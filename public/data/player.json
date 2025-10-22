@@ -1,0 +1,64 @@
+{
+  "profile": {
+    "avatar": "data/avatars/player.png",
+    "name": "未定义",
+    "age": 15,
+    "gender": "未定义",
+    "job": "家族年轻成员"
+  },
+  "stats": {
+    "level": 1,
+    "health": 100,
+    "maxHealth": 100,
+    "attack": 8,
+    "defense": 6,
+    "speed": 10
+  },
+  "experience": {
+    "current": 0,
+    "required": 100
+  },
+  "currency": {
+    "gold": 50
+  },
+  "inventory": {
+    "equipment": {
+      "head": null,
+      "body": null,
+      "legs": null,
+      "hands": null,
+      "feet": null,
+      "back": null,
+      "leftHand": null,
+      "rightHand": null
+    },
+    "items": [
+      {
+        "id": "basic_food",
+        "name": "干粮",
+        "description": "简单的食物，可以恢复少量体力",
+        "icon": "data/icons/bread.png",
+        "type": "consumable",
+        "usable": true,
+        "stackable": true,
+        "effects": {
+          "health": 20
+        },
+        "quantity": 3
+      },
+      {
+        "id": "work_clothes",
+        "name": "工作服",
+        "description": "适合劳作的简单衣物",
+        "icon": "data/icons/clothes.png",
+        "type": "equipment",
+        "usable": false,
+        "stackable": false,
+        "effects": {
+          "defense": 2
+        },
+        "quantity": 1
+      }
+    ]
+  }
+}

@@ -1,0 +1,80 @@
+/* 大地图样式 */
+.mapContent {
+    padding: 0;
+    background: #f8f9fa;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    height: 600px;
+}
+
+.mapSvg {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, #e8f4f8 0%, #f8f9fa 100%);
+}
+
+.resetMapBtn {
+    background: #4a90e2;
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.resetMapBtn:hover {
+    background: #357abd;
+}
+
+/* SVG场景节点样式 */
+.sceneNode {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sceneNode:hover .nodeCircle {
+    stroke-width: 5;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.sceneNode:hover .nodeText {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.nodeCircle {
+    transition: all 0.3s ease;
+}
+
+.nodeText {
+    fill: white;
+    font-size: 14px;
+    font-weight: bold;
+    text-anchor: middle;
+    pointer-events: none;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.nodeLabel {
+    fill: #333;
+    font-size: 13px;
+    text-anchor: middle;
+    pointer-events: none;
+    font-weight: bold;
+}
+
+.connectionLine {
+    stroke: #95a5a6;
+    stroke-width: 2;
+    stroke-dasharray: 5,5;
+    fill: none;
+    opacity: 0.6;
+}
+
+.connectionArrow {
+    fill: #95a5a6;
+    opacity: 0.6;
+}

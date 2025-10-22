@@ -1,0 +1,616 @@
+.bodyContainer {
+    font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%);
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* 背景装饰 */
+.bodyContainer::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* 页头 */
+.header {
+    text-align: center;
+    margin-bottom: 50px;
+    animation: fadeInDown 0.8s ease-out;
+}
+
+.header h1 {
+    font-size: 48px;
+    color: white;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff 0%, #a8dadc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.header p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 18px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* 游戏列表 */
+.gameList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 30px;
+    animation: fadeInUp 1s ease-out;
+}
+
+.gameCard {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.4s ease;
+    position: relative;
+}
+
+.gameCard:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.gameCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 1;
+}
+
+.gameCard:hover::before {
+    opacity: 1;
+}
+
+.gameCover {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    display: block;
+    background: #f5f5f5;
+}
+
+.gameInfo {
+    padding: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+.gameTitle {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gameIcon {
+    font-size: 28px;
+}
+
+.gameSubtitle {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.gameTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.tag {
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.gameDescription {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.gameStats {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 13px;
+    color: #999;
+}
+
+.statItem {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* 弹窗 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modalShow {
+    display: flex;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+    background: white;
+    border-radius: 25px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.5);
+    animation: slideInUp 0.4s ease-out;
+    position: relative;
+}
+
+.createGameModalContent {
+    max-width: 600px;
+    max-height: 85vh;
+}
+
+.modalClose {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    color: white;
+}
+
+.modalClose:hover {
+    background: rgba(0, 0, 0, 0.3);
+    transform: rotate(90deg);
+}
+
+/* 游戏详情 */
+.detailCover {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 25px 25px 0 0;
+}
+
+.detailContent {
+    padding: 40px;
+}
+
+.detailHeader {
+    margin-bottom: 30px;
+}
+
+.detailTitle {
+    font-size: 36px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.detailSubtitle {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.detailTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.detailTag {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.detailSection {
+    margin-bottom: 30px;
+}
+
+.detailSection h3 {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #667eea;
+}
+
+.detailSection p {
+    color: #555;
+    line-height: 1.8;
+    font-size: 15px;
+}
+
+.detailFeatures {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.featureItem {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.featureItem strong {
+    color: #667eea;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.featureItem span {
+    color: #666;
+    font-size: 14px;
+}
+
+.actionButtons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn {
+    flex: 1;
+    padding: 18px 30px;
+    border: none;
+    border-radius: 15px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btnPrimary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btnPrimary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 35px rgba(102, 126, 234, 0.5);
+}
+
+.btnSecondary {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.btnSecondary:hover {
+    background: #e0e0e0;
+}
+
+.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #999 !important;
+}
+
+/* 创建游戏按钮 */
+.createGameBtn {
+    margin-top: 20px;
+    padding: 15px 40px;
+    background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 6px 25px rgba(230, 126, 34, 0.4);
+    transition: all 0.3s ease;
+}
+
+.createGameBtn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 35px rgba(230, 126, 34, 0.5);
+}
+
+/* 创建游戏弹窗 */
+.createGameHeader {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 25px 25px 0 0;
+    text-align: center;
+}
+
+.createGameHeader h2 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+}
+
+.createGameHeader p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.createGameForm {
+    padding: 30px;
+}
+
+.formGroup {
+    margin-bottom: 25px;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.formGroup input[type="text"],
+.formGroup textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.formGroup input[type="text"]:focus,
+.formGroup textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.formGroup textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* 图标选择器 */
+.iconSuggestions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.iconBtn {
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.iconBtn:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+    transform: scale(1.1);
+}
+
+.iconBtnSelected {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.2);
+}
+
+/* 文件上传区域 */
+.fileUploadArea {
+    border: 2px dashed #e0e0e0;
+    border-radius: 15px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.fileUploadArea:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.fileUploadAreaDragover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.uploadPlaceholder {
+    pointer-events: none;
+}
+
+.uploadIcon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 15px;
+}
+
+.uploadText {
+    color: #333;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+    font-size: 16px;
+}
+
+.uploadHint {
+    color: #999;
+    font-size: 13px;
+    margin: 0;
+}
+
+.uploadInfo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+}
+
+.fileIcon {
+    font-size: 32px;
+}
+
+.fileName {
+    text-align: left;
+    color: #333;
+    font-weight: 600;
+}
+
+.fileSize {
+    color: #999;
+    font-size: 13px;
+}
+
+.removeFileBtn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px; /* 确保最小宽度 */
+    min-height: 30px; /* 确保最小高度 */
+    border-radius: 50%;
+    background: #ff4444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1; /* 确保行高为1，防止额外间距 */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* 防止按钮收缩 */
+    transition: all 0.3s ease;
+}
+
+.removeFileBtn:hover {
+    background: #cc0000;
+    transform: scale(1.1);
+}
+
+/* 表单操作按钮 */
+.formActions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.formActions .btn {
+    flex: 1;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 36px;
+    }
+
+    .gameList {
+        grid-template-columns: 1fr;
+    }
+
+    .detailContent {
+        padding: 30px 20px;
+    }
+
+    .detailTitle {
+        font-size: 28px;
+    }
+
+    .actionButtons {
+        flex-direction: column;
+    }
+
+    .createGameForm {
+        padding: 20px;
+    }
+}

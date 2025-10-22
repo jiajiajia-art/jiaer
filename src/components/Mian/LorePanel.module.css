@@ -1,0 +1,105 @@
+/* 悬浮世界观面板 */
+.loreFloatingPanel {
+    position: fixed;
+    bottom: 340px;
+    right: 30px;
+    width: 450px;
+    max-height: 550px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: none;
+    flex-direction: column;
+    z-index: 950;
+    overflow: hidden;
+}
+
+.loreFloatingPanel.show {
+    display: flex;
+    animation: loreSlideIn 0.3s ease-out;
+}
+
+@keyframes loreSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.lorePanelHeader {
+    background: linear-gradient(45deg, #16a085, #138d75);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lorePanelHeader h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.closeLoreBtn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.closeLoreBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+.lorePanelContent {
+    padding: 15px;
+    overflow-y: auto;
+    max-height: 490px;
+}
+
+.loreSection {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.loreSection:last-child {
+    border-bottom: none;
+}
+
+.loreSection h4 {
+    color: #16a085;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.loreContent {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #16a085;
+}
+
+.loreContent p {
+    margin: 0 0 0.8rem 0;
+    color: #555;
+    line-height: 1.8;
+    text-indent: 2em;
+}
+
+.loreContent p:last-child {
+    margin-bottom: 0;
+}
