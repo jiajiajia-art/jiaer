@@ -15,7 +15,6 @@ const Main: React.FC = () => {
     const {
         player,
         currentScene,
-        allScenes, // 新增：所有场景数据
         isInitialized,
         showEventModal,
         currentEvent,
@@ -23,13 +22,6 @@ const Main: React.FC = () => {
         addTestItems,
         resetGame,
         healPlayer,
-        onEventOptionSelect, // 更新：从 handleEventOptionSelect 改为 onEventOptionSelect
-        changeScene, // 新增：切换场景函数
-        getSceneById, // 新增：根据ID获取场景函数
-        calculateTravelCost, // 新增：计算旅行费用函数
-        gameTime,
-        setPlayerCurrency, // 新增：更新玩家金币的函数
-        triggerRandomEvent // 新增：触发随机事件的函数
     } = useGame();
 
     const [activePanel, setActivePanel] = useState<'scene' | 'map'>('scene');
