@@ -6,6 +6,6 @@ interface GameState {
 }
 
 export const useGameStore = create<GameState>((set) => ({
-  pdfFileId: '4982c1407932f432a9f760b70134a879',
+  pdfFileId: null,
   setPdfFileId: (id) => set({ pdfFileId: id }),
 }));
