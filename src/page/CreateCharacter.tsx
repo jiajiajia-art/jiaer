@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import styles from './CreateCharacter.module.css';
-import { Link } from "react-router-dom";
 
 const CreateCharacter: React.FC = () => {
     const [showCustomJob, setShowCustomJob] = useState(false);
@@ -264,7 +263,7 @@ const CreateCharacter: React.FC = () => {
                     <div className={`${styles.successMessage} ${styles.show}`} id="successMessage">
                         ✅ 角色创建成功！
                         <br />
-                        <Link to="/main" className={styles.startGameLink}>立即开始游戏 →</Link>
+                        <a href="/newmain" className={styles.startGameLink}>立即开始游戏 →</a>
                     </div>
                 )}
             </div>

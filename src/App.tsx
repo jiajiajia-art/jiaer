@@ -1,8 +1,8 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import CreateCharacter from './page/CreateCharacter';
-import Main from './page/Main';
 import Home from './page/Home';
+import NewMain from './page/NewMain';
 
 function App() {
 
@@ -12,7 +12,7 @@ function App() {
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
         <Route path="/createCharacter" element={<CreateCharacter />} />
-        <Route path="/main" element={<Main />} />
+        <Route path="/newmain" element={<NewMain />} /> {/* 重新添加 /main 路由 */}
       </Routes>
   </BrowserRouter>
   )

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import styles from './Home.module.css';
-import { Link } from "react-router-dom";
+import { useGameStore } from '../store/gameStore';
+import { useNavigate } from 'react-router-dom';
+// import { Link } from "react-router-dom"; // 不再需要
 
 // 定义游戏数据接口
 interface GameStats {
@@ -36,6 +38,10 @@ const Home: React.FC = () => {
     const [selectedIcon, setSelectedIcon] = useState<string>('');
     const [isDragover, setIsDragover] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
+    const { setPdfFileId } = useGameStore();
+    const navigator = useNavigate();
 
     // 使用ref来引用DOM元素
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +107,7 @@ const Home: React.FC = () => {
         setUploadedFile(null);
         setSelectedIcon('');
         setIsDragover(false);
+        setPdfFileId(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -120,7 +127,9 @@ const Home: React.FC = () => {
                 alert('文件大小不能超过10MB！');
                 return;
             }
+            console.log('file', file);
             setUploadedFile(file);
+            uploadPdf(file);
         }
     };
 
@@ -138,8 +147,41 @@ const Home: React.FC = () => {
      */
     const removeFile = () => {
         setUploadedFile(null);
+        setPdfFileId(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
+        }
+    };
+
+    /**
+     * 上传PDF文件到后端
+     */
+    const uploadPdf = async (file: File) => {
+        setIsUploadingPdf(true);
+        setPdfFileId(null); // 上传新文件时清除旧ID
+
+        const formData = new FormData();
+        formData.append('pdf', file);
+
+        try {
+            const response = await fetch('http://localhost:3000/api/backend/pdf/upload-and-process', {
+                method: 'POST',
+                body: formData
+            });
+            console.log('response', response);
+            if (response.ok) {
+                const data = await response.json();
+                setPdfFileId(data.fileId); // 后端返回fileId
+                alert('PDF 文件上传成功！');
+            } else {
+                const errorData = await response.json();
+                alert(`PDF 文件上传失败: ${errorData.message || response.statusText}`);
+            }
+        } catch (error) {
+            console.error('PDF 文件上传失败:', error);
+            alert('PDF 文件上传时发生网络错误');
+        } finally {
+            setIsUploadingPdf(false);
         }
     };
 
@@ -172,47 +214,56 @@ const Home: React.FC = () => {
                 return;
             }
             setUploadedFile(file);
-            // 手动设置file input
-            if (fileInputRef.current) {
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                fileInputRef.current.files = dataTransfer.files;
-            }
+            uploadPdf(file);
+            // 移除手动设置file input，因为现在文件会直接上传
         }
     };
 
     /**
      * 处理表单提交
      */
-    const handleCreateGameSubmit = (e: React.FormEvent) => {
+    const handleCreateGameSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        navigator('/newmain');
+        // const form = e.target as HTMLFormElement;
+        // const formData = {
+        //     name: (form.gameName as HTMLInputElement).value.trim(),
+        //     subtitle: (form.gameSubtitle as HTMLInputElement).value.trim() || '新游戏',
+        //     description: (form.gameDescription as HTMLTextAreaElement).value.trim(),
+        //     icon: (form.gameIcon as HTMLInputElement).value.trim() || '🎮',
+        // };
 
-        const form = e.target as HTMLFormElement;
-        const formData = {
-            name: (form.gameName as HTMLInputElement).value.trim(),
-            subtitle: (form.gameSubtitle as HTMLInputElement).value.trim() || '新游戏',
-            description: (form.gameDescription as HTMLTextAreaElement).value.trim(),
-            icon: (form.gameIcon as HTMLInputElement).value.trim() || '🎮',
-            pdfFile: uploadedFile
-        };
+        // if (!pdfFileId) {
+        //     alert(isUploadingPdf ? 'PDF 文件正在上传中，请稍候...' : '请上传游戏内容PDF文件！');
+        //     return;
+        // }
 
-        if (!formData.pdfFile) {
-            alert('请上传游戏内容PDF文件！');
-            return;
-        }
+        // const formDataToSend = new FormData();
+        // formDataToSend.append('name', formData.name);
+        // formDataToSend.append('subtitle', formData.subtitle);
+        // formDataToSend.append('description', formData.description);
+        // formDataToSend.append('icon', formData.icon);
+        // formDataToSend.append('pdfFileId', pdfFileId);
 
-        console.log('创建游戏数据:', {
-            name: formData.name,
-            subtitle: formData.subtitle,
-            description: formData.description,
-            icon: formData.icon,
-            pdfFileName: formData.pdfFile.name,
-            pdfSize: formatFileSize(formData.pdfFile.size)
-        });
+        // try {
+        //     const response = await fetch('/api/createGame', {
+        //         method: 'POST',
+        //         body: formDataToSend
+        //     });
 
-        alert(`游戏 "${formData.name}" 创建成功！\n\nPDF文件: ${formData.pdfFile.name}\n大小: ${formatFileSize(formData.pdfFile.size)}\n\n注意：由于浏览器安全限制，PDF文件仅在本地会话中可用。要永久保存，需要后端服务器支持。`);
-
-        closeCreateModal();
+        //     if (response.ok) {
+        //         const data = await response.json();
+        //         alert(`游戏 "${formData.name}" 创建成功！\n\n游戏ID: ${data.gameId}`);
+        //         closeCreateModal();
+        //         loadGamesData(); // 刷新游戏列表
+        //     } else {
+        //         const errorData = await response.json();
+        //         alert(`创建游戏失败: ${errorData.message || response.statusText}`);
+        //     }
+        // } catch (error) {
+        //     console.error('创建游戏失败:', error);
+        //     alert('创建游戏时发生网络错误');
+        // }
     };
 
     // 图标选择处理
@@ -412,13 +463,20 @@ const Home: React.FC = () => {
                                             <span className={styles.fileIcon}>📄</span>
                                             <span className={styles.fileName}>{uploadedFile.name}</span>
                                             <span className={styles.fileSize}>{formatFileSize(uploadedFile.size)}</span>
-                                            <button
-                                                type="button"
-                                                className={styles.removeFileBtn}
-                                                onClick={removeFile}
-                                            >
-                                                ×
-                                            </button>
+                                            {isUploadingPdf ? (
+                                                <div className={styles.uploadLoadingContainer}>
+                                                    <div className={styles.uploadSpinner}></div>
+                                                    <span className={styles.uploadLoadingText}>正在处理...</span>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className={styles.removeFileBtn}
+                                                    onClick={removeFile}
+                                                >
+                                                    ×
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -432,8 +490,12 @@ const Home: React.FC = () => {
                                 >
                                     取消
                                 </button>
-                                <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>
-                                    🚀 创建游戏
+                                <button
+                                    type="submit"
+                                    className={`${styles.btn} ${styles.btnPrimary}`}
+                                    disabled={isUploadingPdf}
+                                >
+                                    {isUploadingPdf ? '⏳ 正在上传...' : '🚀 创建游戏'}
                                 </button>
                             </div>
                         </form>
@@ -495,8 +557,8 @@ const Home: React.FC = () => {
                                 <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={closeModal}>
                                     取消
                                 </button>
-                                <Link
-                                    to="/main"
+                                <a
+                                    href="/createCharacter"
                                     className={`${styles.btn} ${styles.btnPrimary} ${['开发中', '即将推出'].includes(selectedGame.stats.status) ? styles.disabled : ''
                                         }`}
                                     style={{
@@ -509,7 +571,7 @@ const Home: React.FC = () => {
                                         ? `⏳ ${selectedGame.stats.status}，敬请期待`
                                         : '🚀 开始游戏'
                                     }
-                                </Link>
+                                </a>
                             </div>
                         </div>
                     </div>

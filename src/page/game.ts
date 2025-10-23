@@ -27,9 +27,6 @@ export interface PlayerData {
 export interface Equipment {
     head: Item | null;
     body: Item | null;
-    legs: Item | null;
-    body: Item | null;
-    legs: Item | null;
     hands: Item | null;
     feet: Item | null;
     back: Item | null;

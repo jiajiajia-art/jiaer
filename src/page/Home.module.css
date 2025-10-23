@@ -614,3 +614,79 @@
         padding: 20px;
     }
 }
+
+/* === 🆕 剧情类消息的内嵌按钮样式 === */
+.storyActionArea {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeInUp 0.4s ease;
+}
+
+.storyActionButton {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(4px);
+    text-align: left;
+}
+
+.storyActionButton:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(255, 255, 255, 0.2);
+}
+
+/* 禁用状态 */
+.storyActionButton.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* 上传加载动画样式 */
+.uploadLoadingContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.uploadSpinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(74, 144, 226, 0.2);
+    border-top: 2px solid #4a90e2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.uploadLoadingText {
+    color: #4a90e2;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+    .storyActionArea {
+        flex-direction: column;
+    }
+}
