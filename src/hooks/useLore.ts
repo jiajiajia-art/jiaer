@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export const useLore = () => {
     const [gameTimeText, setGameTimeText] = useState('加载中...');
