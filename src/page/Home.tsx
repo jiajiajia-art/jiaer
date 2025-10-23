@@ -176,10 +176,14 @@ const Home: React.FC = () => {
             } else {
                 const errorData = await response.json();
                 alert(`PDF 文件上传失败: ${errorData.message || response.statusText}`);
+                // 上传失败时清除文件
+                removeFile();
             }
         } catch (error) {
             console.error('PDF 文件上传失败:', error);
             alert('PDF 文件上传时发生网络错误');
+            // 网络错误时也清除文件
+            removeFile();
         } finally {
             setIsUploadingPdf(false);
         }
