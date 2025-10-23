@@ -39,6 +39,8 @@ const Home: React.FC = () => {
     const [isDragover, setIsDragover] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
 
     const { setPdfFileId } = useGameStore();
     const navigator = useNavigate();
@@ -108,6 +110,8 @@ const Home: React.FC = () => {
         setSelectedIcon('');
         setIsDragover(false);
         setPdfFileId(null);
+        setUploadProgress(0);
+        setUploadSuccess(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -148,6 +152,8 @@ const Home: React.FC = () => {
     const removeFile = () => {
         setUploadedFile(null);
         setPdfFileId(null);
+        setUploadProgress(0);
+        setUploadSuccess(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -158,7 +164,17 @@ const Home: React.FC = () => {
      */
     const uploadPdf = async (file: File) => {
         setIsUploadingPdf(true);
+        setUploadProgress(0);
+        setUploadSuccess(false);
         setPdfFileId(null); // 上传新文件时清除旧ID
+
+        // 启动假进度条
+        const progressInterval = setInterval(() => {
+            setUploadProgress(prev => {
+                if (prev >= 96) return 96; // 卡在96%
+                return prev + 1.6; // 1分钟到96%，匀速增长
+            });
+        }, 1000); // 每秒更新一次
 
         const formData = new FormData();
         formData.append('pdf', file);
@@ -169,10 +185,15 @@ const Home: React.FC = () => {
                 body: formData
             });
             console.log('response', response);
+
+            // 清除进度条定时器
+            clearInterval(progressInterval);
+
             if (response.ok) {
                 const data = await response.json();
                 setPdfFileId(data.fileId); // 后端返回fileId
-                alert('PDF 文件上传成功！');
+                setUploadProgress(100); // 直接跳到100%
+                setUploadSuccess(true);
             } else {
                 const errorData = await response.json();
                 alert(`PDF 文件上传失败: ${errorData.message || response.statusText}`);
@@ -228,46 +249,21 @@ const Home: React.FC = () => {
      */
     const handleCreateGameSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 验证文件是否已选择
+        if (!uploadedFile) {
+            alert('请先选择PDF文件');
+            return;
+        }
+
+        // 验证PDF文件ID是否存在
+        const pdfFileId = useGameStore.getState().pdfFileId;
+        if (!pdfFileId) {
+            alert('PDF文件正在处理中，请稍后再试');
+            return;
+        }
+
         navigator('/newmain');
-        // const form = e.target as HTMLFormElement;
-        // const formData = {
-        //     name: (form.gameName as HTMLInputElement).value.trim(),
-        //     subtitle: (form.gameSubtitle as HTMLInputElement).value.trim() || '新游戏',
-        //     description: (form.gameDescription as HTMLTextAreaElement).value.trim(),
-        //     icon: (form.gameIcon as HTMLInputElement).value.trim() || '🎮',
-        // };
-
-        // if (!pdfFileId) {
-        //     alert(isUploadingPdf ? 'PDF 文件正在上传中，请稍候...' : '请上传游戏内容PDF文件！');
-        //     return;
-        // }
-
-        // const formDataToSend = new FormData();
-        // formDataToSend.append('name', formData.name);
-        // formDataToSend.append('subtitle', formData.subtitle);
-        // formDataToSend.append('description', formData.description);
-        // formDataToSend.append('icon', formData.icon);
-        // formDataToSend.append('pdfFileId', pdfFileId);
-
-        // try {
-        //     const response = await fetch('/api/createGame', {
-        //         method: 'POST',
-        //         body: formDataToSend
-        //     });
-
-        //     if (response.ok) {
-        //         const data = await response.json();
-        //         alert(`游戏 "${formData.name}" 创建成功！\n\n游戏ID: ${data.gameId}`);
-        //         closeCreateModal();
-        //         loadGamesData(); // 刷新游戏列表
-        //     } else {
-        //         const errorData = await response.json();
-        //         alert(`创建游戏失败: ${errorData.message || response.statusText}`);
-        //     }
-        // } catch (error) {
-        //     console.error('创建游戏失败:', error);
-        //     alert('创建游戏时发生网络错误');
-        // }
     };
 
     // 图标选择处理
@@ -452,7 +448,6 @@ const Home: React.FC = () => {
                                         id="gamePDF"
                                         name="gamePDF"
                                         accept=".pdf"
-                                        required
                                         hidden
                                         onChange={handleFileSelect}
                                     />
@@ -463,16 +458,11 @@ const Home: React.FC = () => {
                                             <p className={styles.uploadHint}>支持 PDF 格式，最大 10MB</p>
                                         </div>
                                     ) : (
-                                        <div className={styles.uploadInfo}>
-                                            <span className={styles.fileIcon}>📄</span>
-                                            <span className={styles.fileName}>{uploadedFile.name}</span>
-                                            <span className={styles.fileSize}>{formatFileSize(uploadedFile.size)}</span>
-                                            {isUploadingPdf ? (
-                                                <div className={styles.uploadLoadingContainer}>
-                                                    <div className={styles.uploadSpinner}></div>
-                                                    <span className={styles.uploadLoadingText}>正在处理...</span>
-                                                </div>
-                                            ) : (
+                                        <>
+                                            <div className={styles.uploadInfo}>
+                                                <span className={styles.fileIcon}>📄</span>
+                                                <span className={styles.fileName}>{uploadedFile.name}</span>
+                                                <span className={styles.fileSize}>{formatFileSize(uploadedFile.size)}</span>
                                                 <button
                                                     type="button"
                                                     className={styles.removeFileBtn}
@@ -480,8 +470,21 @@ const Home: React.FC = () => {
                                                 >
                                                     ×
                                                 </button>
-                                            )}
-                                        </div>
+
+                                            </div>
+                                            {isUploadingPdf && (
+                                                <div className={styles.progressContainer}>
+                                                    <div className={styles.progressBar}>
+                                                        <div
+                                                            className={`${styles.progressFill} ${uploadSuccess ? styles.progressSuccess : ''}`}
+                                                            style={{ width: `${uploadProgress}%` }}
+                                                        ></div>
+                                                    </div>
+                                                    <div className={styles.progressText}>
+                                                        {uploadSuccess ? '✅ 上传完成' : `⏳ 上传中... ${Math.round(uploadProgress)}%`}
+                                                    </div>
+                                                </div>
+                                            )}</>
                                     )}
                                 </div>
                             </div>

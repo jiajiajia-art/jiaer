@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import styles from './NewMain.module.css';
-import { useGameStore } from '../store/gameStore';
+import { useEventSystem } from '../hooks/useEventSystem';
+import { useGameData, type PlayerStats, type InventoryState, type ScenesMap } from '../hooks/useGameData';
+import { useChat } from '../hooks/useChat';
+import { useLore } from '../hooks/useLore';
+import { useInventory } from '../hooks/useInventory';
 import DialogueModal from '../components/Mian/DialogueModal';
+import NpcModal from '../components/Mian/NpcModal';
+import SceneDetailModal from '../components/Mian/SceneDetailModal';
+import EventModal from '../components/Mian/EventModal';
+import PlayerFloatingPanel from '../components/Mian/PlayerFloatingPanel';
+import InventoryFloatingPanel from '../components/Mian/InventoryFloatingPanel';
 
 declare global {
     interface Window {
@@ -15,413 +24,35 @@ declare global {
 }
 
 const NewMain: React.FC = () => {
+    // 使用自定义 hooks
+    const { player, setPlayer, inventory, setInventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore } = useGameData();
+    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, sendChat, handleStartChatWithNpc } = useChat();
+    const { gameTimeText, worldLoreHtml, playerLoreHtml, ensureLoadLore, updateLoreFromBackend, updateLoreFromLocal } = useLore();
+    const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
+    const { events, activeEvent, setActiveEvent, eventHistory, setEventHistory, triggerEventById, closeEvent, ensureLoadEvents } = useEventSystem();
+
     // React 状态（面板与浮窗）
     const [activePanel, setActivePanel] = useState<'scene' | 'map'>('scene');
-    const [chatOpen, setChatOpen] = useState(false);
-    const [inventoryOpen, setInventoryOpen] = useState(false);
     const [playerOpen, setPlayerOpen] = useState(false);
     const [loreOpen, setLoreOpen] = useState(false);
+    const [npcModalOpen, setNpcModalOpen] = useState(false);
+    const [npcDetail, setNpcDetail] = useState<any | null>(null);
 
-    // 聊天
-    const [chatInput, setChatInput] = useState('');
-    const [chatMessages, setChatMessages] = useState<Array<{ type: 'user' | 'system'; text: string }>>([
-        { type: 'system', text: '欢迎来到游戏世界！' },
-    ]);
-    const [currentChatNpc, setCurrentChatNpc] = useState<any | null>(null);
+    // 事件类型
+    type EventDef = { id: string; title: string; image: string; description: string; options: Array<{ text: string; effects?: any; nextEvent?: string | null }>; conditions?: any };
 
-    // 游戏时间与世界观
-    const [gameTimeText, setGameTimeText] = useState('加载中...');
-    const [worldLoreHtml, setWorldLoreHtml] = useState<string>('');
-    const [playerLoreHtml, setPlayerLoreHtml] = useState<string>('');
-    const [loreLoaded, setLoreLoaded] = useState(false);
-
-    // 事件系统（精简版）
-    type EventOption = { text: string; effects?: any; nextEvent?: string | null };
-    type EventDef = { id: string; title: string; image: string; description: string; options: EventOption[]; conditions?: any };
-    const [events, setEvents] = useState<Record<string, EventDef>>({});
-    const [activeEvent, setActiveEvent] = useState<EventDef | null>(null);
-    const [eventHistory, setEventHistory] = useState<Array<{ id: string; title?: string; timestamp: number }>>([]);
-    const [initialEventShown, setInitialEventShown] = useState(false);
-    const [backendDataLoaded, setBackendDataLoaded] = useState(false);
-
-    // ===== Player / Inventory / Scene 数据（React 版本） =====
-    type PlayerProfile = { avatar: string; name: string; age: number; gender: string; job: string };
-    type PlayerStats = { level: number; health: number; maxHealth: number; attack: number; defense: number; speed: number };
-    type PlayerState = {
-        profile: PlayerProfile;
-        stats: PlayerStats;
-        experience: { current: number; required: number };
-        currency: { gold: number };
-    };
-    type Item = { id: string; name?: string; icon?: string; quantity: number; stackable?: boolean; equippable?: boolean; usable?: boolean; slots?: string[]; effects?: Partial<PlayerStats> };
-    type EquipmentSlots = { head: Item | null; body: Item | null; legs: Item | null; hands: Item | null; feet: Item | null; back: Item | null; leftHand: Item | null; rightHand: Item | null };
-    type InventoryState = { equipment: EquipmentSlots; items: Item[] };
-    type SceneNode = { id: string; name: string; description?: string; background?: string; buildings: any[]; npcs: any[]; events?: string[]; exits: Record<string, string> };
-    type ScenesMap = Record<string, SceneNode>;
-
-    const [player, setPlayer] = useState<PlayerState | null>(null);
-    const [inventory, setInventory] = useState<InventoryState>({
-        equipment: { head: null, body: null, legs: null, hands: null, feet: null, back: null, leftHand: null, rightHand: null },
-        items: [],
-    });
-    const [scenes, setScenes] = useState<ScenesMap>({});
-    const [currentSceneId, setCurrentSceneId] = useState<string>('');
-    const pdfFileId = useGameStore((s) => s.pdfFileId);
-
-    // 优先从后端加载数据，失败则回退到本地 JSON（只加载一次）
+    // 更新世界观数据
     useEffect(() => {
-        if (backendDataLoaded) return; // 已加载后端数据则跳过
-
-        (async () => {
-            let backendSuccess = false;
-
-            // 有 pdfFileId 时优先尝试从后端获取
-            if (pdfFileId) {
-                try {
-                    const url = `http://localhost:3000/api/backend/files/${pdfFileId}`;
-                    const res = await fetch(url);
-                    const contentType = res.headers.get('content-type') || '';
-                    if (res.ok && contentType.includes('application/json')) {
-                        const data = await res.json();
-                        console.log('✅ 后端返回数据:', data);
-                        if (data && data.success && data.files) {
-                            applyBackendData(data.files);
-                            setBackendDataLoaded(true);
-                            backendSuccess = true;
-                        }
-                    }
-                } catch (e) {
-                    console.warn('⚠️ 后端数据加载失败，回退到本地文件:', e);
-                }
-            }
-
-            // 后端失败或无 pdfFileId，回退本地
-            if (!backendSuccess) {
-                loadLocalData();
-            }
-        })();
-    }, [pdfFileId, backendDataLoaded]);
-
-    // 应用后端数据到各个状态
-    const applyBackendData = (root: any) => {
-        try {
-            if (!root) return;
-
-            // 1) 场景
-            if (root.scenes && typeof root.scenes === 'object') {
-                const backendScenes: ScenesMap = root.scenes as ScenesMap;
-                setScenes(backendScenes);
-                let preferred = '';
-                if (backendScenes['village_home']) preferred = 'village_home';
-                else if (backendScenes['village_common']) preferred = 'village_common';
-                else preferred = Object.keys(backendScenes)[0] || '';
-                if (preferred) setCurrentSceneId(preferred);
-            }
-
-            // 2) 物品定义映射
-            const itemDefs: Record<string, any> = (root.items && typeof root.items === 'object') ? root.items : {};
-            const mapItem = (id: string | null | undefined): any => {
-                if (!id) return null;
-                const def = itemDefs[id];
-                if (!def) return null;
-                return {
-                    id: def.id || id,
-                    name: def.name,
-                    icon: def.icon,
-                    equippable: !!def.equippable,
-                    usable: !!def.usable,
-                    slots: def.slots,
-                    effects: def.stats || def.effects,
-                    quantity: 1,
-                };
-            };
-
-            // 3) 玩家
-            if (root.player && typeof root.player === 'object') {
-                const p = root.player;
-                // 装备槽：字符串 ID -> Item 对象
-                const eqSrc = (p.inventory && p.inventory.equipment) ? p.inventory.equipment : {};
-                const equipment = {
-                    head: mapItem(eqSrc.head),
-                    body: mapItem(eqSrc.body),
-                    legs: mapItem(eqSrc.legs),
-                    hands: mapItem(eqSrc.hands),
-                    feet: mapItem(eqSrc.feet),
-                    back: mapItem(eqSrc.back),
-                    leftHand: mapItem(eqSrc.leftHand),
-                    rightHand: mapItem(eqSrc.rightHand),
-                } as EquipmentSlots;
-
-                // 背包物品
-                const itemsArr = Array.isArray(p.inventory?.items) ? p.inventory.items : [];
-                const mappedItems = itemsArr.map((it: any) => ({
-                    id: it.id,
-                    name: it.name,
-                    icon: it.icon,
-                    quantity: it.quantity ?? 1,
-                    equippable: !!it.equippable,
-                    usable: !!it.usable,
-                    slots: it.slots,
-                    effects: it.effects,
-                }));
-
-                setInventory({ equipment, items: mappedItems });
-                setPlayer({
-                    profile: {
-                        avatar: p.profile?.avatar || '/data/avatars/default.png',
-                        name: p.profile?.name || '未命名',
-                        age: p.profile?.age ?? 18,
-                        gender: p.profile?.gender || '男',
-                        job: p.profile?.job || '冒险者',
-                    },
-                    stats: {
-                        level: p.stats?.level ?? 1,
-                        health: p.stats?.health ?? 100,
-                        maxHealth: p.stats?.maxHealth ?? 100,
-                        attack: p.stats?.attack ?? 10,
-                        defense: p.stats?.defense ?? 5,
-                        speed: p.stats?.speed ?? 8,
-                    },
-                    experience: {
-                        current: p.experience?.current ?? 0,
-                        required: p.experience?.required ?? 100,
-                    },
-                    currency: {
-                        gold: p.currency?.gold ?? 0,
-                    },
-                });
-            }
-
-            // 4) 世界观与时间
-            if (root.lore && typeof root.lore === 'object') {
-                const lore = root.lore;
-                if (lore.gameTime) {
-                    const { currentYear, yearName, currentMonth, currentDay, monthNames, season } = lore.gameTime;
-                    const monthName = (monthNames && monthNames[currentMonth - 1]) || '未知月';
-                    setGameTimeText(`${yearName} ${currentYear}年 ${monthName} ${currentDay}日 (${season})`);
-                }
-                if (lore.worldBackground?.content) {
-                    setWorldLoreHtml(lore.worldBackground.content.map((p: string) => `<p>${p}</p>`).join(''));
-                }
-                if (lore.playerStory?.content) {
-                    setPlayerLoreHtml(lore.playerStory.content.map((p: string) => `<p>${p}</p>`).join(''));
-                }
-                setLoreLoaded(true);
-            }
-        } catch (err) {
-            console.error('应用后端数据失败:', err);
+        if (backendDataLoaded && backendLore) {
+            // 从后端数据更新世界观
+            console.log('🔄 使用后端世界观数据:', backendLore);
+            updateLoreFromBackend(backendLore);
+        } else if (!backendDataLoaded) {
+            // 从本地数据更新世界观
+            updateLoreFromLocal();
         }
-    };
+    }, [backendDataLoaded, backendLore, updateLoreFromBackend, updateLoreFromLocal]);
 
-    // 加载本地 JSON 文件作为后备
-    const loadLocalData = async () => {
-        try {
-            const res = await fetch('/data/lore.json');
-            if (res.ok) {
-                const loreData = await res.json();
-                if (loreData?.gameTime) {
-                    const { currentYear, yearName, currentMonth, currentDay, monthNames, season } = loreData.gameTime;
-                    const monthName = monthNames?.[currentMonth - 1] || '未知月';
-                    setGameTimeText(`${yearName} ${currentYear}年 ${monthName} ${currentDay}日 (${season})`);
-                } else {
-                    setGameTimeText('纪元元年 一月 1日');
-                }
-            } else {
-                setGameTimeText('纪元元年 一月 1日');
-            }
-        } catch {
-            setGameTimeText('纪元元年 一月 1日');
-        }
-
-        try {
-            const resPlayer = await fetch('/data/player.json');
-            if (resPlayer.ok) {
-                const playerData = await resPlayer.json();
-                const merged: PlayerState = {
-                    profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者', ...(playerData.profile || {}) },
-                    stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8, ...(playerData.stats || {}) },
-                    experience: { current: 0, required: 100, ...(playerData.experience || {}) },
-                    currency: { gold: 100, ...(playerData.currency || {}) },
-                };
-                setPlayer(merged);
-                if (playerData.inventory) {
-                    setInventory((prev) => ({
-                        equipment: { ...prev.equipment, ...(playerData.inventory.equipment || {}) },
-                        items: Array.isArray(playerData.inventory.items) ? playerData.inventory.items : prev.items,
-                    }));
-                }
-            } else {
-                setPlayer({
-                    profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者' },
-                    stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8 },
-                    experience: { current: 0, required: 100 },
-                    currency: { gold: 100 },
-                });
-            }
-        } catch {
-            setPlayer({
-                profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者' },
-                stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8 },
-                experience: { current: 0, required: 100 },
-                currency: { gold: 100 },
-            });
-        }
-
-        try {
-            const resScenes = await fetch('/data/scenes.json');
-            if (resScenes.ok) {
-                const sceneMap: ScenesMap = await resScenes.json();
-                setScenes(sceneMap);
-                let preferred = '';
-                try {
-                    const saved = localStorage.getItem('rpg_scene_data');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (parsed && parsed.currentScene && sceneMap[parsed.currentScene]) preferred = parsed.currentScene;
-                    }
-                } catch { }
-                if (!preferred && sceneMap['village_square']) preferred = 'village_square';
-                if (!preferred) {
-                    const withContent = Object.values(sceneMap).find(sc => (sc.buildings && sc.buildings.length) || (sc.npcs && sc.npcs.length) || (sc.exits && Object.keys(sc.exits).length));
-                    if (withContent) preferred = withContent.id;
-                }
-                if (!preferred) preferred = Object.keys(sceneMap)[0] || '';
-                setCurrentSceneId(preferred);
-            } else {
-                const fallback: ScenesMap = {
-                    village_square: {
-                        id: 'village_square',
-                        name: '村庄广场',
-                        description: '这是一个宁静的村庄广场。请确保 scenes.json 存在。',
-                        background: '/data/icons/empty.png',
-                        buildings: [],
-                        npcs: [],
-                        exits: {},
-                    },
-                };
-                setScenes(fallback);
-                setCurrentSceneId('village_square');
-            }
-        } catch {
-            const fallback: ScenesMap = {
-                village_square: {
-                    id: 'village_square',
-                    name: '村庄广场',
-                    description: '这是一个宁静的村庄广场。请确保 scenes.json 存在。',
-                    background: '/data/icons/empty.png',
-                    buildings: [],
-                    npcs: [],
-                    exits: {},
-                },
-            };
-            setScenes(fallback);
-            setCurrentSceneId('village_square');
-        }
-    };
-
-    // 打开世界观时首次加载
-    const ensureLoadLore = async () => {
-        if (loreLoaded) return;
-        try {
-            const res = await fetch('/data/lore.json');
-            if (res.ok) {
-                const data = await res.json();
-                if (data?.worldBackground?.content) {
-                    setWorldLoreHtml(data.worldBackground.content.map((p: string) => `<p>${p}</p>`).join(''));
-                }
-                if (data?.playerStory?.content) {
-                    setPlayerLoreHtml(data.playerStory.content.map((p: string) => `<p>${p}</p>`).join(''));
-                }
-            } else {
-                setWorldLoreHtml('<p>这是一个充满魔法与冒险的世界...</p>');
-                setPlayerLoreHtml('<p>你是一位初出茅庐的冒险者...</p>');
-            }
-        } catch {
-            setWorldLoreHtml('<p>这是一个充满魔法与冒险的世界...</p>');
-            setPlayerLoreHtml('<p>你是一位初出茅庐的冒险者...</p>');
-        } finally {
-            setLoreLoaded(true);
-        }
-    };
-
-    // 载入事件表
-    const ensureLoadEvents = async () => {
-        if (Object.keys(events).length > 0) return;
-        try {
-            const res = await fetch('/data/events.json');
-            if (res.ok) {
-                const ev = (await res.json()) as Record<string, EventDef>;
-                setEvents(ev);
-            } else {
-                // 默认 welcome 事件
-                const fallback: Record<string, EventDef> = {
-                    welcome_event: {
-                        id: 'welcome_event',
-                        title: '欢迎来到冒险世界',
-                        image: '/data/events/welcome.jpg',
-                        description: '你来到了一个神秘的世界，前方有无数冒险等待着你。作为一位新生的冒险者，你准备好踏上这段旅程了吗？',
-                        options: [
-                            { text: '开始冒险！', effects: { experience: 10 }, nextEvent: null },
-                            { text: '先了解一下这个世界', effects: { experience: 5 }, nextEvent: null },
-                            { text: '我需要更多准备', effects: {}, nextEvent: null },
-                        ],
-                    },
-                };
-                setEvents(fallback);
-            }
-        } catch {
-            const fallback: Record<string, EventDef> = {
-                welcome_event: {
-                    id: 'welcome_event',
-                    title: '欢迎来到冒险世界',
-                    image: '/data/events/welcome.jpg',
-                    description: '你来到了一个神秘的世界，前方有无数冒险等待着你。作为一位新生的冒险者，你准备好踏上这段旅程了吗？',
-                    options: [
-                        { text: '开始冒险！', effects: { experience: 10 }, nextEvent: null },
-                        { text: '先了解一下这个世界', effects: { experience: 5 }, nextEvent: null },
-                        { text: '我需要更多准备', effects: {}, nextEvent: null },
-                    ],
-                },
-            };
-            setEvents(fallback);
-        }
-    };
-
-    // 触发事件（示例：欢迎事件）
-    const triggerEventById = async (eventId: string) => {
-        await ensureLoadEvents();
-        const ev = events[eventId];
-        if (ev) {
-            setActiveEvent(ev);
-            setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]);
-        }
-        else if (eventId === 'welcome_event') {
-            // 如果异步刚加载还未 set 到 state，延迟一点再取
-            setTimeout(() => {
-                const ev2 = events['welcome_event'];
-                if (ev2) {
-                    setActiveEvent(ev2);
-                    setEventHistory((h) => [...h, { id: ev2.id, title: ev2.title, timestamp: Date.now() }]);
-                }
-            }, 100);
-        }
-    };
-
-    // 进入页面自动弹出初始故事事件：等待事件表可用后显示（与 Main.html 行为一致）
-    useEffect(() => {
-        if (initialEventShown) return;
-        (async () => {
-            await ensureLoadEvents();
-            if (Object.keys(events).length > 0 && !initialEventShown) {
-                const ev = events['welcome_event'];
-                if (ev) {
-                    setActiveEvent(ev);
-                    setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]);
-                    setInitialEventShown(true);
-                }
-            }
-        })();
-    }, [events, initialEventShown]);
 
     const handleEventOption = (index: number) => {
         if (!activeEvent) return;
@@ -467,7 +98,7 @@ const NewMain: React.FC = () => {
             }
             setPlayer(next);
         }
-        setActiveEvent(null);
+        closeEvent();
         if (opt.nextEvent) triggerEventById(opt.nextEvent);
     };
 
@@ -482,6 +113,7 @@ const NewMain: React.FC = () => {
                 description: `${building.name}\n\n${building.description}\n\n可用功能：`,
                 options: building.features.slice(0, 3).map((f: string) => ({ text: f, effects: {} })),
             };
+            // 直接设置事件，不需要通过 hook
             setActiveEvent(tempEvent);
             setEventHistory((h) => [...h, { id: tempEvent.id, title: tempEvent.title, timestamp: Date.now() }]);
             return;
@@ -500,42 +132,6 @@ const NewMain: React.FC = () => {
         }
         alert('该建筑暂未配置可用功能');
     };
-
-    // 聊天发送
-    const sendChat = () => {
-        const text = chatInput.trim();
-        if (!text) return;
-        setChatMessages((msgs) => [...msgs, { type: 'user', text }]);
-        setChatInput('');
-        setTimeout(() => {
-            if (currentChatNpc) {
-                const npcName = currentChatNpc.name || 'NPC';
-                setChatMessages((msgs) => [...msgs, { type: 'system', text: `${npcName}: "我明白了，让我想想..."` }]);
-            } else {
-                setChatMessages((msgs) => [...msgs, { type: 'system', text: '收到您的消息：' + text }]);
-            }
-        }, 500);
-    };
-
-    const handleStartChatWithNpc = (npc: any) => {
-        setCurrentChatNpc(npc);
-        setChatOpen(true);
-        setNpcModalOpen(false);
-        // 系统提示：开始与 NPC 对话
-        setChatMessages((msgs) => [...msgs, { type: 'system', text: `━━━ 开始与 ${npc.name}${npc.job || npc.type ? `（${npc.job || npc.type}）` : ''} 对话 ━━━` }]);
-        // NPC 开场白（随机）
-        setTimeout(() => {
-            const greetings = [
-                `${npc.name}: "你好，冒险者！有什么我可以帮助你的吗？"`,
-                `${npc.name}: "欢迎！很高兴见到你。"`,
-                `${npc.name}: "你找我有什么事吗？"`,
-                `${npc.name}: "看起来你是个有趣的冒险者。"`
-            ];
-            const greet = greetings[Math.floor(Math.random() * greetings.length)];
-            setChatMessages((msgs) => [...msgs, { type: 'system', text: greet }]);
-        }, 500);
-    };
-
 
     // 键盘快捷键（1 背包 / 2 角色 / 3 地图 / Esc 关闭弹层）
     useEffect(() => {
@@ -644,17 +240,7 @@ const NewMain: React.FC = () => {
     // 场景详情弹窗
     const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
     const [sceneDetailId, setSceneDetailId] = useState<string | null>(null);
-    const computeTravelCost = (scene: SceneNode | undefined) => {
-        if (!scene) return 10;
-        let cost = 10;
-        if (scene.buildings && scene.buildings.length > 3) cost += 5;
-        if (scene.npcs && scene.npcs.length > 2) cost += 5;
-        return Math.max(5, cost);
-    };
 
-    // NPC 详情弹窗
-    const [npcModalOpen, setNpcModalOpen] = useState(false);
-    const [npcDetail, setNpcDetail] = useState<any | null>(null);
 
     // 对话弹窗（用于奇闻轶事等）
     const [dialogueOpen, setDialogueOpen] = useState(false);
@@ -704,48 +290,10 @@ const NewMain: React.FC = () => {
         if (firstId) setCurrentSceneId(firstId);
         setActiveEvent(null);
     };
-    // ===== Inventory 行为（简化） =====
-    const equipItem = (item: Item, slot: keyof EquipmentSlots) => {
-        setInventory((prev) => {
-            const next = { ...prev, equipment: { ...prev.equipment }, items: prev.items.map((i) => ({ ...i })) };
-            // 卸下当前装备，放回背包
-            const current = next.equipment[slot];
-            if (current) {
-                const exist = next.items.find((i) => i.id === current.id);
-                if (exist) exist.quantity += 1; else next.items.push({ ...current, quantity: 1 });
-            }
-            // 减少物品堆叠
-            const bag = next.items.find((i) => i.id === item.id);
-            if (bag) {
-                bag.quantity = Math.max(0, bag.quantity - 1);
-                if (bag.quantity === 0) next.items = next.items.filter((i) => i.id !== item.id);
-            }
-            next.equipment[slot] = { ...item, quantity: 1 };
-            return next;
-        });
-    };
+    // 背包相关函数
+    const handleEquipItem = (item: any, slot: any) => equipItem(item, slot, setInventory);
+    const handleUseItem = (item: any) => useItem(item, player, setPlayer, setInventory);
 
-    const useItem = (item: Item) => {
-        if (!item.usable) return;
-        if (item.effects && player) {
-            const next = { ...player };
-            const patch = item.effects as Partial<PlayerStats>;
-            next.stats = { ...next.stats, ...patch } as PlayerStats;
-            if (patch.health) next.stats.health = Math.min(next.stats.maxHealth, next.stats.health);
-            setPlayer(next);
-        }
-        setInventory((prev) => {
-            const next = { ...prev, items: prev.items.map((i) => ({ ...i })) };
-            const bag = next.items.find((i) => i.id === item.id);
-            if (bag) {
-                bag.quantity = Math.max(0, bag.quantity - 1);
-                if (bag.quantity === 0) next.items = next.items.filter((i) => i.id !== item.id);
-            }
-            return next;
-        });
-    };
-
-    const slotNameMap: Record<keyof EquipmentSlots, string> = { head: '头部', body: '上身', legs: '下身', hands: '手部', feet: '脚部', back: '背部', leftHand: '左手', rightHand: '右手' };
 
     return (
         <div className={styles.gameContainer}>
@@ -888,24 +436,12 @@ const NewMain: React.FC = () => {
                 </div>
             </main>
 
-            {/* 事件弹窗 */}
-            <div id="eventModal" className={styles.modal} style={{ display: activeEvent ? 'block' : 'none' }}>
-                <div className={styles.modalContent}>
-                    <div className={styles.eventImage}>
-                        {activeEvent?.image && <img id="eventImage" src={activeEvent.image} alt="事件图片" />}
-                    </div>
-                    <div className={styles.eventDescription}>
-                        <p id="eventText">{activeEvent?.description || ''}</p>
-                    </div>
-                    <div className={styles.eventOptions}>
-                        {activeEvent?.options?.map((opt, idx) => (
-                            <button key={idx} id={`option${idx + 1}`} className={styles.eventOption} onClick={() => handleEventOption(idx)}>
-                                {opt.text}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            {/* 事件弹窗组件 */}
+            <EventModal
+                isOpen={!!activeEvent}
+                event={activeEvent}
+                onOptionSelect={handleEventOption}
+            />
 
             {/* 悬浮聊天面板 */}
             <div id="chatPanel" className={styles.chatPanel} style={{ display: chatOpen ? 'flex' : 'none' }}>
@@ -932,167 +468,34 @@ const NewMain: React.FC = () => {
                 </div>
             </div>
 
-            {/* 悬浮背包面板 */}
-            <div id="inventoryFloatingPanel" className={styles.inventoryFloatingPanel} style={{ display: inventoryOpen ? 'flex' : 'none' }}>
-                <div className={styles.inventoryPanelHeader}>
-                    <h3>背包</h3>
-                    <button id="closeInventoryBtn" className={styles.closeInventoryBtn} onClick={() => setInventoryOpen(false)}>×</button>
-                </div>
-                <div className={styles.inventoryPanelContent}>
-                    <div className={styles.equipmentSection}>
-                        <h3>装备</h3>
-                        <div className={styles.equipmentGrid}>
-                            {(Object.keys(inventory.equipment) as Array<keyof EquipmentSlots>).map((slot) => {
-                                const eq = inventory.equipment[slot];
-                                return (
-                                    <div key={slot} className={styles.equipmentSlot} data-slot={slot}>
-                                        <img src={eq?.icon || '/data/icons/empty.png'} alt={slotNameMap[slot]} />
-                                        <span>{eq?.name || slotNameMap[slot]}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                    <div className={styles.itemsSection}>
-                        <h3>物品</h3>
-                        <div id="itemsGrid" className={styles.itemsGrid}>
-                            {inventory.items.length === 0 && (
-                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#666' }}>背包为空</p>
-                            )}
-                            {inventory.items.map((it) => (
-                                <div key={it.id} className={styles.itemSlot} onClick={() => (it.usable ? useItem(it) : (it.equippable && it.slots && it.slots.length ? equipItem(it, it.slots[0] as keyof EquipmentSlots) : null))}>
-                                    <img src={it.icon || '/data/icons/empty.png'} alt={it.name || it.id} />
-                                    <div className={styles.itemName}>{it.name || it.id}</div>
-                                    {it.quantity > 1 && <div className={styles.itemName}>x{it.quantity}</div>}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {/* 悬浮背包面板组件 */}
+            <InventoryFloatingPanel
+                isOpen={inventoryOpen}
+                onClose={() => setInventoryOpen(false)}
+                inventory={inventory}
+                onEquipItem={handleEquipItem}
+                onUseItem={handleUseItem}
+            />
 
-            {/* 悬浮角色信息面板 */}
-            <div id="playerFloatingPanel" className={styles.playerFloatingPanel} style={{ display: playerOpen ? 'flex' : 'none' }}>
-                <div className={styles.playerPanelHeader}>
-                    <h3>角色信息</h3>
-                    <button id="closePlayerBtn" className={styles.closePlayerBtn} onClick={() => setPlayerOpen(false)}>×</button>
-                </div>
-                <div className={styles.playerPanelContent}>
-                    <div className={styles.playerInfo}>
-                        <div className={styles.playerAvatar}>
-                            <img id="playerAvatar" src={player?.profile.avatar || '/data/avatars/default.png'} alt="角色头像" />
-                        </div>
-                        <div className={styles.playerDetails}>
-                            <div className={styles.playerBasic}>
-                                <h3 id="playerName">{player?.profile.name || '未命名'}</h3>
-                                <p><span className={styles.label}>年龄:</span> <span id="playerAge">{player?.profile.age ?? '-'}</span></p>
-                                <p><span className={styles.label}>性别:</span> <span id="playerGender">{player?.profile.gender ?? '-'}</span></p>
-                                <p><span className={styles.label}>职业:</span> <span id="playerJob">{player?.profile.job ?? '-'}</span></p>
-                            </div>
-                            <div className={styles.playerStats}>
-                                <h4>属性</h4>
-                                <div className={styles.statBar}>
-                                    <span className={styles.statLabel}>等级:</span>
-                                    <span id="playerLevel" className={styles.statValue}>{player?.stats.level ?? 1}</span>
-                                </div>
-                                <div className={styles.statBar}>
-                                    <span className={styles.statLabel}>生命:</span>
-                                    <span id="playerHealth" className={styles.statValue}>{player ? `${player.stats.health}/${player.stats.maxHealth}` : '100/100'}</span>
-                                </div>
-                                <div className={styles.statBar}>
-                                    <span className={styles.statLabel}>攻击:</span>
-                                    <span id="playerAttack" className={styles.statValue}>{player?.stats.attack ?? 10}</span>
-                                </div>
-                                <div className={styles.statBar}>
-                                    <span className={styles.statLabel}>防御:</span>
-                                    <span id="playerDefense" className={styles.statValue}>{player?.stats.defense ?? 5}</span>
-                                </div>
-                                <div className={styles.statBar}>
-                                    <span className={styles.statLabel}>速度:</span>
-                                    <span id="playerSpeed" className={styles.statValue}>{player?.stats.speed ?? 8}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {/* 悬浮角色信息面板组件 */}
+            <PlayerFloatingPanel
+                isOpen={playerOpen}
+                onClose={() => setPlayerOpen(false)}
+                player={player}
+            />
 
-            {/* 场景详情弹窗（静态占位）*/}
-            <div id="sceneDetailModal" className={styles.modal} style={{ display: 'none' }}>
-                <div className={`${styles.modalContent} ${styles.sceneModalContent}`}>
-                    <button className={styles.closeSceneModal}>×</button>
-                    <div className={styles.sceneDetailImage}>
-                        <img id="sceneDetailImage" src="" alt="场景图片" />
-                    </div>
-                    <div className={styles.sceneDetailInfo}>
-                        <h2 id="sceneDetailName">场景名称</h2>
-                        <div className={styles.sceneDetailDescription}>
-                            <p id="sceneDetailDesc">场景描述</p>
-                        </div>
-                        <div className={styles.sceneTravelCost}>
-                            <div className={styles.costInfo}>
-                                <span className={styles.costLabel}>旅行费用：</span>
-                                <span id="travelCost" className={styles.costValue}>10</span>
-                                <span className={styles.costIcon}>💰</span>
-                            </div>
-                            <div className={styles.playerGold}>
-                                <span className={styles.goldLabel}>你的金币：</span>
-                                <span id="playerGoldDisplay" className={styles.goldValue}>100</span>
-                                <span className={styles.goldIcon}>💰</span>
-                            </div>
-                        </div>
-                        <div className={styles.sceneDetailActions}>
-                            <button id="goToSceneBtn" className={styles.goToSceneBtn}>🚀 前往此场景</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* NPC详情弹窗（静态占位） */}
-            <div id="npcModal" className={styles.modal} style={{ display: npcModalOpen ? 'block' : 'none' }}>
-                <div className={`${styles.modalContent} ${styles.npcModalContent}`}>
-                    <button className={styles.closeNpcModal} onClick={() => setNpcModalOpen(false)}>×</button>
-                    <div className={styles.npcDetailHeader}>
-                        <img id="npcDetailAvatar" src={npcDetail?.icon || '/data/avatars/default.png'} alt="NPC头像" className={styles.npcDetailAvatar} />
-                        <div className={styles.npcDetailInfo}>
-                            <h2 id="npcDetailName">{npcDetail?.name || 'NPC'}</h2>
-                            <div className={styles.npcDetailStats}>
-                                <span id="npcDetailJob" className={styles.npcDetailJob}>{npcDetail?.job || npcDetail?.type || '职业'}</span>
-                                <span id="npcDetailGender" className={styles.npcDetailGender}>{npcDetail?.gender || '性别'}</span>
-                                <span id="npcDetailAge" className={styles.npcDetailAge}>{npcDetail?.age ? `${npcDetail.age}岁` : '年龄'}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div className={styles.npcDetailDescription}>
-                        <p id="npcDetailDesc">{npcDetail?.description || '描述'}</p>
-                    </div>
-                    <div className={styles.npcRelationships}>
-                        <h3>人际关系</h3>
-                        <div id="npcRelationshipsList" className={styles.relationshipsGrid}>
-                            {npcDetail?.relationships && scenes && Object.keys(npcDetail.relationships).length > 0 ? (
-                                Object.entries(npcDetail.relationships).map(([npcId, relation]: any) => {
-                                    const allNPCs: Record<string, any> = {};
-                                    Object.values(scenes).forEach((sc: any) => (sc.npcs || []).forEach((n: any) => (allNPCs[n.id] = n)));
-                                    const related = allNPCs[npcId as string];
-                                    if (!related) return null;
-                                    return (
-                                        <div key={npcId as string} className="relationship-card">
-                                            <img src={related.icon || '/data/avatars/default.png'} alt={related.name} />
-                                            <div className="relationship-name">{related.name}</div>
-                                            <div className="relationship-type">{relation as string}</div>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <p style={{ textAlign: 'center', color: '#999' }}>暂无人际关系</p>
-                            )}
-                        </div>
-                    </div>
-                    <div className={styles.npcActions}>
-                        <button id="chatWithNPCBtn" className={styles.chatWithNpcBtn} onClick={() => { if (npcDetail) handleStartChatWithNpc(npcDetail); }}>{'💬 与TA对话'}</button>
-                    </div>
-                </div>
-            </div>
+            {/* NPC详情弹窗组件 */}
+            <NpcModal
+                isOpen={npcModalOpen}
+                onClose={() => setNpcModalOpen(false)}
+                npc={npcDetail}
+                onStartChat={(npc) => {
+                    handleStartChatWithNpc(npc);
+                    setNpcModalOpen(false);
+                }}
+                scenes={scenes}
+            />
 
             {/* 悬浮世界观面板 */}
             <div id="lorePanel" className={styles.loreFloatingPanel} style={{ display: loreOpen ? 'flex' : 'none' }}>
@@ -1139,46 +542,22 @@ const NewMain: React.FC = () => {
                 </div>
             )}
 
-            {/* 场景详情弹窗（React 版）*/}
-            <div id="sceneDetailModal" className={styles.modal} style={{ display: sceneDetailOpen ? 'block' : 'none' }}>
-                <div className={`${styles.modalContent} ${styles.sceneModalContent}`}>
-                    <button className={styles.closeSceneModal} onClick={() => setSceneDetailOpen(false)}>×</button>
-                    <div className={styles.sceneDetailImage}>
-                        {sceneDetailId && scenes[sceneDetailId]?.background && (
-                            <img id="sceneDetailImage" src={scenes[sceneDetailId].background} alt="场景图片" />
-                        )}
-                    </div>
-                    <div className={styles.sceneDetailInfo}>
-                        <h2 id="sceneDetailName">{sceneDetailId && scenes[sceneDetailId] ? scenes[sceneDetailId].name : '场景名称'}</h2>
-                        <div className={styles.sceneDetailDescription}>
-                            <p id="sceneDetailDesc">{sceneDetailId && scenes[sceneDetailId]?.description ? scenes[sceneDetailId]?.description : '场景描述'}</p>
-                        </div>
-                        <div className={styles.sceneTravelCost}>
-                            <div className={styles.costInfo}>
-                                <span className={styles.costLabel}>旅行费用：</span>
-                                <span id="travelCost" className={styles.costValue}>{computeTravelCost(sceneDetailId ? scenes[sceneDetailId] : undefined)}</span>
-                                <span className={styles.costIcon}>💰</span>
-                            </div>
-                            <div className={styles.playerGold}>
-                                <span className={styles.goldLabel}>你的金币：</span>
-                                <span id="playerGoldDisplay" className={styles.goldValue}>{player?.currency.gold ?? 0}</span>
-                                <span className={styles.goldIcon}>💰</span>
-                            </div>
-                        </div>
-                        <div className={styles.sceneDetailActions}>
-                            <button id="goToSceneBtn" className={styles.goToSceneBtn} onClick={() => {
-                                if (!sceneDetailId) return;
-                                const cost = computeTravelCost(scenes[sceneDetailId]);
-                                if (player && (player.currency.gold ?? 0) < cost) { alert(`金币不足！需要 ${cost} 金币`); return; }
-                                if (player) setPlayer({ ...player, currency: { gold: Math.max(0, (player.currency.gold ?? 0) - cost) } });
-                                setCurrentSceneId(sceneDetailId);
-                                setSceneDetailOpen(false);
-                                setActivePanel('scene');
-                            }}>🚀 前往此场景</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            {/* 场景详情弹窗组件 */}
+            <SceneDetailModal
+                isOpen={sceneDetailOpen}
+                onClose={() => setSceneDetailOpen(false)}
+                sceneId={sceneDetailId}
+                scene={sceneDetailId ? scenes[sceneDetailId] : null}
+                player={player}
+                onTravel={(sceneId, cost) => {
+                    if (player) {
+                        setPlayer({ ...player, currency: { gold: Math.max(0, player.currency.gold - cost) } });
+                    }
+                    setCurrentSceneId(sceneId);
+                    setSceneDetailOpen(false);
+                    setActivePanel('scene');
+                }}
+            />
         </div>
     );
 }

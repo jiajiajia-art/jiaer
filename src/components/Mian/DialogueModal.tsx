@@ -131,9 +131,6 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                         });
                     }
 
-                    if (json.fullResponse) {
-                        console.log('完整输出:', json.fullResponse);
-                    }
                 } catch {
                     console.warn('⚠️ JSON 解析失败，可能是分包数据:', line);
                 }
