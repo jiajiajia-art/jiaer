@@ -39,7 +39,14 @@ const NewMain: React.FC = () => {
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
 
     // 事件类型
-    type EventDef = { id: string; title: string; image: string; description: string; options: Array<{ text: string; effects?: any; nextEvent?: string | null }>; conditions?: any };
+    type EventDef = { 
+        id: string; 
+        title: string; 
+        image: string; 
+        description: string; 
+        options: Array<{ text: string; effects?: any; nextEvent?: string | null }>; 
+        conditions?: any 
+    };
 
     // 更新世界观数据
     useEffect(() => {
@@ -83,10 +90,15 @@ const NewMain: React.FC = () => {
                     items.forEach(({ id, quantity }) => {
                         const found = nextInv.items.find((i) => i.id === id);
                         if (quantity > 0) {
-                            if (found) found.quantity += quantity; else nextInv.items.push({ id, quantity });
+                            if (found) 
+                                found.quantity += quantity; 
+                            else {
+                                nextInv.items.push({ id, quantity });
+                            }
                         } else if (quantity < 0 && found) {
                             found.quantity = Math.max(0, found.quantity + quantity);
-                            if (found.quantity === 0) nextInv.items = nextInv.items.filter((i) => i.id !== id);
+                            if (found.quantity === 0) 
+                                nextInv.items = nextInv.items.filter((i) => i.id !== id);
                         }
                     });
                     return nextInv;

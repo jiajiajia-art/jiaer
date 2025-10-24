@@ -26,19 +26,17 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             text: string;
             isTyping?: boolean;
             isMarkdown?: boolean;
-            actions?: string[]; // 新增：可选的 ACTION 按钮列表
+            actions?: string[];
         }>
     >([{ type: 'system', text: `欢迎来到游戏世界，${playerName}！` }]);
 
     const pdfFileId = useGameStore((state) => state.pdfFileId);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-    // 🔹 自动滚动到底部
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // 🔹 创建游戏 Session
     const createSession = async (): Promise<string | null> => {
         if (!pdfFileId) {
             console.error('没有 pdfFileId，无法创建 session');
@@ -69,33 +67,20 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     };
 
-    // 🔹 提取 [ACTION: xxx] 的文本
-    const extractActions = (text: string): { cleanText: string; actions: string[] } => {
-        const regex = /\[ACTION:\s*(.*?)\]/g;
-        const actions: string[] = [];
-        let match;
-
-        while ((match = regex.exec(text)) !== null) {
-            actions.push(match[1].trim());
-        }
-
-        const cleanText = text.replace(regex, '').trim();
-        return { cleanText, actions };
-    };
-
-    // 🔹 流式响应处理函数
+    // 🔹 改进后的流式响应解析（支持实时 ACTION 提取）
     const handleStreamResponse = async (response: Response) => {
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         let fullText = '';
+        let actions: string[] = [];
 
         if (!reader) return;
 
-        // 添加一个“打字中”消息
+        // 添加初始“打字中”提示
         setMessages((prev) => [
             ...prev,
-            { type: 'system', text: '', isTyping: true, isMarkdown: true }
+            { type: 'system', text: '', isTyping: true, isMarkdown: true, actions: [] }
         ]);
 
         while (true) {
@@ -103,59 +88,95 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
-            const segments = buffer.split('\n');
+            const segments = buffer.split(/\r?\n/);
             buffer = segments.pop() || '';
 
             for (const segment of segments) {
                 const line = segment.trim();
                 if (!line) continue;
 
-                const cleaned = line.startsWith('data:')
-                    ? line.replace(/^data:\s*/, '')
-                    : line;
+                const cleaned = line.startsWith('data:') ? line.replace(/^data:\s*/, '') : line;
 
                 try {
                     const json = JSON.parse(cleaned);
 
-                    if (json.type === 'stream' && json.content) {
-                        fullText += json.content;
+                    if (json.content) {
+                        const chunk = json.content;
+                        fullText += chunk;
 
-                        // 更新打字中消息
-                        setMessages((prev) => {
-                            const updated = [...prev];
-                            const last = updated[updated.length - 1];
-                            if (last && last.isTyping) {
-                                last.text = fullText;
+                        // ✅ 检测 ACTION
+                        if (fullText.includes('[ACTION:')) {
+                            const textBeforeAction = fullText.slice(0, fullText.indexOf('[ACTION:'));
+                            const actionRegex = /\[ACTION:\s*(.*?)\]/g;
+                            let match;
+                            const newActions: string[] = [];
+
+                            while ((match = actionRegex.exec(fullText)) !== null) {
+                                const actionText = match[1].trim();
+                                if (!actions.includes(actionText)) {
+                                    newActions.push(actionText);
+                                }
                             }
-                            return updated;
-                        });
-                    }
 
+                            if (newActions.length > 0) {
+                                actions = [...actions, ...newActions];
+                            }
+
+                            // ✅ 更新消息（不再要求 isTyping 必须为 true）
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last) {
+                                    const newMessage = {
+                                        ...last,
+                                        text: textBeforeAction.trim(),
+                                        isTyping: false,
+                                        actions: actions.length > 0 ? [...actions] : undefined
+                                    };
+                                    updated[updated.length - 1] = newMessage;
+                                    return [...updated];
+                                }
+                                return prev;
+                            });
+
+                            
+                        } else {
+                            // 🔹 没有 ACTION 时持续更新文字
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last && last.isTyping) {
+                                    updated[updated.length - 1] = {
+                                        ...last,
+                                        text: fullText.trim(),
+                                    };
+                                    return [...updated];
+                                }
+                                return updated;
+                            });
+                        }
+                    }
                 } catch {
-                    console.warn('⚠️ JSON 解析失败，可能是分包数据:', line);
+                    // 解析不完整时忽略
                 }
             }
         }
 
-        // 解析动作按钮
-        const { cleanText, actions } = extractActions(fullText);
-
-        // 替换最后一条“打字中”消息
+        // 🔹 流结束时，关闭打字效果
         setMessages((prev) => {
             const updated = [...prev];
             const last = updated[updated.length - 1];
-            if (last && last.isTyping) {
-                last.text = cleanText;
-                last.isTyping = false;
-                last.actions = actions;
+            if (last) {
+                updated[updated.length - 1] = {
+                    ...last,
+                    isTyping: false
+                };
+                return [...updated];
             }
             return updated;
         });
-
-        console.log('✅ 拼接完成文本:', cleanText, '🎯 actions:', actions);
     };
 
-    // 🔹 开始游戏
     const handleStartGame = async () => {
         try {
             setLoading(true);
@@ -198,7 +219,6 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     };
 
-    // 🔹 发送指令（包括点击 ACTION 按钮）
     const handleSend = async (actionText?: string) => {
         const text = actionText || inputValue.trim();
         if (!text || !sessionId) return;
