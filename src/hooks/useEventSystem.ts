@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useGameData } from './useGameData';
 
 interface EventOption {
     text: string;
@@ -20,10 +21,21 @@ export const useEventSystem = () => {
     const [activeEvent, setActiveEvent] = useState<EventDef | null>(null);
     const [eventHistory, setEventHistory] = useState<Array<{ id: string; title?: string; timestamp: number }>>([]);
     const [initialEventShown, setInitialEventShown] = useState(false);
+    
+    // 获取后端数据
+    const { backendEvents, backendDataLoaded } = useGameData();
 
     // 载入事件表
     const ensureLoadEvents = async () => {
         if (Object.keys(events).length > 0) return;
+        
+        // 优先使用后端转换的事件数据
+        if (backendDataLoaded && Object.keys(backendEvents).length > 0) {
+            console.log('✅ 使用后端转换的事件数据:', backendEvents);
+            setEvents(backendEvents as Record<string, EventDef>);
+            return;
+        }
+        
         try {
             const res = await fetch('/data/events.json');
             if (res.ok) {
@@ -34,12 +46,12 @@ export const useEventSystem = () => {
                 const fallback: Record<string, EventDef> = {
                     welcome_event: {
                         id: 'welcome_event',
-                        title: '欢迎来到冒险世界',
+                        title: '明末人生模拟器',
                         image: '/data/events/welcome.jpg',
-                        description: '你来到了一个神秘的世界，前方有无数冒险等待着你。作为一位新生的冒险者，你准备好踏上这段旅程了吗？',
+                        description: '天启七年正月十五（1627年2月），你叫陈石，是北直隶顺天府郊外一个佃农之子。时值寒冬，村中炊烟稀落，土地贫瘠，官道上有流民缓缓南迁。朝廷阉党专权，边关烽火不断，山海关外后金铁骑虎视眈眈。\n\n作为家中长子，你深知生活不易。父亲偶尔讲述的军旅故事，在你心中埋下了对外面世界既恐惧又好奇的种子。\n\n在这个动荡的时代，你将如何选择自己的人生道路？',
                         options: [
-                            { text: '开始冒险！', effects: { experience: 10 }, nextEvent: null },
-                            { text: '先了解一下这个世界', effects: { experience: 5 }, nextEvent: null },
+                            { text: '我要改变命运！', effects: { experience: 10 }, nextEvent: null },
+                            { text: '先了解当前局势', effects: { experience: 5 }, nextEvent: null },
                             { text: '我需要更多准备', effects: {}, nextEvent: null },
                         ],
                     },
@@ -50,12 +62,12 @@ export const useEventSystem = () => {
             const fallback: Record<string, EventDef> = {
                 welcome_event: {
                     id: 'welcome_event',
-                    title: '欢迎来到冒险世界',
+                    title: '明末人生模拟器',
                     image: '/data/events/welcome.jpg',
-                    description: '你来到了一个神秘的世界，前方有无数冒险等待着你。作为一位新生的冒险者，你准备好踏上这段旅程了吗？',
+                    description: '天启七年正月十五（1627年2月），你叫陈石，是北直隶顺天府郊外一个佃农之子。时值寒冬，村中炊烟稀落，土地贫瘠，官道上有流民缓缓南迁。朝廷阉党专权，边关烽火不断，山海关外后金铁骑虎视眈眈。\n\n作为家中长子，你深知生活不易。父亲偶尔讲述的军旅故事，在你心中埋下了对外面世界既恐惧又好奇的种子。\n\n在这个动荡的时代，你将如何选择自己的人生道路？',
                     options: [
-                        { text: '开始冒险！', effects: { experience: 10 }, nextEvent: null },
-                        { text: '先了解一下这个世界', effects: { experience: 5 }, nextEvent: null },
+                        { text: '我要改变命运！', effects: { experience: 10 }, nextEvent: null },
+                        { text: '先了解当前局势', effects: { experience: 5 }, nextEvent: null },
                         { text: '我需要更多准备', effects: {}, nextEvent: null },
                     ],
                 },
@@ -87,6 +99,14 @@ export const useEventSystem = () => {
     const closeEvent = () => {
         setActiveEvent(null);
     };
+
+    // 监听后端事件数据变化
+    useEffect(() => {
+        if (backendDataLoaded && Object.keys(backendEvents).length > 0) {
+            console.log('🔄 后端事件数据已加载，更新事件表');
+            setEvents(backendEvents as Record<string, EventDef>);
+        }
+    }, [backendDataLoaded, backendEvents]);
 
     // 进入页面自动弹出初始故事事件
     useEffect(() => {

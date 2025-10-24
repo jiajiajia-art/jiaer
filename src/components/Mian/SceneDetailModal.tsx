@@ -46,7 +46,7 @@ const SceneDetailModal: React.FC<SceneDetailModalProps> = ({
                 
                 <div className={styles.sceneDetailImage}>
                     {scene.background && (
-                        <img src={scene.background} alt="场景图片" />
+                        <img src={`http://localhost:3000${scene.background}`} alt="场景图片" />
                     )}
                 </div>
                 

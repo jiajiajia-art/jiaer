@@ -17,7 +17,9 @@ const NpcModal: React.FC<NpcModalProps> = ({
     scenes = {}
 }) => {
     if (!isOpen || !npc) return null;
-
+    console.log('npc', npc);
+    console.log('scenes', scenes);
+    
     return (
         <div className={styles.modal} onClick={onClose}>
             <div className={`${styles.modalContent} ${styles.npcModalContent}`} onClick={(e) => e.stopPropagation()}>
@@ -25,7 +27,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                 
                 <div className={styles.npcDetailHeader}>
                     <img 
-                        src={npc.icon || '/data/avatars/default.png'} 
+                        src={`http://localhost:3000${npc.icon}` || '/data/avatars/default.png'} 
                         alt="NPC头像" 
                         className={styles.npcDetailAvatar} 
                     />
@@ -64,7 +66,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                                 return (
                                     <div key={npcId} className={styles.relationshipCard}>
                                         <img 
-                                            src={related.icon || '/data/avatars/default.png'} 
+                                            src={`http://localhost:3000${related.avatar}` || '/data/avatars/default.png'} 
                                             alt={related.name} 
                                         />
                                         <div className={styles.relationshipName}>{related.name}</div>

@@ -45,6 +45,9 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
     onUseItem
 }) => {
     if (!isOpen) return null;
+    console.log('inventory', inventory);
+    console.log('onEquipItem', onEquipItem);
+    console.log('onUseItem', onUseItem);
 
     const slotNameMap: Record<keyof EquipmentSlots, string> = {
         head: '头部',
@@ -80,7 +83,7 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                             return (
                                 <div key={slot} className={styles.equipmentSlot} data-slot={slot}>
                                     <img 
-                                        src={eq?.icon || '/data/icons/empty.png'} 
+                                        src={`http://localhost:3000${eq?.icon || '/data/icons/empty.png'}`} 
                                         alt={slotNameMap[slot]} 
                                     />
                                     <span>{eq?.name || slotNameMap[slot]}</span>
@@ -104,7 +107,7 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                                 style={{ cursor: (item.usable || item.equippable) ? 'pointer' : 'default' }}
                             >
                                 <img 
-                                    src={item.icon || '/data/icons/empty.png'} 
+                                    src={`http://localhost:3000${item.icon}` || '/data/icons/empty.png'} 
                                     alt={item.name || item.id} 
                                 />
                                 <div className={styles.itemName}>{item.name || item.id}</div>

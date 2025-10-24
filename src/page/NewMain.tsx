@@ -350,7 +350,7 @@ const NewMain: React.FC = () => {
                         <div className={styles.sceneHero} onClick={() => { if (currentSceneId) { setSceneDetailId(currentSceneId); setSceneDetailOpen(true); } }}>
                             <div className={styles.sceneVisual}>
                                 {currentSceneId && scenes[currentSceneId]?.background && (
-                                    <img id="sceneImage" src={scenes[currentSceneId].background} alt="场景图片" />
+                                    <img id="sceneImage" src={`http://localhost:3000${scenes[currentSceneId].background}`} alt="场景图片" />
                                 )}
                             </div>
                             <div className={styles.sceneDescription}>
@@ -364,7 +364,7 @@ const NewMain: React.FC = () => {
                                     ? scenes[currentSceneId].buildings
                                     : []).map((b: any) => (
                                         <div key={b.id} className={styles.buildingCard} onClick={() => handleBuildingClick(b)}>
-                                            <img src={b.icon || '/data/icons/empty.png'} alt={b.name} />
+                                            <img src={`http://localhost:3000${b.icon || '/data/icons/empty.png'}`} alt={b.name} />
                                             <h4>{b.name}</h4>
                                             <p>{b.description}</p>
                                         </div>
@@ -379,7 +379,7 @@ const NewMain: React.FC = () => {
                             <div id="npcsList" className={styles.npcsGrid}>
                                 {(currentSceneId && scenes[currentSceneId]?.npcs?.length ? scenes[currentSceneId].npcs : []).map((n: any) => (
                                     <div key={n.id} className={styles.npcCard} onClick={() => { setNpcDetail(n); setNpcModalOpen(true); }}>
-                                        <img src={n.icon || '/data/avatars/default.png'} alt={n.name} />
+                                        <img src={`http://localhost:3000${n.icon || '/data/avatars/default.png'}`} alt={n.name} />
                                         <h4>{n.name}</h4>
                                         <p>{n.description}</p>
                                     </div>

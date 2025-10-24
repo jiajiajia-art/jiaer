@@ -123,8 +123,14 @@ const Home: React.FC = () => {
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.type !== 'application/pdf') {
-                alert('请上传PDF格式的文件！');
+            // 检查文件类型：支持PDF和DOCX
+            const allowedTypes = [
+                'application/pdf',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+            
+            if (!allowedTypes.includes(file.type)) {
+                alert('请上传PDF或DOCX格式的文件！');
                 return;
             }
             if (file.size > 10 * 1024 * 1024) {
@@ -133,7 +139,7 @@ const Home: React.FC = () => {
             }
             console.log('file', file);
             setUploadedFile(file);
-            uploadPdf(file);
+            uploadDocument(file);
         }
     };
 
@@ -160,9 +166,9 @@ const Home: React.FC = () => {
     };
 
     /**
-     * 上传PDF文件到后端
+     * 上传文档文件到后端（支持PDF和DOCX）
      */
-    const uploadPdf = async (file: File) => {
+    const uploadDocument = async (file: File) => {
         setIsUploadingPdf(true);
         setUploadProgress(0);
         setUploadSuccess(false);
@@ -177,6 +183,7 @@ const Home: React.FC = () => {
         }, 1000); // 每秒更新一次
 
         const formData = new FormData();
+        // 统一使用pdf字段名，后端可以处理PDF和DOCX
         formData.append('pdf', file);
 
         try {
@@ -196,13 +203,15 @@ const Home: React.FC = () => {
                 setUploadSuccess(true);
             } else {
                 const errorData = await response.json();
-                alert(`PDF 文件上传失败: ${errorData.message || response.statusText}`);
+                const fileType = file.type === 'application/pdf' ? 'PDF' : 'DOCX';
+                alert(`${fileType} 文件上传失败: ${errorData.message || response.statusText}`);
                 // 上传失败时清除文件
                 removeFile();
             }
         } catch (error) {
-            console.error('PDF 文件上传失败:', error);
-            alert('PDF 文件上传时发生网络错误');
+            console.error('文档文件上传失败:', error);
+            const fileType = file.type === 'application/pdf' ? 'PDF' : 'DOCX';
+            alert(`${fileType} 文件上传时发生网络错误`);
             // 网络错误时也清除文件
             removeFile();
         } finally {
@@ -230,8 +239,14 @@ const Home: React.FC = () => {
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             const file = files[0];
-            if (file.type !== 'application/pdf') {
-                alert('请上传PDF格式的文件！');
+            // 检查文件类型：支持PDF和DOCX
+            const allowedTypes = [
+                'application/pdf',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+            
+            if (!allowedTypes.includes(file.type)) {
+                alert('请上传PDF或DOCX格式的文件！');
                 return;
             }
             if (file.size > 10 * 1024 * 1024) {
@@ -239,7 +254,7 @@ const Home: React.FC = () => {
                 return;
             }
             setUploadedFile(file);
-            uploadPdf(file);
+            uploadDocument(file);
             // 移除手动设置file input，因为现在文件会直接上传
         }
     };
@@ -252,14 +267,14 @@ const Home: React.FC = () => {
 
         // 验证文件是否已选择
         if (!uploadedFile) {
-            alert('请先选择PDF文件');
+            alert('请先选择文档文件');
             return;
         }
 
-        // 验证PDF文件ID是否存在
+        // 验证文档文件ID是否存在
         const pdfFileId = useGameStore.getState().pdfFileId;
         if (!pdfFileId) {
-            alert('PDF文件正在处理中，请稍后再试');
+            alert('文档文件正在处理中，请稍后再试');
             return;
         }
 
@@ -434,7 +449,7 @@ const Home: React.FC = () => {
                             </div>
 
                             <div className={styles.formGroup}>
-                                <label htmlFor="gamePDF">游戏内容文档 (PDF) *</label>
+                                <label htmlFor="gamePDF">游戏内容文档 (PDF/DOCX) *</label>
                                 <div
                                     className={`${styles.fileUploadArea} ${isDragover ? styles.fileUploadAreaDragover : ''}`}
                                     onClick={() => fileInputRef.current?.click()}
@@ -447,15 +462,15 @@ const Home: React.FC = () => {
                                         type="file"
                                         id="gamePDF"
                                         name="gamePDF"
-                                        accept=".pdf"
+                                        accept=".pdf,.docx"
                                         hidden
                                         onChange={handleFileSelect}
                                     />
                                     {!uploadedFile ? (
                                         <div className={styles.uploadPlaceholder}>
                                             <span className={styles.uploadIcon}>📄</span>
-                                            <p className={styles.uploadText}>点击或拖拽PDF文件到此处</p>
-                                            <p className={styles.uploadHint}>支持 PDF 格式，最大 10MB</p>
+                                            <p className={styles.uploadText}>点击或拖拽文档文件到此处</p>
+                                            <p className={styles.uploadHint}>支持 PDF 和 DOCX 格式，最大 10MB</p>
                                         </div>
                                     ) : (
                                         <>

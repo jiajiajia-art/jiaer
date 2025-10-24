@@ -34,7 +34,7 @@ const EventModal: React.FC<EventModalProps> = ({
             <div className={styles.modalContent}>
                 <div className={styles.eventImage}>
                     {event.image && (
-                        <img src={event.image} alt="事件图片" />
+                        <img src={`http://localhost:3000${event.image}`} alt="事件图片" />
                     )}
                 </div>
                 <div className={styles.eventDescription}>

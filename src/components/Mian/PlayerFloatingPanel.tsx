@@ -37,6 +37,8 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
     player
 }) => {
     if (!isOpen) return null;
+    console.log('player', player);
+    
 
     return (
         <div className={styles.playerFloatingPanel}>
@@ -48,7 +50,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <div className={styles.playerInfo}>
                     <div className={styles.playerAvatar}>
                         <img 
-                            src={player?.profile.avatar || '/data/avatars/default.png'} 
+                            src={`http://localhost:3000${player?.profile.avatar }`|| '/data/avatars/default.png'} 
                             alt="角色头像" 
                         />
                     </div>

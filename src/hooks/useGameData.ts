@@ -77,6 +77,7 @@ export const useGameData = () => {
     const [currentSceneId, setCurrentSceneId] = useState<string>('');
     const [backendDataLoaded, setBackendDataLoaded] = useState(false);
     const [backendLore, setBackendLore] = useState<any>(null);
+    const [backendEvents, setBackendEvents] = useState<Record<string, any>>({});
     
     const pdfFileId = useGameStore((s) => s.pdfFileId);
 
@@ -104,7 +105,43 @@ export const useGameData = () => {
                 console.log('⚠️ 后端未提供世界观数据，将使用本地数据');
             }
 
-            // 3) 物品定义映射
+            // 3) 关键事件数据（从 lore.keyEvents 字段）
+            if (root.lore && root.lore.keyEvents && Array.isArray(root.lore.keyEvents)) {
+                console.log('✅ 后端提供了关键事件数据:', root.lore.keyEvents);
+                const convertedEvents: Record<string, any> = {};
+                root.lore.keyEvents.forEach((event: any, index: number) => {
+                    const eventId = `key_event_${index}`;
+                    convertedEvents[eventId] = {
+                        id: eventId,
+                        title: event.title,
+                        image: '/data/events/historical.jpg',
+                        description: `${event.year}\n\n${event.description}`,
+                        options: [
+                            { text: '了解详情', effects: { experience: 5 }, nextEvent: null },
+                            { text: '继续观察', effects: { experience: 2 }, nextEvent: null },
+                            { text: '暂时忽略', effects: {} },
+                        ],
+                    };
+                });
+                // 添加欢迎事件
+                convertedEvents['welcome_event'] = {
+                    id: 'welcome_event',
+                    title: '明末人生模拟器',
+                    image: '/data/events/welcome.jpg',
+                    description: '天启七年正月十五（1627年2月），你叫陈石，是北直隶顺天府郊外一个佃农之子。时值寒冬，村中炊烟稀落，土地贫瘠，官道上有流民缓缓南迁。朝廷阉党专权，边关烽火不断，山海关外后金铁骑虎视眈眈。\n\n作为家中长子，你深知生活不易。父亲偶尔讲述的军旅故事，在你心中埋下了对外面世界既恐惧又好奇的种子。\n\n在这个动荡的时代，你将如何选择自己的人生道路？',
+                    options: [
+                        { text: '我要改变命运！', effects: { experience: 10 }, nextEvent: null },
+                        { text: '先了解当前局势', effects: { experience: 5 }, nextEvent: null },
+                        { text: '我需要更多准备', effects: {}, nextEvent: null },
+                    ],
+                };
+                setBackendEvents(convertedEvents);
+                console.log('🔄 已转换关键事件为游戏事件:', Object.keys(convertedEvents));
+            } else {
+                console.log('⚠️ 后端未提供关键事件数据，将使用本地事件数据');
+            }
+
+            // 4) 物品定义映射
             const itemDefs: Record<string, any> = (root.items && typeof root.items === 'object') ? root.items : {};
             const mapItem = (id: string | null | undefined): any => {
                 if (!id) return null;
@@ -122,7 +159,7 @@ export const useGameData = () => {
                 };
             };
 
-            // 3) 玩家
+            // 5) 玩家
             if (root.player && typeof root.player === 'object') {
                 const p = root.player;
                 // 装备槽：字符串 ID -> Item 对象
@@ -314,6 +351,7 @@ export const useGameData = () => {
         currentSceneId,
         setCurrentSceneId,
         backendDataLoaded,
-        backendLore
+        backendLore,
+        backendEvents
     };
 };
