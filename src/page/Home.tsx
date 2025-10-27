@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import styles from './Home.module.css';
 import { useGameStore } from '../store/gameStore';
 import { useNavigate } from 'react-router-dom';
+import { HOST_ADDRESS } from '../config';
 // import { Link } from "react-router-dom"; // 不再需要
 
 // 定义游戏数据接口
@@ -187,7 +188,7 @@ const Home: React.FC = () => {
         formData.append('pdf', file);
 
         try {
-            const response = await fetch('http://localhost:3000/api/backend/pdf/upload-and-process', {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/pdf/upload-and-process`, {
                 method: 'POST',
                 body: formData
             });

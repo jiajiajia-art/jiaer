@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './InventoryFloatingPanel.module.css';
+import { HOST_ADDRESS } from '../../config';
 
 interface Item {
     id: string;
@@ -83,7 +84,7 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                             return (
                                 <div key={slot} className={styles.equipmentSlot} data-slot={slot}>
                                     <img 
-                                        src={`http://localhost:3000${eq?.icon || '/data/icons/empty.png'}`} 
+                                        src={`${HOST_ADDRESS}${eq?.icon}` || '/data/icons/empty.png'}
                                         alt={slotNameMap[slot]} 
                                     />
                                     <span>{eq?.name || slotNameMap[slot]}</span>
@@ -107,7 +108,7 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                                 style={{ cursor: (item.usable || item.equippable) ? 'pointer' : 'default' }}
                             >
                                 <img 
-                                    src={`http://localhost:3000${item.icon}` || '/data/icons/empty.png'} 
+                                    src={`${HOST_ADDRESS}${item.icon}` || '/data/icons/empty.png'} 
                                     alt={item.name || item.id} 
                                 />
                                 <div className={styles.itemName}>{item.name || item.id}</div>

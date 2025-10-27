@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './EventModal.module.css';
+import { HOST_ADDRESS } from '../../config';
 
 interface EventOption {
     text: string;
@@ -28,13 +29,15 @@ const EventModal: React.FC<EventModalProps> = ({
     onOptionSelect
 }) => {
     if (!isOpen || !event) return null;
+    console.log("event",event);
+    
 
     return (
         <div className={styles.modal}>
             <div className={styles.modalContent}>
                 <div className={styles.eventImage}>
                     {event.image && (
-                        <img src={`http://localhost:3000${event.image}`} alt="事件图片" />
+                        <img src={`${HOST_ADDRESS}${event.image}`} alt="事件图片" />
                     )}
                 </div>
                 <div className={styles.eventDescription}>

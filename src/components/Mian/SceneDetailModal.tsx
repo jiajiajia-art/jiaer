@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './SceneDetailModal.module.css';
+import { HOST_ADDRESS } from '../../config';
 
 interface SceneDetailModalProps {
     isOpen: boolean;
@@ -46,7 +47,7 @@ const SceneDetailModal: React.FC<SceneDetailModalProps> = ({
                 
                 <div className={styles.sceneDetailImage}>
                     {scene.background && (
-                        <img src={`http://localhost:3000${scene.background}`} alt="场景图片" />
+                        <img src={`${HOST_ADDRESS}${scene.background}`} alt="场景图片" />
                     )}
                 </div>
                 

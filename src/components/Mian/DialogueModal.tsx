@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './DialogueModal.module.css';
+import { HOST_ADDRESS } from '../../config';
 import { useGameStore } from '../../store/gameStore';
 import ReactMarkdown from 'react-markdown';
 
@@ -44,7 +45,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
 
         try {
-            const response = await fetch('http://localhost:3000/api/backend/game/session/create', {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -198,7 +199,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             ]);
 
             const response = await fetch(
-                `http://localhost:3000/api/backend/game/session/${newSessionId}/stream/action-live`,
+                `${HOST_ADDRESS}/api/backend/game/session/${newSessionId}/stream/action-live`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -229,7 +230,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         try {
             setLoading(true);
             const response = await fetch(
-                `http://localhost:3000/api/backend/game/session/${sessionId}/stream/action-live`,
+                `${HOST_ADDRESS}/api/backend/game/session/${sessionId}/stream/action-live`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

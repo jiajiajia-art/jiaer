@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './NpcModal.module.css';
+import { HOST_ADDRESS } from '../../config';
 
 interface NpcModalProps {
     isOpen: boolean;
@@ -27,7 +28,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                 
                 <div className={styles.npcDetailHeader}>
                     <img 
-                        src={`http://localhost:3000${npc.icon}` || '/data/avatars/default.png'} 
+                        src={`${HOST_ADDRESS}${npc.icon}` || '/data/avatars/default.png'} 
                         alt="NPC头像" 
                         className={styles.npcDetailAvatar} 
                     />
@@ -66,7 +67,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                                 return (
                                     <div key={npcId} className={styles.relationshipCard}>
                                         <img 
-                                            src={`http://localhost:3000${related.avatar}` || '/data/avatars/default.png'} 
+                                            src={`${HOST_ADDRESS}${related.avatar}` || '/data/avatars/default.png'} 
                                             alt={related.name} 
                                         />
                                         <div className={styles.relationshipName}>{related.name}</div>

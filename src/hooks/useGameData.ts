@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { HOST_ADDRESS } from '../config';
 
 // 类型定义
 export interface PlayerProfile {
@@ -317,7 +318,7 @@ export const useGameData = () => {
             // 有 pdfFileId 时优先尝试从后端获取
             if (pdfFileId) {
                 try {
-                    const url = `http://localhost:3000/api/backend/files/${pdfFileId}`;
+                    const url = `${HOST_ADDRESS}/api/backend/files/${pdfFileId}`;
                     const res = await fetch(url);
                     const contentType = res.headers.get('content-type') || '';
                     if (res.ok && contentType.includes('application/json')) {

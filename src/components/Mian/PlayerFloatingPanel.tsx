@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './PlayerFloatingPanel.module.css';
+import { HOST_ADDRESS } from '../../config';
 
 interface PlayerProfile {
     avatar: string;
@@ -50,7 +51,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <div className={styles.playerInfo}>
                     <div className={styles.playerAvatar}>
                         <img 
-                            src={`http://localhost:3000${player?.profile.avatar }`|| '/data/avatars/default.png'} 
+                            src={`${HOST_ADDRESS}${player?.profile.avatar}` || '/data/avatars/default.png'} 
                             alt="角色头像" 
                         />
                     </div>
