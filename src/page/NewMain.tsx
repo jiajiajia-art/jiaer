@@ -162,81 +162,120 @@ const NewMain: React.FC = () => {
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
-    // 地图布局：与 Main.html 完全一致的算法
+    // 地图布局：优化算法避免节点重合
     const computePositions = (m: ScenesMap): Record<string, { x: number; y: number }> => {
         const ids = Object.keys(m);
         const positions: Record<string, { x: number; y: number }> = {};
         if (ids.length === 0) return positions;
 
-        // 1) 先用网格初始化所有位置
-        const gridSize = Math.ceil(Math.sqrt(ids.length));
-        const cellWidth = 1000 / (gridSize + 1);
-        const cellHeight = 800 / (gridSize + 1);
-        ids.forEach((id, index) => {
-            const row = Math.floor(index / gridSize);
-            const col = index % gridSize;
-            positions[id] = {
-                x: (col + 1) * cellWidth,
-                y: (row + 1) * cellHeight
-            };
-        });
-
-        // 2) 基于方向关系优化位置（从第一个场景开始）
+        // 方向偏移量
         const directionOffsets: Record<string, { x: number; y: number }> = {
-            north: { x: 0, y: -150 },
-            south: { x: 0, y: 150 },
-            east: { x: 150, y: 0 },
-            west: { x: -150, y: 0 },
-            northeast: { x: 120, y: -120 },
-            northwest: { x: -120, y: -120 },
-            southeast: { x: 120, y: 120 },
-            southwest: { x: -120, y: 120 },
-            up: { x: 0, y: -120 },
-            down: { x: 0, y: 120 },
+            north: { x: 0, y: -180 },
+            south: { x: 0, y: 180 },
+            east: { x: 180, y: 0 },
+            west: { x: -180, y: 0 },
+            northeast: { x: 150, y: -150 },
+            northwest: { x: -150, y: -150 },
+            southeast: { x: 150, y: 150 },
+            southwest: { x: -150, y: 150 },
+            up: { x: 0, y: -160 },
+            down: { x: 0, y: 160 },
         };
 
+        // 碰撞检测函数
+        const hasCollision = (x: number, y: number, excludeId?: string): boolean => {
+            for (const [id, pos] of Object.entries(positions)) {
+                if (excludeId && id === excludeId) continue;
+                const distance = Math.sqrt((pos.x - x) ** 2 + (pos.y - y) ** 2);
+                if (distance < 120) return true; // 最小间距
+            }
+            return false;
+        };
+
+        // 寻找空闲位置（螺旋搜索）
+        const findFreePosition = (centerX: number, centerY: number): { x: number; y: number } => {
+            let angle = 0;
+            let radius = 150;
+            let attempts = 0;
+            const maxAttempts = 20;
+
+            while (attempts < maxAttempts) {
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                if (!hasCollision(x, y)) {
+                    return { x, y };
+                }
+                
+                angle += Math.PI / 4; // 每45度尝试一次
+                if (angle >= Math.PI * 2) {
+                    angle = 0;
+                    radius += 80; // 扩大搜索半径
+                }
+                attempts++;
+            }
+            // 如果找不到，返回随机位置
+            return { x: centerX + Math.random() * 200 - 100, y: centerY + Math.random() * 200 - 100 };
+        };
+
+        // 使用BFS遍历并布局场景
         const visited = new Set<string>();
         const queue = [ids[0]];
+        
         // 设置起始场景在中心
         if (queue[0]) {
             positions[queue[0]] = { x: 500, y: 400 };
+            visited.add(queue[0]);
         }
 
         while (queue.length > 0) {
             const currentId = queue.shift() as string;
-            if (visited.has(currentId)) continue;
-            visited.add(currentId);
-
             const scene = m[currentId];
             const currentPos = positions[currentId];
-            if (!scene || !currentPos) continue;
+            
+            if (!scene || !currentPos || !scene.exits) continue;
 
-            if (scene.exits) {
-                Object.entries(scene.exits).forEach(([direction, targetId]) => {
-                    if (!visited.has(targetId) && m[targetId]) {
-                        const offset = directionOffsets[direction] || { x: 100, y: 100 };
-                        positions[targetId] = {
-                            x: currentPos.x + offset.x,
-                            y: currentPos.y + offset.y
-                        };
-                        queue.push(targetId);
-                    }
-                });
-            }
+            // 处理所有出口
+            Object.entries(scene.exits).forEach(([direction, targetId]) => {
+                if (visited.has(targetId) || !m[targetId]) return;
+
+                const offset = directionOffsets[direction] || { x: 150, y: 150 };
+                let targetX = currentPos.x + offset.x;
+                let targetY = currentPos.y + offset.y;
+
+                // 检查是否有碰撞，如果有则调整位置
+                if (hasCollision(targetX, targetY)) {
+                    const freePos = findFreePosition(currentPos.x, currentPos.y);
+                    targetX = freePos.x;
+                    targetY = freePos.y;
+                }
+
+                positions[targetId] = { x: targetX, y: targetY };
+                visited.add(targetId);
+                queue.push(targetId);
+            });
         }
 
-        // 3) 边界检查与自动缩放到 viewBox 范围内
+        // 处理未访问的场景（孤立节点）
+        ids.forEach(id => {
+            if (!visited.has(id)) {
+                positions[id] = findFreePosition(500, 400);
+            }
+        });
+
+        // 边界检查和缩放
         const allPos = Object.values(positions);
         if (allPos.length === 0) return positions;
+        
         const minX = Math.min(...allPos.map(p => p.x));
         const maxX = Math.max(...allPos.map(p => p.x));
         const minY = Math.min(...allPos.map(p => p.y));
         const maxY = Math.max(...allPos.map(p => p.y));
 
-        const margin = 100; // 留白边距
+        const margin = 80;
         const scaleX = (1000 - 2 * margin) / Math.max(1, maxX - minX);
         const scaleY = (800 - 2 * margin) / Math.max(1, maxY - minY);
-        const scale = Math.min(scaleX, scaleY, 1); // 不放大，只缩小
+        const scale = Math.min(scaleX, scaleY, 1);
 
         // 应用缩放与居中
         Object.keys(positions).forEach(id => {
@@ -393,13 +432,19 @@ const NewMain: React.FC = () => {
                         <div className={styles.sceneExits}>
                             <h3>场景出口</h3>
                             <div id="exitsList" className={styles.exitsGrid}>
-                                {currentSceneId && scenes[currentSceneId] && Object.entries(scenes[currentSceneId].exits || {}).map(([direction, targetId]) => (
-                                    <div key={direction} className={styles.exitCard} onClick={() => setCurrentSceneId(targetId)}>
-                                        <span className={styles.exitDirection}>{direction}</span>
-                                        <h4>{scenes[targetId]?.name || '未知'}</h4>
-                                        <p>{scenes[targetId]?.description ? `${scenes[targetId].description.substring(0, 50)}...` : '未知区域'}</p>
-                                    </div>
-                                ))}
+                                {currentSceneId && scenes[currentSceneId] && Object.entries(scenes[currentSceneId].exits || {})
+                                    .filter(([_, targetId]) => scenes[targetId]) // 只显示目标场景存在的情况
+                                    .map(([direction, targetId]) => {
+                                        const targetScene = scenes[targetId];
+                                        console.log('出口信息:', { direction, targetId, targetScene });
+                                        return (
+                                            <div key={direction} className={styles.exitCard} onClick={() => setCurrentSceneId(targetId)}>
+                                                <span className={styles.exitDirection}>{direction}</span>
+                                                <h4>{targetScene.name}</h4>
+                                                <p>{targetScene.description ? `${targetScene.description.substring(0, 50)}...` : '暂无描述'}</p>
+                                            </div>
+                                        );
+                                    })}
                                 {currentSceneId && scenes[currentSceneId] && Object.keys(scenes[currentSceneId].exits || {}).length === 0 && (
                                     <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#666' }}>没有出口</p>
                                 )}
