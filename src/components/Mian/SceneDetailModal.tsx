@@ -30,7 +30,7 @@ const SceneDetailModal: React.FC<SceneDetailModalProps> = ({
     };
 
     const travelCost = computeTravelCost(scene);
-    const playerGold = player?.currency?.gold ?? 0;
+    const playerGold = player?.currency?.gold ?? 50;
 
     const handleTravel = () => {
         if (playerGold < travelCost) {
