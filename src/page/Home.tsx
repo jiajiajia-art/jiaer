@@ -129,7 +129,7 @@ const Home: React.FC = () => {
                 'application/pdf',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             ];
-            
+
             if (!allowedTypes.includes(file.type)) {
                 alert('请上传PDF或DOCX格式的文件！');
                 return;
@@ -245,7 +245,7 @@ const Home: React.FC = () => {
                 'application/pdf',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             ];
-            
+
             if (!allowedTypes.includes(file.type)) {
                 alert('请上传PDF或DOCX格式的文件！');
                 return;
@@ -488,19 +488,23 @@ const Home: React.FC = () => {
                                                 </button>
 
                                             </div>
-                                            {isUploadingPdf && (
-                                                <div className={styles.progressContainer}>
+                                            {/* {isUploadingPdf && ( */}
+                                            <div className={styles.progressContainer}>
+                                                {
+                                                    isUploadingPdf &&
                                                     <div className={styles.progressBar}>
                                                         <div
                                                             className={`${styles.progressFill} ${uploadSuccess ? styles.progressSuccess : ''}`}
                                                             style={{ width: `${uploadProgress}%` }}
                                                         ></div>
                                                     </div>
-                                                    <div className={styles.progressText}>
-                                                        {uploadSuccess ? '✅ 上传完成' : `⏳ 上传中... ${Math.round(uploadProgress)}%`}
-                                                    </div>
+                                                }
+                                                <div className={styles.progressText}>
+                                                    {uploadSuccess ? '✅ 上传完成' : `⏳ 上传中... ${Math.round(uploadProgress)}%`}
                                                 </div>
-                                            )}</>
+                                            </div>
+                                            {/* )} */}
+                                        </>
                                     )}
                                 </div>
                             </div>
