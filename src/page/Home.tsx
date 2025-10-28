@@ -43,7 +43,7 @@ const Home: React.FC = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadSuccess, setUploadSuccess] = useState(false);
 
-    const { setPdfFileId } = useGameStore();
+    const { pdfFileId,setPdfFileId, sessionId, setSessionId } = useGameStore();
     const navigator = useNavigate();
 
     // 使用ref来引用DOM元素
@@ -311,6 +311,46 @@ const Home: React.FC = () => {
         loadGamesData();
     }, []);
 
+    const createSession = async (): Promise<string | null> => {
+            if (!pdfFileId) {
+            console.error('没有 pdfFileId，无法创建 session');
+            return null;
+        }
+
+        try {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileId: pdfFileId,
+                    playerName: '玩家'
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Session 创建成功:', data);
+                return data.sessionId || data.id;
+            } else {
+                console.error('❌ Session 创建失败:', response.statusText);
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Session 创建错误:', error);
+            return null;
+        }
+    };
+
+    const handleCreateGame = async () => {
+        const sessionId = await createSession();
+        setSessionId(sessionId);
+        if (sessionId) {
+            navigator('/newmain');
+        } else {
+            alert('创建游戏失败，请重试');
+        }
+    };
+
     return (
         <div className={styles.bodyContainer}>
             <div className={styles.container}>
@@ -521,6 +561,7 @@ const Home: React.FC = () => {
                                     type="submit"
                                     className={`${styles.btn} ${styles.btnPrimary}`}
                                     disabled={isUploadingPdf}
+                                    onClick={handleCreateGame}
                                 >
                                     {isUploadingPdf ? '⏳ 正在上传...' : '🚀 创建游戏'}
                                 </button>
