@@ -230,7 +230,7 @@ export const useGameData = () => {
                     profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者', ...(playerData.profile || {}) },
                     stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8, ...(playerData.stats || {}) },
                     experience: { current: 0, required: 100, ...(playerData.experience || {}) },
-                    currency: { gold: 100, ...(playerData.currency || {}) },
+                    currency: { gold: 100, ...(playerData || {}) },
                 };
                 setPlayer(merged);
                 if (playerData.inventory) {

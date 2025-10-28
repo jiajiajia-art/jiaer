@@ -30,10 +30,12 @@ const SceneDetailModal: React.FC<SceneDetailModalProps> = ({
     };
 
     const travelCost = computeTravelCost(scene);
-    const playerGold = player?.currency?.gold ?? 50;
+    const playerGold = 500;
 
     const handleTravel = () => {
         if (playerGold < travelCost) {
+            console.log(player);
+            
             alert(`金币不足！需要 ${travelCost} 金币`);
             return;
         }
