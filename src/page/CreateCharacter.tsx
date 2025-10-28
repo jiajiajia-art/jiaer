@@ -152,7 +152,7 @@ const CreateCharacter: React.FC = () => {
 
     // 点击“立即开始游戏”时清空 GameStore
     const handleStartGame = () => {
-        useGameStore.getState().clearPdfFile();
+        useGameStore.getState().clearAll();
     };
 
     return (
