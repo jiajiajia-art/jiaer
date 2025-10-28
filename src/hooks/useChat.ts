@@ -17,25 +17,6 @@ export const useChat = () => {
     const handleStartChatWithNpc = (npc: any) => {
         setCurrentChatNpc(npc);
         setChatOpen(true);
-        // 系统提示：开始与 NPC 对话
-        if (chatMessages.length > 0) {
-            console.log('聊天历史不为空，不重复开始对话');
-            return;
-        }
-        setChatMessages((msgs) => [...msgs,
-        { role: 'assistant', text: '欢迎来到游戏世界！' },
-        { role: 'assistant', text: `━━━ 开始与 ${npc.name}${npc.job || npc.role ? `（${npc.job || npc.role}）` : ''} 对话 ━━━` }
-        ]);
-        // NPC 开场白（随机）
-
-        const greetings = [
-            `${npc.name}: "你好，冒险者！有什么我可以帮助你的吗？"`,
-            `${npc.name}: "欢迎！很高兴见到你。"`,
-            `${npc.name}: "你找我有什么事吗？"`,
-            `${npc.name}: "看起来你是个有趣的冒险者。"`
-        ];
-        const greet = greetings[Math.floor(Math.random() * greetings.length)];
-        setChatMessages((msgs) => [...msgs, { role: 'assistant', text: greet }]);
     };
 
     const chatWithNpc = async (sessionId: string, npc: any, text: string) => {
@@ -123,9 +104,14 @@ export const useChat = () => {
             if (response.ok) {
                 const data = await response.json();
                 // 确保后端返回的是数组格式
-                if (Array.isArray(data.history) && data.history.length > 0) {
+                if (Array.isArray(data.history)) {
                     console.log('聊天历史数据:', data.history);
                     setChatMessages(data.history.map((item: any) => ({ role: item.role, text: item.content })));
+                    if (data.history.length === 0) {
+                        setChatMessages((msgs) => [...msgs, { role: 'assistant', text: '欢迎来到游戏世界！' },
+                            { role: 'assistant', text: `━━━ 开始与 ${npc.name}${npc.job || npc.role ? `（${npc.job || npc.role}）` : ''} 对话 ━━━` }
+                        ]);
+                    }
                 }
             } else {
                 console.error('Failed to load chat history:', response.statusText);
