@@ -73,7 +73,7 @@ export interface NPC {
     age: number;
     avatar: string;
     description: string;
-    relationships: Relationship[];
+    relationships: number;
 }
 
 export interface Relationship {

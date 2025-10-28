@@ -53,32 +53,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                 </div>
 
                 <div className={styles.npcRelationships}>
-                    <h3>人际关系</h3>
-                    <div className={styles.relationshipsGrid}>
-                        {npc.relationships && Object.keys(npc.relationships).length > 0 ? (
-                            Object.entries(npc.relationships).map(([npcId, relation]: any) => {
-                                const allNPCs: Record<string, any> = {};
-                                Object.values(scenes).forEach((sc: any) => 
-                                    (sc.npcs || []).forEach((n: any) => (allNPCs[n.id] = n))
-                                );
-                                const related = allNPCs[npcId];
-                                if (!related) return null;
-                                
-                                return (
-                                    <div key={npcId} className={styles.relationshipCard}>
-                                        <img 
-                                            src={`${HOST_ADDRESS}${related.avatar}` || '/data/avatars/default.png'} 
-                                            alt={related.name} 
-                                        />
-                                        <div className={styles.relationshipName}>{related.name}</div>
-                                        <div className={styles.relationshipType}>{relation}</div>
-                                    </div>
-                                );
-                            })
-                        ) : (
-                            <p className={styles.noRelationships}>暂无人际关系</p>
-                        )}
-                    </div>
+                    <h3>好感度：{npc.relationships}</h3>
                 </div>
 
                 <div className={styles.npcActions}>
