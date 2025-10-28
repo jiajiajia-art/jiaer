@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import styles from './NewMain.module.css';
 import { HOST_ADDRESS } from '../config';
 import { useEventSystem } from '../hooks/useEventSystem';
 import { useGameData, type PlayerStats, type InventoryState, type ScenesMap } from '../hooks/useGameData';
-import { useChat } from '../hooks/useChat';
+import { useChat, type ChatMessage } from '../hooks/useChat';
 import { useLore } from '../hooks/useLore';
 import { useInventory } from '../hooks/useInventory';
 import DialogueModal from '../components/Mian/DialogueModal';
@@ -12,6 +12,8 @@ import SceneDetailModal from '../components/Mian/SceneDetailModal';
 import EventModal from '../components/Mian/EventModal';
 import PlayerFloatingPanel from '../components/Mian/PlayerFloatingPanel';
 import InventoryFloatingPanel from '../components/Mian/InventoryFloatingPanel';
+import { useGameStore } from '../store/gameStore';
+import ReactMarkdown from 'react-markdown';
 
 declare global {
     interface Window {
@@ -27,7 +29,7 @@ declare global {
 const NewMain: React.FC = () => {
     // 使用自定义 hooks
     const { player, setPlayer, inventory, setInventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore } = useGameData();
-    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, sendChat, handleStartChatWithNpc } = useChat();
+    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
     const { gameTimeText, worldLoreHtml, playerLoreHtml, ensureLoadLore, updateLoreFromBackend, updateLoreFromLocal } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
     const { events, activeEvent, setActiveEvent, eventHistory, setEventHistory, triggerEventById, closeEvent, ensureLoadEvents } = useEventSystem();
@@ -39,14 +41,40 @@ const NewMain: React.FC = () => {
     const [npcModalOpen, setNpcModalOpen] = useState(false);
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
 
+    // 添加聊天消息容器的引用
+    const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+    const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
+
+    // 自动滚动到底部的函数
+    const scrollToBottom = () => {
+        if (chatMessagesContainerRef.current) {
+            chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
+        }
+    };
+
+    // 当聊天消息变化时自动滚动
+    useEffect(() => {
+        scrollToBottom();
+    }, [chatMessages]); // 当聊天消息更新时触发
+
+    // 当聊天面板打开时也滚动到底部
+    useEffect(() => {
+        if (chatOpen) {
+            // 稍微延迟确保DOM已经更新
+            setTimeout(() => {
+                scrollToBottom();
+            }, 100);
+        }
+    }, [chatOpen]);
+
     // 事件类型
-    type EventDef = { 
-        id: string; 
-        title: string; 
-        image: string; 
-        description: string; 
-        options: Array<{ text: string; effects?: any; nextEvent?: string | null }>; 
-        conditions?: any 
+    type EventDef = {
+        id: string;
+        title: string;
+        image: string;
+        description: string;
+        options: Array<{ text: string; effects?: any; nextEvent?: string | null }>;
+        conditions?: any
     };
 
     // 更新世界观数据
@@ -91,14 +119,14 @@ const NewMain: React.FC = () => {
                     items.forEach(({ id, quantity }) => {
                         const found = nextInv.items.find((i) => i.id === id);
                         if (quantity > 0) {
-                            if (found) 
-                                found.quantity += quantity; 
+                            if (found)
+                                found.quantity += quantity;
                             else {
                                 nextInv.items.push({ id, quantity });
                             }
                         } else if (quantity < 0 && found) {
                             found.quantity = Math.max(0, found.quantity + quantity);
-                            if (found.quantity === 0) 
+                            if (found.quantity === 0)
                                 nextInv.items = nextInv.items.filter((i) => i.id !== id);
                         }
                     });
@@ -134,8 +162,8 @@ const NewMain: React.FC = () => {
         // 回退：尝试用 eventId 或通用命名匹配事件
         const sceneId = currentSceneId;
         const tryIds: string[] = [];
-        if (building?.eventId) tryIds.push(building.eventId);
-        if (building?.id && sceneId) {
+        if (building.eventId) tryIds.push(building.eventId);
+        if (building.id && sceneId) {
             tryIds.push(`${sceneId}_building_${building.id}`);
             tryIds.push(`building_${building.id}`);
         }
@@ -202,11 +230,11 @@ const NewMain: React.FC = () => {
             while (attempts < maxAttempts) {
                 const x = centerX + Math.cos(angle) * radius;
                 const y = centerY + Math.sin(angle) * radius;
-                
+
                 if (!hasCollision(x, y)) {
                     return { x, y };
                 }
-                
+
                 angle += Math.PI / 4; // 每45度尝试一次
                 if (angle >= Math.PI * 2) {
                     angle = 0;
@@ -221,7 +249,7 @@ const NewMain: React.FC = () => {
         // 使用BFS遍历并布局场景
         const visited = new Set<string>();
         const queue = [ids[0]];
-        
+
         // 设置起始场景在中心
         if (queue[0]) {
             positions[queue[0]] = { x: 500, y: 400 };
@@ -232,7 +260,7 @@ const NewMain: React.FC = () => {
             const currentId = queue.shift() as string;
             const scene = m[currentId];
             const currentPos = positions[currentId];
-            
+
             if (!scene || !currentPos || !scene.exits) continue;
 
             // 处理所有出口
@@ -266,7 +294,7 @@ const NewMain: React.FC = () => {
         // 边界检查和缩放
         const allPos = Object.values(positions);
         if (allPos.length === 0) return positions;
-        
+
         const minX = Math.min(...allPos.map(p => p.x));
         const maxX = Math.max(...allPos.map(p => p.x));
         const minY = Math.min(...allPos.map(p => p.y));
@@ -346,6 +374,29 @@ const NewMain: React.FC = () => {
     const handleEquipItem = (item: any, slot: any) => equipItem(item, slot, setInventory);
     const handleUseItem = (item: any) => useItem(item, player, setPlayer, setInventory);
 
+    const { sessionId } = useGameStore();
+
+    // 包装 chatWithNpc 以适配当前使用方式
+    const handleChatWithNpc = async (text: string) => {
+        if (!sessionId || !npcDetail) {
+            alert('请点击npc与其对话');
+            return;
+        }
+        await chatWithNpc(sessionId, npcDetail, text);
+    };
+
+    const startChatWithNpc = (npc: any) => {
+        setNpcModalOpen(false);
+        if (sessionId) {
+            // 延迟加载历史，确保欢迎消息先显示
+            setTimeout(async () => {
+                await loadChatHistory(sessionId, npc);
+                // 加载历史后滚动到底部
+                setTimeout(scrollToBottom, 200);
+            }, 300);
+        }
+        handleStartChatWithNpc(npc);
+    };
 
     return (
         <div className={styles.gameContainer}>
@@ -389,18 +440,18 @@ const NewMain: React.FC = () => {
                     <div className={styles.sceneContent}>
                         <div className={styles.sceneHero} onClick={() => { if (currentSceneId) { setSceneDetailId(currentSceneId); setSceneDetailOpen(true); } }}>
                             <div className={styles.sceneVisual}>
-                                {currentSceneId && scenes[currentSceneId]?.background && (
+                                {currentSceneId && scenes[currentSceneId].background && (
                                     <img id="sceneImage" src={`${HOST_ADDRESS}${scenes[currentSceneId].background}`} alt="场景图片" />
                                 )}
                             </div>
                             <div className={styles.sceneDescription}>
-                                <p id="sceneDescription">{currentSceneId && scenes[currentSceneId]?.description ? scenes[currentSceneId].description : '欢迎来到文字RPG世界！'}</p>
+                                <p id="sceneDescription">{currentSceneId && scenes[currentSceneId].description ? scenes[currentSceneId].description : '欢迎来到文字RPG世界！'}</p>
                             </div>
                         </div>
                         <div className={styles.sceneBuildings}>
                             <h3>建筑</h3>
                             <div id="buildingsList" className={styles.buildingsGrid}>
-                                {(currentSceneId && scenes[currentSceneId]?.buildings?.length
+                                {(currentSceneId && scenes[currentSceneId].buildings.length
                                     ? scenes[currentSceneId].buildings
                                     : []).map((b: any) => (
                                         <div key={b.id} className={styles.buildingCard} onClick={() => handleBuildingClick(b)}>
@@ -409,7 +460,7 @@ const NewMain: React.FC = () => {
                                             <p>{b.description}</p>
                                         </div>
                                     ))}
-                                {currentSceneId && (!scenes[currentSceneId]?.buildings || scenes[currentSceneId]?.buildings?.length === 0) && (
+                                {currentSceneId && (!scenes[currentSceneId].buildings || scenes[currentSceneId].buildings.length === 0) && (
                                     <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#666' }}>没有建筑</p>
                                 )}
                             </div>
@@ -417,14 +468,14 @@ const NewMain: React.FC = () => {
                         <div className={styles.sceneNpcs}>
                             <h3>NPC</h3>
                             <div id="npcsList" className={styles.npcsGrid}>
-                                {(currentSceneId && scenes[currentSceneId]?.npcs?.length ? scenes[currentSceneId].npcs : []).map((n: any) => (
+                                {(currentSceneId && scenes[currentSceneId].npcs.length ? scenes[currentSceneId].npcs : []).map((n: any) => (
                                     <div key={n.id} className={styles.npcCard} onClick={() => { setNpcDetail(n); setNpcModalOpen(true); }}>
                                         <img src={`${HOST_ADDRESS}${n.icon}` || '/data/avatars/default.png'} alt={n.name} />
                                         <h4>{n.name}</h4>
                                         <p>{n.description}</p>
                                     </div>
                                 ))}
-                                {currentSceneId && (!scenes[currentSceneId]?.npcs || scenes[currentSceneId]?.npcs?.length === 0) && (
+                                {currentSceneId && (!scenes[currentSceneId].npcs || scenes[currentSceneId].npcs.length === 0) && (
                                     <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#666' }}>没有NPC</p>
                                 )}
                             </div>
@@ -501,16 +552,27 @@ const NewMain: React.FC = () => {
                 onOptionSelect={handleEventOption}
             />
 
-            {/* 悬浮聊天面板 */}
+            {/* 悬浮聊天面板 - 添加 ref 支持自动滚动 */}
             <div id="chatPanel" className={styles.chatPanel} style={{ display: chatOpen ? 'flex' : 'none' }}>
                 <div className={styles.chatHeader}>
                     <h3 id="chatTitle">聊天</h3>
                     <button id="closeChatBtn" className={styles.closeChatBtn} onClick={() => setChatOpen(false)}>×</button>
                 </div>
-                <div id="chatMessages" className={styles.chatMessages}>
-                    {chatMessages.map((m, i) => (
-                        <div key={i} className={`${styles.chatMessage} ${m.type === 'system' ? styles.system : ''}`}>{m.text}</div>
-                    ))}
+                <div 
+                    id="chatMessages" 
+                    className={styles.chatMessages}
+                    ref={chatMessagesContainerRef} // 添加引用用于自动滚动
+                >
+                    {chatMessages.map((m, i) =>
+                        <div key={i} className={`${styles.chatMessage} ${m.role === 'assistant' ? styles.system : styles.user}`}>
+                            <span className={styles.chatMessageWrapper}>
+                                <ReactMarkdown>{m.text}</ReactMarkdown>
+                                {m.isTyping && <span className={styles.typingCursor}>|</span>}
+                            </span>
+                        </div>
+                    )}
+                    {/* 添加一个不可见的锚点元素用于滚动 */}
+                    <div ref={chatMessagesEndRef} />
                 </div>
                 <div className={styles.chatInputArea}>
                     <input
@@ -520,9 +582,25 @@ const NewMain: React.FC = () => {
                         placeholder="输入消息..."
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && sendChat()}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && chatInput.trim()) {
+                                handleChatWithNpc(chatInput);
+                                setChatInput('');
+                            }
+                        }}
                     />
-                    <button id="sendChatBtn" className={styles.sendChatBtn} onClick={sendChat}>发送</button>
+                    <button
+                        id="sendChatBtn"
+                        className={styles.sendChatBtn}
+                        onClick={() => {
+                            if (chatInput.trim()) {
+                                handleChatWithNpc(chatInput);
+                                setChatInput('');
+                            }
+                        }}
+                    >
+                        发送
+                    </button>
                 </div>
             </div>
 
@@ -542,16 +620,12 @@ const NewMain: React.FC = () => {
                 player={player}
             />
 
-
             {/* NPC详情弹窗组件 */}
             <NpcModal
                 isOpen={npcModalOpen}
                 onClose={() => setNpcModalOpen(false)}
                 npc={npcDetail}
-                onStartChat={(npc) => {
-                    handleStartChatWithNpc(npc);
-                    setNpcModalOpen(false);
-                }}
+                onStartChat={(npc) => startChatWithNpc(npc)}
                 scenes={scenes}
             />
 

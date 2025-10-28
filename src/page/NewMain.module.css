@@ -776,12 +776,13 @@
     background: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
 }
-
 .chatMessages {
     flex: 1;
     padding: 15px;
     overflow-y: auto;
     background: #f8f9fa;
+    display: flex;
+    flex-direction: column;
 }
 
 .chatMessage {
@@ -792,29 +793,52 @@
     word-wrap: break-word;
 }
 
+.chatMessageWrapper {
+    display: inline-block;
+    width: 100%;
+}
+
 .chatMessage.user {
+    align-self: flex-end;
     background: #4a90e2;
     color: white;
-    margin-left: auto;
-    text-align: right;
+    text-align: left;
+    width: fit-content;
+    max-width: 80%;
 }
 
 .chatMessage.system {
+    align-self: flex-start;
     background: #e9ecef;
     color: #333;
+    text-align: left;
+}
+
+.typingCursor {
+    display: inline-block;
+    animation: blink 1s infinite;
+    font-weight: bold;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
 }
 
 .chatInputArea {
     display: flex;
     gap: 10px;
-    padding: 15px;
+    padding: 10px;
     border-top: 1px solid #ddd;
     background: white;
 }
 
 .chatInput {
     flex: 1;
-    padding: 10px 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 0.9rem;
