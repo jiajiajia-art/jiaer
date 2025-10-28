@@ -1,49 +1,141 @@
 import { useState } from 'react';
+import { HOST_ADDRESS } from '../config';
 
 export interface ChatMessage {
-    type: 'user' | 'system';
+    role: 'user' | 'assistant';
     text: string;
+    isTyping?: boolean;
 }
 
 export const useChat = () => {
     const [chatOpen, setChatOpen] = useState(false);
     const [chatInput, setChatInput] = useState('');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-        { type: 'system', text: '欢迎来到游戏世界！' },
     ]);
     const [currentChatNpc, setCurrentChatNpc] = useState<any | null>(null);
-
-    const sendChat = () => {
-        const text = chatInput.trim();
-        if (!text) return;
-        setChatMessages((msgs) => [...msgs, { type: 'user', text }]);
-        setChatInput('');
-        setTimeout(() => {
-            if (currentChatNpc) {
-                const npcName = currentChatNpc.name || 'NPC';
-                setChatMessages((msgs) => [...msgs, { type: 'system', text: `${npcName}: "我明白了，让我想想..."` }]);
-            } else {
-                setChatMessages((msgs) => [...msgs, { type: 'system', text: '收到您的消息：' + text }]);
-            }
-        }, 500);
-    };
 
     const handleStartChatWithNpc = (npc: any) => {
         setCurrentChatNpc(npc);
         setChatOpen(true);
         // 系统提示：开始与 NPC 对话
-        setChatMessages((msgs) => [...msgs, { type: 'system', text: `━━━ 开始与 ${npc.name}${npc.job || npc.type ? `（${npc.job || npc.type}）` : ''} 对话 ━━━` }]);
+        if (chatMessages.length > 0) {
+            console.log('聊天历史不为空，不重复开始对话');
+            return;
+        }
+        setChatMessages((msgs) => [...msgs,
+        { role: 'assistant', text: '欢迎来到游戏世界！' },
+        { role: 'assistant', text: `━━━ 开始与 ${npc.name}${npc.job || npc.role ? `（${npc.job || npc.role}）` : ''} 对话 ━━━` }
+        ]);
         // NPC 开场白（随机）
-        setTimeout(() => {
-            const greetings = [
-                `${npc.name}: "你好，冒险者！有什么我可以帮助你的吗？"`,
-                `${npc.name}: "欢迎！很高兴见到你。"`,
-                `${npc.name}: "你找我有什么事吗？"`,
-                `${npc.name}: "看起来你是个有趣的冒险者。"`
-            ];
-            const greet = greetings[Math.floor(Math.random() * greetings.length)];
-            setChatMessages((msgs) => [...msgs, { type: 'system', text: greet }]);
-        }, 500);
+
+        const greetings = [
+            `${npc.name}: "你好，冒险者！有什么我可以帮助你的吗？"`,
+            `${npc.name}: "欢迎！很高兴见到你。"`,
+            `${npc.name}: "你找我有什么事吗？"`,
+            `${npc.name}: "看起来你是个有趣的冒险者。"`
+        ];
+        const greet = greetings[Math.floor(Math.random() * greetings.length)];
+        setChatMessages((msgs) => [...msgs, { role: 'assistant', text: greet }]);
+    };
+
+    const chatWithNpc = async (sessionId: string, npc: any, text: string) => {
+        // 先添加用户消息到聊天列表
+        setChatMessages((prev: ChatMessage[]) => [...prev, { role: 'user', text }]);
+
+        try {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: text
+                })
+            });
+
+            if (response.ok) {
+                // 先添加一条空的NPC消息，用于流式输出
+                setChatMessages((prev: ChatMessage[]) => [...prev, { role: 'assistant', text: '', isTyping: true }]);
+
+                // 处理流式输出
+                const reader = response.body?.getReader();
+                const decoder = new TextDecoder();
+                let fullText = '';
+
+                if (reader) {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n').filter(line => line.trim());
+
+                        for (const line of lines) {
+                            const cleaned = line.startsWith('data:') ? line.replace(/^data:\s*/, '') : line;
+
+                            try {
+                                const json = JSON.parse(cleaned);
+                                console.log('流式数据:', json);
+
+                                if (json.type === 'chunk' && json.content) {
+                                    fullText += json.content;
+                                    // 实时更新最后一条系统消息
+                                    setChatMessages((prev: ChatMessage[]) => {
+                                        const updated = [...prev];
+                                        const last = updated[updated.length - 1];
+                                        if (last && last.role === 'assistant') {
+                                            updated[updated.length - 1] = { ...last, text: fullText, isTyping: true };
+                                        }
+                                        return updated;
+                                    });
+                                }
+                            } catch (e) {
+                                console.warn('解析JSON失败:', cleaned);
+                            }
+                        }
+                    }
+
+                    // 流结束时关闭打字效果
+                    setChatMessages((prev: ChatMessage[]) => {
+                        const updated = [...prev];
+                        const last = updated[updated.length - 1];
+                        if (last && last.role === 'assistant') {
+                            updated[updated.length - 1] = { ...last, isTyping: false };
+                        }
+                        return updated;
+                    });
+                }
+            } else {
+                console.error('Failed to chat with NPC:', response.statusText);
+                alert('发送消息失败，请重试');
+            }
+        } catch (error) {
+            console.error('Failed to chat with NPC:', error);
+            alert('发送消息时发生错误');
+        }
+    };
+
+    const loadChatHistory = async (sessionId: string, npc: any) => {
+        try {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/history`, {
+                method: 'GET',
+            });
+            if (response.ok) {
+                const data = await response.json();
+                // 确保后端返回的是数组格式
+                if (Array.isArray(data.history) && data.history.length > 0) {
+                    console.log('聊天历史数据:', data.history);
+                    setChatMessages(data.history.map((item: any) => ({ role: item.role, text: item.content })));
+                }
+            } else {
+                console.error('Failed to load chat history:', response.statusText);
+                // 不显示 alert，直接初始化空消息
+                setChatMessages([]);
+            }
+        } catch (error) {
+            console.error('加载聊天历史错误:', error);
+            setChatMessages([]);
+        }
     };
 
     return {
@@ -55,7 +147,8 @@ export const useChat = () => {
         setChatMessages,
         currentChatNpc,
         setCurrentChatNpc,
-        sendChat,
-        handleStartChatWithNpc
+        handleStartChatWithNpc,
+        chatWithNpc,
+        loadChatHistory
     };
 };
