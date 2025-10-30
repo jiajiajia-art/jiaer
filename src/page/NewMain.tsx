@@ -31,9 +31,9 @@ const NewMain: React.FC = () => {
     // 使用自定义 hooks
     const { player, setPlayer, inventory, setInventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore } = useGameData();
     const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
-    const { gameTimeText, worldLoreHtml, playerLoreHtml, ensureLoadLore, updateLoreFromBackend, updateLoreFromLocal } = useLore();
+    const { gameTimeText, worldLoreHtml, playerLoreHtml, updateLoreFromBackend, updateLoreFromLocal } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
-    const { events, activeEvent, setActiveEvent, eventHistory, setEventHistory, triggerEventById, closeEvent, ensureLoadEvents } = useEventSystem();
+    const { events, activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
 
     // React 状态（面板与浮窗）
     const [activePanel, setActivePanel] = useState<'scene' | 'map'>('scene');

@@ -43,7 +43,7 @@ const Home: React.FC = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadSuccess, setUploadSuccess] = useState(false);
 
-    const { pdfFileId,setPdfFileId, sessionId, setSessionId } = useGameStore();
+    const { pdfFileId,setPdfFileId, setSessionId } = useGameStore();
     const navigator = useNavigate();
 
     // 使用ref来引用DOM元素

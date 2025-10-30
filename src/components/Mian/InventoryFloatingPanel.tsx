@@ -1,6 +1,5 @@
 import React from 'react';
 import styles from './InventoryFloatingPanel.module.css';
-import { HOST_ADDRESS } from '../../config';
 
 interface Item {
     id: string;
