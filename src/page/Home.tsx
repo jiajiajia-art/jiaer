@@ -356,7 +356,7 @@ const Home: React.FC = () => {
             <div className={styles.container}>
                 {/* 页头 */}
                 <div className={styles.header}>
-                    <h1>🎮 游戏中心</h1>
+                    <h1 className={styles.headerTitle}>Funloom AI</h1>
                     <p>选择你喜欢的冒险世界，开始精彩的旅程</p>
                     <button
                         className={styles.createGameBtn}
