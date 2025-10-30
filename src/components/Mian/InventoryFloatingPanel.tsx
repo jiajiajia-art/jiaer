@@ -50,17 +50,6 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
     console.log('onEquipItem', onEquipItem);
     console.log('onUseItem', onUseItem);
 
-    const slotNameMap: Record<keyof EquipmentSlots, string> = {
-        head: '头部',
-        body: '上身',
-        legs: '下身',
-        hands: '手部',
-        feet: '脚部',
-        back: '背部',
-        leftHand: '左手',
-        rightHand: '右手'
-    };
-
     const handleItemClick = (item: Item) => {
         if (item.usable) {
             onUseItem(item);
@@ -76,48 +65,41 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                 <button className={styles.closeInventoryBtn} onClick={onClose}>×</button>
             </div>
             <div className={styles.inventoryPanelContent}>
-                <div className={styles.equipmentSection}>
-                    <h3>装备</h3>
-                    <div className={styles.equipmentGrid}>
-                        {(Object.keys(inventory.equipment) as Array<keyof EquipmentSlots>).map((slot) => {
-                            const eq = inventory.equipment[slot];
-                            return (
-                                <div key={slot} className={styles.equipmentSlot} data-slot={slot}>
-                                    <img 
-                                        src={`${HOST_ADDRESS}${eq?.icon}` || '/data/icons/empty.png'}
-                                        alt={slotNameMap[slot]} 
-                                    />
-                                    <span>{eq?.name || slotNameMap[slot]}</span>
+                <div className={styles.itemsList}>
+                    {inventory.items.length === 0 && (
+                        <p className={styles.emptyMessage}>背包为空</p>
+                    )}
+                    {inventory.items.map((item) => (
+                        <div
+                            key={item.id}
+                            className={styles.itemRow}
+                        >
+                            <img
+                                src={'/data/icons/berries.png'}
+                                alt={item.name || item.id}
+                                className={styles.itemImage}
+                            />
+                            <div className={styles.itemInfo}>
+                                <div className={styles.itemName}>
+                                    {item.name || item.id}
+                                    {item.quantity > 1 && `     x${item.quantity}`}
                                 </div>
-                            );
-                        })}
-                    </div>
-                </div>
-                
-                <div className={styles.itemsSection}>
-                    <h3>物品</h3>
-                    <div className={styles.itemsGrid}>
-                        {inventory.items.length === 0 && (
-                            <p className={styles.emptyMessage}>背包为空</p>
-                        )}
-                        {inventory.items.map((item) => (
-                            <div 
-                                key={item.id} 
-                                className={styles.itemSlot}
-                                onClick={() => handleItemClick(item)}
-                                style={{ cursor: (item.usable || item.equippable) ? 'pointer' : 'default' }}
-                            >
-                                <img 
-                                    src={`${HOST_ADDRESS}${item.icon}` || '/data/icons/empty.png'} 
-                                    alt={item.name || item.id} 
-                                />
-                                <div className={styles.itemName}>{item.name || item.id}</div>
-                                {item.quantity > 1 && (
-                                    <div className={styles.itemQuantity}>x{item.quantity}</div>
+                                <div className={styles.itemDescription}>
+                                    {item.effects?.description || '暂无描述'}
+                                </div>
+                            </div>
+                            <div className={styles.itemActions}>
+                                {(item.usable || item.equippable) && (
+                                    <button
+                                        className={styles.useButton}
+                                        onClick={() => handleItemClick(item)}
+                                    >
+                                        {item.usable ? '使用' : '装备'}
+                                    </button>
                                 )}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
@@ -125,3 +107,4 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
 };
 
 export default InventoryFloatingPanel;
+

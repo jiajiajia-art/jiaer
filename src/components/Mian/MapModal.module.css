@@ -1,0 +1,197 @@
+.modal {
+    position: absolute;
+    bottom: 100px;
+    right: 30px;
+    max-width: 330px;
+    height: 420px;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-image: url('/data/asset/背包.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: 950;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 24px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #E8DBB7;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.closeBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #5a4d3e;
+    font-size: 22px;
+    line-height: 1;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    position: absolute;
+    right: 10px;
+    background: none;
+}
+
+.closeBtn:hover {
+    border-color: #8a7654;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(90, 77, 62, 0.15);
+}
+
+.content {
+    flex: 1;
+    padding: 0px 10px; /* 减少左右内边距，给地图更多空间 */
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 121, 94, 0.5) transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+    background: #faf8f5;
+    border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb {
+    background: rgba(139, 121, 94, 0.6);
+    border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 121, 94, 0.8);
+}
+
+/* 新增地图容器，确保地图居中 */
+.mapContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+}
+
+.mapSvg {
+    width: 100%;
+    height: 100%;
+    max-height: 620px;
+    display: block;
+    margin: 0 auto;
+}
+
+/* SVG 内部元素样式优化 - 增强连线 */
+.mapSvg line {
+    stroke: #8a7654; /* 更深的颜色 */
+    stroke-width: 4; /* 更粗的线条 */
+    stroke-dasharray: 10,8; /* 更长的虚线 */
+    opacity: 0.8; /* 更高的不透明度 */
+}
+
+.mapSvg circle {
+    transition: all 0.3s ease;
+}
+
+.mapSvg circle:hover {
+    stroke-width: 6; /* 增强悬停效果 */
+}
+
+.mapSvg image {
+    transition: all 0.3s ease;
+}
+
+.mapSvg image:hover {
+    filter: brightness(1.05);
+}
+
+.mapSvg text {
+    fill: #ffffff;
+    font-size: 38px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+/* 当前场景的特殊样式 */
+.mapSvg circle[stroke='#e74c3c'] {
+    stroke: #d4af37;
+    stroke-width: 6;
+    filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.6));
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modal {
+        width: 80vw;
+        height: 50vh;
+        max-width: none;
+        bottom: 200px;
+        right: 10px;
+    }
+    
+    .header {
+        padding: 21px 16px;
+    }
+    
+    .title {
+        font-size: 18px;
+    }
+    
+    .content {
+        padding: 10px;
+    }
+    
+    .closeBtn {
+        width: 32px;
+        height: 32px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    
+    .title {
+        font-size: 16px;
+    }
+    
+    .actions {
+        gap: 8px;
+    }
+    
+    .closeBtn {
+        width: 30px;
+        height: 30px;
+        font-size: 18px;
+    }
+    
+    .mapSvg line {
+        stroke-width: 3; /* 移动端适当减小连线粗细 */
+    }
+}

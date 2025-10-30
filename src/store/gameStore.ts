@@ -16,11 +16,11 @@ interface GameState {
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
-      pdfFileId: null,
+      pdfFileId: '404ba83048e871ec162940513df8f30d',
       setPdfFileId: (id) => set({ pdfFileId: id }),
       clearPdfFile: () => set({ pdfFileId: null }),
 
-      sessionId: null,
+      sessionId: '663377e201317245fecdc68cce128de2',
       setSessionId: (id) => set({ sessionId: id }),
       clearSessionId: () => set({ sessionId: null }),
 
