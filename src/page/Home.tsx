@@ -42,12 +42,29 @@ const Home: React.FC = () => {
     const [isUploadingPdf, setIsUploadingPdf] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadSuccess, setUploadSuccess] = useState(false);
+    const [fileMetas, setFileMetas] = useState<any[]>([]);
 
     const { pdfFileId,setPdfFileId, setSessionId } = useGameStore();
     const navigator = useNavigate();
 
     // 使用ref来引用DOM元素
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 修复为有效的数组声明
+    const fileId = [
+        {
+            id: '0fed0643f24e7c7b3b68e74af04cb0aa',
+            img: `${HOST_ADDRESS}/api/backend/saves/0fed0643f24e7c7b3b68e74af04cb0aa/scenes/red_rock_territory_0fed0643f24e7c7b3b68e74af04cb0aa.png`
+        },
+        {
+            id: '7b7e7d128c686dc57bd23996118e8c0a',
+            img: `${HOST_ADDRESS}/api/backend/saves/7b7e7d128c686dc57bd23996118e8c0a/scenes/village_outskirts_7b7e7d128c686dc57bd23996118e8c0a.png`
+        },
+        {
+            id:'83089b271543d3e2a7cb8b1a4cee3f41',
+            img: `${HOST_ADDRESS}/api/backend/saves/83089b271543d3e2a7cb8b1a4cee3f41/avatars/npc_store_clerk_83089b271543d3e2a7cb8b1a4cee3f41.png`
+        },
+    ];
 
     /**
      * 加载游戏数据
@@ -311,6 +328,29 @@ const Home: React.FC = () => {
         loadGamesData();
     }, []);
 
+    // 首页加载每个 fileId 后端元信息
+    useEffect(() => {
+        Promise.all(
+            fileId.map(async f => {
+                try {
+                    const res = await fetch(`${HOST_ADDRESS}/api/backend/saves/${f.id}/files`);
+                    if (res.ok) {
+                        console.log('f.img',f.img);
+                        
+                        const data = await res.json();
+                        return { id: f.id,img: f.img, ...data.files };
+                    }
+                    console.log('f',f.img);
+                    
+                } catch { }
+                return { id: f.id };
+            })
+        ).then(data => {
+            console.log('fileMetas', data);
+            setFileMetas(data);
+        });
+    }, []);
+
     const createSession = async (): Promise<string | null> => {
             if (!pdfFileId) {
             console.error('没有 pdfFileId，无法创建 session');
@@ -368,47 +408,56 @@ const Home: React.FC = () => {
 
                 {/* 游戏列表 */}
                 <div className={styles.gameList} id="gameList">
-                    {loading ? (
+                    {fileMetas.length === 0 ? (
                         <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: 'white' }}>
                             <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>⏳ 加载中...</h2>
-                            <p style={{ fontSize: '16px', opacity: 0.9 }}>正在加载游戏数据</p>
-                        </div>
-                    ) : games.length === 0 ? (
-                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: 'white' }}>
-                            <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>📂 暂无游戏</h2>
-                            <p style={{ fontSize: '16px', opacity: 0.9 }}>没有找到游戏数据</p>
+                            <p style={{ fontSize: '16px', opacity: 0.9 }}>正在加载剧情文件信息</p>
                         </div>
                     ) : (
-                        games.map((game, index) => (
+                        fileMetas.map((meta, idx) => (
                             <div
-                                key={index}
+                                key={meta.id}
                                 className={styles.gameCard}
-                                onClick={() => showGameDetail(game)}
+
+                                onClick={() => {
+                                    setPdfFileId(meta.id);
+                                    navigator('/newmain');
+                                }}
                             >
+                                
                                 <img
-                                    src={game.cover}
-                                    alt={game.title}
+                                    src={meta.img}
+                                    alt={meta.title}
                                     className={styles.gameCover}
-                                    onError={(e) => {
-                                        (e.target as HTMLImageElement).src = 'data/icons/empty.png';
-                                    }}
+                                    
                                 />
                                 <div className={styles.gameInfo}>
                                     <div className={styles.gameTitle}>
-                                        <span className={styles.gameIcon}>{game.icon}</span>
-                                        <span>{game.title}</span>
+                                        <span className={styles.gameIcon}>{meta.icon || ''}</span>
+                                        <span>{meta.lore.worldBackground.title || `剧情${idx + 1}`}</span>
                                     </div>
-                                    <div className={styles.gameSubtitle}>{game.subtitle}</div>
+                                    <div className={styles.gameSubtitle}>{meta.subtitle || ''}</div>
                                     <div className={styles.gameTags}>
-                                        {game.tags.map((tag, tagIndex) => (
+                                        {Array.isArray(meta.tags) && meta.tags.map((tag: string, tagIndex: number) => (
                                             <span key={tagIndex} className={styles.tag}>{tag}</span>
                                         ))}
                                     </div>
-                                    <div className={styles.gameDescription}>{game.description}</div>
+                                    <div className={styles.gameDescription}>{meta.lore.worldBackground.content || ''}</div>
                                     <div className={styles.gameStats}>
-                                        <span className={styles.statItem}>📊 {game.stats.difficulty}</span>
-                                        <span className={styles.statItem}>⏱️ {game.stats.playtime}</span>
-                                        <span className={styles.statItem}>🎯 {game.stats.status}</span>
+                                    {(() => {
+                                            const scenesCount = meta.scenes ? Object.keys(meta.scenes).length : 0;
+                                            const itemsCount = meta.items ? Object.keys(meta.items).length : 0;
+                                            const npcsCount = meta.scenes
+                                                ? Object.values<any>(meta.scenes).reduce((sum, sc: any) => sum + (Array.isArray(sc.npcs) ? sc.npcs.length : 0), 0)
+                                                : 0;
+                                            return (
+                                                <>
+                                                    <span className={styles.statItem}>🗺️ 场景: {scenesCount}</span>
+                                                    <span className={styles.statItem}>🎒 物品: {itemsCount}</span>
+                                                    <span className={styles.statItem}>🧍 NPC: {npcsCount}</span>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </div>

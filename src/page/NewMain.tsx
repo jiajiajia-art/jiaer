@@ -394,80 +394,13 @@ const NewMain: React.FC = () => {
                             ? scenes[currentSceneId].buildings
                             : []).map((b: any) => (
                                 <div key={b.id} className={styles.buildingCard} onClick={() => handleBuildingClick(b)}>
-                                    <img src={`${HOST_ADDRESS}${b.icon}` || '/data/icons/empty.png'} alt={b.name} />
+                                    <img src={`${HOST_ADDRESS}${b.icon}` || '/data/icons/empty.png'} alt={''} />
                                     <h3>{b.name}</h3>
                                     <p>{b.description}</p>
                                 </div>
                             ))}
                     </div>
-                    <div className={styles.sceneNpcs}>
-                        <div id="npcsList" className={styles.npcsGrid}>
-                            {(currentSceneId && scenes[currentSceneId].npcs.length ? scenes[currentSceneId].npcs : []).map((n: any) => (
-                                <div key={n.id} className={styles.npcCard} onClick={() => { setNpcDetail(n); setNpcModalOpen(true); }}>
-                                    <img src={`${HOST_ADDRESS}${n.icon}` || '/data/avatars/default.png'} alt={n.name} />
-                                    <div className={styles.npcLabel}>{n.name}</div>
-                                </div>
-                            ))}
-                            {/* <div className={styles.npcCard} >
-                                <img src={'/data/avatars/default.png'} alt={''} />
-                                <div className={styles.npcLabel}>{'第四张图'}</div>
-                            </div>
-                            <div className={styles.npcCard} >
-                                <img src={'/data/avatars/default.png'} alt={''} />
-                                <div className={styles.npcLabel}>{'第四张图'}</div>
-                            </div> */}
-                        </div>
-                        <div id="chatPanel" className={styles.chatPanel} style={{ display: chatOpen ? 'flex' : 'none' }}>
-                            <div className={styles.chatHeader}>
-                                <h3 id="chatTitle">聊天</h3>
-                                <button id="closeChatBtn" className={styles.closeChatBtn} onClick={() => setChatOpen(false)}>×</button>
-                            </div>
-                            <div
-                                id="chatMessages"
-                                className={styles.chatMessages}
-                                ref={chatMessagesContainerRef} // 添加引用用于自动滚动
-                            >
-                                {chatMessages.map((m, i) =>
-                                    <div key={i} className={`${styles.chatMessage} ${m.role === 'assistant' ? styles.system : styles.user}`}>
-                                        <span className={styles.chatMessageWrapper}>
-                                            <ReactMarkdown>{m.text}</ReactMarkdown>
-                                            {m.isTyping && <span className={styles.typingCursor}>|</span>}
-                                        </span>
-                                    </div>
-                                )}
-                                {/* 添加一个不可见的锚点元素用于滚动 */}
-                                <div ref={chatMessagesEndRef} />
-                            </div>
-                            <div className={styles.chatInputArea}>
-                                <input
-                                    type="text"
-                                    id="chatInput"
-                                    className={styles.chatInput}
-                                    placeholder="输入消息..."
-                                    value={chatInput}
-                                    onChange={(e) => setChatInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && chatInput.trim()) {
-                                            handleChatWithNpc(chatInput);
-                                            setChatInput('');
-                                        }
-                                    }}
-                                />
-                                <button
-                                    id="sendChatBtn"
-                                    className={styles.sendChatBtn}
-                                    onClick={() => {
-                                        if (chatInput.trim()) {
-                                            handleChatWithNpc(chatInput);
-                                            setChatInput('');
-                                        }
-                                    }}
-                                >
-                                    发送
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
 
 
@@ -482,58 +415,125 @@ const NewMain: React.FC = () => {
                         </div>
                     </div>
                     <div className={styles.sceneDescriptionContainer}>
-                    <div className={styles.sceneDescription}>
-                        <div>{currentSceneId && scenes[currentSceneId].name ? scenes[currentSceneId].name : '当前场景'}</div>
-                        <p id="sceneDescription">{currentSceneId && scenes[currentSceneId].description ? scenes[currentSceneId].description : '欢迎来到文字RPG世界！'}</p>
-                    </div>
-                    <div className={styles.sceneExits}>
-                        <div id="exitsList" className={styles.exitsGrid}>
-                            {currentSceneId && scenes[currentSceneId] && Object.entries(scenes[currentSceneId].exits || {})
-                                .filter(([_, targetId]) => scenes[targetId]) // 只显示目标场景存在的情况
-                                .map(([direction, targetId]) => {
-                                    const targetScene = scenes[targetId];
-                                    return (
-                                        <div
-                                            key={direction}
-                                            className={styles.exitCard}
-                                            onClick={() => {
-                                                setCurrentSceneId(targetId);
-                                                // 更新场景描述显示
-                                                const sceneDescElement = document.getElementById('sceneDescription');
-                                                if (sceneDescElement) {
-                                                    sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
-                                                }
-                                            }}
-                                        >
-                                            <img
-                                                src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
-                                                alt={targetScene.name}
-                                            />
-                                            <div className={styles.exitLabel}>{targetScene.name}</div>
-                                        </div>
-                                    );
-                                })}
-                            {currentSceneId && scenes[currentSceneId] && Object.keys(scenes[currentSceneId].exits || {}).length === 0 && (
-                                <p style={{ textAlign: 'center', color: '#666', width: '100%' }}>没有出口</p>
-                            )}
+                        <div className={styles.sceneDescription}>
+                            <div>{currentSceneId && scenes[currentSceneId].name ? scenes[currentSceneId].name : '当前场景'}</div>
+                            <p id="sceneDescription">{currentSceneId && scenes[currentSceneId].description ? scenes[currentSceneId].description : '欢迎来到文字RPG世界！'}</p>
                         </div>
-                    </div>
+                        <div className={styles.sceneExits}>
+                            <div id="exitsList" className={styles.exitsGrid}>
+                                {currentSceneId && scenes[currentSceneId] && Object.entries(scenes[currentSceneId].exits || {})
+                                    .filter(([_, targetId]) => scenes[targetId]) // 只显示目标场景存在的情况
+                                    .map(([direction, targetId]) => {
+                                        const targetScene = scenes[targetId];
+                                        return (
+                                            <div
+                                                key={direction}
+                                                className={styles.exitCard}
+                                                onClick={() => {
+                                                    setCurrentSceneId(targetId);
+                                                    // 更新场景描述显示
+                                                    const sceneDescElement = document.getElementById('sceneDescription');
+                                                    if (sceneDescElement) {
+                                                        sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
+                                                    }
+                                                }}
+                                            >
+                                                <img
+                                                    src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
+                                                    alt={''}
+                                                />
+                                                <div className={styles.exitLabel}>{targetScene.name}</div>
+                                            </div>
+                                        );
+                                    })}
+                                {currentSceneId && scenes[currentSceneId] && Object.keys(scenes[currentSceneId].exits || {}).length === 0 && (
+                                    <p style={{ textAlign: 'center', color: '#666', width: '100%' }}>没有出口</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
+            <div className={styles.sceneNpcs}>
+                <div id="npcsList" className={styles.npcsGrid}>
+                    {(currentSceneId && scenes[currentSceneId].npcs.length ? scenes[currentSceneId].npcs : []).map((n: any) => (
+                        <div key={n.id} className={styles.npcCard} onClick={() => { setNpcDetail(n); setNpcModalOpen(true); }}>
+                            <img src={`${HOST_ADDRESS}${n.icon}` || '/data/avatars/default.png'} alt={n.name} />
+                            <div className={styles.npcLabel}>{n.name}</div>
+                        </div>
+                    ))}
+                    {/* <div className={styles.npcCard} >
+                                <img src={'/data/avatars/default.png'} alt={''} />
+                                <div className={styles.npcLabel}>{'第四张图'}</div>
+                            </div>
+                            <div className={styles.npcCard} >
+                                <img src={'/data/avatars/default.png'} alt={''} />
+                                <div className={styles.npcLabel}>{'第四张图'}</div>
+                            </div> */}
+                </div>
+                <div id="chatPanel" className={styles.chatPanel} style={{ display: chatOpen ? 'flex' : 'none' }}>
+                    <div className={styles.chatHeader}>
+                        <h3 id="chatTitle">聊天</h3>
+                        <button id="closeChatBtn" className={styles.closeChatBtn} onClick={() => setChatOpen(false)}>×</button>
+                    </div>
+                    <div
+                        id="chatMessages"
+                        className={styles.chatMessages}
+                        ref={chatMessagesContainerRef} // 添加引用用于自动滚动
+                    >
+                        {chatMessages.map((m, i) =>
+                            <div key={i} className={`${styles.chatMessage} ${m.role === 'assistant' ? styles.system : styles.user}`}>
+                                <span className={styles.chatMessageWrapper}>
+                                    <ReactMarkdown>{m.text}</ReactMarkdown>
+                                    {m.isTyping && <span className={styles.typingCursor}>|</span>}
+                                </span>
+                            </div>
+                        )}
+                        {/* 添加一个不可见的锚点元素用于滚动 */}
+                        <div ref={chatMessagesEndRef} />
+                    </div>
+                    <div className={styles.chatInputArea}>
+                        <input
+                            type="text"
+                            id="chatInput"
+                            className={styles.chatInput}
+                            placeholder="输入消息..."
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && chatInput.trim()) {
+                                    handleChatWithNpc(chatInput);
+                                    setChatInput('');
+                                }
+                            }}
+                        />
+                        <button
+                            id="sendChatBtn"
+                            className={styles.sendChatBtn}
+                            onClick={() => {
+                                if (chatInput.trim()) {
+                                    handleChatWithNpc(chatInput);
+                                    setChatInput('');
+                                }
+                            }}
+                        >
+                            发送
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div className={styles.sceneEventBtnContainer}>
                 <div
                     id="triggerSceneEventBtn"
                     className={styles.sceneEventBtn}
-                    onClick={() => setActivePanel('map')}
+                    onClick={() => setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'))}
                 >
                     <img src="/data/asset/地图按钮.png" alt="大地图按钮" className={styles.mapBtnImg} />
                 </div>
                 <button id="toggleInventoryBtn"
                     className={styles.floatingInventoryBtn}
                     title="打开背包"
-                    onClick={() => setInventoryOpen(true)}
+                    onClick={() => setInventoryOpen(!inventoryOpen)}
                 >
                     <img src={"/data/asset/背包按钮.png"} alt="背包按钮" className={styles.inventoryBtnImg} />
                 </button>

@@ -220,95 +220,9 @@ export const useGameData = () => {
         }
     };
 
-    // 加载本地 JSON 文件作为后备
-    const loadLocalData = async () => {
-        try {
-            const resPlayer = await fetch('/data/player.json');
-            if (resPlayer.ok) {
-                const playerData = await resPlayer.json();
-                const merged: PlayerState = {
-                    profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者', ...(playerData.profile || {}) },
-                    stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8, ...(playerData.stats || {}) },
-                    experience: { current: 0, required: 100, ...(playerData.experience || {}) },
-                    currency: { gold: 100, ...(playerData || {}) },
-                };
-                setPlayer(merged);
-                if (playerData.inventory) {
-                    setInventory((prev) => ({
-                        equipment: { ...prev.equipment, ...(playerData.inventory.equipment || {}) },
-                        items: Array.isArray(playerData.inventory.items) ? playerData.inventory.items : prev.items,
-                    }));
-                }
-            } else {
-                setPlayer({
-                    profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者' },
-                    stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8 },
-                    experience: { current: 0, required: 100 },
-                    currency: { gold: 100 },
-                });
-            }
-        } catch {
-            setPlayer({
-                profile: { avatar: '/data/avatars/default.png', name: '未命名', age: 18, gender: '男', job: '冒险者' },
-                stats: { level: 1, health: 100, maxHealth: 100, attack: 10, defense: 5, speed: 8 },
-                experience: { current: 0, required: 100 },
-                currency: { gold: 100 },
-            });
-        }
+    // 移除本地 JSON 文件相关加载与 fallback
+    // 只保留从后端拉取逻辑
 
-        try {
-            const resScenes = await fetch('/data/scenes.json');
-            if (resScenes.ok) {
-                const sceneMap: ScenesMap = await resScenes.json();
-                setScenes(sceneMap);
-                let preferred = '';
-                try {
-                    const saved = localStorage.getItem('rpg_scene_data');
-                    if (saved) {
-                        const parsed = JSON.parse(saved);
-                        if (parsed && parsed.currentScene && sceneMap[parsed.currentScene]) preferred = parsed.currentScene;
-                    }
-                } catch { }
-                if (!preferred && sceneMap['village_square']) preferred = 'village_square';
-                if (!preferred) {
-                    const withContent = Object.values(sceneMap).find(sc => (sc.buildings && sc.buildings.length) || (sc.npcs && sc.npcs.length) || (sc.exits && Object.keys(sc.exits).length));
-                    if (withContent) preferred = withContent.id;
-                }
-                if (!preferred) preferred = Object.keys(sceneMap)[0] || '';
-                setCurrentSceneId(preferred);
-            } else {
-                const fallback: ScenesMap = {
-                    village_square: {
-                        id: 'village_square',
-                        name: '村庄广场',
-                        description: '这是一个宁静的村庄广场。请确保 scenes.json 存在。',
-                        background: '/data/icons/empty.png',
-                        buildings: [],
-                        npcs: [],
-                        exits: {},
-                    },
-                };
-                setScenes(fallback);
-                setCurrentSceneId('village_square');
-            }
-        } catch {
-            const fallback: ScenesMap = {
-                village_square: {
-                    id: 'village_square',
-                    name: '村庄广场',
-                    description: '这是一个宁静的村庄广场。请确保 scenes.json 存在。',
-                    background: '/data/icons/empty.png',
-                    buildings: [],
-                    npcs: [],
-                    exits: {},
-                },
-            };
-            setScenes(fallback);
-            setCurrentSceneId('village_square');
-        }
-    };
-
-    // 优先从后端加载数据，失败则回退到本地 JSON（只加载一次）
     useEffect(() => {
         if (backendDataLoaded) return; // 已加载后端数据则跳过
 
@@ -323,7 +237,6 @@ export const useGameData = () => {
                     const contentType = res.headers.get('content-type') || '';
                     if (res.ok && contentType.includes('application/json')) {
                         const data = await res.json();
-                        console.log('✅ 后端返回数据:', data);
                         if (data && data.success && data.files) {
                             applyBackendData(data.files);
                             setBackendDataLoaded(true);
@@ -331,14 +244,11 @@ export const useGameData = () => {
                         }
                     }
                 } catch (e) {
-                    console.warn('⚠️ 后端数据加载失败，回退到本地文件:', e);
+                    console.warn('⚠️ 后端数据加载失败:', e);
                 }
             }
 
-            // 后端失败或无 pdfFileId，回退本地
-            if (!backendSuccess) {
-                loadLocalData();
-            }
+            // 移除本地 fallback 部分
         })();
     }, [pdfFileId, backendDataLoaded]);
 
