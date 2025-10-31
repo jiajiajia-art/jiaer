@@ -15,7 +15,6 @@ interface DialogueModalProps {
 const DialogueModal: React.FC<DialogueModalProps> = ({
     isOpen,
     onClose,
-    title = '对话',
     playerName = '玩家',
     initialInput = ''
 }) => {
@@ -269,25 +268,25 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
     if (!isOpen) return null;
 
-    const handleGenerate = async () => {
-        const response = await fetch(`${HOST_ADDRESS}/api/backend/novel/generate`, {
-            method: 'POST',
-            body: JSON.stringify({ 
-                sessionId: sessionId,
-                fileId: pdfFileId,
-                title: title,
-                theme: 'adventure',
-                chapterCount: 5,
-                style: 'classic',
-            })
-        });
-        if (!response.ok) {
-            console.error('❌ 小说生成失败:', response.statusText);
-            return;
-        }
-        const data = await response.json();
-        console.log('✅ 小说生成成功:', data);
-    };
+    // const handleGenerate = async () => {
+    //     const response = await fetch(`${HOST_ADDRESS}/api/backend/novel/generate`, {
+    //         method: 'POST',
+    //         body: JSON.stringify({ 
+    //             sessionId: sessionId,
+    //             fileId: pdfFileId,
+    //             title: title,
+    //             theme: 'adventure',
+    //             chapterCount: 5,
+    //             style: 'classic',
+    //         })
+    //     });
+    //     if (!response.ok) {
+    //         console.error('❌ 小说生成失败:', response.statusText);
+    //         return;
+    //     }
+    //     const data = await response.json();
+    //     console.log('✅ 小说生成成功:', data);
+    // };
 
 
     return (

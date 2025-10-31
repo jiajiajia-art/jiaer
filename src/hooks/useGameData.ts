@@ -228,6 +228,8 @@ export const useGameData = () => {
 
         (async () => {
             let backendSuccess = false;
+            console.log(backendSuccess);
+            
 
             // 有 pdfFileId 时优先尝试从后端获取
             if (pdfFileId) {

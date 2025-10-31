@@ -1,6 +1,5 @@
 import React from 'react';
 import styles from './PlayerFloatingPanel.module.css';
-import { HOST_ADDRESS } from '../../config';
 
 interface PlayerProfile {
     avatar: string;
