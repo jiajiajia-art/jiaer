@@ -804,6 +804,10 @@
         max-width: 720px; /* 限制场景详细描述盒子最大宽度 */
     }
 
+    .sceneDescription p {
+        
+    }
+
     .sceneExits {
         min-width: auto;
         width: 100%;

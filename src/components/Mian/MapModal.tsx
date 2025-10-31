@@ -19,10 +19,10 @@ const computePositions = (m: ScenesMap): Record<string, { x: number; y: number }
     if (ids.length === 0) return positions;
 
     // 最小间距：根据节点数量动态调整
-    // 节点多时需要更大的间距，确保节点和连线不会遮挡
+    // 节点少时使用更大的间距，让布局更舒适；节点多时适当减小以容纳更多节点
     const nodeCount = Object.keys(m).length;
-    const MIN_DISTANCE = nodeCount > 20 ? 250 : (nodeCount > 15 ? 240 : 230); // 节点多时增加间距
-    const BASE_OFFSET = nodeCount > 20 ? 300 : (nodeCount > 15 ? 300 : 290); // 节点多时增加偏移
+    const MIN_DISTANCE = nodeCount > 20 ? 250 : (nodeCount > 15 ? 240 : 260); // 节点少时使用更大间距
+    const BASE_OFFSET = nodeCount > 20 ? 300 : (nodeCount > 15 ? 300 : 330); // 节点少时使用更大偏移
 
     // 方向偏移量 - 基于最小间距优化
     const directionOffsets: Record<string, { x: number; y: number }> = {

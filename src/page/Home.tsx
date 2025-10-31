@@ -63,8 +63,9 @@ const Home: React.FC = () => {
             alert('游戏信息错误，请重试');
             return;
         }
+        // 同时更新 store 和直接传递给 createSession，确保立即生效
         setPdfFileId(selectedGameMeta.id);
-        const sessionId = await createSession();
+        const sessionId = await createSession(selectedGameMeta.id);
         setSessionId(sessionId);
         if (sessionId) {
             navigator('/newmain');
@@ -305,8 +306,11 @@ const Home: React.FC = () => {
         });
     }, []);
 
-    const createSession = async (): Promise<string | null> => {
-            if (!pdfFileId) {
+    const createSession = async (fileIdParam?: string): Promise<string | null> => {
+        // 优先使用传入的参数，否则从 store 读取
+        const targetFileId = fileIdParam || pdfFileId;
+        
+        if (!targetFileId) {
             console.error('没有 pdfFileId，无法创建 session');
             return null;
         }
@@ -316,7 +320,7 @@ const Home: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    fileId: pdfFileId,
+                    fileId: targetFileId,
                     playerName: '玩家'
                 })
             });
