@@ -9,18 +9,27 @@ interface DialogueModalProps {
     onClose: () => void;
     title?: string;
     playerName?: string;
+    initialInput?: string; // 初始输入值
 }
 
 const DialogueModal: React.FC<DialogueModalProps> = ({
     isOpen,
     onClose,
     title = '对话',
-    playerName = '玩家'
+    playerName = '玩家',
+    initialInput = ''
 }) => {
     const [gameStarted, setGameStarted] = useState(false);
     const [inputValue, setInputValue] = useState('');
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    
+    // 当 initialInput 变化时，更新 inputValue
+    useEffect(() => {
+        if (initialInput && isOpen) {
+            setInputValue(initialInput);
+        }
+    }, [initialInput, isOpen]);
     const [messages, setMessages] = useState<
         Array<{
             type: 'system' | 'user';
@@ -285,9 +294,11 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.dialogueModal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
-                    <h3>{title}</h3>
+                    <h3></h3>
                     {/* <button className={styles.generateBtn} onClick={handleGenerate}>生成小说</button> */}
-                    <button className={styles.closeBtn} onClick={onClose}>×</button>
+                    <button className={styles.closeBtn} onClick={onClose}>
+                        <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                    </button>
                 </div>
 
                 <div className={styles.messagesContainer}>
@@ -327,7 +338,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                             onClick={handleStartGame}
                             disabled={loading}
                         >
-                            {loading ? '⏳ 处理中...' : '🚀 开始游戏'}
+                            <img src="/data/asset/编年史/按钮.png" alt="开始游戏" />
                         </button>
                     </div>
                 ) : (
@@ -335,7 +346,6 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                         <input
                             type="text"
                             className={styles.input}
-                            placeholder="输入你的回应..."
                             value={inputValue}
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyDown}
@@ -346,7 +356,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                             onClick={() => handleSend()}
                             disabled={loading || !inputValue.trim()}
                         >
-                            {loading ? '⏳' : '发送'}
+                            <img src="/data/asset/聊天框/按钮.png" alt="发送" />
                         </button>
                     </div>
                 )}

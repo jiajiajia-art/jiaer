@@ -5,40 +5,14 @@ import { useNavigate } from 'react-router-dom';
 import { HOST_ADDRESS } from '../config';
 // import { Link } from "react-router-dom"; // 不再需要
 
-// 定义游戏数据接口
-interface GameStats {
-    difficulty: string;
-    playtime: string;
-    status: string;
-}
-
-interface GameFeature {
-    title: string;
-    desc: string;
-}
-
-interface Game {
-    cover: string;
-    icon: string;
-    title: string;
-    subtitle: string;
-    tags: string[];
-    description: string;
-    fullDescription: string;
-    features: GameFeature[];
-    stats: GameStats;
-}
 
 const Home: React.FC = () => {
     // 状态管理
-    const [games, setGames] = useState<Game[]>([]);
-    const [selectedGame, setSelectedGame] = useState<Game | null>(null);
     const [showGameModal, setShowGameModal] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [selectedIcon, setSelectedIcon] = useState<string>('');
     const [isDragover, setIsDragover] = useState(false);
-    const [loading, setLoading] = useState(true);
     const [isUploadingPdf, setIsUploadingPdf] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -64,54 +38,39 @@ const Home: React.FC = () => {
             id:'83089b271543d3e2a7cb8b1a4cee3f41',
             img: `${HOST_ADDRESS}/api/backend/saves/83089b271543d3e2a7cb8b1a4cee3f41/avatars/npc_store_clerk_83089b271543d3e2a7cb8b1a4cee3f41.png`
         },
+        {
+            id:'c2f99389e5fd5f43b42a0a45cfcfeed2',
+            img:`${HOST_ADDRESS}/api/backend/saves/c2f99389e5fd5f43b42a0a45cfcfeed2/scenes/school_campus_c2f99389e5fd5f43b42a0a45cfcfeed2.png`
+        }
     ];
 
-    /**
-     * 加载游戏数据
-     */
-    const loadGamesData = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/StoryData/games.json');
-            if (response.ok) {
-                const gamesData = await response.json();
-                setGames(gamesData);
-                console.log('游戏数据加载成功:', gamesData.length + ' 个游戏');
-            } else {
-                console.error('无法加载游戏数据文件');
-                showErrorMessage('无法加载游戏列表，请检查数据文件是否存在');
-            }
-        } catch (error) {
-            console.error('加载游戏数据失败:', error);
-            showErrorMessage('加载游戏数据时发生错误');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // 存储当前选中的游戏元数据
+    const [selectedGameMeta, setSelectedGameMeta] = useState<any | null>(null);
 
     /**
-     * 显示错误消息
+     * 显示游戏详情（从后端数据）
      */
-    const showErrorMessage = (message: string) => {
-        // 在React中，我们可以通过状态来显示错误信息
-        // 这里保持原有逻辑，但实际应该用状态管理
-        const gameListContainer = document.getElementById('gameList');
-        if (gameListContainer) {
-            gameListContainer.innerHTML = `
-                <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: white;">
-                    <h2 style="font-size: 24px; margin-bottom: 10px;">😔 加载失败</h2>
-                    <p style="font-size: 16px; opacity: 0.9;">${message}</p>
-                </div>
-            `;
-        }
-    };
-
-    /**
-     * 显示游戏详情
-     */
-    const showGameDetail = (game: Game) => {
-        setSelectedGame(game);
+    const showGameDetail = (meta: any) => {
+        setSelectedGameMeta(meta);
         setShowGameModal(true);
+    };
+
+    /**
+     * 从详情弹窗创建游戏
+     */
+    const handleCreateGameFromDetail = async () => {
+        if (!selectedGameMeta?.id) {
+            alert('游戏信息错误，请重试');
+            return;
+        }
+        setPdfFileId(selectedGameMeta.id);
+        const sessionId = await createSession();
+        setSessionId(sessionId);
+        if (sessionId) {
+            navigator('/newmain');
+        } else {
+            alert('创建游戏失败，请重试');
+        }
     };
 
     /**
@@ -119,7 +78,7 @@ const Home: React.FC = () => {
      */
     const closeModal = () => {
         setShowGameModal(false);
-        setSelectedGame(null);
+        setSelectedGameMeta(null);
     };
 
     const closeCreateModal = () => {
@@ -323,11 +282,6 @@ const Home: React.FC = () => {
         };
     }, [showGameModal, showCreateModal]);
 
-    // 组件挂载时加载数据
-    useEffect(() => {
-        loadGamesData();
-    }, []);
-
     // 首页加载每个 fileId 后端元信息
     useEffect(() => {
         Promise.all(
@@ -420,8 +374,7 @@ const Home: React.FC = () => {
                                 className={styles.gameCard}
 
                                 onClick={() => {
-                                    setPdfFileId(meta.id);
-                                    handleCreateGame();
+                                    showGameDetail(meta);
                                 }}
                             >
                                 
@@ -621,7 +574,7 @@ const Home: React.FC = () => {
             )}
 
             {/* 游戏详情弹窗 */}
-            {showGameModal && selectedGame && (
+            {showGameModal && selectedGameMeta && (
                 <div
                     className={`${styles.modal} ${styles.modalShow}`}
                     onClick={(e) => {
@@ -632,41 +585,91 @@ const Home: React.FC = () => {
                         <button className={styles.modalClose} onClick={closeModal}>
                             ×
                         </button>
-                        <img
-                            className={styles.detailCover}
-                            src={selectedGame.cover}
-                            alt="游戏封面"
-                        />
+                        {selectedGameMeta.img && (
+                            <img
+                                className={styles.detailCover}
+                                src={selectedGameMeta.img}
+                                alt="游戏封面"
+                            />
+                        )}
                         <div className={styles.detailContent}>
                             <div className={styles.detailHeader}>
                                 <h2 className={styles.detailTitle}>
-                                    <span>{selectedGame.icon}</span>
-                                    <span>{selectedGame.title}</span>
+                                    <span>{selectedGameMeta.icon || '🎮'}</span>
+                                    <span>{selectedGameMeta.lore?.worldBackground?.title || '未命名游戏'}</span>
                                 </h2>
                                 <p className={styles.detailSubtitle}>
-                                    {selectedGame.subtitle}
+                                    {selectedGameMeta.subtitle || ''}
                                 </p>
-                                <div className={styles.detailTags}>
-                                    {selectedGame.tags.map((tag, index) => (
-                                        <span key={index} className={styles.detailTag}>{tag}</span>
-                                    ))}
+                                {Array.isArray(selectedGameMeta.tags) && selectedGameMeta.tags.length > 0 && (
+                                    <div className={styles.detailTags}>
+                                        {selectedGameMeta.tags.map((tag: string, index: number) => (
+                                            <span key={index} className={styles.detailTag}>{tag}</span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 游戏简介 */}
+                            {selectedGameMeta.lore?.worldBackground?.content && (
+                                <div className={styles.detailSection}>
+                                    <h3>📖 游戏简介</h3>
+                                    {Array.isArray(selectedGameMeta.lore.worldBackground.content) ? (
+                                        selectedGameMeta.lore.worldBackground.content.map((para: string, idx: number) => (
+                                            <p key={idx}>{para}</p>
+                                        ))
+                                    ) : (
+                                        <p>{selectedGameMeta.lore.worldBackground.content}</p>
+                                    )}
                                 </div>
-                            </div>
+                            )}
 
-                            <div className={styles.detailSection}>
-                                <h3>📖 游戏简介</h3>
-                                <p>{selectedGame.fullDescription}</p>
-                            </div>
+                            {/* 玩家故事 */}
+                            {selectedGameMeta.lore?.playerStory && (
+                                <div className={styles.detailSection}>
+                                    <h3>👤 玩家故事</h3>
+                                    <p><strong>{selectedGameMeta.lore.playerStory.title}</strong></p>
+                                    {Array.isArray(selectedGameMeta.lore.playerStory.content) && (
+                                        selectedGameMeta.lore.playerStory.content.map((para: string, idx: number) => (
+                                            <p key={idx}>{para}</p>
+                                        ))
+                                    )}
+                                </div>
+                            )}
 
+                            {/* 关键事件 */}
+                            {Array.isArray(selectedGameMeta.lore?.keyEvents) && selectedGameMeta.lore.keyEvents.length > 0 && (
+                                <div className={styles.detailSection}>
+                                    <h3>⚡ 关键事件</h3>
+                                    <div className={styles.detailFeatures}>
+                                        {selectedGameMeta.lore.keyEvents.map((event: any, index: number) => (
+                                            <div key={index} className={styles.featureItem}>
+                                                <strong>{event.title} ({event.year})</strong>
+                                                <span>{event.description}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 游戏统计 */}
                             <div className={styles.detailSection}>
-                                <h3>✨ 游戏特色</h3>
-                                <div className={styles.detailFeatures}>
-                                    {selectedGame.features.map((feature, index) => (
-                                        <div key={index} className={styles.featureItem}>
-                                            <strong>{feature.title}</strong>
-                                            <span>{feature.desc}</span>
-                                        </div>
-                                    ))}
+                                <h3>📊 游戏统计</h3>
+                                <div className={styles.gameStats}>
+                                    {(() => {
+                                        const scenesCount = selectedGameMeta.scenes ? Object.keys(selectedGameMeta.scenes).length : 0;
+                                        const itemsCount = selectedGameMeta.items ? Object.keys(selectedGameMeta.items).length : 0;
+                                        const npcsCount = selectedGameMeta.scenes
+                                            ? Object.values<any>(selectedGameMeta.scenes).reduce((sum: number, sc: any) => sum + (Array.isArray(sc.npcs) ? sc.npcs.length : 0), 0)
+                                            : 0;
+                                        return (
+                                            <>
+                                                <span className={styles.statItem}>🗺️ 场景: {scenesCount}</span>
+                                                <span className={styles.statItem}>🎒 物品: {itemsCount}</span>
+                                                <span className={styles.statItem}>🧍 NPC: {npcsCount}</span>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 
@@ -674,21 +677,12 @@ const Home: React.FC = () => {
                                 <button className={`${styles.btn} ${styles.btnSecondary}`} onClick={closeModal}>
                                     取消
                                 </button>
-                                <a
-                                    href="/createCharacter"
-                                    className={`${styles.btn} ${styles.btnPrimary} ${['开发中', '即将推出'].includes(selectedGame.stats.status) ? styles.disabled : ''
-                                        }`}
-                                    style={{
-                                        pointerEvents: ['开发中', '即将推出'].includes(selectedGame.stats.status) ? 'none' : 'auto',
-                                        textDecoration: 'none',
-                                        display: 'inline-block'
-                                    }}
+                                <button
+                                    className={`${styles.btn} ${styles.btnPrimary}`}
+                                    onClick={handleCreateGameFromDetail}
                                 >
-                                    {['开发中', '即将推出'].includes(selectedGame.stats.status)
-                                        ? `⏳ ${selectedGame.stats.status}，敬请期待`
-                                        : '🚀 开始游戏'
-                                    }
-                                </a>
+                                    🚀 开始游戏
+                                </button>
                             </div>
                         </div>
                     </div>

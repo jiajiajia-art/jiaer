@@ -23,7 +23,6 @@
 }
 
 .dialogueModal {
-    background: white;
     border-radius: 16px;
     width: 90%;
     max-width: 600px;
@@ -33,6 +32,11 @@
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease-out;
+    background-image: url('/data/asset/编年史/框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
 }
 
 @keyframes slideUp {
@@ -47,9 +51,7 @@
 }
 
 .modalHeader {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
-    color: white;
-    padding: 20px 24px;
+    padding: 16px;
     border-radius: 16px 16px 0 0;
     display: flex;
     justify-content: space-between;
@@ -65,8 +67,6 @@
 .closeBtn {
     background: transparent;
     border: none;
-    color: white;
-    font-size: 24px;
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -80,15 +80,20 @@
     max-width: 32px;
 }
 
-.closeBtn:hover {
-    background: rgba(255, 255, 255, 0.2);
+.closeBtn img {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    margin-right: 5px;
+    position: absolute;
+    top: -6px;
+    right: 2px;
 }
 
 .messagesContainer {
     flex: 1;
-    padding: 24px;
+    padding:5px 24px;
     overflow-y: auto;
-    background: #f8f9fa;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -118,115 +123,98 @@
     background: #e9ecef;
     color: #333;
     align-self: flex-start;
-    border-left: 4px solid #4a90e2;
+    border-left: 4px solid #B69B74;
 }
 
 .message.user {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
+    background: linear-gradient(45deg, #B69B74, #6C573A);
     color: white;
     align-self: flex-end;
     border-left: none;
 }
 
 .startGameContainer {
-    padding: 24px;
-    background: white;
-    border-top: 1px solid #e0e0e0;
+    padding: 5px;
     display: flex;
     justify-content: center;
 }
 
 .startGameBtn {
-    background: linear-gradient(45deg, #27ae60, #229954);
-    color: white;
     border: none;
-    padding: 14px 40px;
-    border-radius: 28px;
+    padding: 0;
+    border-radius: 0;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+    background-color: transparent;
+    border: none;
+    width: 360px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0;
+    margin: 0 auto;
 }
 
-.startGameBtn:hover {
-    background: linear-gradient(45deg, #229954, #1e8449);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
-}
-
-.startGameBtn:active {
-    transform: translateY(0);
+.startGameBtn img {
+    width: 360px;
+    height: 60px;
+    object-fit: contain;
 }
 
 .inputContainer {
-    padding: 20px 24px;
-    background: white;
-    border-top: 1px solid #e0e0e0;
     display: flex;
     gap: 12px;
     align-items: center;
+    width: 94%;
+    margin: 0 auto;
+    height: 74px;
 }
 
 .input {
     flex: 1;
-    padding: 12px 16px;
-    border: 2px solid #ddd;
+    padding: 10px 16px !important;
+    border: 2px solid #bc9760;
     border-radius: 24px;
     font-size: 1rem;
     outline: none;
     transition: all 0.3s ease;
     min-width: 0;
-}
-
-.input:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    flex: auto;
+    background-color: #7E6950 !important;
+    border: none !important;
+    color: #fff !important;
 }
 
 .sendBtn {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
-    color: white;
-    border: none;
-    padding: 12px 16px;
-    border-radius: 24px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    /* 移除所有默认样式 */
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
-    max-width: 80px;
+    width: 80px;
+    height: 80px;
     flex-shrink: 0;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 移除默认外观 */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    opacity: 1 !important;
 }
 
-.sendBtn:hover {
-    background: linear-gradient(45deg, #357abd, #2c6ba8);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
-}
-
-.sendBtn:active {
-    transform: translateY(0);
-}
-
-/* 滚动条样式 */
-.messagesContainer::-webkit-scrollbar {
-    width: 8px;
-}
-
-.messagesContainer::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.messagesContainer::-webkit-scrollbar-thumb {
-    background: #4a90e2;
-    border-radius: 4px;
-}
-
-.messagesContainer::-webkit-scrollbar-thumb:hover {
-    background: #357abd;
+.sendBtn img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    display: block;
 }
 
 .loadingDots {
@@ -255,7 +243,7 @@
 
 .cursor {
     animation: blink 1s infinite;
-    color: #4a90e2;
+    color: #B69B74;
     font-weight: bold;
 }
 
@@ -331,7 +319,7 @@
 }
 
 .markdownContent blockquote {
-    border-left: 4px solid #4a90e2;
+    border-left: 4px solid #B69B74;
     padding-left: 12px;
     margin: 8px 0;
     color: #666;
@@ -374,7 +362,7 @@
 }
 
 .actionBtn {
-    background: #2b6cb0;
+    background: #B69B74;
     color: white;
     border: none;
     border-radius: 6px;
@@ -384,7 +372,7 @@
 }
 
 .actionBtn:hover {
-    background: #3182ce;
+    background: #B69B74;
 }
 
 .actionBtn:disabled {

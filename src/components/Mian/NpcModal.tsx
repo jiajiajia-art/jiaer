@@ -24,7 +24,12 @@ const NpcModal: React.FC<NpcModalProps> = ({
     return (
         <div className={styles.modal} onClick={onClose}>
             <div className={`${styles.modalContent} ${styles.npcModalContent}`} onClick={(e) => e.stopPropagation()}>
-                <button className={styles.closeNpcModal} onClick={onClose}>×</button>
+                <button className={styles.closeNpcModal} onClick={onClose}>
+                    <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                </button>
+                <div className={styles.npcDetailGoodness}>
+                    <p>{npc.relationships}</p>
+                </div>
                 
                 <div className={styles.npcDetailHeader}>
                     <img 
@@ -52,9 +57,6 @@ const NpcModal: React.FC<NpcModalProps> = ({
                     <p>{npc.description || '描述'}</p>
                 </div>
 
-                <div className={styles.npcRelationships}>
-                    <h3>好感度：{npc.relationships}</h3>
-                </div>
 
                 <div className={styles.npcActions}>
                     <button 

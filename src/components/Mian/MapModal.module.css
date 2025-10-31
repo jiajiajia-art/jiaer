@@ -63,31 +63,10 @@
 .content {
     flex: 1;
     padding: 0px 10px; /* 减少左右内边距，给地图更多空间 */
-    overflow: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(139, 121, 94, 0.5) transparent;
+    overflow: hidden; /* 移除滚动 */
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.content::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.content::-webkit-scrollbar-track {
-    background: #faf8f5;
-    border-radius: 4px;
-}
-
-.content::-webkit-scrollbar-thumb {
-    background: rgba(139, 121, 94, 0.6);
-    border-radius: 4px;
-}
-
-.content::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 121, 94, 0.8);
 }
 
 /* 新增地图容器，确保地图居中 */

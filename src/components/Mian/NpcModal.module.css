@@ -23,15 +23,21 @@
 }
 
 .modalContent {
-    background: white;
+    background-image: url('/data/asset/角色信息框/NPC框.png');
+    background-size: 100% 99%;
+    background-position: bottom;
+    background-repeat: no-repeat;
     border-radius: 16px;
     width: 90%;
-    max-width: 600px;
+    min-height: 420px;
+    max-width: 280px;
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease-out;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -46,89 +52,135 @@
 }
 
 .npcModalContent {
-    padding: 24px;
+    padding: 24px 20px 0 20px; /* 左右对称，避免视觉偏移 */
 }
 
 .closeNpcModal {
     position: absolute;
-    top: 16px;
+    top: 0px;
     right: 16px;
     background: transparent;
     border: none;
-    color: #666;
-    font-size: 24px;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 46px;
+    height: 46px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: all 0.3s ease;
+    padding: 0px;
+    background-color: transparent;
     z-index: 10;
 }
 
-.closeNpcModal:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: #333;
+.closeNpcModal img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.npcDetailGoodness{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 46px;
+    height: 40px;
+    z-index: 10;
+    color: #E4D2A9;
+    font-size: 18px;
+    font-weight: 600;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
+    background-image: url('/data/asset/角色信息框/好感度.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .npcDetailHeader {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 20px;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #eee;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
 }
 
 .npcDetailAvatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
+    width: 100%;
+    height: 180px;
     object-fit: cover;
-    border: 3px solid #4a90e2;
+}
+
+.npcDetailInfo{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 46%;
 }
 
 .npcDetailInfo h2 {
-    margin: 0 0 12px 0;
-    color: #333;
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 280px;
+    height: 50px;
+    color: #E4D2A9;
+    font-size: 20px;
+    font-weight: 600;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
+    background-image: url('/data/asset/角色信息框/名字框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .npcDetailStats {
     display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 2px;
+    color: #4d4129de;
+    font-size: 14px;
+    font-weight: bold;
 }
 
 .npcDetailJob,
 .npcDetailGender,
 .npcDetailAge {
-    background: #f0f8ff;
-    color: #4a90e2;
     padding: 4px 12px;
     border-radius: 12px;
-    font-size: 0.9rem;
-    font-weight: 500;
 }
 
 .npcDetailDescription {
-    margin-bottom: 24px;
+    margin-top: 60px;
+    margin-bottom: 12px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 .npcDetailDescription p {
-    color: #666;
-    line-height: 1.6;
-    margin: 0;
+    color: black;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    max-width: 85%;
 }
 
 .npcRelationships {
-    margin-bottom: 24px;
+    margin-bottom: 12px;
+    text-align: center;
 }
 
 .npcRelationships h3 {
-    margin: 0 0 16px 0;
+    margin: 0;
     color: #333;
     font-size: 1.1rem;
 }
@@ -183,27 +235,31 @@
 .npcActions {
     display: flex;
     justify-content: center;
-    padding-top: 20px;
-    border-top: 1px solid #eee;
+    margin-top: auto;
+    margin-bottom: 20px;
+    width: 100%;
+    align-items: center;
 }
 
 .chatWithNpcBtn {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
-    color: white;
+    color: #E4D2A9;
+    background-image: url('/data/asset/角色信息框/按钮.png');
+    background-size: 98% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     border: none;
-    padding: 12px 24px;
-    border-radius: 24px;
+    padding: 6px 24px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+    background-color: transparent;
+    display: inline-block;
+    margin: 0 auto; /* 双保险水平居中 */
 }
 
 .chatWithNpcBtn:hover {
-    background: linear-gradient(45deg, #357abd, #2c6ba8);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
 }
 
 .chatWithNpcBtn:active {
@@ -214,7 +270,7 @@
 @media (max-width: 768px) {
     .modalContent {
         width: 95%;
-        max-height: 90vh;
+        max-height: 450px;
     }
     
     .npcDetailHeader {

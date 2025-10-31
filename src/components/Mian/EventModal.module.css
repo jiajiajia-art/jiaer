@@ -23,15 +23,23 @@
 }
 
 .modalContent {
-    background: white;
+    background-image: url('/data/asset/建筑选项框/框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     border-radius: 16px;
     width: 90%;
     max-width: 500px;
-    max-height: 80vh;
+    max-height: 76vh;
     overflow-y: auto;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease-out;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 18px;
 }
 
 @keyframes slideUp {
@@ -49,8 +57,9 @@
     width: 100%;
     height: 200px;
     overflow: hidden;
-    border-radius: 16px 16px 0 0;
+    border-radius: 5px;
     position: relative;
+    box-sizing: border-box;
 }
 
 .eventImage img {
@@ -59,46 +68,64 @@
     object-fit: cover;
 }
 
+.closeBtn {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    width: 46px;
+    height: 46px;
+    cursor: pointer;
+}
+
+.closeBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .eventDescription {
-    padding: 24px 24px 16px 24px;
+    width: 70%;
+    margin-top: 20px;
 }
 
 .eventDescription p {
-    color: #333;
-    line-height: 1.6;
-    margin: 0;
-    font-size: 1rem;
+    color: #B24F1B;
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
 }
 
 .eventOptions {
     padding: 0 24px 24px 24px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
+    width: 60%;
+    margin-top: 16px;
 }
 
 .eventOption {
-    background: linear-gradient(45deg, #4a90e2, #357abd);
-    color: white;
+    width: 100%;
+    height: 32px;
+    background-image: url('/data/asset/建筑选项框/按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #E4D2A9;
     border: none;
-    padding: 14px 20px;
     border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
-    text-align: left;
-}
-
-.eventOption:hover {
-    background: linear-gradient(45deg, #357abd, #2c6ba8);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
-}
-
-.eventOption:active {
-    transform: translateY(0);
+    text-align: center;
+    line-height: 32px;
+    text-shadow:
+        1px 1px 1px #7a5231,   /* 右下浅棕阴影 */
+       -1px -1px 1px #7a5231,  /* 左上阴影 */
+        1px -1px 1px #7a5231,  /* 右上阴影 */
+       -1px 1px 1px #7a5231,   /* 左下阴影 */
+        0 0 4px #7a5231;  
+    padding: 0;
 }
 
 /* 响应式设计 */

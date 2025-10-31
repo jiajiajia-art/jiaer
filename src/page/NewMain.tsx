@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import styles from './NewMain.module.css';
 import { HOST_ADDRESS } from '../config';
 import { useEventSystem } from '../hooks/useEventSystem';
-import { useGameData, type PlayerStats, type InventoryState, type ScenesMap } from '../hooks/useGameData';
+import { useGameData, type PlayerStats, type InventoryState } from '../hooks/useGameData';
 import { useChat } from '../hooks/useChat';
 import { useLore } from '../hooks/useLore';
 import { useInventory } from '../hooks/useInventory';
@@ -95,6 +95,8 @@ const NewMain: React.FC = () => {
         if (!activeEvent) return;
         const opt = activeEvent.options[index];
         if (!opt) return;
+        // 注意：这里不关闭事件弹窗，因为EventModal中已经处理了关闭和打开对话弹窗的逻辑
+        // 只有在没有通过onOpenDialogue打开对话弹窗的情况下才关闭事件弹窗
         // 应用 effects 到玩家（若有）
         if (opt.effects && player) {
             const next = { ...player };
@@ -146,6 +148,9 @@ const NewMain: React.FC = () => {
 
     // 建筑点击：features 事件或回退事件
     const handleBuildingClick = (building: any) => {
+        // 保存当前建筑信息，用于传递给EventModal
+        setCurrentEventBuilding(building);
+        
         if (building && Array.isArray(building.features) && building.features.length > 0) {
             // 动态生成基于 features 的事件弹窗（最多三项）
             const tempEvent: EventDef = {
@@ -170,9 +175,20 @@ const NewMain: React.FC = () => {
         }
         for (const id of tryIds) {
             const ev = events[id];
-            if (ev) { setActiveEvent(ev); setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]); return; }
+            if (ev) { 
+                setActiveEvent(ev); 
+                setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]); 
+                return; 
+            }
         }
         alert('该建筑暂未配置可用功能');
+    };
+    
+    // 处理从事件弹窗打开对话弹窗
+    const handleOpenDialogueFromEvent = (initialText: string) => {
+        setDialogueInitialInput(initialText);
+        setDialogueTitle('📜 奇闻轶事');
+        setDialogueOpen(true);
     };
 
     // 键盘快捷键（1 背包 / 2 角色 / 3 地图 / Esc 关闭弹层）
@@ -191,136 +207,6 @@ const NewMain: React.FC = () => {
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
-    // 地图布局：优化算法避免节点重合
-    const computePositions = (m: ScenesMap): Record<string, { x: number; y: number }> => {
-        const ids = Object.keys(m);
-        const positions: Record<string, { x: number; y: number }> = {};
-        if (ids.length === 0) return positions;
-
-        // 方向偏移量 - 再次大幅增加
-        const directionOffsets: Record<string, { x: number; y: number }> = {
-            north: { x: 0, y: -400 },    // 300 → 400
-            south: { x: 0, y: 400 },     // 300 → 400
-            east: { x: 400, y: 0 },      // 300 → 400
-            west: { x: -400, y: 0 },     // 300 → 400
-            northeast: { x: 350, y: -350 },  // 250 → 350
-            northwest: { x: -350, y: -350 }, // 250 → 350
-            southeast: { x: 350, y: 350 },   // 250 → 350
-            southwest: { x: -350, y: 350 },  // 250 → 350
-            up: { x: 0, y: -380 },       // 280 → 380
-            down: { x: 0, y: 380 },      // 280 → 380
-        };
-
-        // 碰撞检测函数 - 再次增加最小间距
-        const hasCollision = (x: number, y: number, excludeId?: string): boolean => {
-            for (const [id, pos] of Object.entries(positions)) {
-                if (excludeId && id === excludeId) continue;
-                const distance = Math.sqrt((pos.x - x) ** 2 + (pos.y - y) ** 2);
-                if (distance < 300) return true; // 200 → 300
-            }
-            return false;
-        };
-
-        // 寻找空闲位置（螺旋搜索）- 再次增加搜索半径
-        const findFreePosition = (centerX: number, centerY: number): { x: number; y: number } => {
-            let angle = 0;
-            let radius = 350; // 250 → 350
-            let attempts = 0;
-            const maxAttempts = 20;
-
-            while (attempts < maxAttempts) {
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-
-                if (!hasCollision(x, y)) {
-                    return { x, y };
-                }
-
-                angle += Math.PI / 4;
-                if (angle >= Math.PI * 2) {
-                    angle = 0;
-                    radius += 150; // 120 → 150
-                }
-                attempts++;
-            }
-            // 如果找不到，返回随机位置 - 再次增加随机范围
-            return { x: centerX + Math.random() * 600 - 300, y: centerY + Math.random() * 600 - 300 };
-        };
-
-        // 使用BFS遍历并布局场景
-        const visited = new Set<string>();
-        const queue = [ids[0]];
-
-        // 设置起始场景在中心
-        if (queue[0]) {
-            positions[queue[0]] = { x: 500, y: 400 };
-            visited.add(queue[0]);
-        }
-
-        while (queue.length > 0) {
-            const currentId = queue.shift() as string;
-            const scene = m[currentId];
-            const currentPos = positions[currentId];
-
-            if (!scene || !currentPos || !scene.exits) continue;
-
-            // 处理所有出口
-            Object.entries(scene.exits).forEach(([direction, targetId]) => {
-                if (visited.has(targetId) || !m[targetId]) return;
-
-                const offset = directionOffsets[direction] || { x: 350, y: 350 }; // 250 → 350
-                let targetX = currentPos.x + offset.x;
-                let targetY = currentPos.y + offset.y;
-
-                // 检查是否有碰撞，如果有则调整位置
-                if (hasCollision(targetX, targetY)) {
-                    const freePos = findFreePosition(currentPos.x, currentPos.y);
-                    targetX = freePos.x;
-                    targetY = freePos.y;
-                }
-
-                positions[targetId] = { x: targetX, y: targetY };
-                visited.add(targetId);
-                queue.push(targetId);
-            });
-        }
-
-        // 处理未访问的场景（孤立节点）
-        ids.forEach(id => {
-            if (!visited.has(id)) {
-                positions[id] = findFreePosition(500, 400);
-            }
-        });
-
-        // 边界检查和缩放 - 水平居中
-        const allPos = Object.values(positions);
-        if (allPos.length === 0) return positions;
-
-        const minX = Math.min(...allPos.map(p => p.x));
-        const maxX = Math.max(...allPos.map(p => p.x));
-        const minY = Math.min(...allPos.map(p => p.y));
-        const maxY = Math.max(...allPos.map(p => p.y));
-
-        const margin = 80;
-        const scaleX = (1000 - 2 * margin) / Math.max(1, maxX - minX);
-        const scaleY = (800 - 2 * margin) / Math.max(1, maxY - minY);
-        const scale = Math.min(scaleX, scaleY, 1); // 保持 0.5
-
-        // 计算水平居中
-        const scaledWidth = (maxX - minX) * scale;
-        const horizontalMargin = margin + (1000 - 2 * margin - scaledWidth) / 2;
-
-        // 应用缩放与水平居中
-        Object.keys(positions).forEach(id => {
-            positions[id] = {
-                x: horizontalMargin + (positions[id].x - minX) * scale,
-                y: margin + (positions[id].y - minY) * scale
-            };
-        });
-
-        return positions;
-    };
-    const positions = computePositions(scenes);
 
     // 场景详情弹窗
     const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
@@ -330,6 +216,10 @@ const NewMain: React.FC = () => {
     // 对话弹窗（用于奇闻轶事等）
     const [dialogueOpen, setDialogueOpen] = useState(false);
     const [dialogueTitle, setDialogueTitle] = useState('奇闻轶事');
+    const [dialogueInitialInput, setDialogueInitialInput] = useState('');
+    
+    // 当前事件对应的建筑信息
+    const [currentEventBuilding, setCurrentEventBuilding] = useState<any | null>(null);
 
     // 背包相关函数
     const handleEquipItem = (item: any, slot: any) => equipItem(item, slot, setInventory);
@@ -474,7 +364,9 @@ const NewMain: React.FC = () => {
                 <div id="chatPanel" className={styles.chatPanel} style={{ display: chatOpen ? 'flex' : 'none' }}>
                     <div className={styles.chatHeader}>
                         <h3 id="chatTitle">聊天</h3>
-                        <button id="closeChatBtn" className={styles.closeChatBtn} onClick={() => setChatOpen(false)}>×</button>
+                        <button id="closeChatBtn" className={styles.closeChatBtn} onClick={() => setChatOpen(false)}>
+                            <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                        </button>
                     </div>
                     <div
                         id="chatMessages"
@@ -497,7 +389,6 @@ const NewMain: React.FC = () => {
                             type="text"
                             id="chatInput"
                             className={styles.chatInput}
-                            placeholder="输入消息..."
                             value={chatInput}
                             onChange={(e) => setChatInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -517,7 +408,6 @@ const NewMain: React.FC = () => {
                                 }
                             }}
                         >
-                            发送
                         </button>
                     </div>
                 </div>
@@ -543,7 +433,6 @@ const NewMain: React.FC = () => {
                 isOpen={activePanel === 'map'}
                 onClose={() => setActivePanel('scene')}
                 scenes={scenes}
-                positions={positions}
                 currentSceneId={currentSceneId}
                 onSceneClick={(id) => { setSceneDetailId(id); setSceneDetailOpen(true); }}
             />
@@ -553,7 +442,11 @@ const NewMain: React.FC = () => {
             <EventModal
                 isOpen={!!activeEvent}
                 event={activeEvent}
+                onClose={() => setActiveEvent(null)}
                 onOptionSelect={handleEventOption}
+                currentSceneId={currentSceneId}
+                building={currentEventBuilding}
+                onOpenDialogue={handleOpenDialogueFromEvent}
             />
 
             {/* 悬浮背包面板组件 */}
@@ -602,9 +495,14 @@ const NewMain: React.FC = () => {
             {/* 对话弹窗组件 */}
             <DialogueModal
                 isOpen={dialogueOpen}
-                onClose={() => setDialogueOpen(false)}
+                onClose={() => {
+                    setDialogueOpen(false);
+                    setDialogueInitialInput(''); // 关闭时清空初始输入
+                    setCurrentEventBuilding(null); // 清空建筑信息
+                }}
                 title={dialogueTitle}
                 playerName={player?.profile.name || '玩家'}
+                initialInput={dialogueInitialInput}
             />
 
             {/* 场景详情弹窗组件 */}

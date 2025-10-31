@@ -23,7 +23,7 @@
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1360px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
@@ -57,9 +57,30 @@
 /* 游戏列表 */
 .gameList {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 30px;
     animation: fadeInUp 1s ease-out;
+}
+
+/* 响应式：小于1200px时显示3列 */
+@media (max-width: 1200px) {
+    .gameList {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* 响应式：小于900px时显示2列 */
+@media (max-width: 900px) {
+    .gameList {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 响应式：小于600px时显示1列 */
+@media (max-width: 600px) {
+    .gameList {
+        grid-template-columns: 1fr;
+    }
 }
 
 .gameCard {
@@ -296,6 +317,13 @@
     color: #555;
     line-height: 1.8;
     font-size: 15px;
+    margin-bottom: 12px;
+}
+
+.detailSection .gameStats {
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
 }
 
 .detailFeatures {

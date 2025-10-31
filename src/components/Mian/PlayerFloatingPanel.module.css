@@ -1,10 +1,13 @@
 .playerFloatingPanel {
     position: absolute;
     top: 180px;
-    left: 30px;
-    width: 450px;
-    max-height: 500px;
-    background: white;
+    left: 50px;
+    width: 350px;
+    height: 280px;
+    background-image: url('/data/asset/角色信息框/玩家框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     display: flex;
@@ -26,60 +29,80 @@
 }
 
 .playerPanelHeader {
-    background: linear-gradient(45deg, #9b59b6, #8e44ad);
-    color: white;
     padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: relative;
     padding-right: 56px;
+    height: 50px;
+    color: #E4D2A9;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.playerPanelHeaderLevel {
+    position: absolute;
+    bottom: 0px;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.playerPanelHeaderLevelText {
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.playerPanelHeaderLevelValue {
+    font-size: 20px;
+    font-weight: 600;
 }
 
 .playerPanelHeader h3 {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 600;
+    position: absolute;
+    bottom: 2px;
+    left: 26%;
 }
 
 .closePlayerBtn {
     position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%);
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 26px;
+    top: 12px;
+    right: 6px;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 46px;
+    height: 46px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-    line-height: 1;
-    flex-shrink: 0;
-    max-width: 32px;
+    padding: 0px;
+    background-color: transparent;
 }
 
-.closePlayerBtn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
+.closePlayerBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transform: rotate(90deg);
+    transform-origin: center center;
 }
 
 .playerPanelContent {
-    padding: 15px;
+    padding: 15px 36px 2px 36px;
     overflow-y: auto;
     max-height: 440px;
+    display: flex;
+    justify-content: center;
 }
 
 .playerInfo {
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 2rem;
-    align-items: start;
+    width: 90%;
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-top: 6px;
 }
 
 .playerAvatar {
@@ -87,34 +110,25 @@
 }
 
 .playerAvatar img {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    border: 4px solid #4a90e2;
+    width: 80px;
+    height: 80px;
     object-fit: cover;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    border: 2px solid #000;
 }
 
-.playerDetails {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-}
-
-.playerBasic h3 {
-    color: #4a90e2;
-    font-size: 1.3rem;
-    margin-bottom: 1rem;
+.playerBasic {
+    font-size: 1rem;
+    color: #4d4129de;
+    font-weight: 600;
 }
 
 .playerBasic p {
-    margin: 0.5rem 0;
+    margin: 0 0 0.5rem 0;
     font-size: 1rem;
 }
 
 .label {
-    font-weight: bold;
-    color: #666;
     margin-right: 0.5rem;
 }
 
@@ -142,6 +156,28 @@
     font-weight: 600;
     color: #333;
     font-size: 0.9rem;
+}
+
+.playerStats {
+    width: 90%;
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    margin-left: 50px;
+    font-size: 1rem;
+    color: #4d4129de;
+    font-weight: 600;
+}
+
+.playerStatsColumn {
+    display: flex;
+    flex-direction: column;
+    min-width: 80px;
+}
+
+.playerStats p {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
 }
 
 /* 响应式设计 */

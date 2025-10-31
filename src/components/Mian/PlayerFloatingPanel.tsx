@@ -39,39 +39,44 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
 }) => {
     if (!isOpen) return null;
     console.log('player', player);
-    
+
 
     return (
         <div className={styles.playerFloatingPanel}>
             <div className={styles.playerPanelHeader}>
-                <h3>角色信息</h3>
-                <button className={styles.closePlayerBtn} onClick={onClose}>×</button>
+                <span className={styles.playerPanelHeaderLevel}>
+                    <p className={styles.playerPanelHeaderLevelText}>LV.</p>
+                    <p className={styles.playerPanelHeaderLevelValue}>{player?.stats.level ?? 1}</p>
+                </span>
+                <h3>{player?.profile.name || '未命名'}</h3>
+                <button className={styles.closePlayerBtn} onClick={onClose}>
+                    <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                </button>
             </div>
             <div className={styles.playerPanelContent}>
                 <div className={styles.playerInfo}>
                     <div className={styles.playerAvatar}>
-                        <img 
-                            src={`${HOST_ADDRESS}${player?.profile.avatar}` || '/data/avatars/default.png'} 
-                            alt="角色头像" 
+                        <img
+                            src={'/data/avatars/hunter.png'}
+                            alt="角色头像"
                         />
                     </div>
-                    <div className={styles.playerDetails}>
-                        <div className={styles.playerBasic}>
-                            <h3>{player?.profile.name || '未命名'}</h3>
-                            <p>
-                                <span className={styles.label}>年龄:</span> 
-                                <span>{player?.profile.age ?? '-'}</span>
-                            </p>
-                            <p>
-                                <span className={styles.label}>性别:</span> 
-                                <span>{player?.profile.gender ?? '-'}</span>
-                            </p>
-                            <p>
-                                <span className={styles.label}>职业:</span> 
-                                <span>{player?.profile.job ?? '-'}</span>
-                            </p>
-                        </div>
-                        <div className={styles.playerStats}>
+                    {/* <div className={styles.playerDetails}> */}
+                    <div className={styles.playerBasic}>
+                        <p>
+                            <span className={styles.label}>年龄:</span>
+                            <span>{player?.profile.age ?? '-'}</span>
+                        </p>
+                        <p>
+                            <span className={styles.label}>性别:</span>
+                            <span>{player?.profile.gender ?? '-'}</span>
+                        </p>
+                        <p>
+                            <span className={styles.label}>职业:</span>
+                            <span>{player?.profile.job ?? '-'}</span>
+                        </p>
+                    </div>
+                    {/* <div className={styles.playerStats}>
                             <h4>属性</h4>
                             <div className={styles.statBar}>
                                 <span className={styles.statLabel}>等级:</span>
@@ -95,8 +100,37 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                                 <span className={styles.statLabel}>速度:</span>
                                 <span className={styles.statValue}>{player?.stats.speed ?? 8}</span>
                             </div>
-                        </div>
-                    </div>
+                        </div> */}
+                    {/* </div> */}
+                </div>
+
+            </div>
+            <div className={styles.playerStats}>
+                <div className={styles.playerStatsColumn}>
+                    <p>
+                        <span className={styles.label}>等级:</span>
+                        <span>{player?.stats.level ?? 1}</span>
+                    </p>
+                    <p>
+                        <span className={styles.label}>防御:</span>
+                        <span>{player?.stats.defense ?? 5}</span>
+                    </p>
+                    <p>
+                        <span className={styles.label}>攻击:</span>
+                        <span>{player?.stats.attack ?? 10}</span>
+                    </p>
+                </div>
+                <div className={styles.playerStatsColumn}>
+                    <p>
+                        <span className={styles.label}>生命:</span>
+                        <span>
+                            {player ? `${player.stats.health}/${player.stats.maxHealth}` : '100/100'}
+                        </span>
+                    </p>
+                    <p>
+                        <span className={styles.label}>速度:</span>
+                        <span>{player?.stats.speed ?? 8}</span>
+                    </p>
                 </div>
             </div>
         </div>
