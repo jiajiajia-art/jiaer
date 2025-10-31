@@ -421,7 +421,7 @@ const Home: React.FC = () => {
 
                                 onClick={() => {
                                     setPdfFileId(meta.id);
-                                    navigator('/newmain');
+                                    handleCreateGame();
                                 }}
                             >
                                 
