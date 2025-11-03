@@ -290,8 +290,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
 
     return (
-        <div className={styles.modalOverlay} onClick={onClose}>
-            <div className={styles.dialogueModal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalOverlay}>
+            <div className={styles.dialogueModal}>
                 <div className={styles.modalHeader}>
                     <h3></h3>
                     {/* <button className={styles.generateBtn} onClick={handleGenerate}>生成小说</button> */}

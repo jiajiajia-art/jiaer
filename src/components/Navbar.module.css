@@ -1,0 +1,117 @@
+/* 固定导航条 */
+.navbar {
+    height: 90px;
+    color: #E8DBB7;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 0 16px;
+    z-index: 1000;
+}
+
+.navLinks {
+    display: flex;
+    align-items: center;
+    margin-left: 20%;
+    height: 100%;
+}
+
+.navLink {
+    width: 180px;
+    height: 100%;
+    text-align: center;
+    font-size: 40px;
+    font-weight: 600;
+    color: #FAE9B9;
+    text-shadow: 
+    1.5px 1.5px 2.5px rgba(59, 39, 19, 0.95),
+    -1.5px -1.5px 2.5px rgba(59, 39, 19, 0.95),
+    1.5px -1.5px 2.5px rgba(59, 39, 19, 0.95),
+    -1.5px 1.5px 2.5px rgba(59, 39, 19, 0.95),
+    0px 0px 3px rgba(59, 39, 19, 0.95),
+    2px 0px 2.5px rgba(59, 39, 19, 0.95),
+    -2px 0px 2.5px rgba(59, 39, 19, 0.95),
+    0px 2px 2.5px rgba(59, 39, 19, 0.95),
+    0px -2px 2.5px rgba(59, 39, 19, 0.95);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-image: none;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.navLinkActive {
+    background-image: url('/data/asset/首页/按钮.png');
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    justify-content: flex-end;
+    margin-right: 20px;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    height: 50px;
+    width: 300px;
+    gap: 8px;
+    background-image: url('/data/asset/首页/搜索框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.searchIcon {
+    font-size: 18px;
+    color: #8B7355;
+}
+
+.searchInput {
+    width: 82%;
+    height: 100%;
+    border: none;
+    background: transparent;
+    outline: none;
+    color: #5E4630;
+    font-size: 14px;
+}
+
+.searchInput::placeholder {
+    color: #8B7355;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+.avatar:hover {
+    transform: scale(1.05);
+}
+
+.settingIcon {
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}

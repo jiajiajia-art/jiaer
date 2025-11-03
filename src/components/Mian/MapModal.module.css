@@ -13,6 +13,16 @@
     background-position: center;
     background-repeat: no-repeat;
     z-index: 950;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .header {
@@ -41,7 +51,7 @@
     height: 36px;
     border-radius: 8px;
     cursor: pointer;
-    color: #5a4d3e;
+    color: #E8DBB7;
     font-size: 22px;
     line-height: 1;
     transition: all 0.3s ease;
@@ -54,10 +64,9 @@
     background: none;
 }
 
-.closeBtn:hover {
-    border-color: #8a7654;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(90, 77, 62, 0.15);
+.closeInventoryBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
 }
 
 .content {

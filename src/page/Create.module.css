@@ -1,0 +1,519 @@
+.pageRoot {
+    min-height: 64px;
+    width: 100%;
+    height: 100vh;
+    background-image: url('/data/asset/首页/大背景.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.mainContent {
+    color: black;
+    display: flex;
+    height: calc(100vh - 90px);
+    overflow: hidden;
+}
+
+.sidebar {
+    width: 21%;
+    height: 100%;
+    flex-shrink: 0;
+    padding-top: 30px;
+    overflow-y: auto;
+}
+
+.sidebarItem{
+    width: 100%;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url('/data/asset/创作页面/按钮黄.png');
+    background-size: 98% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    margin-bottom: 16px;
+    cursor: pointer;
+}
+
+.sidebarItem span {
+    margin-left: 16px;
+    font-size: 38px;
+    font-weight: 600;
+    color: #E8DBB7;
+    text-shadow: 1px 1px 2px rgba(115, 80, 47, 0.9), -1px -1px 2px rgba(115, 80, 47, 0.9), 1px -1px 2px rgba(115, 80, 47, 0.9), -1px 1px 2px rgba(115, 80, 47, 0.9);
+}
+
+
+.sidebarItemActive {
+    background-image: url('/data/asset/创作页面/按钮红.png');
+    color: #E8DBB7;
+}
+
+.main {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.createGameContainer {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+}
+
+/* 左侧表单区域 - 60% */
+.formSection {
+    flex: 0 0 60%;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    background-image: url('/data/asset/创作页面/数据板.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 25px;
+    border-radius: 15px;
+    height: 100%;
+    max-height: 100%;
+    box-sizing: border-box;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    height: 1/6;
+}
+
+.formGroup label {
+    font-size: 30px;
+    font-weight: 600;
+    color: #E8DBB7;
+    text-shadow: 1px 1px 2px rgba(115, 80, 47, 0.9), -1px -1px 2px rgba(115, 80, 47, 0.9), 1px -1px 2px rgba(115, 80, 47, 0.9), -1px 1px 2px rgba(115, 80, 47, 0.9);
+    margin-bottom: 0 !important;
+    line-height: 1.2;
+    margin-bottom: 10px !important;
+}
+
+/* 为必填字段添加红色*号 */
+.formGroup:has(input[required]) label::after,
+.formGroup:has(textarea[required]) label::after,
+.formGroup.requiredField label::after {
+    content: '*';
+    color: #B2440F;
+    margin-left: 4px;
+    font-weight: 700;
+}
+
+.formGroup input[type="text"],
+.formGroup textarea {
+    padding: 12px 20px;
+    background-color: transparent;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: inherit;
+    color: #E8DBB7!important;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    border: none;
+}
+
+.formGroup input[type="text"]::placeholder,
+.formGroup textarea::placeholder {
+    color: #B69B74;
+    font-weight: 700;
+    opacity: 1;
+}
+
+.formGroup input[type="text"]::-webkit-input-placeholder,
+.formGroup textarea::-webkit-input-placeholder {
+    color: #B69B74;
+    font-weight: 700;
+    opacity: 1;
+}
+
+.formGroup input[type="text"]::-moz-placeholder,
+.formGroup textarea::-moz-placeholder {
+    color: #B69B74;
+    font-weight: 700;
+    opacity: 1;
+}
+
+.formGroup input[type="text"]:-ms-input-placeholder,
+.formGroup textarea:-ms-input-placeholder {
+    color: #B69B74;
+    font-weight: 700;
+    opacity: 1;
+}
+
+.formGroup textarea {
+    resize: none;
+    height: 150px;
+    overflow-y: auto;
+}
+
+/* 文件上传区域 */
+.fileUploadArea {
+    border-radius: 15px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 160px;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 文件上传区域的滚动条样式 */
+.fileUploadArea::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fileUploadArea::-webkit-scrollbar-track {
+    background: rgba(115, 80, 47, 0.1);
+    border-radius: 3px;
+}
+
+.fileUploadArea::-webkit-scrollbar-thumb {
+    background: rgba(115, 80, 47, 0.4);
+    border-radius: 3px;
+}
+
+.fileUploadArea::-webkit-scrollbar-thumb:hover {
+    background: rgba(115, 80, 47, 0.6);
+}
+
+
+.uploadPlaceholder {
+    pointer-events: none;
+    padding: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.uploadIcon {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.uploadText {
+    color: #5E4630;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    font-size: 14px;
+}
+
+.uploadHint {
+    color: #8B7355;
+    font-size: 12px;
+    margin: 0;
+}
+
+.uploadInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
+    background: rgba(115, 80, 47, 0.25);
+    border: 2px solid rgba(115, 80, 47, 0.6);
+    border-radius: 12px 12px 0 0;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+    box-shadow: 
+        0 2px 8px rgba(115, 80, 47, 0.2),
+        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+    margin: 0;
+    flex: 1;
+}
+
+.fileIcon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.fileName {
+    flex: 1;
+    text-align: left;
+    color: #E8DBB7;
+    font-weight: 600;
+    font-size: 15px;
+    word-break: break-all;
+    line-height: 1.4;
+    min-width: 0;
+}
+
+.fileSize {
+    color: #B69B74;
+    font-size: 13px;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.uploadInfo button.removeFileBtn,
+.removeFileBtn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    border-radius: 50% !important;
+    background: rgba(178, 68, 15, 0.8);
+    color: white;
+    border: 2px solid rgba(178, 68, 15, 0.9);
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    flex-grow: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(178, 68, 15, 0.3);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    position: static;
+}
+
+.removeFileBtn:hover {
+    background: rgba(178, 68, 15, 1);
+    border-color: rgba(178, 68, 15, 1);
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(178, 68, 15, 0.5);
+}
+
+.progressContainer {
+    margin-top: 0;
+    width: 100%;
+    flex-shrink: 0;
+    padding: 12px 18px 16px 18px;
+    box-sizing: border-box;
+    background: rgba(115, 80, 47, 0.25);
+    border: 2px solid rgba(115, 80, 47, 0.6);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    backdrop-filter: blur(4px);
+}
+
+.progressBar {
+    width: 100%;
+    height: 6px;
+    background: rgba(115, 80, 47, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #73502F, #B69B74);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px rgba(115, 80, 47, 0.4);
+}
+
+.progressSuccess {
+    background: linear-gradient(90deg, #73502F, #8B7355);
+}
+
+.progressText {
+    text-align: center;
+    font-size: 12px;
+    color: #B69B74;
+    font-weight: 600;
+}
+
+/* 右侧封面区域 - 40% */
+.coverSection {
+    flex: 0 0 38%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    height: 100%;
+    overflow: hidden;
+}
+
+.coverTitle {
+    font-size: 20px;
+    font-weight: 600;
+    color: #5E4630;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.coverPreview {
+    flex: 1;
+    border: 2px dashed #E8DBB7;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-color: #7F6950;
+    background: rgba(127, 105, 80, 0.1);
+}
+
+.coverPreviewDragover {
+    border-color: #7F6950;
+    background: rgba(127, 105, 80, 0.2);
+}
+
+.coverPreview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.coverPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.coverIcon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.coverPlaceholder p {
+    color: #5E4630;
+    font-weight: 600;
+    margin: 4px 0;
+    font-size: 14px;
+}
+
+.coverHint {
+    color: #8B7355 !important;
+    font-size: 13px !important;
+    font-weight: normal !important;
+}
+
+.removeCoverBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 35px!important;
+    height: 35px!important;
+    border-radius: 50%;
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.removeCoverBtn:hover {
+    background: #cc0000;
+    transform: scale(1.1);
+}
+
+.coverActions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.uploadCoverBtn,
+.createGameBtn {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.uploadCoverBtn {
+    background-color: transparent;
+    background-image: url('/data/asset/创作页面/上传按钮.png');
+    background-size: 96% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 0;
+    height: auto;
+    min-height: 50px;
+}
+
+.uploadCoverBtn:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.createGameBtn {
+    background-color: transparent;
+    background-image: url('/data/asset/创作页面/创建按钮.png');
+    background-size: 96% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 0;
+    height: auto;
+    min-height: 50px;
+    box-shadow: none;
+}
+
+.createGameBtn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.createGameBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.myGamesContainer {
+    padding: 40px;
+    text-align: center;
+}
+
+.myGamesContainer h2 {
+    font-size: 32px;
+    color: #5E4630;
+    margin-bottom: 20px;
+}
+
+.myGamesContainer p {
+    color: #8B7355;
+    font-size: 18px;
+}

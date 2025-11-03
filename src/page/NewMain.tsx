@@ -416,14 +416,28 @@ const NewMain: React.FC = () => {
                 <div
                     id="triggerSceneEventBtn"
                     className={styles.sceneEventBtn}
-                    onClick={() => setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'))}
+                    onClick={() => {
+                        // 如果背包打开，先关闭背包
+                        if (inventoryOpen) {
+                            setInventoryOpen(false);
+                        }
+                        // 切换地图弹窗
+                        setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'));
+                    }}
                 >
                     <img src="/data/asset/地图按钮.png" alt="大地图按钮" className={styles.mapBtnImg} />
                 </div>
                 <button id="toggleInventoryBtn"
                     className={styles.floatingInventoryBtn}
                     title="打开背包"
-                    onClick={() => setInventoryOpen(!inventoryOpen)}
+                    onClick={() => {
+                        // 如果地图打开，先关闭地图
+                        if (activePanel === 'map') {
+                            setActivePanel('scene');
+                        }
+                        // 切换背包弹窗
+                        setInventoryOpen(!inventoryOpen);
+                    }}
                 >
                     <img src={"/data/asset/背包按钮.png"} alt="背包按钮" className={styles.inventoryBtnImg} />
                 </button>
