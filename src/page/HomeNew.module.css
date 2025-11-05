@@ -2,7 +2,7 @@
     min-height: 64px;
     width: 100%;
     height: 100vh;
-    background-image: url('data/asset/首页/大背景copy.png');
+    background-image: url('/data/asset/首页/大背景copy.png');
     background-size: 100% 100vh;
     background-position: center;
     background-repeat: no-repeat;
@@ -41,7 +41,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: url('data/asset/创作页面/按钮红.png');
+    background-image: url('/data/asset/创作页面/按钮红.png');
     background-size: 98% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -94,7 +94,7 @@
 
 /* 商城区域 */
 .shopSection {
-    background-image: url('data/asset/首页/优惠页背板.png');
+    background-image: url('/data/asset/首页/优惠页背板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -120,7 +120,7 @@
 .more {
     width: 120px;
     height: 40px;
-    background-image: url('data/asset/首页/更多按钮.png');
+    background-image: url('/data/asset/首页/更多按钮.png');
     background-size: 80px 40px;
     background-position: center;
     background-repeat: no-repeat;
@@ -150,7 +150,7 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     cursor: pointer;
     height: 335px;
-    background-image: url('data/asset/首页/优惠剧本背板.png');
+    background-image: url('/data/asset/首页/优惠剧本背板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -186,7 +186,7 @@
 
 /* 游戏详情弹窗 - 三栏布局 */
 .gameDetailModal {
-    background-image: url('data/asset/剧本详情页/详情背板.png');
+    background-image: url('/data/asset/剧本详情页/详情背板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -282,7 +282,7 @@
     border-radius: 8px;
     display: inline-block;
     flex-shrink: 0;
-    background-image: url('data/asset/剧本详情页/标签板.png');
+    background-image: url('/data/asset/剧本详情页/标签板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -349,7 +349,7 @@
 /* 特惠价格模块 */
 .priceSection {
     height: 50%;
-    background-image: url('data/asset/剧本详情页/价格面板.png');
+    background-image: url('/data/asset/剧本详情页/价格面板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -413,7 +413,7 @@
 }
 /* 开始游戏模块 */
 .startGameSection {
-    background-image: url('data/asset/剧本详情页/评分板.png');
+    background-image: url('/data/asset/剧本详情页/评分板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;

@@ -310,7 +310,7 @@ const MapModal: React.FC<MapModalProps> = ({
                                                 </clipPath>
                                             </defs>
                                             <image
-                                                href={`${HOST_ADDRESS}${sc.background}` || 'data/icons/empty.png'}
+                                                href={`${HOST_ADDRESS}${sc.background}` || '/data/icons/empty.png'}
                                                 x={positions[id].x - (id === currentSceneId ? 90 : 80)}
                                                 y={positions[id].y - (id === currentSceneId ? 90 : 80)}
                                                 width={(id === currentSceneId ? 180 : 160)}

@@ -61,7 +61,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
             {onClose && (
                 <div className={styles.chatHeader}>
                     <button className={styles.closeChatBtn} onClick={onClose}>
-                        <img src="data/asset/关闭按钮.png" alt="关闭" />
+                        <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
                     </button>
                 </div>
             )}

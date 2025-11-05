@@ -31,7 +31,7 @@ const SettingModal: React.FC<SettingModalProps> = ({ isOpen, onClose }) => {
     return (
         <div className={styles.modalContent}>
             <div className={styles.closeBtn} onClick={handleClose}>
-                <img src="data/asset/关闭按钮.png" alt="关闭" />
+                <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
             </div>
             <div className={styles.settingContent}>
                 <h2 className={styles.settingTitle}>设置</h2>

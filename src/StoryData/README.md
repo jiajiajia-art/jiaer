@@ -7,7 +7,7 @@
 ## 📂 文件结构
 
 ```
-StoryData/
+Story/data/
 ├── games.json          # 游戏列表数据文件
 ├── covers/             # 游戏封面图片文件夹
 │   ├── fantasy-world.png
@@ -64,7 +64,7 @@ StoryData/
 ### 步骤 1：准备游戏资源
 
 1. **封面图片**：准备一张游戏封面图（推荐尺寸：800x800 像素 正方形）⭐
-   - 将图片放入 `StoryData/covers/` 文件夹
+   - 将图片放入 `Story/data/covers/` 文件夹
    - 命名格式：`游戏id.png` （如：`my-game.png`）
    - 必须是正方形（1:1 比例），卡片会完整展示封面
 2. **游戏图标**：选择一个合适的 emoji 表情
@@ -72,7 +72,7 @@ StoryData/
 
 ### 步骤 2：编辑 games.json
 
-打开 `StoryData/games.json` 文件，在数组末尾添加新游戏数据：
+打开 `Story/data/games.json` 文件，在数组末尾添加新游戏数据：
 
 ```json
 [
@@ -83,7 +83,7 @@ StoryData/
         "title": "我的新游戏",
         "subtitle": "精彩的冒险故事",
         "icon": "✨",
-        "cover": "StoryData/covers/my-new-game.png",
+        "cover": "Story/data/covers/my-new-game.png",
         "tags": ["冒险", "RPG", "新作"],
         "description": "这是一个充满惊喜的冒险游戏，你将体验到前所未有的游戏乐趣。",
         "fullDescription": "详细的游戏背景故事和世界观介绍，可以写得更长更详细...",
@@ -118,7 +118,7 @@ StoryData/
 | `title` | String | 游戏标题 | `"幻想大陆"` |
 | `subtitle` | String | 游戏副标题 | `"经典奇幻冒险RPG"` |
 | `icon` | String | 游戏图标emoji | `"⚔️"` |
-| `cover` | String | 封面图片路径 | `"StoryData/covers/fantasy-world.png"` |
+| `cover` | String | 封面图片路径 | `"Story/data/covers/fantasy-world.png"` |
 | `tags` | Array | 游戏标签 | `["奇幻", "RPG"]` |
 | `description` | String | 简短描述 | `"在充满魔法的世界..."` |
 | `fullDescription` | String | 完整描述 | `"这是一个充满魔法..."` |
@@ -159,8 +159,8 @@ StoryData/
    - 不要使用空格或特殊字符
 
 3. **图片路径**
-   - 封面图片统一存放在 `StoryData/covers/` 文件夹
-   - 路径格式：`StoryData/covers/游戏id.png`
+   - 封面图片统一存放在 `Story/data/covers/` 文件夹
+   - 路径格式：`Story/data/covers/游戏id.png`
    - 确保图片文件存在
    - 支持的格式：PNG、JPG、WEBP
 

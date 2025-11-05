@@ -82,15 +82,15 @@
 ### 步骤 3：放置文件
 将图片文件放入此文件夹：
 ```
-StoryData/covers/new-game.png
+Story/data/covers/new-game.png
 ```
 
 ### 步骤 4：更新配置
-在 `StoryData/games.json` 中设置封面路径：
+在 `Story/data/games.json` 中设置封面路径：
 ```json
 {
     "id": "new-game",
-    "cover": "StoryData/covers/new-game.png",
+    "cover": "Story/data/covers/new-game.png",
     ...
 }
 ```

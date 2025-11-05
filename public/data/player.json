@@ -1,6 +1,6 @@
 {
   "profile": {
-    "avatar": "data/avatars/player.png",
+    "avatar": "/data/avatars/player.png",
     "name": "未定义",
     "age": 15,
     "gender": "未定义",
@@ -37,7 +37,7 @@
         "id": "basic_food",
         "name": "干粮",
         "description": "简单的食物，可以恢复少量体力",
-        "icon": "data/icons/bread.png",
+        "icon": "/data/icons/bread.png",
         "type": "consumable",
         "usable": true,
         "stackable": true,
@@ -50,7 +50,7 @@
         "id": "work_clothes",
         "name": "工作服",
         "description": "适合劳作的简单衣物",
-        "icon": "data/icons/clothes.png",
+        "icon": "/data/icons/clothes.png",
         "type": "equipment",
         "usable": false,
         "stackable": false,

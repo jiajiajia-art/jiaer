@@ -23,7 +23,7 @@
 }
 
 .modalContent {
-    background-image: url('data/asset/建筑选项框/框.png');
+    background-image: url('/data/asset/建筑选项框/框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -154,7 +154,7 @@
 }
 
 .goToSceneBtn {
-    background: url('data/asset/建筑选项框/按钮.png') no-repeat center center;
+    background: url('/data/asset/建筑选项框/按钮.png') no-repeat center center;
     background-size: 100% 100%;
     color: white;
     border: none;

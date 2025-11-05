@@ -9,7 +9,7 @@ import Create from './page/Create';
 function App() {
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename='/funloom'>
       <Routes>
         <Route path="/" element={<Navigate to="/homeNew" replace />} />
         <Route path="/home" element={<Home />} />

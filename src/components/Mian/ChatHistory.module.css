@@ -7,7 +7,7 @@
     flex-direction: column;
     z-index: 950;
     overflow: visible;
-    background-image: url('data/asset/对话界面/历史记录.png');
+    background-image: url('/data/asset/对话界面/历史记录.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -146,7 +146,7 @@
     transition: background 0.3s ease;
     max-width: 80px;
     border: none;
-    background-image: url('data/asset/聊天框/按钮.png');
+    background-image: url('/data/asset/聊天框/按钮.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;

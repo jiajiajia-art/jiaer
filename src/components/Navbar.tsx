@@ -63,9 +63,9 @@ const Navbar: React.FC = () => {
                     <span className={styles.searchIcon}></span>
                 </div>
                 <div className={styles.avatar}>
-                    <img src="data/avatars/hunter.png" alt="" />
+                    <img src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} alt="" />
                 </div>
-                <img src="data/asset/设置.png" alt="" className={styles.settingIcon} />
+                <img src={`${import.meta.env.BASE_URL}data/asset/设置.png`} alt="" className={styles.settingIcon} />
             </div>
         </div>
     );

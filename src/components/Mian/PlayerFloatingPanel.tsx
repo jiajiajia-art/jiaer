@@ -50,7 +50,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <h3>{player?.profile.name || '未命名'}</h3>
                 {onClose && (
                     <button className={styles.closePlayerBtn} onClick={onClose}>
-                        <img src="data/asset/关闭按钮.png" alt="关闭" />
+                        <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
                     </button>
                 )}
             </div>
@@ -58,7 +58,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <div className={styles.playerInfo}>
                     <div className={styles.playerAvatar}>
                         <img
-                            src={player?.profile.avatar || 'data/avatars/hunter.png'}
+                            src={player?.profile.avatar || '/data/avatars/hunter.png'}
                             alt="角色头像"
                         />
                     </div>

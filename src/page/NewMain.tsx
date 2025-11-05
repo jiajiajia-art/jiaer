@@ -152,7 +152,7 @@ const NewMain: React.FC = () => {
             const tempEvent: EventDef = {
                 id: building.id,
                 title: building.name,
-                image: building.icon || 'data/icons/empty.png',
+                image: building.icon || '/data/icons/empty.png',
                 description: building.description,
                 options: building.features.slice(0, 3).map((f: string) => ({ text: f, effects: {} })),
             };
@@ -253,7 +253,7 @@ const NewMain: React.FC = () => {
                 <div className={styles.playerContent}>
                     <div className={styles.playerInfo}>
                         <img
-                            src={player?.profile.avatar || 'data/avatars/hunter.png'}
+                            src={player?.profile.avatar || '/data/avatars/hunter.png'}
                             alt="人物头像"
                             onClick={() => setPlayerOpen(!playerOpen)}
                         />
@@ -262,7 +262,7 @@ const NewMain: React.FC = () => {
                     <button id="triggerSceneEventBtn" className={styles.storyBtn} onClick={() => {
                         setDialogueOpen(true);
                     }}>
-                        <img src="data/asset/时间消逝按钮.png" alt="时间消逝按钮" className={styles.storyBtnImg} />
+                        <img src={`${import.meta.env.BASE_URL}data/asset/时间消逝按钮.png`} alt="时间消逝按钮" className={styles.storyBtnImg} />
                     </button>
                     {/* 建筑 */}
                     <div id="buildingsList" className={styles.buildingsGrid}>
@@ -270,7 +270,7 @@ const NewMain: React.FC = () => {
                             ? scenes[currentSceneId].buildings
                             : []).map((b: any) => (
                                 <div key={b.id} className={styles.buildingCard} onClick={() => handleBuildingClick(b)}>
-                                    <img src={`${HOST_ADDRESS}${b.icon}` || 'data/icons/empty.png'} alt={''} />
+                                    <img src={`${HOST_ADDRESS}${b.icon}` || '/data/icons/empty.png'} alt={''} />
                                     <h3>{b.name}</h3>
                                     <p>{b.description}</p>
                                 </div>
@@ -287,7 +287,7 @@ const NewMain: React.FC = () => {
                                 className={`${styles.navBtn}`}
                                 onClick={() => setSettingModalOpen(!settingModalOpen)}
                             >
-                                <img src="data/asset/设置.png" alt="设置" className={styles.settingBtnImg} />
+                                <img src={`${import.meta.env.BASE_URL}data/asset/设置.png`} alt="设置" className={styles.settingBtnImg} />
                             </div>
                             <SettingModal
                                 isOpen={settingModalOpen}
@@ -313,7 +313,7 @@ const NewMain: React.FC = () => {
                                                 onClick={() => handleSceneClick(targetId, targetScene)}
                                             >
                                                 <img
-                                                    src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : 'data/icons/empty.png'}
+                                                    src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
                                                     alt={''}
                                                 />
                                                 <div className={styles.exitLabel}>{targetScene.name}</div>
@@ -342,7 +342,7 @@ const NewMain: React.FC = () => {
                                     setNpcModalOpen(true);
                                 }}
                             >
-                                <img src={`${HOST_ADDRESS}${n.icon}` || 'data/avatars/default.png'} alt={n.name} />
+                                <img src={`${HOST_ADDRESS}${n.icon}` || '/data/avatars/default.png'} alt={n.name} />
                                 <div className={styles.npcLabel}>{n.name}</div>
                             </div>
                         ));
@@ -360,7 +360,7 @@ const NewMain: React.FC = () => {
                         setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'));
                     }}
                 >
-                    <img src="data/asset/地图按钮.png" alt="大地图按钮" className={styles.mapBtnImg} />
+                    <img src={`${import.meta.env.BASE_URL}data/asset/地图按钮.png`} alt="大地图按钮" className={styles.mapBtnImg} />
                 </div>
                 <button id="toggleInventoryBtn"
                     className={styles.floatingInventoryBtn}
@@ -372,7 +372,7 @@ const NewMain: React.FC = () => {
                         setInventoryOpen(!inventoryOpen);
                     }}
                 >
-                    <img src={"data/asset/背包按钮.png"} alt="背包按钮" className={styles.inventoryBtnImg} />
+                    <img src={"/data/asset/背包按钮.png"} alt="背包按钮" className={styles.inventoryBtnImg} />
                 </button>
             </div>
 

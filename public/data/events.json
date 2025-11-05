@@ -2,7 +2,7 @@
   "welcome_event": {
     "id": "welcome_event",
     "title": "欢迎来到冒险世界",
-    "image": "data/events/welcome.jpg",
+    "image": "/data/events/welcome.jpg",
     "description": "你来到了一个神秘的世界，前方有无数冒险等待着你。作为一位新生的冒险者，你准备好踏上这段旅程了吗？",
     "options": [
       {
@@ -37,7 +37,7 @@
   "inn_rest": {
     "id": "inn_rest",
     "title": "旅店休息",
-    "image": "data/events/inn.jpg",
+    "image": "/data/events/inn.jpg",
     "description": "你在旅店休息了一晚，精神焕发。",
     "options": [
       {
@@ -61,7 +61,7 @@
   "temple_blessing": {
     "id": "temple_blessing",
     "title": "神殿祝福",
-    "image": "data/events/temple.jpg",
+    "image": "/data/events/temple.jpg",
     "description": "你在神殿向神明祈祷，感受到一股温暖的力量。",
     "options": [
       { "text": "治疗伤势", "effects": { "stats": { "health": 50 } }, "nextEvent": null },
@@ -73,7 +73,7 @@
   "guild_intro": {
     "id": "guild_intro",
     "title": "公会初见",
-    "image": "data/events/guild.jpg",
+    "image": "/data/events/guild.jpg",
     "description": "你来到了冒险者公会的大厅，热闹非凡。",
     "options": [
       { "text": "咨询任务", "effects": { "experience": 10 }, "nextEvent": null },
@@ -85,7 +85,7 @@
   "forest_shop": {
     "id": "forest_shop",
     "title": "猎人小屋商店",
-    "image": "data/events/cabin_shop.jpg",
+    "image": "/data/events/cabin_shop.jpg",
     "description": "小屋里摆放着各种狩猎用品。",
     "options": [
       { "text": "购买绷带", "effects": { "items": [{ "id": "health_potion", "quantity": 1 }] }, "nextEvent": null },
@@ -97,7 +97,7 @@
   "world_info": {
     "id": "world_info",
     "title": "世界知识",
-    "image": "data/events/world_info.jpg",
+    "image": "/data/events/world_info.jpg",
     "description": "这个世界充满了魔法和危险。东方的森林中居住着精灵，西方的山脉中有巨龙，南方的沙漠里埋藏着古代遗迹。你的选择将决定你的命运。",
     "options": [
       {
@@ -127,7 +127,7 @@
   "forest_choice": {
     "id": "forest_choice",
     "title": "森林探索",
-    "image": "data/events/forest.jpg",
+    "image": "/data/events/forest.jpg",
     "description": "你进入了茂密的森林。阳光透过树叶洒在地面上，你能听到远处传来的神秘声音。突然，一只友善的精灵出现在你面前。",
     "options": [
       {
@@ -159,7 +159,7 @@
   "forest_secret": {
     "id": "forest_secret",
     "title": "森林的秘密",
-    "image": "data/events/forest_secret.jpg",
+    "image": "/data/events/forest_secret.jpg",
     "description": "精灵告诉你森林深处有一棵古老的智慧之树，它掌握着强大的魔法知识。但是到达那里需要面对森林守护者的考验。",
     "options": [
       {
@@ -191,7 +191,7 @@
   "guardian_test": {
     "id": "guardian_test",
     "title": "守护者的考验",
-    "image": "data/events/guardian.jpg",
+    "image": "/data/events/guardian.jpg",
     "description": "你来到了智慧之树前，森林守护者出现了。它说只有真正勇敢和智慧的冒险者才能获得智慧之树的祝福。",
     "options": [
       {
@@ -227,7 +227,7 @@
   "merchant_encounter": {
     "id": "merchant_encounter",
     "title": "神秘商人",
-    "image": "data/events/merchant.jpg",
+    "image": "/data/events/merchant.jpg",
     "description": "你在路上遇到了一个神秘的商人。他的马车里装满了各种奇异的物品，有些散发着微弱的魔法光芒。",
     "options": [
       {
@@ -257,7 +257,7 @@
   "merchant_shop": {
     "id": "merchant_shop",
     "title": "商人的商品",
-    "image": "data/events/merchant_shop.jpg",
+    "image": "/data/events/merchant_shop.jpg",
     "description": "商人向你展示了他的商品：一瓶生命药水（20金币）、一把钢剑（50金币）、一件皮甲（40金币）。你只有30金币。",
     "options": [
       {
@@ -288,7 +288,7 @@
   "merchant_bargain": {
     "id": "merchant_bargain",
     "title": "讨价还价",
-    "image": "data/events/bargain.jpg",
+    "image": "/data/events/bargain.jpg",
     "description": "你试图与商人讨价还价。商人看起来很感兴趣，他说如果你能帮助他解决一个小问题，他可以给你折扣。",
     "options": [
       {
@@ -318,7 +318,7 @@
   "forest_encounter": {
     "id": "forest_encounter",
     "title": "森林遭遇",
-    "image": "data/events/forest_encounter.jpg",
+    "image": "/data/events/forest_encounter.jpg",
     "description": "在森林深处，你遇到了一只受伤的小狼。它看起来很害怕，但似乎需要帮助。",
     "options": [
       {
@@ -350,7 +350,7 @@
   "wolf_grateful": {
     "id": "wolf_grateful",
     "title": "感激的狼",
-    "image": "data/events/wolf_grateful.jpg",
+    "image": "/data/events/wolf_grateful.jpg",
     "description": "你帮助了小狼，它很快康复了。作为感谢，它带你找到了一个隐藏的宝箱，里面有一些有用的物品。",
     "options": [
       {
@@ -378,7 +378,7 @@
   "wild_animal": {
     "id": "wild_animal",
     "title": "野生动物",
-    "image": "data/events/wild_animal.jpg",
+    "image": "/data/events/wild_animal.jpg",
     "description": "你遇到了一只野生的熊。它看起来并不友好，正在向你咆哮。你需要决定如何应对这个情况。",
     "options": [
       {
@@ -411,7 +411,7 @@
   "training_session": {
     "id": "training_session",
     "title": "训练课程",
-    "image": "data/events/training.jpg",
+    "image": "/data/events/training.jpg",
     "description": "训练师邀请你参加一次训练课程。这将消耗你的体力，但可能会提升你的战斗技巧。",
     "options": [
       {
@@ -443,7 +443,7 @@
   "guard_warning": {
     "id": "guard_warning",
     "title": "守卫的警告",
-    "image": "data/events/guard.jpg",
+    "image": "/data/events/guard.jpg",
     "description": "村庄守卫拦住了你，警告说最近有怪物在附近出没，建议你小心行事。",
     "options": [
       {

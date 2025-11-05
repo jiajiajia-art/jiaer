@@ -10,7 +10,7 @@ export const useLore = () => {
     const ensureLoadLore = async () => {
         if (loreLoaded) return;
         try {
-            const res = await fetch('data/lore.json');
+            const res = await fetch('/data/lore.json');
             if (res.ok) {
                 const data = await res.json();
                 if (data?.worldBackground?.content) {
@@ -50,7 +50,7 @@ export const useLore = () => {
     // 从本地数据更新世界观
     const updateLoreFromLocal = async () => {
         try {
-            const res = await fetch('data/lore.json');
+            const res = await fetch('/data/lore.json');
             if (res.ok) {
                 const loreData = await res.json();
                 if (loreData?.gameTime) {

@@ -52,7 +52,7 @@
     position: relative;
     top: 30px;
     left: 60px;
-    background-image: url('data/asset/玩家信息.png');
+    background-image: url('/data/asset/玩家信息.png');
     width: 300px;
     height: 140px;
     background-size: contain;
@@ -104,7 +104,7 @@
     cursor: pointer;
     width: 200px;
     height: 280px;
-    background-image: url('data/asset/建筑信息.png');
+    background-image: url('/data/asset/建筑信息.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -180,7 +180,7 @@
     min-width: 260px;
     max-width: 600px;
     height: 50px;
-    background-image: url('data/asset/时间表.png');
+    background-image: url('/data/asset/时间表.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -235,7 +235,7 @@
     border-radius: 12px;
     margin-bottom: 4px;
     min-height: 220px;
-    background-image: url('data/asset/信息中心.png');
+    background-image: url('/data/asset/信息中心.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -314,7 +314,7 @@
     flex-shrink: 0;
     overflow: hidden;
     position: relative;
-    background-image: url('data/asset/方位按钮.png');
+    background-image: url('/data/asset/方位按钮.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -360,7 +360,7 @@
     z-index: 1000;
     margin-top: 20px;
     height: 100px;
-    background-image: url('data/asset/左下角.png');
+    background-image: url('/data/asset/左下角.png');
     background-size: 350px 100%;
     background-repeat: no-repeat;
     display: flex;
@@ -454,7 +454,7 @@
     position: absolute;
     bottom: -16px;
     left: 30px;
-    background-image: url('data/asset/按钮底座.png');
+    background-image: url('/data/asset/按钮底座.png');
     background-size: 100% 60px;
     background-position: center;
     background-repeat: no-repeat;
@@ -480,7 +480,7 @@
     flex-direction: column;
     z-index: 950;
     overflow: hidden;
-    background-image: url('data/asset/聊天框/框.png');
+    background-image: url('/data/asset/聊天框/框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -636,7 +636,7 @@
     transition: background 0.3s ease;
     max-width: 80px;
     border: none;
-    background-image: url('data/asset/聊天框/按钮.png');
+    background-image: url('/data/asset/聊天框/按钮.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;

@@ -117,7 +117,7 @@ export const useGameData = () => {
             //         convertedEvents[eventId] = {
             //             id: eventId,
             //             title: event.title,
-            //             image: 'data/events/historical.jpg',
+            //             image: '/data/events/historical.jpg',
             //             description: `${event.year}\n\n${event.description}`,
             //             options: [
             //                 { text: '了解详情', effects: { experience: 5 }, nextEvent: null },
@@ -178,7 +178,7 @@ export const useGameData = () => {
                 setInventory({ equipment, items: mappedItems });
                 setPlayer({
                     profile: {
-                        avatar: p.profile?.avatar || 'data/avatars/default.png',
+                        avatar: p.profile?.avatar || '/data/avatars/default.png',
                         name: p.profile?.name || '未命名',
                         age: p.profile?.age ?? 18,
                         gender: p.profile?.gender || '男',

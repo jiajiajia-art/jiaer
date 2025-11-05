@@ -3,7 +3,7 @@
     "id": "cash",
     "name": "现金",
     "description": "美元现金，西部生存的重要资源",
-    "icon": "data/icons/cash.png",
+    "icon": "/data/icons/cash.png",
     "type": "currency",
     "stackable": true,
     "usable": false
@@ -12,7 +12,7 @@
     "id": "land",
     "name": "土地",
     "description": "以英亩计算的土地，品质分为贫瘠/普通/肥沃",
-    "icon": "data/icons/land.png",
+    "icon": "/data/icons/land.png",
     "type": "property",
     "stackable": true,
     "usable": false
@@ -21,7 +21,7 @@
     "id": "cattle",
     "name": "牛",
     "description": "牧场的重要牲畜，可产奶、繁殖和出售",
-    "icon": "data/icons/cattle.png",
+    "icon": "/data/icons/cattle.png",
     "type": "livestock",
     "stackable": true,
     "usable": false
@@ -30,7 +30,7 @@
     "id": "horse",
     "name": "马",
     "description": "重要的交通工具和劳动力",
-    "icon": "data/icons/horse.png",
+    "icon": "/data/icons/horse.png",
     "type": "livestock",
     "stackable": true,
     "usable": false
@@ -39,7 +39,7 @@
     "id": "sheep",
     "name": "羊",
     "description": "可提供羊毛和肉的牲畜",
-    "icon": "data/icons/sheep.png",
+    "icon": "/data/icons/sheep.png",
     "type": "livestock",
     "stackable": true,
     "usable": false
@@ -48,7 +48,7 @@
     "id": "food",
     "name": "食物",
     "description": "维持生存的基本物资",
-    "icon": "data/icons/food.png",
+    "icon": "/data/icons/food.png",
     "type": "consumable",
     "stackable": true,
     "usable": true,
@@ -60,7 +60,7 @@
     "id": "medicine",
     "name": "药品",
     "description": "治疗疾病和伤病的药物",
-    "icon": "data/icons/medicine.png",
+    "icon": "/data/icons/medicine.png",
     "type": "consumable",
     "stackable": true,
     "usable": true,
@@ -72,7 +72,7 @@
     "id": "ammunition",
     "name": "弹药",
     "description": "枪械使用的子弹",
-    "icon": "data/icons/ammunition.png",
+    "icon": "/data/icons/ammunition.png",
     "type": "consumable",
     "stackable": true,
     "usable": false
@@ -81,7 +81,7 @@
     "id": "tools",
     "name": "工具",
     "description": "各种劳动和维修工具",
-    "icon": "data/icons/tools.png",
+    "icon": "/data/icons/tools.png",
     "type": "equipment",
     "stackable": true,
     "usable": false
@@ -90,7 +90,7 @@
     "id": "cabin",
     "name": "小木屋",
     "description": "基础的居住建筑",
-    "icon": "data/icons/cabin.png",
+    "icon": "/data/icons/cabin.png",
     "type": "building",
     "stackable": false,
     "usable": false
@@ -99,7 +99,7 @@
     "id": "ranch_house",
     "name": "牧场房",
     "description": "更大更好的居住建筑",
-    "icon": "data/icons/ranch_house.png",
+    "icon": "/data/icons/ranch_house.png",
     "type": "building",
     "stackable": false,
     "usable": false
@@ -108,7 +108,7 @@
     "id": "shop",
     "name": "商铺",
     "description": "经营生意的商业建筑",
-    "icon": "data/icons/shop.png",
+    "icon": "/data/icons/shop.png",
     "type": "building",
     "stackable": false,
     "usable": false
@@ -117,7 +117,7 @@
     "id": "mine",
     "name": "矿井",
     "description": "开采矿物的产业建筑",
-    "icon": "data/icons/mine.png",
+    "icon": "/data/icons/mine.png",
     "type": "building",
     "stackable": false,
     "usable": false
@@ -126,7 +126,7 @@
     "id": "revolver",
     "name": "左轮手枪",
     "description": "西部经典的自卫武器",
-    "icon": "data/icons/revolver.png",
+    "icon": "/data/icons/revolver.png",
     "type": "weapon",
     "equippable": true,
     "slots": [
@@ -141,7 +141,7 @@
     "id": "rifle",
     "name": "步枪",
     "description": "狩猎和远程战斗的利器",
-    "icon": "data/icons/rifle.png",
+    "icon": "/data/icons/rifle.png",
     "type": "weapon",
     "equippable": true,
     "slots": [
@@ -157,7 +157,7 @@
     "id": "knife",
     "name": "刀具",
     "description": "多功能的近战武器和工具",
-    "icon": "data/icons/knife.png",
+    "icon": "/data/icons/knife.png",
     "type": "weapon",
     "equippable": true,
     "slots": [
@@ -171,7 +171,7 @@
     "id": "debt",
     "name": "债务",
     "description": "需要偿还的借款，有利息和惩罚",
-    "icon": "data/icons/debt.png",
+    "icon": "/data/icons/debt.png",
     "type": "obligation",
     "stackable": true,
     "usable": false
@@ -180,7 +180,7 @@
     "id": "railroad_stock",
     "name": "铁路股票",
     "description": "铁路公司的投资股份",
-    "icon": "data/icons/railroad_stock.png",
+    "icon": "/data/icons/railroad_stock.png",
     "type": "investment",
     "stackable": true,
     "usable": false
@@ -189,7 +189,7 @@
     "id": "mining_equipment",
     "name": "采矿设备",
     "description": "开采矿物的专业工具",
-    "icon": "data/icons/mining_equipment.png",
+    "icon": "/data/icons/mining_equipment.png",
     "type": "equipment",
     "stackable": true,
     "usable": false
@@ -198,7 +198,7 @@
     "id": "farming_tools",
     "name": "农具",
     "description": "耕种和收获的农业工具",
-    "icon": "data/icons/farming_tools.png",
+    "icon": "/data/icons/farming_tools.png",
     "type": "equipment",
     "stackable": true,
     "usable": false
@@ -207,7 +207,7 @@
     "id": "saddle",
     "name": "马鞍",
     "description": "骑马必需的装备",
-    "icon": "data/icons/saddle.png",
+    "icon": "/data/icons/saddle.png",
     "type": "equipment",
     "equippable": true,
     "slots": [
@@ -219,7 +219,7 @@
     "id": "wagon",
     "name": "马车",
     "description": "运输货物和人员的重要工具",
-    "icon": "data/icons/wagon.png",
+    "icon": "/data/icons/wagon.png",
     "type": "vehicle",
     "stackable": false,
     "usable": false

@@ -90,7 +90,7 @@
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease-out;
-    background-image: url('data/asset/编年史/框.png');
+    background-image: url('/data/asset/编年史/框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;

@@ -10,7 +10,7 @@
     flex-direction: column;
     z-index: 1000;
     overflow: visible; /* 允许关闭按钮溢出 */
-    background-image: url('data/asset/对话界面/对话背板.png');
+    background-image: url('/data/asset/对话界面/对话背板.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -47,7 +47,7 @@
     left: 0;
     width: 60px;
     height: 50px;
-    background-image: url('data/asset/角色信息框/好感度.png');
+    background-image: url('/data/asset/角色信息框/好感度.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -68,7 +68,7 @@
 .avatarFrame {
     width: 100%;
     height: 100%;
-    background-image: url('data/asset/对话界面/头像框.png');
+    background-image: url('/data/asset/对话界面/头像框.png');
     background-size: 100% 100%;
     background-position: center top;
     background-repeat: no-repeat;
@@ -96,7 +96,7 @@
     left: 0;
     width: 100%;
     min-height: 50px;
-    background-image: url('data/asset/对话界面/头像名称框.png');
+    background-image: url('/data/asset/对话界面/头像名称框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -272,7 +272,7 @@
 
 .inputWrapper {
     width: 100%;
-    background-image: url('data/asset/对话界面/输入框.png');
+    background-image: url('/data/asset/对话界面/输入框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -315,7 +315,7 @@
     cursor: pointer;
     font-size: 0.9rem;
     transition: opacity 0.3s ease;
-    background-image: url('data/asset/对话界面/发送按钮.png');
+    background-image: url('/data/asset/对话界面/发送按钮.png');
     background-size: 100px 46px;
     background-position: cover;
     background-repeat: no-repeat;

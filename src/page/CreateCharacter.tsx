@@ -61,7 +61,7 @@ const CreateCharacter: React.FC = () => {
 
         const playerData = {
             profile: {
-                avatar: "data/avatars/player.png",
+                avatar: "/data/avatars/player.png",
                 name: name,
                 age: age,
                 gender: gender,
@@ -101,7 +101,7 @@ const CreateCharacter: React.FC = () => {
                         id: "health_potion",
                         name: "生命药水",
                         description: "恢复50点生命值的红色药水",
-                        icon: "data/icons/health_potion.png",
+                        icon: "/data/icons/health_potion.png",
                         type: "consumable",
                         usable: true,
                         stackable: true,
@@ -114,7 +114,7 @@ const CreateCharacter: React.FC = () => {
                         id: "forest_berries",
                         name: "森林浆果",
                         description: "甜美的野生浆果，可以恢复少量体力",
-                        icon: "data/icons/berries.png",
+                        icon: "/data/icons/berries.png",
                         type: "consumable",
                         usable: true,
                         stackable: true,
@@ -164,7 +164,7 @@ const CreateCharacter: React.FC = () => {
                 <div className={styles.avatarPreview}>
                     <img
                         id="avatarPreview"
-                        src="data/avatars/player.png"
+                        src={`${import.meta.env.BASE_URL}data/avatars/player.png`}
                         alt="角色头像"
                     />
                 </div>

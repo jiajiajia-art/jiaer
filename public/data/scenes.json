@@ -3,7 +3,7 @@
     "id": "red_rock_territory",
     "name": "红岩地区",
     "description": "游戏的主要舞台，融合了德克萨斯州西部、新墨西哥州、亚利桑那州与俄克拉荷马州的特征",
-    "background": "data/scenes/red_rock_territory.png",
+    "background": "/data/scenes/red_rock_territory.png",
     "buildings": [],
     "npcs": [],
     "events": [
@@ -20,13 +20,13 @@
     "id": "family_ranch",
     "name": "家族牧场",
     "description": "主角的家族牧场，需要经营管理牲畜、耕种土地、维修房屋",
-    "background": "data/scenes/family_ranch.png",
+    "background": "/data/scenes/family_ranch.png",
     "buildings": [
       {
         "id": "ranch_house",
         "name": "牧场房屋",
         "description": "家族居住的房屋，从小木屋到更大的牧场房",
-        "icon": "data/icons/ranch_house.png",
+        "icon": "/data/icons/ranch_house.png",
         "type": "residence",
         "eventId": "family_gathering",
         "features": [
@@ -39,7 +39,7 @@
         "id": "barn",
         "name": "谷仓",
         "description": "储存农作物和饲料的建筑",
-        "icon": "data/icons/barn.png",
+        "icon": "/data/icons/barn.png",
         "type": "storage",
         "eventId": "harvest_storage",
         "features": [
@@ -56,7 +56,7 @@
         "gender": "男性",
         "job": "牧场主",
         "description": "家族的核心NPC，其健康和态度影响主角的决策权",
-        "icon": "data/avatars/patriarch.png",
+        "icon": "/data/avatars/patriarch.png",
         "type": "family_leader",
         "eventId": "family_decision",
         "relationships": {
@@ -70,7 +70,7 @@
         "gender": "男性",
         "job": "牧场工人",
         "description": "帮助管理牧场的雇工，忠诚度影响经营效率",
-        "icon": "data/avatars/ranch_worker.png",
+        "icon": "/data/avatars/ranch_worker.png",
         "type": "worker",
         "eventId": "work_assistance",
         "relationships": {
@@ -94,13 +94,13 @@
     "id": "local_town",
     "name": "当地小镇",
     "description": "附近的小镇，提供商业交易、社交活动和信息交换的场所",
-    "background": "data/scenes/local_town.png",
+    "background": "/data/scenes/local_town.png",
     "buildings": [
       {
         "id": "general_store",
         "name": "杂货店",
         "description": "购买日用品、工具和物资的商店",
-        "icon": "data/icons/general_store.png",
+        "icon": "/data/icons/general_store.png",
         "type": "shop",
         "eventId": "trading_goods",
         "features": [
@@ -113,7 +113,7 @@
         "id": "saloon",
         "name": "酒馆",
         "description": "小镇的社交中心，可以打听消息和结识人物",
-        "icon": "data/icons/saloon.png",
+        "icon": "/data/icons/saloon.png",
         "type": "tavern",
         "eventId": "social_gathering",
         "features": [
@@ -126,7 +126,7 @@
         "id": "sheriff_office",
         "name": "警长办公室",
         "description": "维护法律与秩序的地方",
-        "icon": "data/icons/sheriff_office.png",
+        "icon": "/data/icons/sheriff_office.png",
         "type": "law_enforcement",
         "eventId": "legal_matters",
         "features": [
@@ -139,7 +139,7 @@
         "id": "church",
         "name": "教堂",
         "description": "小镇的精神中心，举办礼拜和社区活动",
-        "icon": "data/icons/church.png",
+        "icon": "/data/icons/church.png",
         "type": "religious",
         "eventId": "church_service",
         "features": [
@@ -157,7 +157,7 @@
         "gender": "男性",
         "job": "执法官",
         "description": "维护小镇法律与秩序的警长",
-        "icon": "data/avatars/sheriff.png",
+        "icon": "/data/avatars/sheriff.png",
         "type": "law_enforcer",
         "eventId": "law_enforcement",
         "relationships": {
@@ -171,7 +171,7 @@
         "gender": "男性",
         "job": "商人",
         "description": "杂货店的老板，信息与物资来源",
-        "icon": "data/avatars/shopkeeper.png",
+        "icon": "/data/avatars/shopkeeper.png",
         "type": "merchant",
         "eventId": "trade_negotiation",
         "relationships": {
@@ -185,7 +185,7 @@
         "gender": "男性",
         "job": "政府官员",
         "description": "小镇的政治领袖",
-        "icon": "data/avatars/mayor.png",
+        "icon": "/data/avatars/mayor.png",
         "type": "politician",
         "eventId": "town_politics",
         "relationships": {
@@ -210,13 +210,13 @@
     "id": "railroad_station",
     "name": "火车站",
     "description": "连接东部城市的重要交通枢纽，代表工业文明的扩张",
-    "background": "data/scenes/railroad_station.png",
+    "background": "/data/scenes/railroad_station.png",
     "buildings": [
       {
         "id": "station_house",
         "name": "车站房屋",
         "description": "火车站的主要建筑",
-        "icon": "data/icons/station_house.png",
+        "icon": "/data/icons/station_house.png",
         "type": "transportation",
         "eventId": "train_departure",
         "features": [
@@ -229,7 +229,7 @@
         "id": "telegraph_office",
         "name": "电报局",
         "description": "发送和接收电报的地方",
-        "icon": "data/icons/telegraph.png",
+        "icon": "/data/icons/telegraph.png",
         "type": "communication",
         "eventId": "send_telegram",
         "features": [
@@ -247,7 +247,7 @@
         "gender": "男性",
         "job": "铁路工作人员",
         "description": "管理火车站事务的官员",
-        "icon": "data/avatars/stationmaster.png",
+        "icon": "/data/avatars/stationmaster.png",
         "type": "transportation_official",
         "eventId": "train_schedule",
         "relationships": {
@@ -271,7 +271,7 @@
     "id": "grazing_lands",
     "name": "放牧地",
     "description": "广阔的草原，用于放牧牲畜",
-    "background": "data/scenes/grazing_lands.png",
+    "background": "/data/scenes/grazing_lands.png",
     "buildings": [],
     "npcs": [
       {
@@ -281,7 +281,7 @@
         "gender": "男性",
         "job": "牧牛人",
         "description": "在草原上工作的牛仔",
-        "icon": "data/avatars/cowboy.png",
+        "icon": "/data/avatars/cowboy.png",
         "type": "herder",
         "eventId": "cattle_drive",
         "relationships": {}
@@ -303,7 +303,7 @@
     "id": "canyon_lands",
     "name": "峡谷地带",
     "description": "蜿蜒深邃的峡谷与河流地区",
-    "background": "data/scenes/canyon_lands.png",
+    "background": "/data/scenes/canyon_lands.png",
     "buildings": [],
     "npcs": [],
     "events": [
@@ -321,7 +321,7 @@
     "id": "desert_region",
     "name": "沙漠地区",
     "description": "令人敬畏的沙漠地带，充满挑战和危险",
-    "background": "data/scenes/desert_region.png",
+    "background": "/data/scenes/desert_region.png",
     "buildings": [],
     "npcs": [],
     "events": [
@@ -339,13 +339,13 @@
     "id": "mining_area",
     "name": "矿区",
     "description": "蕴藏矿产与石油的丘陵与山地",
-    "background": "data/scenes/mining_area.png",
+    "background": "/data/scenes/mining_area.png",
     "buildings": [
       {
         "id": "mine_shaft",
         "name": "矿井",
         "description": "开采矿物的竖井",
-        "icon": "data/icons/mine_shaft.png",
+        "icon": "/data/icons/mine_shaft.png",
         "type": "extraction",
         "eventId": "mining_operation",
         "features": [
@@ -363,7 +363,7 @@
         "gender": "男性",
         "job": "矿工",
         "description": "在矿井中工作的工人",
-        "icon": "data/avatars/miner.png",
+        "icon": "/data/avatars/miner.png",
         "type": "worker",
         "eventId": "mining_work",
         "relationships": {}
@@ -384,13 +384,13 @@
     "id": "boomtown",
     "name": "新兴城镇",
     "description": "因资源开发而快速崛起的混乱城镇",
-    "background": "data/scenes/boomtown.png",
+    "background": "/data/scenes/boomtown.png",
     "buildings": [
       {
         "id": "gambling_hall",
         "name": "赌场",
         "description": "新兴城镇的娱乐场所",
-        "icon": "data/icons/gambling_hall.png",
+        "icon": "/data/icons/gambling_hall.png",
         "type": "entertainment",
         "eventId": "gambling_event",
         "features": [
@@ -408,7 +408,7 @@
         "gender": "男性",
         "job": "勘探员",
         "description": "寻找矿物和石油的专业人员",
-        "icon": "data/avatars/prospector.png",
+        "icon": "/data/avatars/prospector.png",
         "type": "explorer",
         "eventId": "resource_survey",
         "relationships": {}
@@ -429,13 +429,13 @@
     "id": "reservation_lands",
     "name": "印第安保留地",
     "description": "原住民被迁移到的指定区域",
-    "background": "data/scenes/reservation_lands.png",
+    "background": "/data/scenes/reservation_lands.png",
     "buildings": [
       {
         "id": "tribal_council",
         "name": "部落议事厅",
         "description": "部落进行会议和决策的地方",
-        "icon": "data/icons/tribal_council.png",
+        "icon": "/data/icons/tribal_council.png",
         "type": "governance",
         "eventId": "tribal_meeting",
         "features": [
@@ -453,7 +453,7 @@
         "gender": "男性",
         "job": "部落领袖",
         "description": "原住民部落的领导者",
-        "icon": "data/avatars/tribal_chief.png",
+        "icon": "/data/avatars/tribal_chief.png",
         "type": "tribal_leader",
         "eventId": "tribal_negotiation",
         "relationships": {
@@ -476,7 +476,7 @@
     "id": "wilderness_area",
     "name": "荒野地区",
     "description": "未被文明完全驯服的原始区域",
-    "background": "data/scenes/wilderness_area.png",
+    "background": "/data/scenes/wilderness_area.png",
     "buildings": [],
     "npcs": [
       {
@@ -486,7 +486,7 @@
         "gender": "男性",
         "job": "不法分子",
         "description": "在荒野中活动的匪徒",
-        "icon": "data/avatars/outlaw.png",
+        "icon": "/data/avatars/outlaw.png",
         "type": "bandit",
         "eventId": "bandit_encounter",
         "relationships": {}

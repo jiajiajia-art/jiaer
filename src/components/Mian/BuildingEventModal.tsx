@@ -156,7 +156,7 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
         <div className={styles.modal}>
             <div className={styles.modalContent}>
                 <div className={styles.closeBtn} onClick={onClose}>
-                    <img src="data/asset/关闭按钮.png" alt="关闭" />
+                    <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
                 </div>
                 <div className={styles.streamContent}>
                     <div className={styles.streamText} ref={textContainerRef}>
