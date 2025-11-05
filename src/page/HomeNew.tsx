@@ -192,11 +192,8 @@ const HomeNew: React.FC = () => {
                                     >
                                         <div className={styles.goodsImg}>
                                             <img 
-                                                src={meta.img || '/data/events/welcome.png'} 
+                                                src={meta.img || `${import.meta.env.BASE_URL}data/events/welcome.png`} 
                                                 alt={meta.lore?.worldBackground?.title || `剧情${idx + 1}`}
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = '/data/events/welcome.png';
-                                                }}
                                             />
                                         </div>
                                         <div className={styles.goodsBody}>

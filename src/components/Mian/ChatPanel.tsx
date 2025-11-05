@@ -209,7 +209,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                                 </div>
                                 <div className={styles.avatarFrame}>
                                     <img
-                                        src={`${HOST_ADDRESS}${npc.icon || npc.avatar}` || '/data/avatars/default.png'}
+                                        src={`${HOST_ADDRESS}${npc.icon || npc.avatar}` || `${import.meta.env.BASE_URL}data/avatars/default.png`}
                                         alt={npc.name || 'NPC'}
                                         className={styles.avatarImage}
                                     />

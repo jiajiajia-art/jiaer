@@ -372,7 +372,7 @@ const NewMain: React.FC = () => {
                         setInventoryOpen(!inventoryOpen);
                     }}
                 >
-                    <img src={"/data/asset/背包按钮.png"} alt="背包按钮" className={styles.inventoryBtnImg} />
+                    <img src={`${import.meta.env.BASE_URL}data/asset/背包按钮.png`} alt="背包按钮" className={styles.inventoryBtnImg} />
                 </button>
             </div>
 

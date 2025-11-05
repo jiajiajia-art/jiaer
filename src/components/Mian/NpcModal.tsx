@@ -33,7 +33,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                 
                 <div className={styles.npcDetailHeader}>
                     <img 
-                        src={`${HOST_ADDRESS}${npc.icon}` || '/data/avatars/default.png'} 
+                        src={`${HOST_ADDRESS}${npc.icon}` || `${import.meta.env.BASE_URL}data/avatars/default.png`} 
                         alt="NPC头像" 
                         className={styles.npcDetailAvatar} 
                     />
