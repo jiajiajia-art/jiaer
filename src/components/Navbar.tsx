@@ -53,7 +53,6 @@ const Navbar: React.FC = () => {
                 </div>
                 <div 
                     className={`${styles.navLink} ${activeNav === '仓库' ? styles.navLinkActive : ''}`}
-                    onClick={() => handleNavClick('仓库')}
                 >
                     仓库
                 </div>

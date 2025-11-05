@@ -27,7 +27,7 @@ interface PlayerState {
 
 interface PlayerFloatingPanelProps {
     isOpen: boolean;
-    onClose: () => void;
+    onClose?: () => void;
     player: PlayerState | null;
 }
 
@@ -48,15 +48,17 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                     <p className={styles.playerPanelHeaderLevelValue}>{player?.stats.level ?? 1}</p>
                 </span>
                 <h3>{player?.profile.name || '未命名'}</h3>
-                <button className={styles.closePlayerBtn} onClick={onClose}>
-                    <img src="/data/asset/关闭按钮.png" alt="关闭" />
-                </button>
+                {onClose && (
+                    <button className={styles.closePlayerBtn} onClick={onClose}>
+                        <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                    </button>
+                )}
             </div>
             <div className={styles.playerPanelContent}>
                 <div className={styles.playerInfo}>
                     <div className={styles.playerAvatar}>
                         <img
-                            src={'/data/avatars/hunter.png'}
+                            src={player?.profile.avatar || '/data/avatars/hunter.png'}
                             alt="角色头像"
                         />
                     </div>

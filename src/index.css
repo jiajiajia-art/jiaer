@@ -5,8 +5,15 @@
   box-sizing: border-box;
 }
 
+/* 全局字体设置 - 使用 !important 确保优先级 */
+body,
+html,
+#root,
+* {
+  font-family: 'YouYuan', '幼圆', 'Microsoft YaHei', sans-serif !important;
+}
+
 body {
-  font-family: 'Microsoft YaHei', Arial, sans-serif;
   background: #E8DBB7;
   min-height: 100vh;
   color: #333;

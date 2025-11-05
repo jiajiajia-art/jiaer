@@ -1,0 +1,226 @@
+.modalContent {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    width: 350px;
+    min-height: 280px;
+    max-height: 80vh;
+    background-image: url('/data/asset/建筑选项框/框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 950;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.closeBtn {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.closeBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.settingContent {
+    padding: 20px 20px 20px 20px;
+    flex: 1;
+}
+
+.settingTitle {
+    color: #B24F1B;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0 0 20px 0;
+}
+
+/* 音乐控制区域 */
+.musicControl {
+    margin-top: 20px;
+}
+
+.musicControlRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin: 0 10px;
+}
+
+.musicToggleBtn {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50%;
+    border: 2px solid #B24F1B;
+    background: linear-gradient(135deg, #E4D2A9 0%, #D4B896 100%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+    flex-shrink: 0;
+    padding: 0;
+    margin: 0px !important;
+}
+
+.musicToggleBtn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.4);
+    background: linear-gradient(135deg, #F0E4C9 0%, #E4D2A9 100%);
+}
+
+.musicToggleBtn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.musicToggleBtn:disabled,
+.musicToggleBtn.muted {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: linear-gradient(135deg, #C0B8A0 0%, #B0A886 100%);
+    border-color: #8B6B4F;
+}
+
+.musicToggleBtn:disabled:hover,
+.musicToggleBtn.muted:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+}
+
+.musicIcon {
+    font-size: 1rem;
+    color: #B24F1B;
+    line-height: 1;
+}
+
+.musicToggleBtn:disabled .musicIcon,
+.musicToggleBtn.muted .musicIcon {
+    color: #8B6B4F;
+}
+
+/* 音量控制 */
+.volumeControl {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 240px;
+}
+
+.volumeIcon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    color: #B24F1B;
+}
+
+.volumeSlider {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    min-width: 180px;
+    background: transparent;
+}
+
+.volumeSlider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: transparent;
+}
+
+.volumeSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #B24F1B;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+    margin-top: -4px;
+    border: 2px solid #fff;
+}
+
+.volumeSlider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    background: #8B3A15;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.volumeSlider::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: transparent;
+}
+
+.volumeSlider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #B24F1B;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.volumeSlider::-moz-range-thumb:hover {
+    transform: scale(1.15);
+    background: #8B3A15;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+.volumeValue {
+    font-size: 0.9rem;
+    color: #B24F1B;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modalContent {
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        width: 90%;
+        max-width: 350px;
+        margin-right: 10px;
+        margin-top: 60px;
+    }
+}

@@ -1,6 +1,73 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// 导入类型定义（从 useGameData 导出）
+export interface PlayerProfile {
+    avatar: string;
+    name: string;
+    age: number;
+    gender: string;
+    job: string;
+}
+
+export interface PlayerStats {
+    level: number;
+    health: number;
+    maxHealth: number;
+    attack: number;
+    defense: number;
+    speed: number;
+}
+
+export interface PlayerState {
+    profile: PlayerProfile;
+    stats: PlayerStats;
+    experience: { current: number; required: number };
+    currency: { gold: number };
+}
+
+export interface Item {
+    id: string;
+    name?: string;
+    icon?: string;
+    quantity: number;
+    stackable?: boolean;
+    equippable?: boolean;
+    usable?: boolean;
+    slots?: string[];
+    effects?: Partial<PlayerStats>;
+}
+
+export interface EquipmentSlots {
+    head: Item | null;
+    body: Item | null;
+    legs: Item | null;
+    hands: Item | null;
+    feet: Item | null;
+    back: Item | null;
+    leftHand: Item | null;
+    rightHand: Item | null;
+}
+
+export interface InventoryState {
+    equipment: EquipmentSlots;
+    items: Item[];
+}
+
+// 场景节点类型定义
+export interface SceneNode {
+    id: string;
+    name: string;
+    description?: string;
+    background?: string;
+    buildings: any[];
+    npcs: any[];
+    events?: string[];
+    exits: Record<string, string>;
+}
+
+export type ScenesMap = Record<string, SceneNode>;
+
 interface GameState {
   pdfFileId: string | null;
   setPdfFileId: (id: string | null) => void;
@@ -10,7 +77,30 @@ interface GameState {
   setSessionId: (id: string | null) => void;
   clearSessionId: () => void;
 
-  clearAll: () => void; // ✅ 可选：清空整个 store
+  // 场景数据（频繁变化，多组件使用）
+  scenes: ScenesMap;
+  setScenes: (scenes: ScenesMap) => void;
+  updateScenes: (updater: (scenes: ScenesMap) => ScenesMap) => void;
+  currentSceneId: string;
+  setCurrentSceneId: (id: string) => void;
+
+  // 玩家数据（多组件使用）
+  player: PlayerState | null;
+  setPlayer: (player: PlayerState | null) => void;
+  updatePlayer: (updater: (player: PlayerState | null) => PlayerState | null) => void;
+
+  // 背包数据（多组件使用）
+  inventory: InventoryState;
+  setInventory: (inventory: InventoryState) => void;
+  updateInventory: (updater: (inventory: InventoryState) => InventoryState) => void;
+
+  // 音乐状态（全局共享）
+  isPlaying: boolean;
+  setIsPlaying: (isPlaying: boolean) => void;
+  volume: number;
+  setVolume: (volume: number) => void;
+
+  clearAll: () => void;
 }
 
 export const useGameStore = create<GameState>()(
@@ -24,8 +114,67 @@ export const useGameStore = create<GameState>()(
       setSessionId: (id) => set({ sessionId: id }),
       clearSessionId: () => set({ sessionId: null }),
 
-      clearAll: () => set({ pdfFileId: null, sessionId: null }), // ✅
+      // 场景数据（频繁变化，每次从后端获取最新）
+      scenes: {},
+      setScenes: (scenes) => {
+        // 强制创建新对象引用，确保 React 检测到变化
+        const updatedScenes: ScenesMap = {};
+        Object.keys(scenes).forEach(sceneId => {
+          const scene = scenes[sceneId];
+          updatedScenes[sceneId] = {
+            ...scene,
+            npcs: Array.isArray(scene.npcs) ? scene.npcs.map(npc => ({ ...npc })) : [],
+            buildings: Array.isArray(scene.buildings) ? scene.buildings.map(building => ({ ...building })) : [],
+            exits: scene.exits ? { ...scene.exits } : {},
+          };
+        });
+        set({ scenes: updatedScenes });
+      },
+      updateScenes: (updater) => set((state) => ({ scenes: updater(state.scenes) })),
+      currentSceneId: '',
+      setCurrentSceneId: (id) => set({ currentSceneId: id }),
+
+      // 玩家数据
+      player: null,
+      setPlayer: (player) => set({ player }),
+      updatePlayer: (updater) => set((state) => ({ player: updater(state.player) })),
+
+      // 背包数据
+      inventory: {
+        equipment: { head: null, body: null, legs: null, hands: null, feet: null, back: null, leftHand: null, rightHand: null },
+        items: [],
+      },
+      setInventory: (inventory) => set({ inventory }),
+      updateInventory: (updater) => set((state) => ({ inventory: updater(state.inventory) })),
+
+      // 音乐状态
+      isPlaying: false,
+      setIsPlaying: (isPlaying) => set({ isPlaying }),
+      volume: 1,
+      setVolume: (volume) => set({ volume }),
+
+      clearAll: () => set({ 
+        pdfFileId: null, 
+        sessionId: null,
+        scenes: {},
+        currentSceneId: '',
+        player: null,
+        inventory: {
+          equipment: { head: null, body: null, legs: null, hands: null, feet: null, back: null, leftHand: null, rightHand: null },
+          items: [],
+        },
+        isPlaying: false,
+        volume: 1,
+      }),
     }),
-    { name: 'game-storage' }
+    { 
+      name: 'game-storage',
+      // 只持久化关键数据，游戏运行时数据不持久化（每次从后端获取）
+      partialize: (state) => ({
+        pdfFileId: state.pdfFileId,
+        sessionId: state.sessionId,
+        // scenes, player, inventory 不持久化，每次从后端加载
+      }),
+    }
   )
 );

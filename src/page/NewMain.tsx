@@ -1,11 +1,18 @@
+// ==================== 导入 ====================
 import React, { useEffect, useState, useRef } from 'react';
 import styles from './NewMain.module.css';
 import { HOST_ADDRESS } from '../config';
+import { useGameStore, type SceneNode } from '../store/gameStore';
+
+// Hooks
 import { useEventSystem } from '../hooks/useEventSystem';
 import { useGameData, type PlayerStats, type InventoryState } from '../hooks/useGameData';
 import { useChat } from '../hooks/useChat';
 import { useLore } from '../hooks/useLore';
 import { useInventory } from '../hooks/useInventory';
+import { useMusic } from '../hooks/useMusic';
+
+// 组件
 import DialogueModal from '../components/Mian/DialogueModal';
 import NpcModal from '../components/Mian/NpcModal';
 import SceneDetailModal from '../components/Mian/SceneDetailModal';
@@ -13,9 +20,10 @@ import EventModal from '../components/Mian/EventModal';
 import PlayerFloatingPanel from '../components/Mian/PlayerFloatingPanel';
 import InventoryFloatingPanel from '../components/Mian/InventoryFloatingPanel';
 import MapModal from '../components/Mian/MapModal';
-import { useGameStore } from '../store/gameStore';
-import ReactMarkdown from 'react-markdown';
+import ChatPanel from '../components/Mian/ChatPanel';
+import SettingModal from '../components/Mian/SettingModal';
 
+// ==================== 类型定义 ====================
 declare global {
     interface Window {
         game: any;
@@ -27,70 +35,59 @@ declare global {
     }
 }
 
+type EventDef = {
+    id: string;
+    title: string;
+    image: string;
+    description: string;
+    options: Array<{ text: string; effects?: any; nextEvent?: string | null }>;
+    conditions?: any;
+};
+
+// ==================== 组件 ====================
 const NewMain: React.FC = () => {
-    // 使用自定义 hooks
-    const { player, setPlayer, inventory, setInventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore } = useGameData();
-    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
+    const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore, worldMapImageUrl } = useGameData();
+    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
     const { gameTimeText, worldLoreHtml, playerLoreHtml, updateLoreFromBackend, updateLoreFromLocal } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
     const { events, activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
+    const { sessionId } = useGameStore();
+    const { tracks, isPlaying, play } = useMusic();
 
-    // React 状态（面板与浮窗）
     const [activePanel, setActivePanel] = useState<'scene' | 'map'>('scene');
     const [playerOpen, setPlayerOpen] = useState(false);
     const [loreOpen, setLoreOpen] = useState(false);
     const [npcModalOpen, setNpcModalOpen] = useState(false);
+    const [settingModalOpen, setSettingModalOpen] = useState(false);
+    const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
+    const [sceneDetailId, setSceneDetailId] = useState<string | null>(null);
+    const [dialogueOpen, setDialogueOpen] = useState(false);
+    const [dialogueInitialInput, setDialogueInitialInput] = useState('');
+
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
 
-    // 添加聊天消息容器的引用
-    const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-    const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
-
-    // 自动滚动到底部的函数
-    const scrollToBottom = () => {
-        if (chatMessagesContainerRef.current) {
-            chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
-        }
-    };
-
-    // 当聊天消息变化时自动滚动
-    useEffect(() => {
-        scrollToBottom();
-    }, [chatMessages]); // 当聊天消息更新时触发
-
-    // 当聊天面板打开时也滚动到底部
-    useEffect(() => {
-        if (chatOpen) {
-            // 稍微延迟确保DOM已经更新
-            setTimeout(() => {
-                scrollToBottom();
-            }, 100);
-        }
-    }, [chatOpen]);
-
-    // 事件类型
-    type EventDef = {
-        id: string;
-        title: string;
-        image: string;
-        description: string;
-        options: Array<{ text: string; effects?: any; nextEvent?: string | null }>;
-        conditions?: any
-    };
-
-    // 更新世界观数据
+    // ==================== 世界观相关 ====================
     useEffect(() => {
         if (backendDataLoaded && backendLore) {
-            // 从后端数据更新世界观
-            console.log('🔄 使用后端世界观数据:', backendLore);
             updateLoreFromBackend(backendLore);
         } else if (!backendDataLoaded) {
-            // 从本地数据更新世界观
             updateLoreFromLocal();
         }
     }, [backendDataLoaded, backendLore, updateLoreFromBackend, updateLoreFromLocal]);
 
+    // ==================== 音乐系统相关 ====================
+    const hasStartedPlayingRef = useRef(false);
+    useEffect(() => {
+        if (tracks.length > 0 && !isPlaying && !hasStartedPlayingRef.current) {
+            const timer = setTimeout(() => {
+                play();
+                hasStartedPlayingRef.current = true;
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [tracks.length, isPlaying, play]);
 
+    // ==================== 事件系统相关 ====================
     const handleEventOption = (index: number) => {
         if (!activeEvent) return;
         const opt = activeEvent.options[index];
@@ -117,7 +114,8 @@ const NewMain: React.FC = () => {
             }
             if ((opt.effects as any).items) {
                 const items = (opt.effects as any).items as Array<{ id: string; quantity: number }>;
-                setInventory((prev) => {
+                const updateInventory = useGameStore.getState().updateInventory;
+                updateInventory((prev) => {
                     const nextInv: InventoryState = { ...prev, items: prev.items.map((i) => ({ ...i })) };
                     items.forEach(({ id, quantity }) => {
                         const found = nextInv.items.find((i) => i.id === id);
@@ -140,6 +138,7 @@ const NewMain: React.FC = () => {
                 const delta = (opt.effects as any).gold as number;
                 next.currency.gold = (next.currency.gold ?? 0) + delta;
             }
+            const setPlayer = useGameStore.getState().setPlayer;
             setPlayer(next);
         }
         closeEvent();
@@ -148,16 +147,13 @@ const NewMain: React.FC = () => {
 
     // 建筑点击：features 事件或回退事件
     const handleBuildingClick = (building: any) => {
-        // 保存当前建筑信息，用于传递给EventModal
-        setCurrentEventBuilding(building);
-        
         if (building && Array.isArray(building.features) && building.features.length > 0) {
             // 动态生成基于 features 的事件弹窗（最多三项）
             const tempEvent: EventDef = {
-                id: `building_${building.id}_features`,
+                id: building.id,
                 title: building.name,
                 image: building.icon || '/data/icons/empty.png',
-                description: `${building.name}\n\n${building.description}\n\n`,
+                description: building.description,
                 options: building.features.slice(0, 3).map((f: string) => ({ text: f, effects: {} })),
             };
             // 直接设置事件，不需要通过 hook
@@ -175,84 +171,71 @@ const NewMain: React.FC = () => {
         }
         for (const id of tryIds) {
             const ev = events[id];
-            if (ev) { 
-                setActiveEvent(ev); 
-                setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]); 
-                return; 
+            if (ev) {
+                setActiveEvent(ev);
+                setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]);
+                return;
             }
         }
         alert('该建筑暂未配置可用功能');
     };
-    
-    // 处理从事件弹窗打开对话弹窗
-    const handleOpenDialogueFromEvent = (initialText: string) => {
-        setDialogueInitialInput(initialText);
-        setDialogueTitle('📜 奇闻轶事');
-        setDialogueOpen(true);
-    };
-
-    // 键盘快捷键（1 背包 / 2 角色 / 3 地图 / Esc 关闭弹层）
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || (target as any).isContentEditable)) return;
-            switch (e.key) {
-                case '1': case 'Digit1': setInventoryOpen((v) => !v); e.preventDefault(); break;
-                case '2': case 'Digit2': setPlayerOpen((v) => !v); e.preventDefault(); break;
-                case '3': case 'Digit3': setActivePanel('map'); e.preventDefault(); break;
-                case 'Escape': setActiveEvent(null); setChatOpen(false); setLoreOpen(false); setInventoryOpen(false); setPlayerOpen(false); break;
-            }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, []);
 
 
-    // 场景详情弹窗
-    const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
-    const [sceneDetailId, setSceneDetailId] = useState<string | null>(null);
+    // ==================== 背包系统 ====================
+    const handleEquipItem = (item: any, slot: any) => equipItem(item, slot);
+    const handleUseItem = (item: any) => useItem(item);
 
-
-    // 对话弹窗（用于奇闻轶事等）
-    const [dialogueOpen, setDialogueOpen] = useState(false);
-    const [dialogueTitle, setDialogueTitle] = useState('奇闻轶事');
-    const [dialogueInitialInput, setDialogueInitialInput] = useState('');
-    
-    // 当前事件对应的建筑信息
-    const [currentEventBuilding, setCurrentEventBuilding] = useState<any | null>(null);
-
-    // 背包相关函数
-    const handleEquipItem = (item: any, slot: any) => equipItem(item, slot, setInventory);
-    const handleUseItem = (item: any) => useItem(item, player, setPlayer, setInventory);
-
-    const { sessionId } = useGameStore();
-
-    // 包装 chatWithNpc 以适配当前使用方式
-    const handleChatWithNpc = async (text: string) => {
-        if (!sessionId || !npcDetail) {
-            alert('请点击npc与其对话');
-            return;
-        }
-        await chatWithNpc(sessionId, npcDetail, text);
-    };
-
+    // ==================== NPC聊天 ====================
     const startChatWithNpc = (npc: any) => {
         setNpcModalOpen(false);
         if (sessionId) {
             // 延迟加载历史，确保欢迎消息先显示
             setTimeout(async () => {
                 await loadChatHistory(sessionId, npc);
-                // 加载历史后滚动到底部
-                setTimeout(scrollToBottom, 200);
             }, 300);
         }
         handleStartChatWithNpc(npc);
     };
 
-    // 获取当前场景背景图片
+    const handleSendChatMessage = async (message: string) => {
+        if (!sessionId || !npcDetail) {
+            alert('请点击npc与其对话');
+            return;
+        }
+        setChatInput('');
+        await chatWithNpc(sessionId, npcDetail, message);
+    };
+
     const currentSceneBackground = currentSceneId && scenes[currentSceneId]?.background
         ? `${HOST_ADDRESS}${scenes[currentSceneId].background}`
         : '';
+
+    const handleSceneClick = (targetId: string, targetScene: SceneNode) => {
+        setCurrentSceneId(targetId);
+        // 更新场景描述显示
+        const sceneDescElement = document.getElementById('sceneDescription');
+        if (sceneDescElement) {
+            sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
+        }
+        changeScenes(targetId);
+    }
+
+    const changeScenes = async (targetId: string) => {
+        try {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/change-scene`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sceneId: targetId })
+                }
+            );
+            if (response.ok) {
+                console.log('获取新场景数据成功:', response);
+            }
+        } catch (error) {
+            console.error('获取新场景数据失败:', error);
+        }
+    }
 
     return (
         <div
@@ -269,11 +252,14 @@ const NewMain: React.FC = () => {
 
                 <div className={styles.playerContent}>
                     <div className={styles.playerInfo}>
-                        <img src="/data/avatars/hunter.png" alt="人物头像" onClick={() => setPlayerOpen(true)} />
+                        <img
+                            src={player?.profile.avatar || '/data/avatars/hunter.png'}
+                            alt="人物头像"
+                            onClick={() => setPlayerOpen(!playerOpen)}
+                        />
                         <div className={styles.playerName}>{player?.profile.name}</div>
                     </div>
                     <button id="triggerSceneEventBtn" className={styles.storyBtn} onClick={() => {
-                        setDialogueTitle('📜 故事主线');
                         setDialogueOpen(true);
                     }}>
                         <img src="/data/asset/时间消逝按钮.png" alt="时间消逝按钮" className={styles.storyBtnImg} />
@@ -290,18 +276,23 @@ const NewMain: React.FC = () => {
                                 </div>
                             ))}
                     </div>
-
                 </div>
-
 
                 <div className={styles.sceneContent}>
                     <div className={styles.settingContet}>
                         <div className={styles.gameTimeText}>{gameTimeText}</div>
-                        <div
-                            id="settingBtn"
-                            className={`${styles.navBtn}`}
-                        >
-                            <img src="/data/asset/设置.png" alt="设置" className={styles.settingBtnImg} />
+                        <div className={styles.settingBtnWrapper}>
+                            <div
+                                id="settingBtn"
+                                className={`${styles.navBtn}`}
+                                onClick={() => setSettingModalOpen(!settingModalOpen)}
+                            >
+                                <img src="/data/asset/设置.png" alt="设置" className={styles.settingBtnImg} />
+                            </div>
+                            <SettingModal
+                                isOpen={settingModalOpen}
+                                onClose={() => setSettingModalOpen(false)}
+                            />
                         </div>
                     </div>
                     <div className={styles.sceneDescriptionContainer}>
@@ -319,14 +310,7 @@ const NewMain: React.FC = () => {
                                             <div
                                                 key={direction}
                                                 className={styles.exitCard}
-                                                onClick={() => {
-                                                    setCurrentSceneId(targetId);
-                                                    // 更新场景描述显示
-                                                    const sceneDescElement = document.getElementById('sceneDescription');
-                                                    if (sceneDescElement) {
-                                                        sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
-                                                    }
-                                                }}
+                                                onClick={() => handleSceneClick(targetId, targetScene)}
                                             >
                                                 <img
                                                     src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
@@ -346,70 +330,23 @@ const NewMain: React.FC = () => {
             </div>
             <div className={styles.sceneNpcs}>
                 <div id="npcsList" className={styles.npcsGrid}>
-                    {(currentSceneId && scenes[currentSceneId].npcs.length ? scenes[currentSceneId].npcs : []).map((n: any) => (
-                        <div key={n.id} className={styles.npcCard} onClick={() => { setNpcDetail(n); setNpcModalOpen(true); }}>
-                            <img src={`${HOST_ADDRESS}${n.icon}` || '/data/avatars/default.png'} alt={n.name} />
-                            <div className={styles.npcLabel}>{n.name}</div>
-                        </div>
-                    ))}
-                    {/* <div className={styles.npcCard} >
-                                <img src={'/data/avatars/default.png'} alt={''} />
-                                <div className={styles.npcLabel}>{'第四张图'}</div>
+                    {(() => {
+                        const currentScene = currentSceneId ? scenes[currentSceneId] : null;
+                        const npcs = currentScene?.npcs || [];
+                        return npcs.map((n: any) => (
+                            <div
+                                key={`${n.id}-${n.relationships || n.favorability || 0}`}
+                                className={styles.npcCard}
+                                onClick={() => {
+                                    setNpcDetail(n);
+                                    setNpcModalOpen(true);
+                                }}
+                            >
+                                <img src={`${HOST_ADDRESS}${n.icon}` || '/data/avatars/default.png'} alt={n.name} />
+                                <div className={styles.npcLabel}>{n.name}</div>
                             </div>
-                            <div className={styles.npcCard} >
-                                <img src={'/data/avatars/default.png'} alt={''} />
-                                <div className={styles.npcLabel}>{'第四张图'}</div>
-                            </div> */}
-                </div>
-                <div id="chatPanel" className={styles.chatPanel} style={{ display: chatOpen ? 'flex' : 'none' }}>
-                    <div className={styles.chatHeader}>
-                        <h3 id="chatTitle">聊天</h3>
-                        <button id="closeChatBtn" className={styles.closeChatBtn} onClick={() => setChatOpen(false)}>
-                            <img src="/data/asset/关闭按钮.png" alt="关闭" />
-                        </button>
-                    </div>
-                    <div
-                        id="chatMessages"
-                        className={styles.chatMessages}
-                        ref={chatMessagesContainerRef} // 添加引用用于自动滚动
-                    >
-                        {chatMessages.map((m, i) =>
-                            <div key={i} className={`${styles.chatMessage} ${m.role === 'assistant' ? styles.system : styles.user}`}>
-                                <span className={styles.chatMessageWrapper}>
-                                    <ReactMarkdown>{m.text}</ReactMarkdown>
-                                    {m.isTyping && <span className={styles.typingCursor}>|</span>}
-                                </span>
-                            </div>
-                        )}
-                        {/* 添加一个不可见的锚点元素用于滚动 */}
-                        <div ref={chatMessagesEndRef} />
-                    </div>
-                    <div className={styles.chatInputArea}>
-                        <input
-                            type="text"
-                            id="chatInput"
-                            className={styles.chatInput}
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && chatInput.trim()) {
-                                    handleChatWithNpc(chatInput);
-                                    setChatInput('');
-                                }
-                            }}
-                        />
-                        <button
-                            id="sendChatBtn"
-                            className={styles.sendChatBtn}
-                            onClick={() => {
-                                if (chatInput.trim()) {
-                                    handleChatWithNpc(chatInput);
-                                    setChatInput('');
-                                }
-                            }}
-                        >
-                        </button>
-                    </div>
+                        ));
+                    })()}
                 </div>
             </div>
             <div className={styles.sceneEventBtnContainer}>
@@ -417,11 +354,9 @@ const NewMain: React.FC = () => {
                     id="triggerSceneEventBtn"
                     className={styles.sceneEventBtn}
                     onClick={() => {
-                        // 如果背包打开，先关闭背包
                         if (inventoryOpen) {
                             setInventoryOpen(false);
                         }
-                        // 切换地图弹窗
                         setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'));
                     }}
                 >
@@ -431,11 +366,9 @@ const NewMain: React.FC = () => {
                     className={styles.floatingInventoryBtn}
                     title="打开背包"
                     onClick={() => {
-                        // 如果地图打开，先关闭地图
                         if (activePanel === 'map') {
                             setActivePanel('scene');
                         }
-                        // 切换背包弹窗
                         setInventoryOpen(!inventoryOpen);
                     }}
                 >
@@ -443,12 +376,14 @@ const NewMain: React.FC = () => {
                 </button>
             </div>
 
+
             <MapModal
                 isOpen={activePanel === 'map'}
                 onClose={() => setActivePanel('scene')}
                 scenes={scenes}
                 currentSceneId={currentSceneId}
                 onSceneClick={(id) => { setSceneDetailId(id); setSceneDetailOpen(true); }}
+                worldMapImageUrl={worldMapImageUrl}
             />
 
 
@@ -459,25 +394,27 @@ const NewMain: React.FC = () => {
                 onClose={() => setActiveEvent(null)}
                 onOptionSelect={handleEventOption}
                 currentSceneId={currentSceneId}
-                building={currentEventBuilding}
-                onOpenDialogue={handleOpenDialogueFromEvent}
             />
 
             {/* 悬浮背包面板组件 */}
-            <InventoryFloatingPanel
-                isOpen={inventoryOpen}
-                onClose={() => setInventoryOpen(false)}
-                inventory={inventory}
-                onEquipItem={handleEquipItem}
-                onUseItem={handleUseItem}
-            />
+            <div className={styles.inventoryFloatingPanel}>
+                <InventoryFloatingPanel
+                    isOpen={inventoryOpen}
+                    onClose={() => setInventoryOpen(false)}
+                    inventory={inventory}
+                    onEquipItem={handleEquipItem}
+                    onUseItem={handleUseItem}
+                />
+            </div>
 
             {/* 悬浮角色信息面板组件 */}
-            <PlayerFloatingPanel
-                isOpen={playerOpen}
-                onClose={() => setPlayerOpen(false)}
-                player={player}
-            />
+            <div className={styles.playerFloatingPanel}>
+                <PlayerFloatingPanel
+                    isOpen={playerOpen}
+                    onClose={() => setPlayerOpen(false)}
+                    player={player}
+                />
+            </div>
 
             {/* NPC详情弹窗组件 */}
             <NpcModal
@@ -512,11 +449,13 @@ const NewMain: React.FC = () => {
                 onClose={() => {
                     setDialogueOpen(false);
                     setDialogueInitialInput(''); // 关闭时清空初始输入
-                    setCurrentEventBuilding(null); // 清空建筑信息
                 }}
-                title={dialogueTitle}
                 playerName={player?.profile.name || '玩家'}
                 initialInput={dialogueInitialInput}
+                player={player}
+                inventory={inventory}
+                onEquipItem={handleEquipItem}
+                onUseItem={handleUseItem}
             />
 
             {/* 场景详情弹窗组件 */}
@@ -528,11 +467,32 @@ const NewMain: React.FC = () => {
                 player={player}
                 onTravel={(sceneId, cost) => {
                     if (player) {
+                        const setPlayer = useGameStore.getState().setPlayer;
                         setPlayer({ ...player, currency: { gold: Math.max(0, player.currency.gold - cost) } });
                     }
                     setCurrentSceneId(sceneId);
                     setSceneDetailOpen(false);
                     setActivePanel('scene');
+                }}
+            />
+
+            <ChatPanel
+                isOpen={chatOpen}
+                onClose={() => setChatOpen(false)}
+                chatMessages={chatMessages}
+                chatInput={chatInput}
+                onInputChange={setChatInput}
+                onSendMessage={handleSendChatMessage}
+                npc={(() => {
+                    const npc = currentChatNpc || npcDetail;
+                    if (npc && currentSceneId && scenes[currentSceneId]?.npcs) {
+                        return scenes[currentSceneId].npcs.find((n: any) => n.id === npc.id) || npc;
+                    }
+                    return npc;
+                })()}
+                sessionId={sessionId}
+                onLoadHistory={async (sessionId: string, npc: any) => {
+                    return await loadChatHistory(sessionId, npc);
                 }}
             />
         </div>

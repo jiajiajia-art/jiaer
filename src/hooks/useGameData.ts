@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { HOST_ADDRESS } from '../config';
 
@@ -69,21 +69,27 @@ export interface SceneNode {
 export type ScenesMap = Record<string, SceneNode>;
 
 export const useGameData = () => {
-    const [player, setPlayer] = useState<PlayerState | null>(null);
-    const [inventory, setInventory] = useState<InventoryState>({
-        equipment: { head: null, body: null, legs: null, hands: null, feet: null, back: null, leftHand: null, rightHand: null },
-        items: [],
-    });
-    const [scenes, setScenes] = useState<ScenesMap>({});
-    const [currentSceneId, setCurrentSceneId] = useState<string>('');
+    // 从 Zustand store 读取和更新数据
+    const player = useGameStore((state) => state.player);
+    const setPlayer = useGameStore((state) => state.setPlayer);
+    const updatePlayer = useGameStore((state) => state.updatePlayer);
+    const inventory = useGameStore((state) => state.inventory);
+    const setInventory = useGameStore((state) => state.setInventory);
+    const scenes = useGameStore((state) => state.scenes);
+    const setScenes = useGameStore((state) => state.setScenes);
+    const currentSceneId = useGameStore((state) => state.currentSceneId);
+    const setCurrentSceneId = useGameStore((state) => state.setCurrentSceneId);
+    
+    // 这些数据保留在 hook 中（局部使用，不频繁变化）
     const [backendDataLoaded, setBackendDataLoaded] = useState(false);
     const [backendLore, setBackendLore] = useState<any>(null);
     const [backendEvents, setBackendEvents] = useState<Record<string, any>>({});
-    
+    const [worldMapImageUrl, setWorldMapImageUrl] = useState<string | null>(null);
+    const {sessionId} = useGameStore();
     const pdfFileId = useGameStore((s) => s.pdfFileId);
 
     // 应用后端数据到各个状态
-    const applyBackendData = (root: any) => {
+    const applyBackendData = useCallback((root: any) => {
         try {
             if (!root) return;
 
@@ -100,47 +106,27 @@ export const useGameData = () => {
 
             // 2) 世界观数据（从 lore 字段）
             if (root.lore && typeof root.lore === 'object') {
-                console.log('✅ 后端提供了世界观数据:', root.lore);
                 setBackendLore(root.lore);
-            } else {
-                console.log('⚠️ 后端未提供世界观数据，将使用本地数据');
             }
 
             // 3) 关键事件数据（从 lore.keyEvents 字段）
-            if (root.lore && root.lore.keyEvents && Array.isArray(root.lore.keyEvents)) {
-                console.log('✅ 后端提供了关键事件数据:', root.lore.keyEvents);
-                const convertedEvents: Record<string, any> = {};
-                root.lore.keyEvents.forEach((event: any, index: number) => {
-                    const eventId = `key_event_${index}`;
-                    convertedEvents[eventId] = {
-                        id: eventId,
-                        title: event.title,
-                        image: '/data/events/historical.jpg',
-                        description: `${event.year}\n\n${event.description}`,
-                        options: [
-                            { text: '了解详情', effects: { experience: 5 }, nextEvent: null },
-                            { text: '继续观察', effects: { experience: 2 }, nextEvent: null },
-                            { text: '暂时忽略', effects: {} },
-                        ],
-                    };
-                });
-                // 添加欢迎事件
-                convertedEvents['welcome_event'] = {
-                    id: 'welcome_event',
-                    title: '明末人生模拟器',
-                    image: '/data/events/welcome.jpg',
-                    description: '天启七年正月十五（1627年2月），你叫陈石，是北直隶顺天府郊外一个佃农之子。时值寒冬，村中炊烟稀落，土地贫瘠，官道上有流民缓缓南迁。朝廷阉党专权，边关烽火不断，山海关外后金铁骑虎视眈眈。\n\n作为家中长子，你深知生活不易。父亲偶尔讲述的军旅故事，在你心中埋下了对外面世界既恐惧又好奇的种子。\n\n在这个动荡的时代，你将如何选择自己的人生道路？',
-                    options: [
-                        { text: '我要改变命运！', effects: { experience: 10 }, nextEvent: null },
-                        { text: '先了解当前局势', effects: { experience: 5 }, nextEvent: null },
-                        { text: '我需要更多准备', effects: {}, nextEvent: null },
-                    ],
-                };
-                setBackendEvents(convertedEvents);
-                console.log('🔄 已转换关键事件为游戏事件:', Object.keys(convertedEvents));
-            } else {
-                console.log('⚠️ 后端未提供关键事件数据，将使用本地事件数据');
-            }
+            // if (root.lore?.keyEvents && Array.isArray(root.lore.keyEvents)) {
+            //     const convertedEvents: Record<string, any> = {};
+            //     root.lore.keyEvents.forEach((event: any, index: number) => {
+            //         const eventId = `key_event_${index}`;
+            //         convertedEvents[eventId] = {
+            //             id: eventId,
+            //             title: event.title,
+            //             image: '/data/events/historical.jpg',
+            //             description: `${event.year}\n\n${event.description}`,
+            //             options: [
+            //                 { text: '了解详情', effects: { experience: 5 }, nextEvent: null },
+            //                 { text: '继续观察', effects: { experience: 2 }, nextEvent: null },
+            //                 { text: '暂时忽略', effects: {} },
+            //             ],
+            //         };
+            //     })
+            // }
 
             // 4) 物品定义映射
             const itemDefs: Record<string, any> = (root.items && typeof root.items === 'object') ? root.items : {};
@@ -217,46 +203,106 @@ export const useGameData = () => {
             }
         } catch (err) {
             console.error('应用后端数据失败:', err);
+            throw err;
         }
-    };
+    }, [setScenes, setCurrentSceneId, setBackendLore, setBackendEvents, setInventory, setPlayer]);
 
-    // 移除本地 JSON 文件相关加载与 fallback
-    // 只保留从后端拉取逻辑
+    // 提取图片URL的工具函数
+    const extractImageUrl = useCallback(async (response: Response): Promise<string | null> => {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const data = await response.json();
+            return data.url || data.imageUrl || data.image || response.url;
+        }
+        return response.url;
+    }, []);
 
+    // 加载后端数据
     useEffect(() => {
-        if (backendDataLoaded) return; // 已加载后端数据则跳过
+        if (backendDataLoaded || !sessionId || !pdfFileId) return;
 
         (async () => {
-            let backendSuccess = false;
-            console.log(backendSuccess);
-            
+            try {
+                const [filesResponse, avatarResponse, worldMapResponse] = await Promise.all([
+                    fetch(`${HOST_ADDRESS}/api/backend/files/${sessionId}`),
+                    fetch(`${HOST_ADDRESS}/api/backend/images/${pdfFileId}/player`),
+                    fetch(`${HOST_ADDRESS}/api/backend/images/${pdfFileId}/world`)
+                ]);
 
-            // 有 pdfFileId 时优先尝试从后端获取
-            if (pdfFileId) {
-                try {
-                    const url = `${HOST_ADDRESS}/api/backend/files/${pdfFileId}`;
-                    const res = await fetch(url);
-                    const contentType = res.headers.get('content-type') || '';
-                    if (res.ok && contentType.includes('application/json')) {
-                        const data = await res.json();
-                        if (data && data.success && data.files) {
+                // 处理游戏数据
+                if (filesResponse.ok) {
+                    const contentType = filesResponse.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await filesResponse.json();
+                        if (data?.success && data.files) {
                             applyBackendData(data.files);
                             setBackendDataLoaded(true);
-                            backendSuccess = true;
                         }
                     }
-                } catch (e) {
-                    console.warn('⚠️ 后端数据加载失败:', e);
                 }
-            }
 
-            // 移除本地 fallback 部分
+                // 处理玩家头像
+                if (avatarResponse.ok) {
+                    const avatarUrl = await extractImageUrl(avatarResponse);
+                    if (avatarUrl) {
+                        updatePlayer((prevPlayer) => {
+                            if (!prevPlayer) return null;
+                            return {
+                                ...prevPlayer,
+                                profile: {
+                                    ...prevPlayer.profile,
+                                    avatar: avatarUrl
+                                }
+                            };
+                        });
+                    }
+                }
+
+                // 处理世界地图
+                if (worldMapResponse.ok) {
+                    const worldMapUrl = await extractImageUrl(worldMapResponse);
+                    if (worldMapUrl) {
+                        setWorldMapImageUrl(worldMapUrl);
+                    }
+                }
+            } catch (e) {
+                console.error('后端数据加载失败:', e);
+            }
         })();
-    }, [pdfFileId, backendDataLoaded]);
+    }, [sessionId, pdfFileId, backendDataLoaded, applyBackendData, updatePlayer, extractImageUrl]);
+
+    const getNewScene = useCallback(async () => {
+        if (!sessionId) return;
+        
+        try {
+            const response = await fetch(`${HOST_ADDRESS}/api/backend/files/${sessionId}/scenes`);
+            if (!response.ok) return;
+            
+            const dataJson = await response.json();
+            let newScenes: ScenesMap | null = null;
+            
+            // 根据后端返回的数据结构解析场景
+            if (dataJson.data && typeof dataJson.data === 'object') {
+                newScenes = dataJson.data;
+            } else if (dataJson.scenes && typeof dataJson.scenes === 'object') {
+                newScenes = dataJson.scenes;
+            } else if (typeof dataJson === 'object' && !Array.isArray(dataJson)) {
+                newScenes = dataJson;
+            }
+            
+            if (newScenes) {
+                // store 的 setScenes 会自动处理深拷贝
+                setScenes(newScenes);
+            }
+        } catch (e) {
+            console.error('获取新场景数据失败:', e);
+        }
+    }, [sessionId, setScenes]);
 
     return {
         player,
         setPlayer,
+        updatePlayer,
         inventory,
         setInventory,
         scenes,
@@ -265,6 +311,8 @@ export const useGameData = () => {
         setCurrentSceneId,
         backendDataLoaded,
         backendLore,
-        backendEvents
+        backendEvents,
+        worldMapImageUrl,
+        getNewScene
     };
 };

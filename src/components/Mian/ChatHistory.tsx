@@ -1,0 +1,103 @@
+import React, { useEffect, useRef } from 'react';
+import styles from './ChatHistory.module.css';
+import ReactMarkdown from 'react-markdown';
+
+export interface ChatMessage {
+    role: 'user' | 'assistant';
+    text: string;
+    isTyping?: boolean;
+}
+
+interface ChatHistoryProps {
+    isOpen: boolean;
+    onClose?: () => void;
+    chatMessages: ChatMessage[];
+    title?: string;
+    npc?: {
+        id?: string;
+        name?: string;
+        icon?: string;
+        avatar?: string;
+        [key: string]: any;
+    } | null;
+    loading?: boolean;
+}
+
+const ChatHistory: React.FC<ChatHistoryProps> = ({
+    isOpen,
+    onClose,
+    chatMessages,
+    loading = false
+}) => {
+    const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
+    const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+
+    // 自动滚动到底部的函数
+    const scrollToBottom = () => {
+        if (chatMessagesContainerRef.current) {
+            chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
+        }
+    };
+
+    // 当聊天消息变化时自动滚动
+    useEffect(() => {
+        scrollToBottom();
+    }, [chatMessages]);
+
+    // 当聊天面板打开时也滚动到底部
+    useEffect(() => {
+        if (isOpen) {
+            // 稍微延迟确保DOM已经更新
+            setTimeout(() => {
+                scrollToBottom();
+            }, 100);
+        }
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className={styles.chatHistory}>
+            {onClose && (
+                <div className={styles.chatHeader}>
+                    <button className={styles.closeChatBtn} onClick={onClose}>
+                        <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                    </button>
+                </div>
+            )}
+            <div
+                className={styles.chatMessages}
+                ref={chatMessagesContainerRef}
+            >
+                {loading ? (
+                    <div className={styles.loadingMessage}>加载历史记录中...</div>
+                ) : chatMessages.length === 0 ? (
+                    <div className={styles.emptyMessage}>暂无聊天记录</div>
+                ) : (
+                    <>
+                        {chatMessages.map((m, i) => {
+                            // 适配角色类型：assistant (来自 type: 'game') 使用 system 样式
+                            // user (来自 type: 'player') 使用 user 样式
+                            const messageClass = m.role === 'assistant'
+                                ? `${styles.chatMessage} ${styles.system}`
+                                : `${styles.chatMessage} ${styles.user}`;
+
+                            return (
+                                <div key={i} className={messageClass}>
+                                    <span className={styles.chatMessageWrapper}>
+                                        <ReactMarkdown>{m.text}</ReactMarkdown>
+                                        {m.isTyping && <span className={styles.typingCursor}>|</span>}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+                {/* 添加一个不可见的锚点元素用于滚动 */}
+                <div ref={chatMessagesEndRef} />
+            </div>
+        </div>
+    );
+};
+
+export default ChatHistory;

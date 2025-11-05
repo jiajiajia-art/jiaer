@@ -2,135 +2,14 @@
     min-height: 64px;
     width: 100%;
     height: 100vh;
-    background-image: url('/data/asset/首页/大背景.png');
-    background-size: 100% 100%;
+    background-image: url('/data/asset/首页/大背景copy.png');
+    background-size: 100% 100vh;
     background-position: center;
     background-repeat: no-repeat;
+    /* font-family: 'Playfair Display', serif; */
+    /* font-family: 'Cinzel', serif; */
 }
 
-/* 固定导航条 */
-.navbar {
-    /* position: fixed;
-    top: 0;
-    left: 0;
-    right: 0; */
-    height: 90px;
-    color: #E8DBB7;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    padding: 0 16px;
-    z-index: 1000;
-}
-
-.navLinks {
-    /* width: 50%; */
-    display: flex;
-    align-items: center;
-    margin-left: 20%;
-    height: 100%;
-}
-
-.navLink {
-    width: 180px;
-    height: 100%;
-    text-align: center;
-    font-size: 40px;
-    font-weight: 600;
-    color: #FAE9B9;
-    text-shadow: 
-    1.5px 1.5px 2.5px rgba(59, 39, 19, 0.95),
-    -1.5px -1.5px 2.5px rgba(59, 39, 19, 0.95),
-    1.5px -1.5px 2.5px rgba(59, 39, 19, 0.95),
-    -1.5px 1.5px 2.5px rgba(59, 39, 19, 0.95),
-    0px 0px 3px rgba(59, 39, 19, 0.95),
-    2px 0px 2.5px rgba(59, 39, 19, 0.95),
-    -2px 0px 2.5px rgba(59, 39, 19, 0.95),
-    0px 2px 2.5px rgba(59, 39, 19, 0.95),
-    0px -2px 2.5px rgba(59, 39, 19, 0.95);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background-image: none;
-    background-size: 100% 100%;
-    background-repeat: no-repeat;
-    background-position: center;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.navLinkActive {
-    background-image: url('/data/asset/首页/按钮.png');
-}
-
-.navRight {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex: 1;
-    justify-content: flex-end;
-    margin-right: 20px;
-}
-
-.searchBox {
-    display: flex;
-    align-items: center;
-    /* background: #E8DBB7; */
-    padding: 8px 16px;
-    height: 50px;
-    width: 300px;
-    gap: 8px;
-    background-image: url('/data/asset/首页/搜索框.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.searchIcon {
-    font-size: 18px;
-    color: #8B7355;
-}
-
-.searchInput {
-    width: 82%;
-    height: 100%;
-    border: none;
-    background: transparent;
-    outline: none;
-    color: #5E4630;
-    font-size: 14px;
-}
-
-.searchInput::placeholder {
-    color: #8B7355;
-}
-
-.avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-}
-
-.avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 50%;
-}
-
-.avatar:hover {
-    transform: scale(1.05);
-}
-
-.settingIcon {
-    width: 48px;
-    height: 48px;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-}
 
 .logo {
     width: 100%;
@@ -221,6 +100,7 @@
     background-repeat: no-repeat;
     background-color: transparent;
     padding: 0 20px;
+    height: 54%;
 }
 
 .sectionHeader {
@@ -313,15 +193,14 @@
     border-radius: 25px;
     max-width: 1200px;
     width: 68%;
-    height: 72vh;
-    overflow-y: auto;
+    height: 68vh;
     position: relative;
     padding: 20px 40px;
 }
 
 .detailModalClose {
     position: fixed; /* 使用fixed定位相对于视口 */
-    top: calc((100vh - 72vh) / 2 - 10px); /* 弹窗顶部位置减去按钮的一半高度，让它超出 */
+    top: calc((100vh - 72vh) / 2 + 10px); /* 弹窗顶部位置减去按钮的一半高度，让它超出 */
     right: calc((100vw - min(68vw, 1200px)) / 2 +  30px); /* 弹窗右侧位置减去按钮的一半宽度 */
     width: 60px;
     height: 60px;
@@ -368,9 +247,10 @@
 
 .detailLeftImage {
     width: 98%;
-    height: 480px;
+    height: 29.2rem;
     object-fit: fill;
     border-radius: 5px;
+    margin-top: 6px;
 }
 
 /* 中间列 */
@@ -410,7 +290,7 @@
 
 .detailDescription {
     margin-top: auto; /* 推到底部 */
-    height: 300px; /* 固定高度，占据剩余空间的2/3 */
+    height: 280px; /* 固定高度，占据剩余空间的2/3 */
     overflow-y: auto;
     margin-bottom: 20px; /* 为作者留出空间 */
     min-height: 0;
@@ -473,7 +353,7 @@
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
-    padding: 30px 20px;
+    padding: 30px 20px 16px 20px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -520,7 +400,7 @@
 }
 
 .unlockBtn img {
-    width: 200px;
+    width: 100%;
     height: auto;
     object-fit: contain;
 }
@@ -537,7 +417,7 @@
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
-    padding: 30px 20px;
+    padding: 30px 20px 16px 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -592,7 +472,7 @@
 }
 
 .startGameBtn img {
-    width: 180px;
+    width: 100%;
     height: auto;
     object-fit: contain;
 }

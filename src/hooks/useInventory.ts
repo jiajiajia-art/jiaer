@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import type { Item, EquipmentSlots, InventoryState, PlayerState } from './useGameData';
-import type { Dispatch, SetStateAction } from 'react';
+import { useGameStore } from '../store/gameStore';
 
 export const useInventory = () => {
     const [inventoryOpen, setInventoryOpen] = useState(false);
+    
+    // 从 store 获取数据和方法
+    const player = useGameStore((state) => state.player);
+    const updateInventory = useGameStore((state) => state.updateInventory);
+    const setPlayer = useGameStore((state) => state.setPlayer);
 
     // 装备物品
     const equipItem = (
         item: Item, 
-        slot: keyof EquipmentSlots, 
-        setInventory: Dispatch<SetStateAction<InventoryState>>
+        slot: keyof EquipmentSlots
     ) => {
-        setInventory((prev) => {
+        updateInventory((prev) => {
             const next: InventoryState = { 
                 ...prev, 
                 equipment: { ...prev.equipment }, 
@@ -35,12 +39,7 @@ export const useInventory = () => {
     };
 
     // 使用物品
-    const useItem = (
-        item: Item, 
-        player: PlayerState | null, 
-        setPlayer: (player: PlayerState | null) => void,
-        setInventory: Dispatch<SetStateAction<InventoryState>>
-    ) => {
+    const useItem = (item: Item) => {
         if (!item.usable) return;
         if (item.effects && player) {
             const next = { ...player };
@@ -49,7 +48,7 @@ export const useInventory = () => {
             if (patch.health) next.stats.health = Math.min(next.stats.maxHealth, next.stats.health);
             setPlayer(next);
         }
-        setInventory((prev) => {
+        updateInventory((prev) => {
             const next: InventoryState = { 
                 ...prev, 
                 items: prev.items.map((i) => ({ ...i })) 

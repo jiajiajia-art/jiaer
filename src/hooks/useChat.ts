@@ -10,13 +10,14 @@ export interface ChatMessage {
 export const useChat = () => {
     const [chatOpen, setChatOpen] = useState(false);
     const [chatInput, setChatInput] = useState('');
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    ]);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]); // 当前对话的消息（本轮）
     const [currentChatNpc, setCurrentChatNpc] = useState<any | null>(null);
 
     const handleStartChatWithNpc = (npc: any) => {
         setCurrentChatNpc(npc);
         setChatOpen(true);
+        // 开始新对话时，清空当前对话消息
+        setChatMessages([]);
     };
 
     const chatWithNpc = async (sessionId: string, npc: any, text: string) => {
@@ -96,7 +97,7 @@ export const useChat = () => {
         }
     };
 
-    const loadChatHistory = async (sessionId: string, npc: any) => {
+    const loadChatHistory = async (sessionId: string, npc: any): Promise<ChatMessage[]> => {
         try {
             const response = await fetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/history`, {
                 method: 'GET',
@@ -106,22 +107,30 @@ export const useChat = () => {
                 // 确保后端返回的是数组格式
                 if (Array.isArray(data.history)) {
                     console.log('聊天历史数据:', data.history);
-                    setChatMessages(data.history.map((item: any) => ({ role: item.role, text: item.content })));
-                    if (data.history.length === 0) {
-                        setChatMessages((msgs) => [...msgs, { role: 'assistant', text: '欢迎来到游戏世界！' },
+                    const historyMessages = data.history.map((item: any) => ({ 
+                        role: item.role, 
+                        text: item.content 
+                    }));
+                    
+                    // 如果历史为空，添加欢迎消息
+                    if (historyMessages.length === 0) {
+                        return [
+                            { role: 'assistant', text: '欢迎来到游戏世界！' },
                             { role: 'assistant', text: `━━━ 开始与 ${npc.name}${npc.job || npc.role ? `（${npc.job || npc.role}）` : ''} 对话 ━━━` }
-                        ]);
+                        ];
                     }
+                    
+                    return historyMessages;
                 }
             } else {
                 console.error('Failed to load chat history:', response.statusText);
-                // 不显示 alert，直接初始化空消息
-                setChatMessages([]);
+                return [];
             }
         } catch (error) {
             console.error('加载聊天历史错误:', error);
-            setChatMessages([]);
+            return [];
         }
+        return [];
     };
 
     return {

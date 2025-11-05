@@ -8,6 +8,10 @@
     gap: 20px;
     padding: 0 16px;
     z-index: 1000;
+    background-image: url('/data/asset/创作页面/顶部横栏.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .navLinks {

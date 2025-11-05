@@ -1,0 +1,154 @@
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modalContent {
+    background-image: url('/data/asset/建筑选项框/框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 16px;
+    width: 90%;
+    height: 660px; /* 固定最短长度 */
+    max-width: 600px; /* 比 EventModal 宽一点 */
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 20px 18px;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.closeBtn {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    width: 46px;
+    height: 46px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.closeBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* 流式输出样式 */
+.streamContent {
+    width: 100%;
+    padding: 20px;
+    min-height: 400px;
+    max-height: calc(80vh - 100px);
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.streamText {
+    color: #B24F1B;
+    font-size: 1rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    /* 去除浏览器默认光标 */
+    caret-color: transparent;
+    user-select: none;
+    /* 让内容可以 inline 显示 */
+    display: inline-block;
+    width: 100%;
+}
+
+.streamText p {
+    margin: 0;
+    color: #B24F1B;
+}
+
+.streamText h1,
+.streamText h2,
+.streamText h3 {
+    color: #8B4513;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+.streamText ul,
+.streamText ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+}
+
+.streamText li {
+    margin: 0.3em 0;
+}
+
+.cursor {
+    display: inline;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    color: #B24F1B;
+    margin-left: 2px;
+    vertical-align: baseline;
+    animation: blink 1s infinite;
+    caret-color: transparent;
+    user-select: none;
+    font-weight: bold;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modalContent {
+        width: 95%;
+        min-height: 400px;
+        max-height: 90vh;
+    }
+    
+    .streamContent {
+        min-height: 300px;
+    }
+}

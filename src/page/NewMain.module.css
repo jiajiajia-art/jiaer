@@ -172,6 +172,10 @@
     color: #333;
 }
 
+.settingBtnWrapper {
+    position: relative;
+}
+
 .gameTimeText {
     min-width: 260px;
     max-width: 600px;
@@ -640,6 +644,17 @@
     border-radius: 0;
 }
 
+.playerFloatingPanel {
+    position: absolute;
+    top: 180px;
+    left: 50px;
+}
+
+.inventoryFloatingPanel {
+    position: absolute;
+    bottom: 100px;
+    right: 30px;
+}
 
 @media(470px < width < 800px){
     .playerInfo {

@@ -13,6 +13,64 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+.historyBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 62px;
+    height: 62px;
+    position: absolute;
+    top: 0px;
+    left: 10px;
+}
+
+.historyBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.modalContent {
+    display: flex;
+    gap: 16px;
+    width: 95%;
+    max-width: 1600px;
+    height: 85vh;
+    max-height: 900px;
+    justify-content: center;
+    margin-top: 60px;
+}
+
+/* 左侧面板：历史记录 */
+.leftPanel {
+    width: 350px;
+    flex-shrink: 0;
+    height: 100%;
+    position: relative;
+}
+
+/* 右侧面板：玩家信息和背包 */
+.rightPanel {
+    width: 350px;
+    flex-shrink: 0;
+    height: 70%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.playerPanelWrapper {
+    flex: 1;
+    min-height: 200px;
+    position: relative;
+}
+
+.inventoryPanelWrapper {
+    flex: 1;
+    min-height: 200px;
+    position: relative;
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -24,10 +82,10 @@
 
 .dialogueModal {
     border-radius: 16px;
-    width: 90%;
-    max-width: 600px;
-    height: 70vh;
+    flex: 1;
+    height: 90%;
     min-height: 500px;
+    max-width: 600px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -51,11 +109,12 @@
 }
 
 .modalHeader {
-    padding: 16px;
+    padding: 10px;
     border-radius: 16px 16px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 76px;
 }
 
 .modalHeader h3 {
@@ -68,8 +127,8 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
+    width: 100px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,11 +137,14 @@
     line-height: 1;
     flex-shrink: 0;
     max-width: 32px;
+    position: absolute;
+    top: 0px;
+    right: 50%;
 }
 
 .closeBtn img {
-    width: 52px;
-    height: 52px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
     margin-right: 5px;
     position: absolute;
@@ -92,18 +154,43 @@
 
 .messagesContainer {
     flex: 1;
-    padding:5px 24px;
+    padding: 5px 24px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-height: 300px;
+    justify-content: flex-start; /* 确保内容从顶部开始 */
+    align-items: stretch; /* 消息占满宽度 */
+}
+
+.emptyMessage {
+    text-align: center;
+    color: #B69B74;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    min-height: 200px;
+}
+
+.emptyMessage p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.hintText {
+    font-size: 14px !important;
+    opacity: 0.7;
+    font-style: italic;
 }
 
 .message {
     padding: 12px 16px;
     border-radius: 12px;
-    max-width: 80%;
+    max-width: 100%;
     word-wrap: break-word;
     animation: messageSlideIn 0.3s ease-out;
 }

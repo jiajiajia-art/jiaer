@@ -1,0 +1,406 @@
+.chatPanel {
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+    width: 100%;
+    height: 300px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    overflow: visible; /* 允许关闭按钮溢出 */
+    background-image: url('/data/asset/对话界面/对话背板.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    animation: chatSlideIn 0.3s ease-out;
+}
+
+.chatContent {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    gap: 10px;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 15px 10px 6px 10px;
+    overflow: hidden; /* 内容区域保持溢出隐藏 */
+}
+
+/* 左侧头像区域 - 占约2/7 */
+.avatarSection {
+    width: calc(100% * 2 / 7 - 20px);
+    height: 100%;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.relationShip {
+    position: absolute;
+    top: 6px;
+    left: 0;
+    width: 60px;
+    height: 50px;
+    background-image: url('/data/asset/角色信息框/好感度.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    font-size: 26px;
+    font-weight: bold;
+    color: #E8DBB7;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.avatarFrame {
+    width: 100%;
+    height: 100%;
+    background-image: url('/data/asset/对话界面/头像框.png');
+    background-size: 100% 100%;
+    background-position: center top;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    position: relative;
+    /* 让高度根据背景图片的自然比例自适应 */
+    min-height: 150px;
+    padding: 18px 20px 18px 22px;
+}
+
+.avatarImage {
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    display: block;
+    border-radius: 5px;
+}
+
+.avatarNameBox {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    min-height: 50px;
+    background-image: url('/data/asset/对话界面/头像名称框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    box-sizing: border-box;
+    z-index: 10;
+}
+
+.avatarName {
+    color: #E8DBB7;
+    font-size: 20px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 右侧对话区域 - 占约5/7 */
+.dialogueSection {
+    width: calc(100% * 5 / 7);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    box-sizing: border-box;
+    margin-top: 15px;
+    min-height: 0; /* 重要：允许 flex 子元素缩小 */
+    overflow: hidden; /* 确保对话区域不会溢出 */
+}
+
+@keyframes chatSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.closeChatBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 60px !important;
+    height: 60px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    position: absolute;
+    right: 12px;
+    top: -10px;
+    z-index: 100;
+}
+
+.closeChatBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.chatMessages {
+    flex: 1;
+    padding: 5px 15px 0px 15px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    margin-top: 5px;
+    padding-top: 5px;
+    margin-bottom: 10px;
+    min-height: 0;
+    /* 移除 justify-content: center 和 align-items: center，让内容正常排列 */
+}
+
+.emptyMessage {
+    text-align: center;
+    color: #B69B74;
+    padding: 20px;
+    /* 当消息为空时，使用 flex 居中 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    min-height: 150px;
+}
+
+.emptyMessage p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.hintText {
+    font-size: 14px !important;
+    opacity: 0.7;
+    font-style: italic;
+}
+
+.chatMessage {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    max-width: 100%;
+    word-wrap: break-word;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    line-height: 1.6;
+}
+
+.chatMessageWrapper {
+    display: inline-block;
+    width: 100%;
+}
+
+.chatMessage.user {
+    align-self: flex-end;
+    background: #7F6950;
+    color:#E8DBB7;
+    text-align: left;
+    width: fit-content;
+    max-width: 80%;
+}
+
+.chatMessage.system {
+    align-self: flex-start;
+    color: #FFEEAC;
+    background-color: #7F6950;
+    text-align: left;
+}
+
+.typingCursor {
+    display: inline-block;
+    animation: blink 1s infinite;
+    font-weight: bold;
+}
+
+@keyframes blink {
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.chatInputArea {
+    width: 98%;
+    padding: 5px 0 6px 0;
+    align-items: center;
+    position: relative;
+    display: flex;
+}
+
+.historyChatIcon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    margin-right: 16px;
+}
+
+.inputWrapper {
+    width: 100%;
+    background-image: url('/data/asset/对话界面/输入框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 8px 50px 8px 15px; /* 右侧预留发送按钮空间 */
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.chatInput {
+    width: 100%;
+    font-size: 0.9rem;
+    outline: none;
+    background-color: transparent;
+    border: none;
+    height: auto;
+    /* 移除所有默认样式 */
+    margin: 0 !important;
+    /* padding: 0 !important; */
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    color: #E8DBB7;
+    font-weight: 500;
+    box-sizing: border-box;
+    padding-right: 50px !important;
+}
+
+.chatInput::placeholder {
+    color: #B69B74;
+    opacity: 0.8;
+}
+
+.sendChatBtn {
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: opacity 0.3s ease;
+    background-image: url('/data/asset/对话界面/发送按钮.png');
+    background-size: 100px 46px;
+    background-position: cover;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100px !important;
+    height: 46px !important;
+    z-index: 10;
+}
+
+.sendChatBtn:hover {
+    opacity: 0.9;
+}
+
+.chatHistoryWrapper {
+    position: absolute;
+    top: 180px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+}
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .chatPanel {
+        width: 90%;
+        height: 400px;
+        left: 5%;
+    }
+
+    .chatContent {
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .avatarSection {
+        width: 100%;
+        flex-direction: row;
+        justify-content: center;
+        gap: 15px;
+        min-width: auto;
+    }
+
+    .avatarFrame {
+        max-width: 100px;
+    }
+
+    .avatarNameBox {
+        max-width: 150px;
+    }
+
+    .dialogueSection {
+        width: 100%;
+    }
+
+    .chatHeader {
+        padding: 10px 15px;
+        padding-right: 50px;
+    }
+
+    .chatHeader h3 {
+        font-size: 1rem;
+    }
+
+    .chatMessage {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+
+    .chatInputArea {
+        padding: 5px 8px 8px 8px;
+    }
+
+    .chatInput {
+        font-size: 0.85rem;
+    }
+
+    .sendChatBtn {
+        width: 70px;
+        height: 40px;
+    }
+}
+
+
+

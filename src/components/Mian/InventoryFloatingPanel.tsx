@@ -31,7 +31,7 @@ interface InventoryState {
 
 interface InventoryFloatingPanelProps {
     isOpen: boolean;
-    onClose: () => void;
+    onClose?: () => void;
     inventory: InventoryState;
     onEquipItem: (item: Item, slot: keyof EquipmentSlots) => void;
     onUseItem: (item: Item) => void;
@@ -45,9 +45,6 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
     onUseItem
 }) => {
     if (!isOpen) return null;
-    console.log('inventory', inventory);
-    console.log('onEquipItem', onEquipItem);
-    console.log('onUseItem', onUseItem);
 
     const handleItemClick = (item: Item) => {
         if (item.usable) {
@@ -61,7 +58,9 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
         <div className={styles.inventoryFloatingPanel}>
             <div className={styles.inventoryPanelHeader}>
                 <h3>背包</h3>
-                <button className={styles.closeInventoryBtn} onClick={onClose}>×</button>
+                {onClose && (
+                    <button className={styles.closeInventoryBtn} onClick={onClose}>×</button>
+                )}
             </div>
             <div className={styles.inventoryPanelContent}>
                 <div className={styles.itemsList}>

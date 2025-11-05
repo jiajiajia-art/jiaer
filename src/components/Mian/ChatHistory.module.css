@@ -1,0 +1,199 @@
+.chatHistory {
+    width: 350px;
+    height: 450px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    z-index: 950;
+    overflow: visible;
+    background-image: url('/data/asset/对话界面/历史记录.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    animation: chatSlideIn 0.3s ease-out;
+    position: relative;
+}
+
+@keyframes chatSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.closeChatBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 42px !important;
+    height: 42px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    position: absolute;
+    right: 12px;
+    top: -3px;
+    z-index: 100;
+}
+
+.closeChatBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.loadingMessage {
+    text-align: center;
+    color: #B69B74;
+    padding: 20px;
+    font-size: 16px;
+}
+
+.emptyMessage {
+    text-align: center;
+    color: #B69B74;
+    padding: 20px;
+    font-size: 16px;
+}
+
+.chatMessages {
+    flex: 1;
+    padding: 5px 22px 0px 22px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    margin-top: 56px;
+    margin-bottom: 30px;
+}
+
+.chatMessage {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.chatMessageWrapper {
+    display: inline-block;
+    width: 100%;
+}
+
+.chatMessage.user {
+    align-self: flex-end;
+    background: #4a90e2;
+    color: white;
+    text-align: left;
+    width: fit-content;
+    max-width: 80%;
+}
+
+.chatMessage.system {
+    align-self: flex-start;
+    background: #e9ecef;
+    color: #333;
+    text-align: left;
+}
+
+.typingCursor {
+    display: inline-block;
+    animation: blink 1s infinite;
+    font-weight: bold;
+}
+
+@keyframes blink {
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.chatInputArea {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    margin-left: 10px;
+}
+
+.chatInput {
+    flex: 1;
+    font-size: 0.9rem;
+    outline: none;
+    background-color: transparent;
+    border: none;
+    max-width: 218px;
+    height: 46px;
+    /* 移除所有默认样式 */
+}
+
+.sendChatBtn {
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.3s ease;
+    max-width: 80px;
+    border: none;
+    background-image: url('/data/asset/聊天框/按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 80px;
+    height: 46px;
+    background-color: transparent;
+}
+
+.sendChatBtn:hover {
+    opacity: 0.9;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .chatHistory {
+        width: 90%;
+        height: 400px;
+        left: 5%;
+    }
+
+    .chatHeader {
+        padding: 10px 15px;
+        padding-right: 50px;
+    }
+
+    .chatHeader h3 {
+        font-size: 1rem;
+    }
+
+    .chatMessage {
+        padding: 8px 10px;
+        font-size: 0.85rem;
+    }
+
+    .chatInputArea {
+        padding: 8px;
+        margin-left: 8px;
+    }
+
+    .chatInput {
+        font-size: 0.85rem;
+        max-width: 180px;
+    }
+
+    .sendChatBtn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        max-width: 70px;
+    }
+}

@@ -10,6 +10,7 @@ interface MapModalProps {
     scenes: ScenesMap;
     currentSceneId?: string | null;
     onSceneClick?: (sceneId: string) => void;
+    worldMapImageUrl?: string | null;
 }
 
 // 地图布局：优化算法避免节点重合
@@ -183,8 +184,10 @@ const MapModal: React.FC<MapModalProps> = ({
     onClose,
     scenes,
     currentSceneId,
-    onSceneClick
+    onSceneClick,
+    worldMapImageUrl
 }) => {
+
     // 计算位置并应用缩放以适应固定容器，同时保证节点不会太小
     const { positions, viewBox } = useMemo(() => {
         const rawPositions = computePositions(scenes);
@@ -244,7 +247,6 @@ const MapModal: React.FC<MapModalProps> = ({
     }, [scenes]);
     
     if (!isOpen) return null;
-    console.log('scenes', scenes);
     
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -255,8 +257,19 @@ const MapModal: React.FC<MapModalProps> = ({
                         <button className={styles.closeBtn} onClick={onClose}>×</button>
                     </div>
                 </div>
-                <div className={styles.content}>
-                    <div className={styles.mapContainer}>
+                <div 
+                    className={styles.content}
+                >
+                    <div className={styles.mapContainer}
+                    style={{
+                        backgroundImage: worldMapImageUrl ? `url(${worldMapImageUrl})` : 'none',
+                        backgroundSize: '94% 95%',
+                        backgroundPosition: 'top center',
+                        backgroundRepeat: 'no-repeat',
+                        borderRadius: '5%', // 圆角
+                        overflow: 'hidden',
+                    }}
+                    >
                         <svg 
                             className={styles.mapSvg} 
                             viewBox={viewBox}

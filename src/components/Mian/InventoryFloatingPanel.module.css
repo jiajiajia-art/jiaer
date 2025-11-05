@@ -1,7 +1,5 @@
 .inventoryFloatingPanel {
-    position: absolute;
-    bottom: 100px;
-    right: 30px;
+    position: relative;
     width: 330px;
     height: 420px;
     border-radius: 15px;
