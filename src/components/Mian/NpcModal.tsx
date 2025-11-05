@@ -25,7 +25,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
         <div className={styles.modal} onClick={onClose}>
             <div className={`${styles.modalContent} ${styles.npcModalContent}`} onClick={(e) => e.stopPropagation()}>
                 <button className={styles.closeNpcModal} onClick={onClose}>
-                    <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                    <img src="data/asset/关闭按钮.png" alt="关闭" />
                 </button>
                 <div className={styles.npcDetailGoodness}>
                     <p>{npc.relationships}</p>
@@ -33,7 +33,7 @@ const NpcModal: React.FC<NpcModalProps> = ({
                 
                 <div className={styles.npcDetailHeader}>
                     <img 
-                        src={`${HOST_ADDRESS}${npc.icon}` || '/data/avatars/default.png'} 
+                        src={`${HOST_ADDRESS}${npc.icon}` || 'data/avatars/default.png'} 
                         alt="NPC头像" 
                         className={styles.npcDetailAvatar} 
                     />

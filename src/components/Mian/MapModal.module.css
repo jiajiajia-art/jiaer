@@ -8,7 +8,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background-image: url('/data/asset/背包.png');
+    background-image: url('data/asset/背包.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;

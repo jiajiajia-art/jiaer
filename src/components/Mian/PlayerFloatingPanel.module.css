@@ -2,7 +2,7 @@
     position: relative;
     width: 350px;
     height: 280px;
-    background-image: url('/data/asset/角色信息框/玩家框.png');
+    background-image: url('data/asset/角色信息框/玩家框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;

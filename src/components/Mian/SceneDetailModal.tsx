@@ -46,7 +46,7 @@ const SceneDetailModal: React.FC<SceneDetailModalProps> = ({
         <div className={styles.modal} onClick={onClose}>
             <div className={`${styles.modalContent} ${styles.sceneModalContent}`} onClick={(e) => e.stopPropagation()}>
                 <button className={styles.closeSceneModal} onClick={onClose}>
-                    <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                    <img src="data/asset/关闭按钮.png" alt="关闭" />
                 </button>
                 
                 <div className={styles.sceneDetailImage}>

@@ -197,7 +197,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         <>
             <div className={styles.chatPanel}>
                 <button className={styles.closeChatBtn} onClick={onClose}>
-                    <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                    <img src="data/asset/关闭按钮.png" alt="关闭" />
                 </button>
                 <div className={styles.chatContent}>
                     {/* 左侧头像区域 - 显示NPC信息 */}
@@ -209,7 +209,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                                 </div>
                                 <div className={styles.avatarFrame}>
                                     <img
-                                        src={`${HOST_ADDRESS}${npc.icon || npc.avatar}` || '/data/avatars/default.png'}
+                                        src={`${HOST_ADDRESS}${npc.icon || npc.avatar}` || 'data/avatars/default.png'}
                                         alt={npc.name || 'NPC'}
                                         className={styles.avatarImage}
                                     />
@@ -244,7 +244,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                         </div>
                         <div className={styles.chatInputArea}>
                             <img
-                                src="/data/asset/对话界面/历史对话图标.png"
+                                src="data/asset/对话界面/历史对话图标.png"
                                 alt="历史对话"
                                 className={styles.historyChatIcon}
                                 onClick={handleOpenHistory}

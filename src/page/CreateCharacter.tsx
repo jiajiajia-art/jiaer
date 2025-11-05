@@ -164,7 +164,7 @@ const CreateCharacter: React.FC = () => {
                 <div className={styles.avatarPreview}>
                     <img
                         id="avatarPreview"
-                        src="/data/avatars/player.png"
+                        src="data/avatars/player.png"
                         alt="角色头像"
                     />
                 </div>

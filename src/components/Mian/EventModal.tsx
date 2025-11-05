@@ -93,7 +93,7 @@ const EventModal: React.FC<EventModalProps> = ({
                             )}
                         </div>
                         <div className={styles.closeBtn} onClick={onClose}>
-                            <img src="/data/asset/关闭按钮.png" alt="关闭" />
+                            <img src="data/asset/关闭按钮.png" alt="关闭" />
                         </div>
                         <div className={styles.eventDescription}>
                             <p>{event.description || ''}</p>

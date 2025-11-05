@@ -368,7 +368,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
                 <button className={styles.closeBtn} onClick={onClose}>
-                    <img src="/data/asset/对话界面/时间暂停按钮.png" alt="关闭" />
+                    <img src="data/asset/对话界面/时间暂停按钮.png" alt="关闭" />
                 </button>
                 {/* 左侧：历史记录 */}
                 <div className={styles.leftPanel}>
@@ -385,7 +385,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 <div className={styles.dialogueModal}>
                     <div className={styles.modalHeader}>
                         <button className={styles.historyBtn} onClick={() => setShowHistory(!showHistory)}>
-                            <img src="/data/asset/对话界面/历史对话图标.png" alt="关闭" />
+                            <img src="data/asset/对话界面/历史对话图标.png" alt="关闭" />
                         </button>
                     </div>
 
@@ -432,7 +432,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                                 onClick={handleStartGame}
                                 disabled={loading}
                             >
-                                <img src="/data/asset/编年史/按钮.png" alt="开始游戏" />
+                                <img src="data/asset/编年史/按钮.png" alt="开始游戏" />
                             </button>
                         </div>
                     ) : (
@@ -450,7 +450,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                                 onClick={() => handleSend()}
                                 disabled={loading || !inputValue.trim()}
                             >
-                                <img src="/data/asset/聊天框/按钮.png" alt="发送" />
+                                <img src="data/asset/聊天框/按钮.png" alt="发送" />
                             </button>
                         </div>
                     )}

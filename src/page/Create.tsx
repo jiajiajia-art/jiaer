@@ -275,14 +275,14 @@ const Create: React.FC = () => {
                         className={`${styles.sidebarItem} ${activeTab === '创作游戏' ? styles.sidebarItemActive : ''}`}
                         onClick={() => setActiveTab('创作游戏')}
                     >
-                        <img src="/data/asset/创作页面/文件图标.png" alt="" />
+                        <img src="data/asset/创作页面/文件图标.png" alt="" />
                         <span>创作游戏</span>
                     </div>
                     <div 
                         className={`${styles.sidebarItem} ${activeTab === '我的游戏' ? styles.sidebarItemActive : ''}`}
                         onClick={() => setActiveTab('我的游戏')}
                     >
-                        <img src="/data/asset/创作页面/文件夹图标.png" alt="" />
+                        <img src="data/asset/创作页面/文件夹图标.png" alt="" />
                         <span>我的游戏</span>
                     </div>
                 </div>

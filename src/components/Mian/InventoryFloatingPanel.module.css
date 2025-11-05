@@ -8,7 +8,7 @@
     z-index: 800;
     overflow: hidden;
     animation: inventorySlideIn 0.3s ease-out;
-    background-image: url('/data/asset/背包.png');
+    background-image: url('data/asset/背包.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -91,7 +91,7 @@
     border-radius: 8px;
     border: 1px solid rgba(230, 215, 177, 0.3);
     transition: all 0.3s ease;
-    background-image: url('/data/asset/背包格子.png');
+    background-image: url('data/asset/背包格子.png');
     background-size: 94% 68px;
     background-position: center;
     background-repeat: no-repeat;
@@ -152,7 +152,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    background-image: url('/data/asset/按钮.png');
+    background-image: url('data/asset/按钮.png');
     background-size: 100% 56px;
     background-position: center;
     background-repeat: no-repeat;

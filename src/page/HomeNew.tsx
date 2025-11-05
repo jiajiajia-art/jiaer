@@ -18,11 +18,11 @@ const HomeNew: React.FC = () => {
     const fileId = [
         {
             id: '0fed0643f24e7c7b3b68e74af04cb0aa',
-            img: `/data/gameCover/img1.png`
+            img: `data/gameCover/img1.png`
         },
         {
             id: '7b7e7d128c686dc57bd23996118e8c0a',
-            img: `/data/gameCover/img2.png`,
+            img: `data/gameCover/img2.png`,
             title: '明末风华录'
         },
         {
@@ -31,7 +31,7 @@ const HomeNew: React.FC = () => {
         },
         {
             id:'c2f99389e5fd5f43b42a0a45cfcfeed2',
-            img:`/data/gameCover/img4.png`
+            img:`data/gameCover/img4.png`
         }
     ];
 
@@ -154,7 +154,7 @@ const HomeNew: React.FC = () => {
                 {/* 左侧侧边栏（略大于 1/5） */}
                 <div className={styles.sidebar}>
                     <div className={styles.sidebarItem}>
-                        <img src="/data/asset/首页/homeIcon.png" alt="" />
+                        <img src="data/asset/首页/homeIcon.png" alt="" />
                         <span>首页</span>
                     </div>
                 </div>
@@ -163,10 +163,10 @@ const HomeNew: React.FC = () => {
                 <div className={styles.main}>
                     <div className={styles.todayWrap}>
                         <div className={styles.todayHeader}>
-                            <img src="/data/asset/首页/字样.png" alt="今日推荐" />
+                            <img src="data/asset/首页/字样.png" alt="今日推荐" />
                         </div>
                         <div className={styles.todayScroller}>
-                            <img src="/data/gameCover/image.png" alt="今日推荐" />
+                            <img src="data/gameCover/image.png" alt="今日推荐" />
                         </div>
                     </div>
 
@@ -192,10 +192,10 @@ const HomeNew: React.FC = () => {
                                     >
                                         <div className={styles.goodsImg}>
                                             <img 
-                                                src={meta.img || '/data/events/welcome.png'} 
+                                                src={meta.img || 'data/events/welcome.png'} 
                                                 alt={meta.lore?.worldBackground?.title || `剧情${idx + 1}`}
                                                 onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = '/data/events/welcome.png';
+                                                    (e.target as HTMLImageElement).src = 'data/events/welcome.png';
                                                 }}
                                             />
                                         </div>
@@ -218,7 +218,7 @@ const HomeNew: React.FC = () => {
                     className={`${homeStyles.modal} ${homeStyles.modalShow}`}
                 >
                     <button className={styles.detailModalClose} onClick={closeModal}>
-                        <img src="/data/asset/关闭按钮.png" alt="" />
+                        <img src="data/asset/关闭按钮.png" alt="" />
                     </button>
                     <div className={styles.gameDetailModal}>
                         
@@ -281,7 +281,7 @@ const HomeNew: React.FC = () => {
                                     <div className={styles.priceValue}>￥1.0</div>
                                     <div className={styles.priceCurrency}>CNY</div>
                                     <button className={styles.unlockBtn}>
-                                        <img src="/data/asset/剧本详情页/解锁剧本按钮.png" alt="解锁剧本" />
+                                        <img src="data/asset/剧本详情页/解锁剧本按钮.png" alt="解锁剧本" />
                                     </button>
                                 </div>
                                 
@@ -297,7 +297,7 @@ const HomeNew: React.FC = () => {
                                             {[1, 2, 3, 4, 5].map((star) => (
                                                 <img 
                                                     key={star}
-                                                    src="/data/asset/剧本详情页/星星.png" 
+                                                    src="data/asset/剧本详情页/星星.png" 
                                                     alt="星星" 
                                                     className={styles.starIcon}
                                                 />
@@ -311,7 +311,7 @@ const HomeNew: React.FC = () => {
                                         className={styles.startGameBtn}
                                         onClick={handleCreateGameFromDetail}
                                     >
-                                        <img src="/data/asset/剧本详情页/开始游戏按钮.png" alt="开始游戏" />
+                                        <img src="data/asset/剧本详情页/开始游戏按钮.png" alt="开始游戏" />
                                     </button>
                                 </div>
                             </div>

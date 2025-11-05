@@ -23,7 +23,7 @@
 }
 
 .modalContent {
-    background-image: url('/data/asset/角色信息框/NPC框.png');
+    background-image: url('data/asset/角色信息框/NPC框.png');
     background-size: 100% 99%;
     background-position: bottom;
     background-repeat: no-repeat;
@@ -89,7 +89,7 @@
     font-size: 18px;
     font-weight: 600;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
-    background-image: url('/data/asset/角色信息框/好感度.png');
+    background-image: url('data/asset/角色信息框/好感度.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -131,7 +131,7 @@
     font-size: 20px;
     font-weight: 600;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
-    background-image: url('/data/asset/角色信息框/名字框.png');
+    background-image: url('data/asset/角色信息框/名字框.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -243,7 +243,7 @@
 
 .chatWithNpcBtn {
     color: #E4D2A9;
-    background-image: url('/data/asset/角色信息框/按钮.png');
+    background-image: url('data/asset/角色信息框/按钮.png');
     background-size: 98% 100%;
     background-position: center;
     background-repeat: no-repeat;
