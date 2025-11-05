@@ -353,26 +353,34 @@ const NewMain: React.FC = () => {
                 <div
                     id="triggerSceneEventBtn"
                     className={styles.sceneEventBtn}
-                    onClick={() => {
-                        if (inventoryOpen) {
-                            setInventoryOpen(false);
-                        }
-                        setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'));
-                    }}
                 >
-                    <img src={`${import.meta.env.BASE_URL}data/asset/地图按钮.png`} alt="大地图按钮" className={styles.mapBtnImg} />
+                    <img
+                        onClick={() => {
+                            if (inventoryOpen) {
+                                setInventoryOpen(false);
+                            }
+                            setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'));
+                        }}
+                        src={`${import.meta.env.BASE_URL}data/asset/地图按钮.png`}
+                        alt="大地图按钮"
+                        className={styles.mapBtnImg}
+                    />
                 </div>
                 <button id="toggleInventoryBtn"
                     className={styles.floatingInventoryBtn}
                     title="打开背包"
-                    onClick={() => {
-                        if (activePanel === 'map') {
-                            setActivePanel('scene');
-                        }
-                        setInventoryOpen(!inventoryOpen);
-                    }}
                 >
-                    <img src={`${import.meta.env.BASE_URL}data/asset/背包按钮.png`} alt="背包按钮" className={styles.inventoryBtnImg} />
+                    <img
+                        onClick={() => {
+                            if (activePanel === 'map') {
+                                setActivePanel('scene');
+                            }
+                            setInventoryOpen(!inventoryOpen);
+                        }}
+                        src={`${import.meta.env.BASE_URL}data/asset/背包按钮.png`}
+                        alt="背包按钮"
+                        className={styles.inventoryBtnImg}
+                    />
                 </button>
             </div>
 

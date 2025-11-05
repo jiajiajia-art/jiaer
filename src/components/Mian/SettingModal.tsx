@@ -21,7 +21,6 @@ const SettingModal: React.FC<SettingModalProps> = ({ isOpen, onClose }) => {
     };
     
     const handleClose = () => {
-        if (isPlaying) pause();
         onClose();
     };
     

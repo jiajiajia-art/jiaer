@@ -459,10 +459,12 @@
     background-position: center;
     background-repeat: no-repeat;
     background-color: transparent;
+    cursor: default;
 }
 
 .inventoryBtnImg {
     height: 66px;
+    cursor: pointer;
     object-fit: cover;
     margin-left: 130px;
     margin-bottom: 20px;
