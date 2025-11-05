@@ -17,20 +17,20 @@ const HomeNew: React.FC = () => {
     // 硬编码的文件ID列表（从Home.tsx复制）
     const fileId = [
         {
-            id: '0fed0643f24e7c7b3b68e74af04cb0aa',
+            id: '0f3f4e7539179b8896606b3212f660d9',
             img: `${import.meta.env.BASE_URL}data/gameCover/img1.png`
         },
         {
-            id: '7b7e7d128c686dc57bd23996118e8c0a',
+            id: '6fae713d4a501003654a1973fd854895',
             img: `${import.meta.env.BASE_URL}data/gameCover/img2.png`,
             title: '明末风华录'
         },
         {
-            id:'83089b271543d3e2a7cb8b1a4cee3f41',
-            img: `${HOST_ADDRESS}/api/backend/saves/83089b271543d3e2a7cb8b1a4cee3f41/avatars/npc_store_clerk_83089b271543d3e2a7cb8b1a4cee3f41.png`
+            id:'53275c6d2dc88e87f74cda72888967ed',
+            img: `${HOST_ADDRESS}/api/backend/saves/53275c6d2dc88e87f74cda72888967ed/scenes/convenience_store_53275c6d2dc88e87f74cda72888967ed.png`
         },
         {
-            id:'c2f99389e5fd5f43b42a0a45cfcfeed2',
+            id:'14793e6656c9ca9ba35183416c93e6e6',
             img:`${import.meta.env.BASE_URL}data/gameCover/img4.png`
         }
     ];
