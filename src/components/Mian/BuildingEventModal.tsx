@@ -295,7 +295,7 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
                 </div>
                 <div className={styles.streamContent}>
                     <div className={styles.streamText} ref={textContainerRef}>
-                        {messages.length === 0 ? (
+                        {messages.length === 0 || messages[0].text.length === 0 ? (
                             <p>加载中...</p>
                         ) : (
                             messages.map((message, index) => (

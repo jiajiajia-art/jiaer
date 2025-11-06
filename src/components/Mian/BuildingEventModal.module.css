@@ -140,6 +140,17 @@
     }
 }
 
+.loadingContainer {
+    padding: 20px;
+    text-align: center;
+}
+
+.loadingContainer p {
+    color: #E8DBB7;
+    font-size: 16px;
+    margin: 0;
+}
+
 /* ACTION 按钮样式 */
 .actionButtons {
     display: flex;
@@ -151,7 +162,7 @@
 }
 
 .actionBtn {
-    background: #B24F1B;
+    background: #b65623ed;
     color: white;
     border: none;
     border-radius: 6px;
