@@ -24,13 +24,14 @@
     color: black;
     display: flex;
     height: calc(100vh - 80px);
-    overflow: scroll;
+    /* overflow: scroll; */
 }
 
 .sidebar{
     width: 21%;
     min-height: calc(100vh - 80px);
     flex-shrink: 0;
+    position: fixed;
 }
 
 .sidebarItem{
