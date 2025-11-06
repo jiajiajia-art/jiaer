@@ -320,6 +320,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             );
 
             if (response.ok) {
+                loadHistoryMessages();
+
                 await handleStreamResponse(response);
             } else {
                 console.error('❌ 消息发送失败:', response.statusText);

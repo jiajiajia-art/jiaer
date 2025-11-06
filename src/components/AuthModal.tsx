@@ -14,13 +14,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [mode, setMode] = useState<'login' | 'register'>('login');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [email, setEmailInput] = useState('');
     const [phoneError, setPhoneError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
+    const [emailError, setEmailError] = useState('');
     const [phoneShake, setPhoneShake] = useState(false);
     const [passwordShake, setPasswordShake] = useState(false);
+    const [confirmPasswordShake, setConfirmPasswordShake] = useState(false);
+    const [emailShake, setEmailShake] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [submitError, setSubmitError] = useState('');
-    const { login } = useAuthStore();
+    const { login, setEmail } = useAuthStore();
 
     if (!isOpen) return null;
 
@@ -33,6 +39,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     // 验证密码：至少6位
     const validatePassword = (pwd: string): boolean => {
         return pwd.length >= 6;
+    };
+
+    // 验证邮箱格式
+    const validateEmail = (emailAddress: string): boolean => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(emailAddress);
     };
 
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,6 +64,45 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         if (passwordError) {
             setPasswordError('');
             setPasswordShake(false);
+        }
+        // 如果确认密码已填写，重新验证
+        if (confirmPassword && mode === 'register') {
+            if (value !== confirmPassword) {
+                setConfirmPasswordError('两次输入的密码不一致');
+            } else {
+                setConfirmPasswordError('');
+                setConfirmPasswordShake(false);
+            }
+        }
+    };
+
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setConfirmPassword(value);
+        // 清除错误状态
+        if (confirmPasswordError) {
+            setConfirmPasswordError('');
+            setConfirmPasswordShake(false);
+        }
+        // 验证密码是否一致
+        if (value && password) {
+            if (value !== password) {
+                setConfirmPasswordError('两次输入的密码不一致');
+                setConfirmPasswordShake(true);
+                setTimeout(() => setConfirmPasswordShake(false), 500);
+            } else {
+                setConfirmPasswordError('');
+            }
+        }
+    };
+
+    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setEmailInput(value);
+        // 清除错误状态
+        if (emailError) {
+            setEmailError('');
+            setEmailShake(false);
         }
     };
 
@@ -78,7 +129,37 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             setPasswordError('密码至少需要6位');
             setPasswordShake(true);
             hasError = true;
-            setTimeout(() => setPhoneShake(false), 500);
+            setTimeout(() => setPasswordShake(false), 500);
+        }
+
+        // 注册模式下验证确认密码
+        if (mode === 'register') {
+            if (!confirmPassword) {
+                setConfirmPasswordError('请再次输入密码');
+                setConfirmPasswordShake(true);
+                hasError = true;
+                setTimeout(() => setConfirmPasswordShake(false), 500);
+            } else if (password !== confirmPassword) {
+                setConfirmPasswordError('两次输入的密码不一致');
+                setConfirmPasswordShake(true);
+                hasError = true;
+                setTimeout(() => setConfirmPasswordShake(false), 500);
+            }
+        }
+
+        // 注册模式下验证邮箱
+        if (mode === 'register') {
+            if (!email) {
+                setEmailError('请输入邮箱');
+                setEmailShake(true);
+                hasError = true;
+                setTimeout(() => setEmailShake(false), 500);
+            } else if (!validateEmail(email)) {
+                setEmailError('请输入正确的邮箱格式');
+                setEmailShake(true);
+                hasError = true;
+                setTimeout(() => setEmailShake(false), 500);
+            }
         }
 
         if (hasError) {
@@ -123,22 +204,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 }
             } else {
                 // 注册请求
-                console.log('[Auth] 开始注册请求:', { username: phone, passwordLength: password.length, mode });
+                console.log('[Auth] 开始注册请求:', { username: phone, passwordLength: password.length, email, mode });
                 const response = await auth.signup({
                     username: phone,
                     password: password,
+                    email: email,
                 });
                 
                 console.log('[Auth] 注册响应:', response);
                 
                 if (response.data?.data) {
+                    // 注册成功，保存邮箱到zustand
+                    setEmail(email);
+                    
                     // 注册成功，只返回User，不直接登录
-                    // 切换到登录模式，保留手机号，清空密码
+                    // 切换到登录模式，保留手机号，清空密码和确认密码
                     setMode('login');
                     setPassword('');
+                    setConfirmPassword('');
                     setPasswordError('');
+                    setConfirmPasswordError('');
                     setSubmitError('');
                     setPhoneError('');
+                    setEmailError('');
                     
                     // 显示成功提示
                     setSubmitError('注册成功！请登录');
@@ -148,7 +236,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         onRegister(phone, password);
                     }
                     
-                    console.log('[Auth] 注册成功，已切换到登录模式');
+                    console.log('[Auth] 注册成功，已切换到登录模式，邮箱已保存');
                 } else {
                     throw new Error('服务器返回数据格式错误');
                 }
@@ -167,18 +255,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         // 切换模式时清空错误状态
         setPhoneError('');
         setPasswordError('');
+        setConfirmPasswordError('');
+        setEmailError('');
         setPhoneShake(false);
         setPasswordShake(false);
+        setConfirmPasswordShake(false);
+        setEmailShake(false);
         setSubmitError('');
+        // 切换到登录模式时清空确认密码和邮箱
+        if (mode === 'register') {
+            setConfirmPassword('');
+            setEmailInput('');
+        }
     };
 
     const handleClose = () => {
         setPhone('');
         setPassword('');
+        setConfirmPassword('');
+        setEmailInput('');
         setPhoneError('');
         setPasswordError('');
+        setConfirmPasswordError('');
+        setEmailError('');
         setPhoneShake(false);
         setPasswordShake(false);
+        setConfirmPasswordShake(false);
+        setEmailShake(false);
         onClose();
     };
 
@@ -208,6 +311,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         )}
                     </div>
 
+                    {mode === 'register' && (
+                        <div className={styles.inputGroup}>
+                            <input
+                                type="email"
+                                className={`${styles.input} ${emailError ? styles.inputError : ''} ${emailShake ? styles.shake : ''}`}
+                                placeholder="请输入邮箱"
+                                value={email}
+                                onChange={handleEmailChange}
+                            />
+                            {emailError && (
+                                <div className={styles.errorMessage}>{emailError}</div>
+                            )}
+                        </div>
+                    )}
+
                     <div className={styles.inputGroup}>
                         <input
                             type="password"
@@ -220,6 +338,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                             <div className={styles.errorMessage}>{passwordError}</div>
                         )}
                     </div>
+
+                    {mode === 'register' && (
+                        <div className={styles.inputGroup}>
+                            <input
+                                type="password"
+                                className={`${styles.input} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
+                                placeholder="请再次输入密码"
+                                value={confirmPassword}
+                                onChange={handleConfirmPasswordChange}
+                            />
+                            {confirmPasswordError && (
+                                <div className={styles.errorMessage}>{confirmPasswordError}</div>
+                            )}
+                        </div>
+                    )}
 
                     {submitError && (
                         <div 

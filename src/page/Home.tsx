@@ -177,7 +177,9 @@ const Home: React.FC = () => {
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>限时优惠!</div>
-                            <div className={styles.more}></div>
+                            <div className={styles.more} onClick={() => {
+                                navigator('/home/library');
+                            }}></div>
                         </div>
                         <div className={styles.grid4}>
                             {fileMetas.length === 0 ? (

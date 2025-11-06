@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Navbar.module.css';
 import AuthModal from './AuthModal';
-import { useAuthStore } from '../store/useAuthStore';
+import { authModalStore, useAuthStore } from '../store/useAuthStore';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [showAuthModal, setShowAuthModal] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const { isAuthenticated, initialize, logout } = useAuthStore();
-    
+    const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
+
     // 初始化时检查登录状态
     useEffect(() => {
         initialize();
@@ -77,7 +77,13 @@ const Navbar: React.FC = () => {
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === '创作' ? styles.navLinkActive : ''}`}
-                        onClick={() => handleNavClick('创作')}
+                        onClick={() => {
+                            if (!isAuthenticated) {
+                                setIsAuthModalOpen(true);
+                                return;
+                            }
+                            handleNavClick('创作')
+                        }}
                     >
                         创作
                     </div>
@@ -117,7 +123,7 @@ const Navbar: React.FC = () => {
                     ) : (
                         <button 
                             className={styles.loginBtn} 
-                            onClick={() => setShowAuthModal(true)}
+                            onClick={() => setIsAuthModalOpen(true)}
                         >
                             登录/注册
                         </button>
@@ -126,8 +132,8 @@ const Navbar: React.FC = () => {
                 </div>
             </div>
             <AuthModal
-                isOpen={showAuthModal}
-                onClose={() => setShowAuthModal(false)}
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
             />
         </>
     );

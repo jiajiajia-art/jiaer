@@ -112,3 +112,16 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+
+interface AuthModalState {
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (isAuthModalOpen: boolean) => void;
+}
+
+export const authModalStore = create<AuthModalState>()(
+    (set) => ({
+      isAuthModalOpen: false,
+      setIsAuthModalOpen: (data: boolean) => set({ isAuthModalOpen: data }),
+    }),
+);

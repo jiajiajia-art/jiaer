@@ -12,6 +12,7 @@ export interface User {
 export interface SignupRequest {
   username: string;
   password: string;
+  email: string;
 }
 
 // 登录请求

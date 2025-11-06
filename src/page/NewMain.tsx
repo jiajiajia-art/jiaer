@@ -426,7 +426,6 @@ const NewMain: React.FC = () => {
                 worldMapImageUrl={worldMapImageUrl}
             />
 
-
             {/* 事件弹窗组件 */}
             <EventModal
                 isOpen={!!activeEvent}

@@ -33,7 +33,23 @@ const Library: React.FC = () => {
             id:'14793e6656c9ca9ba35183416c93e6e6',
             img:`${import.meta.env.BASE_URL}data/gameCover/img4.png`
         },
-
+        {
+            id:'74fcb9f3002fa7a01a5e60d43741363d',
+            img:`${import.meta.env.BASE_URL}data/gameCover/img5.png`
+        },
+        {
+            id:'13c048d8d85428f7136067e08943aa23',
+            img:`${import.meta.env.BASE_URL}data/gameCover/img6.png`
+        },
+        {
+            id:'30f3cee22be8bbc00e480ad5eaa3ce16',
+            img:`${import.meta.env.BASE_URL}data/gameCover/img7.png`
+        },
+        {
+            id:'ff36899d9abe7efa3aa467c4b2161570',
+            img:`${import.meta.env.BASE_URL}data/gameCover/img8.png`
+        }
+        
     ];
 
 
