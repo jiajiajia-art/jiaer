@@ -1,24 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { PlayerProfile, PlayerStats, ScenesMap, Scene } from '../api/game/gameData';
 
-// 导入类型定义（从 useGameData 导出）
-export interface PlayerProfile {
-    avatar: string;
-    name: string;
-    age: number;
-    gender: string;
-    job: string;
-}
+// 重新导出基础类型（从 gameData 导入）
+export type { PlayerProfile, PlayerStats, ScenesMap, Scene };
 
-export interface PlayerStats {
-    level: number;
-    health: number;
-    maxHealth: number;
-    attack: number;
-    defense: number;
-    speed: number;
-}
-
+// 前端特有的类型定义（与后端数据结构不同）
 export interface PlayerState {
     profile: PlayerProfile;
     stats: PlayerStats;
@@ -29,6 +16,7 @@ export interface PlayerState {
 export interface Item {
     id: string;
     name?: string;
+    description?: string;
     icon?: string;
     quantity: number;
     stackable?: boolean;
@@ -54,19 +42,8 @@ export interface InventoryState {
     items: Item[];
 }
 
-// 场景节点类型定义
-export interface SceneNode {
-    id: string;
-    name: string;
-    description?: string;
-    background?: string;
-    buildings: any[];
-    npcs: any[];
-    events?: string[];
-    exits: Record<string, string>;
-}
-
-export type ScenesMap = Record<string, SceneNode>;
+// SceneNode 类型别名，兼容旧代码
+export type SceneNode = Scene;
 
 interface GameState {
   pdfFileId: string | null;

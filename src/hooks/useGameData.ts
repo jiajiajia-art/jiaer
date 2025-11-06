@@ -1,72 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { HOST_ADDRESS } from '../config';
+import gameDataApi from '../api/game/gameData.type';
+import type { ScenesMap, Scene } from '../api/game/gameData';
+import type { EquipmentSlots } from '../store/gameStore';
 
-// 类型定义
-export interface PlayerProfile {
-    avatar: string;
-    name: string;
-    age: number;
-    gender: string;
-    job: string;
-}
+// 重新导出前端特有的类型（从 gameStore 导入，避免重复定义）
+export type {
+    PlayerState,
+    Item,
+    InventoryState,
+    PlayerProfile,
+    PlayerStats
+} from '../store/gameStore';
 
-export interface PlayerStats {
-    level: number;
-    health: number;
-    maxHealth: number;
-    attack: number;
-    defense: number;
-    speed: number;
-}
-
-export interface PlayerState {
-    profile: PlayerProfile;
-    stats: PlayerStats;
-    experience: { current: number; required: number };
-    currency: { gold: number };
-}
-
-export interface Item {
-    id: string;
-    name?: string;
-    icon?: string;
-    quantity: number;
-    stackable?: boolean;
-    equippable?: boolean;
-    usable?: boolean;
-    slots?: string[];
-    effects?: Partial<PlayerStats>;
-}
-
-export interface EquipmentSlots {
-    head: Item | null;
-    body: Item | null;
-    legs: Item | null;
-    hands: Item | null;
-    feet: Item | null;
-    back: Item | null;
-    leftHand: Item | null;
-    rightHand: Item | null;
-}
-
-export interface InventoryState {
-    equipment: EquipmentSlots;
-    items: Item[];
-}
-
-export interface SceneNode {
-    id: string;
-    name: string;
-    description?: string;
-    background?: string;
-    buildings: any[];
-    npcs: any[];
-    events?: string[];
-    exits: Record<string, string>;
-}
-
-export type ScenesMap = Record<string, SceneNode>;
+// SceneNode 类型别名，兼容旧代码
+export type SceneNode = Scene;
 
 export const useGameData = () => {
     // 从 Zustand store 读取和更新数据
@@ -109,24 +57,6 @@ export const useGameData = () => {
                 setBackendLore(root.lore);
             }
 
-            // 3) 关键事件数据（从 lore.keyEvents 字段）
-            // if (root.lore?.keyEvents && Array.isArray(root.lore.keyEvents)) {
-            //     const convertedEvents: Record<string, any> = {};
-            //     root.lore.keyEvents.forEach((event: any, index: number) => {
-            //         const eventId = `key_event_${index}`;
-            //         convertedEvents[eventId] = {
-            //             id: eventId,
-            //             title: event.title,
-            //             image: '/data/events/historical.jpg',
-            //             description: `${event.year}\n\n${event.description}`,
-            //             options: [
-            //                 { text: '了解详情', effects: { experience: 5 }, nextEvent: null },
-            //                 { text: '继续观察', effects: { experience: 2 }, nextEvent: null },
-            //                 { text: '暂时忽略', effects: {} },
-            //             ],
-            //         };
-            //     })
-            // }
 
             // 4) 物品定义映射
             const itemDefs: Record<string, any> = (root.items && typeof root.items === 'object') ? root.items : {};
@@ -208,13 +138,29 @@ export const useGameData = () => {
     }, [setScenes, setCurrentSceneId, setBackendLore, setBackendEvents, setInventory, setPlayer]);
 
     // 提取图片URL的工具函数
-    const extractImageUrl = useCallback(async (response: Response): Promise<string | null> => {
-        const contentType = response.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-            const data = await response.json();
-            return data.url || data.imageUrl || data.image || response.url;
+    const extractImageUrl = useCallback(async (response: any): Promise<string | null> => {
+        // 如果响应是 Blob，创建对象 URL
+        if (response instanceof Blob) {
+            return URL.createObjectURL(response);
         }
-        return response.url;
+        
+        // 如果响应是 JSON
+        if (response?.data) {
+            const data = response.data;
+            if (typeof data === 'string') {
+                return data;
+            }
+            if (data?.url || data?.imageUrl || data?.image) {
+                return data.url || data.imageUrl || data.image;
+            }
+        }
+        
+        // 如果是普通对象
+        if (response?.url || response?.imageUrl || response?.image) {
+            return response.url || response.imageUrl || response.image;
+        }
+        
+        return null;
     }, []);
 
     // 加载后端数据
@@ -224,46 +170,37 @@ export const useGameData = () => {
         (async () => {
             try {
                 const [filesResponse, avatarResponse, worldMapResponse] = await Promise.all([
-                    fetch(`${HOST_ADDRESS}/api/backend/files/${sessionId}`),
-                    fetch(`${HOST_ADDRESS}/api/backend/images/${pdfFileId}/player`),
-                    fetch(`${HOST_ADDRESS}/api/backend/images/${pdfFileId}/world`)
+                    gameDataApi.getGameFiles(sessionId),
+                    gameDataApi.getPlayerAvatar(pdfFileId),
+                    gameDataApi.getWorldMap(pdfFileId)
                 ]);
 
-                // 处理游戏数据
-                if (filesResponse.ok) {
-                    const contentType = filesResponse.headers.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
-                        const data = await filesResponse.json();
-                        if (data?.success && data.files) {
-                            applyBackendData(data.files);
-                            setBackendDataLoaded(true);
-                        }
-                    }
+                const responseData = filesResponse.data;
+                
+                if (responseData?.success && responseData.files) {
+                    applyBackendData(responseData.files);
+                    setBackendDataLoaded(true);
+                } else {
+                    console.warn('⚠️ 游戏数据响应格式异常:', responseData);
                 }
 
-                // 处理玩家头像
-                if (avatarResponse.ok) {
-                    const avatarUrl = await extractImageUrl(avatarResponse);
-                    if (avatarUrl) {
-                        updatePlayer((prevPlayer) => {
-                            if (!prevPlayer) return null;
-                            return {
-                                ...prevPlayer,
-                                profile: {
-                                    ...prevPlayer.profile,
-                                    avatar: avatarUrl
-                                }
-                            };
-                        });
-                    }
+                const avatarUrl = await extractImageUrl(avatarResponse.data || avatarResponse);
+                if (avatarUrl) {
+                    updatePlayer((prevPlayer) => {
+                        if (!prevPlayer) return null;
+                        return {
+                            ...prevPlayer,
+                            profile: {
+                                ...prevPlayer.profile,
+                                avatar: avatarUrl
+                            }
+                        };
+                    });
                 }
 
-                // 处理世界地图
-                if (worldMapResponse.ok) {
-                    const worldMapUrl = await extractImageUrl(worldMapResponse);
-                    if (worldMapUrl) {
-                        setWorldMapImageUrl(worldMapUrl);
-                    }
+                const worldMapUrl = await extractImageUrl(worldMapResponse.data || worldMapResponse);
+                if (worldMapUrl) {
+                    setWorldMapImageUrl(worldMapUrl);
                 }
             } catch (e) {
                 console.error('后端数据加载失败:', e);
@@ -275,19 +212,24 @@ export const useGameData = () => {
         if (!sessionId) return;
         
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/files/${sessionId}/scenes`);
-            if (!response.ok) return;
-            
-            const dataJson = await response.json();
+            const response = await gameDataApi.getScenes(sessionId);
+            // 解构响应数据
+            const responseData = response.data?.data;
             let newScenes: ScenesMap | null = null;
             
             // 根据后端返回的数据结构解析场景
-            if (dataJson.data && typeof dataJson.data === 'object') {
-                newScenes = dataJson.data;
-            } else if (dataJson.scenes && typeof dataJson.scenes === 'object') {
-                newScenes = dataJson.scenes;
-            } else if (typeof dataJson === 'object' && !Array.isArray(dataJson)) {
-                newScenes = dataJson;
+            if (responseData) {
+                if (responseData.data && typeof responseData.data === 'object' && !Array.isArray(responseData.data)) {
+                    newScenes = responseData.data as ScenesMap;
+                } else if (responseData.scenes && typeof responseData.scenes === 'object' && !Array.isArray(responseData.scenes)) {
+                    newScenes = responseData.scenes as ScenesMap;
+                } else if (typeof responseData === 'object' && !Array.isArray(responseData)) {
+                    // 检查是否是 ScenesMap 格式（Record<string, SceneNode>）
+                    const keys = Object.keys(responseData);
+                    if (keys.length > 0 && (responseData as any)[keys[0]]?.id) {
+                        newScenes = responseData as unknown as ScenesMap;
+                    }
+                }
             }
             
             if (newScenes) {

@@ -27,6 +27,13 @@ interface EventModalProps {
     onClose: () => void;
 }
 
+export interface BuildingData{
+    sceneId: string;
+    buildingId: string;
+    feature: string;
+    selectedOption: string | null;
+}
+
 const EventModal: React.FC<EventModalProps> = ({
     isOpen,
     event,
@@ -37,7 +44,8 @@ const EventModal: React.FC<EventModalProps> = ({
     const { sessionId } = useGameStore();
     const [buildingModalOpen, setBuildingModalOpen] = useState(false);
     const [streamResponse, setStreamResponse] = useState<Response | null>(null);
-    
+    const [buildingData, setBuildingData] = useState<BuildingData | null>(null);
+
     // 如果既没有打开也没有事件，且没有打开建筑弹窗，则不渲染
     if (!isOpen && !event && !buildingModalOpen) return null;
 
@@ -58,6 +66,12 @@ const EventModal: React.FC<EventModalProps> = ({
             
             if (response.ok) {
                 console.log('✅ 流式请求成功，打开 BuildingEventModal');
+                setBuildingData({
+                    sceneId: currentSceneId,
+                    buildingId: event.id,
+                    feature: event.options[index].text,
+                    selectedOption: null
+                });
                 // 先打开 BuildingEventModal 并传递响应
                 setStreamResponse(response);
                 setBuildingModalOpen(true);
@@ -117,6 +131,7 @@ const EventModal: React.FC<EventModalProps> = ({
                 isOpen={buildingModalOpen}
                 onClose={handleCloseBuildingModal}
                 streamResponse={streamResponse}
+                buildingData={buildingData}
             />
         </>
     );

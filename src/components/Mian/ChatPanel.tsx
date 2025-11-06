@@ -4,6 +4,7 @@ import ChatHistory from './ChatHistory';
 import ReactMarkdown from 'react-markdown';
 import { HOST_ADDRESS } from '../../config';
 import { useGameData } from '../../hooks/useGameData';
+import type { NPC } from '../../api/game/gameData';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -18,15 +19,9 @@ interface ChatPanelProps {
     chatInput: string;
     onInputChange: (value: string) => void;
     onSendMessage: (message: string) => void;
+    onAddMessage?: (message: ChatMessage) => void; // 添加消息到聊天列表（用于显示问候消息等）
     title?: string;
-    npc?: {
-        id?: string;
-        name?: string;
-        icon?: string;
-        avatar?: string;
-        relationships?: number;
-        [key: string]: any;
-    } | null;
+    npc: NPC;
     sessionId?: string | null;
     onLoadHistory?: (sessionId: string, npc: any) => Promise<ChatMessage[]>; // 加载历史记录的函数
 }
@@ -38,7 +33,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     chatInput,
     onInputChange,
     onSendMessage,
-    npc = null,
+    onAddMessage,
+    npc,
     sessionId = null,
     onLoadHistory
 }) => {
@@ -48,8 +44,24 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     const [historyMessages, setHistoryMessages] = useState<ChatMessage[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const { getNewScene } = useGameData();
+    const hasSentGreetingRef = useRef(false);
 
-    // 自动滚动到底部的函数
+    useEffect(() => {
+        if (isOpen && npc && npc.greetings && npc.greetings.length > 0 && !hasSentGreetingRef.current && onAddMessage) {
+            hasSentGreetingRef.current = true;
+            const randomIndex = Math.floor(Math.random() * npc.greetings.length);
+            const greetingMessage = npc.greetings[randomIndex];
+            onAddMessage({
+                role: 'assistant',
+                text: greetingMessage,
+                isTyping: false
+            });
+        }
+        if (!isOpen) {
+            hasSentGreetingRef.current = false;
+        }
+    }, [isOpen, npc, onAddMessage]);
+
     const scrollToBottom = () => {
         if (chatMessagesContainerRef.current) {
             chatMessagesContainerRef.current.scrollTop = chatMessagesContainerRef.current.scrollHeight;
@@ -71,9 +83,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         }
     }, [onLoadHistory, sessionId, npc]);
 
-    // 打开历史弹窗时切换状态
     const handleOpenHistory = React.useCallback(() => {
-        // 使用函数式更新避免闭包问题
         setShowHistory(prev => !prev);
     }, []);
 
@@ -153,20 +163,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     // 当聊天面板打开时阻止页面滚动，关闭时恢复
     useEffect(() => {
         if (isOpen) {
-            // 阻止页面滚动（body 和 html）
             const originalBodyOverflow = document.body.style.overflow;
             const originalHtmlOverflow = document.documentElement.style.overflow;
             
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
             
-            // 滚动到底部
             setTimeout(() => {
                 scrollToBottom();
             }, 100);
             
             return () => {
-                // 恢复页面滚动
                 document.body.style.overflow = originalBodyOverflow;
                 document.documentElement.style.overflow = originalHtmlOverflow;
             };
@@ -209,7 +216,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                                 </div>
                                 <div className={styles.avatarFrame}>
                                     <img
-                                        src={`${HOST_ADDRESS}${npc.icon || npc.avatar}` || `${import.meta.env.BASE_URL}data/avatars/default.png`}
+                                        src={`${HOST_ADDRESS}${npc.icon}` || `${import.meta.env.BASE_URL}data/avatars/default.png`}
                                         alt={npc.name || 'NPC'}
                                         className={styles.avatarImage}
                                     />

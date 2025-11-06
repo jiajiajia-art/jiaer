@@ -2,8 +2,9 @@
 import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { jwtDecode } from 'jwt-decode';
 import { useAuthStore } from '../store/useAuthStore';
+import { HOST_ADDRESS } from '../config';
 
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = HOST_ADDRESS + '/api';
 
 export interface ApiConfig {
   baseURL?: string;

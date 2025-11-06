@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './DialogueModal.module.css';
 import { HOST_ADDRESS } from '../../config';
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore, type EquipmentSlots } from '../../store/gameStore';
 import ReactMarkdown from 'react-markdown';
 import ChatHistory, { type ChatMessage } from './ChatHistory';
 import PlayerFloatingPanel from './PlayerFloatingPanel';
 import type { Item } from '../../hooks/useGameData';
-import type { PlayerState, InventoryState, EquipmentSlots } from '../../hooks/useGameData';
+import type { PlayerState, InventoryState, } from '../../hooks/useGameData';
 import InventoryFloatingPanel from './InventoryFloatingPanel';
 
 interface DialogueModalProps {
@@ -84,10 +84,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
             if (response.ok) {
                 const data = await response.json();
-                // 后端返回格式：{ history: [{ message: string, timestamp: string, type: "player" | "game" }] }
                 const historyArray = data.history || [];
 
-                // 转换为 ChatMessage 格式
                 const convertedMessages: ChatMessage[] = historyArray.map((item: {
                     message: string;
                     timestamp: string;
@@ -99,6 +97,9 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 }));
 
                 setHistoryMessages(convertedMessages);
+                if (convertedMessages.length > 0) {
+                    setGameStarted(true);
+                }
             } else {
                 setHistoryMessages([]);
             }
@@ -481,3 +482,4 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 };
 
 export default DialogueModal;
+

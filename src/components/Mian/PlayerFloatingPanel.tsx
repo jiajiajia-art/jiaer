@@ -37,7 +37,6 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
     player
 }) => {
     if (!isOpen) return null;
-    console.log('player', player);
 
 
     return (

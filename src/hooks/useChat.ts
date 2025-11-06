@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HOST_ADDRESS } from '../config';
+import type { NPC } from '../api/game/gameData';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -11,7 +12,7 @@ export const useChat = () => {
     const [chatOpen, setChatOpen] = useState(false);
     const [chatInput, setChatInput] = useState('');
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]); // 当前对话的消息（本轮）
-    const [currentChatNpc, setCurrentChatNpc] = useState<any | null>(null);
+    const [currentChatNpc, setCurrentChatNpc] = useState<NPC | null>(null);
 
     const handleStartChatWithNpc = (npc: any) => {
         setCurrentChatNpc(npc);

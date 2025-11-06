@@ -140,6 +140,63 @@
     }
 }
 
+/* ACTION 按钮样式 */
+.actionButtons {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+    width: 100%;
+}
+
+.actionBtn {
+    color: #B24F1B;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 1rem;
+    width: 100%;
+    text-align: center;
+}
+
+.actionBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 选中的按钮样式 */
+.actionBtnSelected {
+    background: #B24F1B !important; /* 金色高亮 */
+    color: #fff !important;
+    font-weight: bold;
+    transform: scale(1.02);
+}
+
+/* 未选中但已禁用的按钮样式 */
+.actionBtnDisabled {
+    opacity: 0.4 !important;
+    background: #8B7355 !important; /* 更暗的棕色 */
+    cursor: not-allowed;
+}
+
+/* 消息块容器 */
+.messageBlock {
+    margin-bottom: 20px;
+}
+
+.messageBlock:last-child {
+    margin-bottom: 0;
+}
+
+/* 系统消息样式 */
+.systemMessage {
+    margin-bottom: 10px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .modalContent {

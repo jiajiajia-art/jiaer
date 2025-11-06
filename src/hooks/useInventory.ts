@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Item, EquipmentSlots, InventoryState, PlayerState } from './useGameData';
-import { useGameStore } from '../store/gameStore';
+import type { Item, InventoryState, PlayerState } from './useGameData';
+import { useGameStore, type EquipmentSlots } from '../store/gameStore';
 
 export const useInventory = () => {
     const [inventoryOpen, setInventoryOpen] = useState(false);

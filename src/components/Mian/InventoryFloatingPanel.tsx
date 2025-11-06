@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './InventoryFloatingPanel.module.css';
+import type { InventoryState } from '../../store/gameStore';
 
 interface Item {
     id: string;
@@ -24,10 +25,7 @@ interface EquipmentSlots {
     rightHand: Item | null;
 }
 
-interface InventoryState {
-    equipment: EquipmentSlots;
-    items: Item[];
-}
+
 
 interface InventoryFloatingPanelProps {
     isOpen: boolean;
@@ -83,7 +81,7 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                                     {item.quantity > 1 && `${item.quantity}`}
                                 </div>
                                 <div className={styles.itemDescription}>
-                                    {item.effects?.description || '暂无描述'}
+                                    {item.description || '暂无描述'}
                                 </div>
                             </div>
                             <div className={styles.itemActions}>

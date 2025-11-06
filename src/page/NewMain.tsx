@@ -48,8 +48,8 @@ type EventDef = {
 // ==================== 组件 ====================
 const NewMain: React.FC = () => {
     const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore, worldMapImageUrl } = useGameData();
-    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
-    const { gameTimeText, worldLoreHtml, playerLoreHtml, updateLoreFromBackend, updateLoreFromLocal } = useLore();
+    const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, setChatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
+    const { gameTimeText, worldLoreHtml, playerLoreHtml, updateLoreFromBackend } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
     const { events, activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
     const { sessionId } = useGameStore();
@@ -73,10 +73,8 @@ const NewMain: React.FC = () => {
     useEffect(() => {
         if (backendDataLoaded && backendLore) {
             updateLoreFromBackend(backendLore);
-        } else if (!backendDataLoaded) {
-            updateLoreFromLocal();
         }
-    }, [backendDataLoaded, backendLore, updateLoreFromBackend, updateLoreFromLocal]);
+    }, [backendDataLoaded, backendLore, updateLoreFromBackend]);
 
     // ==================== 音乐系统相关 ====================
     const hasStartedPlayingRef = useRef(false);
@@ -201,12 +199,13 @@ const NewMain: React.FC = () => {
     };
 
     const handleSendChatMessage = async (message: string) => {
-        if (!sessionId || !npcDetail) {
+        const npc = currentChatNpc || npcDetail;
+        if (!sessionId || !npc) {
             alert('请点击npc与其对话');
             return;
         }
         setChatInput('');
-        await chatWithNpc(sessionId, npcDetail, message);
+        await chatWithNpc(sessionId, npc, message);
     };
 
     const currentSceneBackground = currentSceneId && scenes[currentSceneId]?.background
@@ -218,7 +217,7 @@ const NewMain: React.FC = () => {
         changeScenes(targetId);
     }
 
-    const changeScenes = async (targetId: string) => {
+    const changeScenes = async (targetId: string): Promise<boolean> => {
         try {
             const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/change-scene`,
                 {
@@ -236,7 +235,7 @@ const NewMain: React.FC = () => {
                 setAlertMessage(data.message || '该场景尚未解锁');
                 setAlertModalOpen(true);
                 console.log('场景被锁定，无法切换:', data);
-                return;
+                return false; // 返回 false 表示切换失败（被锁定）
             }
             
             // 场景切换成功，更新状态
@@ -251,11 +250,15 @@ const NewMain: React.FC = () => {
                     }
                 }
                 console.log('场景切换成功:', targetId);
+                return true; // 返回 true 表示切换成功
             }
+            
+            return false; // 其他情况返回 false
         } catch (error) {
             console.error('获取新场景数据失败:', error);
             setAlertMessage('场景切换失败，请稍后重试');
             setAlertModalOpen(true);
+            return false; // 错误时返回 false
         }
     }
 
@@ -412,7 +415,14 @@ const NewMain: React.FC = () => {
                 onClose={() => setActivePanel('scene')}
                 scenes={scenes}
                 currentSceneId={currentSceneId}
-                onSceneClick={(id) => { setSceneDetailId(id); setSceneDetailOpen(true); }}
+                onSceneClick={async (id) => { 
+                    setSceneDetailId(id); 
+                    // 先尝试切换场景，如果成功（未被锁定）才打开详情弹窗
+                    const success = await changeScenes(id);
+                    if (success) {
+                        setSceneDetailOpen(true);
+                    }
+                }}
                 worldMapImageUrl={worldMapImageUrl}
             />
 
@@ -521,6 +531,9 @@ const NewMain: React.FC = () => {
                 chatInput={chatInput}
                 onInputChange={setChatInput}
                 onSendMessage={handleSendChatMessage}
+                onAddMessage={(message) => {
+                    setChatMessages((prev) => [...prev, message]);
+                }}
                 npc={(() => {
                     const npc = currentChatNpc || npcDetail;
                     if (npc && currentSceneId && scenes[currentSceneId]?.npcs) {
