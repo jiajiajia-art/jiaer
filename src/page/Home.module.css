@@ -59,7 +59,6 @@
 .main{
     flex: 1;
     min-height: calc(100vh - 80px);
-    overflow-y: auto;
 }
 
 .todayWrap{
@@ -134,10 +133,10 @@
     color: #5E4630;
 }
 
-/* 响应式商品网格布局 - 流式布局，最小宽度自适应 */
+/* 一行四个，自动调整宽度 */
 .grid4 {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 20px;
     height: 50%;
     padding: 10px;
