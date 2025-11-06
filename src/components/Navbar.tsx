@@ -1,13 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Navbar.module.css';
 import AuthModal from './AuthModal';
+import { useAuthStore } from '../store/useAuthStore';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showAuthModal, setShowAuthModal] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const { isAuthenticated, initialize, logout } = useAuthStore();
+    
+    // 初始化时检查登录状态
+    useEffect(() => {
+        initialize();
+    }, [initialize]);
+
+    // 点击外部关闭下拉菜单
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest(`.${styles.avatarContainer}`)) {
+                setShowUserMenu(false);
+            }
+        };
+
+        if (showUserMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+    }, [showUserMenu]);
 
     // 根据当前路径确定激活的导航项（支持嵌套路由）
     const getActiveNav = () => {
@@ -68,9 +92,27 @@ const Navbar: React.FC = () => {
                         <input className={styles.searchInput} placeholder="搜索商品、素材、事件..." />
                         <span className={styles.searchIcon}></span>
                     </div>
-                    {isLoggedIn ? (
-                        <div className={styles.avatar}>
-                            <img src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} alt="" />
+                    {isAuthenticated ? (
+                        <div className={styles.avatarContainer}>
+                            <div 
+                                className={styles.avatar}
+                                onClick={() => setShowUserMenu(!showUserMenu)}
+                            >
+                                <img src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} alt="" />
+                            </div>
+                            {showUserMenu && (
+                                <div className={styles.userMenu}>
+                                    <button 
+                                        className={styles.logoutBtn}
+                                        onClick={() => {
+                                            logout();
+                                            setShowUserMenu(false);
+                                        }}
+                                    >
+                                        退出登录
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <button 
@@ -86,20 +128,6 @@ const Navbar: React.FC = () => {
             <AuthModal
                 isOpen={showAuthModal}
                 onClose={() => setShowAuthModal(false)}
-                onLogin={(phone, password) => {
-                    // 处理登录逻辑
-                    console.log('登录:', phone, password);
-                    // TODO: 调用登录 API
-                    setIsLoggedIn(true);
-                    setShowAuthModal(false);
-                }}
-                onRegister={(phone, password) => {
-                    // 处理注册逻辑
-                    console.log('注册:', phone, password);
-                    // TODO: 调用注册 API
-                    setIsLoggedIn(true);
-                    setShowAuthModal(false);
-                }}
             />
         </>
     );

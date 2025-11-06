@@ -97,7 +97,6 @@
 
 /* SVG 内部元素样式优化 - 增强连线 */
 .mapSvg line {
-    stroke: #8a7654; /* 更深的颜色 */
     stroke-width: 4; /* 更粗的线条 */
     stroke-dasharray: 10,8; /* 更长的虚线 */
     opacity: 0.8; /* 更高的不透明度 */

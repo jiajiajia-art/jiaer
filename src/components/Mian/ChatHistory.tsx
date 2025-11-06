@@ -76,6 +76,18 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                 ) : (
                     <>
                         {chatMessages.map((m, i) => {
+                            // 检测消息中是否包含 [ACTION 字段，如果包含则截断
+                            let displayText = m.text;
+                            const actionIndex = displayText.indexOf('[ACTION');
+                            if (actionIndex !== -1) {
+                                // 只显示 [ACTION 之前的内容
+                                displayText = displayText.substring(0, actionIndex).trim();
+                                // 如果截断后为空，则不显示这条消息
+                                if (!displayText) {
+                                    return null;
+                                }
+                            }
+
                             // 适配角色类型：assistant (来自 type: 'game') 使用 system 样式
                             // user (来自 type: 'player') 使用 user 样式
                             const messageClass = m.role === 'assistant'
@@ -85,7 +97,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                             return (
                                 <div key={i} className={messageClass}>
                                     <span className={styles.chatMessageWrapper}>
-                                        <ReactMarkdown>{m.text}</ReactMarkdown>
+                                        <ReactMarkdown>{displayText}</ReactMarkdown>
                                         {m.isTyping && <span className={styles.typingCursor}>|</span>}
                                     </span>
                                 </div>

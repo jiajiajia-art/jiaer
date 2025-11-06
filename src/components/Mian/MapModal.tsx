@@ -288,9 +288,8 @@ const MapModal: React.FC<MapModalProps> = ({
                                                     y1={positions[id].y}
                                                     x2={positions[targetId].x}
                                                     y2={positions[targetId].y}
-                                                    stroke="#9aa6b2"
-                                                    strokeWidth={4}
-                                                    strokeDasharray="8,8"
+                                                    stroke="#000000"
+                                                    strokeWidth={6}
                                                 />
                                             ) : null)
                                         : null))
@@ -323,7 +322,7 @@ const MapModal: React.FC<MapModalProps> = ({
                                                 cy={positions[id].y}
                                                 r={id === currentSceneId ? 90 : 80}
                                                 fill="none"
-                                                stroke={id === currentSceneId ? '#e74c3c' : '#4a90e2'}
+                                                stroke="#000000"
                                                 strokeWidth={id === currentSceneId ? 6 : 5}
                                             />
                                             <text

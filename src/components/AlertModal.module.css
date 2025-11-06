@@ -1,0 +1,139 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modalContent {
+    background-image: url('/data/asset/建筑选项框/框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 480px;
+    min-height: 300px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 30px 30px 30px;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.closeBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 46px;
+    height: 46px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.closeBtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.title {
+    color: #B24F1B;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 30px 0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.message {
+    color: #B24F1B;
+    font-size: 1.1rem;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.confirmBtn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
+    color: #E8DBB7;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.3);
+}
+
+.confirmBtn:hover {
+    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(178, 79, 27, 0.4);
+}
+
+.confirmBtn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .modalContent {
+        width: 95%;
+        padding: 30px 20px 20px 20px;
+        min-height: 250px;
+    }
+
+    .title {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+
+    .message {
+        font-size: 1rem;
+        padding: 0 10px;
+    }
+
+    .confirmBtn {
+        padding: 12px;
+        font-size: 1rem;
+    }
+}
+

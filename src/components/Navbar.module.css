@@ -94,6 +94,10 @@
     color: #8B7355;
 }
 
+.avatarContainer {
+    position: relative;
+}
+
 .avatar {
     width: 48px;
     height: 48px;
@@ -111,6 +115,53 @@
 
 .avatar:hover {
     transform: scale(1.05);
+}
+
+.userMenu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 120px;
+    z-index: 1000;
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.logoutBtn {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
+    color: #E8DBB7;
+    border: none;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.logoutBtn:hover {
+    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
+}
+
+.logoutBtn:active {
+    background: linear-gradient(135deg, #8B3A15 0%, #6B2A0F 100%);
 }
 
 .settingIcon {

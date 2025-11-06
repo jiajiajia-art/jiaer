@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import styles from './NewMain.module.css';
 import { HOST_ADDRESS } from '../config';
-import { useGameStore, type SceneNode } from '../store/gameStore';
+import { useGameStore } from '../store/gameStore';
 
 // Hooks
 import { useEventSystem } from '../hooks/useEventSystem';
@@ -22,6 +22,7 @@ import InventoryFloatingPanel from '../components/Mian/InventoryFloatingPanel';
 import MapModal from '../components/Mian/MapModal';
 import ChatPanel from '../components/Mian/ChatPanel';
 import SettingModal from '../components/Mian/SettingModal';
+import AlertModal from '../components/AlertModal';
 
 // ==================== 类型定义 ====================
 declare global {
@@ -63,6 +64,8 @@ const NewMain: React.FC = () => {
     const [sceneDetailId, setSceneDetailId] = useState<string | null>(null);
     const [dialogueOpen, setDialogueOpen] = useState(false);
     const [dialogueInitialInput, setDialogueInitialInput] = useState('');
+    const [alertModalOpen, setAlertModalOpen] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
 
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
 
@@ -210,13 +213,8 @@ const NewMain: React.FC = () => {
         ? `${HOST_ADDRESS}${scenes[currentSceneId].background}`
         : '';
 
-    const handleSceneClick = (targetId: string, targetScene: SceneNode) => {
-        setCurrentSceneId(targetId);
-        // 更新场景描述显示
-        const sceneDescElement = document.getElementById('sceneDescription');
-        if (sceneDescElement) {
-            sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
-        }
+    const handleSceneClick = (targetId: string) => {
+        // 先尝试切换场景，不立即更新 currentSceneId
         changeScenes(targetId);
     }
 
@@ -229,11 +227,35 @@ const NewMain: React.FC = () => {
                     body: JSON.stringify({ sceneId: targetId })
                 }
             );
-            if (response.ok) {
-                console.log('获取新场景数据成功:', response);
+            
+            const data = await response.json();
+            
+            // 检查场景是否被锁定
+            if (data.locked === true) {
+                // 场景被锁定，显示提示弹窗，不切换场景
+                setAlertMessage(data.message || '该场景尚未解锁');
+                setAlertModalOpen(true);
+                console.log('场景被锁定，无法切换:', data);
+                return;
+            }
+            
+            // 场景切换成功，更新状态
+            if (response.ok && !data.locked) {
+                setCurrentSceneId(targetId);
+                // 更新场景描述显示
+                const targetScene = scenes[targetId];
+                if (targetScene) {
+                    const sceneDescElement = document.getElementById('sceneDescription');
+                    if (sceneDescElement) {
+                        sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
+                    }
+                }
+                console.log('场景切换成功:', targetId);
             }
         } catch (error) {
             console.error('获取新场景数据失败:', error);
+            setAlertMessage('场景切换失败，请稍后重试');
+            setAlertModalOpen(true);
         }
     }
 
@@ -310,7 +332,7 @@ const NewMain: React.FC = () => {
                                             <div
                                                 key={direction}
                                                 className={styles.exitCard}
-                                                onClick={() => handleSceneClick(targetId, targetScene)}
+                                                onClick={() => handleSceneClick(targetId)}
                                             >
                                                 <img
                                                     src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
@@ -482,6 +504,14 @@ const NewMain: React.FC = () => {
                     setSceneDetailOpen(false);
                     setActivePanel('scene');
                 }}
+            />
+
+            {/* 提示弹窗组件 */}
+            <AlertModal
+                isOpen={alertModalOpen}
+                onClose={() => setAlertModalOpen(false)}
+                message={alertMessage}
+                title="提示"
             />
 
             <ChatPanel

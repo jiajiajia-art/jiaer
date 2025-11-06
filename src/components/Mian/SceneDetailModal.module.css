@@ -164,6 +164,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+    flex: 1;
 }
 
 .goToSceneBtn:hover:not(:disabled) {

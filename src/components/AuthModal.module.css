@@ -170,6 +170,18 @@
     box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
 }
 
+.submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.submitBtn:disabled:hover {
+    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
+    transform: none;
+    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.3);
+}
+
 .modeSwitch {
     margin-top: 20px;
     display: flex;
