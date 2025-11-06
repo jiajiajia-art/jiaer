@@ -256,6 +256,7 @@
     background-color: transparent;
     display: inline-block;
     margin: 0 auto; /* 双保险水平居中 */
+    flex: 1;
 }
 
 .chatWithNpcBtn:hover {

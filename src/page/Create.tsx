@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 import styles from './Create.module.css';
 import { useGameStore } from '../store/gameStore';
 import { HOST_ADDRESS } from '../config';
 
 const Create: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<string>('创作游戏');
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [coverImage, setCoverImage] = useState<string | null>(null);
     const [isDragover, setIsDragover] = useState(false);
@@ -270,28 +270,27 @@ const Create: React.FC = () => {
             
             <div className={styles.mainContent}>
                 {/* 左侧侧边栏 */}
-                <div className={styles.sidebar}>
-                    <div 
-                        className={`${styles.sidebarItem} ${activeTab === '创作游戏' ? styles.sidebarItemActive : ''}`}
-                        onClick={() => setActiveTab('创作游戏')}
-                    >
-                        <img src={`${import.meta.env.BASE_URL}data/asset/创作页面/文件图标.png`} alt="" />
-                        <span>创作游戏</span>
-                    </div>
-                    <div 
-                        className={`${styles.sidebarItem} ${activeTab === '我的游戏' ? styles.sidebarItemActive : ''}`}
-                        onClick={() => setActiveTab('我的游戏')}
-                    >
-                        <img src={`${import.meta.env.BASE_URL}data/asset/创作页面/文件夹图标.png`} alt="" />
-                        <span>我的游戏</span>
-                    </div>
-                </div>
+                <Sidebar
+                    items={[
+                        {
+                            id: 'create',
+                            label: '创作游戏',
+                            icon: 'data/asset/创作页面/文件图标.png',
+                            route: '/create',
+                        },
+                        {
+                            id: 'myGames',
+                            label: '我的游戏',
+                            icon: 'data/asset/创作页面/文件夹图标.png',
+                            route: '/create/myGames',
+                        }
+                    ]}
+                />
 
                 {/* 右侧内容区域 */}
                 <div className={styles.main}>
-                    {activeTab === '创作游戏' && (
-                        <div className={styles.createGameContainer}>
-                            {/* 左侧60% - 表单 */}
+                    <div className={styles.createGameContainer}>
+                        {/* 左侧60% - 表单 */}
                             <div className={styles.formSection}>                                
                                 <div className={styles.formGroup}>
                                     <label htmlFor="gameName">游戏名称</label>
@@ -445,14 +444,6 @@ const Create: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                    )}
-                    
-                    {activeTab === '我的游戏' && (
-                        <div className={styles.myGamesContainer}>
-                            <h2>我的游戏</h2>
-                            <p>我的游戏内容待开发...</p>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

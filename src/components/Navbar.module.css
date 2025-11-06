@@ -119,3 +119,30 @@
     cursor: pointer;
     transition: transform 0.3s ease;
 }
+
+.loginBtn {
+    width: 120px !important;
+    height: 40px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: none !important;
+    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
+    color: #E8DBB7;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+    white-space: nowrap;
+}
+
+.loginBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.4);
+}

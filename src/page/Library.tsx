@@ -17,22 +17,23 @@ const Library: React.FC = () => {
     // 硬编码的文件ID列表（从Home.tsx复制）
     const fileId = [
         {
-            id: '0fed0643f24e7c7b3b68e74af04cb0aa',
+            id: '0f3f4e7539179b8896606b3212f660d9',
             img: `${import.meta.env.BASE_URL}data/gameCover/img1.png`
         },
         {
-            id: '7b7e7d128c686dc57bd23996118e8c0a',
+            id: '6fae713d4a501003654a1973fd854895',
             img: `${import.meta.env.BASE_URL}data/gameCover/img2.png`,
             title: '明末风华录'
         },
         {
-            id: '83089b271543d3e2a7cb8b1a4cee3f41',
-            img: `${HOST_ADDRESS}/api/backend/saves/83089b271543d3e2a7cb8b1a4cee3f41/avatars/npc_store_clerk_83089b271543d3e2a7cb8b1a4cee3f41.png`
+            id:'53275c6d2dc88e87f74cda72888967ed',
+            img: `${HOST_ADDRESS}/api/backend/saves/53275c6d2dc88e87f74cda72888967ed/scenes/convenience_store_53275c6d2dc88e87f74cda72888967ed.png`
         },
         {
-            id: 'c2f99389e5fd5f43b42a0a45cfcfeed2',
-            img: `${import.meta.env.BASE_URL}data/gameCover/img4.png`
-        }
+            id:'14793e6656c9ca9ba35183416c93e6e6',
+            img:`${import.meta.env.BASE_URL}data/gameCover/img4.png`
+        },
+
     ];
 
 
@@ -128,18 +129,13 @@ const Library: React.FC = () => {
                 try {
                     const res = await fetch(`${HOST_ADDRESS}/api/backend/saves/${f.id}/files`);
                     if (res.ok) {
-                        console.log('f.img', f.img);
-
                         const data = await res.json();
                         return { id: f.id, img: f.img, title: f.title, ...data.files };
                     }
-                    console.log('f', f.img);
-
                 } catch { }
                 return { id: f.id };
             })
         ).then(data => {
-            console.log('fileMetas', data);
             setFileMetas(data);
         });
     }, []);
@@ -158,12 +154,12 @@ const Library: React.FC = () => {
                             id: 'home',
                             label: '首页',
                             icon: 'data/asset/首页/homeIcon.png',
-                            route: '/home'
+                            route: '/home',
                         },
                         {
                             id: 'library',
                             label: '全部',
-                            route: '/home/library'
+                            route: '/home/library',
                         }
                     ]}
                 />
@@ -171,7 +167,6 @@ const Library: React.FC = () => {
                 {/* 右侧内容区域 - Library 特有的内容 */}
                 <div className={styles.main}>
                     <div className={styles.libraryContent}>
-                        <h2 className={styles.libraryTitle}>全部游戏</h2>
                         <div className={styles.grid4}>
                             {fileMetas.length === 0 ? (
                                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: '#5E4630' }}>

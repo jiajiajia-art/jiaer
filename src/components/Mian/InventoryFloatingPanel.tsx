@@ -92,7 +92,7 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                                         className={styles.useButton}
                                         onClick={() => handleItemClick(item)}
                                     >
-                                        {item.usable ? '使用' : '装备'}
+                                        {item.usable ? '使\n用' : '装\n备'}
                                     </button>
                                 )}
                             </div>

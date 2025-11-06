@@ -460,6 +460,7 @@
     background-repeat: no-repeat;
     background-color: transparent;
     cursor: default;
+    border: none;
 }
 
 .inventoryBtnImg {
@@ -467,7 +468,7 @@
     cursor: pointer;
     object-fit: cover;
     margin-left: 130px;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
 }
 
 .chatPanel {
