@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import styles from './DialogueModal.module.css';
 import { HOST_ADDRESS } from '../../config';
 import { useGameStore, type EquipmentSlots } from '../../store/gameStore';
@@ -8,6 +8,10 @@ import PlayerFloatingPanel from './PlayerFloatingPanel';
 import type { Item } from '../../hooks/useGameData';
 import type { PlayerState, InventoryState, } from '../../hooks/useGameData';
 import InventoryFloatingPanel from './InventoryFloatingPanel';
+
+// 常量定义
+const ACTION_REGEX_PATTERN = /\[ACTION:\s*(.*?)\]/g;
+const DEFAULT_WELCOME_MESSAGE = (playerName: string) => `欢迎来到游戏世界，${playerName}！`;
 
 interface DialogueModalProps {
     isOpen: boolean;
@@ -37,6 +41,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     const [showHistory, setShowHistory] = useState(true);
     const [historyMessages, setHistoryMessages] = useState<ChatMessage[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const hasLoadedInitialMessage = useRef(false);
+    
     // 当 initialInput 变化时，更新 inputValue
     useEffect(() => {
         if (initialInput && isOpen) {
@@ -51,16 +57,42 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             isMarkdown?: boolean;
             actions?: string[];
         }>
-    >([{ type: 'system', text: `欢迎来到游戏世界，${playerName}！` }]);
+    >([]);
 
     const sessionId = useGameStore((state) => state.sessionId);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+    // 提取 ACTION 字段的工具函数
+    const extractActions = useCallback((text: string): { text: string; actions: string[] } => {
+        if (!text.includes('[ACTION:')) {
+            return { text: text.trim(), actions: [] };
+        }
+
+        const actions: string[] = [];
+        // 每次创建新的正则表达式实例，避免全局状态问题
+        const actionRegex = new RegExp(ACTION_REGEX_PATTERN.source, ACTION_REGEX_PATTERN.flags);
+        let match;
+
+        while ((match = actionRegex.exec(text)) !== null) {
+            const actionText = match[1].trim();
+            if (actionText && !actions.includes(actionText)) {
+                actions.push(actionText);
+            }
+        }
+
+        const textWithoutAction = text.replace(/\[ACTION:\s*.*?\]/g, '').trim();
+        return { text: textWithoutAction, actions };
+    }, []);
+
     // 计算最新的 system 消息（用于滚动效果）
-    const systemMessages = messages.filter(m => m.type === 'system');
-    const latestSystemMessage = systemMessages.length > 0
-        ? systemMessages[systemMessages.length - 1]
-        : null;
+    const systemMessages = useMemo(() => 
+        messages.filter(m => m.type === 'system'), 
+        [messages]
+    );
+    const latestSystemMessage = useMemo(() => 
+        systemMessages.length > 0 ? systemMessages[systemMessages.length - 1] : null,
+        [systemMessages]
+    );
 
     // 当最新的 system 消息变化时自动滚动
     useEffect(() => {
@@ -72,7 +104,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     }, [latestSystemMessage]);
 
     // 加载历史记录（从后端获取）
-    const loadHistoryMessages = React.useCallback(async () => {
+    const loadHistoryMessages = React.useCallback(async (isInitialLoad = false) => {
         if (!sessionId) {
             console.warn('没有 sessionId，无法加载历史记录');
             return;
@@ -97,24 +129,67 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 }));
 
                 setHistoryMessages(convertedMessages);
+                
                 if (convertedMessages.length > 0) {
                     setGameStarted(true);
+                    
+                    // 如果是初始加载且还没有加载过初始消息，加载最后一条历史记录作为初始消息
+                    if (isInitialLoad && !hasLoadedInitialMessage.current) {
+                        const lastMessage = convertedMessages[convertedMessages.length - 1];
+                        if (lastMessage && lastMessage.role === 'assistant') {
+                            const { text: textWithoutAction, actions } = extractActions(lastMessage.text || '');
+                            
+                            setMessages([{
+                                type: 'system',
+                                text: textWithoutAction,
+                                isTyping: false,
+                                isMarkdown: true,
+                                actions: actions.length > 0 ? actions : undefined
+                            }]);
+                            hasLoadedInitialMessage.current = true;
+                        }
+                    }
+                } else if (isInitialLoad && !hasLoadedInitialMessage.current) {
+                    // 如果没有历史记录且是初始加载，显示默认欢迎消息
+                    setMessages([{ type: 'system', text: DEFAULT_WELCOME_MESSAGE(playerName) }]);
+                    hasLoadedInitialMessage.current = true;
                 }
             } else {
                 setHistoryMessages([]);
+                // 如果加载失败且是初始加载，显示默认欢迎消息
+                if (isInitialLoad && !hasLoadedInitialMessage.current) {
+                    setMessages([{ type: 'system', text: DEFAULT_WELCOME_MESSAGE(playerName) }]);
+                    hasLoadedInitialMessage.current = true;
+                }
             }
         } catch (error) {
             console.error('❌ 历史记录加载错误:', error);
             setHistoryMessages([]);
+            // 如果加载失败且是初始加载，显示默认欢迎消息
+            if (isInitialLoad && !hasLoadedInitialMessage.current) {
+                setMessages([{ type: 'system', text: DEFAULT_WELCOME_MESSAGE(playerName) }]);
+                hasLoadedInitialMessage.current = true;
+            }
         } finally {
             setLoadingHistory(false);
         }
-    }, [sessionId]);
+    }, [sessionId, playerName, extractActions]);
 
-    // 当历史记录弹窗打开时加载历史记录
+    // 当弹窗打开时，初始加载历史记录
+    useEffect(() => {
+        if (isOpen && sessionId && !hasLoadedInitialMessage.current) {
+            loadHistoryMessages(true);
+        }
+        // 当弹窗关闭时，重置标志，以便下次打开时可以重新加载
+        if (!isOpen) {
+            hasLoadedInitialMessage.current = false;
+        }
+    }, [isOpen, sessionId, loadHistoryMessages]);
+
+    // 当历史记录弹窗打开时加载历史记录（刷新历史记录列表）
     useEffect(() => {
         if (showHistory && sessionId) {
-            loadHistoryMessages();
+            loadHistoryMessages(false);
         }
     }, [showHistory, sessionId, loadHistoryMessages]);
 
@@ -149,7 +224,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     }, [currentIsTyping, showHistory, loadHistoryMessages]);
 
     // 🔹 改进后的流式响应解析（支持实时 ACTION 提取）
-    const handleStreamResponse = async (response: Response) => {
+    const handleStreamResponse = useCallback(async (response: Response) => {
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -187,18 +262,10 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
                         // ✅ 检测 ACTION
                         if (fullText.includes('[ACTION:')) {
-                            const textBeforeAction = fullText.slice(0, fullText.indexOf('[ACTION:'));
-                            const actionRegex = /\[ACTION:\s*(.*?)\]/g;
-                            let match;
-                            const newActions: string[] = [];
-
-                            while ((match = actionRegex.exec(fullText)) !== null) {
-                                const actionText = match[1].trim();
-                                if (!actions.includes(actionText)) {
-                                    newActions.push(actionText);
-                                }
-                            }
-
+                            const { text: textWithoutAction, actions: extractedActions } = extractActions(fullText);
+                            
+                            // 合并新的 actions
+                            const newActions = extractedActions.filter(action => !actions.includes(action));
                             if (newActions.length > 0) {
                                 actions = [...actions, ...newActions];
                             }
@@ -208,19 +275,16 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                                 const updated = [...prev];
                                 const last = updated[updated.length - 1];
                                 if (last) {
-                                    const newMessage = {
+                                    updated[updated.length - 1] = {
                                         ...last,
-                                        text: textBeforeAction.trim(),
+                                        text: textWithoutAction,
                                         isTyping: false,
                                         actions: actions.length > 0 ? [...actions] : undefined
                                     };
-                                    updated[updated.length - 1] = newMessage;
-                                    return [...updated];
+                                    return updated;
                                 }
                                 return prev;
                             });
-
-
                         } else {
                             // 🔹 没有 ACTION 时持续更新文字
                             setMessages((prev) => {
@@ -256,7 +320,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             }
             return updated;
         });
-    };
+    }, [extractActions]);
 
     const handleStartGame = async () => {
         if (!sessionId) {

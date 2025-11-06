@@ -225,9 +225,7 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
         // 检查是否已经有消息被选中
         const hasSelected = messages.some(msg => msg.selectedAction);
         if (hasSelected) return;
-        
-        console.log('🎯 ACTION 按钮点击:', action);
-        
+                
         // 标记该消息的选中 ACTION
         setMessages((prev) => {
             const updated = [...prev];
@@ -253,11 +251,9 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
             });
             
             if (response.ok) {
-                console.log('✅ ACTION 流式请求成功');
                 // 处理新的流式响应（会自动添加新的系统消息）
                 await handleStreamResponse(response);
             } else {
-                console.error("❌ ACTION 流式请求失败:", response.statusText);
                 // 请求失败，移除选中标记
                 setMessages((prev) => {
                     const updated = [...prev];
