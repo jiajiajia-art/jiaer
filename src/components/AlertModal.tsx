@@ -8,7 +8,7 @@ interface AlertModalProps {
     title?: string;
 }
 
-const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, message, title = '提示' }) => {
+const AlertModal: React.FC<AlertModalProps> = ({ isOpen, onClose, message }) => {
     if (!isOpen) return null;
 
     return (
