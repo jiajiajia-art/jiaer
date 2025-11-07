@@ -23,6 +23,7 @@ import MapModal from '../components/Mian/MapModal';
 import ChatPanel from '../components/Mian/ChatPanel';
 import SettingModal from '../components/Mian/SettingModal';
 import AlertModal from '../components/AlertModal';
+import changeSceneApi from '../api/game/changeSenceAPi';
 
 // ==================== 类型定义 ====================
 declare global {
@@ -213,36 +214,28 @@ const NewMain: React.FC = () => {
         : '';
 
     const handleSceneClick = (targetId: string) => {
-        // 先尝试切换场景，不立即更新 currentSceneId
         changeScenes(targetId);
     }
 
     const changeScenes = async (targetId: string): Promise<boolean> => {
         // 检查 sessionId 是否存在
         if (!sessionId) {
-            console.error('❌ sessionId 不存在，无法切换场景');
             setAlertMessage('游戏会话不存在，请重新开始游戏');
             setAlertModalOpen(true);
             return false;
         }
 
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/change-scene`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sceneId: targetId })
-                }
-            );
-            
-            const data = await response.json();
+            const response = await changeSceneApi.changeScene(sessionId, { sceneId: targetId });
+            const data = response.data;
 
             console.log('场景切换响应:', data);
             
-            // 检查响应是否成功
-            if (!response.ok || data.success === false) {
+            // 使用类型守卫检查响应类型
+            if (data.success === false) {
+                // 这是 ChangeSceneErrorResponse 类型
                 // 检查是否是 session 不存在
-                if (response.status === 404 || data.error === 'Session not found') {
+                if (data.error === 'Session not found') {
                     setAlertMessage('游戏会话不存在或已过期，请重新开始游戏');
                     setAlertModalOpen(true);
                     return false;
@@ -261,15 +254,8 @@ const NewMain: React.FC = () => {
                 return false;
             }
             
-            // 检查场景是否被锁定（即使响应成功也可能被锁定）
-            if (data.locked === true) {
-                setAlertMessage(data.message || '该场景尚未解锁');
-                setAlertModalOpen(true);
-                return false;
-            }
-            
-            // 切换成功
-            if (data.success !== false && !data.locked) {
+            // 这是 ChangeSceneSuccessResponse 类型，切换成功
+            if (data.success === true) {
                 setCurrentSceneId(targetId);
                 const targetScene = scenes[targetId];
                 if (targetScene) {
@@ -282,9 +268,23 @@ const NewMain: React.FC = () => {
             }
             
             return false;
-        } catch (error) {
+        } catch (error: any) {
             console.error('获取新场景数据失败:', error);
-            setAlertMessage('场景切换失败，请稍后重试');
+            
+            // 处理 axios 错误响应
+            if (error.response) {
+                const status = error.response.status;
+                const errorData = error.response.data;
+                
+                if (status === 404 || errorData?.error === 'Session not found') {
+                    setAlertMessage('游戏会话不存在或已过期，请重新开始游戏');
+                } else {
+                    setAlertMessage(errorData?.message || '场景切换失败，请稍后重试');
+                }
+            } else {
+                setAlertMessage('场景切换失败，请稍后重试');
+            }
+            
             setAlertModalOpen(true);
             return false;
         }

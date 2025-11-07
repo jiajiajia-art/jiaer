@@ -97,17 +97,13 @@
 
 /* SVG 内部元素样式优化 - 增强连线 */
 .mapSvg line {
-    stroke-width: 4; /* 更粗的线条 */
+    stroke-width: 18 !important; /* 更粗的线条，三倍加粗 */
     stroke-dasharray: 10,8; /* 更长的虚线 */
     opacity: 0.8; /* 更高的不透明度 */
 }
 
 .mapSvg circle {
     transition: all 0.3s ease;
-}
-
-.mapSvg circle:hover {
-    stroke-width: 6; /* 增强悬停效果 */
 }
 
 .mapSvg image {
@@ -128,7 +124,7 @@
 /* 当前场景的特殊样式 */
 .mapSvg circle[stroke='#e74c3c'] {
     stroke: #d4af37;
-    stroke-width: 6;
+    stroke-width: 18 !important; /* 三倍加粗 */
     filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.6));
 }
 
@@ -178,6 +174,6 @@
     }
     
     .mapSvg line {
-        stroke-width: 3; /* 移动端适当减小连线粗细 */
+        stroke-width: 6; /* 移动端适当减小连线粗细 */
     }
 }

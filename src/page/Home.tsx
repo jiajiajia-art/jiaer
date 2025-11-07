@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import styles from './Home.module.css';
 import { useGameStore } from '../store/gameStore';
 import { useNavigate } from 'react-router-dom';
-import { HOST_ADDRESS } from '../config';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import createSessionApi from '../api/createGame/createSession.type';
+import libraryDataApi from '../api/home/libraryData';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
@@ -13,27 +14,6 @@ const Home: React.FC = () => {
 
     const { setPdfFileId, setSessionId } = useGameStore();
     const navigator = useNavigate();
-
-    // 硬编码的文件ID列表（从Home.tsx复制）
-    const fileId = [
-        {
-            id: '0f3f4e7539179b8896606b3212f660d9',
-            img: `${import.meta.env.BASE_URL}data/gameCover/img1.png`
-        },
-        {
-            id: '6fae713d4a501003654a1973fd854895',
-            img: `${import.meta.env.BASE_URL}data/gameCover/img2.png`,
-            title: '明末风华录'
-        },
-        {
-            id:'53275c6d2dc88e87f74cda72888967ed',
-            img: `${HOST_ADDRESS}/api/backend/saves/53275c6d2dc88e87f74cda72888967ed/scenes/convenience_store_53275c6d2dc88e87f74cda72888967ed.png`
-        },
-        {
-            id:'14793e6656c9ca9ba35183416c93e6e6',
-            img:`${import.meta.env.BASE_URL}data/gameCover/img4.png`
-        }
-    ];
 
 
     /**
@@ -48,13 +28,15 @@ const Home: React.FC = () => {
      * 从详情弹窗创建游戏
      */
     const handleCreateGameFromDetail = async () => {
-        if (!selectedGameMeta?.id) {
+        // 使用 file_id 或 id
+        const fileId = selectedGameMeta?.file_id || selectedGameMeta?.id;
+        if (!fileId) {
             alert('游戏信息错误，请重试');
             return;
         }
         // 同时更新 store 和直接传递给 createSession，确保立即生效
-        setPdfFileId(selectedGameMeta.id);
-        const sessionId = await createSession(selectedGameMeta.id);
+        setPdfFileId(fileId);
+        const sessionId = await createSession(fileId);
         setSessionId(sessionId);
         if (sessionId) {
             navigator('/newmain');
@@ -84,21 +66,16 @@ const Home: React.FC = () => {
         }
 
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileId: targetFileId,
-                    playerName: '玩家'
-                })
+            const response = await createSessionApi.createSession({
+                fileId: targetFileId,
+                playerName: '玩家'
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                console.log('✅ Session 创建成功:', data);
-                return data.sessionId || data.id;
+            if (response.data.success) {
+                const data = response.data;
+                return data.sessionId;
             } else {
-                console.error('❌ Session 创建失败:', response.statusText);
+                alert(response.data.message);
                 return null;
             }
         } catch (error) {
@@ -121,22 +98,41 @@ const Home: React.FC = () => {
         };
     }, [showGameModal]);
 
-    // 首页加载每个 fileId 后端元信息
+    // 使用 libraryDataApi 获取游戏列表数据（首页显示前4个）
     useEffect(() => {
-        Promise.all(
-            fileId.map(async f => {
-                try {
-                    const res = await fetch(`${HOST_ADDRESS}/api/backend/saves/${f.id}/files`);
-                    if (res.ok) {                        
-                        const data = await res.json();
-                        return { id: f.id,img: f.img, title: f.title, ...data.files };
-                    }                    
-                } catch { }
-                return { id: f.id };
-            })
-        ).then(data => {
-            setFileMetas(data);
-        });
+        const loadLibraryData = async () => {
+            try {
+                const response = await libraryDataApi.getLibraryData({ limit: 4 });
+                
+                if (response.data.success && response.data.data) {
+                    // 直接使用返回的数据，转换为组件需要的格式
+                    const formattedData = response.data.data.map((item) => {
+                        return {
+                            id: item.file_id, // 使用 file_id 作为 id
+                            file_id: item.file_id,
+                            img: item.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`,
+                            title: item.subtitle || item.description || '未命名游戏',
+                            subtitle: item.subtitle,
+                            description: item.description,
+                            authorName: item.authorName || '未知作者',
+                            price: item.special_price_amount || item.price_amount,
+                            rating: item.rating_avg,
+                            ratingCount: item.rating_count,
+                        };
+                    });
+                    
+                    setFileMetas(formattedData);
+                } else {
+                    console.error('获取游戏列表失败:', response.data);
+                    setFileMetas([]);
+                }
+            } catch (error) {
+                console.error('获取游戏列表错误:', error);
+                setFileMetas([]);
+            }
+        };
+
+        loadLibraryData();
     }, []);
 
     return (
@@ -199,12 +195,12 @@ const Home: React.FC = () => {
                                         <div className={styles.goodsImg}>
                                             <img 
                                                 src={meta.img || `${import.meta.env.BASE_URL}data/events/welcome.png`} 
-                                                alt={meta.lore?.worldBackground?.title || `剧情${idx + 1}`}
+                                                alt={meta.title || `剧情${idx + 1}`}
                                             />
                                         </div>
                                         <div className={styles.goodsBody}>
                                             <div className={styles.goodsTitle}>
-                                                {meta.title || meta.lore?.worldBackground?.title || `剧情${idx + 1}`}
+                                                {meta.title || `剧情${idx + 1}`}
                                             </div>
                                         </div>
                                     </div>
@@ -245,7 +241,7 @@ const Home: React.FC = () => {
                             <div className={styles.detailMiddleColumn}>
                                 {/* 标题（大写） */}
                                 <h3 className={styles.detailGameTitle}>
-                                    {selectedGameMeta.lore?.worldBackground?.title?.toUpperCase() || '未命名游戏'}
+                                    {(selectedGameMeta.title || '未命名游戏').toUpperCase()}
                                 </h3>
                                 
                                 {/* 游戏属性type */}
@@ -259,20 +255,16 @@ const Home: React.FC = () => {
                                 
                                 {/* 描述模块（占据2/3高度） */}
                                 <div className={styles.detailDescription}>
-                                    {selectedGameMeta.lore?.worldBackground?.content && (
-                                        Array.isArray(selectedGameMeta.lore.worldBackground.content) ? (
-                                            selectedGameMeta.lore.worldBackground.content.map((para: string, idx: number) => (
-                                                <p key={idx}>{para}</p>
-                                            ))
-                                        ) : (
-                                            <p>{selectedGameMeta.lore.worldBackground.content}</p>
-                                        )
+                                    {selectedGameMeta.description ? (
+                                        <p>{selectedGameMeta.description}</p>
+                                    ) : (
+                                        <p>暂无描述</p>
                                     )}
                                 </div>
                                 
                                 {/* 作者名称 */}
                                 <div className={styles.detailAuthor}>
-                                    作者：{selectedGameMeta.author || '未知作者'}
+                                    作者：{selectedGameMeta.authorName || '未知作者'}
                                 </div>
                             </div>
                             
@@ -281,7 +273,9 @@ const Home: React.FC = () => {
                                 {/* 特惠价格模块 */}
                                 <div className={styles.priceSection}>
                                     <div className={styles.priceTitle}>特惠价格</div>
-                                    <div className={styles.priceValue}>￥1.0</div>
+                                    <div className={styles.priceValue}>
+                                        ￥{selectedGameMeta.price ? selectedGameMeta.price.toFixed(1) : '1.0'}
+                                    </div>
                                     <div className={styles.priceCurrency}>CNY</div>
                                     <button className={styles.unlockBtn}>
                                         <img src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/解锁剧本按钮.png`} alt="解锁剧本" />
@@ -293,7 +287,7 @@ const Home: React.FC = () => {
                                     {/* 游戏评分 */}
                                     <div className={styles.gameRating}>
                                         <div className={styles.ratingLabel}>
-                                            9.0
+                                            {selectedGameMeta.rating ? parseFloat(selectedGameMeta.rating).toFixed(1) : '9.0'}
                                             <span className={styles.ratingLabelUnit}>分</span>
                                         </div>
                                         <div className={styles.ratingStars}>
@@ -306,7 +300,9 @@ const Home: React.FC = () => {
                                                 />
                                             ))}
                                         </div>
-                                        <div className={styles.ratingScore}>2934人评价</div>
+                                        <div className={styles.ratingScore}>
+                                            {selectedGameMeta.ratingCount ? `${selectedGameMeta.ratingCount}人评价` : '2934人评价'}
+                                        </div>
                                     </div>
                                     
                                     {/* 开始游戏按钮 */}

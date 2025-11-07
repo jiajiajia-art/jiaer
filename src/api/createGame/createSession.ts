@@ -1,9 +1,39 @@
+import type { GameFiles } from "../game/gameData";
+
 export interface CreateSessionRequest {
-    fileId: string;
-    playerName: string;
+  fileId: string;
+  playerName: string;
+}
+
+export interface CharacterProfile {
+  avatar: string;
+  name: string;
+  age: number;
+  gender: string;
+  job: string;
+}
+
+export interface CharacterStatus {
+  profile: CharacterProfile;
+  stats?: Record<string, number | string>;
+}
+
+export interface GameState {
+  currentLocation: string;
+  inventory: any[];
+  progress: Record<string, any>;
+  flags: Record<string, any>;
+  health: number;
 }
 
 export interface CreateSessionResponse {
-    sessionId: string;
+  success: boolean;
+  message: string;
+  sessionId: string;
+  fileId: string;
+  playerName: string;
+  isInitialized: boolean;
+  files: GameFiles;
+  characterStatus: CharacterStatus;
+  gameState: GameState;
 }
-

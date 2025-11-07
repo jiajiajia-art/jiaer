@@ -70,11 +70,11 @@ const InventoryFloatingPanel: React.FC<InventoryFloatingPanelProps> = ({
                             key={item.id}
                             className={styles.itemRow}
                         >
-                            <img
+                            {/* <img
                                 src={`${import.meta.env.BASE_URL}data/icons/berries.png`}
                                 alt={item.name || item.id}
                                 className={styles.itemImage}
-                            />
+                            /> */}
                             <div className={styles.itemInfo}>
                                 <div className={styles.itemName}>
                                     {item.name || item.id}

@@ -4,7 +4,8 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import styles from './Create.module.css';
 import { useGameStore } from '../store/gameStore';
-import { HOST_ADDRESS } from '../config';
+import uploadFileApi from '../api/createGame/uploadFileApi';
+import createSessionApi from '../api/createGame/createSession.type';
 
 const Create: React.FC = () => {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -108,20 +109,17 @@ const Create: React.FC = () => {
         formData.append('pdf', file);
 
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/pdf/upload-and-process`, {
-                method: 'POST',
-                body: formData
-            });
+            const response = await uploadFileApi.uploadAndProcess(file);
 
             clearInterval(progressInterval);
 
-            if (response.ok) {
-                const data = await response.json();
+            if (response.data.success) {
+                const data = response.data;
                 setPdfFileId(data.fileId);
                 setUploadProgress(100);
                 setUploadSuccess(true);
             } else {
-                const errorData = await response.json();
+                const errorData = response.data;
                 const fileType = file.type === 'application/pdf' ? 'PDF' : 'DOCX';
                 alert(`${fileType} 文件上传失败: ${errorData.message || response.statusText}`);
                 removeFile();
@@ -242,25 +240,21 @@ const Create: React.FC = () => {
 
         // 创建session
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileId: pdfFileId,
-                    playerName: '玩家'
-                })
+            const response = await createSessionApi.createSession({
+                fileId: pdfFileId,
+                playerName: '玩家'
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                setSessionId(data.sessionId || data.id);
+            if (response.data.success) {
+                const data = response.data;
+                setSessionId(data.sessionId);
                 navigate('/newmain');
-            } else {
-                alert('创建游戏失败，请重试');
+            } else {    
+                alert(response.data.message);
             }
         } catch (error) {
             console.error('创建游戏错误:', error);
-            alert('创建游戏时发生错误');
+            alert(error);
         }
     };
 

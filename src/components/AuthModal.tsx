@@ -107,32 +107,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        console.log('[Auth] 表单提交:', { mode, phone, passwordLength: password.length });
-        
+        e.preventDefault();        
         let hasError = false;
         setSubmitError('');
 
-        // 验证手机号
         if (!validatePhone(phone)) {
-            console.log('[Auth] 手机号验证失败:', phone);
             setPhoneError('请输入正确的手机号');
             setPhoneShake(true);
             hasError = true;
             setTimeout(() => setPhoneShake(false), 500);
         }
 
-        // 验证密码
         if (!validatePassword(password)) {
-            console.log('[Auth] 密码验证失败:', password.length);
             setPasswordError('密码至少需要6位');
             setPasswordShake(true);
             hasError = true;
             setTimeout(() => setPasswordShake(false), 500);
         }
 
-        // 注册模式下验证确认密码
         if (mode === 'register') {
             if (!confirmPassword) {
                 setConfirmPasswordError('请再次输入密码');
@@ -147,7 +139,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             }
         }
 
-        // 注册模式下验证邮箱
         if (mode === 'register') {
             if (!email) {
                 setEmailError('请输入邮箱');
@@ -167,26 +158,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             return;
         }
 
-        console.log('[Auth] 表单验证通过，开始请求');
-
         setIsLoading(true);
         try {
             if (mode === 'login') {
-                // 登录请求
-                console.log('[Auth] 开始登录请求:', { username: phone, passwordLength: password.length });
                 const response = await auth.login({
                     username: phone,
                     password: password,
                 });
                 
-                console.log('[Auth] 登录响应:', response);
                 
                 if (response.data?.data) {
                     const authData = response.data.data;
                     // 登录成功后保存状态（会自动持久化到 localStorage）
-                    login(authData);
-                    console.log('[Auth] 登录成功，状态已保存到 localStorage');
-                    
+                    login(authData);                    
                     // 调用回调
                     if (onLogin) {
                         onLogin(phone, password);
@@ -204,21 +188,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 }
             } else {
                 // 注册请求
-                console.log('[Auth] 开始注册请求:', { username: phone, passwordLength: password.length, email, mode });
                 const response = await auth.signup({
                     username: phone,
                     password: password,
                     email: email,
                 });
-                
-                console.log('[Auth] 注册响应:', response);
-                
+                                
                 if (response.data?.data) {
                     // 注册成功，保存邮箱到zustand
                     setEmail(email);
                     
-                    // 注册成功，只返回User，不直接登录
-                    // 切换到登录模式，保留手机号，清空密码和确认密码
                     setMode('login');
                     setPassword('');
                     setConfirmPassword('');
@@ -228,15 +207,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     setPhoneError('');
                     setEmailError('');
                     
-                    // 显示成功提示
                     setSubmitError('注册成功！请登录');
                     
-                    // 调用回调
                     if (onRegister) {
                         onRegister(phone, password);
                     }
                     
-                    console.log('[Auth] 注册成功，已切换到登录模式，邮箱已保存');
                 } else {
                     throw new Error('服务器返回数据格式错误');
                 }
@@ -252,7 +228,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     const handleModeSwitch = () => {
         setMode(mode === 'login' ? 'register' : 'login');
-        // 切换模式时清空错误状态
         setPhoneError('');
         setPasswordError('');
         setConfirmPasswordError('');

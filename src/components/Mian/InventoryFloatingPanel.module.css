@@ -76,9 +76,12 @@
 
 /* 新的物品列表样式 */
 .itemsList {
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
     padding: 0 8px;
+    align-items: center;
+    gap: 8px;
 }
 
 .itemRow {
@@ -91,10 +94,13 @@
     border-radius: 8px;
     border: 1px solid rgba(230, 215, 177, 0.3);
     transition: all 0.3s ease;
-    background-image: url('/data/asset/背包格子.png');
-    background-size: 94% 68px;
+    /* background-image: url('/data/asset/背包格子.png'); */
+    /* background-size: 94% 68px;
     background-position: center;
-    background-repeat: no-repeat;
+    background-repeat: no-repeat; */
+    background: #A9957C !important;
+    width: 94% !important;
+    height: 68px !important;
 }
 
 .itemImage {
@@ -112,7 +118,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-left: 10px;
+    /* margin-left: 10px; */
     width: 100%;
     height: 56px;
 }
