@@ -86,10 +86,47 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
+.playerNameIcon {
+    font-size: 16px;
+    color: #E8DBB7;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.playerNameInputWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playerNameInput {
+    background: transparent;
+    border: none;
+    border: 2px solid #B24F1B;
+    border-radius: 5px;
+    padding: 0px 12px;
+    margin-left: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #E8DBB7;
+    width: 80%;
+    max-width: 160px;
+    text-align: center;
+    outline: none;
+}
+
+.playerNameSaveIcon {
+    font-size: 20px;
+    color: #E8DBB7;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
 .playerContent {
     width: 65%;
 }
-
 
 .buildingsGrid {
     margin-top: 50px;

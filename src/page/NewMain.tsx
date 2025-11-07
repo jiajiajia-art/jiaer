@@ -218,6 +218,14 @@ const NewMain: React.FC = () => {
     }
 
     const changeScenes = async (targetId: string): Promise<boolean> => {
+        // 检查 sessionId 是否存在
+        if (!sessionId) {
+            console.error('❌ sessionId 不存在，无法切换场景');
+            setAlertMessage('游戏会话不存在，请重新开始游戏');
+            setAlertModalOpen(true);
+            return false;
+        }
+
         try {
             const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/change-scene`,
                 {
@@ -228,20 +236,41 @@ const NewMain: React.FC = () => {
             );
             
             const data = await response.json();
+
+            console.log('场景切换响应:', data);
             
-            // 检查场景是否被锁定
-            if (data.locked === true) {
-                // 场景被锁定，显示提示弹窗，不切换场景
-                setAlertMessage(data.message || '该场景尚未解锁');
+            // 检查响应是否成功
+            if (!response.ok || data.success === false) {
+                // 检查是否是 session 不存在
+                if (response.status === 404 || data.error === 'Session not found') {
+                    setAlertMessage('游戏会话不存在或已过期，请重新开始游戏');
+                    setAlertModalOpen(true);
+                    return false;
+                }
+                
+                // 检查场景是否被锁定
+                if (data.locked === true) {
+                    setAlertMessage(data.message || '该场景尚未解锁');
+                    setAlertModalOpen(true);
+                    return false;
+                }
+                
+                // 其他错误
+                setAlertMessage(data.message || `场景切换失败: ${data.error || '未知错误'}`);
                 setAlertModalOpen(true);
-                console.log('场景被锁定，无法切换:', data);
-                return false; // 返回 false 表示切换失败（被锁定）
+                return false;
             }
             
-            // 场景切换成功，更新状态
-            if (response.ok && !data.locked) {
+            // 检查场景是否被锁定（即使响应成功也可能被锁定）
+            if (data.locked === true) {
+                setAlertMessage(data.message || '该场景尚未解锁');
+                setAlertModalOpen(true);
+                return false;
+            }
+            
+            // 切换成功
+            if (data.success !== false && !data.locked) {
                 setCurrentSceneId(targetId);
-                // 更新场景描述显示
                 const targetScene = scenes[targetId];
                 if (targetScene) {
                     const sceneDescElement = document.getElementById('sceneDescription');
@@ -249,16 +278,15 @@ const NewMain: React.FC = () => {
                         sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
                     }
                 }
-                console.log('场景切换成功:', targetId);
-                return true; // 返回 true 表示切换成功
+                return true; 
             }
             
-            return false; // 其他情况返回 false
+            return false;
         } catch (error) {
             console.error('获取新场景数据失败:', error);
             setAlertMessage('场景切换失败，请稍后重试');
             setAlertModalOpen(true);
-            return false; // 错误时返回 false
+            return false;
         }
     }
 
@@ -282,7 +310,9 @@ const NewMain: React.FC = () => {
                             alt="人物头像"
                             onClick={() => setPlayerOpen(!playerOpen)}
                         />
-                        <div className={styles.playerName}>{player?.profile.name}</div>
+                        <div className={styles.playerName}>
+                            {player?.profile.name}
+                        </div>
                     </div>
                     <button id="triggerSceneEventBtn" className={styles.storyBtn} onClick={() => {
                         setDialogueOpen(true);
@@ -489,7 +519,7 @@ const NewMain: React.FC = () => {
                     setDialogueOpen(false);
                     setDialogueInitialInput(''); // 关闭时清空初始输入
                 }}
-                playerName={player?.profile.name || '玩家'}
+                playerName={player?.profile.name}
                 initialInput={dialogueInitialInput}
                 player={player}
                 inventory={inventory}

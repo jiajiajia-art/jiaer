@@ -63,6 +63,59 @@
     position: absolute;
     bottom: 2px;
     left: 26%;
+    display: block;
+    min-width: 180px;
+}
+
+.playerNameDisplay {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    position: absolute;
+    bottom: 2px;
+    left: 26%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.playerNameIcon {
+    position: absolute;
+    bottom: 2px;
+    left: calc(26% + 160px);
+    font-size: 16px;
+    color: #8B3E1A;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.playerNameInputWrapper {
+    position: absolute;
+    bottom: 2px;
+    left: 20%;
+    display: flex;
+    align-self: start;
+    gap: 8px;
+}
+
+.playerNameInput {
+    background: transparent;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #E4D2A9;
+    width: 170px;
+    text-align: center;
+    outline: none;
+    border: none;
+}
+
+.playerNameSaveIcon {
+    font-size: 18px;
+    color: #8B3E1A;
+    cursor: pointer;
+    transition: color 0.2s;
+    margin-top: 4px;
 }
 
 .closePlayerBtn {
