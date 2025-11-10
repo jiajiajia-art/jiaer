@@ -166,44 +166,64 @@ export const useGameData = () => {
     // 加载后端数据
     useEffect(() => {
         if (backendDataLoaded || !sessionId || !pdfFileId) return;
-
+        console.log('sessionId', sessionId);
+        console.log('pdfFileId', pdfFileId);
         (async () => {
-            try {
-                const [filesResponse, avatarResponse, worldMapResponse] = await Promise.all([
-                    gameDataApi.getGameFiles(sessionId),
-                    gameDataApi.getPlayerAvatar(pdfFileId),
-                    gameDataApi.getWorldMap(pdfFileId)
-                ]);
+            console.log('getGameFiles & assets');
+            const results = await Promise.allSettled([
+                gameDataApi.getGameFiles(sessionId),
+                gameDataApi.getPlayerAvatar(pdfFileId),
+                gameDataApi.getWorldMap(pdfFileId),
+            ]);
 
-                const responseData = filesResponse.data;
-                
+            const [filesResult, avatarResult, worldResult] = results;
+
+            if (filesResult.status === 'fulfilled') {
+                const responseData = filesResult.value.data;
+                console.log('responseData', responseData);
                 if (responseData?.success && responseData.files) {
                     applyBackendData(responseData.files);
-                    setBackendDataLoaded(true);
                 } else {
                     console.warn('⚠️ 游戏数据响应格式异常:', responseData);
                 }
+            } else {
+                console.error('获取剧情文件失败:', filesResult.reason);
+            }
+            setBackendDataLoaded(true);
 
-                const avatarUrl = await extractImageUrl(avatarResponse.data || avatarResponse);
-                if (avatarUrl) {
-                    updatePlayer((prevPlayer) => {
-                        if (!prevPlayer) return null;
-                        return {
-                            ...prevPlayer,
-                            profile: {
-                                ...prevPlayer.profile,
-                                avatar: avatarUrl
-                            }
-                        };
-                    });
+            if (avatarResult.status === 'fulfilled') {
+                try {
+                    const avatarUrl = await extractImageUrl(avatarResult.value.data || avatarResult.value);
+                    if (avatarUrl) {
+                        updatePlayer((prevPlayer) => {
+                            if (!prevPlayer) return null;
+                            return {
+                                ...prevPlayer,
+                                profile: {
+                                    ...prevPlayer.profile,
+                                    avatar: avatarUrl,
+                                },
+                            };
+                        });
+                    }
+                } catch (err) {
+                    console.warn('解析玩家头像失败，使用默认头像', err);
                 }
+            } else {
+                console.warn('获取玩家头像失败，使用默认头像', avatarResult.reason);
+            }
 
-                const worldMapUrl = await extractImageUrl(worldMapResponse.data || worldMapResponse);
-                if (worldMapUrl) {
-                    setWorldMapImageUrl(worldMapUrl);
+            if (worldResult.status === 'fulfilled') {
+                try {
+                    const worldMapUrl = await extractImageUrl(worldResult.value.data || worldResult.value);
+                    if (worldMapUrl) {
+                        setWorldMapImageUrl(worldMapUrl);
+                    }
+                } catch (err) {
+                    console.warn('解析世界地图失败，使用默认地图', err);
                 }
-            } catch (e) {
-                console.error('后端数据加载失败:', e);
+            } else {
+                console.warn('获取世界地图失败，使用默认地图', worldResult.reason);
             }
         })();
     }, [sessionId, pdfFileId, backendDataLoaded, applyBackendData, updatePlayer, extractImageUrl]);
