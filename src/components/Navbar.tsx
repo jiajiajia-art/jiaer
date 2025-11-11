@@ -68,6 +68,9 @@ const Navbar: React.FC = () => {
     return (
         <>
             <div className={styles.navbar}>
+                <div className={styles.logo}>
+                    <img src={`${import.meta.env.BASE_URL}data/asset/网站图标.png`} alt="logo" />
+                </div>
                 <div className={styles.navLinks}>
                     <div
                         className={`${styles.navLink} ${activeNav === '商城' ? styles.navLinkActive : ''}`}

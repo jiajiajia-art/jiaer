@@ -43,6 +43,24 @@
     color: #E8DBB7;
 }
 
+@media (min-width: 1280px) {
+    .sidebar {
+        width: 380px;
+        background-color: #A68F66;
+        min-height: calc(100vh - 80px);
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 1280px) {
+    .sidebar {
+        width: 380px;
+        background-color: #A68F66;
+        min-height: calc(100vh - 80px);
+        flex-shrink: 0;
+    }
+}
+
 @media (max-width: 768px) {
     .sidebar {
         display: none;
