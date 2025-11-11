@@ -16,14 +16,15 @@
 }
 
 .logo {
-    width: 400px;
+    width: 380px;
     height: 86px;
     /* display: none; */
 }
 
 .logo img {
-    width: 400px;
-    height: 100%;
+    width: 380px;
+    height: 80%;
+    margin-top: 10px;
     object-fit: contain;
 }
 
