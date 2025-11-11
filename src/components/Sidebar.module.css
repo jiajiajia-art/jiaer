@@ -47,7 +47,7 @@
     .sidebar {
         width: 380px;
         background-color: #A68F66;
-        min-height: calc(100vh - 80px);
+        max-height: calc(100vh - 80px);
         flex-shrink: 0;
     }
 }
@@ -56,7 +56,7 @@
     .sidebar {
         width: 380px;
         background-color: #A68F66;
-        min-height: calc(100vh - 80px);
+        max-height: calc(100vh - 80px);
         flex-shrink: 0;
     }
 }

@@ -17,6 +17,7 @@ body {
   background: #E8DBB7;
   min-height: 100vh;
   color: #333;
+  overflow: hidden;
 }
 
 button {

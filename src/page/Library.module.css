@@ -26,13 +26,15 @@
 
 .main {
     flex: 1;
-    min-height: calc(100vh - 80px);
+    max-height: calc(100vh - 80px);
 }
 
 /* Library 特有的内容区域 */
 .libraryContent {
     padding: 40px 20px;
     width: 100%;
+    overflow-y: auto;
+    height: 98%;
 }
 
 /* 商品网格布局（与 Home 保持一致） */
