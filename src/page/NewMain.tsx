@@ -3,14 +3,17 @@ import React, { useEffect, useState, useRef } from 'react';
 import styles from './NewMain.module.css';
 import { HOST_ADDRESS } from '../config';
 import { useGameStore } from '../store/gameStore';
+import { MdLockClock } from 'react-icons/md';
 
 // Hooks
 import { useEventSystem } from '../hooks/useEventSystem';
-import { useGameData, type PlayerStats, type InventoryState } from '../hooks/useGameData';
+import { useGameData } from '../hooks/useGameData';
 import { useChat } from '../hooks/useChat';
 import { useLore } from '../hooks/useLore';
 import { useInventory } from '../hooks/useInventory';
 import { useMusic } from '../hooks/useMusic';
+import { useAutoFontSize } from '../hooks/useAutoFontSize';
+import type { PlayerStats, Inventory, InventoryItem } from '../api/game/gameData';
 
 // 组件
 import DialogueModal from '../components/Mian/DialogueModal';
@@ -52,6 +55,13 @@ const NewMain: React.FC = () => {
     const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, setChatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
     const { gameTimeText, worldLoreHtml, playerLoreHtml, updateLoreFromBackend } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
+    
+    // 自动调整游戏时间文字大小
+    const [gameTimeRef, gameTimeFontSize] = useAutoFontSize<HTMLDivElement>(gameTimeText, {
+        minFontSize: 8,
+        maxFontSize: 13,
+        padding: 28, // 左右内边距总和 (14px * 2)
+    });
     const { events, activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
     const { sessionId } = useGameStore();
     const { tracks, isPlaying, play } = useMusic();
@@ -99,47 +109,89 @@ const NewMain: React.FC = () => {
         // 应用 effects 到玩家（若有）
         if (opt.effects && player) {
             const next = { ...player };
+
+            // 处理经验值
             if (typeof (opt.effects as any).experience === 'number') {
                 const add = (opt.effects as any).experience as number;
-                next.experience.current += add;
-                while (next.experience.current >= next.experience.required) {
-                    next.experience.current -= next.experience.required;
-                    next.experience.required = Math.floor(next.experience.required * 1.5);
-                    next.stats.level += 1;
-                    next.stats.maxHealth += 5;
-                    next.stats.health = next.stats.maxHealth;
+                if (next.experience) {
+                    next.experience = {
+                        ...next.experience,
+                        current: next.experience.current + add
+                    };
+                    while (next.experience.current >= next.experience.required) {
+                        next.experience.current -= next.experience.required;
+                        next.experience.required = Math.floor(next.experience.required * 1.5);
+                        if (next.stats) {
+                            next.stats = {
+                                ...next.stats,
+                                level: next.stats.level + 1,
+                                maxHealth: next.stats.maxHealth + 5,
+                                health: next.stats.maxHealth + 5
+                            };
+                        }
+                    }
                 }
             }
-            if ((opt.effects as any).stats) {
+
+            // 处理属性变化
+            if ((opt.effects as any).stats && next.stats) {
                 const patch = (opt.effects as any).stats as Partial<PlayerStats>;
-                next.stats = { ...next.stats, ...patch } as PlayerStats;
+                next.stats = { ...next.stats, ...patch };
             }
-            if ((opt.effects as any).items) {
-                const items = (opt.effects as any).items as Array<{ id: string; quantity: number }>;
+
+            // 处理物品变化
+            if ((opt.effects as any).items && inventory) {
+                const itemChanges = (opt.effects as any).items as Array<{ id: string; quantity: number }>;
                 const updateInventory = useGameStore.getState().updateInventory;
+                const items = useGameStore.getState().items; // 获取物品定义
                 updateInventory((prev) => {
-                    const nextInv: InventoryState = { ...prev, items: prev.items.map((i) => ({ ...i })) };
-                    items.forEach(({ id, quantity }) => {
+                    if (!prev) return prev;
+                    const nextInv: Inventory = {
+                        ...prev,
+                        items: prev.items.map((i) => ({ ...i }))
+                    };
+                    itemChanges.forEach(({ id, quantity }) => {
                         const found = nextInv.items.find((i) => i.id === id);
                         if (quantity > 0) {
-                            if (found)
+                            if (found) {
                                 found.quantity += quantity;
-                            else {
-                                nextInv.items.push({ id, quantity });
+                            } else {
+                                // 从物品定义中获取完整信息
+                                const itemDef = items[id];
+                                if (itemDef) {
+                                    nextInv.items.push({
+                                        id: itemDef.id,
+                                        name: itemDef.name,
+                                        description: itemDef.description,
+                                        icon: itemDef.icon,
+                                        type: itemDef.type,
+                                        usable: itemDef.usable || false,
+                                        stackable: itemDef.stackable,
+                                        effects: itemDef.effects || {},
+                                        quantity
+                                    } as InventoryItem);
+                                }
                             }
                         } else if (quantity < 0 && found) {
                             found.quantity = Math.max(0, found.quantity + quantity);
-                            if (found.quantity === 0)
+                            if (found.quantity === 0) {
                                 nextInv.items = nextInv.items.filter((i) => i.id !== id);
+                            }
                         }
                     });
                     return nextInv;
                 });
             }
-            if (typeof (opt.effects as any).gold === 'number') {
+
+            // 处理金币变化
+            if (typeof (opt.effects as any).gold === 'number' && next.currency) {
                 const delta = (opt.effects as any).gold as number;
-                next.currency.gold = (next.currency.gold ?? 0) + delta;
+                next.currency = {
+                    ...next.currency,
+                    gold: (next.currency.gold ?? 0) + delta
+                };
             }
+
             const setPlayer = useGameStore.getState().setPlayer;
             setPlayer(next);
         }
@@ -230,7 +282,7 @@ const NewMain: React.FC = () => {
             const data = response.data;
 
             console.log('场景切换响应:', data);
-            
+
             // 使用类型守卫检查响应类型
             if (data.success === false) {
                 // 这是 ChangeSceneErrorResponse 类型
@@ -240,20 +292,20 @@ const NewMain: React.FC = () => {
                     setAlertModalOpen(true);
                     return false;
                 }
-                
+
                 // 检查场景是否被锁定
                 if (data.locked === true) {
                     setAlertMessage(data.message || '该场景尚未解锁');
                     setAlertModalOpen(true);
                     return false;
                 }
-                
+
                 // 其他错误
                 setAlertMessage(data.message || `场景切换失败: ${data.error || '未知错误'}`);
                 setAlertModalOpen(true);
                 return false;
             }
-            
+
             // 这是 ChangeSceneSuccessResponse 类型，切换成功
             if (data.success === true) {
                 setCurrentSceneId(targetId);
@@ -264,18 +316,18 @@ const NewMain: React.FC = () => {
                         sceneDescElement.textContent = targetScene.description || '欢迎来到文字RPG世界！';
                     }
                 }
-                return true; 
+                return true;
             }
-            
+
             return false;
         } catch (error: any) {
             console.error('获取新场景数据失败:', error);
-            
+
             // 处理 axios 错误响应
             if (error.response) {
                 const status = error.response.status;
                 const errorData = error.response.data;
-                
+
                 if (status === 404 || errorData?.error === 'Session not found') {
                     setAlertMessage('游戏会话不存在或已过期，请重新开始游戏');
                 } else {
@@ -284,11 +336,12 @@ const NewMain: React.FC = () => {
             } else {
                 setAlertMessage('场景切换失败，请稍后重试');
             }
-            
+
             setAlertModalOpen(true);
             return false;
         }
     }
+    
 
     return (
         <div
@@ -306,18 +359,22 @@ const NewMain: React.FC = () => {
                 <div className={styles.playerContent}>
                     <div className={styles.playerInfo}>
                         <img
-                            src={player?.profile.avatar || '/data/avatars/hunter.png'}
+                            src={player?.profile?.avatar || '/data/avatars/hunter.png'}
                             alt="人物头像"
                             onClick={() => setPlayerOpen(!playerOpen)}
                         />
                         <div className={styles.playerName}>
-                            {player?.profile.name}
+                            {player?.profile?.name || '未命名'}
                         </div>
                     </div>
                     <button id="triggerSceneEventBtn" className={styles.storyBtn} onClick={() => {
-                        setDialogueOpen(true);
+                        setDialogueOpen(!dialogueOpen);
                     }}>
-                        <img src={`${import.meta.env.BASE_URL}data/asset/时间消逝按钮.png`} alt="时间消逝按钮" className={styles.storyBtnImg} />
+                        {
+                            dialogueOpen ?
+                                <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/时间暂停按钮.png`} alt="关闭" className={styles.storyBtnImg}/> :
+                                <img src={`${import.meta.env.BASE_URL}data/asset/时间消逝按钮.png`} alt="时间消逝按钮" className={styles.storyBtnImg} />
+                        }
                     </button>
                     {/* 建筑 */}
                     <div id="buildingsList" className={styles.buildingsGrid}>
@@ -335,7 +392,15 @@ const NewMain: React.FC = () => {
 
                 <div className={styles.sceneContent}>
                     <div className={styles.settingContet}>
-                        <div className={styles.gameTimeText}>{gameTimeText}</div>
+                        <div 
+                            ref={gameTimeRef}
+                            className={styles.gameTimeText}
+                            style={{
+                                fontSize: `${gameTimeFontSize}px`
+                            }}
+                        >
+                            {gameTimeText}
+                        </div>
                         <div className={styles.settingBtnWrapper}>
                             <div
                                 id="settingBtn"
@@ -361,16 +426,23 @@ const NewMain: React.FC = () => {
                                     .filter(([_, targetId]) => scenes[targetId]) // 只显示目标场景存在的情况
                                     .map(([direction, targetId]) => {
                                         const targetScene = scenes[targetId];
+                                        const isUnlocked = player?.unlockedScenes?.includes(targetId) ?? false;
                                         return (
                                             <div
                                                 key={direction}
-                                                className={styles.exitCard}
-                                                onClick={() => handleSceneClick(targetId)}
+                                                className={`${styles.exitCard} ${!isUnlocked ? styles.exitCardLocked : ''}`}
+                                                onClick={() => {handleSceneClick(targetId)}}
                                             >
                                                 <img
                                                     src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
                                                     alt={''}
+                                                    className={!isUnlocked ? styles.exitImageLocked : ''}
                                                 />
+                                                {!isUnlocked && (
+                                                    <div className={styles.lockIcon}>
+                                                        <MdLockClock />
+                                                    </div>
+                                                )}
                                                 <div className={styles.exitLabel}>{targetScene.name}</div>
                                             </div>
                                         );
@@ -405,7 +477,7 @@ const NewMain: React.FC = () => {
                 </div>
             </div>
             <div className={styles.sceneEventBtnContainer}>
-                <div
+                <button
                     id="triggerSceneEventBtn"
                     className={styles.sceneEventBtn}
                 >
@@ -420,7 +492,7 @@ const NewMain: React.FC = () => {
                         alt="大地图按钮"
                         className={styles.mapBtnImg}
                     />
-                </div>
+                </button>
                 <button id="toggleInventoryBtn"
                     className={styles.floatingInventoryBtn}
                     title="打开背包"
@@ -445,8 +517,8 @@ const NewMain: React.FC = () => {
                 onClose={() => setActivePanel('scene')}
                 scenes={scenes}
                 currentSceneId={currentSceneId}
-                onSceneClick={async (id) => { 
-                    setSceneDetailId(id); 
+                onSceneClick={async (id) => {
+                    setSceneDetailId(id);
                     // 先尝试切换场景，如果成功（未被锁定）才打开详情弹窗
                     const success = await changeScenes(id);
                     if (success) {
@@ -519,7 +591,7 @@ const NewMain: React.FC = () => {
                     setDialogueOpen(false);
                     setDialogueInitialInput(''); // 关闭时清空初始输入
                 }}
-                playerName={player?.profile.name}
+                playerName={player?.profile?.name || '未命名'}
                 initialInput={dialogueInitialInput}
                 player={player}
                 inventory={inventory}
@@ -535,9 +607,15 @@ const NewMain: React.FC = () => {
                 scene={sceneDetailId ? scenes[sceneDetailId] : null}
                 player={player}
                 onTravel={(sceneId, cost) => {
-                    if (player) {
+                    if (player && player.currency) {
                         const setPlayer = useGameStore.getState().setPlayer;
-                        setPlayer({ ...player, currency: { gold: Math.max(0, player.currency.gold - cost) } });
+                        setPlayer({
+                            ...player,
+                            currency: {
+                                ...player.currency,
+                                gold: Math.max(0, (player.currency.gold ?? 0) - cost)
+                            }
+                        });
                     }
                     setCurrentSceneId(sceneId);
                     setSceneDetailOpen(false);

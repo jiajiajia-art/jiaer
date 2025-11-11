@@ -3,35 +3,12 @@ import styles from './PlayerFloatingPanel.module.css';
 import { useGameStore } from '../../store/gameStore';
 import ModeifyPlayer from '../../api/game/modifyPlayer';
 import { FaCheckToSlot, FaPenToSquare } from 'react-icons/fa6';
-
-interface PlayerProfile {
-    avatar: string;
-    name: string;
-    age: number;
-    gender: string;
-    job: string;
-}
-
-interface PlayerStats {
-    level: number;
-    health: number;
-    maxHealth: number;
-    attack: number;
-    defense: number;
-    speed: number;
-}
-
-interface PlayerState {
-    profile: PlayerProfile;
-    stats: PlayerStats;
-    experience: { current: number; required: number };
-    currency: { gold: number };
-}
+import type { PlayerData } from '../../api/game/gameData';
 
 interface PlayerFloatingPanelProps {
     isOpen: boolean;
     onClose?: () => void;
-    player: PlayerState | null;
+    player: PlayerData | null;
 }
 
 const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
@@ -59,7 +36,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
     // ==================== 玩家姓名编辑相关 ====================
     // 开始编辑姓名
     const handleStartEditName = () => {
-        if (player?.profile.name) {
+        if (player?.profile?.name) {
             setEditingName(player.profile.name);
             setIsEditingName(true);
             // 使用 setTimeout 确保 DOM 更新后再聚焦
@@ -71,7 +48,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
 
     // 保存姓名
     const handleSaveName = async () => {
-        if (!sessionId || !player) return;
+        if (!sessionId || !player || !player.profile) return;
 
         const trimmedName = editingName.trim();
         if (!trimmedName) {
@@ -121,13 +98,15 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
         }
     };
 
+    console.log("角色信息",player);
+    
 
     return (
         <div className={styles.playerFloatingPanel}>
             <div className={styles.playerPanelHeader}>
                 <span className={styles.playerPanelHeaderLevel}>
                     <p className={styles.playerPanelHeaderLevelText}>LV.</p>
-                    <p className={styles.playerPanelHeaderLevelValue}>{player?.stats.level ?? 1}</p>
+                    <p className={styles.playerPanelHeaderLevelValue}>{player?.stats?.level ?? 1}</p>
                 </span>
                 {isEditingName ? (
                     <div className={styles.playerNameInputWrapper}>
@@ -149,7 +128,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 ) : (
                     <>
                         <h3 className={styles.playerNameDisplay}>
-                            {player?.profile.name || '未命名'}
+                            {player?.profile?.name || '未命名'}
                         </h3>
                         <FaPenToSquare
                             className={styles.playerNameIcon}
@@ -170,22 +149,22 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <div className={styles.playerInfo}>
                     <div className={styles.playerAvatar}>
                         <img
-                            src={player?.profile.avatar || '/data/avatars/hunter.png'}
+                            src={player?.profile?.avatar || '/data/avatars/hunter.png'}
                             alt="角色头像"
                         />
                     </div>
                     <div className={styles.playerBasic}>
                         <p>
                             <span className={styles.label}>年龄:</span>
-                            <span>{player?.profile.age ?? '-'}</span>
+                            <span>{player?.profile?.age ?? '-'}</span>
                         </p>
                         <p>
                             <span className={styles.label}>性别:</span>
-                            <span>{player?.profile.gender ?? '-'}</span>
+                            <span>{player?.profile?.gender ?? '-'}</span>
                         </p>
                         <p>
                             <span className={styles.label}>职业:</span>
-                            <span>{player?.profile.job ?? '-'}</span>
+                            <span>{player?.profile?.job ?? '-'}</span>
                         </p>
                     </div>
                 </div>
@@ -195,27 +174,27 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <div className={styles.playerStatsColumn}>
                     <p>
                         <span className={styles.label}>等级:</span>
-                        <span>{player?.stats.level ?? 1}</span>
+                        <span>{player?.stats.level}</span>
                     </p>
                     <p>
                         <span className={styles.label}>防御:</span>
-                        <span>{player?.stats.defense ?? 5}</span>
+                        <span>{player?.stats?.defense ?? 5}</span>
                     </p>
                     <p>
                         <span className={styles.label}>攻击:</span>
-                        <span>{player?.stats.attack ?? 10}</span>
+                        <span>{player?.stats?.attack ?? 10}</span>
                     </p>
                 </div>
                 <div className={styles.playerStatsColumn}>
                     <p>
                         <span className={styles.label}>生命:</span>
                         <span>
-                            {player ? `${player.stats.health}/${player.stats.maxHealth}` : '100/100'}
+                            {player?.stats ? `${player.stats.health}/${player.stats.maxHealth}` : '100/100'}
                         </span>
                     </p>
                     <p>
                         <span className={styles.label}>速度:</span>
-                        <span>{player?.stats.speed ?? 8}</span>
+                        <span>{player?.stats?.speed ?? 8}</span>
                     </p>
                 </div>
             </div>

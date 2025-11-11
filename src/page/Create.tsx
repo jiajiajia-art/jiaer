@@ -1,11 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import styles from './Create.module.css';
 import { useGameStore } from '../store/gameStore';
 import uploadFileApi from '../api/createGame/uploadFileApi';
 import createSessionApi from '../api/createGame/createSession.type';
+import MobileTopNav from '../components/Mobile/MobileTopNav';
+import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 
 const Create: React.FC = () => {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -22,7 +24,21 @@ const Create: React.FC = () => {
     
     const { setPdfFileId, setSessionId } = useGameStore();
     const navigate = useNavigate();
-    
+    const sidebarItems = useMemo<SidebarItem[]>(() => [
+        {
+            id: 'create',
+            label: '创作游戏',
+            icon: 'data/asset/创作页面/文件图标.png',
+            route: '/create',
+        },
+        {
+            id: 'myGames',
+            label: '我的游戏',
+            icon: 'data/asset/创作页面/文件夹图标.png',
+            route: '/create/myGames',
+        }
+    ], []);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -261,25 +277,11 @@ const Create: React.FC = () => {
     return (
         <div className={styles.pageRoot}>
             <Navbar />
+            <MobileTopNav items={sidebarItems} />
             
             <div className={styles.mainContent}>
                 {/* 左侧侧边栏 */}
-                <Sidebar
-                    items={[
-                        {
-                            id: 'create',
-                            label: '创作游戏',
-                            icon: 'data/asset/创作页面/文件图标.png',
-                            route: '/create',
-                        },
-                        {
-                            id: 'myGames',
-                            label: '我的游戏',
-                            icon: 'data/asset/创作页面/文件夹图标.png',
-                            route: '/create/myGames',
-                        }
-                    ]}
-                />
+                <Sidebar items={sidebarItems} />
 
                 {/* 右侧内容区域 */}
                 <div className={styles.main}>
@@ -424,11 +426,11 @@ const Create: React.FC = () => {
                                 </div>
                                 
                                 <div className={styles.coverActions}>
-                                    <button 
+                                    {/* <button 
                                         className={styles.uploadCoverBtn}
                                         onClick={() => coverInputRef.current?.click()}
                                     >
-                                    </button>
+                                    </button> */}
                                     <button 
                                         className={styles.createGameBtn}
                                         onClick={handleCreateGame}
@@ -440,6 +442,7 @@ const Create: React.FC = () => {
                         </div>
                 </div>
             </div>
+            <MobileBottomNav />
         </div>
     );
 };

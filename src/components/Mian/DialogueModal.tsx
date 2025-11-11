@@ -1,13 +1,25 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import styles from './DialogueModal.module.css';
 import { HOST_ADDRESS } from '../../config';
-import { useGameStore, type EquipmentSlots } from '../../store/gameStore';
+import { useGameStore } from '../../store/gameStore';
 import ReactMarkdown from 'react-markdown';
 import ChatHistory, { type ChatMessage } from './ChatHistory';
 import PlayerFloatingPanel from './PlayerFloatingPanel';
-import type { Item } from '../../hooks/useGameData';
-import type { PlayerState, InventoryState, } from '../../hooks/useGameData';
+import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData';
 import InventoryFloatingPanel from './InventoryFloatingPanel';
+import { useGameData } from '../../hooks/useGameData';
+
+// EquipmentSlots 类型定义（后端数据结构：equipment 存储的是物品ID字符串）
+type EquipmentSlots = {
+    head: string | null;
+    body: string | null;
+    legs: string | null;
+    hands: string | null;
+    feet: string | null;
+    back: string | null;
+    leftHand: string | null;
+    rightHand: string | null;
+};
 
 // 常量定义
 const ACTION_REGEX_PATTERN = /\[ACTION:\s*(.*?)\]/g;
@@ -19,10 +31,10 @@ interface DialogueModalProps {
     title?: string;
     playerName?: string;
     initialInput?: string; // 初始输入值
-    player?: PlayerState | null;
-    inventory?: InventoryState | null;
-    onEquipItem?: (item: Item, slot: keyof EquipmentSlots) => void;
-    onUseItem?: (item: Item) => void;
+    player?: PlayerData | null;
+    inventory?: Inventory | null;
+    onEquipItem?: (item: InventoryItem, slot: keyof EquipmentSlots) => void;
+    onUseItem?: (item: InventoryItem) => void;
 }
 
 const DialogueModal: React.FC<DialogueModalProps> = ({
@@ -42,7 +54,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     const [historyMessages, setHistoryMessages] = useState<ChatMessage[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const hasLoadedInitialMessage = useRef(false);
-    
+    const { getNewPlayer } = useGameData();
+
     // 当 initialInput 变化时，更新 inputValue
     useEffect(() => {
         if (initialInput && isOpen) {
@@ -320,6 +333,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             }
             return updated;
         });
+        getNewPlayer();
     }, [extractActions]);
 
     const handleStartGame = async () => {
@@ -438,12 +452,13 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                     <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/时间暂停按钮.png`} alt="关闭" />
                 </button>
                 {/* 左侧：历史记录 */}
-                <div className={styles.leftPanel}>
+                <div className={`${styles.leftPanel} ${showHistory ? styles.mobileHistoryOpen : ''}`}>
                     {showHistory && (
                         <ChatHistory
                             isOpen={showHistory}
                             chatMessages={historyMessagesData}
                             loading={loadingHistory}
+                            onClose={() => setShowHistory(false)}
                         />
                     )}
                 </div>

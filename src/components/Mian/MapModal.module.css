@@ -12,7 +12,7 @@
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
-    z-index: 950;
+    z-index: 1000;
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -128,14 +128,21 @@
     filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.6));
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
+    .modal {
+        z-index: 1200;
+    }
+}
+
+/* 响应式设计 */
+/* @media (max-width: 768px) {
     .modal {
         width: 80vw;
         height: 50vh;
         max-width: none;
-        bottom: 200px;
+        bottom: 100px;
         right: 10px;
+        z-index: 1200;
     }
     
     .header {
@@ -174,6 +181,6 @@
     }
     
     .mapSvg line {
-        stroke-width: 6; /* 移动端适当减小连线粗细 */
+        stroke-width: 6;
     }
-}
+} */

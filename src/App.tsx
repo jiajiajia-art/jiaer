@@ -6,6 +6,8 @@ import Home from './page/Home';
 import Create from './page/Create';
 import MyGames from './page/MyGames';
 import Library from './page/Library';
+import WareHouse from './page/WareHouse';
+import Profile from './page/Profile';
 
 function App() {
 
@@ -19,6 +21,8 @@ function App() {
         <Route path="/home/library" element={<Library />} />
         <Route path="/create" element={<Create />} />
         <Route path="/create/myGames" element={<MyGames />} />
+        <Route path="/warehouse" element={<WareHouse />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
   </BrowserRouter>
   )

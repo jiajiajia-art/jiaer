@@ -8,7 +8,7 @@ const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const { isAuthenticated, initialize, logout } = useAuthStore();
+    const { isAuthenticated, initialize, logout, user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
 
     // 初始化时检查登录状态
@@ -104,7 +104,7 @@ const Navbar: React.FC = () => {
                                 className={styles.avatar}
                                 onClick={() => setShowUserMenu(!showUserMenu)}
                             >
-                                <img src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} alt="" />
+                                <img src={user?.user.avatarUrl || `${import.meta.env.BASE_URL}data/avatars/hunter.png`} alt="" />
                             </div>
                             {showUserMenu && (
                                 <div className={styles.userMenu}>

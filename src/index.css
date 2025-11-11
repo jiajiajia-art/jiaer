@@ -16,9 +16,9 @@ html,
 body {
   background: #E8DBB7;
   min-height: 100vh;
-  overflow: hidden;
   color: #333;
 }
+
 button {
   border: none;
 }
@@ -81,12 +81,5 @@ button {
   to {
       opacity: 1;
       transform: translateY(0);
-  }
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  body {
-      padding: 10px;
   }
 }

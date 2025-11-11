@@ -6,8 +6,8 @@ const gameDataApi = {
   getGameFiles: (sessionId: string) =>
     api.get<GameFilesResponse & { success: boolean }>(`/backend/files/${sessionId}`),
 
-  getScenes: (sessionId: string) =>
-    api.get<ApiResponse<ScenesResponse>>(`/backend/files/${sessionId}/scenes`),
+  getSingleFile: (sessionId: string, fileType: string) =>
+    api.get<ApiResponse<ScenesResponse>>(`/backend/files/${sessionId}/${fileType}`),
 
   getPlayerAvatar: (fileId: string) =>
     api.get(`/backend/images/${fileId}/player`, {

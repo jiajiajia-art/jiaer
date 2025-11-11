@@ -162,7 +162,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         try {
             if (mode === 'login') {
                 const response = await auth.login({
-                    username: phone,
+                    phoneNumber: phone,
                     password: password,
                 });
                 
@@ -189,9 +189,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             } else {
                 // 注册请求
                 const response = await auth.signup({
-                    username: phone,
+                    phoneNumber: phone,
                     password: password,
                     email: email,
+                    avatarUrl: '',
+                    nickname: '',
                 });
                                 
                 if (response.data?.data) {

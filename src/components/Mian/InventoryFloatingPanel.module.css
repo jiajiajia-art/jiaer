@@ -198,17 +198,14 @@
     border: 1px dashed rgba(230, 215, 177, 0.3);
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
     .inventoryFloatingPanel {
-        width: 80vw;
-        height: 50vh;
-        bottom: 200px;
-        right: 10px;
+        z-index: 1200;
     }
-    
-    .itemImage {
-        width: 57px;
-        height: 57px;
+}
+
+@media (max-width: 480px) {
+    .inventoryFloatingPanel {
+        z-index: 1200;
     }
 }

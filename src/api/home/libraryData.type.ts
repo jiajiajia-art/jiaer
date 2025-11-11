@@ -2,6 +2,7 @@ export interface LibraryData {
     id: string;
     file_id: string;
     creator_user_id: number;
+    title: string;
     subtitle: string;
     description: string;
     cover_url: string;

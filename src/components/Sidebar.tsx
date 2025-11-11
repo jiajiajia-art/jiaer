@@ -6,7 +6,7 @@ export interface SidebarItem {
     id: string;
     label: string;
     icon?: string;
-    route: string; // 路由路径（必填）
+    route: string;
 }
 
 interface SidebarProps {

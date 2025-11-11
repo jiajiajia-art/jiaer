@@ -343,62 +343,173 @@
 /* 响应式设计 */
 @media (max-width: 768px) {
     .chatPanel {
-        width: 90%;
-        height: 400px;
-        left: 5%;
+        background-image: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        z-index: 2000;
+        background: #E8DBB7;
     }
 
     .chatContent {
         flex-direction: column;
-        gap: 8px;
-        padding: 8px 10px;
+        gap: 10px;
+        height: 100%;
+        padding: 0;
     }
 
+    /* 移动端用户信息区域 - 上方 */
     .avatarSection {
         width: 100%;
-        flex-direction: row;
+        max-height: 360px;
+        flex-direction: column;
         justify-content: center;
-        gap: 15px;
-        min-width: auto;
+        align-items: center;
+        gap: 0;
+        height: auto;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .relationShip {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        width: 60px;
+        height: 50px;
+        font-size: 24px;
+        z-index: 10;
     }
 
     .avatarFrame {
-        max-width: 100px;
+        width: 100%;
+        min-height: 200px;
+        padding: 20px 25px 20px 30px;
+        position: relative;
+    }
+
+    .avatarImage {
+        width: 100%;
+        height: 100%;
+        object-fit: fill;
     }
 
     .avatarNameBox {
-        max-width: 150px;
+        width: 100%;
+        min-height: 50px;
     }
 
+    .avatarName {
+        font-size: 18px;
+    }
+
+    /* 移动端聊天框区域 - 下方 */
     .dialogueSection {
         width: 100%;
+        flex: 1;
+        margin-top: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
-    .chatHeader {
-        padding: 10px 15px;
-        padding-right: 50px;
-    }
-
-    .chatHeader h3 {
-        font-size: 1rem;
+    .chatMessages {
+        flex: 1;
+        padding: 5px 10px;
+        margin-top: 0;
+        margin-bottom: 10px;
     }
 
     .chatMessage {
         padding: 8px 10px;
-        font-size: 0.85rem;
+        font-size: 14px;
     }
 
     .chatInputArea {
-        padding: 5px 8px 8px 8px;
+        width: 100%;
+        padding: 5px 0;
+        flex-shrink: 0;
+    }
+
+    .historyChatIcon {
+        width: 32px;
+        height: 32px;
+        margin-right: 10px;
+    }
+
+    .inputWrapper {
+        padding: 10px 40px 10px 12px;
     }
 
     .chatInput {
-        font-size: 0.85rem;
+        font-size: 14px;
+        padding-right: 40px !important;
     }
 
     .sendChatBtn {
-        width: 70px;
-        height: 40px;
+        width: 80px !important;
+        height: 36px !important;
+        background-size: 80px 36px;
+        right: 2px;
+    }
+
+    /* 移动端历史记录居中显示 */
+    .chatHistoryWrapper {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 450px;
+        height: 70vh;
+        max-height: 600px;
+        z-index: 3000;
+        pointer-events: none;
+    }
+
+    /* 移动端历史记录遮罩层 - 只在历史记录显示时显示 */
+    .chatHistoryWrapper:has(.chatHistory)::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        z-index: 2999;
+        animation: fadeIn 0.3s ease-out;
+        pointer-events: auto;
+    }
+
+    .chatHistoryWrapper:has(.chatHistory) {
+        pointer-events: auto;
+    }
+
+    /* 确保历史记录内容可以交互 */
+    .chatHistoryWrapper:has(.chatHistory) .chatHistory {
+        pointer-events: auto;
+        position: relative;
+        z-index: 3001;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    .closeChatBtn {
+        width: 50px !important;
+        height: 50px !important;
+        right: 10px;
+        top: 10px;
     }
 }
 

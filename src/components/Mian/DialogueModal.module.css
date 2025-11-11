@@ -9,8 +9,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
+    z-index: 1000;
     animation: fadeIn 0.3s ease-out;
+    /* 允许点击事件穿透到下层元素 */
+    /* pointer-events: none; */
 }
 
 .historyBtn {
@@ -39,6 +41,8 @@
     max-height: 900px;
     justify-content: center;
     margin-top: 60px;
+    /* 恢复内容区域的点击事件 */
+    /* pointer-events: auto; */
 }
 
 /* 左侧面板：历史记录 */
@@ -47,6 +51,7 @@
     flex-shrink: 0;
     height: 100%;
     position: relative;
+    display: block;
 }
 
 /* 右侧面板：玩家信息和背包 */
@@ -473,8 +478,102 @@
 } */
 
 @media (max-width: 768px) {
+    .modalOverlay{
+        background: transparent;
+        backdrop-filter: none;
+        /* 移动端也保持点击穿透 */
+        pointer-events: none;
+    }
+    
+    .modalContent {
+        /* 移动端也恢复内容区域的点击事件 */
+        pointer-events: auto;
+    }
+
+    .historyBtn img {
+        width: 30px;
+        height: 30px;
+        object-fit: contain;
+    }
+
+    .modalHeader{
+        height: 60px;
+    }
+
+    /* 移动端对话弹窗适配 */
+    .dialogueModal {
+        min-height: 400px;
+        max-width: 100%;
+    }
+
+    /* 移动端消息容器适配 */
+    .messagesContainer {
+        padding: 5px 16px;
+        min-height: 200px;
+    }
+
     .startGameBtn{
         width: 200px;
         height: 42px;
+    }
+
+    /* 移动端默认隐藏左侧面板 */
+    .leftPanel:not(.mobileHistoryOpen) {
+        display: none;
+    }
+    
+    /* 移动端历史记录弹窗 - 居中显示 */
+    .leftPanel.mobileHistoryOpen {
+        display: block !important;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 95%;
+        max-width: 450px;
+        height: 76vh;
+        max-height: 600px;
+        z-index: 2000;
+        border-radius: 15px;
+        animation: chatSlideIn 0.3s ease-out;
+        pointer-events: auto;
+    }
+    
+    .rightPanel{
+        display: none;
+    }
+
+    .closeBtn{
+        display: none;
+    }
+
+    /* 移动端输入框容器适配 */
+    .inputContainer {
+        width: 96%;
+        height: 72px;
+        gap: 8px;
+        padding: 0 2%;
+        align-items: center;
+    }
+
+    /* 移动端输入框适配 */
+    .input {
+        padding: 6px 12px !important;
+        font-size: 14px !important;
+        border-radius: 18px !important;
+        height: 32px;
+        line-height: 1.4;
+    }
+
+    /* 移动端发送按钮适配 */
+    .sendBtn {
+        width: 50px;
+        height: 50px;
+        flex-shrink: 0;
+    }
+
+    .sendBtn img {
+        width: 50px;
+        height: 50px;
     }
 }

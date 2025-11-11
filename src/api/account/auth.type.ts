@@ -2,22 +2,27 @@
 export interface User {
   id: number;
   userId: string;
-  username: string;
+  phoneNumber: string;
   role: string;
   createTime: string;
   lastLoginTime: string | null;
+  email: string;
+  nickname: string;
+  avatarUrl: string;
 }
 
 // 注册请求
 export interface SignupRequest {
-  username: string;
+  phoneNumber: string;
   password: string;
   email: string;
+  avatarUrl: string;
+  nickname: string;
 }
 
 // 登录请求
 export interface LoginRequest {
-  username: string;
+  phoneNumber: string;
   password: string;
 }
 

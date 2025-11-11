@@ -1,68 +1,36 @@
 .pageRoot {
     min-height: 64px;
-    width: 100%;
+    width: 100vw;
     height: 100vh;
     background-image: url('/data/asset/首页/大背景copy.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
+    max-width: 1800px;
+    margin: 0 auto;
 }
 
 .mainContent {
     color: black;
     display: flex;
-    height: calc(100vh - 100px);
-    overflow: hidden;
-}
-
-.sidebar {
-    width: 21%;
-    height: 100%;
-    flex-shrink: 0;
-    padding-top: 30px;
-    overflow-y: auto;
-}
-
-.sidebarItem{
+    min-height: calc(100vh - 80px);
     width: 100%;
-    height: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-image: url('/data/asset/创作页面/按钮黄.png');
-    background-size: 98% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    margin-bottom: 16px;
-    cursor: pointer;
-}
-
-.sidebarItem span {
-    margin-left: 16px;
-    font-size: 38px;
-    font-weight: 600;
-    color: #E8DBB7;
-    text-shadow: 1px 1px 2px rgba(115, 80, 47, 0.9), -1px -1px 2px rgba(115, 80, 47, 0.9), 1px -1px 2px rgba(115, 80, 47, 0.9), -1px 1px 2px rgba(115, 80, 47, 0.9);
-}
-
-
-.sidebarItemActive {
-    background-image: url('/data/asset/创作页面/按钮红.png');
-    color: #E8DBB7;
 }
 
 .main {
     flex: 1;
-    height: 100%;
-    overflow: hidden;
-    padding: 20px 20px 10px 20px;
+    min-height: calc(100vh - 80px);
+    padding: 20px 0 10px 0;
     box-sizing: border-box;
+    width: 100%;
 }
 
 .createGameContainer {
     display: flex;
     gap: 20px;
     height: 100%;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
 /* 左侧表单区域 - 60% */
@@ -96,7 +64,6 @@
     font-weight: 600;
     color: #E8DBB7;
     text-shadow: 1px 1px 2px rgba(115, 80, 47, 0.9), -1px -1px 2px rgba(115, 80, 47, 0.9), 1px -1px 2px rgba(115, 80, 47, 0.9), -1px 1px 2px rgba(115, 80, 47, 0.9);
-    margin-bottom: 0 !important;
     line-height: 1.2;
     margin-bottom: 10px !important;
 }
@@ -122,6 +89,14 @@
     transition: all 0.3s ease;
     box-sizing: border-box;
     border: none;
+    outline: none;
+}
+
+.formGroup input[type="text"]:focus,
+.formGroup textarea:focus {
+    outline: none;
+    border: none;
+    box-shadow: none;
 }
 
 .formGroup input[type="text"]::placeholder,
@@ -531,4 +506,121 @@
 .myGamesContainer p {
     color: #8B7355;
     font-size: 18px;
+}
+
+@media (max-width: 768px) {
+    .pageRoot {
+        width: 100%;
+        min-width: auto;
+        min-height: 100vh;
+        height: auto;
+        background-size: cover;
+        padding-bottom: 90px;
+    }
+
+    .mainContent {
+        flex-direction: column;
+        min-height: auto;
+        padding: 0 10px;
+    }
+
+    .main {
+        width: 100%;
+        min-height: auto;
+        padding: 0 0 10px 0;
+        box-sizing: border-box;
+    }
+
+    .createGameContainer {
+        flex-direction: column;
+        height: auto;
+        gap: 10px;
+        padding: 0;
+        border-radius: 0;
+    }
+
+    .formSection {
+        flex: none;
+        width: 100%;
+        max-height: none;
+        padding: 18px;
+        gap: 10px;
+        border-radius: 0;
+        background-size: fill;
+        background-position: center;
+        background-repeat: no-repeat;
+        margin-top: 10px;
+    }
+
+    .formGroup {
+        gap: 0px;
+    }
+
+    .formGroup label {
+        font-size: 14px;
+        margin-bottom: 5px !important;
+    }
+
+    .formGroup input[type="text"],
+    .formGroup textarea {
+        padding: 6px 10px;
+        font-size: 10px!important;
+    }
+
+    .formGroup input[type="text"] {
+        height: 30px;
+        font-size: 14px;
+        border-radius: 0px;
+    }
+
+    .formGroup textarea {
+        height: 60px;
+        font-size: 14px;
+        border-radius: 0px;
+    }
+
+    .fileUploadArea {
+        height: 60px;
+        min-height: 100px;
+        padding: 16px;
+    }
+
+    .uploadIcon{
+        font-size: 24px;
+    }
+
+    .uploadInfo,
+    .progressContainer {
+        padding: 12px;
+    }
+
+    .coverSection {
+        flex: none;
+        width: 100%;
+        gap: 16px;
+    }
+
+    .coverPreview {
+        min-height: 220px;
+    }
+
+    .coverActions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .uploadCoverBtn,
+    .createGameBtn {
+        min-height: 48px;
+        background-size: 100% 100%;
+    }
+
+    .coverTitle {
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    .coverPlaceholder p {
+        font-size: 13px;
+    }
 }

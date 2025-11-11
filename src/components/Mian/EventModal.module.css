@@ -140,7 +140,7 @@
     }
     
     .eventDescription {
-        padding: 20px 20px 16px 20px;
+        padding: 20px 0px 16px 0px;
     }
     
     .eventOptions {
@@ -148,7 +148,6 @@
     }
     
     .eventOption {
-        padding: 12px 16px;
         font-size: 0.9rem;
     }
 }
