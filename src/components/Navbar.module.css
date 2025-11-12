@@ -7,6 +7,8 @@
     justify-content: space-between;
     gap: 10px;
     padding: 0 16px 0 0px;
+    margin: 0;
+    margin-bottom: 0;
     z-index: 1000;
     background-image: url('/data/asset/导航背景图片.png');
     background-size: 100% 100%;

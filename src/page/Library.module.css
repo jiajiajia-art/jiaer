@@ -22,6 +22,7 @@
     color: black;
     display: flex;
     min-height: calc(100vh - 80px);
+    margin-top: -1px;
 }
 
 .main {
@@ -153,15 +154,20 @@
     .pageRoot {
         width: 100%;
         min-width: auto;
-        min-height: 100vh;
-        height: auto;
+        height: 100vh;
         background-size: cover;
+        background-attachment: fixed;
         padding-bottom: 90px;
+        margin: 50px auto 0;
+        overflow: hidden;
+        position: relative;
     }
 
     .mainContent {
         flex-direction: column;
-        min-height: auto;
+        height: calc(100vh - 50px);
+        overflow-y: auto;
+        overflow-x: hidden;
     }
 
     .main {
@@ -169,6 +175,7 @@
         min-height: auto;
         box-sizing: border-box;
         padding: 0;
+        overflow: visible;
     }
 
     .libraryContent {

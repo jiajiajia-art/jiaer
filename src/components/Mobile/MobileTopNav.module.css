@@ -5,7 +5,7 @@
 @media (max-width: 768px) {
     .container {
         display: flex;
-        position: sticky;
+        position: fixed;
         top: 0;
         z-index: 998;
         width: 100%;
