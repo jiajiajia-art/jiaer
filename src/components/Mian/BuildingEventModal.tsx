@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { HOST_ADDRESS } from '../../config';
 import { useGameStore } from '../../store/gameStore';
 import { authFetch } from '../../api/base';
+import { useGameData } from '../../hooks/useGameData';
 import type { BuildingData } from './EventModal';
 
 interface BuildingEventModalProps {
@@ -29,6 +30,7 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
     buildingData
 }) => {
     const sessionId = useGameStore((state) => state.sessionId);
+    const { getNewScene, getNewPlayer } = useGameData();
     const textContainerRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -181,7 +183,15 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
             }
             return updated;
         });
-    }, []);
+        
+        getNewScene().catch(err => {
+            console.warn('⚠️ 刷新场景数据失败:', err);
+        });
+        getNewPlayer().catch(err => {
+            console.warn('⚠️ 刷新玩家数据失败:', err);
+        });
+        
+    }, [getNewScene, getNewPlayer]);
 
     // 当弹窗打开且收到初始 streamResponse 时，处理第一个消息
     useEffect(() => {

@@ -14,7 +14,7 @@ export interface LibraryData {
     rating_count: number|null;
     created_at: string;
     updated_at: string;
-    authorName: string;
+    author_name: string;
 }
 
 export interface LibraryDataResponse {

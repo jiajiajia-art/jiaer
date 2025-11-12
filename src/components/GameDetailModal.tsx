@@ -60,10 +60,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
-            <button className={styles.detailModalClose} onClick={onClose}>
-                <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
-            </button>
             <div className={styles.gameDetailModal}>
+                <button className={styles.detailModalClose} onClick={onClose}>
+                    <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
+                </button>
                 <h2 className={styles.detailMainTitle}>剧本详情</h2>
 
                 <div className={styles.detailThreeColumns}>
@@ -91,7 +91,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                         </div>
 
                         <div className={styles.detailAuthor}>
-                            作者：{game.authorName || '未知作者'}
+                            作者：{game.author_name || '未知作者'}
                         </div>
                     </div>
 
