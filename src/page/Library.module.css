@@ -165,9 +165,10 @@
 
     .mainContent {
         flex-direction: column;
-        height: calc(100vh - 50px);
+        height: calc(100vh - 50px - 70px);
         overflow-y: auto;
         overflow-x: hidden;
+        padding-bottom: 20px;
     }
 
     .main {
@@ -176,10 +177,14 @@
         box-sizing: border-box;
         padding: 0;
         overflow: visible;
+        padding-bottom: 20px;
     }
 
     .libraryContent {
         padding: 0;
+        padding-bottom: 20px;
+        height: auto;
+        min-height: 100%;
     }
 
     .grid4 {
