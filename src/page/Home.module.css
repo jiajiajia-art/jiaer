@@ -108,6 +108,15 @@
     color: #E8DBB7;
     cursor: pointer;
     transition: color 0.3s ease;
+    position: relative;
+    z-index: 10;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    border: none;
+    padding: 0;
+    background-color: transparent;
+    outline: none;
 }
 
 .more:hover {
@@ -321,6 +330,17 @@
 
     .sectionHeader {
         padding: 0 8px;
+    }
+
+    .more {
+        width: 100px;
+        height: 36px;
+        background-size: 70px 36px;
+        position: relative;
+        z-index: 10;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-tap-highlight-color: rgba(232, 219, 183, 0.3);
     }
 
     .grid4 {
