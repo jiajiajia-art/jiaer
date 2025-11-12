@@ -117,10 +117,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
         // 更新 store
         setPdfFileId(fileId);
-        
+
         // 创建会话
         const sessionId = await createSession(fileId);
-        
+
         if (sessionId) {
             setSessionId(sessionId);
             navigate('/newmain');
@@ -200,11 +200,19 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     {(game.rating_count ?? 0)}人评价
                                 </div>
                             </div>
-                            <button className={styles.startGameBtn} onClick={handleStartGame}>
-                                <img
-                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/开始游戏按钮.png`}
-                                    alt="开始游戏"
-                                />
+                            <button className={styles.startGameBtn} onClick={handleStartGame} disabled={isLoading}>
+                                {isLoading ? (
+                                    <div className={styles.loading}>
+                                        <span className={styles.loadingDot}></span>
+                                        <span className={styles.loadingDot}></span>
+                                        <span className={styles.loadingDot}></span>
+                                    </div>
+                                ) : (
+                                    <img
+                                        src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/开始游戏按钮.png`}
+                                        alt="开始游戏"
+                                    />
+                                )}
                             </button>
                         </div>
                     </div>

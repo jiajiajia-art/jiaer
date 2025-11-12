@@ -310,9 +310,63 @@
     object-fit: contain;
 }
 
-.startGameBtn:hover {
+.startGameBtn:hover:not(:disabled) {
     opacity: 0.9;
     transform: scale(1.02);
+}
+
+.startGameBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.loading {
+    width: 100%;
+    height: auto;
+    min-height: 60px;
+    background-image: url('/data/asset/建筑选项框/按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0;
+    position: relative;
+    object-fit: contain;
+}
+
+.loadingDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #E8DBB7;
+    display: inline-block;
+    animation: loadingDots 1.4s infinite ease-in-out;
+}
+
+.loadingDot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loadingDot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.loadingDot:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes loadingDots {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
 }
 
 @media (max-width: 768px) {
@@ -487,5 +541,15 @@
         width: 100%;
         height: auto;
         object-fit: contain;
+    }
+
+    .loading {
+        min-height: 50px;
+    }
+
+    .loadingDot {
+        width: 6px;
+        height: 6px;
+        gap: 6px;
     }
 }

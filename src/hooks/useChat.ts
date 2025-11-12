@@ -59,7 +59,7 @@ export const useChat = () => {
 
                             try {
                                 const json = JSON.parse(cleaned);
-                                console.log('流式数据:', json);
+                                // console.log('流式数据:', json);
 
                                 if (json.type === 'chunk' && json.content) {
                                     fullText += json.content;
