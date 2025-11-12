@@ -45,6 +45,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     const [loadingHistory, setLoadingHistory] = useState(false);
     const { getNewScene } = useGameData();
     const hasSentGreetingRef = useRef(false);
+    const hasSentFirstMessageRef = useRef(false);
+    const lastSentMessageRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (isOpen && npc && npc.greetings && npc.greetings.length > 0 && !hasSentGreetingRef.current && onAddMessage) {
@@ -59,6 +61,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         }
         if (!isOpen) {
             hasSentGreetingRef.current = false;
+            hasSentFirstMessageRef.current = false;
+            lastSentMessageRef.current = null;
         }
     }, [isOpen, npc, onAddMessage]);
 
@@ -76,6 +80,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         try {
             const history = await onLoadHistory(sessionId, npc);
             setHistoryMessages(history);
+            
+            // 如果历史记录为空且还没有发送过第一条消息，重置标记
+            if (history.length === 0 && hasSentFirstMessageRef.current) {
+                hasSentFirstMessageRef.current = false;
+            }
         } catch (error) {
             console.error('加载历史失败:', error);
         } finally {
@@ -180,15 +189,39 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         }
     }, [isOpen]);
 
+    const handleSendMessage = React.useCallback((message: string) => {
+        if (!message.trim()) return;
+
+        const isFirstMessage = !hasSentFirstMessageRef.current;
+        const isEmptyHistory = historyMessages.length === 0;
+
+        // 发送消息
+        onSendMessage(message);
+        lastSentMessageRef.current = message;
+
+        // 如果是第一条消息且历史记录为空，延迟后再次发送
+        if (isFirstMessage && isEmptyHistory) {
+            hasSentFirstMessageRef.current = true;
+            console.log('📤 历史记录为空，第一条消息将自动发送两次');
+            // 延迟一段时间后再次发送
+            setTimeout(() => {
+                console.log('📤 自动发送第二次消息');
+                onSendMessage(message);
+            }, 300);
+        } else {
+            hasSentFirstMessageRef.current = true;
+        }
+    }, [onSendMessage, historyMessages.length]);
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && chatInput.trim()) {
-            onSendMessage(chatInput);
+            handleSendMessage(chatInput);
         }
     };
 
     const handleSendClick = () => {
         if (chatInput.trim()) {
-            onSendMessage(chatInput);
+            handleSendMessage(chatInput);
         }
     };
 

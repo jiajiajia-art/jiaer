@@ -1,28 +1,36 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import styles from './Create.module.css';
 import { useGameStore } from '../store/gameStore';
-import uploadFileApi from '../api/createGame/uploadFileApi';
+import createGameApi from '../api/createGame/createGameApi.type';
 import createSessionApi from '../api/createGame/createSession.type';
+import { useAuthStore } from '../store/useAuthStore';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 
 const Create: React.FC = () => {
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [coverFile, setCoverFile] = useState<File | null>(null);
     const [coverImage, setCoverImage] = useState<string | null>(null);
     const [isDragover, setIsDragover] = useState(false);
     const [isDragoverCover, setIsDragoverCover] = useState(false);
-    const [isUploadingPdf, setIsUploadingPdf] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadSuccess, setUploadSuccess] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [createProgress, setCreateProgress] = useState(0);
+    const [createProgressText, setCreateProgressText] = useState('');
+    const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const startTimeRef = useRef<number | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const MAX_TIME = 5 * 60 * 1000; // 5分钟（毫秒）
+    const MAX_PROGRESS = 90; // 最大进度90%
     
     const [gameName, setGameName] = useState('');
     const [gameSubtitle, setGameSubtitle] = useState('');
     const [gameDescription, setGameDescription] = useState('');
     
     const { setPdfFileId, setSessionId } = useGameStore();
+    const { user } = useAuthStore();
     const navigate = useNavigate();
     const sidebarItems = useMemo<SidebarItem[]>(() => [
         {
@@ -42,6 +50,70 @@ const Create: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
 
+    // 清理进度条定时器
+    useEffect(() => {
+        return () => {
+            if (progressTimerRef.current) {
+                clearInterval(progressTimerRef.current);
+            }
+        };
+    }, []);
+
+    // 启动假进度条（5分钟倒计时）
+    const startFakeProgress = () => {
+        // 清理之前的定时器
+        if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+        }
+
+        startTimeRef.current = Date.now();
+        setCreateProgress(5); // 从5%开始
+
+        // 每100ms更新一次进度
+        progressTimerRef.current = setInterval(() => {
+            if (!startTimeRef.current) return;
+
+            const elapsed = Date.now() - startTimeRef.current;
+            const progress = Math.min(5 + (elapsed / MAX_TIME) * (MAX_PROGRESS - 5), MAX_PROGRESS);
+            
+            setCreateProgress(progress);
+
+            // 如果达到5分钟，停止进度条
+            if (elapsed >= MAX_TIME) {
+                if (progressTimerRef.current) {
+                    clearInterval(progressTimerRef.current);
+                    progressTimerRef.current = null;
+                }
+            }
+        }, 100);
+    };
+
+    // 停止假进度条
+    const stopFakeProgress = () => {
+        if (progressTimerRef.current) {
+            clearInterval(progressTimerRef.current);
+            progressTimerRef.current = null;
+        }
+        startTimeRef.current = null;
+    };
+
+    // 取消上传
+    const handleCancelUpload = () => {
+        // 停止假进度条
+        stopFakeProgress();
+        
+        // 取消正在进行的请求
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        
+        // 重置状态
+        setIsCreating(false);
+        setCreateProgress(0);
+        setCreateProgressText('');
+    };
+
     // 处理文件选择
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -60,7 +132,6 @@ const Create: React.FC = () => {
                 return;
             }
             setUploadedFile(file);
-            uploadDocument(file);
         }
     };
 
@@ -73,6 +144,7 @@ const Create: React.FC = () => {
                 alert('请上传图片格式的文件！');
                 return;
             }
+            setCoverFile(file);
             const reader = new FileReader();
             reader.onload = (e) => {
                 setCoverImage(e.target?.result as string);
@@ -91,9 +163,6 @@ const Create: React.FC = () => {
     // 移除文件
     const removeFile = () => {
         setUploadedFile(null);
-        setPdfFileId(null);
-        setUploadProgress(0);
-        setUploadSuccess(false);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -101,52 +170,10 @@ const Create: React.FC = () => {
 
     // 移除封面
     const removeCover = () => {
+        setCoverFile(null);
         setCoverImage(null);
         if (coverInputRef.current) {
             coverInputRef.current.value = '';
-        }
-    };
-
-    // 上传文档
-    const uploadDocument = async (file: File) => {
-        setIsUploadingPdf(true);
-        setUploadProgress(0);
-        setUploadSuccess(false);
-        setPdfFileId(null);
-
-        const progressInterval = setInterval(() => {
-            setUploadProgress(prev => {
-                if (prev >= 96) return 96;
-                return prev + 1.6;
-            });
-        }, 1000);
-
-        const formData = new FormData();
-        formData.append('pdf', file);
-
-        try {
-            const response = await uploadFileApi.uploadAndProcess(file);
-
-            clearInterval(progressInterval);
-
-            if (response.data.success) {
-                const data = response.data;
-                setPdfFileId(data.fileId);
-                setUploadProgress(100);
-                setUploadSuccess(true);
-            } else {
-                const errorData = response.data;
-                const fileType = file.type === 'application/pdf' ? 'PDF' : 'DOCX';
-                alert(`${fileType} 文件上传失败: ${errorData.message || response.statusText}`);
-                removeFile();
-            }
-        } catch (error) {
-            console.error('文档文件上传失败:', error);
-            const fileType = file.type === 'application/pdf' ? 'PDF' : 'DOCX';
-            alert(`${fileType} 文件上传时发生网络错误`);
-            removeFile();
-        } finally {
-            setIsUploadingPdf(false);
         }
     };
 
@@ -182,7 +209,6 @@ const Create: React.FC = () => {
                 return;
             }
             setUploadedFile(file);
-            uploadDocument(file);
         }
     };
 
@@ -209,6 +235,7 @@ const Create: React.FC = () => {
                 alert('请上传图片格式的文件！');
                 return;
             }
+            setCoverFile(file);
             const reader = new FileReader();
             reader.onload = (e) => {
                 setCoverImage(e.target?.result as string);
@@ -224,8 +251,7 @@ const Create: React.FC = () => {
             gameSubtitle.trim() !== '' &&
             gameDescription.trim() !== '' &&
             uploadedFile !== null &&
-            uploadSuccess &&
-            useGameStore.getState().pdfFileId !== null
+            coverFile !== null
         );
     };
 
@@ -247,30 +273,96 @@ const Create: React.FC = () => {
             alert('请上传游戏内容文档');
             return;
         }
-
-        const pdfFileId = useGameStore.getState().pdfFileId;
-        if (!pdfFileId) {
-            alert('文档文件正在处理中，请稍后再试');
+        if (!coverFile) {
+            alert('请上传封面图片');
+            return;
+        }
+        if (!user?.user?.id) {
+            alert('请先登录');
             return;
         }
 
-        // 创建session
+        setIsCreating(true);
+        setCreateProgress(0);
+        setCreateProgressText('准备上传文件...');
+        
+        // 创建 AbortController 用于取消请求
+        abortControllerRef.current = new AbortController();
+        
+        // 启动假进度条
+        startFakeProgress();
+        
         try {
-            const response = await createSessionApi.createSession({
-                fileId: pdfFileId,
+            // 第一步：创建游戏并上传文件
+            setCreateProgressText('正在上传文件并创建游戏...');
+            
+            const createGameResponse = await createGameApi.createGame({
+                file: uploadedFile,
+                cover: coverFile,
+                title: gameName.trim(),
+                subtitle: gameSubtitle.trim(),
+                description: gameDescription.trim(),
+                creator_user_id: String(user.user.id),
+                author_name: user.user.nickname,
+            });
+
+            if (!createGameResponse.data.success) {
+                stopFakeProgress();
+                abortControllerRef.current = null;
+                alert(createGameResponse.data.message || '创建游戏失败');
+                setIsCreating(false);
+                setCreateProgress(0);
+                setCreateProgressText('');
+                return;
+            }
+
+            const fileId = createGameResponse.data.fileId;
+            setPdfFileId(fileId);
+            setCreateProgressText('游戏创建成功，正在初始化会话...');
+
+            // 第二步：创建session
+            const sessionResponse = await createSessionApi.createSession({
+                fileId: fileId,
                 playerName: '玩家'
             });
 
-            if (response.data.success) {
-                const data = response.data;
-                setSessionId(data.sessionId);
-                navigate('/newmain');
-            } else {    
-                alert(response.data.message);
+            if (sessionResponse.data.success) {
+                const sessionData = sessionResponse.data;
+                setSessionId(sessionData.sessionId);
+                
+                // 停止假进度条，快速到100%
+                stopFakeProgress();
+                abortControllerRef.current = null;
+                setCreateProgress(100);
+                setCreateProgressText('创建成功！正在跳转...');
+                
+                // 延迟一下让用户看到完成状态
+                setTimeout(() => {
+                    navigate('/newmain');
+                }, 500);
+            } else {
+                stopFakeProgress();
+                abortControllerRef.current = null;
+                alert(sessionResponse.data.message || '创建游戏会话失败');
+                setIsCreating(false);
+                setCreateProgress(0);
+                setCreateProgressText('');
             }
-        } catch (error) {
+        } catch (error: any) {
+            // 如果是取消操作，不显示错误
+            if (error.name === 'AbortError' || error.message === 'Request aborted') {
+                console.log('上传已取消');
+                return;
+            }
+            
             console.error('创建游戏错误:', error);
-            alert(error);
+            stopFakeProgress();
+            abortControllerRef.current = null;
+            const errorMessage = error.response?.data?.message || error.message || '创建游戏失败，请稍后重试';
+            alert(errorMessage);
+            setIsCreating(false);
+            setCreateProgress(0);
+            setCreateProgressText('');
         }
     };
 
@@ -278,6 +370,42 @@ const Create: React.FC = () => {
         <div className={styles.pageRoot}>
             <Navbar />
             <MobileTopNav items={sidebarItems} />
+            
+            {/* 上传遮罩层 */}
+            {isCreating && (
+                <div className={styles.uploadOverlay}>
+                    <div className={styles.uploadOverlayContent}>
+                        <h3 className={styles.uploadOverlayTitle}>正在创建游戏</h3>
+                        
+                        {/* 进度条 */}
+                        <div className={styles.uploadProgressContainer}>
+                            <div className={styles.uploadProgressBar}>
+                                <div
+                                    className={styles.uploadProgressFill}
+                                    style={{ width: `${createProgress}%` }}
+                                />
+                            </div>
+                            <div className={styles.uploadProgressPercent}>
+                                {Math.round(createProgress)}%
+                            </div>
+                        </div>
+                        
+                        {/* 提示文字 */}
+                        <p className={styles.uploadOverlayText}>
+                            {createProgressText || '处理中...'}
+                        </p>
+                        
+                        {/* 取消按钮 */}
+                        <button
+                            className={styles.cancelUploadBtn}
+                            onClick={handleCancelUpload}
+                            type="button"
+                        >
+                            取消上传
+                        </button>
+                    </div>
+                </div>
+            )}
             
             <div className={styles.mainContent}>
                 {/* 左侧侧边栏 */}
@@ -298,6 +426,7 @@ const Create: React.FC = () => {
                                         placeholder="输入游戏名称"
                                         required
                                         autoComplete="off"
+                                        disabled={isCreating}
                                     />
                                 </div>
 
@@ -311,6 +440,7 @@ const Create: React.FC = () => {
                                         placeholder="例如：经典奇幻冒险RPG"
                                         required
                                         autoComplete="off"
+                                        disabled={isCreating}
                                     />
                                 </div>
 
@@ -324,6 +454,7 @@ const Create: React.FC = () => {
                                         placeholder="简单介绍你的游戏世界..."
                                         required
                                         autoComplete="off"
+                                        disabled={isCreating}
                                     />
                                 </div>
 
@@ -331,11 +462,11 @@ const Create: React.FC = () => {
                                 <div className={`${styles.formGroup} ${styles.requiredField}`}>
                                     <label htmlFor="gamePDF">游戏内容文档 (PDF/DOCX)</label>
                                     <div
-                                        className={`${styles.fileUploadArea} ${isDragover ? styles.fileUploadAreaDragover : ''}`}
-                                        onClick={() => fileInputRef.current?.click()}
-                                        onDragOver={handleDragOver}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={handleDrop}
+                                        className={`${styles.fileUploadArea} ${isDragover ? styles.fileUploadAreaDragover : ''} ${isCreating ? styles.disabled : ''}`}
+                                        onClick={() => !isCreating && fileInputRef.current?.click()}
+                                        onDragOver={(e) => !isCreating && handleDragOver(e)}
+                                        onDragLeave={(e) => !isCreating && handleDragLeave(e)}
+                                        onDrop={(e) => !isCreating && handleDrop(e)}
                                     >
                                         <input
                                             ref={fileInputRef}
@@ -345,6 +476,7 @@ const Create: React.FC = () => {
                                             hidden
                                             onChange={handleFileSelect}
                                             autoComplete="off"
+                                            disabled={isCreating}
                                         />
                                         {!uploadedFile ? (
                                             <div className={styles.uploadPlaceholder}>
@@ -362,23 +494,11 @@ const Create: React.FC = () => {
                                                         type="button"
                                                         className={styles.removeFileBtn}
                                                         onClick={removeFile}
+                                                        disabled={isCreating}
                                                     >
                                                         ×
                                                     </button>
                                                 </div>
-                                                {isUploadingPdf && (
-                                                    <div className={styles.progressContainer}>
-                                                        <div className={styles.progressBar}>
-                                                            <div
-                                                                className={`${styles.progressFill} ${uploadSuccess ? styles.progressSuccess : ''}`}
-                                                                style={{ width: `${uploadProgress}%` }}
-                                                            />
-                                                        </div>
-                                                        <div className={styles.progressText}>
-                                                            {uploadSuccess ? '✅ 上传完成' : `⏳ 上传中... ${Math.round(uploadProgress)}%`}
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </>
                                         )}
                                     </div>
@@ -389,11 +509,11 @@ const Create: React.FC = () => {
                             <div className={styles.coverSection}>
                                 <h3 className={styles.coverTitle}>封面预览</h3>
                                 <div 
-                                    className={`${styles.coverPreview} ${isDragoverCover ? styles.coverPreviewDragover : ''}`}
-                                    onDragOver={handleCoverDragOver}
-                                    onDragLeave={handleCoverDragLeave}
-                                    onDrop={handleCoverDrop}
-                                    onClick={() => coverInputRef.current?.click()}
+                                    className={`${styles.coverPreview} ${isDragoverCover ? styles.coverPreviewDragover : ''} ${isCreating ? styles.disabled : ''}`}
+                                    onDragOver={(e) => !isCreating && handleCoverDragOver(e)}
+                                    onDragLeave={(e) => !isCreating && handleCoverDragLeave(e)}
+                                    onDrop={(e) => !isCreating && handleCoverDrop(e)}
+                                    onClick={() => !isCreating && coverInputRef.current?.click()}
                                 >
                                     {coverImage ? (
                                         <>
@@ -404,6 +524,7 @@ const Create: React.FC = () => {
                                                     e.stopPropagation();
                                                     removeCover();
                                                 }}
+                                                disabled={isCreating}
                                             >
                                                 ×
                                             </button>
@@ -422,6 +543,7 @@ const Create: React.FC = () => {
                                         hidden
                                         onChange={handleCoverSelect}
                                         autoComplete="off"
+                                        disabled={isCreating}
                                     />
                                 </div>
                                 
@@ -434,7 +556,7 @@ const Create: React.FC = () => {
                                     <button 
                                         className={styles.createGameBtn}
                                         onClick={handleCreateGame}
-                                        disabled={isUploadingPdf || !isFormValid()}
+                                        disabled={isCreating || !isFormValid()}
                                     >
                                     </button>
                                 </div>

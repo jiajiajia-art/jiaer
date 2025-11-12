@@ -96,10 +96,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
             setIsEditingName(false);
             setEditingName('');
         }
-    };
-
-    console.log("角色信息",player);
-    
+    };    
 
     return (
         <div className={styles.playerFloatingPanel}>

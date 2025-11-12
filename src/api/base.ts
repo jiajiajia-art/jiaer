@@ -94,7 +94,6 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
    */
   instance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      console.log('[API] 请求拦截器:', { url: config.url, method: config.method });
       let token = useAuthStore.getState().user?.token;
 
       if (!token) {
@@ -152,3 +151,107 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
 };
 
 export const api = createApi();
+
+/**
+ * 获取当前有效的 token（如果需要则刷新）
+ * @returns 有效的 token 或 null
+ */
+const getValidToken = async (): Promise<string | null> => {
+  let token = useAuthStore.getState().user?.token;
+
+  if (!token) {
+    console.log('[Fetch] No token found, skipping Authorization header.');
+    return null;
+  }
+
+  // 如果 token 即将过期，触发刷新
+  if (isTokenNearExpiry(token)) {
+    if (!refreshPromise) {
+      console.log('[Fetch] Token即将过期，刷新token');
+      refreshPromise = refreshAccessToken()
+        .finally(() => {
+          refreshPromise = null;
+        });
+    }
+    try {
+      token = await refreshPromise; // 等待刷新完成
+    } catch (error) {
+      console.error('[Fetch] Token refresh failed:', error);
+      return null;
+    }
+  }
+
+  return token;
+};
+
+/**
+ * Fetch 请求的包装函数，自动处理 token 刷新和携带
+ * 支持所有原生 fetch 的功能，包括 SSE 流式请求
+ * 
+ * @param url 请求 URL
+ * @param init 请求配置（与原生 fetch 相同）
+ * @returns Promise<Response>
+ * 
+ * @example
+ * // 普通请求
+ * const response = await authFetch('/api/backend/history/123');
+ * 
+ * // POST 请求
+ * const response = await authFetch('/api/backend/game/session/123/stream/action-live', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ action: '开始游戏' })
+ * });
+ * 
+ * // SSE 流式请求
+ * const response = await authFetch('/api/backend/game/session/123/stream/action-live', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ action: '开始游戏' })
+ * });
+ * const reader = response.body?.getReader();
+ */
+export const authFetch = async (
+  url: string | URL,
+  init?: RequestInit
+): Promise<Response> => {
+  // 获取有效的 token
+  const token = await getValidToken();
+
+  // 准备请求头
+  // Headers 构造函数可以接受 Headers 对象、普通对象或数组
+  const headers = init?.headers ? new Headers(init.headers) : new Headers();
+
+  // 如果有 token，添加 Authorization header
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+    console.log('[Fetch] Added Authorization header to request.');
+  } else {
+    headers.delete('Authorization');
+    console.log('[Fetch] No token available, skipping Authorization header.');
+  }
+
+  // 合并请求配置
+  const requestInit: RequestInit = {
+    ...init,
+    headers,
+  };
+
+  try {
+    // 发送请求
+    const response = await fetch(url, requestInit);
+
+    // 处理 403 错误（token 过期）
+    if (response.status === 403) {
+      console.warn('[Fetch] Received 403, token may be expired, logging out.');
+      useAuthStore.getState().logout();
+      throw new Error('Authentication failed: Token expired or invalid');
+    }
+
+    return response;
+  } catch (error) {
+    // 如果是网络错误或其他错误，直接抛出
+    console.error('[Fetch] Request failed:', error);
+    throw error;
+  }
+};

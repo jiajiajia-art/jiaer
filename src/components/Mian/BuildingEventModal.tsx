@@ -3,6 +3,7 @@ import styles from './BuildingEventModal.module.css';
 import ReactMarkdown from 'react-markdown';
 import { HOST_ADDRESS } from '../../config';
 import { useGameStore } from '../../store/gameStore';
+import { authFetch } from '../../api/base';
 import type { BuildingData } from './EventModal';
 
 interface BuildingEventModalProps {
@@ -239,7 +240,7 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
         });
         
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/building-feature/stream`, {
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/building-feature/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

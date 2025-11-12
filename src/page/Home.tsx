@@ -120,7 +120,7 @@ const Home: React.FC = () => {
     useEffect(() => {
         const loadLibraryData = async () => {
             try {
-                const response = await libraryDataApi.getLibraryData({ limit: 4 });
+                const response = await libraryDataApi.getLibraryData(2, { limit: 4 });
 
                 if (response.data.success && response.data.data) {
                     setFileMetas(response.data.data);

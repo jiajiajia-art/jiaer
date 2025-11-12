@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styles from './EventModal.module.css';
 import { HOST_ADDRESS } from '../../config';
 import { useGameStore } from '../../store/gameStore';
+import { authFetch } from '../../api/base';
 import BuildingEventModal from './BuildingEventModal';
 
 interface EventOption {
@@ -53,7 +54,7 @@ const EventModal: React.FC<EventModalProps> = ({
         if (!event) return;
         
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/building-feature/stream`, {
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/game/session/${sessionId}/building-feature/stream`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

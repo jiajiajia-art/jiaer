@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import styles from './GameDetailModal.module.css';
 import type { LibraryData } from '../api/home/libraryData.type';
+import { useAuthStore } from '../store/useAuthStore';
+import statisticsApi from '../api/statistics/statisticsApi';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -15,6 +17,45 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     onClose,
     onStart,
 }) => {
+    const { user } = useAuthStore();
+    // 跟踪上一次的打开状态，用于检测弹窗从关闭到打开的变化
+    const prevIsOpenRef = useRef(false);
+
+    // 当弹窗打开时记录统计（每次打开都记录一次）
+    useEffect(() => {
+        // 检测弹窗从关闭到打开的状态变化
+        const wasClosed = !prevIsOpenRef.current;
+        const isNowOpen = isOpen;
+        const justOpened = wasClosed && isNowOpen;
+
+        // 更新状态
+        prevIsOpenRef.current = isOpen;
+
+        // 只有在弹窗刚打开时（从关闭到打开）才记录
+        if (!justOpened) {
+            return;
+        }
+
+        // 检查必要的数据
+        if (!game || !game.file_id) {
+            return;
+        }
+
+        // 检查用户是否登录
+        if (!user?.user?.id) {
+            return;
+        }
+
+        // 记录统计
+        console.log('记录查看统计:', game.file_id);
+        statisticsApi.addView({
+            fileId: game.file_id,
+            userId: String(user.user.id),
+        }).catch((error) => {
+            console.error('记录查看统计失败:', error);
+        });
+    }, [isOpen, game, user]);
+
     if (!isOpen || !game) return null;
 
     return (

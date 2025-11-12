@@ -122,7 +122,8 @@ const Library: React.FC = () => {
         const loadLibraryData = async () => {
             setIsLoading(true);
             try {
-                const response = await libraryDataApi.getLibraryData({ limit: 10 });
+                // 修复调用参数数量：需要传递 userId 和 request 两个参数
+                const response = await libraryDataApi.getLibraryData(2, { limit: 10 });
 
                 if (response.data.success && response.data.data) {
 

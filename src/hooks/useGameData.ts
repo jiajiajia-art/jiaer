@@ -116,7 +116,6 @@ export const useGameData = () => {
 
             if (filesResult.status === 'fulfilled') {
                 const responseData = filesResult.value.data;
-                console.log('responseData', responseData);
                 if (responseData?.success && responseData.files) {
                     applyBackendData(responseData.files);
                 } else {

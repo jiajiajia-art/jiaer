@@ -8,6 +8,8 @@ import PlayerFloatingPanel from './PlayerFloatingPanel';
 import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData';
 import InventoryFloatingPanel from './InventoryFloatingPanel';
 import { useGameData } from '../../hooks/useGameData';
+import { authFetch } from '../../api/base';
+import statisticsApi from '../../api/statistics/statisticsApi';
 
 // EquipmentSlots 类型定义（后端数据结构：equipment 存储的是物品ID字符串）
 type EquipmentSlots = {
@@ -73,6 +75,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     >([]);
 
     const sessionId = useGameStore((state) => state.sessionId);
+    const pdfFileId = useGameStore((state) => state.pdfFileId);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     // 提取 ACTION 字段的工具函数
@@ -125,7 +128,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
         try {
             setLoadingHistory(true);
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/history/${sessionId}`);
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/history/${sessionId}`);
 
             if (response.ok) {
                 const data = await response.json();
@@ -349,7 +352,14 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             setLoading(true);
             setMessages((prev) => [...prev, { type: 'system', text: '正在开始游戏...' }]);
 
-            const response = await fetch(
+            // 记录游戏开始统计（异步执行，不阻塞游戏开始）
+            if (pdfFileId) {
+                statisticsApi.addConversion({ fileId: pdfFileId }).catch((error) => {
+                    console.error('记录游戏统计失败:', error);
+                });
+            }
+
+            const response = await authFetch(
                 `${HOST_ADDRESS}/api/backend/game/session/${sessionId}/stream/action-live`,
                 {
                     method: 'POST',
@@ -388,7 +398,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
         try {
             setLoading(true);
-            const response = await fetch(
+            const response = await authFetch(
                 `${HOST_ADDRESS}/api/backend/game/session/${sessionId}/stream/action-live`,
                 {
                     method: 'POST',

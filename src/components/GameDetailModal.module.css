@@ -352,27 +352,36 @@
         display: flex;
         flex-direction: column;
         gap: 0;
+        height: auto;
+        min-height: 0;
     }
 
     .detailLeftColumn {
         background-image: none;
         padding: 0;
         margin-top: 10px;
-        height: 260px;
+        height: auto;
+        min-height: 0;
         margin-bottom: 10px;
+        flex-shrink: 0;
     }
 
     .detailLeftImage{
-        height: 100%;
         width: 100vw;
+        height: auto;
+        aspect-ratio: 1/1;
         object-fit: fill;
         padding: 0;
+        display: block;
     }
 
     .detailMiddleColumn {
+        width: 100vw;
         height: auto;
+        min-height: 0;
         margin-top: 10px;
         padding: 0 10px;
+        flex-shrink: 0;
     }
 
     .detailGameTitle {
@@ -392,8 +401,12 @@
         flex-direction: row;
         gap: 10px;
         padding: 0 10px;
-        height: 160px;
+        height: auto;
+        min-height: 160px;
         width: 100vw;
+        flex-shrink: 0;
+        margin-top: 10px;
+        margin-bottom: 10px;
     }
 
     .priceSection {

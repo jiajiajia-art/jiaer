@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HOST_ADDRESS } from '../config';
+import { authFetch } from '../api/base';
 import type { NPC } from '../api/game/gameData';
 
 export interface ChatMessage {
@@ -26,7 +27,7 @@ export const useChat = () => {
         setChatMessages((prev: ChatMessage[]) => [...prev, { role: 'user', text }]);
 
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/send`, {
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/send`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -100,7 +101,7 @@ export const useChat = () => {
 
     const loadChatHistory = async (sessionId: string, npc: any): Promise<ChatMessage[]> => {
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/history`, {
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/npc-chat/${sessionId}/${npc.id}/history`, {
                 method: 'GET',
             });
             if (response.ok) {

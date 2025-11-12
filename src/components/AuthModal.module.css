@@ -90,6 +90,16 @@
     gap: 6px;
 }
 
+/* 包含"忘记密码"的输入组，减少底部间距 */
+.inputGroup:has(.forgetPassword) {
+    margin-bottom: -8px;
+}
+
+/* 如果浏览器不支持:has()，使用类名方式 */
+.inputGroupWithForget {
+    margin-bottom: -8px;
+}
+
 .input {
     width: 100%;
     padding: 14px 16px;
@@ -144,10 +154,15 @@
     padding-left: 4px;
 }
 
+/* 提交错误信息，减少与按钮的间距 */
+.form > .errorMessage {
+    margin-bottom: -8px;
+}
+
 .submitBtn {
     width: 100%;
     padding: 14px;
-    margin-top: 10px;
+    margin-top: 0;
     background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
     color: #E8DBB7;
     border: none;
@@ -207,6 +222,61 @@
     color: #C85F2B;
 }
 
+.forgetPassword {
+    color: #B24F1B;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: right;
+    margin-top: 4px;
+    margin-bottom: -4px;
+}
+
+/* 验证码输入框容器 */
+.codeInputWrapper {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.codeInput {
+    flex: 1;
+    min-width: 0;
+}
+
+.sendCodeBtn {
+    flex-shrink: 0;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
+    color: #E8DBB7;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+.sendCodeBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.3);
+}
+
+.sendCodeBtn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+}
+
+.sendCodeBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    background: linear-gradient(135deg, #8B6B4F 0%, #6B4A3F 100%);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .modalContent {
@@ -228,6 +298,15 @@
     .submitBtn {
         padding: 12px;
         font-size: 1rem;
+    }
+
+    .codeInputWrapper {
+        gap: 8px;
+    }
+
+    .sendCodeBtn {
+        padding: 10px;
+        font-size: 0.9rem;
     }
 }
 

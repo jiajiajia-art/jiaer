@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { HOST_ADDRESS } from '../config';
 import { useGameStore } from '../store/gameStore';
+import { authFetch } from '../api/base';
 
 interface MusicTrack {
     id: string;
@@ -25,7 +26,7 @@ export const useMusic = () => {
         
         setIsLoading(true);
         try {
-            const response = await fetch(`${HOST_ADDRESS}/api/backend/music/${pdfFileId}`);
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/music/${pdfFileId}`);
             if (!response.ok) return;
             
             const data = await response.json();
