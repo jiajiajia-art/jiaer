@@ -1262,7 +1262,7 @@
 
     .sceneEventBtnContainer {
         position: absolute;
-        bottom: 20px;
+        bottom: 15px;
         left: 56%;
         transform: translateX(-50%);
         width: 160px;
@@ -1423,6 +1423,6 @@
     }
 
     .sceneEventBtnContainer{
-        margin-bottom: 10px;
+        margin-bottom: 4px;
     }
 }

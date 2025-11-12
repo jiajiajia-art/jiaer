@@ -702,6 +702,15 @@
     font-size: 18px;
 }
 
+@media (max-width: 1280px) {
+    .pageRoot {
+        width: 1280px;
+        min-height: 100vh;
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+}
+
 @media (max-width: 768px) {
     .pageRoot {
         width: 100%;

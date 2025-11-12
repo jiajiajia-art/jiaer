@@ -18,6 +18,8 @@ const Profile: React.FC = () => {
             <div className={styles.mainContent}>
                 {/* 右侧内容区域 */}
                 <div className={styles.main}>
+                    {/* <img src={`${import.meta.env.BASE_URL}data/asset/设置.png`} alt="" className={styles.settingIcon} /> */}
+
                     <img 
                         className={styles.avatar}
                         src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} 
@@ -26,9 +28,6 @@ const Profile: React.FC = () => {
                     <div className={styles.profileInfo}>
                         <div className={styles.profileName}>
                             <span>用户名: {user?.user.nickname || '未设置'}</span>
-                        </div>
-                        <div className={styles.profileEmail}>
-                            <span>邮箱: {user?.user.email || '未设置'}</span>
                         </div>
                     </div>
                     <button 
