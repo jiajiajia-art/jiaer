@@ -897,7 +897,7 @@
     .sceneDescriptionContainer {
         flex-direction: row;
         height: auto;
-        max-width: 720px; /* 最大宽度限制 */
+        max-width: 720px;
         align-items: stretch;
         
     }
@@ -905,9 +905,17 @@
     .sceneDescription {
         margin-bottom: 10px;
         min-width: 60%;
-        min-height: 120px;
+        min-height: auto;
         height: auto;
         max-width: 720px; /* 限制场景详细描述盒子最大宽度 */
+    }
+
+    .sceneDescription>div {
+        height: auto;
+    }
+
+    .sceneDescription p {
+        height: auto;
     }
 
     .sceneExits {
@@ -1083,7 +1091,7 @@
     .buildingCard {
         width: 100%;
         min-width: 86px;
-        min-height: 125px;
+        min-height: 130px;
         height: auto;
         aspect-ratio: 5 / 7; /* 保持web端比例 200/280 ≈ 5/7 */
         max-width: 100%;
@@ -1174,14 +1182,15 @@
         /* 使用 clamp 实现自适应字体大小，确保文字完整显示 */
         font-size: clamp(8px, 3vw, 12px);
     }
+
     .sceneDescriptionContainer {
-        max-width: 360px;
-        height: 170px;
+        max-width: 300px;
+        height: 150px;
     }
 
     .sceneDescription {
         min-width: 60%;
-        min-height: 100px;
+        min-height: 90px;
         height: fit-content;
     }
 
@@ -1199,7 +1208,7 @@
     .sceneDescription p {
         height: 80%;
         padding: 0px 28px 0px 28px;
-        font-size: 0.75rem;
+        font-size: 10px;
         text-indent: 1.5em;
         margin-top: 6px;
         display: flex;
@@ -1242,7 +1251,7 @@
     }
 
     .exitCard .exitLabel {
-        font-size: 11px;
+        font-size: 9px;
         padding: 6px 2px 12px;
         background:none;
     }
@@ -1370,11 +1379,25 @@
 
     .buildingsGrid{
         grid-template-columns: repeat(4, 1fr);
-        max-height: 270px;
+        max-height: 280px;
+    }
+
+    @media (max-width: 380px) {
+        .buildingsGrid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+
+        .buildingCard {
+            width: 100%;
+            min-width: 80px;
+            min-height: 120px;
+            aspect-ratio: 5 / 7;
+        }
     }
 
     .buildingCard {
-        height: 132px;
+        height: 135px;
     }
 
     .buildingCard h3{
