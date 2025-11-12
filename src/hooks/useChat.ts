@@ -108,7 +108,7 @@ export const useChat = () => {
                 const data = await response.json();
                 // 确保后端返回的是数组格式
                 if (Array.isArray(data.history)) {
-                    console.log('聊天历史数据:', data.history);
+                    // console.log('聊天历史数据:', data.history);
                     const historyMessages = data.history.map((item: any) => ({ 
                         role: item.role, 
                         text: item.content 

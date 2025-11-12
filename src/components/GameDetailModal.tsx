@@ -1,25 +1,29 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './GameDetailModal.module.css';
 import type { LibraryData } from '../api/home/libraryData.type';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore, authModalStore } from '../store/useAuthStore';
+import { useGameStore } from '../store/gameStore';
+import { useNavigate } from 'react-router-dom';
 import statisticsApi from '../api/statistics/statisticsApi';
+import createSessionApi from '../api/createGame/createSessionApi';
 
 interface GameDetailModalProps {
     isOpen: boolean;
     game: LibraryData;
     onClose: () => void;
-    onStart: () => void;
 }
 
 const GameDetailModal: React.FC<GameDetailModalProps> = ({
     isOpen,
     game,
     onClose,
-    onStart,
 }) => {
     const { user } = useAuthStore();
+    const { setPdfFileId, setSessionId } = useGameStore();
+    const navigate = useNavigate();
     // 跟踪上一次的打开状态，用于检测弹窗从关闭到打开的变化
     const prevIsOpenRef = useRef(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // 当弹窗打开时记录统计（每次打开都记录一次）
     useEffect(() => {
@@ -55,6 +59,73 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             console.error('记录查看统计失败:', error);
         });
     }, [isOpen, game, user]);
+
+    /**
+     * 创建会话
+     */
+    const createSession = async (fileId: string): Promise<string | null> => {
+        if (!fileId) {
+            console.error('没有 fileId，无法创建 session');
+            return null;
+        }
+
+        if (!user?.user?.userId || !user?.user?.id) {
+            alert('用户信息错误，无法创建 session');
+            return null;
+        }
+
+        console.log('创建会话', fileId, user.user.userId);
+        setIsLoading(true);
+        try {
+            const response = await createSessionApi.getSession({
+                fileId: fileId,
+                userId: user.user.id
+            });
+
+            if (response.data.success) {
+                const data = response.data.data;
+                return data?.session.session_id || null;
+            } else {
+                alert(response.data.message || '创建游戏失败，请重试');
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Session 创建错误:', error);
+            alert('创建游戏失败，请稍后重试');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * 处理开始游戏按钮点击
+     */
+    const handleStartGame = async () => {
+        // 检查用户是否登录
+        if (!user?.user?.userId || !user?.user?.id) {
+            // 打开登录弹窗
+            authModalStore.getState().setIsAuthModalOpen(true);
+            return;
+        }
+
+        const fileId = game?.file_id || game?.id;
+        if (!fileId) {
+            alert('游戏信息错误，请重试');
+            return;
+        }
+
+        // 更新 store
+        setPdfFileId(fileId);
+        
+        // 创建会话
+        const sessionId = await createSession(fileId);
+        
+        if (sessionId) {
+            setSessionId(sessionId);
+            navigate('/newmain');
+        }
+    };
 
     if (!isOpen || !game) return null;
 
@@ -129,7 +200,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     {(game.rating_count ?? 0)}人评价
                                 </div>
                             </div>
-                            <button className={styles.startGameBtn} onClick={onStart}>
+                            <button className={styles.startGameBtn} onClick={handleStartGame}>
                                 <img
                                     src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/开始游戏按钮.png`}
                                     alt="开始游戏"

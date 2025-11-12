@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styles from './Home.module.css';
-import { useGameStore } from '../store/gameStore';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import GameDetailModal from '../components/GameDetailModal';
-import createSessionApi from '../api/createGame/createSession.type';
 import libraryDataApi from '../api/home/libraryData';
 import type { LibraryData } from '../api/home/libraryData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
@@ -16,9 +14,7 @@ const Home: React.FC = () => {
     const [fileMetas, setFileMetas] = useState<LibraryData[]>([]);
     const [selectedGameMeta, setSelectedGameMeta] = useState<LibraryData | null>(null);
 
-    const { setPdfFileId, setSessionId } = useGameStore();
     const navigator = useNavigate();
-
 
     const sidebarItems = useMemo<SidebarItem[]>(() => [
         {
@@ -43,63 +39,11 @@ const Home: React.FC = () => {
     };
 
     /**
-     * 从详情弹窗创建游戏
-     */
-    const handleCreateGameFromDetail = async () => {
-        // 使用 file_id 或 id
-        const fileId = selectedGameMeta?.file_id || selectedGameMeta?.id;
-        if (!fileId) {
-            alert('游戏信息错误，请重试');
-            return;
-        }
-        // 同时更新 store 和直接传递给 createSession，确保立即生效
-        setPdfFileId(fileId);
-        const sessionId = await createSession(fileId);
-        setSessionId(sessionId);
-        if (sessionId) {
-            navigator('/newmain');
-        } else {
-            alert('创建游戏失败，请重试');
-        }
-    };
-
-    /**
      * 关闭弹窗
      */
     const closeModal = () => {
         setShowGameModal(false);
         setSelectedGameMeta(null);
-    };
-
-    /**
-     * 创建会话
-     */
-    const createSession = async (fileIdParam?: string): Promise<string | null> => {
-        // 优先使用传入的参数，否则从 store 读取
-        const targetFileId = fileIdParam || useGameStore.getState().pdfFileId;
-
-        if (!targetFileId) {
-            console.error('没有 pdfFileId，无法创建 session');
-            return null;
-        }
-
-        try {
-            const response = await createSessionApi.createSession({
-                fileId: targetFileId,
-                playerName: '玩家'
-            });
-
-            if (response.data.success) {
-                const data = response.data;
-                return data.sessionId;
-            } else {
-                alert(response.data.message);
-                return null;
-            }
-        } catch (error) {
-            console.error('❌ Session 创建错误:', error);
-            return null;
-        }
     };
 
     // ESC键关闭弹窗
@@ -209,7 +153,6 @@ const Home: React.FC = () => {
                     isOpen={showGameModal}
                     game={selectedGameMeta}
                     onClose={closeModal}
-                    onStart={handleCreateGameFromDetail}
                 />
             )}
             <MobileBottomNav />

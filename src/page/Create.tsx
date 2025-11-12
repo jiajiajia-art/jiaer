@@ -5,7 +5,7 @@ import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import styles from './Create.module.css';
 import { useGameStore } from '../store/gameStore';
 import createGameApi from '../api/createGame/createGameApi.type';
-import createSessionApi from '../api/createGame/createSession.type';
+import createSessionApi from '../api/createGame/createSessionApi';
 import { useAuthStore } from '../store/useAuthStore';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
@@ -321,14 +321,14 @@ const Create: React.FC = () => {
             setCreateProgressText('游戏创建成功，正在初始化会话...');
 
             // 第二步：创建session
-            const sessionResponse = await createSessionApi.createSession({
+            const sessionResponse = await createSessionApi.getSession({
                 fileId: fileId,
-                playerName: '玩家'
+                userId: user.user.id
             });
 
             if (sessionResponse.data.success) {
-                const sessionData = sessionResponse.data;
-                setSessionId(sessionData.sessionId);
+                const sessionData = sessionResponse.data.data;
+                setSessionId(sessionData?.session.session_id || null);
                 
                 // 停止假进度条，快速到100%
                 stopFakeProgress();

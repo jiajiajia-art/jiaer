@@ -37,3 +37,31 @@ export interface CreateSessionResponse {
   characterStatus: CharacterStatus;
   gameState: GameState;
 }
+
+
+interface GameSession {
+  id: number;
+  session_id: string;
+  user_id: string;
+  file_id: string;
+  status: string;
+  files: string;
+  started_at: string;
+  ended_at: string;
+}
+
+export interface GetSessionRequest {
+  userId: number;
+  fileId: string;
+}
+
+export interface GetSessionResponse {
+    session: GameSession;
+    initFilesPath: string;
+    sessionDataSync: {
+        success: boolean;
+        bucket: string;
+        prefix: string;
+        destRoot: string;
+    }
+}

@@ -47,6 +47,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     const hasSentGreetingRef = useRef(false);
     const hasSentFirstMessageRef = useRef(false);
     const lastSentMessageRef = useRef<string | null>(null);
+    const isLoadingHistoryRef = useRef(false);
+    const loadHistoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const loadHistoryMessagesRef = useRef<(() => Promise<void>) | undefined>(undefined);
+    const hasCheckedHistoryRef = useRef(false); // 标记是否已检查过历史记录
 
     useEffect(() => {
         if (isOpen && npc && npc.greetings && npc.greetings.length > 0 && !hasSentGreetingRef.current && onAddMessage) {
@@ -63,6 +67,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             hasSentGreetingRef.current = false;
             hasSentFirstMessageRef.current = false;
             lastSentMessageRef.current = null;
+            hasCheckedHistoryRef.current = false;
+            // 清理定时器
+            if (loadHistoryTimerRef.current) {
+                clearTimeout(loadHistoryTimerRef.current);
+                loadHistoryTimerRef.current = null;
+            }
+            isLoadingHistoryRef.current = false;
         }
     }, [isOpen, npc, onAddMessage]);
 
@@ -72,36 +83,70 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         }
     };
 
-    // 加载历史记录的函数
+    // 加载历史记录的函数（带防抖和重复检查）
     const loadHistoryMessages = React.useCallback(async () => {
         if (!onLoadHistory || !sessionId || !npc) return;
 
-        setLoadingHistory(true);
-        try {
-            const history = await onLoadHistory(sessionId, npc);
-            setHistoryMessages(history);
-            
-            // 如果历史记录为空且还没有发送过第一条消息，重置标记
-            if (history.length === 0 && hasSentFirstMessageRef.current) {
-                hasSentFirstMessageRef.current = false;
-            }
-        } catch (error) {
-            console.error('加载历史失败:', error);
-        } finally {
-            setLoadingHistory(false);
+        // 如果正在加载，直接返回
+        if (isLoadingHistoryRef.current) {
+            console.log('⏸️ 历史记录正在加载中，跳过重复请求');
+            return;
         }
+
+        // 清除之前的定时器
+        if (loadHistoryTimerRef.current) {
+            clearTimeout(loadHistoryTimerRef.current);
+            loadHistoryTimerRef.current = null;
+        }
+
+        // 使用防抖，延迟执行
+        loadHistoryTimerRef.current = setTimeout(async () => {
+            if (isLoadingHistoryRef.current) {
+                return;
+            }
+
+            isLoadingHistoryRef.current = true;
+            setLoadingHistory(true);
+            try {
+                console.log('📥 开始加载历史记录');
+                const history = await onLoadHistory(sessionId, npc);
+                setHistoryMessages(history);
+                hasCheckedHistoryRef.current = true; // 标记已检查过历史记录
+                
+                // 如果历史记录为空且还没有发送过第一条消息，重置标记
+                if (history.length === 0 && hasSentFirstMessageRef.current) {
+                    hasSentFirstMessageRef.current = false;
+                }
+            } catch (error) {
+                console.error('加载历史失败:', error);
+            } finally {
+                setLoadingHistory(false);
+                isLoadingHistoryRef.current = false;
+                loadHistoryTimerRef.current = null;
+            }
+        }, 300); // 300ms 防抖延迟
     }, [onLoadHistory, sessionId, npc]);
+
+    // 保持 loadHistoryMessages 的最新引用
+    useEffect(() => {
+        loadHistoryMessagesRef.current = loadHistoryMessages;
+    }, [loadHistoryMessages]);
 
     const handleOpenHistory = React.useCallback(() => {
         setShowHistory(prev => !prev);
     }, []);
 
-    // 当历史弹窗打开时加载历史记录
+    // 当历史弹窗打开时加载历史记录（只在打开时加载一次）
     useEffect(() => {
-        if (showHistory) {
-            loadHistoryMessages();
+        if (showHistory && !isLoadingHistoryRef.current && loadHistoryMessagesRef.current) {
+            // 清除之前的定时器
+            if (loadHistoryTimerRef.current) {
+                clearTimeout(loadHistoryTimerRef.current);
+                loadHistoryTimerRef.current = null;
+            }
+            loadHistoryMessagesRef.current();
         }
-    }, [showHistory, loadHistoryMessages]);
+    }, [showHistory]); // 移除 loadHistoryMessages 依赖，避免频繁触发
 
     // 当聊天消息变化时自动滚动（只关注 assistant 消息）
     useEffect(() => {
@@ -111,9 +156,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         }
     }, [chatMessages]);
 
-    // 记录上一次的 isTyping 状态和消息数量，用于检测流式输出完成和消息发送
+    // 记录上一次的 isTyping 状态，用于检测流式输出完成
     const prevIsTypingRef = useRef<boolean | undefined>(undefined);
-    const prevMessageCountRef = useRef(0);
     const isStreamingRef = useRef(false);
     const getNewSceneRef = useRef(getNewScene);
     
@@ -129,26 +173,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         : null;
     const currentIsTyping = latestAssistantMessageForTyping?.isTyping ?? false;
 
-    // 当用户发送消息或 AI 流式输出完成时，刷新历史记录
+    // 只在 AI 流式输出完成时刷新历史记录和场景数据
     useEffect(() => {
-        const currentMessageCount = chatMessages.length;
         const prevIsTyping = prevIsTypingRef.current;
 
-        // 1. 检测用户发送消息：消息数量增加且新增的是 user 消息
-        if (showHistory && currentMessageCount > prevMessageCountRef.current) {
-            const lastMessage = chatMessages[chatMessages.length - 1];
-            if (lastMessage && lastMessage.role === 'user') {
-                console.log('🔄 用户发送消息，刷新历史记录');
-                loadHistoryMessages();
-            }
-        }
-
-        // 2. 检测流式输出开始
+        // 检测流式输出开始
         if (currentIsTyping === true && prevIsTyping !== true) {
             isStreamingRef.current = true;
         }
 
-        // 3. 检测流式输出完成：从 typing 状态变为非 typing 状态
+        // 检测流式输出完成：从 typing 状态变为非 typing 状态
         if (prevIsTyping === true && currentIsTyping === false && isStreamingRef.current) {
             isStreamingRef.current = false;
             console.log('🔄 AI 流式输出完成，刷新场景数据和历史记录');
@@ -156,18 +190,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             getNewSceneRef.current().catch(err => {
                 console.warn('⚠️ 刷新场景数据失败:', err);
             });
-            // 如果历史记录窗口打开，也刷新历史记录
-            if (showHistory) {
-                setTimeout(() => {
-                    loadHistoryMessages();
-                }, 800);
+            // 等待后端处理完成后再加载历史记录（延迟更长时间确保后端已保存）
+            if (showHistory && !isLoadingHistoryRef.current && loadHistoryMessagesRef.current) {
+                // 清除之前的定时器
+                if (loadHistoryTimerRef.current) {
+                    clearTimeout(loadHistoryTimerRef.current);
+                }
+                loadHistoryTimerRef.current = setTimeout(() => {
+                    console.log('🔄 流式输出完成，加载历史记录');
+                    loadHistoryMessagesRef.current?.();
+                }, 1500); // 增加延迟时间，确保后端已保存完整数据
             }
         }
 
         // 更新 ref
         prevIsTypingRef.current = currentIsTyping;
-        prevMessageCountRef.current = currentMessageCount;
-    }, [chatMessages, showHistory, loadHistoryMessages, currentIsTyping]); // 移除 getNewScene 依赖
+    }, [currentIsTyping, showHistory]); // 移除 loadHistoryMessages 依赖，避免频繁触发
 
     // 当聊天面板打开时阻止页面滚动，关闭时恢复
     useEffect(() => {
@@ -189,20 +227,64 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         }
     }, [isOpen]);
 
-    const handleSendMessage = React.useCallback((message: string) => {
+    const handleSendMessage = React.useCallback(async (message: string) => {
         if (!message.trim()) return;
 
         const isFirstMessage = !hasSentFirstMessageRef.current;
-        const isEmptyHistory = historyMessages.length === 0;
+        
+        // 如果是第一次发送消息，先检查历史记录
+        if (isFirstMessage && !hasCheckedHistoryRef.current && onLoadHistory && sessionId && npc) {
+            try {
+                console.log('📥 第一次发送消息，先检查历史记录');
+                const history = await onLoadHistory(sessionId, npc);
+                setHistoryMessages(history);
+                hasCheckedHistoryRef.current = true;
+                
+                // 检查历史记录中是否有用户消息（如果没有用户消息，说明是空历史记录）
+                // 因为 loadChatHistory 会在空历史时返回欢迎消息，所以需要检查是否有 user 消息
+                const hasUserMessage = history.some(msg => msg.role === 'user');
+                const isEmptyHistory = !hasUserMessage;
+                
+                console.log('📊 历史记录检查结果:', {
+                    totalMessages: history.length,
+                    hasUserMessage,
+                    isEmptyHistory
+                });
+                
+                // 发送第一次消息
+                onSendMessage(message);
+                lastSentMessageRef.current = message;
+                hasSentFirstMessageRef.current = true;
+                
+                // 如果历史记录为空（没有用户消息），延迟后再次发送
+                if (isEmptyHistory) {
+                    console.log('📤 历史记录为空（无用户消息），第一条消息将自动发送两次');
+                    setTimeout(() => {
+                        console.log('📤 自动发送第二次消息');
+                        onSendMessage(message);
+                    }, 300);
+                } else {
+                    console.log('📤 历史记录不为空，只发送一次');
+                }
+                return;
+            } catch (error) {
+                console.error('检查历史记录失败:', error);
+                // 如果检查失败，按正常流程发送一次
+            }
+        }
 
-        // 发送消息
+        // 正常发送消息
+        // 检查历史记录中是否有用户消息（如果没有用户消息，说明是空历史记录）
+        const hasUserMessage = historyMessages.some(msg => msg.role === 'user');
+        const isEmptyHistory = !hasUserMessage;
+        
         onSendMessage(message);
         lastSentMessageRef.current = message;
 
         // 如果是第一条消息且历史记录为空，延迟后再次发送
         if (isFirstMessage && isEmptyHistory) {
             hasSentFirstMessageRef.current = true;
-            console.log('📤 历史记录为空，第一条消息将自动发送两次');
+            console.log('📤 历史记录为空（无用户消息），第一条消息将自动发送两次');
             // 延迟一段时间后再次发送
             setTimeout(() => {
                 console.log('📤 自动发送第二次消息');
@@ -211,7 +293,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         } else {
             hasSentFirstMessageRef.current = true;
         }
-    }, [onSendMessage, historyMessages.length]);
+    }, [onSendMessage, historyMessages.length, onLoadHistory, sessionId, npc]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && chatInput.trim()) {
