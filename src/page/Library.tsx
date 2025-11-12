@@ -10,6 +10,7 @@ import libraryDataApi from '../api/home/libraryData';
 import type { LibraryData } from '../api/home/libraryData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
+import { IoSearch } from 'react-icons/io5';
 
 const Library: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
@@ -157,9 +158,9 @@ const Library: React.FC = () => {
 
                 {/* 右侧内容区域 - Library 特有的内容 */}
                 <div className={styles.main}>
-                <div className={styles.searchBox}>
+                    <div className={styles.searchBox}>
                         <input className={styles.searchInput} placeholder="搜索商品、素材、事件..." />
-                        <span className={styles.searchIcon}></span>
+                        <IoSearch className={styles.searchIcon} />
                     </div>
                     <div className={styles.libraryContent}>
                         <div className={styles.grid4}>
