@@ -1263,11 +1263,26 @@
         left: 50%;
         transform: translateX(-50%);
         margin-left: 0;
+        width: 246px;
+        height: 60px;
+        background-size: 246px 100%;
+    }
+    .npcsGrid{
+        max-width: 250px;
+        height: 50px;
     }
     
-    .npcCard .npcLabel {
-        color: #E8DBB7;
-        font-size: 10px;
+    .npcLabel {
+        color: #E8DBB7 !important;
+        font-size: 8px !important;
+    }
+
+    .npcCard{
+        width: 50px;
+        height: 50px;
+        border-radius: 5px;
+        color: #E8DBB7 !important;
+        font-size: 8px !important;
     }
 
     .sceneEventBtnContainer {
@@ -1425,7 +1440,7 @@
         left: 50%;
         transform: translateX(-50%);
         margin-left: 0;
-        width: 280px;
+        width: 246px;
         height: 60px;
         background-size: 246px 100%;
     }
