@@ -526,6 +526,7 @@ const NewMain: React.FC = () => {
                     }
                 }}
                 worldMapImageUrl={worldMapImageUrl}
+                player={player}
             />
 
             {/* 事件弹窗组件 */}

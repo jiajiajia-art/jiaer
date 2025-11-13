@@ -66,7 +66,6 @@ const EventModal: React.FC<EventModalProps> = ({
             });
             
             if (response.ok) {
-                console.log('✅ 流式请求成功，打开 BuildingEventModal');
                 setBuildingData({
                     sceneId: currentSceneId,
                     buildingId: event.id,

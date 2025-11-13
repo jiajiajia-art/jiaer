@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import GameDetailModal from '../components/GameDetailModal';
-import libraryDataApi from '../api/home/libraryData';
-import type { LibraryData } from '../api/home/libraryData.type';
+import libraryDataApi from '../api/home/getGameData';
+import type { UserGameData } from '../api/home/getGameData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
-    const [fileMetas, setFileMetas] = useState<LibraryData[]>([]);
-    const [selectedGameMeta, setSelectedGameMeta] = useState<LibraryData | null>(null);
+    const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
 
     const navigator = useNavigate();
 
@@ -33,7 +33,7 @@ const Home: React.FC = () => {
     /**
      * 显示游戏详情（从后端数据）
      */
-    const showGameDetail = (meta: LibraryData) => {
+    const showGameDetail = (meta: UserGameData) => {
         setSelectedGameMeta(meta);
         setShowGameModal(true);
     };
@@ -64,7 +64,7 @@ const Home: React.FC = () => {
     useEffect(() => {
         const loadLibraryData = async () => {
             try {
-                const response = await libraryDataApi.getLibraryData(2, { limit: 4 });
+                const response = await libraryDataApi.getGameData({ limit: '4' });
 
                 if (response.data.success && response.data.data) {
                     setFileMetas(response.data.data);
@@ -113,45 +113,52 @@ const Home: React.FC = () => {
                     </div>
 
                     <div className={styles.shopSection}>
-                        <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>限时优惠!</div>
-                            <button 
-                                type="button"
-                                className={styles.more} 
-                                onClick={() => {
-                                    navigator('/home/library');
-                                }}
-                            ></button>
-                        </div>
-                        <div className={styles.grid4}>
-                            {fileMetas.length === 0 ? (
-                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: '#5E4630' }}>
-                                    <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>⏳ 加载中...</h2>
-                                    <p style={{ fontSize: '16px', opacity: 0.9 }}>正在加载剧情文件信息</p>
-                                </div>
-                            ) : (
-                                fileMetas.map((meta, idx) => (
-                                    <div
-                                        className={styles.goodsCard}
-                                        key={meta.id}
+                        <div className={styles.shopSectionInner}>
+                            <div className={styles.shopSectionContent}>
+                                <div className={styles.sectionHeader}>
+                                    <div className={styles.sectionTitle}>限时优惠!</div>
+                                    <button 
+                                        type="button"
+                                        className={`${styles.more} ${styles.moreText}`}
                                         onClick={() => {
-                                            showGameDetail(meta);
+                                            navigator('/home/library');
                                         }}
                                     >
-                                        <div className={styles.goodsImg}>
-                                            <img
-                                                src={meta.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`}
-                                                alt={meta.title || `剧情${idx + 1}`}
-                                            />
+                                        更多
+                                        {'>'}
+                                    </button>
+                                </div>
+                                <div className={styles.grid4}>
+                                    {fileMetas.length === 0 ? (
+                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: '#5E4630' }}>
+                                            <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>⏳ 加载中...</h2>
+                                            <p style={{ fontSize: '16px', opacity: 0.9 }}>正在加载剧情文件信息</p>
                                         </div>
-                                        <div className={styles.goodsBody}>
-                                            <div className={styles.goodsTitle}>
-                                                {meta.title || `剧情${idx + 1}`}
+                                    ) : (
+                                        fileMetas.map((meta, idx) => (
+                                            <div
+                                                className={styles.goodsCard}
+                                                key={meta.id}
+                                                onClick={() => {
+                                                    showGameDetail(meta);
+                                                }}
+                                            >
+                                                <div className={styles.goodsImg}>
+                                                    <img
+                                                        src={meta.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`}
+                                                        alt={meta.title || `剧情${idx + 1}`}
+                                                    />
+                                                </div>
+                                                <div className={styles.goodsBody}>
+                                                    <div className={styles.goodsTitle}>
+                                                        {meta.title || `剧情${idx + 1}`}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                                        ))
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

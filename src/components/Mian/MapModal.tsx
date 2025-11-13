@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import styles from './MapModal.module.css';
 import { HOST_ADDRESS } from '../../config';
+import { MdLockClock } from 'react-icons/md';
 
 type ScenesMap = Record<string, any>;
 
@@ -11,6 +12,9 @@ interface MapModalProps {
     currentSceneId?: string | null;
     onSceneClick?: (sceneId: string) => void;
     worldMapImageUrl?: string | null;
+    player?: {
+        unlockedScenes?: string[];
+    } | null;
 }
 
 // 地图布局：优化算法避免节点重合
@@ -185,7 +189,8 @@ const MapModal: React.FC<MapModalProps> = ({
     scenes,
     currentSceneId,
     onSceneClick,
-    worldMapImageUrl
+    worldMapImageUrl,
+    player
 }) => {
 
     // 计算位置并应用缩放以适应固定容器，同时保证节点不会太小
@@ -247,6 +252,8 @@ const MapModal: React.FC<MapModalProps> = ({
     }, [scenes]);
     
     if (!isOpen) return null;
+    console.log(player);
+    
     
     return (
         <div className={styles.overlay} onClick={onClose}>
@@ -296,38 +303,75 @@ const MapModal: React.FC<MapModalProps> = ({
                                 }
                             </g>
                             <g>
-                                {Object.entries(scenes).map(([id, sc]) => (
-                                    positions[id] ? (
+                                {Object.entries(scenes).map(([id, sc]) => {
+                                    if (!positions[id]) return null;
+                                    
+                                    const isUnlocked = player?.unlockedScenes?.includes(id) ?? false;
+                                    const isCurrent = id === currentSceneId;
+                                    const radius = isCurrent ? 90 : 80;
+                                    
+                                    return (
                                         <g
                                             key={id}
                                             onClick={() => onSceneClick && onSceneClick(id)}
-                                            style={{ cursor: 'pointer' }}
+                                            style={{ 
+                                                cursor: isUnlocked ? 'pointer' : 'not-allowed',
+                                                opacity: !isUnlocked ? 0.6 : 1,
+                                                filter: !isUnlocked ? 'grayscale(0.5)' : 'none'
+                                            }}
                                         >
                                             <defs>
                                                 <clipPath id={`clip-${id}`}>
-                                                    <circle cx={positions[id].x} cy={positions[id].y} r={id === currentSceneId ? 90 : 80} />
+                                                    <circle cx={positions[id].x} cy={positions[id].y} r={radius} />
                                                 </clipPath>
                                             </defs>
                                             <image
                                                 href={`${HOST_ADDRESS}${sc.background}` || `${import.meta.env.BASE_URL}data/icons/empty.png`}
-                                                x={positions[id].x - (id === currentSceneId ? 90 : 80)}
-                                                y={positions[id].y - (id === currentSceneId ? 90 : 80)}
-                                                width={(id === currentSceneId ? 180 : 160)}
-                                                height={(id === currentSceneId ? 180 : 160)}
+                                                x={positions[id].x - radius}
+                                                y={positions[id].y - radius}
+                                                width={radius * 2}
+                                                height={radius * 2}
                                                 clipPath={`url(#clip-${id})`}
                                                 preserveAspectRatio="xMidYMid slice"
+                                                style={{
+                                                    filter: !isUnlocked ? 'brightness(0.5) grayscale(0.8)' : 'none'
+                                                }}
                                             />
                                             <circle
                                                 cx={positions[id].x}
                                                 cy={positions[id].y}
-                                                r={id === currentSceneId ? 90 : 80}
+                                                r={radius}
                                                 fill="none"
                                                 stroke="#000000"
-                                                strokeWidth={id === currentSceneId ? 10 : 9}
+                                                strokeWidth={isCurrent ? 10 : 9}
+                                                style={{
+                                                    opacity: !isUnlocked ? 0.7 : 1
+                                                }}
                                             />
+                                            {!isUnlocked && (
+                                                <g>
+                                                    {/* 锁图标背景圆形，让图标更明显 */}
+                                                    <circle
+                                                        cx={positions[id].x}
+                                                        cy={positions[id].y}
+                                                        r={radius * 0.6}
+                                                        fill="rgba(0, 0, 0, 0.7)"
+                                                    />
+                                                    <foreignObject
+                                                        x={positions[id].x - radius * 0.5}
+                                                        y={positions[id].y - radius * 0.5 - 30}
+                                                        width={radius}
+                                                        height={radius}
+                                                    >
+                                                        <div className={styles.lockIcon}>
+                                                            <MdLockClock size={radius * 1}/>
+                                                        </div>
+                                                    </foreignObject>
+                                                </g>
+                                            )}
                                             <text
                                                 x={positions[id].x}
-                                                y={positions[id].y + 12}
+                                                y={isUnlocked ? positions[id].y + 12 : positions[id].y + radius- 20}
                                                 textAnchor="middle"
                                                 fill="#29323c"
                                                 fontSize={36}
@@ -336,8 +380,8 @@ const MapModal: React.FC<MapModalProps> = ({
                                                 {sc.name.length > 6 ? sc.name.substring(0, 6) : sc.name}
                                             </text>
                                         </g>
-                                    ) : null
-                                ))}
+                                    );
+                                })}
                             </g>
                         </svg>
                     </div>

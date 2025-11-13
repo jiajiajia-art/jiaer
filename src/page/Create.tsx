@@ -28,6 +28,7 @@ const Create: React.FC = () => {
     const [gameName, setGameName] = useState('');
     const [gameSubtitle, setGameSubtitle] = useState('');
     const [gameDescription, setGameDescription] = useState('');
+    const [noImageMode, setNoImageMode] = useState(false); // 无图模式
     
     const { setPdfFileId, setSessionId } = useGameStore();
     const { user } = useAuthStore();
@@ -351,7 +352,6 @@ const Create: React.FC = () => {
         } catch (error: any) {
             // 如果是取消操作，不显示错误
             if (error.name === 'AbortError' || error.message === 'Request aborted') {
-                console.log('上传已取消');
                 return;
             }
             
@@ -548,11 +548,16 @@ const Create: React.FC = () => {
                                 </div>
                                 
                                 <div className={styles.coverActions}>
-                                    {/* <button 
-                                        className={styles.uploadCoverBtn}
-                                        onClick={() => coverInputRef.current?.click()}
-                                    >
-                                    </button> */}
+                                    <label className={styles.noImageModeLabel}>
+                                        <input 
+                                            type="checkbox"
+                                            checked={noImageMode}
+                                            onChange={(e) => setNoImageMode(e.target.checked)}
+                                            disabled={isCreating}
+                                            className={styles.noImageModeCheckbox}
+                                        />
+                                        <span className={styles.noImageModeText}>无图模式</span>
+                                    </label>
                                     <button 
                                         className={styles.createGameBtn}
                                         onClick={handleCreateGame}

@@ -1,4 +1,4 @@
-export interface LibraryData {
+export interface UserGameData {
     id: string;
     file_id: string;
     creator_user_id: number;
@@ -15,13 +15,20 @@ export interface LibraryData {
     created_at: string;
     updated_at: string;
     author_name: string;
+    is_public: number;
 }
 
-export interface LibraryDataResponse {
+export interface UserGameResponse {
     success: boolean;
-    data: LibraryData[];
+    data: UserGameData[];
 }
 
-export interface LibraryRequest{
+export interface UserGameRequest{
     limit?: number;
+}
+
+
+export interface PublicGameRequest {
+    limit?: string;
+    offset?: string;
 }

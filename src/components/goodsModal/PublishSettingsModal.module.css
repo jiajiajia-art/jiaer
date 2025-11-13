@@ -1,0 +1,226 @@
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modalShow {
+    display: flex;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* 发布设置弹窗内容容器 */
+.publishModalContent {
+    padding: 2px;
+    max-width: 500px;
+    width: 500px;
+    min-height: 320px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background-image: url('/data/asset/剧本详情页/评分板.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 20px 30px;
+}
+
+.closeBtn {
+    position: absolute;
+    top: 0px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+}
+
+.closeBtn img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.modalTitle {
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    color: #E8DBB7;
+    margin: 20px 0 30px 0;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.formContent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #5E4630;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.freeCheckbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #B69B74;
+}
+
+.checkboxLabel {
+    font-size: 16px;
+    font-weight: 600;
+    color: #5E4630;
+    cursor: pointer;
+}
+
+.priceInput {
+    padding: 12px 15px;
+    border: 2px solid #8b785e;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #5E4630;
+    outline: none;
+    transition: border-color 0.3s ease;
+}
+
+.priceInput:focus {
+    border-color: #B69B74;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: flex-end;
+}
+
+.cancelBtn,
+.publishBtn {
+    padding: 10px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cancelBtn {
+    background-color: #8B7355;
+    color: #fff;
+}
+
+.cancelBtn:hover {
+    background-color: #6C573A;
+}
+
+.publishBtn {
+    background-color: #648255;
+    border: 1px solid #5a4630;
+    color: #fff;
+}
+
+@media (max-width: 500px) {
+    .modal {
+        padding: 10px;
+    }
+
+    .publishModalContent {
+        width: 90vw;
+        max-width: 90vw;
+        min-height: 280px;
+        padding: 20px 25px;
+    }
+
+    .closeBtn {
+        top: 0px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .closeBtn img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .modalTitle {
+        font-size: 20px;
+        margin: 15px 0 20px 0;
+    }
+
+    .formContent {
+        gap: 15px;
+    }
+
+    .formGroup {
+        gap: 6px;
+    }
+
+    .label {
+        font-size: 14px;
+    }
+
+    .freeCheckbox {
+        width: 16px;
+        height: 16px;
+    }
+
+    .checkboxLabel {
+        font-size: 14px;
+    }
+
+    .priceInput {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+
+    .buttonGroup {
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .cancelBtn,
+    .publishBtn {
+        width: 45%;
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}

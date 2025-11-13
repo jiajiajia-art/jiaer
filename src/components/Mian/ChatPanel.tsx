@@ -108,7 +108,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             isLoadingHistoryRef.current = true;
             setLoadingHistory(true);
             try {
-                console.log('📥 开始加载历史记录');
                 const history = await onLoadHistory(sessionId, npc);
                 setHistoryMessages(history);
                 hasCheckedHistoryRef.current = true; // 标记已检查过历史记录
@@ -185,7 +184,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         // 检测流式输出完成：从 typing 状态变为非 typing 状态
         if (prevIsTyping === true && currentIsTyping === false && isStreamingRef.current) {
             isStreamingRef.current = false;
-            console.log('🔄 AI 流式输出完成，刷新场景数据和历史记录');
             // 立即刷新场景数据，使用 ref 避免依赖问题
             getNewSceneRef.current().catch(err => {
                 console.warn('⚠️ 刷新场景数据失败:', err);
@@ -244,12 +242,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 // 因为 loadChatHistory 会在空历史时返回欢迎消息，所以需要检查是否有 user 消息
                 const hasUserMessage = history.some(msg => msg.role === 'user');
                 const isEmptyHistory = !hasUserMessage;
-                
-                console.log('📊 历史记录检查结果:', {
-                    totalMessages: history.length,
-                    hasUserMessage,
-                    isEmptyHistory
-                });
                 
                 // 发送第一次消息
                 onSendMessage(message);

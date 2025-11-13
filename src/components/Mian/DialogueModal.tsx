@@ -10,6 +10,7 @@ import InventoryFloatingPanel from './InventoryFloatingPanel';
 import { useGameData } from '../../hooks/useGameData';
 import { authFetch } from '../../api/base';
 import statisticsApi from '../../api/statistics/statisticsApi';
+import MissionsModal from './missionsModal';
 
 // EquipmentSlots 类型定义（后端数据结构：equipment 存储的是物品ID字符串）
 type EquipmentSlots = {
@@ -431,26 +432,6 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
     if (!isOpen) return null;
 
-    // const handleGenerate = async () => {
-    //     const response = await fetch(`${HOST_ADDRESS}/api/backend/novel/generate`, {
-    //         method: 'POST',
-    //         body: JSON.stringify({ 
-    //             sessionId: sessionId,
-    //             fileId: pdfFileId,
-    //             title: title,
-    //             theme: 'adventure',
-    //             chapterCount: 5,
-    //             style: 'classic',
-    //         })
-    //     });
-    //     if (!response.ok) {
-    //         console.error('❌ 小说生成失败:', response.statusText);
-    //         return;
-    //     }
-    //     const data = await response.json();
-    //     console.log('✅ 小说生成成功:', data);
-    // };
-
 
     // 历史记录只使用从后端加载的数据
     const historyMessagesData: ChatMessage[] = historyMessages;
@@ -471,6 +452,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                             onClose={() => setShowHistory(false)}
                         />
                     )}
+                    <MissionsModal />
                 </div>
 
                 {/* 中间：编年纪事对话 - 只显示最新一条 AI 回复 */}

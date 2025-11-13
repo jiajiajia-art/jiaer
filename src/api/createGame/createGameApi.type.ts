@@ -10,6 +10,7 @@ const createGameApi = {
         formData.append('subtitle', data.subtitle);
         formData.append('description', data.description);
         formData.append('creator_user_id', data.creator_user_id);
+        formData.append('author_name', data.author_name);
         
         return api.post<CreateGameResponse>('/auth/games', formData, {
             headers: {

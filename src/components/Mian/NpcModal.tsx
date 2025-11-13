@@ -15,11 +15,8 @@ const NpcModal: React.FC<NpcModalProps> = ({
     onClose,
     npc,
     onStartChat,
-    scenes = {}
 }) => {
     if (!isOpen || !npc) return null;
-    console.log('npc', npc);
-    console.log('scenes', scenes);
     
     return (
         <div className={styles.modal} onClick={onClose}>

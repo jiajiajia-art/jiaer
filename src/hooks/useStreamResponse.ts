@@ -325,7 +325,6 @@ export const useStreamResponse = (
         if (!onUpdate && isActive && streamResponse) {
             // 如果正在处理旧的流，先停止并重置
             if (isProcessingRef.current) {
-                console.log('⚠️ 检测到新的 streamResponse，停止旧的处理');
                 clearTypingTimer();
                 accumulatedTextRef.current = '';
                 displayedTextRef.current = '';

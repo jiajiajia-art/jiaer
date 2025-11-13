@@ -184,33 +184,8 @@ const getValidToken = async (): Promise<string | null> => {
   return token;
 };
 
-/**
- * Fetch 请求的包装函数，自动处理 token 刷新和携带
- * 支持所有原生 fetch 的功能，包括 SSE 流式请求
- * 
- * @param url 请求 URL
- * @param init 请求配置（与原生 fetch 相同）
- * @returns Promise<Response>
- * 
- * @example
- * // 普通请求
- * const response = await authFetch('/api/backend/history/123');
- * 
- * // POST 请求
- * const response = await authFetch('/api/backend/game/session/123/stream/action-live', {
- *   method: 'POST',
- *   headers: { 'Content-Type': 'application/json' },
- *   body: JSON.stringify({ action: '开始游戏' })
- * });
- * 
- * // SSE 流式请求
- * const response = await authFetch('/api/backend/game/session/123/stream/action-live', {
- *   method: 'POST',
- *   headers: { 'Content-Type': 'application/json' },
- *   body: JSON.stringify({ action: '开始游戏' })
- * });
- * const reader = response.body?.getReader();
- */
+//  * Fetch 请求的包装函数，自动处理 token 刷新和携带
+//  * 支持所有原生 fetch 的功能，包括 SSE 流式请求
 export const authFetch = async (
   url: string | URL,
   init?: RequestInit

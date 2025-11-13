@@ -1,0 +1,10 @@
+.missionsModal {
+    width: 350px;
+    height: 270px;
+    position: relative;
+    background: transparent;
+    background-image: url('/data/asset/剧本详情页/评分板.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}

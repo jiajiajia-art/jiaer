@@ -3,17 +3,17 @@ import styles from './Library.module.css';
 import Navbar from '../components/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import GameDetailModal from '../components/GameDetailModal';
-import libraryDataApi from '../api/home/libraryData';
-import type { LibraryData } from '../api/home/libraryData.type';
+import libraryDataApi from '../api/home/getGameData';
+import type { UserGameData } from '../api/home/getGameData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 import { IoSearch } from 'react-icons/io5';
 
 const Library: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
-    const [fileMetas, setFileMetas] = useState<LibraryData[]>([]);
+    const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedGameMeta, setSelectedGameMeta] = useState<LibraryData | null>(null);
+    const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
 
     
     const sidebarItems = useMemo<SidebarItem[]>(() => [
@@ -34,7 +34,7 @@ const Library: React.FC = () => {
     /**
      * 显示游戏详情（从后端数据）
      */
-    const showGameDetail = (meta: LibraryData) => {
+    const showGameDetail = (meta: UserGameData) => {
         setSelectedGameMeta(meta);
         setShowGameModal(true);
     };
@@ -67,7 +67,7 @@ const Library: React.FC = () => {
             setIsLoading(true);
             try {
                 // 修复调用参数数量：需要传递 userId 和 request 两个参数
-                const response = await libraryDataApi.getLibraryData(2, { limit: 10 });
+                const response = await libraryDataApi.getGameData({ limit: '10' });
 
                 if (response.data.success && response.data.data) {
 

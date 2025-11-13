@@ -78,6 +78,7 @@
     border-radius: 20px;
     background: linear-gradient(90deg, rgba(185, 160, 130, 0.3) 0%, rgba(216, 198, 173, 0.6) 50%, rgba(185, 160, 130, 0.3) 100%);
     background-size: 200% 100%;
+    position: relative;
 }
 
 .goodsImg img {
@@ -98,6 +99,83 @@
     font-weight: 600;
     color: #5E4630;
     margin-bottom: 8px;
+}
+
+/* 删除图标 - 固定在图片右上角 */
+.deleteIcon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background-color: #B2440F;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.deleteIcon:hover {
+    transform: scale(1.1);
+}
+
+.deleteIcon:active {
+    transform: scale(0.95);
+}
+
+/* 按钮容器 - 一行显示 */
+.goodsActions {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* 编辑按钮 */
+.editBtn,
+.publishBtn,
+.gameDataBtn {
+    flex: 1;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.editBtn {
+    background-color: #A68F66;
+    border: 1px solid #5a4630;
+    color: #fff;
+}
+
+.publishBtn {
+    background-color: #648255;
+    border: 1px solid #5a4630;
+    color: #fff;
+}
+
+.gameDataBtn {
+    background-color: #6C573A;
+    color: #E8DBB7;
+}
+
+.gameDataBtn:hover {
+    background-color: #5a4630;
+    transform: translateY(-1px);
 }
 
 .skeletonCard {
@@ -219,6 +297,27 @@
 
     .goodsTitle {
         font-size: 14px;
+    }
+
+    .deleteIcon {
+        width: 24px;
+        height: 24px;
+        top: 6px;
+        right: 6px;
+        font-size: 14px;
+    }
+
+    .goodsActions {
+        gap: 6px;
+        margin-top: 6px;
+    }
+
+    .editBtn,
+    .publishBtn,
+    .gameDataBtn {
+        padding: 5px 8px;
+        font-size: 12px;
+        border-radius: 4px;
     }
 
     .searchBox {

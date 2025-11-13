@@ -212,6 +212,23 @@
     flex-shrink: 0;
 }
 
+.exportBtnContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 40px;
+}
+
+.exportBtn {
+    width: 80%;
+    height: 40px;
+    background: #B24F1B;
+    color: #fff;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .modalContent {

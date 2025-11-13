@@ -102,10 +102,7 @@ export const useGameData = () => {
     // 加载后端数据
     useEffect(() => {
         if (backendDataLoaded || !sessionId || !pdfFileId) return;
-        console.log('sessionId', sessionId);
-        console.log('pdfFileId', pdfFileId);
         (async () => {
-            console.log('getGameFiles & assets');
             const results = await Promise.allSettled([
                 gameDataApi.getGameFiles(sessionId),
                 gameDataApi.getPlayerAvatar(pdfFileId),
@@ -113,6 +110,7 @@ export const useGameData = () => {
             ]);
 
             const [filesResult, avatarResult, worldResult] = results;
+            console.log(filesResult);
 
             if (filesResult.status === 'fulfilled') {
                 const responseData = filesResult.value.data;

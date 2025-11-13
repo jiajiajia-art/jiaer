@@ -63,8 +63,6 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
             console.error('❌ 无法获取 reader');
             return;
         }
-
-        console.log('🔄 开始处理流式响应，添加新消息到列表');
         
         // 添加初始"打字中"消息
         setMessages((prev) => {
@@ -76,7 +74,6 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
                 actions: [] 
             };
             const newMessages = [...prev, newMessage];
-            console.log('✅ 添加新消息，当前消息数量:', newMessages.length);
             return newMessages;
         });
 
@@ -166,14 +163,7 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
                 if (finalText.includes('[ACTION:')) {
                     finalText = finalText.slice(0, finalText.indexOf('[ACTION:')).trim();
                 }
-                
-                console.log('✅ 流式响应完成，最终消息:', {
-                    textLength: finalText.length,
-                    textPreview: finalText.substring(0, 100) + (finalText.length > 100 ? '...' : ''),
-                    actions: last.actions,
-                    isTyping: false
-                });
-                
+
                 updated[updated.length - 1] = {
                     ...last,
                     text: finalText,
