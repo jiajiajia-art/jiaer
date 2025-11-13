@@ -276,7 +276,7 @@
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
-    padding: 8px 50px 8px 15px; /* 右侧预留发送按钮空间 */
+    padding: 14px 50px 14px 15px; /* 右侧预留发送按钮空间 */
     box-sizing: border-box;
     display: flex;
     align-items: center;
@@ -316,16 +316,16 @@
     font-size: 0.9rem;
     transition: opacity 0.3s ease;
     background-image: url('/data/asset/对话界面/发送按钮.png');
-    background-size: 100px 46px;
+    background-size: 100px 42px;
     background-position: cover;
     background-repeat: no-repeat;
     background-color: transparent;
     position: absolute;
-    right: 8px;
+    right: 6px;
     top: 50%;
     transform: translateY(-50%);
     width: 100px !important;
-    height: 46px !important;
+    height: 42px !important;
     z-index: 10;
 }
 
