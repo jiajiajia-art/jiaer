@@ -237,7 +237,7 @@
         width: 280px;
         position: fixed;
         top: 100px;
-        right: 10px;
+        left: 10px;
         max-height: 85vh;
     }
     
@@ -250,8 +250,46 @@
         height: 60px;
     }
     
-    .playerBasic h3 {
-        font-size: 1.1rem;
+    
+    .playerPanelHeaderLevelText {
+        font-size: 10px;
+    }
+    
+    .playerPanelHeaderLevelValue {
+        font-size: 18px;
+    }
+    
+    .playerPanelHeader h3,
+    .playerNameDisplay {
+        font-size: 0.9rem;
+    }
+    
+    .playerNameInput {
+        font-size: 0.9rem;
+    }
+    
+    .playerNameIcon {
+        font-size: 14px;
+    }
+    
+    .playerNameSaveIcon {
+        font-size: 16px;
+    }
+    
+    .playerBasic {
+        font-size: 0.9rem;
+    }
+    
+    .playerBasic p {
+        font-size: 0.9rem;
+    }
+    
+    .playerStats {
+        font-size: 0.9rem;
+    }
+    
+    .playerStats p {
+        font-size: 0.9rem;
     }
 }
 
@@ -260,5 +298,46 @@
         width: calc(100vw - 20px);
         right: 10px;
         left: 10px;
+    }
+    
+    .playerPanelHeaderLevelText {
+        font-size: 10px;
+    }
+    
+    .playerPanelHeaderLevelValue {
+        font-size: 18px;
+    }
+    
+    .playerPanelHeader h3,
+    .playerNameDisplay {
+        font-size: 0.9rem;
+    }
+    
+    .playerNameInput {
+        font-size: 0.9rem;
+    }
+    
+    .playerNameIcon {
+        font-size: 14px;
+    }
+    
+    .playerNameSaveIcon {
+        font-size: 16px;
+    }
+    
+    .playerBasic {
+        font-size: 0.9rem;
+    }
+    
+    .playerBasic p {
+        font-size: 0.9rem;
+    }
+    
+    .playerStats {
+        font-size: 0.9rem;
+    }
+    
+    .playerStats p {
+        font-size: 0.9rem;
     }
 }

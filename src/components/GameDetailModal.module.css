@@ -544,7 +544,7 @@
     }
 
     .loading {
-        min-height: 50px;
+        min-height: 36px;
     }
 
     .loadingDot {

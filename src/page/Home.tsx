@@ -81,6 +81,8 @@ const Home: React.FC = () => {
         loadLibraryData();
     }, []);
 
+    console.log(fileMetas);
+    
     return (
         <div className={styles.pageRoot}>
             {/* 顶部固定导航 */}
@@ -98,7 +100,10 @@ const Home: React.FC = () => {
                         <div className={styles.todayHeader}>
                             <img src={`${import.meta.env.BASE_URL}data/asset/首页/字样.png`} alt="今日推荐" />
                         </div>
-                        <div className={styles.todayScroller}>
+                        <div className={styles.todayScroller} 
+                            onClick={() => {
+                                showGameDetail(fileMetas[1]);
+                            }}>
                             <img src={`${import.meta.env.BASE_URL}data/gameCover/image.png`} alt="今日推荐" />
                         </div>
                     </div>
