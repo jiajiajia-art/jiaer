@@ -102,7 +102,11 @@ const Home: React.FC = () => {
                         </div>
                         <div className={styles.todayScroller} 
                             onClick={() => {
-                                showGameDetail(fileMetas[1]);
+                                const targetFileId = "6fae713d4a501003654a1973fd854895";
+                                const targetGame = fileMetas.find(meta => meta.file_id === targetFileId);
+                                if (targetGame) {
+                                    showGameDetail(targetGame);
+                                }
                             }}>
                             <img src={`${import.meta.env.BASE_URL}data/gameCover/image.png`} alt="今日推荐" />
                         </div>
