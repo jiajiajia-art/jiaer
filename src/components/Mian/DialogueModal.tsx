@@ -10,7 +10,9 @@ import InventoryFloatingPanel from './InventoryFloatingPanel';
 import { useGameData } from '../../hooks/useGameData';
 import { authFetch } from '../../api/base';
 import statisticsApi from '../../api/statistics/statisticsApi';
-import MissionsModal from './missionsModal';
+import MissionsModal from './MissionsModal';
+import MissionApi from '../../api/game/missionApi';
+import type { MissionData } from '../../api/game/missionApi.type';
 
 // EquipmentSlots 类型定义（后端数据结构：equipment 存储的是物品ID字符串）
 type EquipmentSlots = {
@@ -58,6 +60,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     const [loadingHistory, setLoadingHistory] = useState(false);
     const hasLoadedInitialMessage = useRef(false);
     const { getNewPlayer } = useGameData();
+    const [missionData, setMissionData] = useState<MissionData | null>(null);
+    const [loadingMissions, setLoadingMissions] = useState(false);
 
     // 当 initialInput 变化时，更新 inputValue
     useEffect(() => {
@@ -210,7 +214,28 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     }, [showHistory, sessionId, loadHistoryMessages]);
 
-    // 当 AI 流式输出完成时刷新历史记录
+    // 获取任务列表
+    const loadMissions = useCallback(async () => {
+        console.log("loadMissions正在开发中...");
+        
+        // if (!sessionId) {
+        //     return;
+        // }
+
+        // try {
+        //     setLoadingMissions(true);
+        //     const response = await MissionApi.getMissions(sessionId);
+        //     if (response.data.success && response.data.data) {
+        //         setMissionData(response.data.data);
+        //     }
+        // } catch (error) {
+        //     console.error('获取任务列表失败:', error);
+        // } finally {
+        //     setLoadingMissions(false);
+        // }
+    }, [sessionId]);
+
+    // 当 AI 流式输出完成时刷新历史记录和任务列表
     const prevIsTypingRef = useRef<boolean | undefined>(undefined);
     const isStreamingRef = useRef(false);
     const currentIsTyping = latestSystemMessage?.isTyping ?? false;
@@ -229,6 +254,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             // 延迟刷新，确保后端已保存新消息
             const timer = setTimeout(() => {
                 loadHistoryMessages();
+                // 获取任务列表
+                loadMissions();
             }, 800);
             prevIsTypingRef.current = currentIsTyping;
             return () => clearTimeout(timer);
@@ -238,7 +265,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         if (prevIsTyping !== currentIsTyping) {
             prevIsTypingRef.current = currentIsTyping;
         }
-    }, [currentIsTyping, showHistory, loadHistoryMessages]);
+    }, [currentIsTyping, showHistory, loadHistoryMessages, loadMissions]);
 
     // 🔹 改进后的流式响应解析（支持实时 ACTION 提取）
     const handleStreamResponse = useCallback(async (response: Response) => {
@@ -338,7 +365,9 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             return updated;
         });
         getNewPlayer();
-    }, [extractActions]);
+        // 流式输出完成后获取任务列表
+        loadMissions();
+    }, [extractActions, loadMissions]);
 
     const handleStartGame = async () => {
         if (!sessionId) {
@@ -452,7 +481,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                             onClose={() => setShowHistory(false)}
                         />
                     )}
-                    <MissionsModal />
+                    {/* <MissionsModal missionData={missionData} loading={loadingMissions} /> */}
                 </div>
 
                 {/* 中间：编年纪事对话 - 只显示最新一条 AI 回复 */}

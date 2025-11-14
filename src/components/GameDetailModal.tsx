@@ -146,47 +146,47 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     if (!isOpen || !game) return null;
 
-    const handleLike = () => {
-        // 检查用户是否登录
-        if (!user?.user?.id) {
-            authModalStore.getState().setIsAuthModalOpen(true);
-            return;
-        }
+    // const handleLike = () => {
+    //     // 检查用户是否登录
+    //     if (!user?.user?.id) {
+    //         authModalStore.getState().setIsAuthModalOpen(true);
+    //         return;
+    //     }
 
-        // 防止重复点击
-        if (isLikeLoading) {
-            return;
-        }
+    //     // 防止重复点击
+    //     if (isLikeLoading) {
+    //         return;
+    //     }
 
-        // 清除之前的定时器
-        if (likeDebounceTimerRef.current) {
-            clearTimeout(likeDebounceTimerRef.current);
-        }
+    //     // 清除之前的定时器
+    //     if (likeDebounceTimerRef.current) {
+    //         clearTimeout(likeDebounceTimerRef.current);
+    //     }
 
-        // 设置防抖定时器
-        likeDebounceTimerRef.current = setTimeout(async () => {
-            setIsLikeLoading(true);
-            try {
-                const response = await GameAction.gameLike({
-                    fileId: game.file_id || game.id,
-                    userId: String(user.user.id),
-                });
+    //     // 设置防抖定时器
+    //     likeDebounceTimerRef.current = setTimeout(async () => {
+    //         setIsLikeLoading(true);
+    //         try {
+    //             const response = await GameAction.gameLike({
+    //                 fileId: game.file_id || game.id,
+    //                 userId: String(user.user.id),
+    //             });
 
-                if (response.data.success && response.data.data) {
-                    const { isLike, likeCount: newLikeCount } = response.data.data;
-                    setIsLiked(isLike);
-                    setLikeCount(newLikeCount);
-                } else {
-                    console.error('点赞失败:', response.data);
-                }
-            } catch (error) {
-                console.error('点赞失败:', error);
-            } finally {
-                setIsLikeLoading(false);
-                likeDebounceTimerRef.current = null;
-            }
-        }, 300); // 300ms 防抖延迟
-    };
+    //             if (response.data.success && response.data.data) {
+    //                 const { isLike, likeCount: newLikeCount } = response.data.data;
+    //                 setIsLiked(isLike);
+    //                 setLikeCount(newLikeCount);
+    //             } else {
+    //                 console.error('点赞失败:', response.data);
+    //             }
+    //         } catch (error) {
+    //             console.error('点赞失败:', error);
+    //         } finally {
+    //             setIsLikeLoading(false);
+    //             likeDebounceTimerRef.current = null;
+    //         }
+    //     }, 300); // 300ms 防抖延迟
+    // };
 
     // 组件卸载时清理定时器
     useEffect(() => {
@@ -223,7 +223,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     <h3 className={styles.detailGameTitle}>
                                         {(game.title || '未命名游戏').toUpperCase()}
                                     </h3>
-                                    <div className={styles.likeContainer}>
+                                    {/* <div className={styles.likeContainer}>
                                         <AiOutlineLike 
                                             className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
                                             onClick={handleLike}
@@ -231,7 +231,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                         {likeCount > 0 && (
                                             <span className={styles.likeCount}>{likeCount}</span>
                                         )}
-                                    </div>
+                                    </div> */}
                                 </div>
 
                                 <div className={styles.detailGameType}>
