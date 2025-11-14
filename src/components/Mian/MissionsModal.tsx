@@ -4,6 +4,7 @@ import type { MissionData, Mission } from '../../api/game/missionApi.type';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 
 interface MissionsModalProps {
+    onClose?: () => void;
     missionData: MissionData | null;
     loading?: boolean;
 }
@@ -100,7 +101,7 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission }) => {
     );
 };
 
-const MissionsModal: React.FC<MissionsModalProps> = ({ missionData, loading = false }) => {
+const MissionsModal: React.FC<MissionsModalProps> = ({ onClose, missionData, loading = false }) => {
     const renderMission = (mission: Mission) => {
         return <MissionItem key={mission.id} mission={mission} />;
     };

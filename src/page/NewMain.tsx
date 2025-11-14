@@ -27,6 +27,7 @@ import ChatPanel from '../components/Mian/ChatPanel';
 import SettingModal from '../components/Mian/SettingModal';
 import AlertModal from '../components/AlertModal';
 import changeSceneApi from '../api/game/changeSenceAPi';
+import MissionsModal from '../components/Mian/MissionsModal';
 
 // ==================== 类型定义 ====================
 declare global {
@@ -53,9 +54,9 @@ type EventDef = {
 const NewMain: React.FC = () => {
     const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore, worldMapImageUrl } = useGameData();
     const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, setChatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
-    const { gameTimeText, worldLoreHtml, playerLoreHtml, updateLoreFromBackend } = useLore();
+    const { gameTimeText, updateLoreFromBackend } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
-    
+
     // 自动调整游戏时间文字大小
     const [gameTimeRef, gameTimeFontSize] = useAutoFontSize<HTMLDivElement>(gameTimeText, {
         minFontSize: 8,
@@ -68,7 +69,6 @@ const NewMain: React.FC = () => {
 
     const [activePanel, setActivePanel] = useState<'scene' | 'map'>('scene');
     const [playerOpen, setPlayerOpen] = useState(false);
-    const [loreOpen, setLoreOpen] = useState(false);
     const [npcModalOpen, setNpcModalOpen] = useState(false);
     const [settingModalOpen, setSettingModalOpen] = useState(false);
     const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
@@ -77,8 +77,10 @@ const NewMain: React.FC = () => {
     const [dialogueInitialInput, setDialogueInitialInput] = useState('');
     const [alertModalOpen, setAlertModalOpen] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
-
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
+    const [missionModalOpen, setMissionModalOpen] = useState(false);
+    const { loadMissions } = useGameData();
+    const { missionData } = useGameStore();
 
     // ==================== 世界观相关 ====================
     useEffect(() => {
@@ -341,7 +343,7 @@ const NewMain: React.FC = () => {
             return false;
         }
     }
-    
+
 
     return (
         <div
@@ -372,7 +374,7 @@ const NewMain: React.FC = () => {
                     }}>
                         {
                             dialogueOpen ?
-                                <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/时间暂停按钮.png`} alt="关闭" className={styles.storyBtnImg}/> :
+                                <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/时间暂停按钮.png`} alt="关闭" className={styles.storyBtnImg} /> :
                                 <img src={`${import.meta.env.BASE_URL}data/asset/时间消逝按钮.png`} alt="时间消逝按钮" className={styles.storyBtnImg} />
                         }
                     </button>
@@ -392,7 +394,7 @@ const NewMain: React.FC = () => {
 
                 <div className={styles.sceneContent}>
                     <div className={styles.settingContet}>
-                        <div 
+                        <div
                             ref={gameTimeRef}
                             className={styles.gameTimeText}
                             style={{
@@ -431,7 +433,7 @@ const NewMain: React.FC = () => {
                                             <div
                                                 key={direction}
                                                 className={`${styles.exitCard} ${!isUnlocked ? styles.exitCardLocked : ''}`}
-                                                onClick={() => {handleSceneClick(targetId)}}
+                                                onClick={() => { handleSceneClick(targetId) }}
                                             >
                                                 <img
                                                     src={targetScene.background ? `${HOST_ADDRESS}${targetScene.background}` : '/data/icons/empty.png'}
@@ -477,6 +479,12 @@ const NewMain: React.FC = () => {
                 </div>
             </div>
             <div className={styles.sceneEventBtnContainer}>
+                <button id="triggerMissionBtn" className={styles.missionBtn} onClick={() => {
+                    loadMissions();
+                    setMissionModalOpen(!missionModalOpen);
+                }}>
+                    <img src={`${import.meta.env.BASE_URL}data/asset/mission.png`} alt="任务按钮" className={styles.missionBtnImg} />
+                </button>
                 <button
                     id="triggerSceneEventBtn"
                     className={styles.sceneEventBtn}
@@ -529,6 +537,17 @@ const NewMain: React.FC = () => {
                 player={player}
             />
 
+            {
+                missionModalOpen && (
+                    <div className={styles.missionModal}>
+                        <MissionsModal
+                            onClose={() => setMissionModalOpen(false)}
+                            missionData={missionData}
+                        />
+                    </div>
+                )
+            }
+
             {/* 事件弹窗组件 */}
             <EventModal
                 isOpen={!!activeEvent}
@@ -567,23 +586,6 @@ const NewMain: React.FC = () => {
                 scenes={scenes}
             />
 
-            {/* 悬浮世界观面板 */}
-            <div id="lorePanel" className={styles.loreFloatingPanel} style={{ display: loreOpen ? 'flex' : 'none' }}>
-                <div className={styles.lorePanelHeader}>
-                    <h3>世界观</h3>
-                    <button id="closeLoreBtn" className={styles.closeLoreBtn} onClick={() => setLoreOpen(false)}>×</button>
-                </div>
-                <div className={styles.lorePanelContent}>
-                    <div className={styles.loreSection}>
-                        <h4>📖 世界背景</h4>
-                        <div id="worldLoreContent" className={styles.loreContent} dangerouslySetInnerHTML={{ __html: worldLoreHtml }} />
-                    </div>
-                    <div className={styles.loreSection}>
-                        <h4>⚔️ 主角故事</h4>
-                        <div id="playerLoreContent" className={styles.loreContent} dangerouslySetInnerHTML={{ __html: playerLoreHtml }} />
-                    </div>
-                </div>
-            </div>
 
             {/* 对话弹窗组件 */}
             <DialogueModal

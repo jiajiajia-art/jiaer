@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import gameDataApi from '../api/game/gameData.type';
 import type { ScenesMap, Scene, PlayerData, Inventory, GameItem } from '../api/game/gameData';
+import MissionApi from '../api/game/missionApi';
 
 export type {
     PlayerState,
@@ -26,7 +27,8 @@ export const useGameData = () => {
     const currentSceneId = useGameStore((state) => state.currentSceneId);
     const setCurrentSceneId = useGameStore((state) => state.setCurrentSceneId);
     const setItems = useGameStore((state) => state.setItems);
-    
+    const setMissionData = useGameStore((state) => state.setMissionData);
+
     // 这些数据保留在 hook 中（局部使用，不频繁变化）
     const [backendDataLoaded, setBackendDataLoaded] = useState(false);
     const [backendLore, setBackendLore] = useState<any>(null);
@@ -213,6 +215,23 @@ export const useGameData = () => {
         return await getGameFile('player');
     }, [getGameFile]);
 
+    const loadMissions = useCallback(async () => {
+        console.log("loadMissions正在开发");
+        
+        if (!sessionId) {
+            return;
+        }
+
+        try {
+            const response = await MissionApi.getMissions(sessionId);
+            if (response.data.success && response.data.data) {
+                setMissionData(response.data.data);
+                console.log(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取任务列表失败:', error);
+        }
+    }, [sessionId]);
 
     return {
         player,
@@ -230,6 +249,7 @@ export const useGameData = () => {
         worldMapImageUrl,
         getGameFile,
         getNewScene,
-        getNewPlayer
+        getNewPlayer,
+        loadMissions
     };
 };

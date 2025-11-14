@@ -100,6 +100,11 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ user: null, isAuthenticated: false, email: '' });
+        // 登出时清除游戏数据，避免数据泄露
+        // 动态导入避免循环依赖
+        import('./gameStore').then(({ useGameStore }) => {
+          useGameStore.getState().clearAll();
+        });
       },
     }),
     {

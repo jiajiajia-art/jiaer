@@ -196,16 +196,40 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     }, [sessionId, playerName, extractActions]);
 
-    // 当弹窗打开时，初始加载历史记录
+    // 获取任务列表
+    const loadMissions = useCallback(async () => {
+        console.log("loadMissions正在开发");
+        
+        if (!sessionId) {
+            return;
+        }
+
+        try {
+            setLoadingMissions(true);
+            const response = await MissionApi.getMissions(sessionId);
+            if (response.data.success && response.data.data) {
+                setMissionData(response.data.data);
+                console.log(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取任务列表失败:', error);
+        } finally {
+            setLoadingMissions(false);
+        }
+    }, [sessionId]);
+
+    // 当弹窗打开时，初始加载历史记录和任务列表
     useEffect(() => {
         if (isOpen && sessionId && !hasLoadedInitialMessage.current) {
             loadHistoryMessages(true);
+            // 同时加载任务列表
+            loadMissions();
         }
         // 当弹窗关闭时，重置标志，以便下次打开时可以重新加载
         if (!isOpen) {
             hasLoadedInitialMessage.current = false;
         }
-    }, [isOpen, sessionId, loadHistoryMessages]);
+    }, [isOpen, sessionId, loadHistoryMessages, loadMissions]);
 
     // 当历史记录弹窗打开时加载历史记录（刷新历史记录列表）
     useEffect(() => {
@@ -214,26 +238,13 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     }, [showHistory, sessionId, loadHistoryMessages]);
 
-    // 获取任务列表
-    const loadMissions = useCallback(async () => {
-        console.log("loadMissions正在开发中...");
-        
-        // if (!sessionId) {
-        //     return;
-        // }
-
-        // try {
-        //     setLoadingMissions(true);
-        //     const response = await MissionApi.getMissions(sessionId);
-        //     if (response.data.success && response.data.data) {
-        //         setMissionData(response.data.data);
-        //     }
-        // } catch (error) {
-        //     console.error('获取任务列表失败:', error);
-        // } finally {
-        //     setLoadingMissions(false);
-        // }
-    }, [sessionId]);
+    // 同时刷新历史记录和任务列表（使用 allSettled 确保一个失败不影响另一个）
+    const refreshHistoryAndMissions = useCallback(async () => {
+        await Promise.allSettled([
+            loadHistoryMessages(),
+            loadMissions()
+        ]);
+    }, [loadHistoryMessages, loadMissions]);
 
     // 当 AI 流式输出完成时刷新历史记录和任务列表
     const prevIsTypingRef = useRef<boolean | undefined>(undefined);
@@ -251,11 +262,9 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         // 流式输出完成：从 true 变为 false
         if (prevIsTyping === true && currentIsTyping === false && isStreamingRef.current && showHistory) {
             isStreamingRef.current = false;
-            // 延迟刷新，确保后端已保存新消息
+            // 延迟刷新，确保后端已保存新消息，同时刷新历史记录和任务列表
             const timer = setTimeout(() => {
-                loadHistoryMessages();
-                // 获取任务列表
-                loadMissions();
+                refreshHistoryAndMissions();
             }, 800);
             prevIsTypingRef.current = currentIsTyping;
             return () => clearTimeout(timer);
@@ -265,7 +274,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         if (prevIsTyping !== currentIsTyping) {
             prevIsTypingRef.current = currentIsTyping;
         }
-    }, [currentIsTyping, showHistory, loadHistoryMessages, loadMissions]);
+    }, [currentIsTyping, showHistory, refreshHistoryAndMissions]);
 
     // 🔹 改进后的流式响应解析（支持实时 ACTION 提取）
     const handleStreamResponse = useCallback(async (response: Response) => {
@@ -365,9 +374,11 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             return updated;
         });
         getNewPlayer();
-        // 流式输出完成后获取任务列表
-        loadMissions();
-    }, [extractActions, loadMissions]);
+        // 流式输出完成后同时刷新历史记录和任务列表（延迟执行，确保后端已保存）
+        setTimeout(() => {
+            refreshHistoryAndMissions();
+        }, 800);
+    }, [extractActions, refreshHistoryAndMissions]);
 
     const handleStartGame = async () => {
         if (!sessionId) {
@@ -481,7 +492,9 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                             onClose={() => setShowHistory(false)}
                         />
                     )}
-                    {/* <MissionsModal missionData={missionData} loading={loadingMissions} /> */}
+                    <div className={styles.missionsModalWrapper}>
+                        <MissionsModal missionData={missionData} loading={loadingMissions} />
+                    </div>
                 </div>
 
                 {/* 中间：编年纪事对话 - 只显示最新一条 AI 回复 */}

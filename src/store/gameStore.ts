@@ -9,6 +9,7 @@ import type {
     Inventory,
     GameItem
 } from '../api/game/gameData';
+import type { MissionData } from '../api/game/missionApi.type';
 
 // 重新导出基础类型（从 gameData 导入）
 export type { PlayerProfile, PlayerStats, ScenesMap, Scene, PlayerData, Inventory, GameItem };
@@ -69,19 +70,23 @@ interface GameState {
   currentSceneId: string;
   setCurrentSceneId: (id: string) => void;
 
-  // 玩家数据（直接使用后端类型定义，不做映射，保留所有字段）
+  // 玩家数据
   player: PlayerData | null;
   setPlayer: (player: PlayerData | null) => void;
   updatePlayer: (updater: (player: PlayerData | null) => PlayerData | null) => void;
 
-  // 背包数据（直接使用后端类型定义，不做映射，保留所有字段）
+  // 背包数据
   inventory: Inventory | null;
   setInventory: (inventory: Inventory | null) => void;
   updateInventory: (updater: (inventory: Inventory | null) => Inventory | null) => void;
 
-  // 物品定义（直接从后端获取，用于根据ID查找物品信息）
+  // 物品定义
   items: Record<string, GameItem>;
   setItems: (items: Record<string, GameItem>) => void;
+
+  // 任务数据
+  missionData: MissionData | null;
+  setMissionData: (missionData: MissionData | null) => void;
 
   // 音乐状态（全局共享）
   isPlaying: boolean;
@@ -103,7 +108,7 @@ export const useGameStore = create<GameState>()(
       setSessionId: (id) => set({ sessionId: id }),
       clearSessionId: () => set({ sessionId: null }),
 
-      // 场景数据（频繁变化，每次从后端获取最新）
+      // 场景数据
       scenes: {},
       setScenes: (scenes) => {
         // 强制创建新对象引用，确保 React 检测到变化
@@ -123,12 +128,12 @@ export const useGameStore = create<GameState>()(
       currentSceneId: '',
       setCurrentSceneId: (id) => set({ currentSceneId: id }),
 
-      // 玩家数据（直接使用后端数据结构）
+      // 玩家数据
       player: null,
       setPlayer: (player) => set({ player }),
       updatePlayer: (updater) => set((state) => ({ player: updater(state.player) })),
 
-      // 背包数据（直接使用后端数据结构）
+      // 背包数据
       inventory: null,
       setInventory: (inventory) => set({ inventory }),
       updateInventory: (updater) => set((state) => ({ inventory: updater(state.inventory) })),
@@ -136,6 +141,10 @@ export const useGameStore = create<GameState>()(
       // 物品定义
       items: {},
       setItems: (items) => set({ items }),
+
+      // 任务数据
+      missionData: null,
+      setMissionData: (missionData) => set({ missionData }),
 
       // 音乐状态
       isPlaying: false,

@@ -1,6 +1,6 @@
 .missionsModal {
     width: 350px;
-    height: 270px;
+    height: 100%;
     position: relative;
     background: transparent;
     background-image: url('/data/asset/剧本详情页/评分板.png');
@@ -20,6 +20,7 @@
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    position: relative;
 }
 
 .missionsContent::-webkit-scrollbar {
@@ -203,7 +204,7 @@
     .missionsModal {
         width: 100%;
         max-width: 350px;
-        height: 240px;
+        height: 100%;
         padding: 16px;
     }
 

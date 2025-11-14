@@ -134,15 +134,44 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
 
   /**
    * 响应拦截器：
-   *  - 如果返回 403，说明 refreshToken 也过期了，直接退出登录
+   *  - 如果返回 401，说明 token 无效，需要重新登录
+   *  - 如果返回 403 且是认证相关错误（如 token 过期），才退出登录
+   *  - 其他 403 可能是业务逻辑错误（如权限不足），不应该退出登录
    */
   instance.interceptors.response.use(
     (response) => response,
     (error: AxiosError) => {
-      if (error.response?.status === 403) {
-        console.warn('[Auth] Refresh token expired or invalid, logging out.');
+      const status = error.response?.status;
+      const errorData = error.response?.data as any;
+      
+      // 401: 未授权，token 无效或过期
+      if (status === 401) {
+        console.warn('[Auth] Unauthorized (401), token invalid, logging out.');
         useAuthStore.getState().logout();
       }
+      // 403: 需要判断是否是认证错误还是业务错误
+      // 只有当错误信息明确表示是认证问题时才退出登录
+      else if (status === 403) {
+        const errorMessage = errorData?.message || errorData?.error || '';
+        const isAuthError = 
+          errorMessage.includes('token') || 
+          errorMessage.includes('Token') ||
+          errorMessage.includes('authentication') ||
+          errorMessage.includes('Authentication') ||
+          errorMessage.includes('unauthorized') ||
+          errorMessage.includes('Unauthorized') ||
+          errorData?.code === 'TOKEN_EXPIRED' ||
+          errorData?.code === 'INVALID_TOKEN';
+        
+        if (isAuthError) {
+          console.warn('[Auth] Authentication error (403), logging out.');
+          useAuthStore.getState().logout();
+        } else {
+          // 业务逻辑错误（如权限不足、场景锁定等），不退出登录
+          console.log('[API] Business logic error (403), not logging out:', errorMessage);
+        }
+      }
+      
       return Promise.reject(error);
     }
   );
@@ -216,11 +245,19 @@ export const authFetch = async (
     // 发送请求
     const response = await fetch(url, requestInit);
 
-    // 处理 403 错误（token 过期）
-    if (response.status === 403) {
-      console.warn('[Fetch] Received 403, token may be expired, logging out.');
+    // 处理认证错误
+    if (response.status === 401) {
+      console.warn('[Fetch] Received 401, token invalid, logging out.');
       useAuthStore.getState().logout();
-      throw new Error('Authentication failed: Token expired or invalid');
+      throw new Error('Authentication failed: Token invalid');
+    }
+    
+    // 处理 403 错误：需要判断是否是认证错误
+    // 注意：对于 403，默认不退出登录，因为可能是业务逻辑错误（如场景锁定、权限不足等）
+    // 业务层应该自己处理这些错误
+    if (response.status === 403) {
+      console.log('[Fetch] Received 403, this may be a business logic error (e.g., scene locked, insufficient permissions). Not logging out automatically.');
+      // 不自动退出登录，让业务层处理
     }
 
     return response;
