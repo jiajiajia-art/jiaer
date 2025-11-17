@@ -19,6 +19,7 @@ export interface SignupRequest {
   email: string;
   avatarUrl: string;
   nickname: string;
+  verificationCode: string;
 }
 
 // 登录请求
