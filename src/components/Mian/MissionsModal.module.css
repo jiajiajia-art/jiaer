@@ -202,8 +202,8 @@
 
 @media (max-width: 768px) {
     .missionsModal {
-        width: 100%;
-        max-width: 350px;
+        width: 350px;
+        max-width: 98%;
         height: 100%;
         padding: 16px;
     }

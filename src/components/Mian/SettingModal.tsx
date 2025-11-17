@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styles from './SettingModal.module.css';
 import { useMusic } from '../../hooks/useMusic';
-import AdventureModal from './adventureModal';
+// import AdventureModal from './AdventureModal';
 
 interface SettingModalProps {
     isOpen: boolean;
@@ -11,7 +11,7 @@ interface SettingModalProps {
 const SettingModal: React.FC<SettingModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
     const { isPlaying, togglePlay, pause, volume, setVolume } = useMusic();
-    const [isAdventureModalOpen, setIsAdventureModalOpen] = useState(false);
+    // const [isAdventureModalOpen, setIsAdventureModalOpen] = useState(false);
 
     const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newVolume = parseFloat(e.target.value);
@@ -70,14 +70,14 @@ const SettingModal: React.FC<SettingModalProps> = ({ isOpen, onClose }) => {
                             </div>
                         </div>
                     </div>
-                    <div className={styles.exportBtnContainer}>
+                    {/* <div className={styles.exportBtnContainer}>
                         <button className={styles.exportBtn} onClick={() => setIsAdventureModalOpen(true)}>导出冒险笔记</button>
-                    </div>
+                    </div> */}
                 </div>
             </div>
-            <AdventureModal
+            {/* <AdventureModal
                 isOpen={isAdventureModalOpen}
-                onClose={() => setIsAdventureModalOpen(false)} />
+                onClose={() => setIsAdventureModalOpen(false)} /> */}
         </>
     );
 };

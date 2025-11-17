@@ -8,14 +8,14 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 import { IoSearch } from 'react-icons/io5';
+import { useAuthStore } from '../store/useAuthStore';
 
 const Library: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
-
-    
+    const { user } = useAuthStore();
     const sidebarItems = useMemo<SidebarItem[]>(() => [
         {
             id: 'home',
@@ -67,7 +67,7 @@ const Library: React.FC = () => {
             setIsLoading(true);
             try {
                 // 修复调用参数数量：需要传递 userId 和 request 两个参数
-                const response = await libraryDataApi.getGameData({ limit: '10' });
+                const response = await libraryDataApi.getGameData({ limit: '10', userId: String(user?.user.id) || '' });
 
                 if (response.data.success && response.data.data) {
 

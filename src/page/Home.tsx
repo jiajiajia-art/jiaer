@@ -8,11 +8,13 @@ import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
+import { useAuthStore } from '../store/useAuthStore';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
+    const { user } = useAuthStore();
 
     const navigator = useNavigate();
 
@@ -64,7 +66,9 @@ const Home: React.FC = () => {
     useEffect(() => {
         const loadLibraryData = async () => {
             try {
-                const response = await libraryDataApi.getGameData({ limit: '4' });
+                const response = await libraryDataApi.getGameData({ 
+                    limit: '4', 
+                    userId: String(user?.user?.id) || '' });
 
                 if (response.data.success && response.data.data) {
                     setFileMetas(response.data.data);

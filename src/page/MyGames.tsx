@@ -126,18 +126,18 @@ const MyGames: React.FC = () => {
     };
 
     // 删除游戏
-    // const handleDelete = async (fileId: string) => {
-    //     try {
-    //         const response = await GameAction.deleteGame(fileId);
-    //         if (response.data.success) {
-    //             await loadMyGames();
-    //         } else {
-    //             console.error('删除游戏失败:', response.data);
-    //         }
-    //     } catch (error) {
-    //         console.error('删除游戏失败:', error);
-    //     }
-    // };
+    const handleDelete = async (fileId: string) => {
+        try {
+            const response = await GameAction.deleteGame(fileId);
+            if (response.data.success) {
+                await loadMyGames();
+            } else {
+                console.error('删除游戏失败:', response.data);
+            }
+        } catch (error) {
+            console.error('删除游戏失败:', error);
+        }
+    };
 
     const getGameStats = async (fileId: string) => {
         try {
@@ -186,13 +186,13 @@ const MyGames: React.FC = () => {
                                         }}
                                     >
                                         <div className={styles.goodsImg}>
-                                            {/* <MdOutlineDeleteSweep
+                                            <MdOutlineDeleteSweep
                                                 className={styles.deleteIcon}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDelete(meta.file_id || '');
                                                 }}
-                                            /> */}
+                                            />
                                             <img
                                                 src={meta.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`}
                                                 alt={meta.title || `我的游戏${idx + 1}`}
@@ -203,7 +203,7 @@ const MyGames: React.FC = () => {
                                                 {meta.title || `我的游戏${idx + 1}`}
                                             </div>
                                             <div className={styles.goodsActions} onClick={(e) => e.stopPropagation()}>
-                                                <div className={styles.editBtn}>编辑</div>
+                                                {/* <div className={styles.editBtn}>编辑</div> */}
                                                 {
                                                     meta.is_public === 0 ? (
                                                         <div

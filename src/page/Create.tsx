@@ -28,7 +28,7 @@ const Create: React.FC = () => {
     const [gameName, setGameName] = useState('');
     const [gameSubtitle, setGameSubtitle] = useState('');
     const [gameDescription, setGameDescription] = useState('');
-    const [noImageMode, setNoImageMode] = useState(false); // 无图模式
+    // const [noImageMode, setNoImageMode] = useState(false); // 无图模式
     
     const { setPdfFileId, setSessionId } = useGameStore();
     const { user } = useAuthStore();
@@ -548,7 +548,7 @@ const Create: React.FC = () => {
                                 </div>
                                 
                                 <div className={styles.coverActions}>
-                                    <label className={styles.noImageModeLabel}>
+                                    {/* <label className={styles.noImageModeLabel}>
                                         <input 
                                             type="checkbox"
                                             checked={noImageMode}
@@ -557,7 +557,7 @@ const Create: React.FC = () => {
                                             className={styles.noImageModeCheckbox}
                                         />
                                         <span className={styles.noImageModeText}>无图模式</span>
-                                    </label>
+                                    </label> */}
                                     <button 
                                         className={styles.createGameBtn}
                                         onClick={handleCreateGame}

@@ -67,7 +67,7 @@ const NewMain: React.FC = () => {
     const { sessionId } = useGameStore();
     const { tracks, isPlaying, play } = useMusic();
 
-    const [activePanel, setActivePanel] = useState<'scene' | 'map'>('scene');
+    const [mapModalOpen, setMapModalOpen] = useState(false);
     const [playerOpen, setPlayerOpen] = useState(false);
     const [npcModalOpen, setNpcModalOpen] = useState(false);
     const [settingModalOpen, setSettingModalOpen] = useState(false);
@@ -81,6 +81,13 @@ const NewMain: React.FC = () => {
     const [missionModalOpen, setMissionModalOpen] = useState(false);
     const { loadMissions } = useGameData();
     const { missionData } = useGameStore();
+
+    // 统一处理三个弹窗的互斥逻辑
+    const closeOtherPanels = () => {
+        if (inventoryOpen) setInventoryOpen(false);
+        if (missionModalOpen) setMissionModalOpen(false);
+        if (mapModalOpen) setMapModalOpen(false);
+    };
 
     // ==================== 世界观相关 ====================
     useEffect(() => {
@@ -480,6 +487,7 @@ const NewMain: React.FC = () => {
             </div>
             <div className={styles.sceneEventBtnContainer}>
                 <button id="triggerMissionBtn" className={styles.missionBtn} onClick={() => {
+                    closeOtherPanels();
                     loadMissions();
                     setMissionModalOpen(!missionModalOpen);
                 }}>
@@ -491,10 +499,8 @@ const NewMain: React.FC = () => {
                 >
                     <img
                         onClick={() => {
-                            if (inventoryOpen) {
-                                setInventoryOpen(false);
-                            }
-                            setActivePanel((prev) => (prev === 'map' ? 'scene' : 'map'));
+                            closeOtherPanels();
+                            setMapModalOpen(!mapModalOpen);
                         }}
                         src={`${import.meta.env.BASE_URL}data/asset/地图按钮.png`}
                         alt="大地图按钮"
@@ -507,9 +513,7 @@ const NewMain: React.FC = () => {
                 >
                     <img
                         onClick={() => {
-                            if (activePanel === 'map') {
-                                setActivePanel('scene');
-                            }
+                            closeOtherPanels();
                             setInventoryOpen(!inventoryOpen);
                         }}
                         src={`${import.meta.env.BASE_URL}data/asset/背包按钮.png`}
@@ -519,10 +523,9 @@ const NewMain: React.FC = () => {
                 </button>
             </div>
 
-
             <MapModal
-                isOpen={activePanel === 'map'}
-                onClose={() => setActivePanel('scene')}
+                isOpen={mapModalOpen}
+                onClose={() => setMapModalOpen(false)}
                 scenes={scenes}
                 currentSceneId={currentSceneId}
                 onSceneClick={async (id) => {
@@ -622,7 +625,7 @@ const NewMain: React.FC = () => {
                     }
                     setCurrentSceneId(sceneId);
                     setSceneDetailOpen(false);
-                    setActivePanel('scene');
+                    setMapModalOpen(false);
                 }}
             />
 

@@ -16,6 +16,9 @@ export interface UserGameData {
     updated_at: string;
     author_name: string;
     is_public: number;
+    like_count: number;
+    dislike_count: number;
+    reaction: string;
 }
 
 export interface UserGameResponse {
@@ -31,4 +34,15 @@ export interface UserGameRequest{
 export interface PublicGameRequest {
     limit?: string;
     offset?: string;
+    userId: string;
+}
+
+export interface GameDetailRequest {
+    fileId: string;
+    userId: string;
+}
+
+export interface GameDetailResponse {
+    success: boolean;
+    data: UserGameData;
 }

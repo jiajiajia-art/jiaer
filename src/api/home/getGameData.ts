@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { UserGameResponse, UserGameRequest, PublicGameRequest } from "./getGameData.type";
+import type { UserGameResponse, UserGameRequest, PublicGameRequest, GameDetailRequest, GameDetailResponse } from "./getGameData.type";
 
 const getGameDataApi = {
     getUserData: (userId: number, request: UserGameRequest) => {
@@ -7,6 +7,9 @@ const getGameDataApi = {
     },
     getGameData: (data: PublicGameRequest) => {
         return api.get<UserGameResponse>(`/auth/games/public`, { params: data });
+    },
+    getGameDetail: (data: GameDetailRequest) => {
+        return api.get<GameDetailResponse>(`/auth/games/info`, { params: data });
     }
 }
 
