@@ -21,6 +21,7 @@
     display: flex;
     margin: 0;
     padding: 0;
+    margin-bottom: 48px;
 }
 
 .main {
@@ -34,24 +35,12 @@
     position: relative;
     padding: 0;
     flex-shrink: 0;
-    margin-bottom: 20px;
-}
-
-.todayHeader {
-    position: absolute;
-    top: 40px;
-    left: 40px;
-    font-size: 24px;
-    font-weight: 600;
-    color: #E8DBB7;
-    padding: 10px;
-    z-index: 10;
 }
 
 /* 轮播容器 */
 .carouselContainer {
     width: 100%;
-    height: 600px;
+    aspect-ratio: 19.2 / 8;
     position: relative;
     overflow: hidden;
 }
@@ -98,7 +87,7 @@
 
 .carouselContent {
     width: 100%;
-    max-width: 1200px;
+    max-width: 1080px;
     margin: 0 auto;
     position: relative;
     z-index: 2;
@@ -112,20 +101,22 @@
     text-align: left;
     color: white;
     width: 100%;
-    max-width: 1200px;
+    max-width: 1080px;
     margin: 0 auto;
 }
 
 .carouselTitle {
-    font-size: 48px;
-    font-weight: 600;
+    font-size: 72px;
     margin: 0 0 20px 0;
-    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55),
-                 0 0 25px rgba(0, 0, 0, 0.45);
+    text-shadow: 
+    0 0 6px rgba(0, 0, 0, 0.4),
+    0 0 12px rgba(0, 0, 0, 0.35),
+    0 0 24px rgba(0, 0, 0, 0.3),
+    0 0 36px rgba(0, 0, 0, 0.25);
 }
 
 .carouselDescription {
-    font-size: 18px;
+    font-size: 24px;
     line-height: 1.6;
     margin: 0 0 30px 0;
     width: 280px;
@@ -135,17 +126,22 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    text-shadow: 
+    0 0 2px rgba(0, 0, 0, 0.4),
+    0 0 4px rgba(0, 0, 0, 0.35),
+    0 0 8px rgba(0, 0, 0, 0.3),
+    0 0 16px rgba(0, 0, 0, 0.25);
 }
 
 .carouselStartBtn {
+    margin-top: 10px;
     background-color: #FB4655;
+    width: 260px;
+    height: 70px;
     color: white;
     border: none;
     padding: 14px 40px;
-    font-size: 18px;
-    font-weight: 600;
-    border-radius: 8px;
+    font-size: 30px;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(251, 70, 85, 0.4);
@@ -174,9 +170,9 @@
 }
 
 .carouselIndicator {
-    width: 40px;
-    height: 4px;
-    background-color: rgba(255, 255, 255, 0.5);
+    width: 30px;
+    height: 6px;
+    background-color: #fff;
     border: none;
     border-radius: 2px;
     cursor: pointer;
@@ -185,17 +181,18 @@
 }
 
 .carouselIndicator:hover {
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: #fb4756cb;
 }
 
 .carouselIndicatorActive {
-    background-color: rgba(255, 255, 255, 1);
     width: 50px;
+    height: 6px;
+    background-color: #fb4755;
 }
 
 .carouselPlaceholder {
     width: 100%;
-    height: 600px;
+    aspect-ratio: 19.2 / 8;
 }
 
 .carouselPlaceholder img {
@@ -204,87 +201,32 @@
     object-fit: cover;
 }
 
-.todayScroller {
-    width: 1360px;
-    height: 330px;
-    min-height: 330px;
-    padding: 0;
-    flex-shrink: 0;
-    box-sizing: border-box;
-}
-
-.todayScroller img {
-    width: 100%;
-    height: 100%;
-    max-width: 1360px;
-    max-height: 330px;
-    object-fit: cover;
-    display: block;
-}
-
 /* 商城区域外层容器（用于多层边框） */
 .shopSection {
-    background-color: #000;
-    padding: 2px;
-    min-height: 436px;
-    flex-shrink: 0;
-    position: relative;
-    /* 切角效果：四个角削平 */
-    clip-path: polygon(20px 0%,
-            calc(100% - 20px) 0%,
-            100% 20px,
-            100% calc(100% - 20px),
-            calc(100% - 20px) 100%,
-            20px 100%,
-            0% calc(100% - 20px),
-            0% 20px);
-}
-
-/* 商城区域内层容器（第二层边框） */
-.shopSectionInner {
-    background-color: #6C573A;
-    padding: 8px;
-    min-height: 100%;
-    clip-path: polygon(20px 0%,
-            calc(100% - 20px) 0%,
-            100% 20px,
-            100% calc(100% - 20px),
-            calc(100% - 20px) 100%,
-            20px 100%,
-            0% calc(100% - 20px),
-            0% 20px);
-}
-
-/* 商城区域内容容器（最内层） */
-.shopSectionContent {
-    background-color: #B69B74;
-    /* 背景颜色 */
-    min-height: 100%;
-    clip-path: polygon(20px 0%,
-            calc(100% - 20px) 0%,
-            100% 20px,
-            100% calc(100% - 20px),
-            calc(100% - 20px) 100%,
-            20px 100%,
-            0% calc(100% - 20px),
-            0% 20px);
+    width: 1080px;
+    margin: 0 auto;
+    margin-top: 38px;
 }
 
 .sectionHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 70px;
-    background-color: #7F6950;
-    padding: 0 20px;
-    border-bottom: 6px solid #6C573A;
+    margin-bottom: 22px;
+}
+
+.sectionHeader hr {
+    flex: 1;
+    height: 1px;
+    border: none;
+    background-color: #D9D9D9;
+    margin: 0 20px;
 }
 
 .sectionTitle {
-    font-size: 22px;
+    font-size: 30px;
+    color: #262626;
     font-weight: 600;
-    color: #E8DBB7;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .more {
@@ -298,147 +240,18 @@
     padding: 0 12px;
     background-color: transparent;
     outline: none;
-    border: 3px solid #e2c089e0;
-    background: #7EBE5E;
-    border-radius: 5px;
-    box-shadow:
-        0 0 0 2px #6C573A,
-        /* 外描边 */
-        inset 0 0 0 1px #6c573a6b;
-    font-size: 18px;
-    font-weight: 700;
-    text-shadow: 1px 1px 2px rgba(44, 35, 23, 0.8),
-        -1px -1px 2px rgba(47, 34, 17, 0.8),
-        1px -1px 2px rgba(0, 0, 0, 0.8),
-        -1px 1px 2px rgba(0, 0, 0, 0.8);
-    color: #E8DBB7;
-}
-
-/* 一行四个，自动调整宽度 */
-.grid4 {
-    display: grid;
-    grid-template-columns: repeat(4, 320px);
-    gap: 20px;
-    padding: 10px;
-    min-height: 300px;
-}
-
-.goodsCard {
-    padding: 12px;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    aspect-ratio: 1/1.05;
-    background-image: url('/data/asset/首页/优惠剧本背板.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.goodsImg {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
+    color: #737373;
+    font-size: 20px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.goodsImg img {
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-    border-radius: 20px;
-}
-
-.goodsBody {
-    padding: 8px 8px 0;
-    flex-shrink: 0;
-}
-
-.goodsTitle {
-    font-size: 20px;
-    font-weight: 600;
-    color: #5E4630;
-    margin-bottom: 8px;
-}
-
-@media (min-width: 1280px) {
-    .pageRoot {
-        width: 100vw;
-        min-height: 100vh;
-        max-width: 1800px;
-        margin: 0 auto;
-    }
-
-    .mainContent {
-        width: 100%;
-        display: flex;
-        gap: 0;
-    }
-
-    .main {
-        flex: 1;
-        min-width: 0;
-        width: auto;
-    }
-
-    .carouselContainer {
-        width: 100%;
-        height: 600px;
-    }
-
-    .carouselContent {
-        max-width: 1200px;
-    }
-
-    .carouselInfo {
-        max-width: 1200px;
-    }
-
-    .carouselTitle {
-        font-size: 62px;
-    }
-
-    .carouselDescription {
-        font-size: 16px;
-        width: 360px;
-    }
-
-    .todayScroller {
-        width: 100%;
-    }
-
-    .todayScroller img {
-        width: 100%;
-        height: 100%;
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: fill;
-        display: block;
-    }
-
-    .shopSection {
-        width: 100%;
-        background-size: 100% 100%;
-        min-height: auto;
-        height: auto;
-    }
-
-    .grid4 {
-        grid-template-columns: repeat(4, minmax(260px, 1fr));
-        overflow-x: auto;
-    }
 }
 
 @media (max-width: 1280px) {
     .pageRoot {
         width: 1280px;
         min-height: 100vh;
+        height: 100%;
+        overflow: auto;
         max-width: 1280px;
         margin: 0 auto;
     }
@@ -457,16 +270,16 @@
 
     .carouselContainer {
         width: 100%;
-        height: 600px;
+        aspect-ratio: 19.2 / 8;
     }
 
     .carouselContent {
-        max-width: 1200px;
+        max-width: 1080px;
         padding: 0 30px;
     }
 
     .carouselInfo {
-        max-width: 1200px;
+        max-width: 1080px;
     }
 
     .carouselTitle {
@@ -478,29 +291,11 @@
         width: 160px;
     }
 
-    .todayScroller {
-        width: 1000px;
-    }
-
-    .todayScroller img {
-        width: 860px;
-        height: 100%;
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: fill;
-        display: block;
-    }
-
     .shopSection {
         width: 100%;
         background-size: 100% 100%;
         min-height: auto;
         height: auto;
-    }
-
-    .grid4 {
-        grid-template-columns: repeat(4, minmax(260px, 1fr));
-        overflow-x: auto;
     }
 }
 
@@ -538,13 +333,9 @@
         margin-bottom: 10px;
     }
 
-    .todayHeader {
-        display: none;
-    }
-
     .carouselContainer {
         width: 100vw;
-        height: 400px;
+        aspect-ratio: 19.2 / 8;
     }
 
     .carouselContent {
@@ -587,18 +378,6 @@
         width: 40px;
     }
 
-    .todayScroller {
-        width: 100vw;
-        height: 200px;
-    }
-
-    .todayScroller img {
-        width: 100vw;
-        height: 200px;
-        border-radius: 10px;
-        object-fit: fill;
-    }
-
     /* 商城区域外层容器（用于多层边框） */
     .shopSection {
         clip-path: polygon(10px 0%,
@@ -613,30 +392,6 @@
         max-height: none;
         height: auto;
         margin-top: 6px;
-    }
-
-    /* 商城区域内层容器（第二层边框） */
-    .shopSectionInner {
-        clip-path: polygon(10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px);
-    }
-
-    /* 商城区域内容容器（最内层） */
-    .shopSectionContent {
-        clip-path: polygon(10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px);
     }
 
     .sectionHeader {
@@ -656,34 +411,4 @@
         font-size: 16px;
     }
 
-    .grid4 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-        height: auto;
-        padding: 8px;
-    }
-
-    .goodsCard {
-        aspect-ratio: 1;
-        padding: 6px;
-    }
-
-    .goodsBody {
-        padding: 6px 6px 0;
-    }
-
-    .goodsTitle {
-        font-size: 14px;
-    }
-
-    .goodsImg img {
-        border-radius: 10px;
-        object-fit: fill;
-    }
-}
-
-.goodsDesc {
-    font-size: 14px;
-    color: #8B7355;
-    line-height: 1.5;
 }

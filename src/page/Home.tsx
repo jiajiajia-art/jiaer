@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import styles from './Home.module.css';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/Layout/Navbar';
 import { type SidebarItem } from '../components/Sidebar';
 import GameDetailModal from '../components/GameDetailModal';
+import GameGrid from '../components/GameGrid';
 import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
+import { IoIosArrowForward } from 'react-icons/io';
+import FooterArea from '../components/Layout/FooterArea';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    const [allGames, setAllGames] = useState<UserGameData[]>([]);
     const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuthStore();
@@ -75,28 +79,41 @@ const Home: React.FC = () => {
         };
     }, [showGameModal]);
 
-    // 使用 libraryDataApi 获取游戏列表数据（首页显示前4个）
+    // 使用 libraryDataApi 获取游戏列表数据
     useEffect(() => {
         const loadLibraryData = async () => {
             try {
-                const response = await libraryDataApi.getGameData({ 
-                    limit: '4', 
+                // 获取限时优惠游戏（前8个，有特殊价格的）
+                const specialResponse = await libraryDataApi.getGameData({ 
+                    limit: '8', 
                     userId: String(user?.user.id) || '' });
 
-                if (response.data.success && response.data.data) {
-                    setFileMetas(response.data.data);
+                if (specialResponse.data.success && specialResponse.data.data) {
+                    setFileMetas(specialResponse.data.data);
                 } else {
-                    console.error('获取游戏列表失败:', response.data);
+                    console.error('获取限时优惠游戏列表失败:', specialResponse.data);
                     setFileMetas([]);
+                }
+
+                // 获取全部游戏（更多数据，用于全部游戏模块）
+                const allResponse = await libraryDataApi.getGameData({ 
+                    userId: String(user?.user.id) || '' });
+
+                if (allResponse.data.success && allResponse.data.data) {
+                    setAllGames(allResponse.data.data);
+                } else {
+                    console.error('获取全部游戏列表失败:', allResponse.data);
+                    setAllGames([]);
                 }
             } catch (error) {
                 console.error('获取游戏列表错误:', error);
                 setFileMetas([]);
+                setAllGames([]);
             }
         };
 
         loadLibraryData();
-    }, []);
+    }, [user?.user.id]);
 
     // 自动轮播
     useEffect(() => {
@@ -191,57 +208,55 @@ const Home: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* 限时优惠模块 */}
                     <div className={styles.shopSection}>
-                        <div className={styles.shopSectionInner}>
-                            <div className={styles.shopSectionContent}>
-                                <div className={styles.sectionHeader}>
-                                    <div className={styles.sectionTitle}>限时优惠!</div>
-                                    <button 
-                                        type="button"
-                                        className={`${styles.more} ${styles.moreText}`}
-                                        onClick={() => {
-                                            navigator('/home/library');
-                                        }}
-                                    >
-                                        更多
-                                        {'>'}
-                                    </button>
-                                </div>
-                                <div className={styles.grid4}>
-                                    {fileMetas.length === 0 ? (
-                                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '50px', color: '#5E4630' }}>
-                                            <h2 style={{ fontSize: '24px', marginBottom: '10px' }}>⏳ 加载中...</h2>
-                                            <p style={{ fontSize: '16px', opacity: 0.9 }}>正在加载剧情文件信息</p>
-                                        </div>
-                                    ) : (
-                                        fileMetas.map((meta, idx) => (
-                                            <div
-                                                className={styles.goodsCard}
-                                                key={meta.id}
-                                                onClick={() => {
-                                                    showGameDetail(meta);
-                                                }}
-                                            >
-                                                <div className={styles.goodsImg}>
-                                                    <img
-                                                        src={meta.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`}
-                                                        alt={meta.title || `剧情${idx + 1}`}
-                                                    />
-                                                </div>
-                                                <div className={styles.goodsBody}>
-                                                    <div className={styles.goodsTitle}>
-                                                        {meta.title || `剧情${idx + 1}`}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
+                        <div className={styles.sectionHeader}>
+                            <div className={styles.sectionTitle}>限时优惠</div>
+                            <hr />
+                            <button 
+                                type="button"
+                                className={`${styles.more} ${styles.moreText}`}
+                                onClick={() => {
+                                    navigator('/home/library');
+                                }}
+                            >
+                                更多
+                                <IoIosArrowForward />
+                            </button>
                         </div>
+                        <GameGrid 
+                            games={fileMetas} 
+                            showSpecialPrice={true}
+                            onGameClick={showGameDetail}
+                        />
+                    </div>
+
+                    {/* 全部游戏模块 */}
+                    <div className={styles.shopSection}>
+                        <div className={styles.sectionHeader}>
+                            <div className={styles.sectionTitle}>全部游戏</div>
+                            <hr />
+                            <button 
+                                type="button"
+                                className={`${styles.more} ${styles.moreText}`}
+                                onClick={() => {
+                                    navigator('/home/library');
+                                }}
+                            >
+                                更多
+                                <IoIosArrowForward />
+                            </button>
+                        </div>
+                        <GameGrid 
+                            games={allGames} 
+                            showSpecialPrice={false}
+                            onGameClick={showGameDetail}
+                        />
                     </div>
                 </div>
             </div>
+
+            <FooterArea />
 
             {selectedGameMeta && (
                 <GameDetailModal

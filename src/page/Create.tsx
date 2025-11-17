@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/Layout/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import styles from './Create.module.css';
 import { useGameStore } from '../store/gameStore';

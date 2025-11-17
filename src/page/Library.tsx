@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styles from './Library.module.css';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/Layout/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import GameDetailModal from '../components/GameDetailModal';
 import libraryDataApi from '../api/home/getGameData';

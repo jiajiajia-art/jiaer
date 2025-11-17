@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Navbar.module.css';
-import AuthModal from './AuthModal';
-import { authModalStore, useAuthStore } from '../store/useAuthStore';
+import AuthModal from '../AuthModal';
+import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { IoSearch } from 'react-icons/io5';
 
 const Navbar: React.FC = () => {
@@ -67,7 +67,7 @@ const Navbar: React.FC = () => {
         <div className={styles.navbarContainer}>
             <div className={styles.navbar}>
                 <div className={styles.logo}>
-                    <img src={`${import.meta.env.BASE_URL}data/asset/网站图标.png`} alt="logo" />
+                    <img src={`${import.meta.env.BASE_URL}data/assets/LOGO2.png`} alt="logo" />
                 </div>
                 <div className={styles.navLinks}>
                     <div 

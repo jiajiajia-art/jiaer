@@ -1,0 +1,79 @@
+.footer {
+  width: 100%;
+  background-color: #f7f7f7;
+  padding: 60px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 1080px;
+  display: flex;
+}
+
+.logoArea {
+  width: auto;
+  height: 100%;
+}
+
+.logo {
+  margin-top: 130px;
+  height: 60px;
+  margin-right: 36px;
+}
+
+.followSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #4c4c4c;
+}
+
+.iconRow {
+  display: flex;
+  gap: 20px;
+}
+
+.iconItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 24px;
+  color: #666;
+}
+
+.iconItem img {
+  width: 28px;
+  height: 28px;
+}
+
+.joinSection {
+  display: flex;
+  gap: 89px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.block .title {
+  margin-bottom: 18px;
+}
+
+.item {
+  font-size: 18px;
+  color: #999999;
+}
+
+.red {
+  color: #ff3333;
+  font-weight: 600;
+}

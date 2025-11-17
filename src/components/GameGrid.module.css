@@ -1,0 +1,142 @@
+/* 一行四个，自动调整宽度 */
+.grid4 {
+    display: grid;
+    grid-template-columns: repeat(4, 250px);
+    gap: 20px;
+}
+
+.goodsCard {
+    width: 250px;
+    height: auto;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.goodsImg {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.goodsImg img {
+    width: 250px;
+    height: 130px;
+    object-fit: fill;
+    border-radius: 10px;
+}
+
+.goodsBody {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.goodsTitleWrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.goodsTitle {
+    font-size: 20px;
+    font-weight: 600;
+    color: #4c4c4c;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.goodsSubtitle {
+    font-size: 16px;
+    color: #999999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.goodsPrice {
+    background: #FB4655;
+    height: 50px;
+    width: 100px;
+    border-radius: 10px 0 10px 0px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.goodsPriceText {
+    font-size: 14px;
+    color: #fdbdc0;
+    text-decoration: line-through;
+}
+
+.specialPriceText {
+    font-size: 22px;
+    color: #FFFFFF;
+}
+
+.normalPriceText {
+    font-size: 22px;
+    color: #FFFFFF;
+}
+
+.emptyState {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px;
+    color: #5E4630;
+}
+
+.emptyState h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.emptyState p {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+    .grid4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        height: auto;
+        padding: 8px;
+    }
+
+    .goodsCard {
+        aspect-ratio: 1;
+        padding: 6px;
+    }
+
+    .goodsBody {
+        padding: 6px 6px 0;
+    }
+
+    .goodsTitle {
+        font-size: 14px;
+    }
+
+    .goodsImg img {
+        border-radius: 10px;
+        object-fit: fill;
+    }
+}
+

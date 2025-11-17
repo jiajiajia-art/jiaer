@@ -15,7 +15,7 @@
 }
 
 .navbar {
-    width: 1200px;
+    width: 1080px;
     height: 100%;
     display: flex;
     align-items: center;
@@ -74,21 +74,21 @@
 .searchBox {
     display: flex;
     align-items: center;
-    height: 36px;
+    height: 30px;
     width: 300px;
     gap: 8px;
-    border: 1px solid #383C48;
+    border: 1px solid #282828;
     border-radius: 18px;
     padding-right: 0px;
     padding-left: 10px;
 }
 
 .searchIcon {
-    flex: 1;
-    height: 36px;
+    height: 26px;
+    width: 60px;
     font-size: 18px;
     color: #fff;
-    background: #363d48ec;
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -96,7 +96,7 @@
 }
 
 .searchInput {
-    width: 80%;
+    width: 76%;
     height: 100%;
     border: none;
     background: transparent;

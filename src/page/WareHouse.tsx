@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import styles from './WareHouse.module.css';
-import Navbar from '../components/Navbar';
+import Navbar from '../components/Layout/Navbar';
 import Sidebar, { type SidebarItem } from '../components/Sidebar';
 import MobileTopNav from '../components/Mobile/MobileTopNav';
 import MobileBottomNav from '../components/Mobile/MobileBottomNav';
