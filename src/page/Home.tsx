@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import styles from './Home.module.css';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import Sidebar, { type SidebarItem } from '../components/Sidebar';
+import { type SidebarItem } from '../components/Sidebar';
 import GameDetailModal from '../components/GameDetailModal';
 import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
@@ -14,9 +14,22 @@ const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
+    const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuthStore();
+    const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const navigator = useNavigate();
+    
+    // 轮播数据（使用前3个游戏作为轮播内容）
+    const carouselItems = useMemo(() => {
+        return fileMetas.slice(0, 3).map(meta => ({
+            id: meta.file_id || meta.id,
+            title: meta.title || '未命名游戏',
+            description: meta.description || '一段精彩的冒险故事等待着你...',
+            cover: meta.cover_url || `${import.meta.env.BASE_URL}data/gameCover/image.png`,
+            game: meta
+        }));
+    }, [fileMetas]);
 
     const sidebarItems = useMemo<SidebarItem[]>(() => [
         {
@@ -68,7 +81,7 @@ const Home: React.FC = () => {
             try {
                 const response = await libraryDataApi.getGameData({ 
                     limit: '4', 
-                    userId: String(user?.user?.id) || '' });
+                    userId: String(user?.user.id) || '' });
 
                 if (response.data.success && response.data.data) {
                     setFileMetas(response.data.data);
@@ -85,7 +98,35 @@ const Home: React.FC = () => {
         loadLibraryData();
     }, []);
 
-    console.log(fileMetas);
+    // 自动轮播
+    useEffect(() => {
+        if (carouselItems.length > 1) {
+            carouselIntervalRef.current = setInterval(() => {
+                setCurrentSlide((prev) => (prev + 1) % carouselItems.length);
+            }, 5000); // 每5秒切换一次
+
+            return () => {
+                if (carouselIntervalRef.current) {
+                    clearInterval(carouselIntervalRef.current);
+                }
+            };
+        }
+    }, [carouselItems.length]);
+
+    // 手动切换轮播
+    const goToSlide = (index: number) => {
+        setCurrentSlide(index);
+        // 重置自动轮播
+        if (carouselIntervalRef.current) {
+            clearInterval(carouselIntervalRef.current);
+        }
+        if (carouselItems.length > 1) {
+            carouselIntervalRef.current = setInterval(() => {
+                setCurrentSlide((prev) => (prev + 1) % carouselItems.length);
+            }, 5000);
+        }
+    };
+    // console.log(fileMetas);
     
     return (
         <div className={styles.pageRoot}>
@@ -95,24 +136,58 @@ const Home: React.FC = () => {
 
             {/* 主体 */}
             <div className={styles.mainContent}>
-                {/* 左侧侧边栏 */}
-                <Sidebar items={sidebarItems} />
-
                 {/* 右侧商城内容 */}
                 <div className={styles.main}>
                     <div className={styles.todayWrap}>
-                        <div className={styles.todayHeader}>
-                            <img src={`${import.meta.env.BASE_URL}data/asset/首页/字样.png`} alt="今日推荐" />
-                        </div>
-                        <div className={styles.todayScroller} 
-                            onClick={() => {
-                                const targetFileId = "6fae713d4a501003654a1973fd854895";
-                                const targetGame = fileMetas.find(meta => meta.file_id === targetFileId);
-                                if (targetGame) {
-                                    showGameDetail(targetGame);
-                                }
-                            }}>
-                            <img src={`${import.meta.env.BASE_URL}data/gameCover/image.png`} alt="今日推荐" />
+                        <div className={styles.carouselContainer}>
+                            {carouselItems.length > 0 ? (
+                                <>
+                                    <div className={styles.carouselWrapper}>
+                                        <div 
+                                            className={styles.carouselTrack}
+                                            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                                        >
+                                            {carouselItems.map((item) => (
+                                                <div key={item.id} className={styles.carouselSlide}>
+                                                    <div className={styles.carouselImage}>
+                                                        <img src={item.cover} alt={item.title} />
+                                                    </div>
+                                                    <div className={styles.carouselContent}>
+                                                        <div className={styles.carouselInfo}>
+                                                            <h2 className={styles.carouselTitle}>{item.title}</h2>
+                                                            <p className={styles.carouselDescription}>{item.description}</p>
+                                                            <button 
+                                                                className={styles.carouselStartBtn}
+                                                                onClick={() => 
+                                                                    showGameDetail(item.game)
+                                                                }
+                                                            >
+                                                                开始游戏
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    {carouselItems.length > 1 && (
+                                        <div className={styles.carouselIndicators}>
+                                            {carouselItems.map((_, index) => (
+                                                <button
+                                                    key={index}
+                                                    className={`${styles.carouselIndicator} ${currentSlide === index ? styles.carouselIndicatorActive : ''}`}
+                                                    onClick={() => goToSlide(index)}
+                                                    aria-label={`切换到第 ${index + 1} 张`}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className={styles.carouselPlaceholder}>
+                                    <img src={`${import.meta.env.BASE_URL}data/gameCover/image.png`} alt="今日推荐" />
+                                </div>
+                            )}
                         </div>
                     </div>
 

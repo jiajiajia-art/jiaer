@@ -326,7 +326,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     email: email,
                     avatarUrl: '',
                     nickname: '',
-                    verificationCode: verificationCode,
+                    code: verificationCode,
                 });
                 
                 if (response.data?.data) {

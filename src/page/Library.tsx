@@ -67,7 +67,10 @@ const Library: React.FC = () => {
             setIsLoading(true);
             try {
                 // 修复调用参数数量：需要传递 userId 和 request 两个参数
-                const response = await libraryDataApi.getGameData({ limit: '10', userId: String(user?.user.id) || '' });
+                const response = await libraryDataApi.getGameData({ 
+                    limit: '10', 
+                    userId: String(user?.user.id) || '' 
+                });
 
                 if (response.data.success && response.data.data) {
 

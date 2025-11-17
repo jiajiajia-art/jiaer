@@ -1,6 +1,6 @@
 .bodyContainer {
     font-family: "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-    background: #E8DBB7;
+    /* background: #E8DBB7; */
     min-height: 100vh;
     display: flex;
     justify-content: center;

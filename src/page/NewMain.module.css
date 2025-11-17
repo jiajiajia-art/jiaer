@@ -1,16 +1,3 @@
-:global(*) {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-:global(body) {
-    font-family: 'Microsoft YaHei', Arial, sans-serif;
-    background: #E8DBB7;
-    min-height: 100vh;
-    color: #333;
-}
-
 .gameContainer {
     max-width: 1200px;
     margin: 0 auto;

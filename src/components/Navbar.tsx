@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './Navbar.module.css';
 import AuthModal from './AuthModal';
 import { authModalStore, useAuthStore } from '../store/useAuthStore';
+import { IoSearch } from 'react-icons/io5';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -33,27 +34,24 @@ const Navbar: React.FC = () => {
         }
     }, [showUserMenu]);
 
-    // 根据当前路径确定激活的导航项（支持嵌套路由）
+    // 根据当前路径确定激活的导航项
     const getActiveNav = () => {
         const path = location.pathname;
-        // 使用 startsWith 匹配路径前缀，支持嵌套路由
-        if (path.startsWith('/home')) {
-            return '商城';
+        // 精确匹配路径
+        if (path === '/home' || path === '/') {
+            return '首页';
         } else if (path.startsWith('/create')) {
             return '创作';
         } else if (path.startsWith('/warehouse')) {
             return '仓库';
         }
-        return '商城';
+        return '';
     };
 
     const activeNav = getActiveNav();
 
     const handleNavClick = (navName: string) => {
         switch (navName) {
-            case '商城':
-                navigate('/home');
-                break;
             case '创作':
                 navigate('/create');
                 break;
@@ -66,17 +64,17 @@ const Navbar: React.FC = () => {
     };
 
     return (
-        <>
+        <div className={styles.navbarContainer}>
             <div className={styles.navbar}>
                 <div className={styles.logo}>
                     <img src={`${import.meta.env.BASE_URL}data/asset/网站图标.png`} alt="logo" />
                 </div>
                 <div className={styles.navLinks}>
-                    <div
-                        className={`${styles.navLink} ${activeNav === '商城' ? styles.navLinkActive : ''}`}
-                        onClick={() => handleNavClick('商城')}
+                    <div 
+                        className={`${styles.navLink} ${activeNav === '首页' ? styles.navLinkActive : ''}`}
+                        onClick={() => navigate('/home')}
                     >
-                        商城
+                        首页
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === '创作' ? styles.navLinkActive : ''}`}
@@ -92,6 +90,13 @@ const Navbar: React.FC = () => {
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === '仓库' ? styles.navLinkActive : ''}`}
+                        onClick={() => {
+                            if (!isAuthenticated) {
+                                setIsAuthModalOpen(true);
+                                return;
+                            }
+                            handleNavClick('仓库')
+                        }}
                     >
                         仓库
                     </div>
@@ -99,7 +104,9 @@ const Navbar: React.FC = () => {
                 <div className={styles.navRight}>
                     <div className={styles.searchBox}>
                         <input className={styles.searchInput} placeholder="搜索商品、素材、事件..." />
-                        <span className={styles.searchIcon}></span>
+                        <span className={styles.searchIcon}>
+                            <IoSearch />
+                        </span>
                     </div>
                     {isAuthenticated ? (
                         <div className={styles.avatarContainer}>
@@ -131,14 +138,13 @@ const Navbar: React.FC = () => {
                             登录/注册
                         </button>
                     )}
-                    <img src={`${import.meta.env.BASE_URL}data/asset/设置.png`} alt="" className={styles.settingIcon} />
                 </div>
             </div>
             <AuthModal
                 isOpen={isAuthModalOpen}
                 onClose={() => setIsAuthModalOpen(false)}
             />
-        </>
+        </div>
     );
 };
 

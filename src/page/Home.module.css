@@ -1,10 +1,6 @@
 .pageRoot {
     width: 1800px;
     min-height: 100vh;
-    background-image: url('/data/asset/首页/大背景copy.png');
-    background-size: 1800px 100%;
-    background-position: center;
-    background-repeat: no-repeat;
     max-width: 1800px;
     margin: 0 auto;
 }
@@ -23,9 +19,7 @@
 .mainContent {
     color: black;
     display: flex;
-    min-height: calc(100vh - 80px);
     margin: 0;
-    margin-top: -2px;
     padding: 0;
 }
 
@@ -33,15 +27,14 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 10px;
 }
 
 .todayWrap {
     width: 100%;
-    min-height: 340px;
     position: relative;
-    padding: 20px;
+    padding: 0;
     flex-shrink: 0;
+    margin-bottom: 20px;
 }
 
 .todayHeader {
@@ -52,6 +45,163 @@
     font-weight: 600;
     color: #E8DBB7;
     padding: 10px;
+    z-index: 10;
+}
+
+/* 轮播容器 */
+.carouselContainer {
+    width: 100%;
+    height: 600px;
+    position: relative;
+    overflow: hidden;
+}
+
+.carouselWrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.carouselTrack {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s ease-in-out;
+}
+
+.carouselSlide {
+    width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carouselImage {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.carouselImage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.carouselContent {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0px;
+}
+
+.carouselInfo {
+    text-align: left;
+    color: white;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.carouselTitle {
+    font-size: 48px;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.55),
+                 0 0 25px rgba(0, 0, 0, 0.45);
+}
+
+.carouselDescription {
+    font-size: 18px;
+    line-height: 1.6;
+    margin: 0 0 30px 0;
+    width: 280px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.carouselStartBtn {
+    background-color: #FB4655;
+    color: white;
+    border: none;
+    padding: 14px 40px;
+    font-size: 18px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.4);
+    display: block;
+}
+
+.carouselStartBtn:hover {
+    background-color: #e03d4b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.6);
+}
+
+.carouselStartBtn:active {
+    transform: translateY(0);
+}
+
+/* 轮播指示器 */
+.carouselIndicators {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 3;
+}
+
+.carouselIndicator {
+    width: 40px;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+}
+
+.carouselIndicator:hover {
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+.carouselIndicatorActive {
+    background-color: rgba(255, 255, 255, 1);
+    width: 50px;
+}
+
+.carouselPlaceholder {
+    width: 100%;
+    height: 600px;
+}
+
+.carouselPlaceholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .todayScroller {
@@ -237,6 +387,28 @@
         width: auto;
     }
 
+    .carouselContainer {
+        width: 100%;
+        height: 600px;
+    }
+
+    .carouselContent {
+        max-width: 1200px;
+    }
+
+    .carouselInfo {
+        max-width: 1200px;
+    }
+
+    .carouselTitle {
+        font-size: 62px;
+    }
+
+    .carouselDescription {
+        font-size: 16px;
+        width: 360px;
+    }
+
     .todayScroller {
         width: 100%;
     }
@@ -281,6 +453,29 @@
         flex: 1;
         min-width: 0;
         width: auto;
+    }
+
+    .carouselContainer {
+        width: 100%;
+        height: 600px;
+    }
+
+    .carouselContent {
+        max-width: 1200px;
+        padding: 0 30px;
+    }
+
+    .carouselInfo {
+        max-width: 1200px;
+    }
+
+    .carouselTitle {
+        font-size: 36px;
+    }
+
+    .carouselDescription {
+        font-size: 16px;
+        width: 160px;
     }
 
     .todayScroller {
@@ -339,13 +534,57 @@
 
     .todayWrap {
         width: 100vw;
-        height: 200px;
-        min-height: 200px;
         padding: 0;
+        margin-bottom: 10px;
     }
 
     .todayHeader {
         display: none;
+    }
+
+    .carouselContainer {
+        width: 100vw;
+        height: 400px;
+    }
+
+    .carouselContent {
+        max-width: 100%;
+        padding: 0 20px;
+    }
+
+    .carouselInfo {
+        max-width: 100%;
+        padding: 0 20px;
+    }
+
+    .carouselTitle {
+        font-size: 28px;
+        margin-bottom: 12px;
+    }
+
+    .carouselDescription {
+        font-size: 14px;
+        margin-bottom: 20px;
+        width: 120px;
+    }
+
+    .carouselStartBtn {
+        padding: 12px 30px;
+        font-size: 16px;
+    }
+
+    .carouselIndicators {
+        bottom: 20px;
+        gap: 8px;
+    }
+
+    .carouselIndicator {
+        width: 30px;
+        height: 3px;
+    }
+
+    .carouselIndicatorActive {
+        width: 40px;
     }
 
     .todayScroller {

@@ -1,5 +1,6 @@
 export interface ConversionRequest {
     fileId: string;
+    userId: string;
 }
 
 export interface ConversionResponse {
