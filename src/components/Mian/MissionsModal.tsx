@@ -101,7 +101,7 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission }) => {
     );
 };
 
-const MissionsModal: React.FC<MissionsModalProps> = ({ onClose, missionData, loading = false }) => {
+const MissionsModal: React.FC<MissionsModalProps> = ({ missionData, loading = false }) => {
     const renderMission = (mission: Mission) => {
         return <MissionItem key={mission.id} mission={mission} />;
     };
