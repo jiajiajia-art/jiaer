@@ -24,6 +24,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
 }
 
 .goodsImg img {
@@ -31,6 +32,29 @@
     height: 130px;
     object-fit: fill;
     border-radius: 10px;
+}
+
+.goodsInfo {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.goodsInfoItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.goodsInfoItem svg {
+    width: 16px;
+    height: 16px;
 }
 
 .goodsBody {

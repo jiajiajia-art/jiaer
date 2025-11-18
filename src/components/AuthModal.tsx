@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './AuthModal.module.css';
 import { auth } from '../api/account/authApi';
 import { useAuthStore } from '../store/useAuthStore';
@@ -49,8 +50,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             }
         };
     }, []);
-
-    if (!isOpen) return null;
 
     // ========== 验证函数 ==========
     const validatePhone = (phoneNumber: string): boolean => {
@@ -429,7 +428,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         }
     };
 
-    return (
+    if (!isOpen) return null;
+
+    const modalContent = (
         <div className={styles.modalOverlay} onClick={handleClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.closeBtn} onClick={handleClose}>
@@ -619,6 +620,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default AuthModal;

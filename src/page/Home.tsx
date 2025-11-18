@@ -149,7 +149,7 @@ const Home: React.FC = () => {
         <div className={styles.pageRoot}>
             {/* 顶部固定导航 */}
             <Navbar />
-            <MobileTopNav items={sidebarItems} />
+            {/* <MobileTopNav items={sidebarItems} /> */}
 
             {/* 主体 */}
             <div className={styles.mainContent}>

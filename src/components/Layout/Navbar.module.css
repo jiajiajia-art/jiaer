@@ -11,7 +11,17 @@
     color: #fff;
     position: fixed;
     top: 0;
+    left: 50%;
+    transform: translateX(-50%);
     width: 100%;
+}
+
+/* 在 1800px 以下时，导航栏容器占据 100% 宽度 */
+@media (max-width: 1800px) {
+    .navbarContainer {
+        left: 0;
+        transform: none;
+    }
 }
 
 .navbar {
@@ -21,6 +31,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 30px;
+    margin: 0 auto;
 }
 
 .logo {
@@ -210,6 +221,15 @@
 .loginBtn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(178, 79, 27, 0.4);
+}
+
+
+@media (max-width: 1080px) {
+    .navbar {
+        width: 100%;
+        padding: 0 20px;
+        box-sizing: border-box;
+    }
 }
 
 @media (max-width: 768px) {

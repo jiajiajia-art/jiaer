@@ -1,6 +1,8 @@
 import React from 'react';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
+import { AiOutlineLike } from 'react-icons/ai';
+import { IoGameControllerOutline } from 'react-icons/io5';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -31,6 +33,16 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                             src={meta.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`}
                             alt={meta.title || `剧情${idx + 1}`}
                         />
+                        <div className={styles.goodsInfo}>
+                            <div className={styles.goodsInfoItem}>
+                                <AiOutlineLike />
+                                {meta.like_count}
+                            </div>
+                            <div className={styles.goodsInfoItem}>
+                                <IoGameControllerOutline />
+                                {meta.rating_count}
+                            </div>
+                        </div>
                     </div>
                     <div className={styles.goodsBody}>
                         <div className={styles.goodsTitleWrap}>
