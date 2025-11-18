@@ -250,13 +250,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 setFieldError(setEmailError, setEmailShake, '请输入正确的邮箱格式');
                 hasError = true;
             }
-            if (!verificationCode) {
-                setFieldError(setVerificationCodeError, setVerificationCodeShake, '请输入验证码');
-                hasError = true;
-            } else if (verificationCode.length !== 6) {
-                setFieldError(setVerificationCodeError, setVerificationCodeShake, '验证码为6位数字');
-                hasError = true;
-            }
         }
 
         // 重置密码模式验证
@@ -325,7 +318,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     email: email,
                     avatarUrl: '',
                     nickname: '',
-                    code: verificationCode,
                 });
                 
                 if (response.data?.data) {
@@ -382,11 +374,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             setConfirmPassword('');
             setEmailInput('');
             setVerificationCode('');
-            setCountdown(0);
-            if (countdownTimerRef.current) {
-                clearInterval(countdownTimerRef.current);
-                countdownTimerRef.current = null;
-            }
         }
     };
 
@@ -397,11 +384,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setPassword('');
         setConfirmPassword('');
         setVerificationCode('');
-        setCountdown(0);
-        if (countdownTimerRef.current) {
-            clearInterval(countdownTimerRef.current);
-            countdownTimerRef.current = null;
-        }
     };
 
     const handleClose = () => {
@@ -473,8 +455,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         </div>
                     )}
 
-                    {/* 验证码输入（注册/重置） */}
-                    {(mode === 'register' || mode === 'reset') && (
+                    {/* 验证码输入 */}
+                    {mode === 'reset' && (
                         <div className={styles.inputGroup}>
                             <div className={styles.codeInputWrapper}>
                                 <input
@@ -492,12 +474,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     onClick={handleSendCode}
                                     disabled={isSendingCode || countdown > 0 || !email || !validateEmail(email)}
                                 >
-                                    {isSendingCode
-                                        ? '发送中...'
-                                        : countdown > 0
-                                            ? `${countdown}秒`
-                                            : '获取验证码'
-                                    }
+                                    {isSendingCode ? '发送中...' : countdown > 0 ? `${countdown}秒` : '发送验证码'}
                                 </button>
                             </div>
                             {verificationCodeError && (

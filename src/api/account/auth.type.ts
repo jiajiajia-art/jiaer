@@ -19,7 +19,7 @@ export interface SignupRequest {
   email: string;
   avatarUrl: string;
   nickname: string;
-  code: string;
+  // code: string;
 }
 
 // 登录请求
