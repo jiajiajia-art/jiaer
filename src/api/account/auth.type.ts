@@ -16,7 +16,7 @@ export interface User {
 export interface SignupRequest {
   phoneNumber: string;
   password: string;
-  email: string;
+  // email: string;
   avatarUrl: string;
   nickname: string;
   // code: string;

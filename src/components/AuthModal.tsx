@@ -38,7 +38,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [submitError, setSubmitError] = useState('');
-    const { login, setEmail } = useAuthStore();
+    const { login } = useAuthStore();
     const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // 清理倒计时定时器
@@ -244,13 +244,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '两次输入的密码不一致');
                 hasError = true;
             }
-            if (!email) {
-                setFieldError(setEmailError, setEmailShake, '请输入邮箱');
-                hasError = true;
-            } else if (!validateEmail(email)) {
-                setFieldError(setEmailError, setEmailShake, '请输入正确的邮箱格式');
-                hasError = true;
-            }
         }
 
         // 重置密码模式验证
@@ -316,13 +309,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 const response = await auth.signup({
                     phoneNumber: phone,
                     password: password,
-                    email: email,
                     avatarUrl: '',
                     nickname: '',
                 });
                 
                 if (response.data?.data) {
-                    setEmail(email);
                     setMode('login');
                     setPassword('');
                     setConfirmPassword('');
@@ -439,7 +430,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     )}
 
                     {/* 邮箱输入 */}
-                    {(mode === 'register' || mode === 'reset') && (
+                    {(mode === 'reset') && (
                         <div className={styles.inputGroup}>
                             <input
                                 type="email"
