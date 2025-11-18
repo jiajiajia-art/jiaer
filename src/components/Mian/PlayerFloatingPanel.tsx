@@ -171,7 +171,7 @@ const PlayerFloatingPanel: React.FC<PlayerFloatingPanelProps> = ({
                 <div className={styles.playerStatsColumn}>
                     <p>
                         <span className={styles.label}>等级:</span>
-                        <span>{player?.stats.level}</span>
+                        <span>{player?.stats?.level ?? 1}</span>
                     </p>
                     <p>
                         <span className={styles.label}>防御:</span>

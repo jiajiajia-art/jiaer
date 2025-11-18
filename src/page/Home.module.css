@@ -1,7 +1,7 @@
 .pageRoot {
     width: 100%;
     min-height: 100vh;
-    max-width: 1800px;
+    max-width: 1920px;
     margin: 0 auto;
 }
 
@@ -36,7 +36,7 @@
 
 .todayWrap {
     width: 100vw;
-    max-width: 1800px;
+    max-width: 1920px;
     position: relative;
     padding: 0;
     flex-shrink: 0;
@@ -47,7 +47,7 @@
 /* 轮播容器 */
 .carouselContainer {
     width: 100%;
-    max-width: 1800px;
+    max-width: 1920px;
     aspect-ratio: 19.2 / 8;
     position: relative;
     overflow: hidden;
@@ -255,8 +255,8 @@
     align-items: center;
 }
 
-/* 在 1800px 以下时，导航栏和轮播图占据 100% 宽度 */
-@media (max-width: 1800px) {
+/* 在 1920px 以下时，导航栏和轮播图占据 100% 宽度 */
+@media (max-width: 1920px) {
     .todayWrap {
         max-width: 100vw;
     }

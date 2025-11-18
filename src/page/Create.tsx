@@ -1,575 +1,280 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Layout/Navbar';
-import Sidebar, { type SidebarItem } from '../components/Sidebar';
+import React, { useEffect, useState } from 'react';
 import styles from './Create.module.css';
-import { useGameStore } from '../store/gameStore';
-import createGameApi from '../api/createGame/createGameApi.type';
-import createSessionApi from '../api/createGame/createSessionApi';
+import gameGridStyles from '../components/GameGrid.module.css';
+import Navbar from '../components/Layout/Navbar';
+import FooterArea from '../components/Layout/FooterArea';
+import GameGrid from '../components/GameGrid';
+import GameDetailModal from '../components/GameDetailModal';
+import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
 import { useAuthStore } from '../store/useAuthStore';
-import MobileTopNav from '../components/Mobile/MobileTopNav';
-import MobileBottomNav from '../components/Mobile/MobileBottomNav';
+import getGameDataApi from '../api/home/getGameData';
+import GameAction from '../api/game/gameAction';
+import type { UserGameData } from '../api/home/getGameData.type';
+import { IoIosArrowForward } from 'react-icons/io';
+import { IoEye, IoStatsChartSharp, IoWallet } from 'react-icons/io5';
+import { TbHandClick } from 'react-icons/tb';
+import { HiOutlineLightBulb } from 'react-icons/hi';
+import { useNavigate } from 'react-router-dom';
 
 const Create: React.FC = () => {
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [coverFile, setCoverFile] = useState<File | null>(null);
-    const [coverImage, setCoverImage] = useState<string | null>(null);
-    const [isDragover, setIsDragover] = useState(false);
-    const [isDragoverCover, setIsDragoverCover] = useState(false);
-    const [isCreating, setIsCreating] = useState(false);
-    const [createProgress, setCreateProgress] = useState(0);
-    const [createProgressText, setCreateProgressText] = useState('');
-    const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const startTimeRef = useRef<number | null>(null);
-    const abortControllerRef = useRef<AbortController | null>(null);
-    const MAX_TIME = 5 * 60 * 1000; // 5分钟（毫秒）
-    const MAX_PROGRESS = 90; // 最大进度90%
-    
-    const [gameName, setGameName] = useState('');
-    const [gameSubtitle, setGameSubtitle] = useState('');
-    const [gameDescription, setGameDescription] = useState('');
-    // const [noImageMode, setNoImageMode] = useState(false); // 无图模式
-    
-    const { setPdfFileId, setSessionId } = useGameStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
-    const sidebarItems = useMemo<SidebarItem[]>(() => [
-        {
-            id: 'create',
-            label: '创作游戏',
-            icon: 'data/asset/创作页面/文件图标.png',
-            route: '/create',
-        },
-        {
-            id: 'myGames',
-            label: '我的游戏',
-            icon: 'data/asset/创作页面/文件夹图标.png',
-            route: '/create/myGames',
-        }
-    ], []);
+    const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    const [showGameModal, setShowGameModal] = useState(false);
+    const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [currentGame, setCurrentGame] = useState<UserGameData | null>(null);
+    const [stats, setStats] = useState({
+        totalCreated: 0,
+        totalViews: 0,
+        totalClicks: 0,
+        totalRevenue: 0,
+    });
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const coverInputRef = useRef<HTMLInputElement>(null);
-
-    // 清理进度条定时器
-    useEffect(() => {
-        return () => {
-            if (progressTimerRef.current) {
-                clearInterval(progressTimerRef.current);
-            }
-        };
-    }, []);
-
-    // 启动假进度条（5分钟倒计时）
-    const startFakeProgress = () => {
-        // 清理之前的定时器
-        if (progressTimerRef.current) {
-            clearInterval(progressTimerRef.current);
-        }
-
-        startTimeRef.current = Date.now();
-        setCreateProgress(5); // 从5%开始
-
-        // 每100ms更新一次进度
-        progressTimerRef.current = setInterval(() => {
-            if (!startTimeRef.current) return;
-
-            const elapsed = Date.now() - startTimeRef.current;
-            const progress = Math.min(5 + (elapsed / MAX_TIME) * (MAX_PROGRESS - 5), MAX_PROGRESS);
-            
-            setCreateProgress(progress);
-
-            // 如果达到5分钟，停止进度条
-            if (elapsed >= MAX_TIME) {
-                if (progressTimerRef.current) {
-                    clearInterval(progressTimerRef.current);
-                    progressTimerRef.current = null;
-                }
-            }
-        }, 100);
-    };
-
-    // 停止假进度条
-    const stopFakeProgress = () => {
-        if (progressTimerRef.current) {
-            clearInterval(progressTimerRef.current);
-            progressTimerRef.current = null;
-        }
-        startTimeRef.current = null;
-    };
-
-    // 取消上传
-    const handleCancelUpload = () => {
-        // 停止假进度条
-        stopFakeProgress();
-        
-        // 取消正在进行的请求
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-            abortControllerRef.current = null;
-        }
-        
-        // 重置状态
-        setIsCreating(false);
-        setCreateProgress(0);
-        setCreateProgressText('');
-    };
-
-    // 处理文件选择
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const allowedTypes = [
-                'application/pdf',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ];
-
-            if (!allowedTypes.includes(file.type)) {
-                alert('请上传PDF或DOCX格式的文件！');
-                return;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                alert('文件大小不能超过10MB！');
-                return;
-            }
-            setUploadedFile(file);
-        }
-    };
-
-    // 处理封面图片选择
-    const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-            if (!allowedTypes.includes(file.type)) {
-                alert('请上传图片格式的文件！');
-                return;
-            }
-            setCoverFile(file);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setCoverImage(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    // 格式化文件大小
-    const formatFileSize = (bytes: number): string => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-    };
-
-    // 移除文件
-    const removeFile = () => {
-        setUploadedFile(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
-    // 移除封面
-    const removeCover = () => {
-        setCoverFile(null);
-        setCoverImage(null);
-        if (coverInputRef.current) {
-            coverInputRef.current.value = '';
-        }
-    };
-
-    // 处理拖拽上传
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragover(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragover(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragover(false);
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const file = files[0];
-            const allowedTypes = [
-                'application/pdf',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ];
-
-            if (!allowedTypes.includes(file.type)) {
-                alert('请上传PDF或DOCX格式的文件！');
-                return;
-            }
-            if (file.size > 10 * 1024 * 1024) {
-                alert('文件大小不能超过10MB！');
-                return;
-            }
-            setUploadedFile(file);
-        }
-    };
-
-    // 处理封面拖拽
-    const handleCoverDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragoverCover(true);
-    };
-
-    const handleCoverDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragoverCover(false);
-    };
-
-    const handleCoverDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setIsDragoverCover(false);
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const file = files[0];
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-            if (!allowedTypes.includes(file.type)) {
-                alert('请上传图片格式的文件！');
-                return;
-            }
-            setCoverFile(file);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setCoverImage(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    // 验证必填字段
-    const isFormValid = () => {
-        return (
-            gameName.trim() !== '' &&
-            gameSubtitle.trim() !== '' &&
-            gameDescription.trim() !== '' &&
-            uploadedFile !== null &&
-            coverFile !== null
-        );
-    };
-
-    // 创建游戏
-    const handleCreateGame = async () => {
-        if (!gameName.trim()) {
-            alert('请填写游戏名称');
-            return;
-        }
-        if (!gameSubtitle.trim()) {
-            alert('请填写游戏副标题');
-            return;
-        }
-        if (!gameDescription.trim()) {
-            alert('请填写游戏简介');
-            return;
-        }
-        if (!uploadedFile) {
-            alert('请上传游戏内容文档');
-            return;
-        }
-        if (!coverFile) {
-            alert('请上传封面图片');
-            return;
-        }
+    // 加载我的游戏数据
+    const loadMyGames = async () => {
         if (!user?.user?.id) {
-            alert('请先登录');
             return;
         }
 
-        setIsCreating(true);
-        setCreateProgress(0);
-        setCreateProgressText('准备上传文件...');
-        
-        // 创建 AbortController 用于取消请求
-        abortControllerRef.current = new AbortController();
-        
-        // 启动假进度条
-        startFakeProgress();
-        
         try {
-            // 第一步：创建游戏并上传文件
-            setCreateProgressText('正在上传文件并创建游戏...');
-            
-            const createGameResponse = await createGameApi.createGame({
-                file: uploadedFile,
-                cover: coverFile,
-                title: gameName.trim(),
-                subtitle: gameSubtitle.trim(),
-                description: gameDescription.trim(),
-                creator_user_id: String(user.user.id),
-                author_name: user.user.nickname,
-            });
-
-            if (!createGameResponse.data.success) {
-                stopFakeProgress();
-                abortControllerRef.current = null;
-                alert(createGameResponse.data.message || '创建游戏失败');
-                setIsCreating(false);
-                setCreateProgress(0);
-                setCreateProgressText('');
-                return;
+            const response = await getGameDataApi.getUserData(user.user.id, { limit: 100 });
+            if (response.data.success && response.data.data) {
+                setFileMetas(response.data.data);
+                // 计算统计数据
+                const games = response.data.data;
+                setStats({
+                    totalCreated: games.length,
+                    totalViews: games.reduce((sum: number, game: UserGameData) => sum + (game.rating_count || 0), 0),
+                    totalClicks: games.reduce((sum: number, game: UserGameData) => sum + (game.like_count || 0), 0),
+                    totalRevenue: games.reduce((sum: number, game: UserGameData) => sum + ((game.price_amount || 0) * (game.rating_count || 0)), 0),
+                });
             }
-
-            const fileId = createGameResponse.data.fileId;
-            setPdfFileId(fileId);
-            setCreateProgressText('游戏创建成功，正在初始化会话...');
-
-            // 第二步：创建session
-            const sessionResponse = await createSessionApi.getSession({
-                fileId: fileId,
-                userId: user.user.id
-            });
-
-            if (sessionResponse.data.success) {
-                const sessionData = sessionResponse.data.data;
-                setSessionId(sessionData?.session.session_id || null);
-                
-                // 停止假进度条，快速到100%
-                stopFakeProgress();
-                abortControllerRef.current = null;
-                setCreateProgress(100);
-                setCreateProgressText('创建成功！正在跳转...');
-                
-                // 延迟一下让用户看到完成状态
-                setTimeout(() => {
-                    navigate('/newmain');
-                }, 500);
-            } else {
-                stopFakeProgress();
-                abortControllerRef.current = null;
-                alert(sessionResponse.data.message || '创建游戏会话失败');
-                setIsCreating(false);
-                setCreateProgress(0);
-                setCreateProgressText('');
-            }
-        } catch (error: any) {
-            // 如果是取消操作，不显示错误
-            if (error.name === 'AbortError' || error.message === 'Request aborted') {
-                return;
-            }
-            
-            console.error('创建游戏错误:', error);
-            stopFakeProgress();
-            abortControllerRef.current = null;
-            const errorMessage = error.response?.data?.message || error.message || '创建游戏失败，请稍后重试';
-            alert(errorMessage);
-            setIsCreating(false);
-            setCreateProgress(0);
-            setCreateProgressText('');
+        } catch (error) {
+            console.error('获取我的游戏列表错误:', error);
         }
     };
+
+    useEffect(() => {
+        loadMyGames();
+    }, [user?.user.id]);
+
+    const showGameDetail = (meta: UserGameData) => {
+        setSelectedGameMeta(meta);
+        setShowGameModal(true);
+    };
+
+    const closeModal = () => {
+        setShowGameModal(false);
+        setSelectedGameMeta(null);
+    };
+
+    // 发布游戏
+    const handlePublish = async (price: number | null, isFree: boolean) => {
+        if (!currentGame) return;
+
+        try {
+            const priceAmount = isFree ? 0 : (price || 0);
+            const response = await GameAction.publishGame({
+                fileId: currentGame.file_id || '',
+                priceAmount: priceAmount,
+            });
+
+            if (response.data.success) {
+                await loadMyGames();
+                setShowPublishModal(false);
+                setCurrentGame(null);
+            } else {
+                console.error('发布游戏失败:', response.data);
+            }
+        } catch (error) {
+            console.error('发布游戏失败:', error);
+        }
+    };
+
+    // 渲染操作按钮
+    const renderGameActions = (game: UserGameData) => {
+        // 检查 is_public 的值（0 表示未发布，1 表示已发布）
+        const isPublic = game.is_public === 1;
+        
+        if (!isPublic) {
+            // 未发布，显示发布按钮
+            return (
+                <button
+                    className={gameGridStyles.gameDataBtn}
+                    onClick={() => {
+                        setCurrentGame(game);
+                        setShowPublishModal(true);
+                    }}
+                >
+                    发布
+                </button>
+            );
+        } else {
+            // 已发布，显示数据按钮，跳转到编辑/数据页面
+            return (
+                <button
+                    className={gameGridStyles.gameDataBtn}
+                    onClick={() => {
+                        if (!game.file_id) return;
+                        navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
+                    }}
+                >
+                    数据
+                </button>
+            );
+        }
+    };
+
+    const userAvatar = `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
+    const userName = user?.user?.nickname || user?.user?.name || '未设置';
 
     return (
         <div className={styles.pageRoot}>
             <Navbar />
-            <MobileTopNav items={sidebarItems} />
-            
-            {/* 上传遮罩层 */}
-            {isCreating && (
-                <div className={styles.uploadOverlay}>
-                    <div className={styles.uploadOverlayContent}>
-                        <h3 className={styles.uploadOverlayTitle}>正在创建游戏</h3>
-                        
-                        {/* 进度条 */}
-                        <div className={styles.uploadProgressContainer}>
-                            <div className={styles.uploadProgressBar}>
-                                <div
-                                    className={styles.uploadProgressFill}
-                                    style={{ width: `${createProgress}%` }}
-                                />
-                            </div>
-                            <div className={styles.uploadProgressPercent}>
-                                {Math.round(createProgress)}%
-                            </div>
-                        </div>
-                        
-                        {/* 提示文字 */}
-                        <p className={styles.uploadOverlayText}>
-                            {createProgressText || '处理中...'}
-                        </p>
-                        
-                        {/* 取消按钮 */}
-                        <button
-                            className={styles.cancelUploadBtn}
-                            onClick={handleCancelUpload}
-                            type="button"
-                        >
-                            取消上传
+
+            <div className={styles.mainContent}>
+                <div className={styles.main}>
+                    {/* 创作游戏按钮 */}
+                    <div className={styles.createGameButton}>
+                        <button className={styles.createGameButtonItem} onClick={() => {
+                            navigate('/createGame');
+                        }}>
+                            <HiOutlineLightBulb />
+                            <span>创作游戏</span>
                         </button>
                     </div>
-                </div>
-            )}
-            
-            <div className={styles.mainContent}>
-                {/* 左侧侧边栏 */}
-                <Sidebar items={sidebarItems} />
 
-                {/* 右侧内容区域 */}
-                <div className={styles.main}>
-                    <div className={styles.createGameContainer}>
-                        {/* 左侧60% - 表单 */}
-                            <div className={styles.formSection}>                                
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="gameName">游戏名称</label>
-                                    <input
-                                        type="text"
-                                        id="gameName"
-                                        value={gameName}
-                                        onChange={(e) => setGameName(e.target.value)}
-                                        placeholder="输入游戏名称"
-                                        required
-                                        autoComplete="off"
-                                        disabled={isCreating}
-                                    />
-                                </div>
-
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="gameSubtitle">游戏副标题</label>
-                                    <input
-                                        type="text"
-                                        id="gameSubtitle"
-                                        value={gameSubtitle}
-                                        onChange={(e) => setGameSubtitle(e.target.value)}
-                                        placeholder="例如：经典奇幻冒险RPG"
-                                        required
-                                        autoComplete="off"
-                                        disabled={isCreating}
-                                    />
-                                </div>
-
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="gameDescription">游戏简介</label>
-                                    <textarea
-                                        id="gameDescription"
-                                        value={gameDescription}
-                                        onChange={(e) => setGameDescription(e.target.value)}
-                                        rows={4}
-                                        placeholder="简单介绍你的游戏世界..."
-                                        required
-                                        autoComplete="off"
-                                        disabled={isCreating}
-                                    />
-                                </div>
-
-
-                                <div className={`${styles.formGroup} ${styles.requiredField}`}>
-                                    <label htmlFor="gamePDF">游戏内容文档 (PDF/DOCX)</label>
-                                    <div
-                                        className={`${styles.fileUploadArea} ${isDragover ? styles.fileUploadAreaDragover : ''} ${isCreating ? styles.disabled : ''}`}
-                                        onClick={() => !isCreating && fileInputRef.current?.click()}
-                                        onDragOver={(e) => !isCreating && handleDragOver(e)}
-                                        onDragLeave={(e) => !isCreating && handleDragLeave(e)}
-                                        onDrop={(e) => !isCreating && handleDrop(e)}
-                                    >
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            id="gamePDF"
-                                            accept=".pdf,.docx"
-                                            hidden
-                                            onChange={handleFileSelect}
-                                            autoComplete="off"
-                                            disabled={isCreating}
-                                        />
-                                        {!uploadedFile ? (
-                                            <div className={styles.uploadPlaceholder}>
-                                                <span className={styles.uploadIcon}>📄</span>
-                                                <p className={styles.uploadText}>点击或拖拽文档文件到此处</p>
-                                                <p className={styles.uploadHint}>支持 PDF 和 DOCX 格式，最大 10MB</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className={styles.uploadInfo}>
-                                                    <span className={styles.fileIcon}>📄</span>
-                                                    <span className={styles.fileName}>{uploadedFile.name}</span>
-                                                    <span className={styles.fileSize}>{formatFileSize(uploadedFile.size)}</span>
-                                                    <button
-                                                        type="button"
-                                                        className={styles.removeFileBtn}
-                                                        onClick={removeFile}
-                                                        disabled={isCreating}
-                                                    >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 右侧40% - 封面展示 */}
-                            <div className={styles.coverSection}>
-                                <h3 className={styles.coverTitle}>封面预览</h3>
-                                <div 
-                                    className={`${styles.coverPreview} ${isDragoverCover ? styles.coverPreviewDragover : ''} ${isCreating ? styles.disabled : ''}`}
-                                    onDragOver={(e) => !isCreating && handleCoverDragOver(e)}
-                                    onDragLeave={(e) => !isCreating && handleCoverDragLeave(e)}
-                                    onDrop={(e) => !isCreating && handleCoverDrop(e)}
-                                    onClick={() => !isCreating && coverInputRef.current?.click()}
-                                >
-                                    {coverImage ? (
-                                        <>
-                                            <img src={coverImage} alt="封面预览" />
-                                            <button 
-                                                className={styles.removeCoverBtn}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeCover();
-                                                }}
-                                                disabled={isCreating}
-                                            >
-                                                ×
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <div className={styles.coverPlaceholder}>
-                                            <span className={styles.coverIcon}>🖼️</span>
-                                            <p>点击或拖拽图片到此处</p>
-                                            <p className={styles.coverHint}>支持 JPG、PNG 格式</p>
-                                        </div>
-                                    )}
-                                    <input
-                                        ref={coverInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/jpg"
-                                        hidden
-                                        onChange={handleCoverSelect}
-                                        autoComplete="off"
-                                        disabled={isCreating}
-                                    />
-                                </div>
-                                
-                                <div className={styles.coverActions}>
-                                    {/* <label className={styles.noImageModeLabel}>
-                                        <input 
-                                            type="checkbox"
-                                            checked={noImageMode}
-                                            onChange={(e) => setNoImageMode(e.target.checked)}
-                                            disabled={isCreating}
-                                            className={styles.noImageModeCheckbox}
-                                        />
-                                        <span className={styles.noImageModeText}>无图模式</span>
-                                    </label> */}
-                                    <button 
-                                        className={styles.createGameBtn}
-                                        onClick={handleCreateGame}
-                                        disabled={isCreating || !isFormValid()}
-                                    >
-                                    </button>
-                                </div>
+                    {/* 用户信息展示区域 */}
+                    <div className={styles.userProfileSection}>
+                        <div className={styles.userProfileBackground}>
+                            <div
+                                className={styles.userProfileBlur}
+                                style={{
+                                    backgroundImage: `url(${userAvatar})`,
+                                }}
+                            />
+                            <div className={styles.userProfileContent}>
+                                <img
+                                    className={styles.userAvatar}
+                                    src={userAvatar}
+                                    alt="用户头像"
+                                />
+                                <div className={styles.userName}>{userName}</div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* 我的数据模块 */}
+                    <div className={styles.statsSection}>
+                        <div className={styles.sectionHeader}>
+                            <div className={styles.sectionTitle}>我的数据</div>
+                            <hr />
+                            <button
+                                type="button"
+                                className={`${styles.more} ${styles.moreText}`}
+                            >
+                                每晚12:00更新
+                                <IoIosArrowForward />
+                            </button>
+                        </div>
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoStatsChartSharp />
+                                    <span>创作总数</span>
+                                </div>
+                                <div className={styles.statValue}>{stats.totalCreated}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoEye />
+                                    <span>总浏览量</span>
+                                </div>
+                                <div className={styles.statValue}>{stats.totalViews}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <TbHandClick />
+                                    <span>总点击</span>
+                                </div>
+                                <div className={styles.statValue}>{stats.totalClicks}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoWallet />
+                                    <span>总收益</span>
+                                </div>
+                                <div className={styles.statValue}>{stats.totalRevenue}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 发布作品模块 */}
+                    <div className={styles.shopSection}>
+                        <div className={styles.sectionHeader}>
+                            <div className={styles.sectionTitle}>发布作品</div>
+                            <hr />
+                            <button
+                                type="button"
+                                className={`${styles.more} ${styles.moreText}`}
+                            >
+                                更多
+                                <IoIosArrowForward />
+                            </button>
+                        </div>
+                        <GameGrid
+                            games={fileMetas}
+                            showSpecialPrice={false}
+                            onGameClick={showGameDetail}
+                            renderActions={renderGameActions}
+                        />
+                    </div>
+
+                    <div className={styles.shopSection}>
+                        <div className={styles.sectionHeader}>
+                            <div className={styles.sectionTitle}>草稿箱</div>
+                            <hr />
+                            <button
+                                type="button"
+                                className={`${styles.more} ${styles.moreText}`}
+                            >
+                                更多
+                                <IoIosArrowForward />
+                            </button>
+                        </div>
+                        <GameGrid
+                            games={fileMetas}
+                            showSpecialPrice={false}
+                            onGameClick={showGameDetail}
+                            renderActions={renderGameActions}
+                        />
+                    </div>
                 </div>
             </div>
-            <MobileBottomNav />
+
+            <FooterArea />
+
+            {selectedGameMeta && (
+                <GameDetailModal
+                    isOpen={showGameModal}
+                    game={selectedGameMeta}
+                    onClose={closeModal}
+                />
+            )}
+
+            {currentGame && (
+                <PublishSettingsModal
+                    isOpen={showPublishModal}
+                    game={currentGame}
+                    onClose={() => {
+                        setShowPublishModal(false);
+                        setCurrentGame(null);
+                    }}
+                    onPublish={handlePublish}
+                />
+            )}
+
         </div>
     );
 };

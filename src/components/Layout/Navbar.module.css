@@ -7,7 +7,7 @@
     margin-bottom: 0;
     z-index: 1000;
     background: rgba(0, 0, 0, 0.3);
-    max-width: 1800px;
+    max-width: 1920px;
     color: #fff;
     position: fixed;
     top: 0;
@@ -16,8 +16,8 @@
     width: 100%;
 }
 
-/* 在 1800px 以下时，导航栏容器占据 100% 宽度 */
-@media (max-width: 1800px) {
+/* 在 1920px 以下时，导航栏容器占据 100% 宽度 */
+@media (max-width: 1920px) {
     .navbarContainer {
         left: 0;
         transform: none;
@@ -227,7 +227,6 @@
 @media (max-width: 1080px) {
     .navbar {
         width: 100%;
-        padding: 0 20px;
         box-sizing: border-box;
     }
 }

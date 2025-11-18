@@ -171,6 +171,7 @@ export const useGameData = () => {
             const response = await gameDataApi.getSingleFile(sessionId, fileType);
             // 使用 any 类型来处理不同文件类型的响应
             const responseData = (response.data?.data as any);
+            console.log(responseData);
             
             if (!responseData) {
                 console.warn(`获取${fileType}数据失败: 响应数据为空`);
@@ -212,8 +213,30 @@ export const useGameData = () => {
 
     // 获取新玩家数据
     const getNewPlayer = useCallback(async () => {
-        return await getGameFile('player');
-    }, [getGameFile]);
+        await getGameFile('player');
+        
+        // 重新获取用户头像并更新
+        if (pdfFileId) {
+            try {
+                const avatarResponse = await gameDataApi.getPlayerAvatar(pdfFileId);
+                const avatarUrl = await extractImageUrl(avatarResponse.data || avatarResponse);
+                if (avatarUrl) {
+                    updatePlayer((prevPlayer) => {
+                        if (!prevPlayer) return null;
+                        return {
+                            ...prevPlayer,
+                            profile: {
+                                ...prevPlayer.profile,
+                                avatar: avatarUrl,
+                            },
+                        };
+                    });
+                }
+            } catch (err) {
+                console.warn('获取玩家头像失败，使用默认头像', err);
+            }
+        }
+    }, [getGameFile, pdfFileId, extractImageUrl, updatePlayer]);
 
     const loadMissions = useCallback(async () => {
         console.log("loadMissions正在开发");

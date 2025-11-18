@@ -8,9 +8,10 @@ interface GameGridProps {
     games: UserGameData[];
     showSpecialPrice?: boolean;
     onGameClick: (game: UserGameData) => void;
+    renderActions?: (game: UserGameData) => React.ReactNode;
 }
 
-const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, onGameClick }) => {
+const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, onGameClick, renderActions }) => {
     if (games.length === 0) {
         return (
             <div className={styles.emptyState}>
@@ -35,12 +36,12 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                         />
                         <div className={styles.goodsInfo}>
                             <div className={styles.goodsInfoItem}>
-                                <AiOutlineLike />
-                                {meta.like_count}
-                            </div>
-                            <div className={styles.goodsInfoItem}>
                                 <IoGameControllerOutline />
                                 {meta.rating_count}
+                            </div>
+                            <div className={styles.goodsInfoItem}>
+                                <AiOutlineLike />
+                                {meta.like_count}
                             </div>
                         </div>
                     </div>
@@ -54,16 +55,22 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                             )}
                         </div>
 
-                        <div className={styles.goodsPrice}>
-                            {showSpecialPrice && meta.special_price_amount ? (
-                                <>
-                                    <div className={styles.goodsPriceText}>￥{meta.price_amount || 100}</div>
-                                    <div className={styles.specialPriceText}>￥{meta.special_price_amount}</div>
-                                </>
-                            ) : (
-                                <div className={styles.normalPriceText}>￥{meta.price_amount || 100}</div>
-                            )}
-                        </div>
+                        {renderActions ? (
+                            <div className={styles.goodsPrice} onClick={(e) => e.stopPropagation()}>
+                                {renderActions(meta)}
+                            </div>
+                        ) : (
+                            <div className={styles.goodsPrice}>
+                                {showSpecialPrice && meta.special_price_amount ? (
+                                    <>
+                                        <div className={styles.goodsPriceText}>￥{meta.price_amount || 100}</div>
+                                        <div className={styles.specialPriceText}>￥{meta.special_price_amount}</div>
+                                    </>
+                                ) : (
+                                    <div className={styles.normalPriceText}>￥{meta.price_amount || 100}</div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             ))}

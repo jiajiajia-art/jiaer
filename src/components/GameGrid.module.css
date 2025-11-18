@@ -30,17 +30,21 @@
 .goodsImg img {
     width: 250px;
     height: 130px;
-    object-fit: fill;
+    object-fit: cover;
     border-radius: 10px;
 }
 
 .goodsInfo {
+    width: 100%;
+    padding: 3px;
     position: absolute;
-    bottom: 8px;
-    left: 8px;
+    bottom: 0px;
+    left: 0px;
     display: flex;
     gap: 12px;
     align-items: center;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.00) 0%, #000000 100%);
+    border-radius: 0 0 10px 10px;
 }
 
 .goodsInfoItem {
@@ -63,7 +67,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-top: 2px;
+    margin-top: 6px;
 }
 
 .goodsTitleWrap {
@@ -102,6 +106,13 @@
     justify-content: center;
     align-items: center;
     gap: 4px;
+}
+
+.goodsPrice button{
+    background-color: transparent;
+    font-size: 22px;
+    font-weight: 600 !important;
+    color: #fff;
 }
 
 .goodsPriceText {

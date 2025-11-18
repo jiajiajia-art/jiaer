@@ -252,107 +252,96 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
             <div className={styles.gameDetailModal}>
-                <div className={styles.gameDetailModalInner}>
-                    <div className={styles.gameDetailModalContent}>
-                        <button className={styles.detailModalClose} onClick={onClose}>
-                            <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
-                        </button>
-                        <h2 className={styles.detailMainTitle}>剧本详情</h2>
+                <button className={styles.detailModalClose} onClick={onClose}>
+                    <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
+                </button>
+                <div className={styles.detailThreeColumns}>
+                    <div className={styles.detailLeftColumn}>
+                        {currentGame.cover_url && (
+                            <img
+                                className={styles.detailLeftImage}
+                                src={currentGame.cover_url}
+                                alt="游戏封面"
+                            />
+                        )}
+                    </div>
 
-                        <div className={styles.detailThreeColumns}>
-                            <div className={styles.detailLeftColumn}>
-                                {currentGame.cover_url && (
-                                    <img
-                                        className={styles.detailLeftImage}
-                                        src={currentGame.cover_url}
-                                        alt="游戏封面"
-                                    />
+                    <div className={styles.detailMiddleColumn}>
+                        <div className={styles.detailGameTitleContainer}>
+                            <h3 className={styles.detailGameTitle}>
+                                {(currentGame.title || '未命名游戏').toUpperCase()}
+                            </h3>
+                            <div className={styles.detailGameType}>
+                                RPG
+                            </div>
+
+                            <div className={styles.likeContainer}>
+                                <AiOutlineLike
+                                    className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
+                                    onClick={handleLike}
+                                />
+                                {likeCount > 0 && (
+                                    <span className={styles.likeCount}>{likeCount}</span>
                                 )}
                             </div>
+                        </div>
 
-                            <div className={styles.detailMiddleColumn}>
-                                <div className={styles.detailGameTitleContainer}>
-                                    <h3 className={styles.detailGameTitle}>
-                                        {(currentGame.title || '未命名游戏').toUpperCase()}
-                                    </h3>
-                                    <div className={styles.likeContainer}>
-                                        <AiOutlineLike
-                                            className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
-                                            onClick={handleLike}
-                                        />
-                                        {likeCount > 0 && (
-                                            <span className={styles.likeCount}>{likeCount}</span>
-                                        )}
-                                    </div>
+                        <div className={styles.startGameSection}>
+                            <div className={styles.gameRating}>
+                                <div className={styles.ratingLabel}>
+                                    {(currentGame.rating_avg ?? '9.0')}
+                                    <span className={styles.ratingLabelUnit}>分</span>
                                 </div>
-
-                                <div className={styles.detailGameType}>
-                                    RPG
-                                </div>
-
-                                <div className={styles.detailDescription}>
-                                    {currentGame.description ? <p>{currentGame.description}</p> : <p>暂无描述</p>}
-                                </div>
-
-                                <div className={styles.detailAuthor}>
-                                    作者：{currentGame.author_name || '未知作者'}
+                                <div className={styles.ratingScore}>
+                                    {(currentGame.rating_count ?? 0)}人评价
                                 </div>
                             </div>
+                        </div>
 
-                            <div className={styles.detailRightColumn}>
-                                <div className={styles.startGameSection}>
-                                    <div className={styles.gameRating}>
-                                        <div className={styles.ratingLabel}>
-                                            {(currentGame.rating_avg ?? '9.0')}
-                                            <span className={styles.ratingLabelUnit}>分</span>
-                                        </div>
-                                        <div className={styles.ratingStars}>
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <img
-                                                    key={star}
-                                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/星星.png`}
-                                                    alt="星星"
-                                                    className={styles.starIcon}
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className={styles.ratingScore}>
-                                            {(currentGame.rating_count ?? 0)}人评价
-                                        </div>
-                                    </div>
-                                </div>
-                                {
+                        <div className={styles.detailDescription}>
+                            {currentGame.description ? <p>{currentGame.description}</p> : <p>暂无描述</p>}
+                        </div>
 
-                                    !isUnlocked && currentGame.creator_user_id !== user?.user.id ?
-                                        <div className={styles.priceSection}>
-                                            <div className={styles.priceTitle}>特惠价格</div>
-                                            <div className={styles.priceValue}>
-                                                ￥0
-                                            </div>
-                                            <button className={styles.unlockBtn} onClick={() => setIsUnlocked(true)}>
-                                                <img
-                                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/解锁剧本按钮.png`}
-                                                    alt="解锁剧本"
-                                                />
-                                            </button>
+                        <div className={styles.detailFooter}>
+                            <div className={styles.detailAuthor}>
+                                <span className={styles.authorName}>
+                                    作者：
+                                </span>
+                                <img
+                                    className={styles.authorAvatar}
+                                    src={`${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`}
+                                    alt="作者头像"
+                                />
+                                <span className={styles.authorName}>
+                                    {currentGame.author_name || '未知作者'}
+                                </span>
+                            </div>
+
+                            <div className={styles.priceSection}>
+
+                                {!isUnlocked && currentGame.creator_user_id !== user?.user.id ? (
+                                    <>
+                                        <div className={styles.priceLabel}>
+                                            <div className={styles.priceLabelText}>限时特惠</div>
+                                            <div className={styles.originalPrice}>￥256</div>
                                         </div>
-                                        :
-                                        < button className={styles.startGameBtn} onClick={handleStartGame} disabled={isLoading}>
-                                            {isLoading ? (
-                                                <div className={styles.loading}>
-                                                    <span className={styles.loadingDot}></span>
-                                                    <span className={styles.loadingDot}></span>
-                                                    <span className={styles.loadingDot}></span>
-                                                </div>
-                                            ) : (
-                                                <img
-                                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/开始游戏按钮.png`}
-                                                    alt="开始游戏"
-                                                />
-                                            )}
+                                        <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
+                                            ￥0
                                         </button>
-                                }
-
+                                    </>
+                                ) : (
+                                    <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
+                                        {isLoading ? (
+                                            <div className={styles.loading}>
+                                                <span className={styles.loadingDot}></span>
+                                                <span className={styles.loadingDot}></span>
+                                                <span className={styles.loadingDot}></span>
+                                            </div>
+                                        ) : (
+                                            <span>开始游戏</span>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
