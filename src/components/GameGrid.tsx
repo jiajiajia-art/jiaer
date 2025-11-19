@@ -7,7 +7,7 @@ import { IoGameControllerOutline } from 'react-icons/io5';
 interface GameGridProps {
     games: UserGameData[];
     showSpecialPrice?: boolean;
-    onGameClick: (game: UserGameData) => void;
+    onGameClick?: (game: UserGameData) => void;
     renderActions?: (game: UserGameData) => React.ReactNode;
 }
 
@@ -27,7 +27,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                 <div
                     className={styles.goodsCard}
                     key={meta.id}
-                    onClick={() => onGameClick(meta)}
+                    onClick={() => onGameClick?.(meta)}
                 >
                     <div className={styles.goodsImg}>
                         <img
@@ -56,7 +56,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                         </div>
 
                         {renderActions ? (
-                            <div className={styles.goodsPrice} onClick={(e) => e.stopPropagation()}>
+                            <div className={styles.gameEditBtn} onClick={(e) => e.stopPropagation()}>
                                 {renderActions(meta)}
                             </div>
                         ) : (

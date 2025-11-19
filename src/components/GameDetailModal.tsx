@@ -6,9 +6,9 @@ import { useGameStore } from '../store/gameStore';
 import { useNavigate } from 'react-router-dom';
 import statisticsApi from '../api/statistics/statisticsApi';
 import createSessionApi from '../api/createGame/createSessionApi';
-import { AiOutlineLike } from 'react-icons/ai';
 import GameAction from '../api/game/gameAction';
 import getGameDataApi from '../api/home/getGameData';
+import { BiLike } from 'react-icons/bi';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -251,21 +251,19 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
-            <div className={styles.gameDetailModal}>
+            <div
+                className={styles.gameDetailModal}
+                style={currentGame.cover_url ? {
+                    backgroundImage: `url(${currentGame.cover_url})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                } : {}}
+            >
                 <button className={styles.detailModalClose} onClick={onClose}>
-                    <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
+                    <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt="关闭" />
                 </button>
                 <div className={styles.detailThreeColumns}>
-                    <div className={styles.detailLeftColumn}>
-                        {currentGame.cover_url && (
-                            <img
-                                className={styles.detailLeftImage}
-                                src={currentGame.cover_url}
-                                alt="游戏封面"
-                            />
-                        )}
-                    </div>
-
                     <div className={styles.detailMiddleColumn}>
                         <div className={styles.detailGameTitleContainer}>
                             <h3 className={styles.detailGameTitle}>
@@ -274,19 +272,9 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                             <div className={styles.detailGameType}>
                                 RPG
                             </div>
-
-                            <div className={styles.likeContainer}>
-                                <AiOutlineLike
-                                    className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
-                                    onClick={handleLike}
-                                />
-                                {likeCount > 0 && (
-                                    <span className={styles.likeCount}>{likeCount}</span>
-                                )}
-                            </div>
                         </div>
 
-                        <div className={styles.startGameSection}>
+                        <div className={styles.gameRatingContainer}>
                             <div className={styles.gameRating}>
                                 <div className={styles.ratingLabel}>
                                     {(currentGame.rating_avg ?? '9.0')}
@@ -296,6 +284,15 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     {(currentGame.rating_count ?? 0)}人评价
                                 </div>
                             </div>
+                            <div className={styles.likeContainer}>
+                                <BiLike
+                                    className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
+                                    onClick={handleLike}
+                                />
+                                {likeCount > 0 && (
+                                    <span className={`${styles.likeCount} ${isLiked ? styles.likeCountActive : ''}`}>{likeCount}</span>
+                                )}
+                            </div>
                         </div>
 
                         <div className={styles.detailDescription}>
@@ -303,32 +300,36 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                         </div>
 
                         <div className={styles.detailFooter}>
-                            <div className={styles.detailAuthor}>
-                                <span className={styles.authorName}>
-                                    作者：
-                                </span>
-                                <img
-                                    className={styles.authorAvatar}
-                                    src={`${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`}
-                                    alt="作者头像"
-                                />
-                                <span className={styles.authorName}>
-                                    {currentGame.author_name || '未知作者'}
-                                </span>
-                            </div>
-
                             <div className={styles.priceSection}>
+                                <div className={styles.priceTopBar}>
+                                    <div className={styles.detailAuthor}>
+                                        <span className={styles.authorName}>
+                                            作者：
+                                        </span>
+                                        <img
+                                            className={styles.authorAvatar}
+                                            src={currentGame.avatarUrl && currentGame.avatarUrl.trim()
+                                                ? currentGame.avatarUrl
+                                                : `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`}
+                                            alt="作者头像"
+                                        />
+                                        <span className={styles.authorName}>
+                                            {currentGame.author_name || '未知作者'}
+                                        </span>
+                                    </div>
 
-                                {!isUnlocked && currentGame.creator_user_id !== user?.user.id ? (
-                                    <>
+                                    {!isUnlocked && currentGame.creator_user_id !== user?.user.id && (
                                         <div className={styles.priceLabel}>
                                             <div className={styles.priceLabelText}>限时特惠</div>
                                             <div className={styles.originalPrice}>￥256</div>
                                         </div>
-                                        <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
-                                            ￥0
-                                        </button>
-                                    </>
+                                    )}
+                                </div>
+
+                                {!isUnlocked && currentGame.creator_user_id !== user?.user.id ? (
+                                    <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
+                                        ￥0
+                                    </button>
                                 ) : (
                                     <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
                                         {isLoading ? (

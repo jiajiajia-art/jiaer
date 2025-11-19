@@ -19,6 +19,7 @@ export interface UserGameData {
     like_count: number;
     dislike_count: number;
     reaction: string;
+    avatarUrl: string;
 }
 
 export interface UserGameResponse {

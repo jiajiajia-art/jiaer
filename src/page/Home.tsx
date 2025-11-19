@@ -35,20 +35,6 @@ const Home: React.FC = () => {
         }));
     }, [fileMetas]);
 
-    const sidebarItems = useMemo<SidebarItem[]>(() => [
-        {
-            id: 'home',
-            label: '首页',
-            icon: 'data/asset/首页/homeIcon.png',
-            route: '/home',
-        },
-        {
-            id: 'library',
-            label: '全部',
-            route: '/home/library',
-        },
-    ], []);
-
     /**
      * 显示游戏详情（从后端数据）
      */

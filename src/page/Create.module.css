@@ -261,12 +261,12 @@
     .statsSection,
     .shopSection {
         width: 100%;
-        padding: 0 20px;
+        padding: 0;
         box-sizing: border-box;
     }
 
     .statsGrid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
     }
 
@@ -277,6 +277,21 @@
 }
 
 @media (max-width: 768px) {
+    .pageRoot{
+        padding-bottom: 20px;
+    }
+
+    .createGameButton {
+        top: 70px;
+    }
+
+    .createGameButtonItem {
+        width: 140px;
+        height: 44px;
+        font-size: 16px;
+        gap: 6px;
+    }
+
     .userProfileBackground {
         height: 250px;
     }
@@ -292,16 +307,16 @@
     }
 
     .statsGrid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
     }
 
     .statBox {
-        height: 80px;
+        height: 90px;
     }
 
     .statValue {
-        font-size: 28px;
+        font-size: 26px;
     }
 
     .statLabel {

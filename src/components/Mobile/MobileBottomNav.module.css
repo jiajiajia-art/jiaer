@@ -9,43 +9,42 @@
         bottom: 0;
         left: 50%;
         transform: translateX(-50%);
-        width: min(100%, 480px);
+        width: 100vw;
+        height: 6%;
+        background: #fff;
         z-index: 999;
         justify-content: space-between;
         align-items: center;
-        background-image: url('/data/asset/导航背景图片.png');
-        background-size: 100% 100%;
-        background-position: center;
-        background-repeat: no-repeat;
+        border-top: 1px solid #e6e6e6;
     }
 
     .navItem {
         flex: 1;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        color: #FAE9B9;
-        font-size: 16px;
-        font-weight: 700;
-        text-shadow:
-            1px 1px 2px rgba(59, 39, 19, 0.9),
-            -1px -1px 2px rgba(59, 39, 19, 0.9);
+        color: #737373;
+        font-size: 12px;
+        font-weight: 600;
         background: transparent;
         border: none;
         cursor: pointer;
-        padding: 12px 8px;
+        padding: 10px 4px;
         transition: all 0.2s ease;
         background-repeat: no-repeat;
         background-position: center;
         background-size: 120% 120%;
+        gap: 4px;
     }
 
     .navItemActive {
-        background-image: url('/data/asset/首页/按钮.png');
-        background-size: 100% 100%;
-        background-position: center;
-        background-repeat: no-repeat;
-        box-shadow: 0 6px 20px rgba(178, 79, 27, 0.45);
+        color: #fb4755;
+    }
+
+    .icon {
+        width: 24px;
+        height: 24px;
     }
 
     .label {

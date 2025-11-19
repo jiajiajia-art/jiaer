@@ -12,6 +12,38 @@ const normalize = (path: string) => {
         : normalized;
 };
 
+const navItems: Array<{
+    key: BottomNavKey;
+    label: string;
+    iconActive: string;
+    iconInactive: string;
+}> = [
+    {
+        key: 'home',
+        label: '商城',
+        iconInactive: 'data/assets/切图/首页02.png',
+        iconActive: 'data/assets/切图/首页01.png',
+    },
+    {
+        key: 'create',
+        label: '创作',
+        iconInactive: 'data/assets/切图/创作02.png',
+        iconActive: 'data/assets/切图/创作01.png',
+    },
+    {
+        key: 'warehouse',
+        label: '仓库',
+        iconInactive: 'data/assets/切图/仓库02.png',
+        iconActive: 'data/assets/切图/仓库01.png',
+    },
+    {
+        key: 'profile',
+        label: '我的',
+        iconInactive: 'data/assets/切图/我的02.png',
+        iconActive: 'data/assets/切图/我的01.png',
+    },
+];
+
 const MobileBottomNav: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -63,21 +95,24 @@ const MobileBottomNav: React.FC = () => {
     return (
         <>
             <div className={styles.container}>
-                {(['home', 'create', 'warehouse', 'profile'] as BottomNavKey[]).map((key) => (
+                {navItems.map(({ key, label, iconActive, iconInactive }) => {
+                    const isActive = activeKey === key;
+                    const iconSrc = `${import.meta.env.BASE_URL}${isActive ? iconActive : iconInactive}`;
+
+                    return (
                     <button
                         key={key}
                         type="button"
                         className={`${styles.navItem} ${activeKey === key ? styles.navItemActive : ''}`}
                         onClick={() => handleNav(key)}
                     >
+                        <img src={iconSrc} alt={label} className={styles.icon} />
                         <span className={styles.label}>
-                            {key === 'home' && '商城'}
-                            {key === 'create' && '创作'}
-                            {key === 'warehouse' && '仓库'}
-                            {key === 'profile' && '我的'}
+                            {label}
                         </span>
                     </button>
-                ))}
+                    );
+                })}
             </div>
         </>
     );

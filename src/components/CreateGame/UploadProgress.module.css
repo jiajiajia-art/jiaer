@@ -1,0 +1,132 @@
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.uploadOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+}
+
+.uploadOverlayContent {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 32px 40px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    min-width: 360px;
+    max-width: 90%;
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.uploadOverlayTitle {
+    color: #5E4630;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 24px 0;
+}
+
+.uploadProgressContainer {
+    margin-bottom: 20px;
+}
+
+.uploadProgressBar {
+    width: 100%;
+    height: 10px;
+    background: rgba(115, 80, 47, 0.15);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.uploadProgressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #73502F, #B69B74, #8B7355);
+    border-radius: 5px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(115, 80, 47, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.uploadProgressFill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    animation: shimmer 1.5s infinite;
+}
+
+.uploadProgressPercent {
+    color: #73502F;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.uploadOverlayText {
+    color: #8B7355;
+    font-size: 14px;
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+    min-height: 20px;
+}
+
+.cancelUploadBtn {
+    background: transparent;
+    border: 2px solid #DC3545;
+    color: #DC3545;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.cancelUploadBtn:hover {
+    background: #DC3545;
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.cancelUploadBtn:active {
+    transform: translateY(0);
+}
+

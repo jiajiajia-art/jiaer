@@ -13,7 +13,6 @@ import { useLore } from '../hooks/useLore';
 import { useInventory } from '../hooks/useInventory';
 import { useMusic } from '../hooks/useMusic';
 import { useAutoFontSize } from '../hooks/useAutoFontSize';
-import type { PlayerStats, Inventory, InventoryItem } from '../api/game/gameData';
 
 // 组件
 import DialogueModal from '../components/Mian/DialogueModal';
@@ -29,32 +28,10 @@ import AlertModal from '../components/AlertModal';
 import changeSceneApi from '../api/game/changeSenceAPi';
 import MissionsModal from '../components/Mian/MissionsModal';
 
-// ==================== 类型定义 ====================
-declare global {
-    interface Window {
-        game: any;
-        showNotification: any;
-        switchPanel: any;
-        addChatMessage: any;
-        setChatNPC: any;
-        Game?: any;
-    }
-}
-
-type EventDef = {
-    id: string;
-    title: string;
-    image: string;
-    description: string;
-    options: Array<{ text: string; effects?: any; nextEvent?: string | null }>;
-    conditions?: any;
-};
-
-// ==================== 组件 ====================
 const NewMain: React.FC = () => {
-    const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, backendLore, worldMapImageUrl } = useGameData();
+    const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, worldMapImageUrl } = useGameData();
     const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, setChatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
-    const { gameTimeText, updateLoreFromBackend } = useLore();
+    const { gameTimeText } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
 
     // 自动调整游戏时间文字大小
@@ -89,12 +66,6 @@ const NewMain: React.FC = () => {
         if (mapModalOpen) setMapModalOpen(false);
     };
 
-    // ==================== 世界观相关 ====================
-    useEffect(() => {
-        if (backendDataLoaded && backendLore) {
-            updateLoreFromBackend(backendLore);
-        }
-    }, [backendDataLoaded, backendLore, updateLoreFromBackend]);
 
     // ==================== 音乐系统相关 ====================
     const hasStartedPlayingRef = useRef(false);
@@ -113,136 +84,38 @@ const NewMain: React.FC = () => {
         if (!activeEvent) return;
         const opt = activeEvent.options[index];
         if (!opt) return;
-        // 注意：这里不关闭事件弹窗，因为EventModal中已经处理了关闭和打开对话弹窗的逻辑
-        // 只有在没有通过onOpenDialogue打开对话弹窗的情况下才关闭事件弹窗
-        // 应用 effects 到玩家（若有）
-        if (opt.effects && player) {
-            const next = { ...player };
 
-            // 处理经验值
-            if (typeof (opt.effects as any).experience === 'number') {
-                const add = (opt.effects as any).experience as number;
-                if (next.experience) {
-                    next.experience = {
-                        ...next.experience,
-                        current: next.experience.current + add
-                    };
-                    while (next.experience.current >= next.experience.required) {
-                        next.experience.current -= next.experience.required;
-                        next.experience.required = Math.floor(next.experience.required * 1.5);
-                        if (next.stats) {
-                            next.stats = {
-                                ...next.stats,
-                                level: next.stats.level + 1,
-                                maxHealth: next.stats.maxHealth + 5,
-                                health: next.stats.maxHealth + 5
-                            };
-                        }
-                    }
-                }
-            }
-
-            // 处理属性变化
-            if ((opt.effects as any).stats && next.stats) {
-                const patch = (opt.effects as any).stats as Partial<PlayerStats>;
-                next.stats = { ...next.stats, ...patch };
-            }
-
-            // 处理物品变化
-            if ((opt.effects as any).items && inventory) {
-                const itemChanges = (opt.effects as any).items as Array<{ id: string; quantity: number }>;
-                const updateInventory = useGameStore.getState().updateInventory;
-                const items = useGameStore.getState().items; // 获取物品定义
-                updateInventory((prev) => {
-                    if (!prev) return prev;
-                    const nextInv: Inventory = {
-                        ...prev,
-                        items: prev.items.map((i) => ({ ...i }))
-                    };
-                    itemChanges.forEach(({ id, quantity }) => {
-                        const found = nextInv.items.find((i) => i.id === id);
-                        if (quantity > 0) {
-                            if (found) {
-                                found.quantity += quantity;
-                            } else {
-                                // 从物品定义中获取完整信息
-                                const itemDef = items[id];
-                                if (itemDef) {
-                                    nextInv.items.push({
-                                        id: itemDef.id,
-                                        name: itemDef.name,
-                                        description: itemDef.description,
-                                        icon: itemDef.icon,
-                                        type: itemDef.type,
-                                        usable: itemDef.usable || false,
-                                        stackable: itemDef.stackable,
-                                        effects: itemDef.effects || {},
-                                        quantity
-                                    } as InventoryItem);
-                                }
-                            }
-                        } else if (quantity < 0 && found) {
-                            found.quantity = Math.max(0, found.quantity + quantity);
-                            if (found.quantity === 0) {
-                                nextInv.items = nextInv.items.filter((i) => i.id !== id);
-                            }
-                        }
-                    });
-                    return nextInv;
-                });
-            }
-
-            // 处理金币变化
-            if (typeof (opt.effects as any).gold === 'number' && next.currency) {
-                const delta = (opt.effects as any).gold as number;
-                next.currency = {
-                    ...next.currency,
-                    gold: (next.currency.gold ?? 0) + delta
-                };
-            }
-
-            const setPlayer = useGameStore.getState().setPlayer;
-            setPlayer(next);
-        }
         closeEvent();
-        if (opt.nextEvent) triggerEventById(opt.nextEvent);
+        if (opt.nextEvent) {
+            triggerEventById(opt.nextEvent);
+        }
     };
 
-    // 建筑点击：features 事件或回退事件
+    // 建筑点击： fallback 对 features 选项
     const handleBuildingClick = (building: any) => {
-        if (building && Array.isArray(building.features) && building.features.length > 0) {
-            // 动态生成基于 features 的事件弹窗（最多三项）
-            const tempEvent: EventDef = {
-                id: building.id,
+        if (!building) {
+            return;
+        }
+        // 后端返回的数据没有选项id之类的
+        if (Array.isArray(building.features) && building.features.length > 0) {
+            const tempEvent = {
+                id: `${building.id }`,
                 title: building.name,
-                image: building.icon || '/data/icons/empty.png',
-                description: building.description,
-                options: building.features.slice(0, 3).map((f: string) => ({ text: f, effects: {} })),
+                image: building.icon || '',
+                description: building.description || '',
+                options: building.features.map((text: string) => ({
+                    text,
+                    effects: {},
+                    nextEvent: null
+                })),
             };
-            // 直接设置事件，不需要通过 hook
             setActiveEvent(tempEvent);
             setEventHistory((h) => [...h, { id: tempEvent.id, title: tempEvent.title, timestamp: Date.now() }]);
             return;
         }
-        // 回退：尝试用 eventId 或通用命名匹配事件
-        const sceneId = currentSceneId;
-        const tryIds: string[] = [];
-        if (building.eventId) tryIds.push(building.eventId);
-        if (building.id && sceneId) {
-            tryIds.push(`${sceneId}_building_${building.id}`);
-            tryIds.push(`building_${building.id}`);
-        }
-        for (const id of tryIds) {
-            const ev = events[id];
-            if (ev) {
-                setActiveEvent(ev);
-                setEventHistory((h) => [...h, { id: ev.id, title: ev.title, timestamp: Date.now() }]);
-                return;
-            }
-        }
+
         alert('该建筑暂未配置可用功能');
     };
-
 
     // ==================== 背包系统 ====================
     const handleEquipItem = (item: any, slot: any) => equipItem(item, slot);
@@ -273,6 +146,17 @@ const NewMain: React.FC = () => {
     const currentSceneBackground = currentSceneId && scenes[currentSceneId]?.background
         ? `${HOST_ADDRESS}${scenes[currentSceneId].background}`
         : '';
+    const hasScenes = scenes && Object.keys(scenes).length > 0;
+    const isDataReady = backendDataLoaded && !!player && hasScenes;
+
+    if (!isDataReady) {
+        return (
+            <div className={styles.loadingWrapper}>
+                <div className={styles.loadingSpinner}></div>
+                <p className={styles.loadingText}>正在加载世界，请稍候…</p>
+            </div>
+        );
+    }
 
     const handleSceneClick = (targetId: string) => {
         changeScenes(targetId);
@@ -338,7 +222,7 @@ const NewMain: React.FC = () => {
                 const errorData = error.response.data;
 
                 if (status === 404 || errorData?.error === 'Session not found') {
-                    setAlertMessage('游戏会话不存在或已过期，请重新开始游戏');
+                    setAlertMessage('场景切换失败，请稍后重试');
                 } else {
                     setAlertMessage(errorData?.message || '场景切换失败，请稍后重试');
                 }

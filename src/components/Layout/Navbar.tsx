@@ -135,7 +135,7 @@ const Navbar: React.FC = () => {
                             className={styles.loginBtn} 
                             onClick={() => setIsAuthModalOpen(true)}
                         >
-                            登录/注册
+                            登录
                         </button>
                     )}
                 </div>

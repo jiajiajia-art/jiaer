@@ -13,14 +13,23 @@
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 100%;
+    width: 1920px;
+    padding: 0 20px;
+    box-sizing: border-box;
 }
 
-/* 在 1920px 以下时，导航栏容器占据 100% 宽度 */
-@media (max-width: 1920px) {
+@media (max-width: 1080px) {
     .navbarContainer {
         left: 0;
         transform: none;
+        width: 1080px;
+        padding: 0 10px;
+    }
+
+    .navbar {
+        margin: 0;
+        width: 100%;
+        max-width: 1080px;
     }
 }
 
@@ -197,42 +206,78 @@
 }
 
 .loginBtn {
-    width: 120px !important;
-    height: 40px !important;
-    min-width: 120px !important;
-    max-width: 120px !important;
-    min-height: 40px !important;
-    max-height: 40px !important;
     padding: 0 !important;
     margin: 0 !important;
     flex: none !important;
-    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
-    color: #E8DBB7;
+    color: #fff;
     border: none;
     border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
     white-space: nowrap;
+    background: none;
 }
 
 .loginBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.4);
-}
-
-
-@media (max-width: 1080px) {
-    .navbar {
-        width: 100%;
-        box-sizing: border-box;
-    }
 }
 
 @media (max-width: 768px) {
+    .navbarContainer {
+        width: 100vw;
+        height: 60px;
+        padding: 0 12px;
+    }
+
     .navbar {
+        width: 100%;
+        gap: 16px;
+    }
+
+    .logo {
+        width: 120px;
+        height: 64px;
+    }
+
+    .logo img {
+        width: 120px;
+        height: 70%;
+    }
+
+    .navLinks {
         display: none;
+    }
+
+    .searchBox {
+        width: 200px;
+        height: 28px;
+        padding-left: 8px;
+    }
+
+    .searchIcon {
+        height: 24px;
+        width: 50px;
+        font-size: 16px;
+    }
+
+    .searchInput {
+        font-size: 12px;
+    }
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .settingIcon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .navRight {
+        gap: 12px;
+        margin-right: 0;
     }
 }

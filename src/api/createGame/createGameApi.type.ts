@@ -11,6 +11,7 @@ const createGameApi = {
         formData.append('description', data.description);
         formData.append('creator_user_id', data.creator_user_id);
         formData.append('author_name', data.author_name);
+        formData.append('generateImages', data.generateImages.toString());
         
         return api.post<CreateGameResponse>('/auth/games', formData, {
             headers: {

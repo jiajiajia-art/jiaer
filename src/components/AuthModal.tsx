@@ -406,9 +406,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const modalContent = (
         <div className={styles.modalOverlay} onClick={handleClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <div className={styles.closeBtn} onClick={handleClose}>
-                    <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
-                </div>
+                <button type="button" className={styles.closeBtn} onClick={handleClose}>
+                    ×
+                </button>
                 
                 <h2 className={styles.title}>{getTitle()}</h2>
 

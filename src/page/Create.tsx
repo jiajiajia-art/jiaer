@@ -1,35 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import styles from './Create.module.css';
-import gameGridStyles from '../components/GameGrid.module.css';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGrid from '../components/GameGrid';
-import GameDetailModal from '../components/GameDetailModal';
-import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
 import { useAuthStore } from '../store/useAuthStore';
 import getGameDataApi from '../api/home/getGameData';
-import GameAction from '../api/game/gameAction';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { IoIosArrowForward } from 'react-icons/io';
 import { IoEye, IoStatsChartSharp, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
+import MobileBottomNav from '../components/Mobile/MobileBottomNav';
 
 const Create: React.FC = () => {
     const { user } = useAuthStore();
     const navigate = useNavigate();
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
-    const [showGameModal, setShowGameModal] = useState(false);
-    const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
-    const [showPublishModal, setShowPublishModal] = useState(false);
-    const [currentGame, setCurrentGame] = useState<UserGameData | null>(null);
     const [stats, setStats] = useState({
         totalCreated: 0,
         totalViews: 0,
         totalClicks: 0,
         totalRevenue: 0,
     });
+
+    // 将游戏数据分类为已发布和未发布
+    const { publishedGames, draftGames } = useMemo(() => {
+        const published: UserGameData[] = [];
+        const drafts: UserGameData[] = [];
+
+        fileMetas.forEach((game) => {
+            if (game.is_public === 1) {
+                published.push(game);
+            } else {
+                drafts.push(game);
+            }
+        });
+
+        return {
+            publishedGames: published,
+            draftGames: drafts,
+        };
+    }, [fileMetas]);
 
     // 加载我的游戏数据
     const loadMyGames = async () => {
@@ -59,71 +71,22 @@ const Create: React.FC = () => {
         loadMyGames();
     }, [user?.user.id]);
 
-    const showGameDetail = (meta: UserGameData) => {
-        setSelectedGameMeta(meta);
-        setShowGameModal(true);
-    };
-
-    const closeModal = () => {
-        setShowGameModal(false);
-        setSelectedGameMeta(null);
-    };
-
-    // 发布游戏
-    const handlePublish = async (price: number | null, isFree: boolean) => {
-        if (!currentGame) return;
-
-        try {
-            const priceAmount = isFree ? 0 : (price || 0);
-            const response = await GameAction.publishGame({
-                fileId: currentGame.file_id || '',
-                priceAmount: priceAmount,
-            });
-
-            if (response.data.success) {
-                await loadMyGames();
-                setShowPublishModal(false);
-                setCurrentGame(null);
-            } else {
-                console.error('发布游戏失败:', response.data);
-            }
-        } catch (error) {
-            console.error('发布游戏失败:', error);
-        }
-    };
-
     // 渲染操作按钮
     const renderGameActions = (game: UserGameData) => {
         // 检查 is_public 的值（0 表示未发布，1 表示已发布）
         const isPublic = game.is_public === 1;
         
-        if (!isPublic) {
-            // 未发布，显示发布按钮
-            return (
-                <button
-                    className={gameGridStyles.gameDataBtn}
-                    onClick={() => {
-                        setCurrentGame(game);
-                        setShowPublishModal(true);
-                    }}
-                >
-                    发布
-                </button>
-            );
-        } else {
-            // 已发布，显示数据按钮，跳转到编辑/数据页面
-            return (
-                <button
-                    className={gameGridStyles.gameDataBtn}
-                    onClick={() => {
-                        if (!game.file_id) return;
-                        navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
-                    }}
-                >
-                    数据
-                </button>
-            );
-        }
+        // 未发布或已发布，都跳转到编辑/数据页面
+        return (
+            <button
+                onClick={() => {
+                    if (!game.file_id) return;
+                    navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
+                }}
+            >
+                {isPublic ? '查看数据' : '继续编辑'}
+            </button>
+        );
     };
 
     const userAvatar = `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
@@ -224,9 +187,8 @@ const Create: React.FC = () => {
                             </button>
                         </div>
                         <GameGrid
-                            games={fileMetas}
+                            games={publishedGames}
                             showSpecialPrice={false}
-                            onGameClick={showGameDetail}
                             renderActions={renderGameActions}
                         />
                     </div>
@@ -244,37 +206,16 @@ const Create: React.FC = () => {
                             </button>
                         </div>
                         <GameGrid
-                            games={fileMetas}
+                            games={draftGames}
                             showSpecialPrice={false}
-                            onGameClick={showGameDetail}
                             renderActions={renderGameActions}
                         />
                     </div>
                 </div>
             </div>
+            <MobileBottomNav />
 
             <FooterArea />
-
-            {selectedGameMeta && (
-                <GameDetailModal
-                    isOpen={showGameModal}
-                    game={selectedGameMeta}
-                    onClose={closeModal}
-                />
-            )}
-
-            {currentGame && (
-                <PublishSettingsModal
-                    isOpen={showPublishModal}
-                    game={currentGame}
-                    onClose={() => {
-                        setShowPublishModal(false);
-                        setCurrentGame(null);
-                    }}
-                    onPublish={handlePublish}
-                />
-            )}
-
         </div>
     );
 };
