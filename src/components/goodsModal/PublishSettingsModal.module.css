@@ -136,7 +136,6 @@
 .publishBtn {
     padding: 10px 30px;
     border: none;
-    border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -159,27 +158,33 @@
     background-repeat: no-repeat;
     color: #fff;
     background-color: transparent;
-    width: 200px;
+    width: 260px;
     height: 80px;
     font-size: 30px;
     font-weight: 500;
+    box-shadow: 0 4px 8px rgba(251, 73, 88, 0.3),
+    0 -3px 8px rgba(251, 73, 88, 0.3),
+    3px 0 8px rgba(251, 73, 88, 0.3),
+    -3px 0 8px rgba(251, 73, 88, 0.3);
 }
 
-@media (max-width: 500px) {
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
     .modal {
         padding: 10px;
     }
 
     .publishModalContent {
-        width: 90vw;
-        max-width: 90vw;
-        min-height: 280px;
-        padding: 20px 25px;
+        width: 95vw;
+        max-width: 95vw;
+        min-height: 260px;
+        padding: 20px 20px;
+        border-radius: 6px;
     }
 
     .closeBtn {
-        top: 0px;
-        right: 10px;
+        top: -40px;
+        right: 0px;
         width: 40px;
         height: 40px;
     }
@@ -190,16 +195,18 @@
     }
 
     .modalTitle {
-        font-size: 20px;
-        margin: 15px 0 20px 0;
+        font-size: 22px;
+        margin: 10px 0 20px 0;
     }
 
     .formContent {
-        gap: 15px;
+        width: 90%;
+        gap: 16px;
     }
 
     .formGroup {
-        gap: 6px;
+        gap: 8px;
+        align-items: flex-start;
     }
 
     .label {
@@ -207,28 +214,39 @@
     }
 
     .freeCheckbox {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
     }
 
     .checkboxLabel {
         font-size: 14px;
+        margin-right: 0;
     }
 
     .priceInput {
-        padding: 10px 12px;
+        width: 100%;
+        padding: 6px 12px;
         font-size: 14px;
     }
 
     .buttonGroup {
-        gap: 10px;
-        margin-top: 15px;
+        gap: 12px;
+        margin-top: 20px;
+        flex-direction: column;
+        width: 100%;
     }
 
     .cancelBtn,
     .publishBtn {
-        width: 45%;
-        padding: 10px 20px;
-        font-size: 14px;
+        height: 50px !important;
+        padding: 12px 24px;
+        font-size: 16px;
+        margin: 0 auto;
+        width: 180px;
+    }
+
+    .publishBtn {
+        height: 60px;
+        font-size: 20px;
     }
 }

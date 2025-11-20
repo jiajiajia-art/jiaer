@@ -47,3 +47,9 @@ export interface GameDetailResponse {
     success: boolean;
     data: UserGameData;
 }
+
+
+export interface WareHouseResponse {
+    success: boolean;
+    data: UserGameData[];
+}

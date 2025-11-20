@@ -424,12 +424,13 @@
     }
 } */
 
-/* 移动端适配 (768px以下) */
+/* 1080px以下适配 */
 @media (max-width: 1080px) {
     .gameDetailModal {
         width: 90vw;
         min-width: 90vw;
         max-width: 90vw;
+        max-height: 80vh;
     }
 
     .detailModalClose {
@@ -445,8 +446,9 @@
     }
 
     .detailMiddleColumn {
-        padding: 6px 20px;
+        padding: 6px 10px;
         padding-bottom: 6px;
+        border-radius: 0 0 10px 10px;
     }
 
     .detailGameTitle {
@@ -508,5 +510,98 @@
         margin: 0px;
         font-size: 20px;
         height: 55px;
+    }
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .gameDetailModal {
+        width: 95vw;
+        min-width: 95vw;
+        max-width: 95vw;
+        padding: 0px;
+        border-radius: 10px;
+    }
+
+    .detailModalClose {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .detailModalClose img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .detailMiddleColumn {
+        padding: 8px 20px;
+        padding-bottom: 8px;
+        max-height: 60%;
+    }
+
+    .detailGameTitle {
+        font-size: 32px;
+    }
+
+    .detailGameType {
+        font-size: 15px;
+    }
+
+    .ratingLabel {
+        font-size: 32px;
+    }
+
+    .ratingLabelUnit {
+        font-size: 22px;
+    }
+
+    .ratingScore {
+        font-size: 16px;
+    }
+
+    .detailGameLike {
+        font-size: 26px;
+    }
+
+    .likeCount {
+        font-size: 20px;
+    }
+
+    .detailDescription {
+        height: 100px;
+    }
+
+    .detailDescription p {
+        font-size: 13px;
+    }
+
+    .detailAuthor {
+        font-size: 15px;
+    }
+
+    .authorAvatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .priceSection {
+        width: 96%;
+        min-width: 96%;
+    }
+
+    .priceLabelText {
+        font-size: 17px;
+    }
+
+    .originalPrice {
+        font-size: 17px;
+    }
+
+    .priceWrapper {
+        width: 96%;
+        font-size: 19px;
+        height: 52px;
     }
 }

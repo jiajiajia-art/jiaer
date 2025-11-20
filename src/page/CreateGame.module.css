@@ -23,6 +23,16 @@
     width: 100%;
 }
 
+/* 当表单未显示时，移除最小高度限制 */
+.mainContentHidden {
+    min-height: 300px;
+}
+
+.mainHidden {
+    min-height: auto;
+    padding: 0;
+}
+
 .createGameContainer {
     gap: 20px;
     height: 100%;
@@ -698,8 +708,144 @@
 } */
 
 
-/* 移动端响应式 */
+/* 移动端响应式 (768px以下) */
 @media (max-width: 768px) {
+    .pageRoot {
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .mainContent {
+        max-width: 100%;
+        padding: 0 10px;
+        overflow-x: hidden;
+        overflow-y: visible;
+        min-height: auto;
+    }
+
+    .main {
+        padding: 10px 0;
+        overflow: visible;
+    }
+
+    .createGameContainer {
+        padding: 0 10px;
+        overflow: visible;
+    }
+
+    .formSectionOnly {
+        margin-top: 60px!important;
+    }
+
+    .formSection {
+        overflow: visible;
+    }
+
+    .statsModeWrapper {
+        margin-bottom: 20px;
+    }
+
+    .heroBanner {
+        height: 250px;
+        margin-bottom: 16px;
+    }
+
+    .heroContent {
+        margin-top: 60px;
+        padding: 0 16px;
+    }
+
+    .heroTitle {
+        font-size: 28px;
+        margin-bottom: 12px;
+    }
+
+    .heroMeta {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .heroRating {
+        font-size: 24px;
+    }
+
+    .heroMetaLabel {
+        font-size: 14px;
+    }
+
+    .heroStatsWrapper {
+        padding: 0 16px;
+    }
+
+    .statsSection {
+        width: 100%;
+    }
+
+    .sectionHeader {
+        margin-bottom: 16px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 12px;
+    }
+
+    .sectionTitle {
+        font-size: 20px;
+    }
+
+    .more {
+        width: auto;
+        font-size: 14px;
+        padding: 0 8px;
+        min-width: auto;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .statBox {
+        width: 100%;
+        height: 80px;
+        padding: 8px;
+    }
+
+    .statValue {
+        font-size: 24px;
+    }
+
+    .statLabel {
+        font-size: 14px;
+    }
+
+    .heroActionGroup {
+        margin-top: 16px;
+        gap: 12px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
+
+    .editGameBtn {
+        flex: 0 0 70%;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    .deleteGameBtn {
+        flex: 0 0 30%;
+        padding: 12px 20px;
+        font-size: 14px;
+        min-width: 100px!important;
+    }
+
+    .detailLoading,
+    .detailError,
+    .statsError {
+        font-size: 14px;
+        padding: 20px 0;
+    }
+
     .uploadOverlayContent {
         min-width: 320px;
         padding: 24px 28px;
@@ -735,21 +881,22 @@
     .pageRoot {
         width: 100%;
         min-width: auto;
-        height: 100vh;
+        min-height: 100vh;
         background-size: cover;
         background-attachment: fixed;
         padding-bottom: 90px;
-        margin: 50px auto 0;
-        overflow: hidden;
+        margin: 0 auto;
+        overflow-x: hidden;
+        overflow-y: auto;
         position: relative;
     }
 
     .mainContent {
         flex-direction: column;
-        height: calc(100vh - 50px);
+        min-height: auto;
         padding: 0 10px;
-        overflow-y: auto;
         overflow-x: hidden;
+        overflow-y: visible;
         margin-bottom: 50px;
     }
 
@@ -768,6 +915,7 @@
         padding: 0;
         border-radius: 0;
         margin-bottom: 50px;
+        overflow: visible;
     }
 
     .formSection {
@@ -781,6 +929,7 @@
         background-position: center;
         background-repeat: no-repeat;
         margin-top: 10px;
+        overflow: visible;
     }
 
     .statsBoard {
@@ -832,5 +981,8 @@
     .createGameBtn {
         min-height: 48px;
         background-size: 100% 100%;
+    }
+    .deleteGameBtn {
+        min-width: 100px!important;
     }
 }

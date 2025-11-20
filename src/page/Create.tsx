@@ -11,7 +11,7 @@ import { IoEye, IoStatsChartSharp, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
-import MobileBottomNav from '../components/Mobile/MobileBottomNav';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 
 const Create: React.FC = () => {
     const { user } = useAuthStore();

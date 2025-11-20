@@ -56,7 +56,7 @@
 }
 
 .title {
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 600;
     color: #000000;
     margin: 0 0 16px 0;
@@ -64,7 +64,7 @@
 }
 
 .message {
-    font-size: 24px;
+    font-size: 20px;
     color: #FB4655;
     margin: 0 0 32px 0;
     text-align: center;
@@ -82,8 +82,8 @@
 .confirmButton,
 .cancelButton {
     width: 260px;
-    height: 70px;
-    font-size: 30px;
+    height: 60px;
+    font-size: 18px;
     font-weight: 500;
     border-radius: 8px;
     cursor: pointer;
@@ -140,5 +140,64 @@
 
 .closeButton:active {
     transform: scale(0.95);
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .modalOverlay {
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .modalWrapper {
+        width: auto;
+        max-width: calc(100vw - 40px);
+        box-sizing: border-box;
+    }
+
+    .deletModal {
+        width: 95vw;
+        max-width: calc(100vw - 40px);
+        min-height: 250px;
+        height: auto;
+        padding: 28px 24px;
+        border-radius: 6px;
+        box-sizing: border-box;
+        min-width: 300px;
+    }
+
+    .title {
+        font-size: 22px;
+        margin: 0 0 16px 0;
+    }
+
+    .message {
+        font-size: 16px;
+        margin: 0 0 28px 0;
+    }
+
+    .buttonGroup {
+        width: 100%;
+        gap: 12px;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .confirmButton,
+    .cancelButton {
+        flex: 1;
+        height: 48px;
+        font-size: 16px;
+        min-width: 0;
+        border-radius: 0px;
+    }
+
+    .closeButton {
+        top: 10px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
 }
 

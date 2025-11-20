@@ -103,7 +103,7 @@ const Navbar: React.FC = () => {
                 </div>
                 <div className={styles.navRight}>
                     <div className={styles.searchBox}>
-                        <input className={styles.searchInput} placeholder="搜索商品、素材、事件..." />
+                        <input className={styles.searchInput} placeholder="" />
                         <span className={styles.searchIcon}>
                             <IoSearch />
                         </span>

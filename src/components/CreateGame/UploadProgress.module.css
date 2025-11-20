@@ -130,3 +130,45 @@
     transform: translateY(0);
 }
 
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .uploadOverlay {
+        padding: 10px;
+    }
+
+    .uploadOverlayContent {
+        min-width: 90vw;
+        max-width: 90vw;
+        padding: 24px 20px;
+        border-radius: 12px;
+    }
+
+    .uploadOverlayTitle {
+        font-size: 18px;
+        margin: 0 0 20px 0;
+    }
+
+    .uploadProgressContainer {
+        margin-bottom: 16px;
+    }
+
+    .uploadProgressBar {
+        height: 8px;
+        margin-bottom: 10px;
+    }
+
+    .uploadProgressPercent {
+        font-size: 14px;
+    }
+
+    .uploadOverlayText {
+        font-size: 13px;
+        margin: 0 0 20px 0;
+    }
+
+    .cancelUploadBtn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+}
+

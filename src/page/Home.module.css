@@ -244,7 +244,6 @@
 
 .more {
     width: auto;
-    min-width: 80px;
     height: 40px;
     cursor: pointer;
     transition: color 0.3s ease;
@@ -348,7 +347,7 @@
         min-height: auto;
         box-sizing: border-box;
         overflow: visible;
-        margin-bottom: 50px;
+        margin-bottom: 20px;
     }
 
     .todayWrap {
@@ -430,19 +429,19 @@
 
     .sectionHeader {
         padding: 0;
-        height: 60px;
-        margin-bottom: 0px;
+        margin-bottom: 6px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 10px;
+    }
+
+    .sectionTitle {
+        font-size: 20px;
     }
 
     .more {
-        width: 80px;
-        height: 36px;
-        background-size: 70px 36px;
-        position: relative;
-        z-index: 10;
-        touch-action: manipulation;
-        user-select: none;
-        -webkit-tap-highlight-color: rgba(232, 219, 183, 0.3);
         font-size: 16px;
+        padding: 0px;
     }
 }

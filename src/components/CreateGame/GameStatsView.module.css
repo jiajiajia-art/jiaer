@@ -44,9 +44,28 @@
 .heroMeta {
     display: flex;
     align-items: baseline;
-    gap: 12px;
+    gap: 36px;
     margin-bottom: 8px;
 }
+
+.startGameBtn {
+    background-image: url('/data/assets/开始按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 60px;
+    width: 200px;
+    cursor: pointer;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(251, 73, 88, 0.3),
+                0 -3px 8px rgba(251, 73, 88, 0.3),
+                3px 0 8px rgba(251, 73, 88, 0.3),
+                -3px 0 8px rgba(251, 73, 88, 0.3);
+}
+
 
 .heroRating {
     font-size: 40px;
@@ -156,7 +175,7 @@
     margin-top: 24px;
     display: flex;
     gap: 16px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .editGameBtn,
@@ -172,7 +191,7 @@
 }
 
 .editGameBtn {
-    width: 800px;
+    flex: 0 0 70%;
     background: #FB5B67;
     color: #FFFFFF;
 }
@@ -194,7 +213,7 @@
 }
 
 .deleteGameBtn {
-    width: 250px;
+    flex: 0 0 30%;
     background: transparent;
     color: #FB5B67;
     border: 1px solid #FB5B67;
@@ -207,5 +226,195 @@
 .deleteGameBtn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* 中等屏幕适配 (768px到1080px之间) */
+@media (min-width: 769px) and (max-width: 1080px) {
+    .statsModeWrapper {
+        margin-bottom: 30px;
+    }
+
+    .heroBanner {
+        height: 350px;
+    }
+
+    .heroContent {
+        padding: 0 20px;
+        margin-top: 70px;
+    }
+
+    .heroTitle {
+        font-size: 36px;
+    }
+
+    .heroRating {
+        font-size: 32px;
+    }
+
+    .heroMetaLabel {
+        font-size: 16px;
+    }
+
+    .heroStatsWrapper {
+        padding: 0 20px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .statsSection {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sectionHeader {
+        margin-bottom: 18px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 16px;
+    }
+
+    .sectionTitle {
+        font-size: 24px;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .statBox {
+        width: 100%;
+        height: 90px;
+    }
+
+    .statValue {
+        font-size: 26px;
+    }
+
+    .statLabel {
+        font-size: 16px;
+    }
+
+    .heroActionGroup {
+        margin-top: 20px;
+        gap: 14px;
+    }
+
+    .editGameBtn {
+        flex: 0 0 70%;
+        padding: 12px 24px;
+    }
+
+    .deleteGameBtn {
+        flex: 0 0 30%;
+        padding: 12px 24px;
+    }
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .statsModeWrapper {
+        margin-bottom: 20px;
+    }
+
+    .heroBanner {
+        height: 250px;
+        margin-bottom: 16px;
+    }
+
+    .heroContent {
+        margin-top: 60px;
+        padding: 0 16px;
+    }
+
+    .heroTitle {
+        font-size: 28px;
+        margin-bottom: 12px;
+    }
+
+    .heroMeta {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .heroRating {
+        font-size: 24px;
+    }
+
+    .heroMetaLabel {
+        font-size: 14px;
+    }
+
+    .heroStatsWrapper {
+        padding: 0 16px;
+    }
+
+    .statsSection {
+        width: 100%;
+    }
+
+    .sectionHeader {
+        margin-bottom: 16px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 12px;
+    }
+
+    .sectionTitle {
+        font-size: 20px;
+    }
+
+    .more {
+        font-size: 14px;
+        padding: 0 8px;
+        min-width: auto;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .statBox {
+        width: 100%;
+        height: 80px;
+        padding: 8px;
+    }
+
+    .statValue {
+        font-size: 24px;
+    }
+
+    .statLabel {
+        font-size: 14px;
+        gap: 6px;
+    }
+
+    .heroActionGroup {
+        margin-top: 16px;
+        gap: 12px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
+
+    .editGameBtn {
+        flex: 0 0 70%;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    .deleteGameBtn {
+        flex: 0 0 30%;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    .startGameBtn {
+        width: 120px;
+        height: 40px;
+        font-size: 14px;
+    }
 }
 

@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import createGameApi from '../api/createGame/createGameApi.type';
 import createSessionApi from '../api/createGame/createSessionApi';
 import { useAuthStore } from '../store/useAuthStore';
-import MobileBottomNav from '../components/Mobile/MobileBottomNav';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import GameAction from '../api/game/gameAction';
@@ -430,8 +430,8 @@ const CreateGame: React.FC = () => {
                 </>
             )}
 
-            <div className={styles.mainContent}>
-                <div className={styles.main}>
+            <div className={`${styles.mainContent} ${isStatsMode && !showForm ? styles.mainContentHidden : ''}`}>
+                <div className={`${styles.main} ${isStatsMode && !showForm ? styles.mainHidden : ''}`}>
                     <div className={styles.createGameContainer}>
                         {(!isStatsMode || showForm) ? (
                             <div className={`${styles.formSection} ${!isStatsMode ? styles.formSectionOnly : ''}`}>

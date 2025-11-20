@@ -375,19 +375,21 @@ const GameForm: React.FC<GameFormProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-                <label htmlFor=""></label>
-                <input
-                    type="checkbox"
-                    checked={noImageMode}
-                    onChange={(e) => setNoImageMode(e.target.checked)}
-                    disabled={isCreating}
-                    className={styles.noImageModeCheckbox}
-                />
-                <span className={styles.noImageModeText}>无图模式</span>
+                <label className={styles.noImageModeLabel}></label>
+                <div className={styles.noImageModeContainer}>
+                    <input
+                        type="checkbox"
+                        checked={noImageMode}
+                        onChange={(e) => setNoImageMode(e.target.checked)}
+                        disabled={isCreating}
+                        className={styles.noImageModeCheckbox}
+                    />
+                    <span className={styles.noImageModeText}>无图模式</span>
+                </div>
             </div>
 
             <div className={styles.formGroup}>
-                <label></label>
+                <label className={styles.createGameBtnLabel}></label>
                 <button
                     className={`${styles.gameBtn} ${styles.createGameBtn}`}
                     onClick={onTestGame}
@@ -397,19 +399,19 @@ const GameForm: React.FC<GameFormProps> = ({
                 </button>
             </div>
 
-            {   
+            {
                 initialGameData && (
-                <div className={styles.formGroup}>
-                    <label></label>
-                    <button
-                        className={`${styles.gameBtn} ${styles.publishGameBtn}`}
-                        onClick={onPublish}
-                        disabled={isCreating}
-                    >
-                        发布
-                    </button>
-                </div>
-            )}
+                    <div className={styles.formGroup}>
+                        <label className={styles.createGameBtnLabel}></label>
+                        <button
+                            className={`${styles.gameBtn} ${styles.publishGameBtn}`}
+                            onClick={onPublish}
+                            disabled={isCreating}
+                        >
+                            发布
+                        </button>
+                    </div>
+                )}
         </div>
     );
 };

@@ -138,7 +138,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return null;
         }
 
-        if (!user?.user?.userId || !user?.user?.id) {
+        if (!user?.user.userId || !user?.user.id) {
             alert('用户信息错误，无法创建 session');
             return null;
         }

@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { IoEye, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { IoIosArrowForward } from 'react-icons/io';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
+import { useAuthStore, authModalStore } from '../../store/useAuthStore';
+import { useGameStore } from '../../store/gameStore';
+import createSessionApi from '../../api/createGame/createSessionApi';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -20,6 +24,76 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     onDelete,
     isDeleting,
 }) => {
+    const { user } = useAuthStore();
+    const { setPdfFileId, setSessionId } = useGameStore();
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
+
+    /**
+     * 创建会话
+     */
+    const createSession = async (fileId: string): Promise<string | null> => {
+        if (!fileId) {
+            console.error('没有 fileId，无法创建 session');
+            return null;
+        }
+
+        if (!user?.user?.userId || !user?.user?.id) {
+            alert('用户信息错误，无法创建 session');
+            return null;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await createSessionApi.getSession({
+                fileId: fileId,
+                userId: user.user.id
+            });
+
+            if (response.data.success) {
+                const data = response.data.data;
+                return data?.session.session_id || null;
+            } else {
+                alert(response.data.message || '创建游戏失败，请重试');
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Session 创建错误:', error);
+            alert('创建游戏失败，请稍后重试');
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    /**
+     * 处理开始游戏按钮点击
+     */
+    const handleStartGame = async () => {
+        // 检查用户是否登录
+        if (!user?.user.userId || !user?.user.id) {
+            // 打开登录弹窗
+            authModalStore.getState().setIsAuthModalOpen(true);
+            return;
+        }
+
+        const fileId = gameDetail?.file_id || gameDetail?.id;
+        if (!fileId) {
+            alert('游戏信息错误，请重试');
+            return;
+        }
+
+        // 更新 store
+        setPdfFileId(fileId);
+
+        // 创建会话
+        const sessionId = await createSession(fileId);
+        if (sessionId) {
+            setSessionId(sessionId);
+            navigate('/newmain');
+        }
+    };
+
     return (
         <div className={styles.statsModeWrapper}>
             <div
@@ -37,6 +111,13 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 {(gameDetail.rating_count || 0).toLocaleString()} 人评论
                             </span>
                         </div>
+                        <button 
+                            className={styles.startGameBtn}
+                            onClick={handleStartGame}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? '加载中...' : '开始游戏'}
+                        </button>
                     </div>
                 </div>
             </div>

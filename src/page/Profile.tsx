@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Profile.module.css';
-import MobileBottomNav from '../components/Mobile/MobileBottomNav';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
 
 const Profile: React.FC = () => {

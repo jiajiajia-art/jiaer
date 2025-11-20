@@ -104,8 +104,10 @@
 }
 
 .searchIcon {
+    flex-shrink: 0;
     height: 26px;
     width: 60px;
+    min-width: 60px;
     font-size: 18px;
     color: #fff;
     background: rgba(0, 0, 0, 0.3);
@@ -116,12 +118,14 @@
 }
 
 .searchInput {
-    width: 76%;
+    flex: 1;
+    min-width: 0;
     height: 100%;
     border: none;
     background: transparent;
     outline: none;
     font-size: 14px;
+    color: #fff;
 }
 
 .searchInput::placeholder {
@@ -178,8 +182,8 @@
 .logoutBtn {
     width: 100%;
     padding: 12px 20px;
-    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
-    color: #E8DBB7;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
     border: none;
     border-radius: 0;
     font-size: 14px;
@@ -229,20 +233,24 @@
         width: 100vw;
         height: 60px;
         padding: 0 12px;
+        left: 0;
+        transform: none;
     }
 
     .navbar {
         width: 100%;
-        gap: 16px;
+        gap: 8px;
+        min-width: 0;
     }
 
     .logo {
-        width: 120px;
-        height: 64px;
+        width: 100px;
+        height: 54px;
+        flex-shrink: 0;
     }
 
     .logo img {
-        width: 120px;
+        width: 100px;
         height: 70%;
     }
 
@@ -250,34 +258,58 @@
         display: none;
     }
 
-    .searchBox {
-        width: 200px;
-        height: 28px;
-        padding-left: 8px;
+    .navRight {
+        gap: 8px;
+        margin-right: 0;
+        flex: 1;
+        min-width: 0;
+        justify-content: flex-end;
     }
 
-    .searchIcon {
-        height: 24px;
-        width: 50px;
-        font-size: 16px;
+    .searchBox {
+        flex: 1;
+        min-width: 0;
+        max-width: 70%;
+        height: 28px;
+        padding-left: 8px;
+        padding-right: 0;
     }
 
     .searchInput {
+        flex: 1;
+        min-width: 0;
         font-size: 12px;
+        width: auto;
+    }
+
+    .searchIcon {
+        flex-shrink: 0;
+        height: 24px;
+        width: 40px;
+        min-width: 40px;
+        font-size: 14px;
     }
 
     .avatar {
         width: 36px;
         height: 36px;
+        flex-shrink: 0;
     }
 
     .settingIcon {
         width: 36px;
         height: 36px;
+        flex-shrink: 0;
     }
 
-    .navRight {
-        gap: 12px;
-        margin-right: 0;
+    .loginBtn {
+        width: 60px !important;
+        height: 32px !important;
+        min-width: 60px !important;
+        max-width: 60px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        font-size: 14px;
+        flex-shrink: 0;
     }
 }
