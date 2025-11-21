@@ -793,27 +793,27 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
                 {/* 中间：编年纪事对话 - 只显示最新一条 AI 回复 */}
                 <div className={styles.dialogueCenterWrapper}>
-                    {currentStep && currentStep.type === 'dialogue' && (
+                    {/* {currentStep && currentStep.type === 'dialogue' && ( */}
                         <div className={styles.npcAvatarContainer}>
                             {currentNPC ? (
                                 <img 
-                                    src={currentNPC.icon || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`} 
+                                    src={currentNPC.icon || `${import.meta.env.BASE_URL}data/avatars/hunter.png`} 
                                     alt={currentNPC.name || currentStep.characterId}
                                     className={styles.npcAvatar}
                                     onError={(e) => {
                                         console.error('❌ NPC 头像加载失败:', currentNPC.icon);
-                                        (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
+                                        (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}data/avatars/hunter.png`;
                                     }}
                                 />
                             ) : (
                                 <img 
-                                    src={`${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`} 
+                                    src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} 
                                     alt={currentStep.characterId || '角色'}
                                     className={styles.npcAvatar}
                                 />
                             )}
                         </div>
-                    )}
+                    {/* )} */}
                     <div className={styles.dialogueWrapper}>
                     <div className={styles.dialogueModalWrapper}>
                         <div className={styles.dialogueModal}>
