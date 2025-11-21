@@ -223,14 +223,12 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     }, [isOpen, sessionId, loadHistoryMessages, loadMissions]);
 
-    // 当历史记录弹窗打开时加载历史记录（刷新历史记录列表）
     useEffect(() => {
         if (showHistory && sessionId) {
             loadHistoryMessages(false);
         }
     }, [showHistory, sessionId, loadHistoryMessages]);
 
-    // 同时刷新历史记录和任务列表（使用 allSettled 确保一个失败不影响另一个）
     const refreshHistoryAndMissions = useCallback(async () => {
         await Promise.allSettled([
             loadHistoryMessages(),
@@ -323,6 +321,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
             if (response.ok) {
                 setGameStarted(true);
                 await handleStreamResponse(response);
+                console.log(response);
+                
             } else {
                 console.error('❌ 游戏开始失败:', response.statusText);
                 setMessages((prev) => [
@@ -336,7 +336,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 ...prev,
                 { type: 'system', text: '游戏开始错误，请重试...' }
             ]);
-        } finally {
+        } finally {            
             setLoading(false);
         }
     };
@@ -363,6 +363,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 loadHistoryMessages();
 
                 await handleStreamResponse(response);
+                console.log(response);
+
             } else {
                 console.error('❌ 消息发送失败:', response.statusText);
             }

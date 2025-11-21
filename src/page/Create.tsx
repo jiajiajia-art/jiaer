@@ -12,6 +12,7 @@ import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import statisticsApi from '../api/statistics/statisticsApi';
 
 const Create: React.FC = () => {
     const { user } = useAuthStore();
@@ -48,18 +49,28 @@ const Create: React.FC = () => {
         if (!user?.user?.id) {
             return;
         }
-
         try {
             const response = await getGameDataApi.getUserData(user.user.id, { limit: 100 });
             if (response.data.success && response.data.data) {
                 setFileMetas(response.data.data);
-                // 计算统计数据
-                const games = response.data.data;
+            }
+        } catch (error) {
+            console.error('获取我的游戏列表错误:', error);
+        }
+    };
+
+    const getGameTotalStats = async () => {
+        if (!user?.user?.id) {
+            return;
+        }
+        try {
+            const response = await statisticsApi.getALLGameStats({ userId: String(user.user.id) });
+            if (response.data.success && response.data.data) {
                 setStats({
-                    totalCreated: games.length,
-                    totalViews: games.reduce((sum: number, game: UserGameData) => sum + (game.rating_count || 0), 0),
-                    totalClicks: games.reduce((sum: number, game: UserGameData) => sum + (game.like_count || 0), 0),
-                    totalRevenue: games.reduce((sum: number, game: UserGameData) => sum + ((game.price_amount || 0) * (game.rating_count || 0)), 0),
+                    totalCreated: response.data.data.Count ?? 0,
+                    totalViews: response.data.data.pv ?? 0,
+                    totalClicks: response.data.data.likeCount ?? 0,
+                    totalRevenue: response.data.data.uv ?? 0,
                 });
             }
         } catch (error) {
@@ -69,6 +80,7 @@ const Create: React.FC = () => {
 
     useEffect(() => {
         loadMyGames();
+        getGameTotalStats();
     }, [user?.user.id]);
 
     // 渲染操作按钮

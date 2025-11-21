@@ -87,11 +87,11 @@ export const useStreamResponse = ({ setMessages, initialMessage }: UseStreamResp
                 try {
                     const json = JSON.parse(cleaned);
 
-                    // 支持多种格式：
+                    // 支持多种格式：nnnnn
                     // 1. json.content（无 type 或 type 为 'chunk'）
                     // 2. json.type === 'stream' && json.content
                     // 3. json.type === 'chunk' && json.content
-                    const chunk = json.content && (json.type === undefined || json.type === 'chunk' || json.type === 'stream')
+                    const chunk = json.content && (json.type === undefined || json.type === 'raw_text' || json.type === 'chunk' || json.type === 'stream')
                         ? json.content 
                         : null;
 

@@ -20,6 +20,8 @@ export interface UserGameData {
     dislike_count: number;
     reaction: string;
     avatarUrl: string;
+    total_pv_count?: number;
+    paid?: boolean;
 }
 
 export interface UserGameResponse {
@@ -30,7 +32,6 @@ export interface UserGameResponse {
 export interface UserGameRequest{
     limit?: number;
 }
-
 
 export interface PublicGameRequest {
     limit?: string;

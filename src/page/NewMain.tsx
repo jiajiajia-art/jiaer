@@ -27,6 +27,7 @@ import SettingModal from '../components/Mian/SettingModal';
 import AlertModal from '../components/AlertModal';
 import changeSceneApi from '../api/game/changeSenceAPi';
 import MissionsModal from '../components/Mian/MissionsModal';
+import StoryModal from '../components/storyModal/StoryModal';
 
 const NewMain: React.FC = () => {
     const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, worldMapImageUrl } = useGameData();
@@ -475,14 +476,13 @@ const NewMain: React.FC = () => {
 
 
             {/* 对话弹窗组件 */}
-            <DialogueModal
+            <StoryModal
                 isOpen={dialogueOpen}
                 onClose={() => {
                     setDialogueOpen(false);
                     setDialogueInitialInput(''); // 关闭时清空初始输入
                 }}
                 playerName={player?.profile?.name || '未命名'}
-                initialInput={dialogueInitialInput}
                 player={player}
                 inventory={inventory}
                 onEquipItem={handleEquipItem}

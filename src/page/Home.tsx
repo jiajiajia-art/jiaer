@@ -10,18 +10,21 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
 import { IoIosArrowForward } from 'react-icons/io';
 import FooterArea from '../components/Layout/FooterArea';
+import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [allGames, setAllGames] = useState<UserGameData[]>([]);
+    const [isLoadingSpecial, setIsLoadingSpecial] = useState(true);
+    const [isLoadingAll, setIsLoadingAll] = useState(true);
     const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuthStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const navigator = useNavigate();
-    
+
     // 轮播数据（使用前3个游戏作为轮播内容）
     const carouselItems = useMemo(() => {
         return fileMetas.slice(0, 3).map(meta => ({
@@ -68,9 +71,11 @@ const Home: React.FC = () => {
         const loadLibraryData = async () => {
             try {
                 // 获取限时优惠游戏（前8个，有特殊价格的）
-                const specialResponse = await libraryDataApi.getGameData({ 
-                    limit: '8', 
-                    userId: String(user?.user.id) || '' });
+                setIsLoadingSpecial(true);
+                const specialResponse = await libraryDataApi.getGameData({
+                    limit: '8',
+                    userId: String(user?.user.id) || ''
+                });
 
                 if (specialResponse.data.success && specialResponse.data.data) {
                     setFileMetas(specialResponse.data.data);
@@ -78,10 +83,13 @@ const Home: React.FC = () => {
                     console.error('获取限时优惠游戏列表失败:', specialResponse.data);
                     setFileMetas([]);
                 }
+                setIsLoadingSpecial(false);
 
                 // 获取全部游戏（更多数据，用于全部游戏模块）
-                const allResponse = await libraryDataApi.getGameData({ 
-                    userId: String(user?.user.id) || '' });
+                setIsLoadingAll(true);
+                const allResponse = await libraryDataApi.getGameData({
+                    userId: String(user?.user.id) || ''
+                });
 
                 if (allResponse.data.success && allResponse.data.data) {
                     setAllGames(allResponse.data.data);
@@ -89,10 +97,13 @@ const Home: React.FC = () => {
                     console.error('获取全部游戏列表失败:', allResponse.data);
                     setAllGames([]);
                 }
+                setIsLoadingAll(false);
             } catch (error) {
                 console.error('获取游戏列表错误:', error);
                 setFileMetas([]);
                 setAllGames([]);
+                setIsLoadingSpecial(false);
+                setIsLoadingAll(false);
             }
         };
 
@@ -127,13 +138,10 @@ const Home: React.FC = () => {
             }, 5000);
         }
     };
-    // console.log(fileMetas);
-    
     return (
         <div className={styles.pageRoot}>
             {/* 顶部固定导航 */}
             <Navbar />
-            {/* <MobileTopNav items={sidebarItems} /> */}
 
             {/* 主体 */}
             <div className={styles.mainContent}>
@@ -144,31 +152,37 @@ const Home: React.FC = () => {
                             {carouselItems.length > 0 ? (
                                 <>
                                     <div className={styles.carouselWrapper}>
-                                        <div 
+                                        <div
                                             className={styles.carouselTrack}
                                             style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                                         >
-                                            {carouselItems.map((item) => (
-                                                <div key={item.id} className={styles.carouselSlide}>
-                                                    <div className={styles.carouselImage}>
-                                                        <img src={item.cover} alt={item.title} />
-                                                    </div>
-                                                    <div className={styles.carouselContent}>
-                                                        <div className={styles.carouselInfo}>
-                                                            <h2 className={styles.carouselTitle}>{item.title}</h2>
-                                                            <p className={styles.carouselDescription}>{item.description}</p>
-                                                            <button 
-                                                                className={styles.carouselStartBtn}
-                                                                onClick={() => 
-                                                                    showGameDetail(item.game)
-                                                                }
-                                                            >
-                                                                开始游戏
-                                                            </button>
+                                            {carouselItems.map((item, idx) => {
+                                                const imageId = item.id || `carousel-${idx}`;
+                                                return (
+                                                    <div key={imageId} className={styles.carouselSlide}>
+                                                        <div className={styles.carouselImage}>
+                                                            <img
+                                                                src={item.cover}
+                                                                alt={item.title}
+                                                            />
+                                                        </div>
+                                                        <div className={styles.carouselContent}>
+                                                            <div className={styles.carouselInfo}>
+                                                                <h2 className={styles.carouselTitle}>{item.title}</h2>
+                                                                <p className={styles.carouselDescription}>{item.description}</p>
+                                                                <button
+                                                                    className={styles.carouselStartBtn}
+                                                                    onClick={() =>
+                                                                        showGameDetail(item.game)
+                                                                    }
+                                                                >
+                                                                    开始游戏
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                     {carouselItems.length > 1 && (
@@ -185,9 +199,7 @@ const Home: React.FC = () => {
                                     )}
                                 </>
                             ) : (
-                                <div className={styles.carouselPlaceholder}>
-                                    <img src={`${import.meta.env.BASE_URL}data/gameCover/image.png`} alt="今日推荐" />
-                                </div>
+                                <div className={styles.carouselEmpty} />
                             )}
                         </div>
                     </div>
@@ -197,7 +209,7 @@ const Home: React.FC = () => {
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>限时优惠</div>
                             <hr />
-                            <button 
+                            <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                                 onClick={() => {
@@ -208,11 +220,15 @@ const Home: React.FC = () => {
                                 <IoIosArrowForward />
                             </button>
                         </div>
-                        <GameGrid 
-                            games={fileMetas} 
-                            showSpecialPrice={true}
-                            onGameClick={showGameDetail}
-                        />
+                        {isLoadingSpecial ? (
+                            <GameGridSkeleton count={8} />
+                        ) : (
+                            <GameGrid
+                                games={fileMetas}
+                                showSpecialPrice={true}
+                                onGameClick={showGameDetail}
+                            />
+                        )}
                     </div>
 
                     {/* 全部游戏模块 */}
@@ -220,7 +236,7 @@ const Home: React.FC = () => {
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>全部游戏</div>
                             <hr />
-                            <button 
+                            <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                                 onClick={() => {
@@ -231,11 +247,15 @@ const Home: React.FC = () => {
                                 <IoIosArrowForward />
                             </button>
                         </div>
-                        <GameGrid 
-                            games={allGames} 
-                            showSpecialPrice={false}
-                            onGameClick={showGameDetail}
-                        />
+                        {isLoadingAll ? (
+                            <GameGridSkeleton count={8} />
+                        ) : (
+                            <GameGrid
+                                games={allGames}
+                                showSpecialPrice={false}
+                                onGameClick={showGameDetail}
+                            />
+                        )}
                     </div>
                 </div>
             </div>

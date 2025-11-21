@@ -20,3 +20,10 @@ export interface ViewResponse {
     isNewVisitor: boolean;
     message: string;
 }
+
+export interface GameTotalStatsResponse {
+    pv: number;
+    uv: number;
+    likeCount: number;
+    Count: number;
+}

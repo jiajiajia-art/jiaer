@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoEye, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
@@ -8,6 +8,8 @@ import styles from './GameStatsView.module.css';
 import { useAuthStore, authModalStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
 import createSessionApi from '../../api/createGame/createSessionApi';
+import GameAction from '../../api/game/gameAction';
+import type { GameStatsResponse } from '../../api/game/gameAction.Api';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -28,6 +30,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const { setPdfFileId, setSessionId } = useGameStore();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const [gameStats, setGameStats] = useState<GameStatsResponse>();
 
     /**
      * 创建会话
@@ -70,9 +73,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
      * 处理开始游戏按钮点击
      */
     const handleStartGame = async () => {
-        // 检查用户是否登录
         if (!user?.user.userId || !user?.user.id) {
-            // 打开登录弹窗
             authModalStore.getState().setIsAuthModalOpen(true);
             return;
         }
@@ -93,6 +94,17 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             navigate('/newmain');
         }
     };
+
+    const getGameStats = async () => {
+        const response = await GameAction.getGameStats(gameDetail.file_id);
+        if (response.data.success) {
+            setGameStats(response.data.data ?? undefined);
+        }
+    };
+
+    useEffect(() => {
+        getGameStats();
+    }, [gameDetail.file_id]);
 
     return (
         <div className={styles.statsModeWrapper}>
@@ -140,14 +152,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 <IoEye />
                                 <span>浏览量</span>
                             </div>
-                            <div className={styles.statValue}>200</div>
+                            <div className={styles.statValue}>{gameStats?.pv || 0}</div>
                         </div>
                         <div className={styles.statBox}>
                             <div className={styles.statLabel}>
                                 <TbHandClick />
                                 <span>点击</span>
                             </div>
-                            <div className={styles.statValue}>6</div>
+                            <div className={styles.statValue}>{gameStats?.pv || 0}</div>
                         </div>
                         <div className={styles.statBox}>
                             <div className={styles.statLabel}>

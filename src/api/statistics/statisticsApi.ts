@@ -1,6 +1,6 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
-import type { ConversionRequest, ConversionResponse, ViewRequest, ViewResponse } from "./statisticsApi.type";
+import type { ConversionRequest, ConversionResponse, GameTotalStatsResponse, ViewRequest, ViewResponse } from "./statisticsApi.type";
 
 const statisticsApi = {
     addConversion: (data: ConversionRequest) => {
@@ -8,6 +8,9 @@ const statisticsApi = {
     },
     addView: (data: ViewRequest) => {
         return api.post<ApiResponse<ViewResponse>>('/auth/games-stats/visit', data);
+    },
+    getALLGameStats: ( data:{userId: string}) => {
+        return api.get<ApiResponse<GameTotalStatsResponse>>('/auth/games-stats/total-data', { params: data });
     }
 }
 

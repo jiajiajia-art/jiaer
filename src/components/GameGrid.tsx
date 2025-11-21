@@ -15,8 +15,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
     if (games.length === 0) {
         return (
             <div className={styles.emptyState}>
-                <h2>⏳ 加载中...</h2>
-                <p>正在加载剧情文件信息</p>
+                <p></p>
             </div>
         );
     }
@@ -37,7 +36,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                         <div className={styles.goodsInfo}>
                             <div className={styles.goodsInfoItem}>
                                 <IoGameControllerOutline />
-                                {meta.rating_count}
+                                {meta.total_pv_count}
                             </div>
                             <div className={styles.goodsInfoItem}>
                                 <AiOutlineLike />
