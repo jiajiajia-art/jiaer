@@ -728,7 +728,11 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     </div>
                     <div className={`${styles.panelCard} ${styles.missionsModalWrapper}`}>
                         {missionModalOpen && (
-                            <MissionsModal missionData={missionData} loading={loadingMissions} />
+                            <MissionsModal
+                                missionData={missionData}
+                                loading={loadingMissions}
+                                onClose={() => setMissionModalOpen(false)}
+                            />
                         )}
                     </div>
                 </div>
@@ -911,13 +915,53 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 </div>
 
                 {showHistory && (
-                    <div className={styles.mobileHistoryModal}>
-                        <ChatHistory
-                            isOpen={true}
-                            chatMessages={historyMessages}
-                            loading={loadingHistory}
-                            onClose={() => setShowHistory(false)}
-                        />
+                    <div className={`${styles.mobilePanelOverlay} ${styles.mobileHistoryModal}`}>
+                        <div className={styles.mobilePanelContent}>
+                            <ChatHistory
+                                isOpen={true}
+                                chatMessages={historyMessages}
+                                loading={loadingHistory}
+                                onClose={() => setShowHistory(false)}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {missionModalOpen && (
+                    <div className={`${styles.mobilePanelOverlay} ${styles.mobileMissionModal}`}>
+                        <div className={styles.mobilePanelContent}>
+                            <MissionsModal
+                                missionData={missionData}
+                                loading={loadingMissions}
+                                onClose={() => setMissionModalOpen(false)}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {inventoryOpen && inventory && (
+                    <div className={`${styles.mobilePanelOverlay} ${styles.mobileInventoryModal}`}>
+                        <div className={styles.mobilePanelContent}>
+                            <InventoryFloatingPanel
+                                isOpen={true}
+                                inventory={inventory}
+                                onEquipItem={onEquipItem || (() => {})}
+                                onUseItem={onUseItem || (() => {})}
+                                onClose={() => setInventoryOpen(false)}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {playerOpen && (
+                    <div className={`${styles.mobilePanelOverlay} ${styles.mobilePlayerModal}`}>
+                        <div className={styles.mobilePanelContent}>
+                            <PlayerFloatingPanel
+                                isOpen={true}
+                                onClose={() => setPlayerOpen(false)}
+                                player={player}
+                            />
+                        </div>
                     </div>
                 )}
 
