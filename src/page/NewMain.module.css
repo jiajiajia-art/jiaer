@@ -1,14 +1,34 @@
-:global(*) {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+.loadingWrapper {
+  min-height: 100vh;
+  width: 100%;
+  background: #ffffff8f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  color: #fff;
 }
 
-:global(body) {
-    font-family: 'Microsoft YaHei', Arial, sans-serif;
-    background: #E8DBB7;
-    min-height: 100vh;
-    color: #333;
+.loadingSpinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(64, 64, 64, 0.2);
+  border-top-color: #fb4655;
+  border-radius: 50%;
+  animation: loading-spin 1s linear infinite;
+}
+
+.loadingText {
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #000;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .gameContainer {
@@ -18,6 +38,7 @@
     min-height: 100vh;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
     position: relative;
+    overflow: hidden;
 }
 
 /* 时间消逝按钮 */

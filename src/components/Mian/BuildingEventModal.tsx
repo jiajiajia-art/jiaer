@@ -6,6 +6,7 @@ import { useGameStore } from '../../store/gameStore';
 import { authFetch } from '../../api/base';
 import { useGameData } from '../../hooks/useGameData';
 import type { BuildingData } from './EventModal';
+import { useStreamResponse } from '../../hooks/useStreamResponse';
 
 interface BuildingEventModalProps {
     isOpen: boolean;
@@ -51,137 +52,27 @@ const BuildingEventModal: React.FC<BuildingEventModalProps> = ({
         }
     }, [messages]);
     
-    // 处理流式响应（类似 DialogueModal）
+    // 使用流式处理 Hook
+    const { handleStreamResponse: baseHandleStreamResponse } = useStreamResponse({
+        setMessages,
+        initialMessage: { type: 'system', isMarkdown: true }
+    });
+
+    // 包装 handleStreamResponse，在流结束后刷新数据
     const handleStreamResponse = useCallback(async (response: Response) => {
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let fullText = '';
-        let actions: string[] = [];
-
-        if (!reader) {
-            console.error('❌ 无法获取 reader');
-            return;
+        try {
+            await baseHandleStreamResponse(response);
+            // 流式输出完成后刷新数据
+            getNewScene().catch(err => {
+                console.warn('⚠️ 刷新场景数据失败:', err);
+            });
+            getNewPlayer().catch(err => {
+                console.warn('⚠️ 刷新玩家数据失败:', err);
+            });
+        } catch (error) {
+            console.error('❌ [BuildingEventModal] 流式响应处理失败:', error);
         }
-        
-        // 添加初始"打字中"消息
-        setMessages((prev) => {
-            const newMessage: Message = { 
-                type: 'system', 
-                text: '', 
-                isTyping: true, 
-                isMarkdown: true, 
-                actions: [] 
-            };
-            const newMessages = [...prev, newMessage];
-            return newMessages;
-        });
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const segments = buffer.split(/\r?\n/);
-            buffer = segments.pop() || '';
-
-            for (const segment of segments) {
-                const line = segment.trim();
-                if (!line) continue;
-
-                const cleaned = line.startsWith('data:') ? line.replace(/^data:\s*/, '') : line;
-
-                try {
-                    const json = JSON.parse(cleaned);
-
-                    if (json.content) {
-                        const chunk = json.content;
-                        fullText += chunk;
-                        
-                        // 检测 ACTION
-                        if (fullText.includes('[ACTION:')) {
-                            const textBeforeAction = fullText.slice(0, fullText.indexOf('[ACTION:'));
-                            const actionRegex = /\[ACTION:\s*(.*?)\]/g;
-                            let match;
-                            const newActions: string[] = [];
-
-                            while ((match = actionRegex.exec(fullText)) !== null) {
-                                const actionText = match[1].trim();
-                                if (!actions.includes(actionText)) {
-                                    newActions.push(actionText);
-                                }
-                            }
-
-                            if (newActions.length > 0) {
-                                actions = [...actions, ...newActions];
-                            }
-
-                            // 更新消息
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last) {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        text: textBeforeAction.trim(),
-                                        isTyping: false,
-                                        actions: actions.length > 0 ? [...actions] : undefined
-                                    };
-                                    return [...updated];
-                                }
-                                return prev;
-                            });
-                        } else {
-                            // 没有 ACTION 时持续更新文字（无论 isTyping 状态）
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last) {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        text: fullText.trim(),
-                                    };
-                                    return [...updated];
-                                }
-                                return updated;
-                            });
-                        }
-                    }
-                } catch {
-                    // 解析不完整时忽略
-                }
-            }
-        }
-
-        // 流结束时，确保最终文本和关闭打字效果
-        setMessages((prev) => {
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last) {
-                // 确保最终文本是完整的（去除 ACTION 部分）
-                let finalText = fullText.trim();
-                if (finalText.includes('[ACTION:')) {
-                    finalText = finalText.slice(0, finalText.indexOf('[ACTION:')).trim();
-                }
-
-                updated[updated.length - 1] = {
-                    ...last,
-                    text: finalText,
-                    isTyping: false
-                };
-                return [...updated];
-            }
-            return updated;
-        });
-        
-        getNewScene().catch(err => {
-            console.warn('⚠️ 刷新场景数据失败:', err);
-        });
-        getNewPlayer().catch(err => {
-            console.warn('⚠️ 刷新玩家数据失败:', err);
-        });
-        
-    }, [getNewScene, getNewPlayer]);
+    }, [baseHandleStreamResponse, getNewScene, getNewPlayer]);
 
     // 当弹窗打开且收到初始 streamResponse 时，处理第一个消息
     useEffect(() => {

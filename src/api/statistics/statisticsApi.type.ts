@@ -1,5 +1,6 @@
 export interface ConversionRequest {
     fileId: string;
+    userId: string;
 }
 
 export interface ConversionResponse {
@@ -18,4 +19,11 @@ export interface ViewResponse {
     uvCount: number;
     isNewVisitor: boolean;
     message: string;
+}
+
+export interface GameTotalStatsResponse {
+    pv: number;
+    uv: number;
+    likeCount: number;
+    Count: number;
 }

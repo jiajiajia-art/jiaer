@@ -1,867 +1,344 @@
 .pageRoot {
-    min-height: 64px;
-    width: 100vw;
-    height: 100vh;
-    background-image: url('/data/asset/首页/大背景copy.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    max-width: 1800px;
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
     margin: 0 auto;
 }
 
 .mainContent {
     color: black;
     display: flex;
-    min-height: calc(100vh - 80px);
-    width: 100%;
-    margin-top: -1px;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 48px;
 }
 
 .main {
     flex: 1;
-    min-height: calc(100vh - 80px);
-    padding: 20px 0 10px 0;
-    box-sizing: border-box;
-    width: 100%;
-}
-
-.createGameContainer {
-    display: flex;
-    gap: 20px;
-    height: 100%;
-    padding: 0 20px;
-    box-sizing: border-box;
-}
-
-/* 左侧表单区域 - 60% */
-.formSection {
-    flex: 0 0 60%;
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    background-image: url('/data/asset/创作页面/数据板.png');
-    background-size: 100% 100%;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    overflow: visible;
+    position: relative;
+}
+
+/* 用户信息展示区域 */
+.userProfileSection {
+    width: 100vw;
+    max-width: 1920px;
+    position: relative;
+    padding: 0;
+    flex-shrink: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 38px;
+}
+
+.userProfileBackground {
+    width: 100%;
+    max-width: 1920px;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+}
+
+.userProfileBlur {
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    padding: 25px;
-    border-radius: 15px;
-    height: 100%;
-    max-height: 800px;
-    box-sizing: border-box;
-    overflow-y: auto;
+    filter: blur(20px);
+    -webkit-filter: blur(20px);
+    z-index: 0;
 }
 
-.formGroup {
+.userProfileBackground::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.userProfileContent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-    height: 1/6;
+    align-items: center;
+    gap: 20px;
+    z-index: 2;
 }
 
-.formGroup label {
+.userAvatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    margin-top: 80px;
+}
+
+.userName {
     font-size: 30px;
     font-weight: 600;
-    color: #E8DBB7;
-    text-shadow: 1px 1px 2px rgba(115, 80, 47, 0.9), -1px -1px 2px rgba(115, 80, 47, 0.9), 1px -1px 2px rgba(115, 80, 47, 0.9), -1px 1px 2px rgba(115, 80, 47, 0.9);
-    line-height: 1.2;
-    margin-bottom: 10px !important;
-}
-
-/* 为必填字段添加红色*号 */
-.formGroup:has(input[required]) label::after,
-.formGroup:has(textarea[required]) label::after,
-.formGroup.requiredField label::after {
-    content: '*';
-    color: #B2440F;
-    margin-left: 4px;
-    font-weight: 700;
-}
-
-.formGroup input[type="text"],
-.formGroup textarea {
-    padding: 12px 20px;
-    background-color: transparent;
-    border-radius: 8px;
-    font-size: 16px;
-    font-family: inherit;
-    color: #E8DBB7!important;
-    transition: all 0.3s ease;
-    box-sizing: border-box;
-    border: none;
-    outline: none;
-}
-
-.formGroup input[type="text"]:focus,
-.formGroup textarea:focus {
-    outline: none;
-    border: none;
-    box-shadow: none;
-}
-
-.formGroup input[type="text"]::placeholder,
-.formGroup textarea::placeholder {
-    color: #B69B74;
-    font-weight: 700;
-    opacity: 1;
-}
-
-.formGroup input[type="text"]::-webkit-input-placeholder,
-.formGroup textarea::-webkit-input-placeholder {
-    color: #B69B74;
-    font-weight: 700;
-    opacity: 1;
-}
-
-.formGroup input[type="text"]::-moz-placeholder,
-.formGroup textarea::-moz-placeholder {
-    color: #B69B74;
-    font-weight: 700;
-    opacity: 1;
-}
-
-.formGroup input[type="text"]:-ms-input-placeholder,
-.formGroup textarea:-ms-input-placeholder {
-    color: #B69B74;
-    font-weight: 700;
-    opacity: 1;
-}
-
-.formGroup textarea {
-    resize: none;
-    height: 9rem;
-    overflow-y: auto;
-    background-image: url('/data/asset/创作页面/输入框2.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-.formGroup input[type="text"]{
-    background-image: url('/data/asset/创作页面/输入框1.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    height: 58px;
-}
-
-
-/* 文件上传区域 */
-.fileUploadArea {
-    border-radius: 5px;
-    padding: 15px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    min-height: 9rem;
-    box-sizing: border-box;
-    overflow: hidden;
-    position: relative;
-    background: #73502F;
-}
-
-/* 文件上传区域的滚动条样式 */
-.fileUploadArea::-webkit-scrollbar {
-    width: 6px;
-}
-
-.fileUploadArea::-webkit-scrollbar-track {
-    background: rgba(115, 80, 47, 0.1);
-    border-radius: 3px;
-}
-
-.fileUploadArea::-webkit-scrollbar-thumb {
-    background: rgba(115, 80, 47, 0.4);
-    border-radius: 3px;
-}
-
-.fileUploadArea::-webkit-scrollbar-thumb:hover {
-    background: rgba(115, 80, 47, 0.6);
-}
-
-
-.uploadPlaceholder {
-    pointer-events: none;
-    padding: 20px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-}
-
-.uploadIcon {
-    font-size: 36px;
-    display: block;
-    margin-bottom: 10px;
-}
-
-.uploadText {
-    color: #5E4630;
-    font-weight: 600;
-    margin: 0 0 4px 0;
-    font-size: 14px;
-}
-
-.uploadHint {
-    color: #8B7355;
-    font-size: 12px;
-    margin: 0;
-}
-
-.uploadInfo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 18px;
-    background: rgba(115, 80, 47, 0.25);
-    border: 2px solid rgba(115, 80, 47, 0.6);
-    border-radius: 12px 12px 0 0;
-    position: relative;
-    width: 100%;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    backdrop-filter: blur(4px);
-    box-shadow: 
-        0 2px 8px rgba(115, 80, 47, 0.2),
-        inset 0 1px 2px rgba(255, 255, 255, 0.1);
-    margin: 0;
-    flex: 1;
-}
-
-.fileIcon {
-    font-size: 28px;
-    flex-shrink: 0;
-}
-
-.fileName {
-    flex: 1;
-    text-align: left;
-    color: #E8DBB7;
-    font-weight: 600;
-    font-size: 15px;
-    word-break: break-all;
-    line-height: 1.4;
-    min-width: 0;
-}
-
-.fileSize {
-    color: #B69B74;
-    font-size: 13px;
-    flex-shrink: 0;
-    font-weight: 500;
-}
-
-.uploadInfo button.removeFileBtn,
-.removeFileBtn {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
-    min-height: 32px !important;
-    max-height: 32px !important;
-    border-radius: 50% !important;
-    background: #B04310;
-    color: white;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    flex-grow: 0;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(178, 68, 15, 0.3);
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    position: static;
-}
-
-.removeFileBtn:hover {
-    background: rgb(188, 70, 11);
-    /* border-color: rgba(178, 68, 15, 1); */
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(178, 68, 15, 0.5);
-}
-
-
-/* 右侧封面区域 - 40% */
-.coverSection {
-    flex: 0 0 38%;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    height: 100%;
-    overflow: hidden;
-}
-
-.coverTitle {
-    font-size: 20px;
-    font-weight: 600;
-    color: #5E4630;
-    margin-bottom: 8px;
-    flex-shrink: 0;
-}
-
-.coverPreview {
-    flex: 1;
-    border: 2px dashed #E8DBB7;
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    min-height: 0;
-    max-height: 500px;
-    overflow: hidden;
-    box-sizing: border-box;
-    border-color: #7F6950;
-    background: rgba(127, 105, 80, 0.1);
-}
-
-.coverPreviewDragover {
-    border-color: #7F6950;
-    background: rgba(127, 105, 80, 0.2);
-}
-
-.coverPreview img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.coverPlaceholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    text-align: center;
-    padding: 20px;
-}
-
-.coverIcon {
-    font-size: 48px;
-    margin-bottom: 10px;
-}
-
-.coverPlaceholder p {
-    color: #5E4630;
-    font-weight: 600;
-    margin: 4px 0;
-    font-size: 14px;
-}
-
-.coverHint {
-    color: #8B7355 !important;
-    font-size: 13px !important;
-    font-weight: normal !important;
-}
-
-.removeCoverBtn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 35px!important;
-    height: 35px!important;
-    border-radius: 50%;
-    background: #B04310;
-    color: white;
-    border: none;
-    cursor: pointer;
-    font-size: 24px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    z-index: 10;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.removeCoverBtn:hover {
-    background: #c14810;
-    transform: scale(1.1);
-}
-
-/* 创建进度条容器 */
-.createProgressContainer {
-    width: 100%;
-    flex-shrink: 0;
-    padding: 12px 0;
-    box-sizing: border-box;
-    margin-bottom: 8px;
-}
-
-.createProgressBar {
-    width: 100%;
-    height: 8px;
-    background: rgba(115, 80, 47, 0.2);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 8px;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.createProgressFill {
-    height: 100%;
-    background: linear-gradient(90deg, #73502F, #B69B74, #8B7355);
-    border-radius: 4px;
-    transition: width 0.4s ease;
-    box-shadow: 0 0 8px rgba(115, 80, 47, 0.4);
-    position: relative;
-    overflow: hidden;
-}
-
-.createProgressFill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
-    animation: shimmer 1.5s infinite;
-}
-
-@keyframes shimmer {
-    0% {
-        transform: translateX(-100%);
-    }
-    100% {
-        transform: translateX(100%);
-    }
-}
-
-.createProgressText {
-    text-align: center;
-    font-size: 13px;
-    color: #B69B74;
-    font-weight: 600;
-    line-height: 1.4;
-}
-
-/* 上传遮罩层 */
-.uploadOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    pointer-events: all;
-}
-
-.uploadOverlayContent {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 16px;
-    padding: 32px 40px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    text-align: center;
-    min-width: 360px;
-    max-width: 90%;
-    animation: fadeInUp 0.3s ease-out;
-}
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.uploadOverlayTitle {
-    color: #5E4630;
-    font-size: 20px;
-    font-weight: 600;
-    margin: 0 0 24px 0;
-}
-
-/* 进度条容器 */
-.uploadProgressContainer {
-    margin-bottom: 20px;
-}
-
-.uploadProgressBar {
-    width: 100%;
-    height: 10px;
-    background: rgba(115, 80, 47, 0.15);
-    border-radius: 5px;
-    overflow: hidden;
-    margin-bottom: 12px;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.uploadProgressFill {
-    height: 100%;
-    background: linear-gradient(90deg, #73502F, #B69B74, #8B7355);
-    border-radius: 5px;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 10px rgba(115, 80, 47, 0.4);
-    position: relative;
-    overflow: hidden;
-}
-
-.uploadProgressFill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.4),
-        transparent
-    );
-    animation: shimmer 1.5s infinite;
-}
-
-.uploadProgressPercent {
-    color: #73502F;
-    font-size: 16px;
-    font-weight: 600;
-    text-align: center;
-}
-
-.uploadOverlayText {
-    color: #8B7355;
-    font-size: 14px;
-    margin: 0 0 24px 0;
-    line-height: 1.5;
-    min-height: 20px;
-}
-
-/* 取消按钮 */
-.cancelUploadBtn {
-    background: transparent;
-    border: 2px solid #DC3545;
-    color: #DC3545;
-    border-radius: 8px;
-    padding: 10px 24px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 100%;
-}
-
-.cancelUploadBtn:hover {
-    background: #DC3545;
     color: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.cancelUploadBtn:active {
-    transform: translateY(0);
+.createGameButton {
+    position: absolute;
+    top: 100px;
+    left: 0;
+    z-index: 10;
 }
 
-/* 移动端响应式 */
-@media (max-width: 768px) {
-    .uploadOverlayContent {
-        min-width: 320px;
-        padding: 24px 28px;
-        margin: 20px;
-    }
-
-    .uploadOverlayTitle {
-        font-size: 18px;
-        margin-bottom: 20px;
-    }
-
-    .uploadProgressBar {
-        height: 8px;
-    }
-
-    .uploadProgressPercent {
-        font-size: 14px;
-    }
-
-    .uploadOverlayText {
-        font-size: 13px;
-        margin-bottom: 20px;
-    }
-
-    .cancelUploadBtn {
-        padding: 10px 20px;
-        font-size: 13px;
-    }
-}
-
-/* 禁用状态 */
-.disabled {
-    opacity: 0.6;
-    pointer-events: none;
-    cursor: not-allowed;
-}
-
-.disabled input,
-.disabled textarea {
-    cursor: not-allowed;
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-.coverActions {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex-shrink: 0;
-}
-
-.noImageModeLabel {
+.createGameButtonItem {
+    width: 200px;
+    height: 60px;
+    background-color: #fb5b66;
+    border-radius: 10px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    cursor: pointer;
-    user-select: none;
-    padding: 8px 12px;
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
-    background: #bea4809b;
-    height: 80px;
-}
-
-.noImageModeCheckbox {
-    margin-left: 10px;
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: #B69B74;
-}
-
-.noImageModeCheckbox:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-}
-
-.noImageModeText {
-    font-size: 14px;
-    color: #5E4630;
-    font-weight: 500;
-}
-
-.uploadCoverBtn,
-.createGameBtn {
-    width: 100%;
-    padding: 12px 20px;
     border: none;
-    border-radius: 10px;
-    font-size: 16px;
-    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-sizing: border-box;
-}
-
-.createGameBtn {
-    background-color: transparent;
-    background-image: url('/data/asset/创作页面/创建按钮.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    padding: 0;
-    height: auto;
-    min-height: 50px;
-    box-shadow: none;
-}
-
-.createGameBtn:hover:not(:disabled) {
-    opacity: 0.9;
-    transform: translateY(-2px);
-}
-
-.createGameBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.myGamesContainer {
-    padding: 40px;
-    text-align: center;
-}
-
-.myGamesContainer h2 {
-    font-size: 32px;
-    color: #5E4630;
-    margin-bottom: 20px;
-}
-
-.myGamesContainer p {
-    color: #8B7355;
     font-size: 18px;
+    color: #ffffff;
+    transition: all 0.3s ease;
+    margin-left: 10px;
 }
 
-@media (max-width: 1280px) {
-    .pageRoot {
-        width: 1280px;
-        min-height: 100vh;
-        max-width: 1280px;
-        margin: 0 auto;
+.createGameButtonItem:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.createGameButtonItem svg {
+    font-size: 24px;
+}
+
+/* 我的数据模块 */
+.statsSection {
+    width: 1080px;
+    margin: 0 auto;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.sectionHeader hr {
+    flex: 1;
+    height: 1px;
+    border: none;
+    background-color: #D9D9D9;
+    margin: 0 20px;
+}
+
+.sectionTitle {
+    font-size: 30px;
+    color: #262626;
+    font-weight: 600;
+}
+
+.more {
+    width: auto;
+    height: 40px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    position: relative;
+    z-index: 10;
+    background-color: transparent;
+    outline: none;
+    color: #737373;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    border: none;
+}
+
+.moreText {
+    gap: 4px;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.statBox {
+    width: 250px;
+    height: 100px;
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.statBox:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.statValue {
+    font-size: 30px;
+    font-weight: 700;
+    color: #fb5b66;
+}
+
+.statLabel {
+    font-size: 20px;
+    color: #999999;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    /* justify-content: center; */
+    gap: 8px;
+}
+
+/* 发布作品模块 */
+.shopSection {
+    width: 1080px;
+    margin: 0 auto;
+    margin-top: 38px;
+}
+
+/* 在 1920px 以下时，用户信息区域占据 100% 宽度 */
+@media (max-width: 1920px) {
+    .userProfileSection {
+        max-width: 100vw;
+    }
+
+    .userProfileBackground {
+        max-width: 100%;
     }
 }
 
-@media (max-width: 768px) {
-    .pageRoot {
-        width: 100%;
-        min-width: auto;
-        height: 100vh;
-        background-size: cover;
-        background-attachment: fixed;
-        padding-bottom: 90px;
-        margin: 50px auto 0;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .mainContent {
-        flex-direction: column;
-        height: calc(100vh - 50px);
-        padding: 0 10px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        margin-bottom: 50px;
-    }
-
+/* 在 1080px 以下时，开始响应式调整 */
+@media (max-width: 1080px) {
     .main {
-        width: 100%;
-        min-height: auto;
-        padding: 0 0 10px 0;
-        box-sizing: border-box;
-        overflow: visible;
+        max-width: 100%;
+        padding: 0 20px;
     }
 
-    .createGameContainer {
-        flex-direction: column;
-        height: auto;
-        gap: 10px;
-        padding: 0;
-        border-radius: 0;
-        margin-bottom: 50px;
+    .userProfileBackground {
+        height: 300px;
     }
 
-    .formSection {
-        flex: none;
-        width: 100%;
-        max-height: none;
-        padding: 18px;
-        gap: 10px;
-        border-radius: 0;
-        background-size: fill;
-        background-position: center;
-        background-repeat: no-repeat;
-        margin-top: 10px;
+    .userAvatar {
+        margin-top: 80px;
+        width: 80px;
+        height: 80px;
+        border-width: 2px;
     }
 
-    .formGroup {
-        gap: 0px;
-    }
-
-    .formGroup label {
-        font-size: 14px;
-        margin-bottom: 5px !important;
-    }
-
-    .formGroup input[type="text"],
-    .formGroup textarea {
-        padding: 6px 10px;
-        font-size: 10px!important;
-    }
-
-    .formGroup input[type="text"] {
-        height: 30px;
-        font-size: 14px;
-        border-radius: 0px;
-    }
-
-    .formGroup textarea {
-        height: 60px;
-        font-size: 14px;
-        border-radius: 0px;
-    }
-
-    .fileUploadArea {
-        height: 60px;
-        min-height: 100px;
-        padding: 16px;
-    }
-
-    .uploadIcon{
+    .userName {
         font-size: 24px;
     }
 
-    .uploadInfo {
-        padding: 12px;
+    .statsSection,
+    .shopSection {
+        width: 100%;
+        padding: 0;
+        box-sizing: border-box;
     }
 
-    .coverSection {
-        flex: none;
-        width: 100%;
+    .statsGrid {
+        grid-template-columns: repeat(3, 1fr);
         gap: 16px;
     }
 
-    .coverPreview {
-        min-height: 200px;
-        max-height: calc(100% - 160px);
+    .statBox {
+        width: 100%;
+        max-width: 100%;
     }
 
-    .createProgressContainer {
-        padding: 10px 0;
-        margin-bottom: 6px;
-    }
-
-    .createProgressBar {
-        height: 6px;
-        margin-bottom: 6px;
-    }
-
-    .createProgressText {
-        font-size: 11px;
-    }
-
-    .coverActions {
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .uploadCoverBtn,
-    .createGameBtn {
-        min-height: 48px;
-        background-size: 100% 100%;
-    }
-
-    .coverTitle {
-        font-size: 14px;
-        margin-top: 10px;
-    }
-
-    .coverPlaceholder p {
-        font-size: 13px;
+    .sectionHeader{
+        margin-bottom: 10px;
     }
 }
+
+@media (max-width: 768px) {
+    .pageRoot{
+        padding-bottom: 20px;
+    }
+
+    .createGameButton {
+        top: 70px;
+    }
+
+    .createGameButtonItem {
+        width: 120px;
+        height: 36px;
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .userProfileBackground {
+        height: 250px;
+    }
+
+    .userAvatar {
+        margin-top: 80px;
+        width: 60px;
+        height: 60px;
+        border-width: 2px;
+    }
+
+    .userName {
+        font-size: 20px;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .statBox {
+        height: 90px;
+    }
+
+    .statValue {
+        font-size: 26px;
+    }
+
+    .statLabel {
+        font-size: 14px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 10px;
+    }
+
+    .sectionTitle {
+        font-size: 20px;
+    }
+
+    .more {
+        font-size: 14px;
+    }
+}
+

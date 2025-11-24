@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styles from './ChatHistory.module.css';
 import ReactMarkdown from 'react-markdown';
+import { cleanTextOnly } from '../../utils/textUtils';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -86,6 +87,14 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                                 if (!displayText) {
                                     return null;
                                 }
+                            }
+                            
+                            // 清理标记文字（NARRATION, DIALOGUE, HINT, CHOICE, OPTION）
+                            displayText = cleanTextOnly(displayText);
+                            
+                            // 如果清理后为空，则不显示这条消息
+                            if (!displayText) {
+                                return null;
                             }
 
                             // 适配角色类型：assistant (来自 type: 'game') 使用 system 样式

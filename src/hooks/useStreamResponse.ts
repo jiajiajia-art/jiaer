@@ -1,374 +1,177 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useCallback } from 'react';
 
-export interface StreamResponseResult {
-    text: string;
-    actions: string[];
-    isTyping: boolean;
-    fullText: string;
-    handleStreamResponse?: (response: Response) => Promise<void>;
-}
+// ACTION 提取工具函数
+const ACTION_REGEX_PATTERN = /\[ACTION:\s*(.*?)\]/g;
 
-export interface UseStreamResponseOptions {
-    enableTypingEffect?: boolean;
-    typingSpeed?: number;
-    extractActions?: boolean;
-    onUpdate?: (data: { text: string; actions: string[]; isTyping: boolean; fullText: string }) => void;
-    onInit?: () => void;
-}
+const extractActions = (text: string): { text: string; actions: string[] } => {
+    if (!text.includes('[ACTION:')) {
+        return { text: text.trim(), actions: [] };
+    }
 
-export const useStreamResponse = (
-    streamResponse: Response | null | undefined,
-    isActive: boolean,
-    options: UseStreamResponseOptions = {}
-): StreamResponseResult => {
-    const {
-        enableTypingEffect = false,
-        typingSpeed = 50,
-        extractActions = true,
-        onUpdate,
-        onInit
-    } = options;
+    const actions: string[] = [];
+    const actionRegex = new RegExp(ACTION_REGEX_PATTERN.source, ACTION_REGEX_PATTERN.flags);
+    let match;
 
-    const [text, setText] = useState('');
-    const [actions, setActions] = useState<string[]>([]);
-    const [isTyping, setIsTyping] = useState(false);
-    const [fullText, setFullText] = useState('');
+    while ((match = actionRegex.exec(text)) !== null) {
+        const actionText = match[1].trim();
+        if (actionText && !actions.includes(actionText)) {
+            actions.push(actionText);
+        }
+    }
 
-    // 打字机效果相关 refs
-    const typingBufferRef = useRef<string>('');
-    const displayedTextRef = useRef<string>('');
-    const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const extractedActionsRef = useRef<string[]>([]);
+    const textWithoutAction = text.replace(/\[ACTION:\s*.*?\]/g, '').trim();
+    return { text: textWithoutAction, actions };
+};
+
+interface UseStreamResponseOptions {
+    /**
+     * 更新消息的函数
+     */
+    setMessages: React.Dispatch<React.SetStateAction<any[]>>;
     
-    // 流式处理相关 refs（用于避免重复追加）
-    const accumulatedTextRef = useRef<string>('');
-    const isProcessingRef = useRef<boolean>(false);
+    /**
+     * 初始消息的配置（可选）
+     */
+    initialMessage?: {
+        type?: 'system' | 'user';
+        isMarkdown?: boolean;
+    };
+}
 
-    // 清理打字机定时器
-    const clearTypingTimer = useCallback(() => {
-        if (typingTimerRef.current) {
-            clearInterval(typingTimerRef.current);
-            typingTimerRef.current = null;
-        }
-    }, []);
-
-    // 更新函数：统一处理状态更新和回调
-    const updateData = useCallback((data: { text: string; actions: string[]; isTyping: boolean; fullText: string }) => {
-        if (onUpdate) {
-            // 回调模式
-            onUpdate(data);
-        } else {
-            // 状态模式
-            setText(data.text);
-            setActions(data.actions);
-            setIsTyping(data.isTyping);
-            setFullText(data.fullText);
-        }
-    }, [onUpdate]);
-
-    // 打字机效果：逐字符显示
-    const startTyping = useCallback(() => {
-        clearTypingTimer();
-
-        const typeNextChar = () => {
-            if (typingBufferRef.current.length > 0) {
-                const char = typingBufferRef.current[0];
-                typingBufferRef.current = typingBufferRef.current.slice(1);
-                displayedTextRef.current += char;
-                
-                // 更新显示文本（去除 ACTION 部分）
-                let displayText = displayedTextRef.current;
-                if (extractActions && displayText.includes('[ACTION:')) {
-                    displayText = displayText.slice(0, displayText.indexOf('[ACTION:')).trim();
-                }
-
-                updateData({
-                    text: displayText,
-                    actions: extractedActionsRef.current,
-                    isTyping: true,
-                    fullText: accumulatedTextRef.current
-                });
-            } else {
-                clearTypingTimer();
-                // 最终显示文本（去除 ACTION 部分）
-                let finalDisplayText = displayedTextRef.current;
-                if (extractActions && finalDisplayText.includes('[ACTION:')) {
-                    finalDisplayText = finalDisplayText.slice(0, finalDisplayText.indexOf('[ACTION:')).trim();
-                }
-                
-                updateData({
-                    text: finalDisplayText,
-                    actions: extractedActionsRef.current,
-                    isTyping: false,
-                    fullText: accumulatedTextRef.current
-                });
-            }
-        };
-
-        typingTimerRef.current = setInterval(typeNextChar, typingSpeed);
-    }, [typingSpeed, clearTypingTimer, extractActions, updateData]);
-
-    // 处理流式响应（核心逻辑）
+/**
+ * 流式响应处理 Hook
+ * 统一处理流式数据解析、ACTION 提取和消息更新
+ * 刷新数据的方法由各组件在流结束后自行调用
+ */
+export const useStreamResponse = ({ setMessages, initialMessage }: UseStreamResponseOptions) => {
     const handleStreamResponse = useCallback(async (response: Response) => {
-        if (isProcessingRef.current) {
-            console.warn('流式处理已在进行中，跳过重复请求');
-            return;
-        }
-
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let fullText = '';
+        let actions: string[] = [];
 
-        if (!reader) return;
-
-        // 标记为正在处理
-        isProcessingRef.current = true;
-
-        // 重置状态
-        accumulatedTextRef.current = '';
-        displayedTextRef.current = '';
-        typingBufferRef.current = '';
-        extractedActionsRef.current = [];
-
-        // 调用初始化回调
-        if (onInit) {
-            onInit();
+        if (!reader) {
+            return;
         }
 
-        // 初始化状态
-        updateData({
-            text: '',
-            actions: [],
-            isTyping: true,
-            fullText: ''
+        // 添加初始"打字中"消息
+        setMessages((prev) => {
+            const newMessage = {
+                type: initialMessage?.type || 'system',
+                text: '',
+                isTyping: true,
+                isMarkdown: initialMessage?.isMarkdown ?? true,
+                actions: [] as string[]
+            };
+            return [...prev, newMessage];
         });
 
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const segments = buffer.split(/\r?\n/);
-                buffer = segments.pop() || '';
-
-                for (const segment of segments) {
-                    const line = segment.trim();
-                    if (!line) continue;
-
-                    const cleaned = line.startsWith('data:') ? line.replace(/^data:\s*/, '') : line;
-
-                    try {
-                        const json = JSON.parse(cleaned);
-
-                        if (json.content) {
-                            const chunk = json.content;
-                            // 累积完整文本（不重复追加）
-                            accumulatedTextRef.current += chunk;
-
-                            // 检测并提取 ACTION
-                            let displayText = accumulatedTextRef.current;
-                            let hasAction = false;
-
-                            if (extractActions && accumulatedTextRef.current.includes('[ACTION:')) {
-                                hasAction = true;
-                                displayText = accumulatedTextRef.current.slice(0, accumulatedTextRef.current.indexOf('[ACTION:'));
-                                
-                                // 提取所有 ACTION
-                                const actionRegex = /\[ACTION:\s*(.*?)\]/g;
-                                let match;
-                                const newActions: string[] = [];
-
-                                while ((match = actionRegex.exec(accumulatedTextRef.current)) !== null) {
-                                    const actionText = match[1].trim();
-                                    if (!extractedActionsRef.current.includes(actionText) && !newActions.includes(actionText)) {
-                                        newActions.push(actionText);
-                                    }
-                                }
-
-                                if (newActions.length > 0) {
-                                    extractedActionsRef.current = [...extractedActionsRef.current, ...newActions];
-                                }
-                            }
-
-                            const finalDisplayText = displayText.trim();
-
-                            if (enableTypingEffect) {
-                                // 打字机模式：只添加新增的文本部分到缓冲区
-                                // 注意：displayedTextRef.current 跟踪的是原始累积文本（可能包含 ACTION）
-                                // 我们需要基于原始累积文本计算新增部分
-                                const currentAccumulatedLength = displayedTextRef.current.length;
-                                const newText = accumulatedTextRef.current.slice(currentAccumulatedLength);
-                                
-                                if (newText.length > 0) {
-                                    // 将新增的原始文本添加到缓冲区
-                                    typingBufferRef.current += newText;
-                                    // 更新 displayedTextRef 为当前累积的原始文本（用于下次计算）
-                                    displayedTextRef.current = accumulatedTextRef.current;
-                                    
-                                    if (!typingTimerRef.current) {
-                                        startTyping();
-                                    }
-                                }
-                            } else {
-                                // 实时模式：立即更新（和 DialogueModal 一样，使用 fullText 累积）
-                                updateData({
-                                    text: finalDisplayText,
-                                    actions: extractedActionsRef.current,
-                                    isTyping: !hasAction, // 有 ACTION 时停止打字效果
-                                    fullText: accumulatedTextRef.current
-                                });
-                            }
-                        }
-                    } catch {
-                        // 解析不完整时忽略
-                    }
-                }
+        let chunkCount = 0;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+                break;
             }
-        } finally {
-            // 流结束时，最终处理
-            if (extractActions && accumulatedTextRef.current.includes('[ACTION:')) {
-                const textBeforeAction = accumulatedTextRef.current.slice(0, accumulatedTextRef.current.indexOf('[ACTION:'));
-                const actionRegex = /\[ACTION:\s*(.*?)\]/g;
-                let match;
-                const finalActions: string[] = [];
 
-                while ((match = actionRegex.exec(accumulatedTextRef.current)) !== null) {
-                    const actionText = match[1].trim();
-                    if (!finalActions.includes(actionText)) {
-                        finalActions.push(actionText);
-                    }
-                }
+            buffer += decoder.decode(value, { stream: true });
+            const segments = buffer.split(/\r?\n/);
+            buffer = segments.pop() || '';
 
-                extractedActionsRef.current = finalActions;
-                const displayText = textBeforeAction.trim();
+            for (const segment of segments) {
+                const line = segment.trim();
+                if (!line) continue;
 
-                if (enableTypingEffect) {
-                    // 打字机模式：确保所有文本都在缓冲区中
-                    // 计算剩余未添加到缓冲区的原始文本
-                    const remainingText = accumulatedTextRef.current.slice(displayedTextRef.current.length);
-                    if (remainingText.length > 0) {
-                        typingBufferRef.current += remainingText;
-                        displayedTextRef.current = accumulatedTextRef.current;
-                        if (!typingTimerRef.current) {
-                            startTyping();
-                        }
-                    }
-                    // 等待缓冲区内容全部显示完
-                    const waitForTyping = () => {
-                        if (typingBufferRef.current.length > 0) {
-                            setTimeout(waitForTyping, 100);
-                        } else {
-                            // 最终显示文本（去除 ACTION）
-                            let finalDisplayText = displayedTextRef.current;
-                            if (extractActions && finalDisplayText.includes('[ACTION:')) {
-                                finalDisplayText = finalDisplayText.slice(0, finalDisplayText.indexOf('[ACTION:')).trim();
-                            }
+                const cleaned = line.startsWith('data:') ? line.replace(/^data:\s*/, '') : line;
+
+                try {
+                    const json = JSON.parse(cleaned);
+
+                    // 支持多种格式：nnnnn
+                    // 1. json.content（无 type 或 type 为 'chunk'）
+                    // 2. json.type === 'stream' && json.content
+                    // 3. json.type === 'chunk' && json.content
+                    const chunk = json.content && (json.type === undefined || json.type === 'raw_text' || json.type === 'chunk' || json.type === 'stream')
+                        ? json.content 
+                        : null;
+
+                    if (chunk) {
+                        chunkCount++;
+                        fullText += chunk;
+
+                        // 检测 ACTION
+                        if (fullText.includes('[ACTION:')) {
+                            const { text: textWithoutAction, actions: extractedActions } = extractActions(fullText);
                             
-                            updateData({
-                                text: finalDisplayText,
-                                actions: finalActions,
-                                isTyping: false,
-                                fullText: accumulatedTextRef.current
+                            // 合并新的 actions
+                            const newActions = extractedActions.filter(action => !actions.includes(action));
+                            if (newActions.length > 0) {
+                                actions = [...actions, ...newActions];
+                            }
+
+                            // 更新消息：有 ACTION 时停止打字效果
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last) {
+                                    updated[updated.length - 1] = {
+                                        ...last,
+                                        text: textWithoutAction,
+                                        isTyping: false,
+                                        actions: actions.length > 0 ? [...actions] : undefined
+                                    };
+                                    return updated;
+                                }
+                                return prev;
+                            });
+                        } else {
+                            // 没有 ACTION 时持续更新文字
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last && last.isTyping) {
+                                    updated[updated.length - 1] = {
+                                        ...last,
+                                        text: fullText.trim(),
+                                    };
+                                    return updated;
+                                }
+                                if (last && !last.isTyping) {
+                                    console.warn('⚠️ [useStreamResponse] last.isTyping 为 false，跳过更新');
+                                }
+                                return updated;
                             });
                         }
-                    };
-                    waitForTyping();
-                } else {
-                    // 实时模式
-                    updateData({
-                        text: displayText,
-                        actions: finalActions,
-                        isTyping: false,
-                        fullText: accumulatedTextRef.current
-                    });
-                }
-            } else {
-                if (enableTypingEffect) {
-                    // 等待缓冲区内容全部显示完
-                    const waitForTyping = () => {
-                        if (typingBufferRef.current.length > 0) {
-                            setTimeout(waitForTyping, 100);
-                        } else {
-                            // 最终显示文本（去除 ACTION）
-                            let finalDisplayText = displayedTextRef.current;
-                            if (extractActions && finalDisplayText.includes('[ACTION:')) {
-                                finalDisplayText = finalDisplayText.slice(0, finalDisplayText.indexOf('[ACTION:')).trim();
-                            }
-                            
-                            updateData({
-                                text: finalDisplayText,
-                                actions: extractedActionsRef.current,
-                                isTyping: false,
-                                fullText: accumulatedTextRef.current
-                            });
-                        }
-                    };
-                    waitForTyping();
-                } else {
-                    updateData({
-                        text: accumulatedTextRef.current.trim(),
-                        actions: extractedActionsRef.current,
-                        isTyping: false,
-                        fullText: accumulatedTextRef.current
-                    });
+                    }
+                } catch {
+                    // 解析不完整时忽略
                 }
             }
-
-            // 标记处理完成
-            isProcessingRef.current = false;
-        }
-    }, [enableTypingEffect, extractActions, startTyping, updateData, onInit]);
-
-    // 状态模式：当 streamResponse 变化时自动处理
-    useEffect(() => {
-        if (!onUpdate && isActive && streamResponse) {
-            // 如果正在处理旧的流，先停止并重置
-            if (isProcessingRef.current) {
-                clearTypingTimer();
-                accumulatedTextRef.current = '';
-                displayedTextRef.current = '';
-                typingBufferRef.current = '';
-                extractedActionsRef.current = [];
-                isProcessingRef.current = false;
-                // 重置显示状态
-                setText('');
-                setActions([]);
-                setIsTyping(false);
-                setFullText('');
-            }
-            
-            // 处理新的流
-            handleStreamResponse(streamResponse);
         }
 
-        // 清理函数
-        return () => {
-            clearTypingTimer();
-            if (!isActive) {
-                // 重置状态
-                accumulatedTextRef.current = '';
-                displayedTextRef.current = '';
-                typingBufferRef.current = '';
-                extractedActionsRef.current = [];
-                isProcessingRef.current = false;
-                
-                if (!onUpdate) {
-                    // 只在状态模式下重置状态
-                    setText('');
-                    setActions([]);
-                    setIsTyping(false);
-                    setFullText('');
+        // 流结束时，确保最终文本和关闭打字效果
+        setMessages((prev) => {
+            const updated = [...prev];
+            const last = updated[updated.length - 1];
+            if (last) {
+                // 确保最终文本是完整的（去除 ACTION 部分）
+                let finalText = fullText.trim();
+                if (finalText.includes('[ACTION:')) {
+                    finalText = finalText.slice(0, finalText.indexOf('[ACTION:')).trim();
                 }
+
+                updated[updated.length - 1] = {
+                    ...last,
+                    text: finalText,
+                    isTyping: false
+                };
+                return updated;
             }
-        };
-    }, [isActive, streamResponse, handleStreamResponse, clearTypingTimer, onUpdate]);
+            return updated;
+        });
+    }, [setMessages, initialMessage]);
 
     return {
-        text,
-        actions,
-        isTyping,
-        fullText,
-        handleStreamResponse: onUpdate ? handleStreamResponse : undefined // 回调模式才返回函数
+        handleStreamResponse
     };
 };

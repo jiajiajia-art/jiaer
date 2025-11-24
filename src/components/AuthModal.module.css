@@ -11,6 +11,10 @@
     justify-content: center;
     z-index: 2000;
     animation: fadeIn 0.3s ease-out;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
 }
 
 @keyframes fadeIn {
@@ -23,21 +27,19 @@
 }
 
 .modalContent {
-    background-image: url('/data/asset/建筑选项框/框.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    border-radius: 16px;
+    background: #ffffff;
+    border-radius: 14px;
     width: 90%;
     max-width: 480px;
-    min-height: 400px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    min-height: 300px;
+    border: 1px solid rgba(251, 70, 85, 0.18);
+    box-shadow: 0 18px 48px rgba(251, 70, 85, 0.22);
     animation: slideUp 0.3s ease-out;
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 40px 30px 30px 30px;
+    padding: 36px 32px ;
 }
 
 @keyframes slideUp {
@@ -53,41 +55,51 @@
 
 .closeBtn {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 46px;
-    height: 46px;
+    top: 12px;
+    right: 12px;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     z-index: 10;
+    transition: all 0.3s ease;
+    color: #FB4655;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 600;
+    background: transparent;
+    border: none;
 }
 
-.closeBtn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+.closeBtn:hover {
+    transform: translateY(-2px);
+    color: #ff5c68;
 }
 
 .title {
-    color: #B24F1B;
-    font-size: 2rem;
+    color: #111;
+    font-size: 1.7rem;
     font-weight: 700;
     text-align: center;
-    margin: 0 0 30px 0;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    margin: 0 0 18px 0;
+    letter-spacing: 0.5px;
 }
 
 .form {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
 }
 
 .inputGroup {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 /* 包含"忘记密码"的输入组，减少底部间距 */
@@ -102,27 +114,25 @@
 
 .input {
     width: 100%;
-    padding: 14px 16px;
-    border: 2px solid #8B6B4F;
-    border-radius: 8px;
-    background: rgba(139, 107, 79, 0.2);
-    color: #4d4129de;
-    font-size: 1rem;
-    font-weight: bold;
+    padding: 11px 14px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 10px;
+    color: #111;
+    font-size: 0.95rem;
+    font-weight: 500;
     outline: none;
     transition: all 0.3s ease;
     box-sizing: border-box;
 }
 
 .input::placeholder {
-    color: #4d4129de;
-    font-weight: 600;
+    color: rgba(0,0,0,0.45);
+    font-weight: 500;
 }
 
 .input:focus {
-    border-color: #B24F1B;
-    background: rgba(139, 107, 79, 0.3);
-    box-shadow: 0 0 0 3px rgba(178, 79, 27, 0.1);
+    border-color: #FB4655;
+    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.15);
 }
 
 .inputError {
@@ -161,28 +171,28 @@
 
 .submitBtn {
     width: 100%;
-    padding: 14px;
-    margin-top: 0;
-    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
-    color: #E8DBB7;
+    padding: 12px;
+    margin-top: 4px;
+    background: linear-gradient(135deg, #FB4655 0%, #F74363 100%);
+    color: #fff;
     border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
+    border-radius: 10px;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.3);
+    box-shadow: 0 12px 26px rgba(251, 70, 85, 0.32);
 }
 
 .submitBtn:hover {
-    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
+    background: linear-gradient(135deg, #FF5A6A 0%, #FB4655 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(178, 79, 27, 0.4);
+    box-shadow: 0 18px 36px rgba(251, 70, 85, 0.4);
 }
 
 .submitBtn:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+    box-shadow: 0 8px 18px rgba(251, 70, 85, 0.3);
 }
 
 .submitBtn:disabled {
@@ -198,19 +208,19 @@
 }
 
 .modeSwitch {
-    margin-top: 20px;
+    margin-top: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
     font-size: 0.9rem;
-    color: #8B6B4F;
+    color: rgba(0,0,0,0.6);
 }
 
 .switchBtn {
     background: transparent;
     border: none;
-    color: #B24F1B;
+    color: #FB4655;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
@@ -219,11 +229,11 @@
 }
 
 .switchBtn:hover {
-    color: #C85F2B;
+    color: #ff5c68;
 }
 
 .forgetPassword {
-    color: #B24F1B;
+    color: #FB4655;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
@@ -235,7 +245,7 @@
 /* 验证码输入框容器 */
 .codeInputWrapper {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: stretch;
 }
 
@@ -246,35 +256,37 @@
 
 .sendCodeBtn {
     flex-shrink: 0;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, #B24F1B 0%, #8B3A15 100%);
-    color: #E8DBB7;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #FB4655 0%, #F74363 100%);
+    color: #fff;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
     min-width: 120px;
+    box-shadow: 0 10px 24px rgba(251, 70, 85, 0.25);
 }
 
 .sendCodeBtn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
+    background: linear-gradient(135deg, #FF5A6A 0%, #FB4655 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.3);
+    box-shadow: 0 14px 30px rgba(251, 70, 85, 0.3);
 }
 
 .sendCodeBtn:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+    box-shadow: 0 8px 18px rgba(251, 70, 85, 0.25);
 }
 
 .sendCodeBtn:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
     cursor: not-allowed;
     transform: none;
-    background: linear-gradient(135deg, #8B6B4F 0%, #6B4A3F 100%);
+    background: linear-gradient(135deg, #d8d8d8 0%, #c4c4c4 100%);
+    box-shadow: none;
 }
 
 /* 响应式设计 */

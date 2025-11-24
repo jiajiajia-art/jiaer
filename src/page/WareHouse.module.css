@@ -1,44 +1,39 @@
 .pageRoot {
-    min-height: 64px;
-    width: 100vw;
-    height: 100vh;
-    background-image: url('/data/asset/首页/大背景copy.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    max-width: 1800px;
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
     margin: 0 auto;
 }
 
 .mainContent {
     color: black;
     display: flex;
-    min-height: calc(100vh - 80px);
+    margin: 0;
+    padding: 0;
+    margin-bottom: 48px;
 }
 
 .main {
     flex: 1;
-    min-height: calc(100vh - 80px);
-    padding: 20px 20px 10px 20px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    overflow: visible;
+    padding: 20px;
     box-sizing: border-box;
+    margin-top: 80px;
 }
 
-.WareHouseContainer {
-    padding: 40px;
-    text-align: center;
+/* 中等屏幕适配 (769px - 1080px) */
+@media screen and (min-width: 769px) and (max-width: 1080px) {
+    .main {
+        padding: 20px;
+    }
 }
 
-.WareHouseContainer h2 {
-    font-size: 32px;
-    color: #5E4630;
-    margin-bottom: 20px;
-}
-
-.WareHouseContainer p {
-    color: #8B7355;
-    font-size: 18px;
-}
-
+/* 移动端适配 (768px以下) */
 @media (max-width: 768px) {
     .pageRoot {
         width: 100%;
@@ -47,5 +42,14 @@
         height: auto;
         background-size: cover;
         padding-bottom: 90px;
+    }
+
+    .mainContent {
+        margin-bottom: 0;
+    }
+
+    .main {
+        margin-top: 60px;
+        padding: 10px;
     }
 }

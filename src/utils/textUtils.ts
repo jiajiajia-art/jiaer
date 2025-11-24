@@ -1,0 +1,153 @@
+// 清理历史记录中的标记文字，并提取 OPTION
+export const cleanHistoryMessage = (text: string): { cleanedText: string; options: string[] } => {
+    if (!text) return { cleanedText: '', options: [] };
+    
+    let cleaned = text;
+    const options: string[] = [];
+    
+    const optionRegex = /\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi;
+    let optionMatch;
+    while ((optionMatch = optionRegex.exec(text)) !== null) {
+        const optionText = optionMatch[1]?.trim();
+        if (optionText && !options.includes(optionText)) {
+            options.push(optionText);
+        }
+    }
+    
+    cleaned = cleaned.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+        return content ? content.trim() : '';
+    });
+    
+    cleaned = cleaned.replace(/\[DIALOGUE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+        if (content.includes('"')) {
+            const textMatch = content.match(/"([^"]*)"/);
+            return textMatch ? textMatch[1] : content.trim();
+        }
+        return content ? content.trim() : '';
+    });
+    
+    cleaned = cleaned.replace(/\[HINT:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+        return content ? content.trim() : '';
+    });
+    cleaned = cleaned.replace(/\[CHOICE:[\s\S]*?\[END_CHOICE\]/gi, '');
+    cleaned = cleaned.replace(/\[CHOICE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
+    cleaned = cleaned.replace(/\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
+    cleaned = cleaned.replace(/\]/g, '\n');
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+    
+    return { cleanedText: cleaned, options };
+};
+
+// 仅清理文本，不提取 OPTION（用于 ChatHistory 等不需要选项的场景）
+export const cleanTextOnly = (text: string): string => {
+    const { cleanedText } = cleanHistoryMessage(text);
+    return cleanedText;
+};
+
+// 提取 CHOICE 相关的完整信息，用于转换为 step 格式
+export const extractChoiceFromHistory = (text: string): {
+    title: string;
+    text: string;
+    options: string[];
+} | null => {
+    if (!text) return null;
+    
+    // 匹配完整的 CHOICE 块（从 [CHOICE: 到 [END_CHOICE]）
+    const choiceBlockRegex = /\[CHOICE:([^\]]*)\]([\s\S]*?)\[END_CHOICE\]/i;
+    const choiceBlockMatch = text.match(choiceBlockRegex);
+    
+    if (!choiceBlockMatch) {
+        // 如果没有完整的 CHOICE 块，尝试匹配简单的 CHOICE 标签和后续的 OPTION
+        const simpleChoiceRegex = /\[CHOICE:\s*([^\]]*)\]/i;
+        const simpleChoiceMatch = text.match(simpleChoiceRegex);
+        
+        if (!simpleChoiceMatch) {
+            // 检查是否有 OPTION，如果有，说明可能是 choice 但没有 CHOICE 标签
+            const hasOptions = /\[OPTION:/i.test(text);
+            if (!hasOptions) {
+                return null;
+            }
+        }
+    }
+    
+    // 提取 title（CHOICE 标签中的内容）
+    let title = '';
+    const choiceTitleRegex = /\[CHOICE:\s*([^\]]*)\]/i;
+    const titleMatch = text.match(choiceTitleRegex);
+    if (titleMatch && titleMatch[1]) {
+        title = titleMatch[1].trim();
+    }
+    
+    // 提取所有 OPTION
+    const options: string[] = [];
+    const optionRegex = /\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi;
+    let optionMatch;
+    while ((optionMatch = optionRegex.exec(text)) !== null) {
+        const optionText = optionMatch[1]?.trim();
+        if (optionText && !options.includes(optionText)) {
+            options.push(optionText);
+        }
+    }
+    
+    // 如果没有选项，返回 null
+    if (options.length === 0) {
+        return null;
+    }
+    
+    // 提取 CHOICE 和 OPTION 之间的文本作为描述文本
+    let choiceText = '';
+    
+    if (choiceBlockMatch && choiceBlockMatch[2]) {
+        // 如果有完整的 CHOICE 块，提取中间的内容
+        let middleText = choiceBlockMatch[2];
+        // 移除所有 OPTION 标签
+        middleText = middleText.replace(/\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
+        // 清理其他标签
+        middleText = middleText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+            return content ? content.trim() : '';
+        });
+        middleText = middleText.replace(/\[DIALOGUE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+            if (content.includes('"')) {
+                const textMatch = content.match(/"([^"]*)"/);
+                return textMatch ? textMatch[1] : content.trim();
+            }
+            return content ? content.trim() : '';
+        });
+        middleText = middleText.replace(/\[HINT:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+            return content ? content.trim() : '';
+        });
+        middleText = middleText.replace(/\]/g, '\n');
+        middleText = middleText.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+        choiceText = middleText;
+    } else {
+        // 如果没有完整的 CHOICE 块，尝试提取 CHOICE 标签后的文本（直到第一个 OPTION）
+        const afterChoiceMatch = text.match(/\[CHOICE:[^\]]*\]([\s\S]*?)(?=\[OPTION:|$)/i);
+        if (afterChoiceMatch && afterChoiceMatch[1]) {
+            let extractedText = afterChoiceMatch[1];
+            // 清理其他标签
+            extractedText = extractedText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+                return content ? content.trim() : '';
+            });
+            extractedText = extractedText.replace(/\[DIALOGUE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+                if (content.includes('"')) {
+                    const textMatch = content.match(/"([^"]*)"/);
+                    return textMatch ? textMatch[1] : content.trim();
+                }
+                return content ? content.trim() : '';
+            });
+            extractedText = extractedText.replace(/\[HINT:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+                return content ? content.trim() : '';
+            });
+            extractedText = extractedText.replace(/\]/g, '\n');
+            extractedText = extractedText.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+            choiceText = extractedText;
+        }
+    }
+    
+    return {
+        title: title || '',
+        text: choiceText,
+        options
+    };
+};
+

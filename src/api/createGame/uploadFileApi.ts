@@ -2,9 +2,10 @@ import { api } from "../base";
 import type { UploadFileResponse } from "./uploadFileApi.type";
 
 const uploadFileApi = {
-  uploadAndProcess: (file: File) => {
+  uploadAndProcess: (file: File, generateImages: boolean) => {
     const formData = new FormData();
     formData.append('pdf', file);
+    formData.append('generateImages', generateImages.toString());
     
     return api.post<UploadFileResponse>('/backend/pdf/upload-and-process', formData, {
       headers: {

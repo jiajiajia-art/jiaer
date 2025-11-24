@@ -89,7 +89,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
         // 如果正在加载，直接返回
         if (isLoadingHistoryRef.current) {
-            console.log('⏸️ 历史记录正在加载中，跳过重复请求');
             return;
         }
 
@@ -250,13 +249,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 
                 // 如果历史记录为空（没有用户消息），延迟后再次发送
                 if (isEmptyHistory) {
-                    console.log('📤 历史记录为空（无用户消息），第一条消息将自动发送两次');
                     setTimeout(() => {
-                        console.log('📤 自动发送第二次消息');
                         onSendMessage(message);
                     }, 300);
-                } else {
-                    console.log('📤 历史记录不为空，只发送一次');
                 }
                 return;
             } catch (error) {
@@ -276,8 +271,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         // 如果是第一条消息且历史记录为空，延迟后再次发送
         if (isFirstMessage && isEmptyHistory) {
             hasSentFirstMessageRef.current = true;
-            console.log('📤 历史记录为空（无用户消息），第一条消息将自动发送两次');
-            // 延迟一段时间后再次发送
             setTimeout(() => {
                 console.log('📤 自动发送第二次消息');
                 onSendMessage(message);

@@ -1,0 +1,260 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modalContent {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modalTitle {
+    font-size: 24px;
+    font-weight: 600;
+    color: #fb4755;
+    margin: 0;
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    font-size: 32px;
+    color: #999;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.modalBody {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.alertMessage {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.alertText {
+    font-size: 16px;
+    color: #856404;
+    margin: 0;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+.missionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+}
+
+.missionItem {
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.missionItem:hover {
+    border-color: #fb4755;
+    box-shadow: 0 2px 8px rgba(251, 71, 85, 0.1);
+}
+
+.missionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.missionTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    flex: 1;
+}
+
+.missionStatus {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.missionStatusActive {
+    background: #fb4755;
+    color: #fff;
+}
+
+.missionDescription {
+    margin-bottom: 12px;
+}
+
+.missionDescription p {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.missionCompletionPaths p {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #fb5858;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.missionCompletionPaths div {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+.missionReward {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.submitButton {
+    background: #fb4755;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.submitButton:hover {
+    background: #e63946;
+    transform: scale(1.05);
+}
+
+.submitButton:active {
+    transform: scale(0.98);
+}
+
+.rewardItem {
+    font-size: 14px;
+    color: #fb4755;
+    font-weight: 500;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .modalContent {
+        width: 95%;
+        max-height: 76vh;
+    }
+
+    .modalHeader {
+        padding: 16px 20px;
+    }
+
+    .modalTitle {
+        font-size: 20px;
+    }
+
+    .modalBody {
+        padding: 20px;
+    }
+
+    .alertMessage {
+        padding: 12px;
+    }
+
+    .alertText {
+        font-size: 14px;
+    }
+
+    .missionItem {
+        padding: 12px;
+    }
+
+    .missionTitle {
+        font-size: 16px;
+    }
+
+    .missionDescription p {
+        font-size: 13px;
+    }
+}
+

@@ -13,6 +13,8 @@ import statisticsApi from '../../api/statistics/statisticsApi';
 import MissionsModal from './MissionsModal';
 import MissionApi from '../../api/game/missionApi';
 import type { MissionData } from '../../api/game/missionApi.type';
+import { useStreamResponse } from '../../hooks/useStreamResponse';
+import { useAuthStore } from '../../store/useAuthStore';
 
 // EquipmentSlots 类型定义（后端数据结构：equipment 存储的是物品ID字符串）
 type EquipmentSlots = {
@@ -27,7 +29,6 @@ type EquipmentSlots = {
 };
 
 // 常量定义
-const ACTION_REGEX_PATTERN = /\[ACTION:\s*(.*?)\]/g;
 const DEFAULT_WELCOME_MESSAGE = (playerName: string) => `欢迎来到游戏世界，${playerName}！`;
 
 interface DialogueModalProps {
@@ -62,6 +63,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     const { getNewPlayer } = useGameData();
     const [missionData, setMissionData] = useState<MissionData | null>(null);
     const [loadingMissions, setLoadingMissions] = useState(false);
+    const { user } = useAuthStore();
 
     // 当 initialInput 变化时，更新 inputValue
     useEffect(() => {
@@ -82,28 +84,6 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     const sessionId = useGameStore((state) => state.sessionId);
     const pdfFileId = useGameStore((state) => state.pdfFileId);
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
-    // 提取 ACTION 字段的工具函数
-    const extractActions = useCallback((text: string): { text: string; actions: string[] } => {
-        if (!text.includes('[ACTION:')) {
-            return { text: text.trim(), actions: [] };
-        }
-
-        const actions: string[] = [];
-        // 每次创建新的正则表达式实例，避免全局状态问题
-        const actionRegex = new RegExp(ACTION_REGEX_PATTERN.source, ACTION_REGEX_PATTERN.flags);
-        let match;
-
-        while ((match = actionRegex.exec(text)) !== null) {
-            const actionText = match[1].trim();
-            if (actionText && !actions.includes(actionText)) {
-                actions.push(actionText);
-            }
-        }
-
-        const textWithoutAction = text.replace(/\[ACTION:\s*.*?\]/g, '').trim();
-        return { text: textWithoutAction, actions };
-    }, []);
 
     // 计算最新的 system 消息（用于滚动效果）
     const systemMessages = useMemo(() => 
@@ -158,7 +138,20 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                     if (isInitialLoad && !hasLoadedInitialMessage.current) {
                         const lastMessage = convertedMessages[convertedMessages.length - 1];
                         if (lastMessage && lastMessage.role === 'assistant') {
-                            const { text: textWithoutAction, actions } = extractActions(lastMessage.text || '');
+                            // 简单提取 ACTION（用于历史记录显示）
+                            let textWithoutAction = lastMessage.text || '';
+                            const actions: string[] = [];
+                            if (textWithoutAction.includes('[ACTION:')) {
+                                const actionRegex = /\[ACTION:\s*(.*?)\]/g;
+                                let match;
+                                while ((match = actionRegex.exec(textWithoutAction)) !== null) {
+                                    const actionText = match[1].trim();
+                                    if (actionText && !actions.includes(actionText)) {
+                                        actions.push(actionText);
+                                    }
+                                }
+                                textWithoutAction = textWithoutAction.replace(/\[ACTION:\s*.*?\]/g, '').trim();
+                            }
                             
                             setMessages([{
                                 type: 'system',
@@ -194,12 +187,10 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         } finally {
             setLoadingHistory(false);
         }
-    }, [sessionId, playerName, extractActions]);
+    }, [sessionId, playerName]);
 
     // 获取任务列表
-    const loadMissions = useCallback(async () => {
-        console.log("loadMissions正在开发");
-        
+    const loadMissions = useCallback(async () => {        
         if (!sessionId) {
             return;
         }
@@ -222,7 +213,6 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     useEffect(() => {
         if (isOpen && sessionId && !hasLoadedInitialMessage.current) {
             loadHistoryMessages(true);
-            // 同时加载任务列表
             loadMissions();
         }
         // 当弹窗关闭时，重置标志，以便下次打开时可以重新加载
@@ -231,14 +221,12 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     }, [isOpen, sessionId, loadHistoryMessages, loadMissions]);
 
-    // 当历史记录弹窗打开时加载历史记录（刷新历史记录列表）
     useEffect(() => {
         if (showHistory && sessionId) {
             loadHistoryMessages(false);
         }
     }, [showHistory, sessionId, loadHistoryMessages]);
 
-    // 同时刷新历史记录和任务列表（使用 allSettled 确保一个失败不影响另一个）
     const refreshHistoryAndMissions = useCallback(async () => {
         await Promise.allSettled([
             loadHistoryMessages(),
@@ -276,109 +264,25 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
         }
     }, [currentIsTyping, showHistory, refreshHistoryAndMissions]);
 
-    // 🔹 改进后的流式响应解析（支持实时 ACTION 提取）
+    // 使用流式处理 Hook
+    const { handleStreamResponse: baseHandleStreamResponse } = useStreamResponse({
+        setMessages,
+        initialMessage: { type: 'system', isMarkdown: true }
+    });
+
+    // 包装 handleStreamResponse，在流结束后刷新数据
     const handleStreamResponse = useCallback(async (response: Response) => {
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let fullText = '';
-        let actions: string[] = [];
-
-        if (!reader) return;
-
-        // 添加初始“打字中”提示
-        setMessages((prev) => [
-            ...prev,
-            { type: 'system', text: '', isTyping: true, isMarkdown: true, actions: [] }
-        ]);
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const segments = buffer.split(/\r?\n/);
-            buffer = segments.pop() || '';
-
-            for (const segment of segments) {
-                const line = segment.trim();
-                if (!line) continue;
-
-                const cleaned = line.startsWith('data:') ? line.replace(/^data:\s*/, '') : line;
-
-                try {
-                    const json = JSON.parse(cleaned);
-
-                    if (json.content) {
-                        const chunk = json.content;
-                        fullText += chunk;
-
-                        // ✅ 检测 ACTION
-                        if (fullText.includes('[ACTION:')) {
-                            const { text: textWithoutAction, actions: extractedActions } = extractActions(fullText);
-                            
-                            // 合并新的 actions
-                            const newActions = extractedActions.filter(action => !actions.includes(action));
-                            if (newActions.length > 0) {
-                                actions = [...actions, ...newActions];
-                            }
-
-                            // ✅ 更新消息（不再要求 isTyping 必须为 true）
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last) {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        text: textWithoutAction,
-                                        isTyping: false,
-                                        actions: actions.length > 0 ? [...actions] : undefined
-                                    };
-                                    return updated;
-                                }
-                                return prev;
-                            });
-                        } else {
-                            // 🔹 没有 ACTION 时持续更新文字
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last && last.isTyping) {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        text: fullText.trim(),
-                                    };
-                                    return [...updated];
-                                }
-                                return updated;
-                            });
-                        }
-                    }
-                } catch {
-                    // 解析不完整时忽略
-                }
-            }
+        try {
+            await baseHandleStreamResponse(response);
+            // 流式输出完成后刷新数据
+            getNewPlayer();
+            setTimeout(() => {
+                refreshHistoryAndMissions();
+            }, 800);
+        } catch (error) {
+            console.error('❌ [DialogueModal] 流式响应处理失败:', error);
         }
-
-        // 🔹 流结束时，关闭打字效果
-        setMessages((prev) => {
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last) {
-                updated[updated.length - 1] = {
-                    ...last,
-                    isTyping: false
-                };
-                return [...updated];
-            }
-            return updated;
-        });
-        getNewPlayer();
-        // 流式输出完成后同时刷新历史记录和任务列表（延迟执行，确保后端已保存）
-        setTimeout(() => {
-            refreshHistoryAndMissions();
-        }, 800);
-    }, [extractActions, refreshHistoryAndMissions]);
+    }, [baseHandleStreamResponse, getNewPlayer, refreshHistoryAndMissions]);
 
     const handleStartGame = async () => {
         if (!sessionId) {
@@ -395,7 +299,10 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
             // 记录游戏开始统计（异步执行，不阻塞游戏开始）
             if (pdfFileId) {
-                statisticsApi.addConversion({ fileId: pdfFileId }).catch((error) => {
+                statisticsApi.addConversion({ 
+                    fileId: pdfFileId, 
+                    userId: String(user?.user.id)  
+                }).catch((error) => {
                     console.error('记录游戏统计失败:', error);
                 });
             }
@@ -411,9 +318,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
             if (response.ok) {
                 setGameStarted(true);
-                await handleStreamResponse(response);
+                await handleStreamResponse(response);                
             } else {
-                console.error('❌ 游戏开始失败:', response.statusText);
                 setMessages((prev) => [
                     ...prev,
                     { type: 'system', text: '游戏开始失败，请重试...' }
@@ -425,7 +331,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 ...prev,
                 { type: 'system', text: '游戏开始错误，请重试...' }
             ]);
-        } finally {
+        } finally {            
             setLoading(false);
         }
     };
@@ -452,6 +358,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
                 loadHistoryMessages();
 
                 await handleStreamResponse(response);
+                console.log(response);
+
             } else {
                 console.error('❌ 消息发送失败:', response.statusText);
             }

@@ -30,82 +30,23 @@
 
 /* 游戏详情弹窗外层容器（用于多层边框） */
 .gameDetailModal {
-    background-color: #000;
-    padding: 1px;
-    max-width: 1200px;
-    width: 1200px;
-    height: 680px;
+    width: 1080px;
+    min-width: 1080px;
+    height: 640px;
+    background: #fff;
     position: relative;
-    /* 切角效果：四个角削平 */
-    clip-path: polygon(16px 0%,
-            calc(100% - 16px) 0%,
-            100% 16px,
-            100% calc(100% - 16px),
-            calc(100% - 16px) 100%,
-            16px 100%,
-            0% calc(100% - 16px),
-            0% 16px);
-}
-
-/* 游戏详情弹窗中层容器（第二层边框） */
-.gameDetailModalInner {
-    background-color: #6C573A;
-    padding: 8px;
-    width: 100%;
-    height: 100%;
-    clip-path: polygon(16px 0%,
-            calc(100% - 16px) 0%,
-            100% 16px,
-            100% calc(100% - 16px),
-            calc(100% - 16px) 100%,
-            16px 100%,
-            0% calc(100% - 16px),
-            0% 16px);
-}
-
-/* 游戏详情弹窗内容容器（最内层） */
-.gameDetailModalContent {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    background: #B69B74;
-    clip-path: polygon(16px 0%,
-            calc(100% - 16px) 0%,
-            100% 16px,
-            100% calc(100% - 16px),
-            calc(100% - 16px) 100%,
-            16px 100%,
-            0% calc(100% - 16px),
-            0% 16px);
-    /* 隐藏滚动条但保持滚动功能 */
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE 和 Edge */
-}
-
-/* 隐藏 WebKit 浏览器的滚动条 */
-.gameDetailModalContent::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-    background: transparent;
+    overflow: visible;
 }
 
 .detailModalClose {
     position: absolute;
     top: 0px;
-    right: 20px;
+    right: -70px;
     width: 60px;
     height: 60px;
     border: none;
     background: transparent;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.3s ease;
     z-index: 1001;
 }
@@ -116,59 +57,66 @@
     object-fit: contain;
 }
 
-.detailMainTitle {
-    font-size: 32px;
-    font-weight: 700;
-    padding-left: 20px;
-    text-align: left;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
-    color: #E8DBB7;
-    height: 70px;
-    display: flex;
-    align-items: center;
-    border-bottom: 8px solid #6C573A;
-    background: #7F6950;
+.handleDeleteSession {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    padding: 8px 16px;
+    background: rgba(251, 71, 85, 0.9);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1002;
+    transition: all 0.3s ease;
+}
+
+.handleDeleteSession:hover {
+    background: rgba(251, 71, 85, 1);
+    transform: scale(1.05);
 }
 
 .detailThreeColumns {
-    padding: 20px;
-    display: grid;
-    grid-template-columns: 33.5% 1fr 24%;
-    gap: 20px;
-    align-items: start;
-    flex: 1;
-    min-height: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
 }
 
 .detailLeftColumn {
-    display: flex;
-    flex-direction: column;
-    padding: 22px 24px;
-    background-image: url('/data/asset/剧本详情页/图片背板.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    margin: auto 0;
+    display: none;
 }
 
 .detailLeftImage {
-    width: 100%;
-    height: 29.2rem;
-    object-fit: fill;
-    border-radius: 5px;
+    display: none;
 }
 
 .detailMiddleColumn {
     display: flex;
     flex-direction: column;
-    height: 480px;
-    position: relative;
-    margin-top: 20px;
+    height: 400px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 6px 30px;
+    padding-bottom: 6px;
+    box-sizing: border-box;
+    z-index: 1;
+    overflow: visible;
 }
 
 .detailGameTitleContainer {
     display: flex;
-    align-items: center;
+    align-items: end;
+    justify-content: space-between;
+    margin-bottom: 0px;
 }
 
 .likeContainer {
@@ -176,11 +124,13 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    margin-right: 10px;
+    width: auto;
 }
 
 .detailGameLike {
-    font-size: 24px;
-    color: #E8DBB7;
+    font-size: 36px;
+    color: #999999;
     cursor: pointer;
     font-weight: 700;
     margin-left: 20px;
@@ -190,7 +140,6 @@
 
 .detailGameLike:hover {
     transform: scale(1.1);
-    color: #ff1500;
 }
 
 .detailGameLikeActive {
@@ -204,60 +153,55 @@
 }
 
 .likeCount {
-    font-size: 18px;
-    color: #E8DBB7;
+    font-size: 26px;
+    color: #999999;
     font-weight: 600;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     user-select: none;
 }
 
+.likeCountActive {
+    color: #FF6B6B !important;
+    fill: #FF6B6B;
+}
+
 .detailGameTitle {
-    font-size: 42px;
-    font-weight: 700;
-    color: #E8DBB7;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
-    margin-bottom: 5px;
+    font-size: 60px;
+    font-weight: 600;
+    color: #fb4755;
     text-transform: uppercase;
     flex-shrink: 0;
 }
 
 .detailGameType {
-    font-size: 16px;
-    color: #E8DBB7;
-    width: 30%;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.8), 1px -1px 2px rgba(0, 0, 0, 0.8), -1px 1px 2px rgba(0, 0, 0, 0.8);
-    margin-bottom: 20px;
-    padding: 8px 16px;
-    border-radius: 8px;
+    font-size: 20px;
+    width: auto;
+    color: #fff;
     display: inline-block;
     flex-shrink: 0;
-    background-image: url('/data/asset/剧本详情页/标签板.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: #FB4754;
+    padding: 2px;
+    margin-right: 10px;
+    margin-bottom: 16px;
 }
 
 .detailDescription {
     margin-top: auto;
-    height: 300px;
-    padding-bottom: 30px;
-    /* 为作者信息预留空间，防止文字覆盖 */
+    height: 120px;
+    padding-bottom: 10px;
     min-height: 0;
     padding-right: 6px;
-    background: #7F6950;
     border-radius: 5px;
 }
 
 .detailDescription p {
-    color: #fff;
+    color: #000;
     font-weight: 500;
-    padding: 10px 20px;
     line-height: 1.8;
     font-size: 15px;
     height: 100%;
     overflow: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(182, 155, 116, 0.5) transparent;
+    scrollbar-color: rgba(189, 189, 188, 0.5) transparent;
 }
 
 .detailDescription::-webkit-scrollbar {
@@ -269,141 +213,154 @@
 }
 
 .detailDescription::-webkit-scrollbar-thumb {
-    background: rgba(182, 155, 116, 0.5);
+    background: rgba(189, 189, 188, 0.5);
     border-radius: 3px;
 }
 
 .detailDescription::-webkit-scrollbar-thumb:hover {
-    background: rgba(182, 155, 116, 0.7);
+    background: rgba(189, 189, 188, 0.7);
+}
+
+.detailFooter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    height: auto;
+    min-width: 0;
+    overflow: visible;
+    width: 100%;
 }
 
 .detailAuthor {
-    position: absolute;
-    bottom: 4px;
-    left: 0;
-    font-size: 16px;
-    color: #B69B74;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 18px;
+    color: #999999;
     flex-shrink: 0;
-    margin-left: 16px;
 }
 
-.detailRightColumn {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    height: 480px;
-    margin-top: 20px;
-    justify-content: flex-start;
+.authorAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid #fff;
+}
+
+.authorName {
+    white-space: nowrap;
 }
 
 .priceSection {
-    height: 50%;
-    background-image: url('/data/asset/剧本详情页/价格面板.png');
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 980px;
+    min-width: 980px;
+    padding-top: 46px;
+    padding-bottom: 8px;
+    overflow: visible;
+}
+
+.priceTopBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.priceLabel {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+}
+
+.priceLabelText {
+    font-size: 20px;
+    font-weight: 500;
+    color: #fb4755;
+}
+
+.priceWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    position: relative;
+    background-image: url('/data/assets/开始按钮.png');
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
-    padding: 30px 20px 16px 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.priceTitle {
-    font-size: 30px;
-    font-weight: 600;
-    color: #7F6950;
-    margin-bottom: 15px;
-}
-
-.priceValue {
-    font-size: 48px;
-    font-weight: 700;
-    color: #DE563A;
-    text-align: center;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-    -webkit-text-stroke: 6px white;
-    paint-order: stroke fill;
-}
-
-.unlockBtn {
-    background: transparent;
+    width: 980px;
+    max-width: 980px;
+    margin: 0 auto;
+    height: 60px;
     border: none;
     cursor: pointer;
-    padding: 0;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.unlockBtn img {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-}
-
-.ratingLabelUnit {
+    color: #fff;
     font-size: 24px;
     font-weight: 600;
-    color: #7F6950;
-    margin-left: 8px;
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(251, 73, 88, 0.3),
+                0 -3px 8px rgba(251, 73, 88, 0.3),
+                3px 0 8px rgba(251, 73, 88, 0.3),
+                -3px 0 8px rgba(251, 73, 88, 0.3);
 }
 
-.startGameSection {
-    background-image: url('/data/asset/剧本详情页/评分板.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    padding: 30px 20px 16px 20px;
+.originalPrice {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fb4755;
+    text-decoration: line-through;
+    white-space: nowrap;
+}
+
+.gameRatingContainer {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    flex: 1;
-    max-height: 200px;
+    justify-content: space-between;
+    width: 100%;
 }
 
 .gameRating {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    width: 100%;
-    text-align: center;
+    align-items: flex-end;
+    gap: 60px;
 }
 
 .ratingLabel {
-    font-size: 42px;
+    font-size: 48px;
     font-weight: 600;
-    color: #7F6950;
-    text-align: center;
-    width: 100%;
-}
-
-.ratingStars {
+    color: #4c4c4c;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    width: 100%;
+    align-items: end;
+    width: auto;
 }
 
-.starIcon {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
+.ratingLabelUnit {
+    font-size: 30px;
+    font-weight: 600;
+    margin-left: 8px;
+    margin-bottom: 10px;
 }
 
 .ratingScore {
-    font-size: 18px;
-    font-weight: 700;
-    color: #B69B74;
-    text-align: center;
-    width: 100%;
-    margin-left: 0;
-    margin-bottom: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #808080;
+    text-align: left;
+    margin: 0;
+    white-space: nowrap;
+    margin-bottom: 8px;
 }
 
 .startGameBtn {
@@ -438,10 +395,6 @@
     width: 100%;
     height: auto;
     min-height: 60px;
-    background-image: url('/data/asset/建筑选项框/按钮.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -487,85 +440,24 @@
     }
 }
 
-@media (max-width: 768px) {
-
+/* @media (max-width: 1080px) {
     .modal {
-        padding: 0;
-        background: transparent;
-        overflow-x: hidden; /* 防止横向滚动 */
-        height: 100vh;
-        overflow: hidden;
+        overflow: auto;
+        padding: 10px;
     }
+} */
 
+/* 1080px以下适配 */
+@media (max-width: 1080px) {
     .gameDetailModal {
-        width: 100vw;
-        max-width: 100vw;
-        padding: 2px;
-        height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden; /* 防止横向滚动 */
-        box-sizing: border-box;
-        clip-path: polygon(10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px);
-    }
-
-    .gameDetailModalInner {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        padding: 6px; /* 减小移动端边框宽度 */
-        clip-path: polygon(10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px);
-    }
-
-    .gameDetailModalContent {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        padding: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding-bottom: 20px;
-        clip-path: polygon(10px 0%,
-                calc(100% - 10px) 0%,
-                100% 10px,
-                100% calc(100% - 10px),
-                calc(100% - 10px) 100%,
-                10px 100%,
-                0% calc(100% - 10px),
-                0% 10px);
-        /* 隐藏滚动条但保持滚动功能 */
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE 和 Edge */
-    }
-
-    /* 隐藏移动端 WebKit 浏览器的滚动条 */
-    .gameDetailModalContent::-webkit-scrollbar {
-        display: none;
-        width: 0;
-        height: 0;
-        background: transparent;
-    }
-
-    .detailMainTitle {
-        font-size: 20px;
-        height: 60px;
+        width: 90vw;
+        min-width: 90vw;
+        max-width: 90vw;
+        max-height: 80vh;
     }
 
     .detailModalClose {
-        top: 0px;
+        top: -50px;
         right: 0px;
         width: 50px;
         height: 50px;
@@ -576,191 +468,178 @@
         height: 50px;
     }
 
-    .detailThreeColumns {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        height: auto;
-        min-height: 0;
-        padding: 0;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    .detailLeftColumn {
-        background-image: none;
-        padding: 0;
-        height: auto;
-        min-height: 0;
-        margin: 0;
-        flex-shrink: 0;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-
-    .detailLeftImage {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        aspect-ratio: 1/1;
-        object-fit: fill;
-        padding: 0;
-        display: block;
-        box-sizing: border-box;
+    .handleDeleteSession {
+        top: 8px;
+        right: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
     }
 
     .detailMiddleColumn {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        min-height: 0;
-        margin-top: 10px;
-        padding: 0 10px;
-        flex-shrink: 0;
-        box-sizing: border-box;
+        padding: 6px 10px;
+        padding-bottom: 6px;
+        border-radius: 0 0 10px 10px;
     }
 
     .detailGameTitle {
-        font-size: 24px;
+        font-size: 36px;
     }
 
     .detailGameType {
-        font-size: 14px;
+        font-size: 16px;
     }
 
-    .detailDescription {
-        height: 240px;
+    .ratingLabel {
+        font-size: 36px;
     }
 
-    .detailRightColumn {
-        display: flex;
-        flex-direction: row;
-        gap: 10px;
-        padding: 0 10px;
-        height: auto;
-        min-height: 160px;
-        width: 100%;
-        max-width: 100%;
-        flex-shrink: 0;
-        margin-top: 10px;
-        margin-bottom: 10px;
-        box-sizing: border-box;
+    .ratingLabelUnit {
+        font-size: 24px;
+    }
+
+    .ratingScore {
+        font-size: 18px;
+    }
+
+    .detailGameLike {
+        font-size: 28px;
+    }
+
+    .likeCount {
+        font-size: 22px;
+    }
+
+    .detailDescription p {
+        font-size: 13px;
+    }
+
+    .detailAuthor {
+        font-size: 16px;
+    }
+
+    .authorAvatar {
+        width: 36px;
+        height: 36px;
     }
 
     .priceSection {
-        width: 50%;
-        height: 100%;
-        padding: 20px 10px 12px 10px;
-        /* 统一内边距 */
-        justify-content: space-between;
-        /* 统一布局方式 */
+        width: 98%;
+        min-width: 90%;
     }
 
-    .priceTitle {
+    .priceLabelText {
         font-size: 18px;
-        margin-bottom: 8px;
-        text-align: left;
-        margin-left: 10px;
     }
 
-    .priceValue {
-        font-size: 28px;
-        margin-bottom: 8px;
+    .originalPrice {
+        font-size: 18px;
     }
 
-    .unlockBtn {
-        width: 90%;
-        /* 统一按钮宽度 */
-        max-width: 140px;
-        /* 限制最大宽度 */
-        margin: 0 auto;
-        margin-top: auto;
-        /* 推到底部 */
+    .priceWrapper {
+        width: 98%;
+        margin: 0px;
+        font-size: 20px;
+        height: 55px;
+    }
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .gameDetailModal {
+        width: 95vw;
+        min-width: 95vw;
+        max-width: 95vw;
+        padding: 0px;
+        border-radius: 10px;
     }
 
-    .unlockBtn img {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
+    .detailModalClose {
+        top: 10px;
+        right: 10px;
+        width: 40px;
+        height: 40px;
     }
 
-    .startGameSection {
-        width: 50%;
-        height: 100%;
-        padding: 20px 10px 12px 10px;
-        /* 统一内边距，与价格区域一致 */
-        justify-content: center;
-        /* 居中布局 */
-        align-items: center;
-        /* 统一对齐方式 */
+    .detailModalClose img {
+        width: 40px;
+        height: 40px;
     }
 
-    .gameRating {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        width: 100%;
-        text-align: center;
+    .handleDeleteSession {
+        top: 18px;
+        left: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        width: 100px;
+    }
+
+    .detailMiddleColumn {
+        padding: 8px 20px;
+        padding-bottom: 8px;
+        max-height: 60%;
+    }
+
+    .detailGameTitle {
+        font-size: 32px;
+    }
+
+    .detailGameType {
+        font-size: 15px;
     }
 
     .ratingLabel {
         font-size: 32px;
-        text-align: center;
-        width: 100%;
     }
 
     .ratingLabelUnit {
-        font-size: 20px;
+        font-size: 22px;
     }
 
     .ratingScore {
         font-size: 16px;
-        text-align: center;
-        width: 100%;
-        margin-bottom: 0;
-        margin-left: 0;
     }
 
-    .ratingStars {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 4px;
-        width: 100%;
+    .detailGameLike {
+        font-size: 26px;
     }
 
-    .starIcon {
-        width: 14px;
-        height: 14px;
+    .likeCount {
+        font-size: 20px;
     }
 
-    .startGameBtn {
-        width: 90%;
-        /* 统一按钮宽度 */
-        max-width: 140px;
-        /* 限制最大宽度，与解锁按钮一致 */
-        margin: 0 auto;
-        margin-top: 0;
-        /* 靠近评分面板 */
+    .detailDescription {
+        height: 100px;
     }
 
-    .startGameBtn img {
-        width: 100%;
-        height: auto;
-        object-fit: contain;
+    .detailDescription p {
+        font-size: 13px;
     }
 
-    .loading {
-        min-height: 36px;
+    .detailAuthor {
+        font-size: 15px;
     }
 
-    .loadingDot {
-        width: 6px;
-        height: 6px;
-        gap: 6px;
+    .authorAvatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .priceSection {
+        width: 96%;
+        min-width: 96%;
+    }
+
+    .priceLabelText {
+        font-size: 17px;
+    }
+
+    .originalPrice {
+        font-size: 17px;
+    }
+
+    .priceWrapper {
+        width: 96%;
+        font-size: 19px;
+        height: 52px;
     }
 }

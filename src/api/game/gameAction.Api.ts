@@ -41,3 +41,8 @@ export interface GameLikeResponse {
     isLike: boolean;
     message: string;
 }
+
+export interface DeletSessionRequest{
+    fileId: string;
+    userId: string;
+}

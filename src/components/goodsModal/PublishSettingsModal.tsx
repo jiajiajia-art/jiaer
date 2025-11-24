@@ -37,7 +37,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             <div className={styles.publishModal}>
                 <div className={styles.publishModalContent}>
                     <button className={styles.closeBtn} onClick={onClose}>
-                        <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
+                        <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt="关闭" />
                     </button>
                     <h2 className={styles.modalTitle}>发布设置</h2>
 
@@ -57,20 +57,17 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.label}>
+                            <span className={styles.checkboxLabel}>免费游戏</span>
                                 <input
                                     type="checkbox"
                                     checked={isFree}
                                     onChange={(e) => handleFreeChange(e.target.checked)}
                                     className={styles.freeCheckbox}
                                 />
-                                <span className={styles.checkboxLabel}>免费游戏</span>
                             </label>
                         </div>
 
                         <div className={styles.buttonGroup}>
-                            <button className={styles.cancelBtn} onClick={onClose}>
-                                取消
-                            </button>
                             <button className={styles.publishBtn} onClick={handleSubmit}>
                                 发布
                             </button>

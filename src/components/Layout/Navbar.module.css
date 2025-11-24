@@ -1,0 +1,307 @@
+/* 固定导航条 */
+.navbarContainer {
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    margin-bottom: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.3);
+    max-width: 1920px;
+    color: #fff;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1920px;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 1080px) {
+    .navbarContainer {
+        left: 0;
+        transform: none;
+        width: 1080px;
+        padding: 0 10px;
+    }
+
+    .navbar {
+        margin: 0;
+        width: 100%;
+        max-width: 1080px;
+    }
+}
+
+.navbar {
+    width: 1080px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    margin: 0 auto;
+}
+
+.logo {
+    width: 160px;
+    height: 86px;
+    /* display: none; */
+}
+
+.logo img {
+    width: 160px;
+    height: 80%;
+    margin-top: 10px;
+    object-fit: contain;
+}
+
+.navLinks {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.navLink {
+    width: 80px;
+    height: 100%;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-image: none;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+}
+
+.navLinkActive {
+    border-bottom: 4px solid #fb4755;
+}
+
+.navRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    justify-content: flex-end;
+    margin-right: 20px;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    width: 300px;
+    gap: 8px;
+    border: 1px solid #282828;
+    border-radius: 18px;
+    padding-right: 0px;
+    padding-left: 10px;
+}
+
+.searchIcon {
+    flex-shrink: 0;
+    height: 26px;
+    width: 60px;
+    min-width: 60px;
+    font-size: 18px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.searchInput {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: #fff;
+}
+
+.searchInput::placeholder {
+    color: #fff;
+}
+
+.avatarContainer {
+    position: relative;
+}
+
+.avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+.avatar:hover {
+    transform: scale(1.05);
+}
+
+.userMenu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-width: 120px;
+    z-index: 1000;
+    animation: slideDown 0.3s ease-out;
+    overflow: hidden;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.logoutBtn {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.settingIcon {
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.loginBtn {
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: none !important;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    background: none;
+}
+
+.loginBtn:hover {
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .navbarContainer {
+        width: 100vw;
+        height: 60px;
+        padding: 0 12px;
+        left: 0;
+        transform: none;
+    }
+
+    .navbar {
+        width: 100%;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .logo {
+        width: 100px;
+        height: 54px;
+        flex-shrink: 0;
+    }
+
+    .logo img {
+        width: 100px;
+        height: 70%;
+    }
+
+    .navLinks {
+        display: none;
+    }
+
+    .navRight {
+        gap: 8px;
+        margin-right: 0;
+        flex: 1;
+        min-width: 0;
+        justify-content: flex-end;
+    }
+
+    .searchBox {
+        flex: 1;
+        min-width: 0;
+        max-width: 70%;
+        height: 28px;
+        padding-left: 8px;
+        padding-right: 0;
+    }
+
+    .searchInput {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        width: auto;
+    }
+
+    .searchIcon {
+        flex-shrink: 0;
+        height: 24px;
+        width: 40px;
+        min-width: 40px;
+        font-size: 14px;
+    }
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .settingIcon {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+    }
+
+    .loginBtn {
+        width: 60px !important;
+        height: 32px !important;
+        min-width: 60px !important;
+        max-width: 60px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+}

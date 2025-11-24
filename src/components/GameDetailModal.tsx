@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import styles from './GameDetailModal.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { useAuthStore, authModalStore } from '../store/useAuthStore';
@@ -6,9 +6,10 @@ import { useGameStore } from '../store/gameStore';
 import { useNavigate } from 'react-router-dom';
 import statisticsApi from '../api/statistics/statisticsApi';
 import createSessionApi from '../api/createGame/createSessionApi';
-import { AiOutlineLike } from 'react-icons/ai';
 import GameAction from '../api/game/gameAction';
 import getGameDataApi from '../api/home/getGameData';
+import { BiLike } from 'react-icons/bi';
+import { RECORD_CONVERSION } from '../config';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -16,74 +17,80 @@ interface GameDetailModalProps {
     onClose: () => void;
 }
 
+// 常量
+const LIKE_DEBOUNCE_DELAY = 300;
+const DEFAULT_RATING = '9.0';
+const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
+const CLOSE_BUTTON_PATH = 'data/assets/关闭.png';
+
+// 判断是否点赞的辅助函数
+const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
+    if (reaction === null || reaction === undefined) return false;
+    if (typeof reaction === 'string') {
+        return reaction === 'like' || reaction === '1';
+    }
+    if (typeof reaction === 'number') {
+        return reaction === 1;
+    }
+    return false;
+};
+
 const GameDetailModal: React.FC<GameDetailModalProps> = ({
     isOpen,
     game,
     onClose,
 }) => {
+    // Hooks
     const { user } = useAuthStore();
     const { setPdfFileId, setSessionId } = useGameStore();
     const navigate = useNavigate();
-    // 跟踪上一次的打开状态，用于检测弹窗从关闭到打开的变化
-    const prevIsOpenRef = useRef(false);
+
+    // 状态
     const [isLoading, setIsLoading] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
-    // 判断是否点赞的辅助函数，支持多种格式
-    const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
-        if (reaction === null || reaction === undefined) return false;
-        // 支持字符串格式
-        if (typeof reaction === 'string') {
-            return reaction === 'like' || reaction === '1';
-        }
-        // 支持数字格式
-        if (typeof reaction === 'number') {
-            return reaction === 1;
-        }
-        return false;
-    };
-
-    const [isLiked, setIsLiked] = useState(checkIsLiked(game.reaction));
+    const [isLiked, setIsLiked] = useState(() => checkIsLiked(game.reaction));
     const [likeCount, setLikeCount] = useState(game.like_count || 0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
-    const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [gameDetail, setGameDetail] = useState<UserGameData | null>(null);
 
-    const currentGame = gameDetail ?? game;
+    // Refs
+    const prevIsOpenRef = useRef(false);
+    const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // 当弹窗打开时记录统计和获取点赞状态（每次打开都记录一次）
+    // 计算值
+    const currentGame = useMemo(() => gameDetail ?? game, [gameDetail, game]);
+    const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
+    const isOwner = useMemo(() => currentGame.creator_user_id === userId, [currentGame.creator_user_id, userId]);
+    const fileId = useMemo(() => currentGame?.file_id || currentGame?.id, [currentGame]);
+
+    // 检查用户是否登录
+    const checkAuth = useCallback(() => {
+        if (!userId) {
+            authModalStore.getState().setIsAuthModalOpen(true);
+            return false;
+        }
+        return true;
+    }, [userId]);
+
+    // 当弹窗打开时记录浏览统计
     useEffect(() => {
-        // 检测弹窗从关闭到打开的状态变化
-        const wasClosed = !prevIsOpenRef.current;
-        const isNowOpen = isOpen;
-        const justOpened = wasClosed && isNowOpen;
+        if (RECORD_CONVERSION || !isOpen) return;
 
-        // 更新状态
+        const wasClosed = !prevIsOpenRef.current;
+        const justOpened = wasClosed && isOpen;
         prevIsOpenRef.current = isOpen;
 
-        // 只有在弹窗刚打开时（从关闭到打开）才记录
-        if (!justOpened) {
-            return;
-        }
-
-        // 检查必要的数据
-        if (!currentGame || !currentGame.file_id) {
-            return;
-        }
-
-        // 检查用户是否登录
-        if (!user?.user?.id) {
-            return;
-        }
+        if (!justOpened || !fileId || !userId) return;
 
         statisticsApi.addView({
-            fileId: currentGame.file_id,
-            userId: String(user.user.id),
+            fileId,
+            userId: String(userId),
         }).catch((error) => {
             console.error('添加浏览统计失败:', error);
         });
+    }, [isOpen, fileId, userId]);
 
-    }, [isOpen, game, user]);
-
+    // 获取游戏详情
     const fetchGameDetail = useCallback(async () => {
         if (!game?.file_id) {
             console.warn('没有 file_id，无法获取详情');
@@ -93,66 +100,51 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         try {
             const response = await getGameDataApi.getGameDetail({
                 fileId: game.file_id,
-                userId: String(user?.user.id || ''),
+                userId: String(userId || ''),
             });
 
-            console.log('获取剧本详情响应:', response);
-
-            if (response.data && response.data.data) {
+            if (response.data?.data) {
                 const gameData = response.data.data;
                 setGameDetail(gameData);
                 setIsLiked(checkIsLiked(gameData.reaction));
                 setLikeCount(gameData.like_count || 0);
             } else {
-                console.warn('无法解析剧本详情数据，使用传入的 game 数据');
-                // 如果无法解析，保持使用传入的 game 数据
                 setGameDetail(game);
             }
         } catch (error) {
             console.error('获取剧本详情失败:', error);
-            // 出错时使用传入的 game 数据
             setGameDetail(game);
         }
-    }, [game, user?.user.id]);
+    }, [game, userId]);
 
+    // 初始化游戏数据
     useEffect(() => {
         if (isOpen) {
-            // 初始化时使用传入的 game 数据
             setGameDetail(game);
-            setIsLiked(game.reaction === 'like');
+            setIsLiked(checkIsLiked(game.reaction));
             setLikeCount(game.like_count || 0);
-            // 然后获取最新数据
             fetchGameDetail();
         } else {
-            // 关闭时重置
             setGameDetail(null);
+            setIsUnlocked(false);
         }
     }, [isOpen, game, fetchGameDetail]);
 
-    /**
-     * 创建会话
-     */
-    const createSession = async (fileId: string): Promise<string | null> => {
-        if (!fileId) {
-            console.error('没有 fileId，无法创建 session');
-            return null;
-        }
-
-        if (!user?.user?.userId || !user?.user?.id) {
-            alert('用户信息错误，无法创建 session');
+    // 创建会话
+    const createSession = useCallback(async (fileId: string): Promise<string | null> => {
+        if (!fileId || !userId) {
             return null;
         }
 
         setIsLoading(true);
         try {
             const response = await createSessionApi.getSession({
-                fileId: fileId,
-                userId: user.user.id
+                fileId,
+                userId
             });
 
             if (response.data.success) {
-                const data = response.data.data;
-                return data?.session.session_id || null;
+                return response.data.data?.session.session_id || null;
             } else {
                 alert(response.data.message || '创建游戏失败，请重试');
                 return null;
@@ -164,63 +156,42 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [userId]);
 
-    /**
-     * 处理开始游戏按钮点击
-     */
-    const handleStartGame = async () => {
-        // 检查用户是否登录
-        if (!user?.user?.userId || !user?.user?.id) {
-            // 打开登录弹窗
-            authModalStore.getState().setIsAuthModalOpen(true);
-            return;
-        }
+    // 处理开始游戏
+    const handleStartGame = useCallback(async () => {
+        if (!checkAuth()) return;
 
-        const fileId = currentGame?.file_id || currentGame?.id;
         if (!fileId) {
             alert('游戏信息错误，请重试');
             return;
         }
 
-        // 更新 store
         setPdfFileId(fileId);
-
-        // 创建会话
         const sessionId = await createSession(fileId);
 
         if (sessionId) {
             setSessionId(sessionId);
             navigate('/newmain');
         }
-    };
+    }, [checkAuth, fileId, createSession, setPdfFileId, setSessionId, navigate]);
 
-    if (!isOpen || !game) return null;
+    // 处理点赞
+    const handleLike = useCallback(() => {
+        if (!checkAuth() || isLikeLoading) return;
 
-    const handleLike = () => {
-        // 检查用户是否登录
-        if (!user?.user?.id) {
-            authModalStore.getState().setIsAuthModalOpen(true);
-            return;
-        }
-
-        // 防止重复点击
-        if (isLikeLoading) {
-            return;
-        }
-
-        // 清除之前的定时器
         if (likeDebounceTimerRef.current) {
             clearTimeout(likeDebounceTimerRef.current);
         }
 
-        // 设置防抖定时器
         likeDebounceTimerRef.current = setTimeout(async () => {
+            if (!fileId || !userId) return;
+
             setIsLikeLoading(true);
             try {
                 const response = await GameAction.gameLike({
-                    fileId: currentGame.file_id || currentGame.id,
-                    userId: String(user.user.id),
+                    fileId,
+                    userId: String(userId),
                 });
 
                 if (response.data.success && response.data.data) {
@@ -228,8 +199,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     setIsLiked(isLike);
                     setLikeCount(newLikeCount);
                     await fetchGameDetail();
-                } else {
-                    console.error('点赞失败:', response.data);
                 }
             } catch (error) {
                 console.error('点赞失败:', error);
@@ -237,10 +206,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 setIsLikeLoading(false);
                 likeDebounceTimerRef.current = null;
             }
-        }, 300); // 300ms 防抖延迟
-    };
+        }, LIKE_DEBOUNCE_DELAY);
+    }, [checkAuth, isLikeLoading, fileId, userId, fetchGameDetail]);
 
-    // 组件卸载时清理定时器
+    // 清理定时器
     useEffect(() => {
         return () => {
             if (likeDebounceTimerRef.current) {
@@ -249,110 +218,119 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         };
     }, []);
 
+    // 计算样式
+    const modalStyle = useMemo(() => {
+        if (!currentGame.cover_url) return {};
+        return {
+            backgroundImage: `url(${currentGame.cover_url})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+        };
+    }, [currentGame.cover_url]);
+
+    if (!isOpen || !game) return null;
+
+    const handleDeleteSession = useCallback(() => {
+        if (!checkAuth()) return;
+        if (!fileId || !userId) return;
+        GameAction.deletGameSession({
+            fileId,
+            userId: String(userId),
+        });
+    }, [checkAuth, fileId, userId]);
+
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
-            <div className={styles.gameDetailModal}>
-                <div className={styles.gameDetailModalInner}>
-                    <div className={styles.gameDetailModalContent}>
-                        <button className={styles.detailModalClose} onClick={onClose}>
-                            <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
-                        </button>
-                        <h2 className={styles.detailMainTitle}>剧本详情</h2>
+            <div className={styles.gameDetailModal} style={modalStyle}>
+                <button className={styles.detailModalClose} onClick={onClose}>
+                    <img src={`${import.meta.env.BASE_URL}${CLOSE_BUTTON_PATH}`} alt="关闭" />
+                </button>
+                {currentGame.is_public && (
+                    <button className={styles.handleDeleteSession} onClick={handleDeleteSession}>
+                        删除存档
+                    </button>
+                )}
+                <div className={styles.detailThreeColumns}>
+                    <div className={styles.detailMiddleColumn}>
+                        <div className={styles.detailGameTitleContainer}>
+                            <h3 className={styles.detailGameTitle}>
+                                {(currentGame.title || '未命名游戏').toUpperCase()}
+                            </h3>
+                            <div className={styles.detailGameType}>
+                                RPG
+                            </div>
+                        </div>
 
-                        <div className={styles.detailThreeColumns}>
-                            <div className={styles.detailLeftColumn}>
-                                {currentGame.cover_url && (
-                                    <img
-                                        className={styles.detailLeftImage}
-                                        src={currentGame.cover_url}
-                                        alt="游戏封面"
-                                    />
+                        <div className={styles.gameRatingContainer}>
+                            <div className={styles.gameRating}>
+                                <div className={styles.ratingLabel}>
+                                    {currentGame.rating_avg ?? DEFAULT_RATING}
+                                    <span className={styles.ratingLabelUnit}>分</span>
+                                </div>
+                                <div className={styles.ratingScore}>
+                                    {currentGame.rating_count ?? 0}人评价
+                                </div>
+                            </div>
+                            <div className={styles.likeContainer}>
+                                <BiLike
+                                    className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
+                                    onClick={handleLike}
+                                />
+                                {likeCount > 0 && (
+                                    <span className={`${styles.likeCount} ${isLiked ? styles.likeCountActive : ''}`}>
+                                        {likeCount}
+                                    </span>
                                 )}
                             </div>
+                        </div>
 
-                            <div className={styles.detailMiddleColumn}>
-                                <div className={styles.detailGameTitleContainer}>
-                                    <h3 className={styles.detailGameTitle}>
-                                        {(currentGame.title || '未命名游戏').toUpperCase()}
-                                    </h3>
-                                    <div className={styles.likeContainer}>
-                                        <AiOutlineLike
-                                            className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
-                                            onClick={handleLike}
+                        <div className={styles.detailDescription}>
+                            {currentGame.description ? <p>{currentGame.description}</p> : <p>暂无描述</p>}
+                        </div>
+
+                        <div className={styles.detailFooter}>
+                            <div className={styles.priceSection}>
+                                <div className={styles.priceTopBar}>
+                                    <div className={styles.detailAuthor}>
+                                        <span className={styles.authorName}>
+                                            作者：
+                                        </span>
+                                        <img
+                                            className={styles.authorAvatar}
+                                            src={currentGame.avatarUrl?.trim() || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
+                                            alt="作者头像"
                                         />
-                                        {likeCount > 0 && (
-                                            <span className={styles.likeCount}>{likeCount}</span>
-                                        )}
+                                        <span className={styles.authorName}>
+                                            {currentGame.author_name || '未知作者'}
+                                        </span>
                                     </div>
-                                </div>
 
-                                <div className={styles.detailGameType}>
-                                    RPG
-                                </div>
-
-                                <div className={styles.detailDescription}>
-                                    {currentGame.description ? <p>{currentGame.description}</p> : <p>暂无描述</p>}
-                                </div>
-
-                                <div className={styles.detailAuthor}>
-                                    作者：{currentGame.author_name || '未知作者'}
-                                </div>
-                            </div>
-
-                            <div className={styles.detailRightColumn}>
-                                <div className={styles.startGameSection}>
-                                    <div className={styles.gameRating}>
-                                        <div className={styles.ratingLabel}>
-                                            {(currentGame.rating_avg ?? '9.0')}
-                                            <span className={styles.ratingLabelUnit}>分</span>
+                                    {!isUnlocked && !isOwner && (
+                                        <div className={styles.priceLabel}>
+                                            <div className={styles.priceLabelText}>限时特惠</div>
+                                            <div className={styles.originalPrice}>￥256</div>
                                         </div>
-                                        <div className={styles.ratingStars}>
-                                            {[1, 2, 3, 4, 5].map((star) => (
-                                                <img
-                                                    key={star}
-                                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/星星.png`}
-                                                    alt="星星"
-                                                    className={styles.starIcon}
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className={styles.ratingScore}>
-                                            {(currentGame.rating_count ?? 0)}人评价
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
-                                {
 
-                                    !isUnlocked && currentGame.creator_user_id !== user?.user.id ?
-                                        <div className={styles.priceSection}>
-                                            <div className={styles.priceTitle}>特惠价格</div>
-                                            <div className={styles.priceValue}>
-                                                ￥0
+                                {!isUnlocked && !isOwner ? (
+                                    <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
+                                        ￥0
+                                    </button>
+                                ) : (
+                                    <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
+                                        {isLoading ? (
+                                            <div className={styles.loading}>
+                                                <span className={styles.loadingDot}></span>
+                                                <span className={styles.loadingDot}></span>
+                                                <span className={styles.loadingDot}></span>
                                             </div>
-                                            <button className={styles.unlockBtn} onClick={() => setIsUnlocked(true)}>
-                                                <img
-                                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/解锁剧本按钮.png`}
-                                                    alt="解锁剧本"
-                                                />
-                                            </button>
-                                        </div>
-                                        :
-                                        < button className={styles.startGameBtn} onClick={handleStartGame} disabled={isLoading}>
-                                            {isLoading ? (
-                                                <div className={styles.loading}>
-                                                    <span className={styles.loadingDot}></span>
-                                                    <span className={styles.loadingDot}></span>
-                                                    <span className={styles.loadingDot}></span>
-                                                </div>
-                                            ) : (
-                                                <img
-                                                    src={`${import.meta.env.BASE_URL}data/asset/剧本详情页/开始游戏按钮.png`}
-                                                    alt="开始游戏"
-                                                />
-                                            )}
-                                        </button>
-                                }
-
+                                        ) : (
+                                            <span>开始游戏</span>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -1,0 +1,420 @@
+.statsModeWrapper {
+    width: 100vw;
+    max-width: 1920px;
+    margin: 0 auto 40px;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.heroBanner {
+    width: 100%;
+    max-width: 1920px;
+    height: 400px;
+    margin: 0 auto 24px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.heroOverlay {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(120deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.35));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.heroContent {
+    margin-top: 80px;
+    width: 100%;
+    max-width: 1080px;
+    color: #FFFFFF;
+    box-sizing: border-box;
+}
+
+.heroTitle {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.heroMeta {
+    display: flex;
+    align-items: baseline;
+    gap: 36px;
+    margin-bottom: 8px;
+}
+
+.startGameBtn {
+    background-image: url('/data/assets/开始按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 60px;
+    width: 200px;
+    cursor: pointer;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    box-sizing: border-box;
+    box-shadow: 0 4px 8px rgba(251, 73, 88, 0.3),
+                0 -3px 8px rgba(251, 73, 88, 0.3),
+                3px 0 8px rgba(251, 73, 88, 0.3),
+                -3px 0 8px rgba(251, 73, 88, 0.3);
+}
+
+
+.heroRating {
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.heroMetaLabel {
+    font-size: 18px;
+    opacity: 0.85;
+}
+
+.heroStatsWrapper {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+}
+
+.statsSection {
+    width: 1080px;
+    margin: 0 auto;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.sectionHeader hr {
+    flex: 1;
+    height: 1px;
+    border: none;
+    background-color: #D9D9D9;
+    margin: 0 20px;
+}
+
+.sectionTitle {
+    font-size: 30px;
+    color: #262626;
+    font-weight: 600;
+}
+
+.more {
+    width: auto;
+    min-width: 80px;
+    height: 40px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    position: relative;
+    z-index: 10;
+    padding: 0 12px;
+    background-color: transparent;
+    outline: none;
+    color: #737373;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    border: none;
+}
+
+.moreText {
+    gap: 4px;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+}
+
+.statBox {
+    width: 250px;
+    height: 100px;
+    background: #f5f5f5;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.statBox:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.statValue {
+    font-size: 30px;
+    font-weight: 700;
+    color: #fb5b66;
+}
+
+.statLabel {
+    font-size: 20px;
+    color: #999999;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.heroActionGroup {
+    margin-top: 24px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: nowrap;
+}
+
+.editGameBtn,
+.publishGameBtn,
+.deleteGameBtn {
+    padding: 14px 32px;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.editGameBtn {
+    flex: 0 0 70%;
+    background: #FB5B67;
+    color: #FFFFFF;
+}
+
+.editGameBtn:hover {
+    box-shadow: 0 10px 20px rgba(251, 91, 103, 0.3);
+    transform: translateY(-2px);
+}
+
+.publishGameBtn {
+    width: 250px;
+    background: #4CAF50;
+    color: #FFFFFF;
+}
+
+.publishGameBtn:hover {
+    box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+    transform: translateY(-2px);
+}
+
+.deleteGameBtn {
+    flex: 0 0 30%;
+    background: transparent;
+    color: #FB5B67;
+    border: 1px solid #FB5B67;
+}
+
+.deleteGameBtn:hover:not(:disabled) {
+    background: rgba(251, 91, 103, 0.08);
+}
+
+.deleteGameBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 中等屏幕适配 (768px到1080px之间) */
+@media (min-width: 769px) and (max-width: 1080px) {
+    .statsModeWrapper {
+        margin-bottom: 30px;
+    }
+
+    .heroBanner {
+        height: 350px;
+    }
+
+    .heroContent {
+        padding: 0 20px;
+        margin-top: 70px;
+    }
+
+    .heroTitle {
+        font-size: 36px;
+    }
+
+    .heroRating {
+        font-size: 32px;
+    }
+
+    .heroMetaLabel {
+        font-size: 16px;
+    }
+
+    .heroStatsWrapper {
+        padding: 0 20px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .statsSection {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sectionHeader {
+        margin-bottom: 18px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 16px;
+    }
+
+    .sectionTitle {
+        font-size: 24px;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+
+    .statBox {
+        width: 100%;
+        height: 90px;
+    }
+
+    .statValue {
+        font-size: 26px;
+    }
+
+    .statLabel {
+        font-size: 16px;
+    }
+
+    .heroActionGroup {
+        margin-top: 20px;
+        gap: 14px;
+    }
+
+    .editGameBtn {
+        flex: 0 0 70%;
+        padding: 12px 24px;
+    }
+
+    .deleteGameBtn {
+        flex: 0 0 30%;
+        padding: 12px 24px;
+    }
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .statsModeWrapper {
+        margin-bottom: 20px;
+    }
+
+    .heroBanner {
+        height: 250px;
+        margin-bottom: 16px;
+    }
+
+    .heroContent {
+        margin-top: 60px;
+        padding: 0 16px;
+    }
+
+    .heroTitle {
+        font-size: 28px;
+        margin-bottom: 12px;
+    }
+
+    .heroMeta {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .heroRating {
+        font-size: 24px;
+    }
+
+    .heroMetaLabel {
+        font-size: 14px;
+    }
+
+    .heroStatsWrapper {
+        padding: 0 16px;
+    }
+
+    .statsSection {
+        width: 100%;
+    }
+
+    .sectionHeader {
+        margin-bottom: 16px;
+    }
+
+    .sectionHeader hr {
+        margin: 0 12px;
+    }
+
+    .sectionTitle {
+        font-size: 20px;
+    }
+
+    .more {
+        font-size: 14px;
+        padding: 0 8px;
+        min-width: auto;
+    }
+
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .statBox {
+        width: 100%;
+        height: 80px;
+        padding: 8px;
+    }
+
+    .statValue {
+        font-size: 24px;
+    }
+
+    .statLabel {
+        font-size: 14px;
+        gap: 6px;
+    }
+
+    .heroActionGroup {
+        margin-top: 16px;
+        gap: 12px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
+
+    .editGameBtn {
+        flex: 0 0 70%;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    .deleteGameBtn {
+        flex: 0 0 30%;
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+
+    .startGameBtn {
+        width: 120px;
+        height: 40px;
+        font-size: 14px;
+    }
+}
+
