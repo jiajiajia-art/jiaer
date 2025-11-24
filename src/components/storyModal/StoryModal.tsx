@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import styles from './StoryModal.module.css';
 import { HOST_ADDRESS, RECORD_CONVERSION } from '../../config';
 import { useGameStore, type EquipmentSlots } from '../../store/gameStore';
-import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData';
+import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';
 import { authFetch } from '../../api/base';
 import statisticsApi from '../../api/statistics/statisticsApi';
 import MissionApi from '../../api/game/missionApi';
@@ -42,7 +42,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
     // 基础状态
     const [gameStarted, setGameStarted] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [showHistory, setShowHistory] = useState(true);
+    const [showHistory, setShowHistory] = useState(false);
     const [historyMessages, setHistoryMessages] = useState<ChatMessage[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [missionData, setMissionData] = useState<MissionData | null>(null);
@@ -69,9 +69,14 @@ const StoryModal: React.FC<StoryModalProps> = ({
     const [displayedText, setDisplayedText] = useState<string>('');
     const [isTyping, setIsTyping] = useState(false);
     const [isWaitingForData, setIsWaitingForData] = useState(false);
-    
+
     // 输入框状态
     const [choiceInput, setChoiceInput] = useState<string>('');
+
+    // 移动端浮动面板/按钮状态
+    const [missionModalOpen, setMissionModalOpen] = useState(false);
+    const [inventoryOpen, setInventoryOpen] = useState(false);
+    const [playerOpen, setPlayerOpen] = useState(false);
 
     // Refs
     const hasLoadedInitialMessage = useRef(false);
@@ -104,7 +109,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
         }
 
         const characterId = currentStep.characterId;
-        
+
         // 如果 scenes 为空，返回 null
         if (!scenes || Object.keys(scenes).length === 0) {
             return null;
@@ -115,12 +120,12 @@ const StoryModal: React.FC<StoryModalProps> = ({
             const scene = scenes[sceneId];
             if (scene && scene.npcs && Array.isArray(scene.npcs)) {
                 let npc = scene.npcs.find(n => n.name === characterId);
-                
+
                 if (!npc) {
                     const normalizedCharacterId = characterId.trim().toLowerCase();
                     npc = scene.npcs.find(n => n.id.trim().toLowerCase() === normalizedCharacterId);
                 }
-                
+
                 if (npc) {
                     console.log('✅ 找到匹配的 NPC:', { id: npc.id, name: npc.name, icon: npc.icon });
                     return npc;
@@ -175,7 +180,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                         const lastMessage = convertedMessages[convertedMessages.length - 1];
                         if (lastMessage && lastMessage.role === 'assistant') {
                             let processedText = lastMessage.text || '';
-                            
+
                             // 提取 ACTION（用于历史记录显示）
                             const actions: string[] = [];
                             if (processedText.includes('[ACTION:')) {
@@ -189,13 +194,13 @@ const StoryModal: React.FC<StoryModalProps> = ({
                                 }
                                 processedText = processedText.replace(/\[ACTION:\s*.*?\]/g, '').trim();
                             }
-                            
+
                             // 检查是否有未完成任务，如果有则不显示 choice 弹窗
                             const hasActiveMissions = missionData?.activeMissions && missionData.activeMissions.length > 0;
-                            
+
                             // 首先尝试提取 CHOICE 信息
                             const choiceData = extractChoiceFromHistory(processedText);
-                            
+
                             if (choiceData && choiceData.options.length > 0 && !hasActiveMissions) {
                                 // 如果有 choice 数据且没有未完成任务，创建虚拟的 choice step 并显示在弹窗中
                                 console.log('📝 检测到 choice，创建虚拟 choice step:', choiceData);
@@ -218,7 +223,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                             } else {
                                 // 如果没有 choice，使用原来的逻辑清理文本
                                 const { cleanedText, options: extractedOptions } = cleanHistoryMessage(processedText);
-                                
+
                                 // 只有清理后的文本不为空时才设置消息
                                 if (cleanedText || extractedOptions.length > 0) {
                                     console.log('📝 设置历史记录最后一条消息:', cleanedText.substring(0, 100), '选项:', extractedOptions);
@@ -273,7 +278,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 const data = response.data.data;
                 setMissionData(data);
                 console.log('任务数据:', data);
-                
+
                 // 检查是否有未完成的任务
                 if (data.activeMissions && data.activeMissions.length > 0) {
                     console.log('检测到未完成任务，显示任务提示弹窗');
@@ -344,7 +349,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
             // 根据 step 类型设置按钮显示状态
             setShowNextButton(nextStep.type !== 'choice');
             console.log('nextStep进行下一个step渲染', nextStep);
-            
+
             // 如果显示的是 choice 类型，刷新任务列表（这样任务弹窗会在用户完成交互后显示）
             if (nextStep.type === 'choice') {
                 console.log('刷新任务列表');
@@ -481,7 +486,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
             setStepQueue([]);
             setShowNextButton(false);
             setIsWaitingForData(true); // 显示加载状态（等待数据）
-            
+
             // 清空 messages，避免显示旧的欢迎消息
             setMessages([]);
 
@@ -551,9 +556,9 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 }
             );
             const contentType = response.headers.get('content-type');
-  
+
             if (contentType?.includes('text/event-stream')) {
-                console.log('流式响应');     
+                console.log('流式响应');
                 const requestId = ++currentRequestId.current;
 
                 setCurrentStep(null);
@@ -562,7 +567,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 setIsWaitingForData(true);
                 setMessages([]);
                 setLoading(true);
-                
+
                 await processStreamResponse(response, requestId, {
                     onFirstStep: () => {
                         console.log('📝 收到第一个 step，关闭任务提示弹窗');
@@ -579,14 +584,13 @@ const StoryModal: React.FC<StoryModalProps> = ({
                         setIsWaitingForData(false);
                     }
                 });
-            } else{
+            } else {
                 // 普通 JSON 响应（成功）
                 try {
                     const data: SubmitMissionResponse = await response.json();
                     if (data.completed) {
                         console.log('✅ 任务提交成功');
                         toast.success(data.message || '任务提交成功');
-                        // 刷新任务列表
                         await loadMissions();
                     } else {
                         console.log('❌ 任务提交失败:', data.message);
@@ -596,7 +600,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     console.error('❌ 解析响应失败:', jsonError);
                     toast.error('任务提交响应格式错误');
                 }
-            } 
+            }
         } catch (error) {
             console.error('❌ 任务提交错误:', error);
             toast.error('任务提交失败，请稍后重试');
@@ -604,10 +608,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
     }, [sessionId, processStreamResponse, loadMissions]);
 
     const handleStartGame = async () => {
-        // 记录游戏开始统计（异步执行，不阻塞游戏开始）
         if (pdfFileId && RECORD_CONVERSION) {
-            console.log('是否开启统计');
-            
             statisticsApi.addConversion({
                 fileId: pdfFileId,
                 userId: String(user?.user.id)
@@ -618,7 +619,6 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
         await handleStreamAction('开始游戏', {
             onBeforeRequest: () => {
-                // 清空之前的消息，避免显示旧的欢迎消息
                 setMessages([]);
             },
             shouldSetGameStarted: true,
@@ -639,7 +639,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 setCurrentStep(nextStep);
                 setShowNextButton(nextStep.type !== 'choice');
                 console.log('nextStep进行下一个step渲染');
-                if(nextStep.type === 'choice') {
+                if (nextStep.type === 'choice') {
                     console.log('刷新任务列表');
                     loadMissions();
                 }
@@ -681,7 +681,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
         // 清空输入框
         setChoiceInput('');
-        
+
         // 发送消息，类似于选择选项
         setIsWaitingForData(true);
         setShowNextButton(false);
@@ -702,8 +702,8 @@ const StoryModal: React.FC<StoryModalProps> = ({
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
-                <button 
-                    className={`${styles.closeBtn} ${currentStep && currentStep.type === 'choice'||showMissionAlert ? styles.closeBtnElevated : ''}`}
+                <button
+                    className={`${styles.closeBtn} ${currentStep && currentStep.type === 'choice' || showMissionAlert ? styles.closeBtnElevated : ''}`}
                     onClick={() => {
                         // 只有 choice 类型时才允许关闭 step 弹窗
                         if (currentStep && currentStep.type === 'choice') {
@@ -714,158 +714,197 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 >
                     <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/时间暂停按钮.png`} alt="关闭" />
                 </button>
-                
+
                 {/* 左侧面板：历史记录和任务列表 */}
                 <div className={styles.leftPanels}>
-                    {
-                        showHistory && (
-                            <div className={`${styles.panelCard} ${styles.historyPanel}`}>
-                                <ChatHistory
-                                    isOpen={true}
-                                    chatMessages={historyMessages}
-                                    loading={loadingHistory}
-                                />
-                            </div>
-                        )
-                    }
+                    <div className={`${styles.panelCard} ${styles.historyPanel}`}>
+                        {showHistory && (
+                            <ChatHistory
+                                isOpen={true}
+                                chatMessages={historyMessages}
+                                loading={loadingHistory}
+                            />
+                        )}
+                    </div>
                     <div className={`${styles.panelCard} ${styles.missionsModalWrapper}`}>
-                        <MissionsModal missionData={missionData} loading={loadingMissions} />
+                        {missionModalOpen && (
+                            <MissionsModal missionData={missionData} loading={loadingMissions} />
+                        )}
                     </div>
                 </div>
 
                 {/* 中间：编年纪事对话 - 只显示最新一条 AI 回复 */}
                 <div className={styles.dialogueCenterWrapper}>
-                    {/* {currentStep && currentStep.type === 'dialogue' && ( */}
-                        <div className={styles.npcAvatarContainer}>
-                            {currentNPC ? (
-                                <img 
-                                    src={currentNPC.icon || `${import.meta.env.BASE_URL}data/avatars/hunter.png`} 
-                                    alt={currentNPC.name || currentStep.characterId}
-                                    className={styles.npcAvatar}
-                                    onError={(e) => {
-                                        console.error('❌ NPC 头像加载失败:', currentNPC.icon);
-                                        (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}data/avatars/hunter.png`;
-                                    }}
-                                />
-                            ) : (
-                                <img 
-                                    src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} 
-                                    alt='角色'
-                                    className={styles.npcAvatar}
-                                />
-                            )}
-                        </div>
-                    {/* )} */}
+                    <div className={styles.npcAvatarContainer}>
+                        {currentNPC ? (
+                            <img
+                                src={currentNPC.icon || `${import.meta.env.BASE_URL}data/avatars/hunter.png`}
+                                alt={currentNPC.name || currentStep.characterId}
+                                className={styles.npcAvatar}
+                                onError={(e) => {
+                                    console.error('❌ NPC 头像加载失败:', currentNPC.icon);
+                                    (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}data/avatars/hunter.png`;
+                                }}
+                            />
+                        ) : (
+                            <img
+                                src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`}
+                                alt='角色'
+                                className={styles.npcAvatar}
+                            />
+                        )}
+                    </div>
                     <div className={styles.dialogueWrapper}>
-                    <div className={styles.dialogueModalWrapper}>
-                        <div className={styles.dialogueModal}>
-                        <div className={styles.modalHeader}>
-                            <button className={styles.historyBtn} onClick={() => setShowHistory(!showHistory)}>
-                                <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/历史对话图标.png`} alt="历史记录" />
-                            </button>
+                        <div className={styles.dialogueModalWrapper}>
+                            <div className={styles.dialogueModal}>
+                                <div className={styles.modalHeader}>
+                                    <button
+                                        className={styles.historyBtn}
+                                        onClick={() => {
+                                            setShowHistory(!showHistory);
+                                        }}
+                                    >
+                                        <img src={`${import.meta.env.BASE_URL}data/asset/对话界面/历史对话图标.png`} alt="历史记录" />
+                                    </button>
 
-                            <span className={styles.headerSpacer} />
-                        </div>
+                                    <div className={styles.rightButtons}>
+                                        <button
+                                            id="triggerMissionBtn"
+                                            className={styles.missionBtn}
+                                            onClick={() => {
+                                                loadMissions();
+                                                setMissionModalOpen(!missionModalOpen);
+                                            }}
+                                        >
+                                            <img src={`${import.meta.env.BASE_URL}data/asset/mission.png`} alt="任务按钮" className={styles.missionBtnImg} />
+                                        </button>
 
-                        <div className={styles.messagesContainer}>
-                            {/* 下半部分：消息显示 */}
-                            <div className={styles.messageContent}>
-                                {/* 显示 dialogue 类型的 step */}
-                                {currentStep && currentStep.type === 'dialogue' ? (
-                                    <div className={`${styles.message} ${styles.system}`}>
-                                        <div className={styles.dialogueContent}>
-                                            <strong>{currentNPC?.name || currentStep.characterId || '角色'}:</strong>
-                                            <p>
-                                                {displayedText}
-                                                {isTyping && <span className={styles.cursor}></span>}
-                                            </p>
-                                        </div>
+                                        <button
+                                            id="toggleInventoryBtn"
+                                            className={styles.floatingInventoryBtn}
+                                            title="打开背包"
+                                            onClick={() => {
+                                                setInventoryOpen(!inventoryOpen);
+                                            }}
+                                        >
+                                            <img
+                                                src={`${import.meta.env.BASE_URL}data/asset/背包按钮.png`}
+                                                alt="背包按钮"
+                                                className={styles.inventoryBtnImg}
+                                            />
+                                        </button>
+                                        <img
+                                            src={player?.profile?.avatar || `${import.meta.env.BASE_URL}data/avatars/hunter.png`}
+                                            alt="玩家头像"
+                                            className={styles.headerSpacer}
+                                            onClick={() => {
+                                                setPlayerOpen(!playerOpen);
+                                            }}
+                                        />
                                     </div>
-                                ) : (
-                                // 只有在没有 currentStep 且没有正在等待数据时才显示 messages（历史记录）
-                                // 如果正在等待数据（显示旁白弹窗），则不显示 messages，避免显示旧的欢迎消息
-                                !isWaitingForData && !currentStep && messages.length > 0 && messages.map((msg, index) => (
-                                    <div key={index} className={`${styles.message} ${styles.system}`}>
-                                        {msg.isMarkdown ? (
-                                            <div dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br/>') }} />
-                                        ) : (
-                                            <p>{msg.text}</p>
-                                        )}
-                                        {/* 显示 OPTION 按钮 */}
-                                        {msg.options && msg.options.length > 0 && (
-                                            <div className={styles.historyOptions}>
-                                                {msg.options.map((option, optIndex) => (
-                                                    <button
-                                                        key={optIndex}
-                                                        className={styles.historyOptionBtn}
-                                                        onClick={() => handleStreamAction(option, {
-                                                            onSuccess: () => {
-                                                                loadHistoryMessages();
-                                                            },
-                                                            onError: (error) => {
-                                                                console.error('❌ 选项处理错误:', error);
-                                                            }
-                                                        })}
-                                                        disabled={loading}
-                                                    >
-                                                        {option}
-                                                    </button>
-                                                ))}
+                                </div>
+
+                                <div className={styles.messagesContainer}>
+                                    {/* 下半部分：消息显示 */}
+                                    <div className={styles.messageContent}>
+                                        {/* 显示 dialogue 类型的 step */}
+                                        {currentStep && currentStep.type === 'dialogue' ? (
+                                            <div className={`${styles.message} ${styles.system}`}>
+                                                <div className={styles.dialogueContent}>
+                                                    <strong>{currentNPC?.name || currentStep.characterId || '角色'}:</strong>
+                                                    <p>
+                                                        {displayedText}
+                                                        {isTyping && <span className={styles.cursor}></span>}
+                                                    </p>
+                                                </div>
                                             </div>
+                                        ) : (
+                                            // 只有在没有 currentStep 且没有正在等待数据时才显示 messages（历史记录）
+                                            // 如果正在等待数据（显示旁白弹窗），则不显示 messages，避免显示旧的欢迎消息
+                                            !isWaitingForData && !currentStep && messages.length > 0 && messages.map((msg, index) => (
+                                                <div key={index} className={`${styles.message} ${styles.system}`}>
+                                                    {msg.isMarkdown ? (
+                                                        <div dangerouslySetInnerHTML={{ __html: msg.text.replace(/\n/g, '<br/>') }} />
+                                                    ) : (
+                                                        <p>{msg.text}</p>
+                                                    )}
+                                                    {/* 显示 OPTION 按钮 */}
+                                                    {msg.options && msg.options.length > 0 && (
+                                                        <div className={styles.historyOptions}>
+                                                            {msg.options.map((option, optIndex) => (
+                                                                <button
+                                                                    key={optIndex}
+                                                                    className={styles.historyOptionBtn}
+                                                                    onClick={() => handleStreamAction(option, {
+                                                                        onSuccess: () => {
+                                                                            loadHistoryMessages();
+                                                                        },
+                                                                        onError: (error) => {
+                                                                            console.error('❌ 选项处理错误:', error);
+                                                                        }
+                                                                    })}
+                                                                    disabled={loading}
+                                                                >
+                                                                    {option}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))
                                         )}
+                                        <div ref={messagesEndRef} />
                                     </div>
-                                ))
-                            )}
-                            <div ref={messagesEndRef} />
-                            </div>
-                        </div>
+                                </div>
 
-                        {/* 开始游戏按钮 */}
-                        {!gameStarted && (
-                            <div className={styles.startGameContainer}>
-                                <button
-                                    className={styles.startGameBtn}
-                                    onClick={handleStartGame}
-                                    disabled={loading}
-                                >
-                                    <img src={`${import.meta.env.BASE_URL}data/asset/编年史/按钮.png`} alt="开始游戏" />
-                                </button>
-                            </div>
-                        )}
+                                {/* 开始游戏按钮 */}
+                                {!gameStarted && (
+                                    <div className={styles.startGameContainer}>
+                                        <button
+                                            className={styles.startGameBtn}
+                                            onClick={handleStartGame}
+                                            disabled={loading}
+                                        >
+                                            <img src={`${import.meta.env.BASE_URL}data/asset/编年史/按钮.png`} alt="开始游戏" />
+                                        </button>
+                                    </div>
+                                )}
 
-                        {/* 继续按钮 */}
-                        {gameStarted && showNextButton && currentStep && currentStep.type !== 'choice' && (
-                            <div className={styles.nextStepContainer}>
-                                <button
-                                    className={styles.nextStepBtn}
-                                    onClick={handleNextStep}
-                                    disabled={isTyping}
-                                >
-                                    继续
-                                </button>
-                            </div>
-                        )}
+                                {/* 继续按钮 */}
+                                {gameStarted && showNextButton && currentStep && currentStep.type !== 'choice' && (
+                                    <div className={styles.nextStepContainer}>
+                                        <button
+                                            className={styles.nextStepBtn}
+                                            onClick={handleNextStep}
+                                            disabled={isTyping}
+                                        >
+                                            继续
+                                        </button>
+                                    </div>
+                                )}
 
+                            </div>
                         </div>
                     </div>
-                </div>
                 </div>
 
                 {/* 右侧面板：人物信息和背包 */}
                 <div className={styles.rightPanels}>
                     <div className={`${styles.panelCard} ${styles.playerPanel}`}>
-                        <PlayerFloatingPanel
-                            isOpen={true}
-                            player={player}
-                        />
+                        {playerOpen && (
+                            <PlayerFloatingPanel
+                                isOpen={true}
+                                player={player}
+                            />
+                        )}
                     </div>
                     <div className={`${styles.panelCard} ${styles.inventoryPanel}`}>
-                        {inventory && onEquipItem && onUseItem && (
+                        {inventoryOpen && (
                             <InventoryFloatingPanel
                                 isOpen={true}
                                 inventory={inventory}
-                                onEquipItem={onEquipItem}
-                                onUseItem={onUseItem}
+                                onEquipItem={onEquipItem || (() => {})}
+                                onUseItem={onUseItem || (() => {})}
                             />
                         )}
                     </div>
@@ -926,10 +965,10 @@ const StoryModal: React.FC<StoryModalProps> = ({
                                                     ))}
                                                 </div>
                                                 <div className={styles.choiceInputContainer}>
-                                                    <input 
-                                                        type="text" 
+                                                    <input
+                                                        type="text"
                                                         className={styles.choiceInput}
-                                                        placeholder="输入你的选择..." 
+                                                        placeholder="输入你的选择..."
                                                         value={choiceInput}
                                                         onChange={(e) => setChoiceInput(e.target.value)}
                                                         onKeyDown={(e) => {
@@ -940,7 +979,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                                                         }}
                                                         disabled={selectedOptionIndex !== null || isWaitingForData}
                                                     />
-                                                    <button 
+                                                    <button
                                                         className={styles.choiceSendBtn}
                                                         onClick={handleChoiceSend}
                                                         disabled={!choiceInput.trim() || selectedOptionIndex !== null || isWaitingForData}
@@ -986,7 +1025,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
                 {/* 任务提示弹窗 */}
                 {showMissionAlert && missionData && (
-                    <MissionSubmitModal 
+                    <MissionSubmitModal
                         missionData={missionData}
                         onClose={() => setShowMissionAlert(false)}
                         onSubmitMission={handleSubmitMission}

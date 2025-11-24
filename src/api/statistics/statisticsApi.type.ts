@@ -26,4 +26,5 @@ export interface GameTotalStatsResponse {
     uv: number;
     likeCount: number;
     Count: number;
+    totalAmount: number;
 }

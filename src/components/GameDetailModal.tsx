@@ -10,6 +10,8 @@ import GameAction from '../api/game/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { BiLike } from 'react-icons/bi';
 import { RECORD_CONVERSION } from '../config';
+import DeletModal from './goodsModal/DeletModal';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -62,6 +64,8 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
     const isOwner = useMemo(() => currentGame.creator_user_id === userId, [currentGame.creator_user_id, userId]);
     const fileId = useMemo(() => currentGame?.file_id || currentGame?.id, [currentGame]);
+
+    const [isDeletModalOpen, setIsDeletModalOpen] = useState(false);
 
     // 检查用户是否登录
     const checkAuth = useCallback(() => {
@@ -231,23 +235,51 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     if (!isOpen || !game) return null;
 
-    const handleDeleteSession = useCallback(() => {
+    const handleDeleteSession = useCallback(async () => {
         if (!checkAuth()) return;
         if (!fileId || !userId) return;
-        GameAction.deletGameSession({
-            fileId,
-            userId: String(userId),
-        });
+        try {
+            const response = await GameAction.deletGameSession({
+                fileId,
+                userId: String(userId),
+            });
+            if (response.data.success) {
+                toast.success('删除成功');
+            } else {
+                toast.error(response.data.message || '删除失败');
+            }
+        } catch (error) {
+            console.error('删除存档失败:', error);
+        } finally {
+            setIsDeletModalOpen(false);
+        }
     }, [checkAuth, fileId, userId]);
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
+            <Toaster
+                position="top-center"
+                containerStyle={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                }}
+                toastOptions={{
+                    duration: 3000,
+                    style: {
+                        minWidth: '250px',
+                        textAlign: 'center',
+                        borderRadius: '8px',
+                    },
+                }}
+            />
             <div className={styles.gameDetailModal} style={modalStyle}>
                 <button className={styles.detailModalClose} onClick={onClose}>
                     <img src={`${import.meta.env.BASE_URL}${CLOSE_BUTTON_PATH}`} alt="关闭" />
                 </button>
                 {currentGame.is_public && (
-                    <button className={styles.handleDeleteSession} onClick={handleDeleteSession}>
+                    <button className={styles.handleDeleteSession} onClick={() => setIsDeletModalOpen(true)}>
                         删除存档
                     </button>
                 )}
@@ -316,7 +348,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
                                 {!isUnlocked && !isOwner ? (
                                     <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
-                                        ￥0
+                                        {currentGame.special_price_amount == 0 ? '免费' : `￥${currentGame.special_price_amount}`}
                                     </button>
                                 ) : (
                                     <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
@@ -336,7 +368,8 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     </div>
                 </div>
             </div>
-        </div >
+            <DeletModal isOpen={isDeletModalOpen} onDelete={handleDeleteSession} onCancel={()=>setIsDeletModalOpen(false)} />
+        </div>
     );
 };
 

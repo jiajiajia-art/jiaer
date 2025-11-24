@@ -105,8 +105,10 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 4px;
+    gap: 0px;
     cursor: pointer;
+    padding: 8px 12px;
+    box-sizing: border-box;
 }
 
 .goodsPrice button{
@@ -129,6 +131,8 @@
     align-items: center;
     gap: 4px;
     cursor: pointer;
+    padding: 8px 12px;
+    box-sizing: border-box;
 }
 
 .gameEditBtn button{

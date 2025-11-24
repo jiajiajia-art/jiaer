@@ -35,6 +35,41 @@
     object-fit: contain;
 }
 
+.missionBtn,
+.floatingInventoryBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.inventoryBtnImg {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    pointer-events: none;
+    display: block;
+}
+
+.missionBtnImg{
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    pointer-events: none;
+    display: block;
+}
+
+.headerSpacer{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
 .modalContent {
     display: flex;
     flex-direction: row;
@@ -218,13 +253,19 @@
 .modalHeader {
     padding: 10px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     height: 48px;
     background: #B69B74;
     border-bottom: 2px solid #6C573A;
 }
 
+.rightButtons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
 
 .headerSpacer {
     width: 40px;
@@ -396,8 +437,6 @@
     object-fit: contain;
 }
 
-
-
 .startGameBtn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -424,19 +463,26 @@
 
 @media (max-width: 768px) {
     .modalOverlay{
-        background: transparent;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
         backdrop-filter: none;
-        /* 移动端也保持点击穿透 */
-        pointer-events: none;
+        pointer-events: auto;
     }
     
     .modalContent {
         flex-direction: column;
-        gap: 16px;
-        margin-top: 30px;
-        padding: 0 10px;
-        /* 移动端也恢复内容区域的点击事件 */
+        gap: 12px;
+        margin-top: 0;
+        padding: 0;
+        width: 100%;
+        max-width: 100%;
+        min-width: auto;
+        min-height: 80vh;
+        max-height: 80vh;
+        justify-content: flex-start;
+        align-items: center;
         pointer-events: auto;
+        overflow: visible;
     }
 
     .leftPanels,
@@ -444,19 +490,26 @@
         display: none;
     }
 
-
     .mobileHistoryModal {
         display: block;
     }
 
     .dialogueCenterWrapper {
         width: 100%;
-        max-width: 90vw;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
     }
 
     .dialogueWrapper {
         width: 100%;
-        max-width: 90vw;
+        height: 180px;
+        display: flex;
+        justify-content: center;
+        padding: 0 12px;
+        box-sizing: border-box;
     }
 
     .historyBtn img {
@@ -465,24 +518,59 @@
         object-fit: contain;
     }
 
+    .missionBtn,
+    .floatingInventoryBtn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .missionBtnImg,
+    .inventoryBtnImg {
+        width: 34px;
+        height: 34px;
+    }
+
     .modalHeader{
         height: 40px;
     }
 
     /* 移动端对话弹窗适配 */
-    .dialogueModal {
-        min-height: 360px;
-        height: auto;
+    .dialogueModalWrapper {
+        width: 100%;
+        height: 180px;
         max-width: 100%;
+        min-width: 0;
+        padding: 3px;
+        border: 0.6px solid #000;
+        box-sizing: border-box;
+    }
+
+    .dialogueModal {
+        width: 100%;
+        height: calc(100% - 6px);
+        max-width: 100%;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-sizing: border-box;
     }
 
     /* 移动端消息容器适配 */
     .messagesContainer {
-        min-height: 200px;
+        flex: 1;
+        min-height: 0;
+        max-height: 120px;
     }
 
     .npcAvatarContainer {
         width: 100%;
+        padding: 12px 12px 0;
+        margin-bottom: 0;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     .npcAvatar {
@@ -496,14 +584,30 @@
     }
 
     .startGameBtn{
-        width: 200px;
-        height: 42px;
+        width: 220px;
+        height: 48px;
     }
 
     .closeBtn{
         display: none;
     }
 
+}
+
+@media (max-width: 480px) {
+    .dialogueWrapper {
+        padding: 0 10px;
+    }
+
+    .messagesContainer {
+        max-height: 110px;
+    }
+
+    .npcAvatarContainer {
+        padding: 12px 10px 0;
+        height: auto;
+        margin-bottom: 0;
+    }
 }
 
 /* Step 相关样式 */

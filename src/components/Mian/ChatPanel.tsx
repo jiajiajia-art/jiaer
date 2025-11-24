@@ -4,7 +4,7 @@ import ChatHistory from './ChatHistory';
 import ReactMarkdown from 'react-markdown';
 import { HOST_ADDRESS } from '../../config';
 import { useGameData } from '../../hooks/useGameData';
-import type { NPC } from '../../api/game/gameData';
+import type { NPC } from '../../api/game/gameData.type';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';

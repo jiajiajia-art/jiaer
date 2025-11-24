@@ -8,7 +8,7 @@ import type {
     PlayerData,
     Inventory,
     GameItem
-} from '../api/game/gameData';
+} from '../api/game/gameData.type';
 import type { MissionData } from '../api/game/missionApi.type';
 
 // 重新导出基础类型（从 gameData 导入）
