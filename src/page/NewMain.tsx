@@ -15,7 +15,6 @@ import { useMusic } from '../hooks/useMusic';
 import { useAutoFontSize } from '../hooks/useAutoFontSize';
 
 // 组件
-import DialogueModal from '../components/Mian/DialogueModal';
 import NpcModal from '../components/Mian/NpcModal';
 import SceneDetailModal from '../components/Mian/SceneDetailModal';
 import EventModal from '../components/Mian/EventModal';
@@ -41,7 +40,7 @@ const NewMain: React.FC = () => {
         maxFontSize: 13,
         padding: 28, // 左右内边距总和 (14px * 2)
     });
-    const { events, activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
+    const { activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
     const { sessionId } = useGameStore();
     const { tracks, isPlaying, play } = useMusic();
 
@@ -52,7 +51,7 @@ const NewMain: React.FC = () => {
     const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
     const [sceneDetailId, setSceneDetailId] = useState<string | null>(null);
     const [dialogueOpen, setDialogueOpen] = useState(false);
-    const [dialogueInitialInput, setDialogueInitialInput] = useState('');
+    const [_dialogueInitialInput, setDialogueInitialInput] = useState('');
     const [alertModalOpen, setAlertModalOpen] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
