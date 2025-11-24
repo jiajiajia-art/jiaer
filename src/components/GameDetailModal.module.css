@@ -57,6 +57,29 @@
     object-fit: contain;
 }
 
+.handleDeleteSession {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: auto;
+    height: auto;
+    padding: 8px 16px;
+    background: rgba(251, 71, 85, 0.9);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1002;
+    transition: all 0.3s ease;
+}
+
+.handleDeleteSession:hover {
+    background: rgba(251, 71, 85, 1);
+    transform: scale(1.05);
+}
+
 .detailThreeColumns {
     padding: 0;
     display: flex;
@@ -445,6 +468,13 @@
         height: 50px;
     }
 
+    .handleDeleteSession {
+        top: 8px;
+        right: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
     .detailMiddleColumn {
         padding: 6px 10px;
         padding-bottom: 6px;
@@ -533,6 +563,14 @@
     .detailModalClose img {
         width: 40px;
         height: 40px;
+    }
+
+    .handleDeleteSession {
+        top: 18px;
+        left: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        width: 100px;
     }
 
     .detailMiddleColumn {

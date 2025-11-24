@@ -190,9 +190,7 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
     }, [sessionId, playerName]);
 
     // 获取任务列表
-    const loadMissions = useCallback(async () => {
-        console.log("loadMissions正在开发");
-        
+    const loadMissions = useCallback(async () => {        
         if (!sessionId) {
             return;
         }
@@ -320,11 +318,8 @@ const DialogueModal: React.FC<DialogueModalProps> = ({
 
             if (response.ok) {
                 setGameStarted(true);
-                await handleStreamResponse(response);
-                console.log(response);
-                
+                await handleStreamResponse(response);                
             } else {
-                console.error('❌ 游戏开始失败:', response.statusText);
                 setMessages((prev) => [
                     ...prev,
                     { type: 'system', text: '游戏开始失败，请重试...' }

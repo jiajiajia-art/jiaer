@@ -1,41 +1,71 @@
-// 任务奖励
-export interface MissionReward {
+// 完成路径要求
+export interface CompletionPathRequirements {
+    items?: Array<{
+      itemName: string;
+      quantity: number;
+    }>;
+    relationships?: Array<{
+      npcName: string;
+      minValue: number;
+    }>;
+    locations?: string[];
+    stats?: unknown[];
+  }
+  
+  // 完成路径
+  export interface CompletionPath {
+    pathId: string;
+    name: string;
+    description: string;
+    requirements: CompletionPathRequirements;
+  }
+  
+  // 任务奖励
+  export interface MissionReward {
     experience: number;
     gold: number;
-}
-
-// 任务要求
-export interface MissionRequirements {
-    targetLocation?: string;
-    [key: string]: unknown;
-}
-
-// 单个任务
-export interface Mission {
+    items: string[];
+  }
+  
+  // 单个任务
+  export interface Mission {
     id: string;
     title: string;
     description: string;
     type: string;
-    requirements: MissionRequirements;
+    isStoryMission: boolean;
+    blocksStoryline: boolean;
+    completionPaths: CompletionPath[];
     reward: MissionReward;
     status: string;
     createdAt: string;
     createdTurn: number;
-}
-
-// 任务数据
-export interface MissionData {
+    attemptedSubmissions: number;
+  }
+  
+  // 任务数据
+  export interface MissionData {
     turnCount: number;
     lastMissionTurn: number;
     turnsUntilNextMission: number;
     activeMissions: Mission[];
     completedMissions: Mission[];
     totalMissions: number;
-}
-
-// 任务响应
-export interface MissionResponse {
+  }
+  
+  // 任务响应
+  export interface MissionResponse {
     success: boolean;
     data: MissionData;
+    timestamp: string;
+  }
+
+export interface SubmitMissionResponse {
+    success: boolean;
+    completed: boolean;
+    mission: Mission;
+    pathResults: any[];
+    message: string;
+    attempts: number;
     timestamp: string;
 }

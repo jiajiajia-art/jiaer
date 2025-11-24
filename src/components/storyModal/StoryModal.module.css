@@ -97,8 +97,10 @@
 }
 
 .missionsModalWrapper {
-    margin-top: 170px;
     height: 250px;
+}
+.historyPanel {
+    height: 436px;
 }
 
 /* 右侧面板样式 */
@@ -153,7 +155,7 @@
 /* 对话框外层包装容器 */
 .dialogueModalWrapper {
     background-color: #6C573A;
-    padding: 8px;
+    padding: 5px;
     clip-path: polygon(
         10px 0%,
         calc(100% - 10px) 0%,

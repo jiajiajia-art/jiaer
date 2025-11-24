@@ -18,7 +18,7 @@ const DeletModal: React.FC<DeletModalProps> = ({ isOpen, onDelete, onCancel }) =
                 </button>
                 <div className={styles.deletModal}>
                     <h1 className={styles.title}>删除作品</h1>
-                    <p className={styles.message}>删除后作品不可恢复，请谨慎操作！</p>
+                    <p className={styles.message}>删除后不可恢复，请谨慎操作！</p>
                     <div className={styles.buttonGroup}>
                         <button className={styles.confirmButton} onClick={onDelete}>确认删除</button>
                         <button className={styles.cancelButton} onClick={onCancel}>我再想想</button>

@@ -6,19 +6,17 @@ import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameDa
 import { authFetch } from '../../api/base';
 import statisticsApi from '../../api/statistics/statisticsApi';
 import MissionApi from '../../api/game/missionApi';
-import type { MissionData } from '../../api/game/missionApi.type';
+import type { MissionData, SubmitMissionResponse } from '../../api/game/missionApi.type';
 import { useAuthStore } from '../../store/useAuthStore';
 import type { ChatMessage } from '../Mian/ChatHistory';
 import ChatHistory from '../Mian/ChatHistory';
 import MissionsModal from '../Mian/MissionsModal';
 import PlayerFloatingPanel from '../Mian/PlayerFloatingPanel';
 import InventoryFloatingPanel from '../Mian/InventoryFloatingPanel';
-
-// 常量定义
-// const DEFAULT_WELCOME_MESSAGE = (playerName: string) => `欢迎来到游戏世界，${playerName}！`;
-
-// 导入文本清理工具函数
+import MissionSubmitModal from './MissionSubmitModal';
+import toast from 'react-hot-toast';
 import { cleanHistoryMessage, extractChoiceFromHistory } from '../../utils/textUtils';
+import { useStepStreamResponse } from '../../hooks/useStepStreamResponse';
 
 interface StoryModalProps {
     isOpen: boolean;
@@ -30,6 +28,7 @@ interface StoryModalProps {
     onEquipItem?: (item: InventoryItem, slot: keyof EquipmentSlots) => void;
     onUseItem?: (item: InventoryItem) => void;
 }
+
 
 const StoryModal: React.FC<StoryModalProps> = ({
     isOpen,
@@ -48,13 +47,14 @@ const StoryModal: React.FC<StoryModalProps> = ({
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [missionData, setMissionData] = useState<MissionData | null>(null);
     const [loadingMissions, setLoadingMissions] = useState(false);
+    const [showMissionAlert, setShowMissionAlert] = useState(false);
     const [messages, setMessages] = useState<
         Array<{
             type: 'system' | 'user';
             text: string;
             isTyping?: boolean;
             isMarkdown?: boolean;
-            // actions?: string[];
+            actions?: string[];
             options?: string[]; // 从 [OPTION: ...] 提取的选项
         }>
     >([]);
@@ -87,7 +87,6 @@ const StoryModal: React.FC<StoryModalProps> = ({
     const scenes = useGameStore((state) => state.scenes);
     const { user } = useAuthStore();
 
-
     // 计算最新的 system 消息（用于滚动效果）
     const systemMessages = useMemo(() =>
         messages.filter(m => m.type === 'system'),
@@ -105,12 +104,9 @@ const StoryModal: React.FC<StoryModalProps> = ({
         }
 
         const characterId = currentStep.characterId;
-        console.log('🔍 查找 NPC，characterId:', characterId);
-        console.log('📚 可用场景数量:', Object.keys(scenes).length);
         
         // 如果 scenes 为空，返回 null
         if (!scenes || Object.keys(scenes).length === 0) {
-            console.log('⚠️ scenes 数据为空，无法查找 NPC');
             return null;
         }
 
@@ -118,13 +114,8 @@ const StoryModal: React.FC<StoryModalProps> = ({
         for (const sceneId in scenes) {
             const scene = scenes[sceneId];
             if (scene && scene.npcs && Array.isArray(scene.npcs)) {
-                console.log(`🔎 在场景 ${sceneId} 中查找，NPCs 数量:`, scene.npcs.length);
-                console.log(`📋 NPC IDs:`, scene.npcs.map(n => n.id));
-                
-                // 精确匹配
                 let npc = scene.npcs.find(n => n.name === characterId);
                 
-                // 如果精确匹配失败，尝试忽略大小写和空格
                 if (!npc) {
                     const normalizedCharacterId = characterId.trim().toLowerCase();
                     npc = scene.npcs.find(n => n.id.trim().toLowerCase() === normalizedCharacterId);
@@ -199,11 +190,14 @@ const StoryModal: React.FC<StoryModalProps> = ({
                                 processedText = processedText.replace(/\[ACTION:\s*.*?\]/g, '').trim();
                             }
                             
+                            // 检查是否有未完成任务，如果有则不显示 choice 弹窗
+                            const hasActiveMissions = missionData?.activeMissions && missionData.activeMissions.length > 0;
+                            
                             // 首先尝试提取 CHOICE 信息
                             const choiceData = extractChoiceFromHistory(processedText);
                             
-                            if (choiceData && choiceData.options.length > 0) {
-                                // 如果有 choice 数据，创建虚拟的 choice step 并显示在弹窗中
+                            if (choiceData && choiceData.options.length > 0 && !hasActiveMissions) {
+                                // 如果有 choice 数据且没有未完成任务，创建虚拟的 choice step 并显示在弹窗中
                                 console.log('📝 检测到 choice，创建虚拟 choice step:', choiceData);
                                 const virtualChoiceStep = {
                                     id: 'history_choice',
@@ -218,8 +212,9 @@ const StoryModal: React.FC<StoryModalProps> = ({
                                 setCurrentStep(virtualChoiceStep);
                                 setShowNextButton(false);
                                 savedChoiceStepRef.current = virtualChoiceStep;
-                                // 不设置 messages，只显示选项弹窗
-                                console.log('✅ 已设置虚拟 choice step，将在弹窗中显示');
+                            } else if (hasActiveMissions) {
+                                setCurrentStep(null);
+                                savedChoiceStepRef.current = null;
                             } else {
                                 // 如果没有 choice，使用原来的逻辑清理文本
                                 const { cleanedText, options: extractedOptions } = cleanHistoryMessage(processedText);
@@ -232,7 +227,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                                         text: cleanedText,
                                         isTyping: false,
                                         isMarkdown: true,
-                                        // actions: actions.length > 0 ? actions : undefined,
+                                        actions: actions.length > 0 ? actions : undefined,
                                         options: extractedOptions.length > 0 ? extractedOptions : undefined
                                     }]);
                                 } else {
@@ -263,7 +258,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
         } finally {
             setLoadingHistory(false);
         }
-    }, [sessionId, playerName]);
+    }, [sessionId, playerName, missionData]);
 
     // 获取任务列表
     const loadMissions = useCallback(async () => {
@@ -275,8 +270,17 @@ const StoryModal: React.FC<StoryModalProps> = ({
             setLoadingMissions(true);
             const response = await MissionApi.getMissions(sessionId);
             if (response.data.success && response.data.data) {
-                setMissionData(response.data.data);
-                console.log(response.data.data);
+                const data = response.data.data;
+                setMissionData(data);
+                console.log('任务数据:', data);
+                
+                // 检查是否有未完成的任务
+                if (data.activeMissions && data.activeMissions.length > 0) {
+                    console.log('检测到未完成任务，显示任务提示弹窗');
+                    setShowMissionAlert(true);
+                } else {
+                    setShowMissionAlert(false);
+                }
             }
         } catch (error) {
             console.error('获取任务列表失败:', error);
@@ -289,14 +293,24 @@ const StoryModal: React.FC<StoryModalProps> = ({
     useEffect(() => {
         if (isOpen && sessionId) {
             if (!hasLoadedInitialMessage.current) {
-                loadHistoryMessages(true);
-                loadMissions();
+                // 先加载任务列表，然后加载历史记录（历史记录加载时会检查任务状态）
+                loadMissions().then(() => {
+                    // 任务加载完成后再加载历史记录
+                    loadHistoryMessages(true);
+                });
             } else {
                 // 如果已经加载过，但有保存的 choice step，恢复它
+                // 但需要检查是否有未完成任务
                 if (savedChoiceStepRef.current && !currentStep) {
-                    console.log('🔄 恢复保存的 choice step');
-                    setCurrentStep(savedChoiceStepRef.current);
-                    setShowNextButton(false);
+                    const hasActiveMissions = missionData?.activeMissions && missionData.activeMissions.length > 0;
+                    if (!hasActiveMissions) {
+                        console.log('🔄 恢复保存的 choice step');
+                        setCurrentStep(savedChoiceStepRef.current);
+                        setShowNextButton(false);
+                    } else {
+                        console.log('⚠️ 有未完成任务，不恢复 choice step');
+                        savedChoiceStepRef.current = null;
+                    }
                 }
             }
         }
@@ -304,7 +318,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
         if (!isOpen) {
             hasLoadedInitialMessage.current = false;
         }
-    }, [isOpen, sessionId, loadHistoryMessages, loadMissions]);
+    }, [isOpen, sessionId, loadHistoryMessages, loadMissions, missionData, currentStep]);
 
     useEffect(() => {
         if (showHistory && sessionId) {
@@ -329,12 +343,19 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
             // 根据 step 类型设置按钮显示状态
             setShowNextButton(nextStep.type !== 'choice');
+            console.log('nextStep进行下一个step渲染', nextStep);
+            
+            // 如果显示的是 choice 类型，刷新任务列表（这样任务弹窗会在用户完成交互后显示）
+            if (nextStep.type === 'choice') {
+                console.log('刷新任务列表');
+
+                loadMissions();
+            }
         }
-    }, [stepQueue, currentStep, isWaitingForData]);
+    }, [stepQueue, currentStep, isWaitingForData, loadMissions]);
 
     // 打字机效果：当 currentStep 变化时，开始打字机效果
     useEffect(() => {
-        // 清除之前的打字机效果
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
         }
@@ -347,17 +368,13 @@ const StoryModal: React.FC<StoryModalProps> = ({
         }
 
         // 如果是 choice 类型，不需要打字机效果，直接显示
-        // 注意：不要在这里设置 setIsWaitingForData(false)，因为可能正在等待新数据
         if (currentStep.type === 'choice') {
             setDisplayedText('');
             setIsTyping(false);
-            // 不设置 setIsWaitingForData(false)，让它在收到新数据时由 useEffect 处理
             return;
         }
 
-        // 获取要显示的文本
         const textToDisplay = currentStep.text || '';
-
         if (!textToDisplay) {
             setDisplayedText('');
             setIsTyping(false);
@@ -365,12 +382,10 @@ const StoryModal: React.FC<StoryModalProps> = ({
             return;
         }
 
-        // 重置显示文本，开始打字机效果
         setDisplayedText('');
         setIsTyping(true);
         setIsWaitingForData(false);
 
-        // 打字机效果：逐字显示
         let currentIndex = 0;
         const typingSpeed = 60; // 每个字符的延迟（毫秒）
 
@@ -380,23 +395,18 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 currentIndex++;
                 typingTimeoutRef.current = setTimeout(typeNextChar, typingSpeed);
             } else {
-                // 打字完成
                 setIsTyping(false);
                 setDisplayedText(textToDisplay);
             }
         };
 
-        // 开始打字
         typingTimeoutRef.current = setTimeout(typeNextChar, typingSpeed);
-
-        // 清理函数
         return () => {
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
             }
         };
     }, [currentStep]);
-
 
     const refreshHistoryAndMissions = useCallback(async () => {
         await Promise.allSettled([
@@ -435,25 +445,13 @@ const StoryModal: React.FC<StoryModalProps> = ({
         }
     }, [currentIsTyping, refreshHistoryAndMissions]);
 
-    // 使用流式处理 Hook
-    // const { handleStreamResponse: baseHandleStreamResponse } = useStreamResponse({
-    //     setMessages,
-    //     initialMessage: { type: 'system', isMarkdown: true }
-    // });
-
-    // 包装 handleStreamResponse，在流结束后刷新数据
-    // const handleStreamResponse = useCallback(async (response: Response) => {
-    //     try {
-    //         await baseHandleStreamResponse(response);
-    //         // 流式输出完成后刷新数据
-    //         getNewPlayer();
-    //         setTimeout(() => {
-    //             refreshHistoryAndMissions();
-    //         }, 800);
-    //     } catch (error) {
-    //         console.error('❌ [DialogueModal] 流式响应处理失败:', error);
-    //     }
-    // }, [baseHandleStreamResponse, getNewPlayer, refreshHistoryAndMissions]);
+    // 使用 Step 流式响应处理 Hook
+    const { processStreamResponse } = useStepStreamResponse({
+        setStepQueue,
+        setSelectedOptionIndex,
+        setIsWaitingForData,
+        currentRequestId,
+    });
 
     // 通用的流式请求处理函数
     const handleStreamAction = useCallback(async (
@@ -506,149 +504,18 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     setGameStarted(true);
                 }
 
-                // 异步读取流式数据，不阻塞 UI
-                const reader = response.body?.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                if (reader) {
-                    console.log('📡 开始接收流式数据...');
-
-                    // 使用异步函数处理流式数据，不阻塞主流程
-                    (async () => {
-                        let hasReceivedStep = false;
-                        try {
-                            while (true) {
-                                const { value, done } = await reader.read();
-
-                                if (done) {
-                                    console.log('✅ 流式数据接收完成，请求 ID:', requestId);
-                                    // 如果流结束时没有收到任何 step，清除选中状态
-                                    if (!hasReceivedStep && selectedOptionIndex !== null) {
-                                        console.log('⚠️ 流结束时没有收到任何 step，清除选中状态');
-                                        setSelectedOptionIndex(null);
-                                        setIsWaitingForData(false);
-                                    }
-                                    break;
-                                }
-
-                                buffer += decoder.decode(value, { stream: true });
-                                const lines = buffer.split(/\r?\n/);
-                                buffer = lines.pop() || '';
-
-                                for (const line of lines) {
-                                    const trimmedLine = line.trim();
-                                    if (!trimmedLine) continue;
-
-                                    let dataStr = trimmedLine;
-                                    if (trimmedLine.startsWith('data:')) {
-                                        dataStr = trimmedLine.replace(/^data:\s*/, '');
-                                    }
-
-                                    try {
-                                        const jsonData = JSON.parse(dataStr);
-                                        console.log('📦 收到流式数据:', jsonData);
-
-                                        // 检查是否是当前请求的数据（防止处理旧请求的数据）
-                                        if (currentRequestId.current !== requestId) {
-                                            console.log('⚠️ 忽略旧请求的数据，当前请求 ID:', currentRequestId.current, '数据请求 ID:', requestId);
-                                            continue;
-                                        }
-
-                                        // 处理 step 类型的数据
-                                        if (jsonData.type === 'step' && jsonData.step) {
-                                            const step = jsonData.step;
-                                            console.log('📝 收到新的 step（请求 ID:', requestId, '）:', step.type, step.id || step.text?.substring(0, 30));
-                                            hasReceivedStep = true;
-
-                                            setStepQueue(prev => {
-                                                if (currentRequestId.current !== requestId) {
-                                                    console.log('⚠️ 队列更新时请求 ID 已变化，忽略此 step');
-                                                    return prev;
-                                                }
-                                                const newQueue = [...prev, step];
-                                                console.log('📋 队列更新，当前队列长度:', newQueue.length);
-                                                return newQueue;
-                                            });
-                                        }
-
-                                        // 处理完整数据（包含 narrativeSteps）
-                                        if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
-                                            console.log('📚 收到完整数据（请求 ID:', requestId, '），包含', jsonData.narrativeSteps.length, '个 steps');
-                                            if (jsonData.narrativeSteps.length > 0) {
-                                                hasReceivedStep = true;
-                                            }
-
-                                            setStepQueue(prev => {
-                                                if (currentRequestId.current !== requestId) {
-                                                    console.log('⚠️ 队列更新时请求 ID 已变化，忽略此数据');
-                                                    return prev;
-                                                }
-                                                const newQueue = [...prev, ...jsonData.narrativeSteps];
-                                                console.log('📋 队列更新（完整数据），当前队列长度:', newQueue.length);
-                                                return newQueue;
-                                            });
-                                        }
-                                    } catch (e) {
-                                        console.log('📦 收到流式数据（原始）:', e);
-                                    }
-                                }
-                            }
-
-                            // 处理缓冲区中剩余的数据
-                            if (buffer.trim()) {
-                                let dataStr = buffer.trim();
-                                if (dataStr.startsWith('data:')) {
-                                    dataStr = dataStr.replace(/^data:\s*/, '');
-                                }
-                                try {
-                                    const jsonData = JSON.parse(dataStr);
-                                    console.log('📦 收到流式数据（最后，请求 ID:', requestId, '）:', jsonData);
-
-                                    // 检查是否是当前请求的数据
-                                    if (currentRequestId.current !== requestId) {
-                                        console.log('⚠️ 忽略旧请求的最后数据');
-                                        return;
-                                    }
-
-                                    // 处理最后的数据
-                                    if (jsonData.type === 'step' && jsonData.step) {
-                                        hasReceivedStep = true;
-                                        setStepQueue(prev => {
-                                            if (currentRequestId.current !== requestId) {
-                                                return prev;
-                                            }
-                                            return [...prev, jsonData.step];
-                                        });
-                                    }
-                                    if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
-                                        if (jsonData.narrativeSteps.length > 0) {
-                                            hasReceivedStep = true;
-                                        }
-                                        setStepQueue(prev => {
-                                            if (currentRequestId.current !== requestId) {
-                                                return prev;
-                                            }
-                                            return [...prev, ...jsonData.narrativeSteps];
-                                        });
-                                    }
-                                } catch (e) {
-                                    console.log('📦 收到流式数据（最后，原始）:', dataStr);
-                                }
-                            }
-
-                            // 执行成功回调
-                            options?.onSuccess?.();
-                        } catch (error) {
-                            console.error('❌ 流式数据接收错误:', error);
-                            // 错误时清除选中状态
-                            setSelectedOptionIndex(null);
-                            setIsWaitingForData(false);
+                // 使用 processStreamResponse 处理流式数据
+                await processStreamResponse(response, requestId, {
+                    onSuccess: async () => {
+                        // 先执行用户自定义的 onSuccess 回调
+                        if (options?.onSuccess) {
+                            await options.onSuccess();
                         }
-                    })();
-                } else {
-                    console.warn('⚠️ 无法获取响应流');
-                }
+                        // 只刷新历史记录，任务列表等到显示 choice 时再刷新
+                        await loadHistoryMessages();
+                    },
+                    onError: options?.onError
+                });
 
             } else {
                 const errorMsg = `请求失败: ${response.statusText}`;
@@ -666,11 +533,81 @@ const StoryModal: React.FC<StoryModalProps> = ({
             options?.onError?.(errorMsg);
         }
         // 注意：请求成功时，不在这里取消 loading，让 loading 保持到收到第一个 step 并显示后才取消（在 useEffect 中处理）
-    }, [sessionId]);
+    }, [sessionId, processStreamResponse]);
+
+    // 处理任务提交
+    const handleSubmitMission = useCallback(async (missionId: string) => {
+        if (!sessionId) {
+            toast.error('没有 sessionId，无法提交任务');
+            return;
+        }
+
+        try {
+            const response = await authFetch(
+                `${HOST_ADDRESS}/api/backend/game/session/${sessionId}/missions/${missionId}/submit`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+            const contentType = response.headers.get('content-type');
+  
+            if (contentType?.includes('text/event-stream')) {
+                console.log('流式响应');     
+                const requestId = ++currentRequestId.current;
+
+                setCurrentStep(null);
+                setStepQueue([]);
+                setShowNextButton(false);
+                setIsWaitingForData(true);
+                setMessages([]);
+                setLoading(true);
+                
+                await processStreamResponse(response, requestId, {
+                    onFirstStep: () => {
+                        console.log('📝 收到第一个 step，关闭任务提示弹窗');
+                        setShowMissionAlert(false);
+                    },
+                    onSuccess: async () => {
+                        // 只刷新历史记录，任务列表等到显示 choice 时再刷新
+                        await loadHistoryMessages();
+                    },
+                    onError: (error) => {
+                        console.error('❌ 任务提交流式处理错误:', error);
+                        toast.error(error || '任务提交失败');
+                        setLoading(false);
+                        setIsWaitingForData(false);
+                    }
+                });
+            } else{
+                // 普通 JSON 响应（成功）
+                try {
+                    const data: SubmitMissionResponse = await response.json();
+                    if (data.completed) {
+                        console.log('✅ 任务提交成功');
+                        toast.success(data.message || '任务提交成功');
+                        // 刷新任务列表
+                        await loadMissions();
+                    } else {
+                        console.log('❌ 任务提交失败:', data.message);
+                        toast.error(data.message || '任务提交失败');
+                    }
+                } catch (jsonError) {
+                    console.error('❌ 解析响应失败:', jsonError);
+                    toast.error('任务提交响应格式错误');
+                }
+            } 
+        } catch (error) {
+            console.error('❌ 任务提交错误:', error);
+            toast.error('任务提交失败，请稍后重试');
+        }
+    }, [sessionId, processStreamResponse, loadMissions]);
 
     const handleStartGame = async () => {
         // 记录游戏开始统计（异步执行，不阻塞游戏开始）
         if (pdfFileId && RECORD_CONVERSION) {
+            console.log('是否开启统计');
+            
             statisticsApi.addConversion({
                 fileId: pdfFileId,
                 userId: String(user?.user.id)
@@ -701,6 +638,11 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 const nextStep = prev[0];
                 setCurrentStep(nextStep);
                 setShowNextButton(nextStep.type !== 'choice');
+                console.log('nextStep进行下一个step渲染');
+                if(nextStep.type === 'choice') {
+                    console.log('刷新任务列表');
+                    loadMissions();
+                }
                 return prev.slice(1);
             } else {
                 setCurrentStep(null);
@@ -713,7 +655,6 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
     // 处理选择选项
     const handleChoiceOption = useCallback(async (option: { text: string; nextId: string }, optionIndex: number) => {
-        // 记录被选中的选项索引
         setSelectedOptionIndex(optionIndex);
         // 立即显示加载状态，确保弹窗立即切换到加载状态
         setIsWaitingForData(true);
@@ -762,14 +703,11 @@ const StoryModal: React.FC<StoryModalProps> = ({
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
                 <button 
-                    className={`${styles.closeBtn} ${currentStep && currentStep.type === 'choice' ? styles.closeBtnElevated : ''}`}
+                    className={`${styles.closeBtn} ${currentStep && currentStep.type === 'choice'||showMissionAlert ? styles.closeBtnElevated : ''}`}
                     onClick={() => {
                         // 只有 choice 类型时才允许关闭 step 弹窗
                         if (currentStep && currentStep.type === 'choice') {
-                            // 保存当前的 choice step，不清除它，以便重新打开时恢复
                             savedChoiceStepRef.current = currentStep;
-                            // 不清除 currentStep，保持显示状态
-                            // 只关闭整个 StoryModal
                         }
                         onClose();
                     }}
@@ -779,13 +717,17 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 
                 {/* 左侧面板：历史记录和任务列表 */}
                 <div className={styles.leftPanels}>
-                    <div className={`${styles.panelCard} ${styles.historyPanel}`}>
-                        <ChatHistory
-                            isOpen={true}
-                            chatMessages={historyMessages}
-                            loading={loadingHistory}
-                        />
-                    </div>
+                    {
+                        showHistory && (
+                            <div className={`${styles.panelCard} ${styles.historyPanel}`}>
+                                <ChatHistory
+                                    isOpen={true}
+                                    chatMessages={historyMessages}
+                                    loading={loadingHistory}
+                                />
+                            </div>
+                        )
+                    }
                     <div className={`${styles.panelCard} ${styles.missionsModalWrapper}`}>
                         <MissionsModal missionData={missionData} loading={loadingMissions} />
                     </div>
@@ -808,7 +750,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                             ) : (
                                 <img 
                                     src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`} 
-                                    alt={currentStep.characterId || '角色'}
+                                    alt='角色'
                                     className={styles.npcAvatar}
                                 />
                             )}
@@ -1041,6 +983,15 @@ const StoryModal: React.FC<StoryModalProps> = ({
                         </div>
                     </div>
                 ) : null}
+
+                {/* 任务提示弹窗 */}
+                {showMissionAlert && missionData && (
+                    <MissionSubmitModal 
+                        missionData={missionData}
+                        onClose={() => setShowMissionAlert(false)}
+                        onSubmitMission={handleSubmitMission}
+                    />
+                )}
 
             </div>
         </div>

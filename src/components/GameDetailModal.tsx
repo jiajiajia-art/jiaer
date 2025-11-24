@@ -231,12 +231,26 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     if (!isOpen || !game) return null;
 
+    const handleDeleteSession = useCallback(() => {
+        if (!checkAuth()) return;
+        if (!fileId || !userId) return;
+        GameAction.deletGameSession({
+            fileId,
+            userId: String(userId),
+        });
+    }, [checkAuth, fileId, userId]);
+
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
             <div className={styles.gameDetailModal} style={modalStyle}>
                 <button className={styles.detailModalClose} onClick={onClose}>
                     <img src={`${import.meta.env.BASE_URL}${CLOSE_BUTTON_PATH}`} alt="关闭" />
                 </button>
+                {currentGame.is_public && (
+                    <button className={styles.handleDeleteSession} onClick={handleDeleteSession}>
+                        删除存档
+                    </button>
+                )}
                 <div className={styles.detailThreeColumns}>
                     <div className={styles.detailMiddleColumn}>
                         <div className={styles.detailGameTitleContainer}>

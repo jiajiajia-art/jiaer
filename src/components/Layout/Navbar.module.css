@@ -194,14 +194,6 @@
     white-space: nowrap;
 }
 
-.logoutBtn:hover {
-    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
-}
-
-.logoutBtn:active {
-    background: linear-gradient(135deg, #8B3A15 0%, #6B2A0F 100%);
-}
-
 .settingIcon {
     width: 48px;
     height: 48px;
