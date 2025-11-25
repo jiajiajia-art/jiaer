@@ -101,13 +101,18 @@ const MissionItem: React.FC<MissionItemProps> = ({ mission }) => {
     );
 };
 
-const MissionsModal: React.FC<MissionsModalProps> = ({ missionData, loading = false }) => {
-    const renderMission = (mission: Mission) => {
-        return <MissionItem key={mission.id} mission={mission} />;
-    };
-
+const MissionsModal: React.FC<MissionsModalProps> = ({ missionData, loading = false, onClose }) => {
     return (
         <div className={styles.missionsModal}>
+            {onClose && (
+                <button
+                    className={styles.closeButton}
+                    onClick={onClose}
+                    aria-label="关闭任务列表"
+                >
+                    <img src={`${import.meta.env.BASE_URL}data/asset/关闭按钮.png`} alt="关闭" />
+                </button>
+            )}
             <div className={styles.missionsContent}>
                 <h3 className={styles.missionsTitle}>任务列表</h3>
                 {loading ? (
@@ -119,13 +124,17 @@ const MissionsModal: React.FC<MissionsModalProps> = ({ missionData, loading = fa
                         {missionData.activeMissions.length > 0 && (
                             <div className={styles.missionSection}>
                                 <h4 className={styles.sectionTitle}>进行中的任务 ({missionData.activeMissions.length})</h4>
-                                {missionData.activeMissions.map(renderMission)}
+                                {missionData.activeMissions.map((mission) => (
+                                    <MissionItem key={`active-${mission.id}`} mission={mission} />
+                                ))}
                             </div>
                         )}
                         {missionData.completedMissions.length > 0 && (
                             <div className={styles.missionSection}>
                                 <h4 className={styles.sectionTitle}>已完成的任务 ({missionData.completedMissions.length})</h4>
-                                {missionData.completedMissions.map(renderMission)}
+                                {missionData.completedMissions.map((mission) => (
+                                    <MissionItem key={`completed-${mission.id}`} mission={mission} />
+                                ))}
                             </div>
                         )}
                         {missionData.activeMissions.length === 0 && missionData.completedMissions.length === 0 && (

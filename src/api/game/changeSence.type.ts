@@ -1,4 +1,4 @@
-import type { GameFiles, Scene } from "./gameData";
+import type { GameFiles, Scene } from "./gameData.type";
 
 export interface ChangeSceneRequest {
     sceneId: string;

@@ -62,11 +62,11 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                             <div className={styles.goodsPrice}>
                                 {showSpecialPrice && meta.special_price_amount ? (
                                     <>
-                                        <div className={styles.goodsPriceText}>￥{meta.price_amount || 100}</div>
-                                        <div className={styles.specialPriceText}>￥{meta.special_price_amount}</div>
+                                        <div className={styles.goodsPriceText}>{meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}</div>
+                                        <div className={styles.specialPriceText}>{meta.special_price_amount == 0 ? '免费' : `￥${meta.special_price_amount}`}</div>
                                     </>
                                 ) : (
-                                    <div className={styles.normalPriceText}>￥{meta.price_amount || 100}</div>
+                                    <div className={styles.normalPriceText}>{meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}</div>
                                 )}
                             </div>
                         )}

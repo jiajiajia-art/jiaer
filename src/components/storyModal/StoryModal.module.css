@@ -35,6 +35,41 @@
     object-fit: contain;
 }
 
+.missionBtn,
+.floatingInventoryBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.inventoryBtnImg {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    pointer-events: none;
+    display: block;
+}
+
+.missionBtnImg{
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    pointer-events: none;
+    display: block;
+}
+
+.headerSpacer{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
 .modalContent {
     display: flex;
     flex-direction: row;
@@ -99,6 +134,7 @@
 .missionsModalWrapper {
     height: 250px;
 }
+
 .historyPanel {
     height: 436px;
 }
@@ -109,30 +145,14 @@
     width: 330px;
 }
 
-.mobileHistoryModal {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 95%;
-    max-width: 450px;
-    height: 76vh;
-    max-height: 600px;
-    z-index: 2000;
-    border-radius: 15px;
-    animation: chatSlideIn 0.3s ease-out;
-    pointer-events: auto;
-}
-
 @keyframes chatSlideIn {
     from {
         opacity: 0;
-        transform: translate(-50%, -45%);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
-        transform: translate(-50%, -50%);
+        transform: translateY(0);
     }
 }
 
@@ -218,13 +238,19 @@
 .modalHeader {
     padding: 10px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     height: 48px;
     background: #B69B74;
     border-bottom: 2px solid #6C573A;
 }
 
+.rightButtons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
 
 .headerSpacer {
     width: 40px;
@@ -275,7 +301,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
+    width: 450px;
     position: relative;
     z-index: 1002;
     max-width: 450px;
@@ -396,8 +422,6 @@
     object-fit: contain;
 }
 
-
-
 .startGameBtn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
@@ -410,9 +434,13 @@
 }
 
 .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background-color: #B69B74;
+    margin-left: 2px;
     animation: blink 1s infinite;
-    color: #B69B74;
-    font-weight: bold;
+    vertical-align: middle;
 }
 
 @keyframes blink {
@@ -420,23 +448,28 @@
     51%, 100% { opacity: 0; }
 }
 
-
-
 @media (max-width: 768px) {
     .modalOverlay{
-        background: transparent;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
         backdrop-filter: none;
-        /* 移动端也保持点击穿透 */
-        pointer-events: none;
+        pointer-events: auto;
     }
     
     .modalContent {
         flex-direction: column;
-        gap: 16px;
-        margin-top: 30px;
-        padding: 0 10px;
-        /* 移动端也恢复内容区域的点击事件 */
+        gap: 12px;
+        margin-top: 0;
+        padding: 0;
+        width: 100%;
+        max-width: 100%;
+        min-width: auto;
+        min-height: 80vh;
+        max-height: 80vh;
+        justify-content: flex-start;
+        align-items: center;
         pointer-events: auto;
+        overflow: visible;
     }
 
     .leftPanels,
@@ -444,19 +477,26 @@
         display: none;
     }
 
-
     .mobileHistoryModal {
         display: block;
     }
 
     .dialogueCenterWrapper {
         width: 100%;
-        max-width: 90vw;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
     }
 
     .dialogueWrapper {
         width: 100%;
-        max-width: 90vw;
+        height: 180px;
+        display: flex;
+        justify-content: center;
+        padding: 0 12px;
+        box-sizing: border-box;
     }
 
     .historyBtn img {
@@ -465,24 +505,63 @@
         object-fit: contain;
     }
 
+    .floatingInventoryBtn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .missionBtn {
+        width: 50px;
+        height: 50px;
+    }
+
+    .missionBtnImg,
+    .inventoryBtnImg {
+        width: 100%;
+        height: 100%;
+    }
+
     .modalHeader{
         height: 40px;
     }
 
     /* 移动端对话弹窗适配 */
-    .dialogueModal {
-        min-height: 360px;
-        height: auto;
+    .dialogueModalWrapper {
+        width: 430px;
+        height: 180px;
         max-width: 100%;
+        min-width: 0;
+        padding: 3px;
+        border: 0.6px solid #000;
+        box-sizing: border-box;
+    }
+
+    .dialogueModal {
+        width: 426px;
+        height: calc(100% - 6px);
+        max-width: 100%;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-sizing: border-box;
     }
 
     /* 移动端消息容器适配 */
     .messagesContainer {
-        min-height: 200px;
+        flex: 1;
+        min-height: 0;
+        max-height: 120px;
     }
 
     .npcAvatarContainer {
         width: 100%;
+        padding: 12px 12px 0;
+        margin-bottom: 0;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     .npcAvatar {
@@ -496,14 +575,30 @@
     }
 
     .startGameBtn{
-        width: 200px;
-        height: 42px;
+        width: 220px;
+        height: 48px;
     }
 
     .closeBtn{
         display: none;
     }
 
+}
+
+@media (max-width: 480px) {
+    .dialogueWrapper {
+        padding: 0 10px;
+    }
+
+    .messagesContainer {
+        max-height: 110px;
+    }
+
+    .npcAvatarContainer {
+        padding: 12px 10px 0;
+        height: auto;
+        margin-bottom: 0;
+    }
 }
 
 /* Step 相关样式 */
@@ -669,24 +764,7 @@
 }
 
 /* 打字机光标闪烁效果 */
-.cursor {
-    display: inline-block;
-    width: 2px;
-    height: 1.2em;
-    background-color: #B69B74;
-    margin-left: 2px;
-    animation: blink 1s infinite;
-    vertical-align: middle;
-}
-
-@keyframes blink {
-    0%, 50% {
-        opacity: 1;
-    }
-    51%, 100% {
-        opacity: 0;
-    }
-}
+/* blink keyframes defined once above */
 
 /* 三个点上下跳动的加载效果 */
 .loadingDots {
@@ -895,5 +973,76 @@
         width: 100%;
         padding: 10px 20px;
         font-size: 0.9rem;
+    }
+}
+
+.mobilePanelOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    background: transparent;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.mobilePanelContent {
+    position: relative;
+    width: min(95vw, 420px);
+    height: 65vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+}
+
+.mobilePanelContent :global(.inventoryFloatingPanel),
+.mobilePanelContent :global(.playerFloatingPanel),
+.mobilePanelContent :global(.missionsModal),
+.mobilePanelContent :global(.chatHistory) {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 65vh;
+    animation: none !important;
+}
+
+.mobileMissionModal .mobilePanelContent,
+.mobileInventoryModal .mobilePanelContent,
+.mobilePlayerModal .mobilePanelContent {
+    max-width: 360px;
+}
+
+.mobileHistoryModal .mobilePanelContent {
+    height: 76vh;
+    max-height: 600px;
+}
+
+.mobilePanelContent :global(.chatHistory) {
+    height: 100%;
+}
+
+.mobilePanelContent :global(.inventoryFloatingPanel) {
+    height: auto;
+}
+
+.mobilePanelContent :global(.playerFloatingPanel) {
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    .mobilePanelOverlay {
+        display: flex;
+    }
+    
+    .mobileHistoryModal {
+        display: flex;
     }
 }

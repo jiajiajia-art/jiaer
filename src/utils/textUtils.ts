@@ -5,6 +5,7 @@ export const cleanHistoryMessage = (text: string): { cleanedText: string; option
     let cleaned = text;
     const options: string[] = [];
     
+    // 提取 OPTION 信息
     const optionRegex = /\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi;
     let optionMatch;
     while ((optionMatch = optionRegex.exec(text)) !== null) {
@@ -14,24 +15,30 @@ export const cleanHistoryMessage = (text: string): { cleanedText: string; option
         }
     }
     
+    // 处理 NARRATION - 保留内容
     cleaned = cleaned.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
         return content ? content.trim() : '';
     });
     
-    cleaned = cleaned.replace(/\[DIALOGUE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
-        if (content.includes('"')) {
-            const textMatch = content.match(/"([^"]*)"/);
-            return textMatch ? textMatch[1] : content.trim();
+    // 处理 DIALOGUE - 保留说话人和对话内容
+    cleaned = cleaned.replace(/\[DIALOGUE:\s*([^,]*),\s*"([^"]*)"\]/gi, (_match, speaker, content) => {
+        if (speaker && content) {
+            return `${speaker.trim()}：“${content.trim()}”`;
         }
         return content ? content.trim() : '';
     });
     
+    // 处理 HINT - 保留内容
     cleaned = cleaned.replace(/\[HINT:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
-        return content ? content.trim() : '';
+        return content ? `提示：${content.trim()}` : '';
     });
+    
+    // 移除 CHOICE 相关的标签（OPTION 已经提取）
     cleaned = cleaned.replace(/\[CHOICE:[\s\S]*?\[END_CHOICE\]/gi, '');
     cleaned = cleaned.replace(/\[CHOICE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
     cleaned = cleaned.replace(/\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
+    
+    // 清理多余的符号和空格
     cleaned = cleaned.replace(/\]/g, '\n');
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
     
@@ -102,15 +109,14 @@ export const extractChoiceFromHistory = (text: string): {
         let middleText = choiceBlockMatch[2];
         // 移除所有 OPTION 标签
         middleText = middleText.replace(/\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
-        // 清理其他标签
-        middleText = middleText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+        // 保留对话中的说话人信息
+        middleText = middleText.replace(/\[DIALOGUE:\s*([^,]*),\s*"([^"]*)"\]/gi, (_match, speaker, content) => {
+            if (speaker && content) {
+                return `${speaker.trim()}：“${content.trim()}”`;
+            }
             return content ? content.trim() : '';
         });
-        middleText = middleText.replace(/\[DIALOGUE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
-            if (content.includes('"')) {
-                const textMatch = content.match(/"([^"]*)"/);
-                return textMatch ? textMatch[1] : content.trim();
-            }
+        middleText = middleText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
             return content ? content.trim() : '';
         });
         middleText = middleText.replace(/\[HINT:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
@@ -124,15 +130,14 @@ export const extractChoiceFromHistory = (text: string): {
         const afterChoiceMatch = text.match(/\[CHOICE:[^\]]*\]([\s\S]*?)(?=\[OPTION:|$)/i);
         if (afterChoiceMatch && afterChoiceMatch[1]) {
             let extractedText = afterChoiceMatch[1];
-            // 清理其他标签
-            extractedText = extractedText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
+            // 保留对话中的说话人信息
+            extractedText = extractedText.replace(/\[DIALOGUE:\s*([^,]*),\s*"([^"]*)"\]/gi, (_match, speaker, content) => {
+                if (speaker && content) {
+                    return `${speaker.trim()}：“${content.trim()}”`;
+                }
                 return content ? content.trim() : '';
             });
-            extractedText = extractedText.replace(/\[DIALOGUE:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
-                if (content.includes('"')) {
-                    const textMatch = content.match(/"([^"]*)"/);
-                    return textMatch ? textMatch[1] : content.trim();
-                }
+            extractedText = extractedText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
                 return content ? content.trim() : '';
             });
             extractedText = extractedText.replace(/\[HINT:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
@@ -150,4 +155,3 @@ export const extractChoiceFromHistory = (text: string): {
         options
     };
 };
-

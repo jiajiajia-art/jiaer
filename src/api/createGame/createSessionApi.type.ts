@@ -1,4 +1,4 @@
-import type { GameFiles } from "../game/gameData";
+import type { GameFiles } from "../game/gameData.type";
 
 export interface CreateSessionRequest {
   fileId: string;

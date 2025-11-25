@@ -5,7 +5,7 @@ import { useGameStore } from '../../store/gameStore';
 import ReactMarkdown from 'react-markdown';
 import ChatHistory, { type ChatMessage } from './ChatHistory';
 import PlayerFloatingPanel from './PlayerFloatingPanel';
-import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData';
+import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';
 import InventoryFloatingPanel from './InventoryFloatingPanel';
 import { useGameData } from '../../hooks/useGameData';
 import { authFetch } from '../../api/base';

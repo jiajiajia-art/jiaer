@@ -3,7 +3,7 @@ import styles from './PlayerFloatingPanel.module.css';
 import { useGameStore } from '../../store/gameStore';
 import ModeifyPlayer from '../../api/game/modifyPlayer';
 import { FaCheckToSlot, FaPenToSquare } from 'react-icons/fa6';
-import type { PlayerData } from '../../api/game/gameData';
+import type { PlayerData } from '../../api/game/gameData.type';
 
 interface PlayerFloatingPanelProps {
     isOpen: boolean;

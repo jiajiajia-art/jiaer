@@ -149,14 +149,14 @@ const NewMain: React.FC = () => {
     const hasScenes = scenes && Object.keys(scenes).length > 0;
     const isDataReady = backendDataLoaded && !!player && hasScenes;
 
-    if (!isDataReady) {
-        return (
-            <div className={styles.loadingWrapper}>
-                <div className={styles.loadingSpinner}></div>
-                <p className={styles.loadingText}>正在加载世界，请稍候…</p>
-            </div>
-        );
-    }
+    // if (!isDataReady) {
+    //     return (
+    //         <div className={styles.loadingWrapper}>
+    //             <div className={styles.loadingSpinner}></div>
+    //             <p className={styles.loadingText}>正在加载世界，请稍候…</p>
+    //         </div>
+    //     );
+    // }
 
     const handleSceneClick = (targetId: string) => {
         changeScenes(targetId);

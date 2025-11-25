@@ -22,7 +22,7 @@ const Create: React.FC = () => {
         totalCreated: 0,
         totalViews: 0,
         totalClicks: 0,
-        totalRevenue: 0,
+        totalAmount: 0,
     });
 
     // 将游戏数据分类为已发布和未发布
@@ -69,8 +69,8 @@ const Create: React.FC = () => {
                 setStats({
                     totalCreated: response.data.data.Count ?? 0,
                     totalViews: response.data.data.pv ?? 0,
-                    totalClicks: response.data.data.likeCount ?? 0,
-                    totalRevenue: response.data.data.uv ?? 0,
+                    totalClicks: response.data.data.uv ?? 0,
+                    totalAmount: response.data.data.totalAmount ?? 0,
                 });
             }
         } catch (error) {
@@ -180,7 +180,7 @@ const Create: React.FC = () => {
                                     <IoWallet />
                                     <span>总收益</span>
                                 </div>
-                                <div className={styles.statValue}>{stats.totalRevenue}</div>
+                                <div className={styles.statValue}>{stats.totalAmount}</div>
                             </div>
                         </div>
                     </div>
