@@ -131,6 +131,10 @@
     font-size: 24px;
 }
 
+.payButton {
+    margin-top: 10px;
+}
+
 /* 我的数据模块 */
 .statsSection {
     width: 1080px;

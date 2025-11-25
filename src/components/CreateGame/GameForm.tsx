@@ -25,7 +25,6 @@ interface GameFormProps {
     isCreating?: boolean;
     onFormDataChange?: (data: GameFormData) => void;
     onTestGame?: () => void;
-    onPublish?: () => void;
     isFormValid?: boolean;
 }
 
@@ -35,7 +34,6 @@ const GameForm: React.FC<GameFormProps> = ({
     isCreating = false,
     onFormDataChange,
     onTestGame,
-    onPublish,
     isFormValid = false,
 }) => {
     const [gameName, setGameName] = useState(initialGameData?.title || '');
@@ -59,7 +57,7 @@ const GameForm: React.FC<GameFormProps> = ({
             setGameName(initialGameData.title || '');
             setGameSubtitle(initialGameData.subtitle || '');
             setGameDescription(initialGameData.description || '');
-            setCoverImage(initialGameData.cover_url || null);
+            setCoverImage(`https://kurangames.com/images/${initialGameData.cover_url}` || null);
         }
         if (initialFiles) {
             if (initialFiles.existingDocFile !== undefined) setExistingDocFile(initialFiles.existingDocFile);
@@ -357,7 +355,7 @@ const GameForm: React.FC<GameFormProps> = ({
                         </div>
                     ) : (
                         <div className={styles.coverPreviewContainer}>
-                            <img src={`https://kurangames.com/images/${coverImage}`} alt="封面预览" className={styles.coverPreviewImage} />
+                            <img src={coverImage} alt="封面预览" className={styles.coverPreviewImage} />
                             <button
                                 type="button"
                                 className={styles.removeFileBtn}
@@ -395,23 +393,11 @@ const GameForm: React.FC<GameFormProps> = ({
                     onClick={onTestGame}
                     disabled={isCreating || !isFormValid}
                 >
-                    创建游戏
+                    {
+                        initialGameData ? '提交修改' : '创建游戏'
+                    }
                 </button>
             </div>
-
-            {
-                initialGameData && (
-                    <div className={styles.formGroup}>
-                        <label className={styles.createGameBtnLabel}></label>
-                        <button
-                            className={`${styles.gameBtn} ${styles.publishGameBtn}`}
-                            onClick={onPublish}
-                            disabled={isCreating}
-                        >
-                            发布
-                        </button>
-                    </div>
-                )}
         </div>
     );
 };

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStepStreamResponse } from './useStepStreamResponse';
-import { authFetch } from '../api/base';
-import { HOST_ADDRESS } from '../config';
+import { authFetch } from '../../api/base';
+import { HOST_ADDRESS } from '../../config';
 
 interface UseStoryStepOptions {
     sessionId: string | null;
@@ -50,7 +50,6 @@ export const useStoryStep = ({
             
             if (nextStep.type === 'choice') {
                 onMissionsRefresh?.();
-                console.log('这边choice触发onMissionsRefresh');
             }
         }
     }, [stepQueue, currentStep, isWaitingForData, onMissionsRefresh]);
@@ -130,10 +129,8 @@ export const useStoryStep = ({
             if (prev.length > 0) {
                 const nextStep = prev[0];
                 setCurrentStep(nextStep);
-                console.log('这边nextStep触发onMissionsRefresh');
                 setShowNextButton(nextStep.type !== 'choice');
                 if (nextStep.type === 'choice') {
-                    console.log('这边choice触发onMissionsRefresh');
                     onMissionsRefresh?.();
                 }
                 return prev.slice(1);

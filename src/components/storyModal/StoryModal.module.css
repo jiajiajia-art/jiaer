@@ -611,18 +611,18 @@
 .dialogueContent {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .dialogueContent strong {
     color: #B69B74;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .nextStepContainer {
     display: flex;
     justify-content: center;
-    padding-bottom: 16px;
+    padding: 6px 0;
 }
 
 .nextStepBtn {
@@ -630,7 +630,7 @@
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 12px 32px;
+    padding: 8px 32px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;

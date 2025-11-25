@@ -4,7 +4,6 @@ export interface CreateGameRequest {
     title: string;
     subtitle: string;
     description: string;
-    creator_user_id: string;
     author_name: string;
     generateImages: boolean;
 }

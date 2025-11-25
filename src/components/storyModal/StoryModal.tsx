@@ -13,12 +13,12 @@ import LeftPanels from './LeftPanels';
 import RightPanels from './RightPanels';
 import MobilePanels from './MobilePanels';
 import toast from 'react-hot-toast';
-import { useStoryHistory } from '../../hooks/useStoryHistory';
-import { useStoryMissions } from '../../hooks/useStoryMissions';
-import { useStoryStep } from '../../hooks/useStoryStep';
-import { useStoryTyping } from '../../hooks/useStoryTyping';
-import { useMobilePanels } from '../../hooks/useMobilePanels';
-import { useStepStreamResponse } from '../../hooks/useStepStreamResponse';
+import { useStoryHistory } from '../../hooks/storyModal/useStoryHistory';
+import { useStoryMissions } from '../../hooks/storyModal/useStoryMissions';
+import { useStoryStep } from '../../hooks/storyModal/useStoryStep';
+import { useStoryTyping } from '../../hooks/storyModal/useStoryTyping';
+import { useMobilePanels } from '../../hooks/storyModal/useMobilePanels';
+import { useStepStreamResponse } from '../../hooks/storyModal/useStepStreamResponse';
 
 interface StoryModalProps {
     isOpen: boolean;
@@ -135,6 +135,15 @@ const StoryModal: React.FC<StoryModalProps> = ({
         enabled: stepHandlers.currentStep?.type !== 'choice' && !!stepHandlers.currentStep,
         speed: 60
     });
+
+    const isDialogueOrNarrationStep =
+        stepHandlers.currentStep &&
+        (stepHandlers.currentStep.type === 'dialogue' || stepHandlers.currentStep.type === 'narration');
+
+    const shouldShowStepModal =
+        (stepHandlers.currentStep &&
+            stepHandlers.currentStep.type !== 'dialogue' &&
+            stepHandlers.currentStep.type !== 'narration');
 
     // 计算最新的 system 消息（用于滚动效果）
     const systemMessages = useMemo(() =>
@@ -303,16 +312,15 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 console.error('记录游戏统计失败:', error);
             });
         }
+        setGameStarted(true);
 
         await stepHandlers.handleStreamAction('开始游戏', {
             onBeforeRequest: () => {
                 setMessages([]);
             },
             shouldSetGameStarted: true,
-            onSuccess: () => {
-                setGameStarted(true);
-            },
             onError: (error) => {
+                setGameStarted(false);
                 setMessages((prev) => [
                     ...prev,
                     { type: 'system', text: error || '游戏开始失败，请重试...' }
@@ -436,10 +444,20 @@ const StoryModal: React.FC<StoryModalProps> = ({
 
                                 <div className={styles.messagesContainer}>
                                     <div className={styles.messageContent}>
-                                        {stepHandlers.currentStep && stepHandlers.currentStep.type === 'dialogue' ? (
+                                        {stepHandlers.isWaitingForData && !stepHandlers.currentStep ? (
                                             <div className={`${styles.message} ${styles.system}`}>
                                                 <div className={styles.dialogueContent}>
-                                                    <strong>{currentNPC?.name || stepHandlers.currentStep.characterId || '角色'}:</strong>
+                                                    <p>
+                                                        <span className={styles.cursor}></span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : isDialogueOrNarrationStep ? (
+                                            <div className={`${styles.message} ${styles.system}`}>
+                                                <div className={styles.dialogueContent}>
+                                                    {(currentNPC?.name || stepHandlers.currentStep.characterId) && (
+                                                        <strong>{currentNPC?.name || stepHandlers.currentStep.characterId}:</strong>
+                                                    )}
                                                     <p>
                                                         {displayedText}
                                                         {isTyping && <span className={styles.cursor}></span>}
@@ -531,7 +549,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     onUseItem={onUseItem}
                 />
 
-                {((stepHandlers.currentStep && stepHandlers.currentStep.type !== 'dialogue') || (stepHandlers.isWaitingForData && !stepHandlers.currentStep)) && (
+                {shouldShowStepModal && (
                     <StepModal
                         currentStep={stepHandlers.currentStep}
                         isWaitingForData={stepHandlers.isWaitingForData}

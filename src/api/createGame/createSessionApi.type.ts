@@ -51,7 +51,6 @@ interface GameSession {
 }
 
 export interface GetSessionRequest {
-  userId: number;
   fileId: string;
 }
 

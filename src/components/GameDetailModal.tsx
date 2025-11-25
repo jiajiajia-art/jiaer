@@ -143,7 +143,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         try {
             const response = await createSessionApi.getSession({
                 fileId,
-                userId
             });
 
             if (response.data.success) {

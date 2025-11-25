@@ -17,6 +17,7 @@ interface GameStatsViewProps {
     onEdit: () => void;
     onDelete: () => void;
     isDeleting: boolean;
+    onPublish: () => void;
 }
 
 const GameStatsView: React.FC<GameStatsViewProps> = ({
@@ -25,6 +26,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     onEdit,
     onDelete,
     isDeleting,
+    onPublish,
 }) => {
     const { user } = useAuthStore();
     const { setPdfFileId, setSessionId } = useGameStore();
@@ -50,7 +52,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         try {
             const response = await createSessionApi.getSession({
                 fileId: fileId,
-                userId: user.user.id
             });
 
             if (response.data.success) {
@@ -123,13 +124,23 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 {(gameDetail.rating_count || 0).toLocaleString()} 人评论
                             </span>
                         </div>
-                        <button 
-                            className={styles.startGameBtn}
-                            onClick={handleStartGame}
-                            disabled={isLoading}
-                        >
-                            {isLoading ? '加载中...' : '开始游戏'}
-                        </button>
+                        <div className={styles.heroPrimaryActions}>
+                            <button
+                                className={`${styles.primaryActionBtn} ${styles.startGameBtn}`}
+                                onClick={handleStartGame}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? '加载中...' : '开始游戏'}
+                            </button>
+
+                            <button
+                                className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
+                                onClick={onPublish}
+                                disabled={isLoading}
+                            >
+                                发布
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

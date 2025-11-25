@@ -9,7 +9,7 @@ const createGameApi = {
         formData.append('title', data.title);
         formData.append('subtitle', data.subtitle);
         formData.append('description', data.description);
-        formData.append('creator_user_id', data.creator_user_id);
+        // formData.append('creator_user_id', data.creator_user_id);
         formData.append('author_name', data.author_name);
         formData.append('generateImages', data.generateImages.toString());
         

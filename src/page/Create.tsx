@@ -118,6 +118,9 @@ const Create: React.FC = () => {
                             <HiOutlineLightBulb />
                             <span>创作游戏</span>
                         </button>
+                        <button className={`${styles.createGameButtonItem} ${styles.payButton}`}>
+                            <span>充值</span>
+                        </button>
                     </div>
 
                     {/* 用户信息展示区域 */}

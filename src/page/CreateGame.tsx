@@ -264,7 +264,6 @@ const CreateGame: React.FC = () => {
                 title: formData.gameName.trim(),
                 subtitle: formData.gameSubtitle.trim(),
                 description: formData.gameDescription.trim(),
-                creator_user_id: String(user.user.id),
                 author_name: user.user.nickname,
                 generateImages: !formData.generateImages,
             });
@@ -309,7 +308,6 @@ const CreateGame: React.FC = () => {
             // 创建session
             const sessionResponse = await createSessionApi.getSession({
                 fileId: fileId,
-                userId: user!.user.id
             });
 
             if (sessionResponse.data.success) {
@@ -422,6 +420,7 @@ const CreateGame: React.FC = () => {
                             onEdit={() => setShowForm(true)}
                             onDelete={handleDeleteGame}
                             isDeleting={isDeleting}
+                            onPublish={() => setShowPublishModal(true)}
                         />
                     ) : (
                         <div className={styles.detailError}>未找到游戏信息</div>
@@ -440,7 +439,6 @@ const CreateGame: React.FC = () => {
                                     isCreating={isCreating}
                                     onFormDataChange={setFormData}
                                     onTestGame={handleTestGame}
-                                    onPublish={() => setShowPublishModal(true)}
                                     isFormValid={isFormValid()}
                                 />
                             </div>
