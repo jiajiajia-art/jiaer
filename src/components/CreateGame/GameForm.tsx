@@ -357,7 +357,7 @@ const GameForm: React.FC<GameFormProps> = ({
                         </div>
                     ) : (
                         <div className={styles.coverPreviewContainer}>
-                            <img src={coverImage} alt="封面预览" className={styles.coverPreviewImage} />
+                            <img src={`https://kurangames.com/images/${coverImage}`} alt="封面预览" className={styles.coverPreviewImage} />
                             <button
                                 type="button"
                                 className={styles.removeFileBtn}

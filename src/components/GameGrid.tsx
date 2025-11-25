@@ -3,6 +3,7 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
+import { HOST_ADDRESS } from '../config';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -30,7 +31,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                 >
                     <div className={styles.goodsImg}>
                         <img
-                            src={meta.cover_url || `${import.meta.env.BASE_URL}data/events/welcome.png`}
+                            src={`https://kurangames.com/images/${meta.cover_url}` || `${import.meta.env.BASE_URL}data/events/welcome.png`}
                             alt={meta.title || `剧情${idx + 1}`}
                         />
                         <div className={styles.goodsInfo}>
@@ -40,7 +41,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                             </div>
                             <div className={styles.goodsInfoItem}>
                                 <AiOutlineLike />
-                                {meta.like_count}
+                                {meta.like_count || 0}
                             </div>
                         </div>
                     </div>

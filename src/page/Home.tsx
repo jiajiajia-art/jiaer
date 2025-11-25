@@ -74,7 +74,6 @@ const Home: React.FC = () => {
                 setIsLoadingSpecial(true);
                 const specialResponse = await libraryDataApi.getGameData({
                     limit: '8',
-                    userId: String(user?.user.id) || ''
                 });
 
                 if (specialResponse.data.success && specialResponse.data.data) {
@@ -88,7 +87,6 @@ const Home: React.FC = () => {
                 // 获取全部游戏（更多数据，用于全部游戏模块）
                 setIsLoadingAll(true);
                 const allResponse = await libraryDataApi.getGameData({
-                    userId: String(user?.user.id) || ''
                 });
 
                 if (allResponse.data.success && allResponse.data.data) {
@@ -162,7 +160,7 @@ const Home: React.FC = () => {
                                                     <div key={imageId} className={styles.carouselSlide}>
                                                         <div className={styles.carouselImage}>
                                                             <img
-                                                                src={item.cover}
+                                                                src={`https://kurangames.com/images/${item.cover}`}
                                                                 alt={item.title}
                                                             />
                                                         </div>

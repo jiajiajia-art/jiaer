@@ -50,7 +50,7 @@ const Create: React.FC = () => {
             return;
         }
         try {
-            const response = await getGameDataApi.getUserData(user.user.id, { limit: 100 });
+            const response = await getGameDataApi.getUserData({ limit: 100 });
             if (response.data.success && response.data.data) {
                 setFileMetas(response.data.data);
             }
@@ -64,7 +64,7 @@ const Create: React.FC = () => {
             return;
         }
         try {
-            const response = await statisticsApi.getALLGameStats({ userId: String(user.user.id) });
+            const response = await statisticsApi.getALLGameStats();
             if (response.data.success && response.data.data) {
                 setStats({
                     totalCreated: response.data.data.Count ?? 0,
@@ -101,7 +101,7 @@ const Create: React.FC = () => {
         );
     };
 
-    const userAvatar = `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
+    const userAvatar = `https://kurangames.com/images/${user?.user?.avatarUrl}` || `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
 
     return (

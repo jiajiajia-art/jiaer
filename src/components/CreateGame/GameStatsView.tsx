@@ -110,7 +110,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         <div className={styles.statsModeWrapper}>
             <div
                 className={styles.heroBanner}
-                style={{ backgroundImage: `url(${heroBackground})` }}
+                style={{ backgroundImage: `url(https://kurangames.com/images/${heroBackground})` }}
             >
                 <div className={styles.heroOverlay}>
                     <div className={styles.heroContent}>

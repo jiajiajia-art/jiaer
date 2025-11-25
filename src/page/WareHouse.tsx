@@ -22,9 +22,7 @@ const WareHouse: React.FC = () => {
         const loadGames = async () => {
             setIsLoading(true);
             try {
-                const response = await libraryDataApi.getGameData({
-                    userId: String(user?.user.id) || ''
-                });
+                const response = await libraryDataApi.getWareHouseData();
 
                 if (response.data.success && response.data.data) {
                     setGames(response.data.data);

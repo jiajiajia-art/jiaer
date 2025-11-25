@@ -32,7 +32,6 @@ export interface GameStatsResponse {
 
 export interface GameLikeRequest {
     fileId: string;
-    userId: string;
 }
 
 export interface GameLikeResponse {
@@ -44,5 +43,4 @@ export interface GameLikeResponse {
 
 export interface DeletSessionRequest{
     fileId: string;
-    userId: string;
 }

@@ -114,7 +114,7 @@ const Navbar: React.FC = () => {
                                 className={styles.avatar}
                                 onClick={() => setShowUserMenu(!showUserMenu)}
                             >
-                                <img src={user?.user.avatarUrl || `${import.meta.env.BASE_URL}data/avatars/hunter.png`} alt="" />
+                                <img src={`https://kurangames.com/images/${user?.user.avatarUrl}` || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`} alt="" />
                             </div>
                             {showUserMenu && (
                                 <div className={styles.userMenu}>

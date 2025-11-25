@@ -51,7 +51,6 @@ const NewMain: React.FC = () => {
     const [sceneDetailOpen, setSceneDetailOpen] = useState(false);
     const [sceneDetailId, setSceneDetailId] = useState<string | null>(null);
     const [dialogueOpen, setDialogueOpen] = useState(false);
-    const [_dialogueInitialInput, setDialogueInitialInput] = useState('');
     const [alertModalOpen, setAlertModalOpen] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
@@ -479,9 +478,7 @@ const NewMain: React.FC = () => {
                 isOpen={dialogueOpen}
                 onClose={() => {
                     setDialogueOpen(false);
-                    setDialogueInitialInput(''); // 关闭时清空初始输入
                 }}
-                playerName={player?.profile?.name || '未命名'}
                 player={player}
                 inventory={inventory}
                 onEquipItem={handleEquipItem}

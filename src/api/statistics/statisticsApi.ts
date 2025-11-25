@@ -9,8 +9,8 @@ const statisticsApi = {
     addView: (data: ViewRequest) => {
         return api.post<ApiResponse<ViewResponse>>('/auth/games-stats/visit', data);
     },
-    getALLGameStats: ( data:{userId: string}) => {
-        return api.get<ApiResponse<GameTotalStatsResponse>>('/auth/games-stats/total-data', { params: data });
+    getALLGameStats: () => {
+        return api.get<ApiResponse<GameTotalStatsResponse>>('/auth/games-stats/total-data');
     }
 }
 

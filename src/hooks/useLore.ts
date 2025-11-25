@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 export const useLore = () => {
-    const [gameTimeText, setGameTimeText] = useState('加载中...');
+    const [gameTimeText, setGameTimeText] = useState('');
     const [worldLoreHtml, setWorldLoreHtml] = useState<string>('');
     const [playerLoreHtml, setPlayerLoreHtml] = useState<string>('');
     const [loreLoaded, setLoreLoaded] = useState(false);

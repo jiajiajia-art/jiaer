@@ -72,7 +72,6 @@ export const useStepStreamResponse = ({
 
                     try {
                         const jsonData = JSON.parse(dataStr);
-                        console.log('📦 收到流式数据:', jsonData);
 
                         // 检查是否是当前请求的数据
                         if (currentRequestId.current !== requestId) {
@@ -97,7 +96,6 @@ export const useStepStreamResponse = ({
                                     return prev;
                                 }
                                 const newQueue = [...prev, step];
-                                console.log('📋 队列更新，当前队列长度:', newQueue.length);
                                 return newQueue;
                             });
                         }
@@ -138,7 +136,6 @@ export const useStepStreamResponse = ({
                 }
                 try {
                     const jsonData = JSON.parse(dataStr);
-                    console.log('📦 收到流式数据（最后）:', jsonData);
 
                     if (currentRequestId.current !== requestId) {
                         return;

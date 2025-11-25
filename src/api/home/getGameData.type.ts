@@ -36,12 +36,10 @@ export interface UserGameRequest{
 export interface PublicGameRequest {
     limit?: string;
     offset?: string;
-    userId: string;
 }
 
 export interface GameDetailRequest {
     fileId: string;
-    userId: string;
 }
 
 export interface GameDetailResponse {

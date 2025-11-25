@@ -22,7 +22,6 @@ const REFRESH_URL = '/auth/refresh';
  */
 const isTokenNearExpiry = (token?: string, bufferSeconds = 120): boolean => {
   if (!token) {
-    console.log('[Auth] No token found, need refresh.');
     return true; // 没 token 就当作要刷新
   }
   try {
@@ -118,10 +117,8 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
       // 将最新 token 加到请求头
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log('[Auth] Added Authorization header to request.');
       } else {
         delete config.headers.Authorization; // 没 token 就不发
-        console.log('[Auth] No token after refresh, removing Authorization header.');
       }
 
       return config;
@@ -146,7 +143,6 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
       
       // 401: 未授权，token 无效或过期
       if (status === 401) {
-        console.warn('[Auth] Unauthorized (401), token invalid, logging out.');
         useAuthStore.getState().logout();
       }
       // 403: 需要判断是否是认证错误还是业务错误

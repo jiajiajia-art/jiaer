@@ -105,7 +105,6 @@ const CreateGame: React.FC = () => {
             try {
                 const response = await getGameDataApi.getGameDetail({
                     fileId: gameId,
-                    userId: String(user?.user?.id || '')
                 });
                 if (!isMounted) return;
 

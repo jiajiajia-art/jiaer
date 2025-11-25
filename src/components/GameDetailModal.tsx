@@ -104,7 +104,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         try {
             const response = await getGameDataApi.getGameDetail({
                 fileId: game.file_id,
-                userId: String(userId || ''),
             });
 
             if (response.data?.data) {
@@ -195,7 +194,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             try {
                 const response = await GameAction.gameLike({
                     fileId,
-                    userId: String(userId),
                 });
 
                 if (response.data.success && response.data.data) {
@@ -226,7 +224,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const modalStyle = useMemo(() => {
         if (!currentGame.cover_url) return {};
         return {
-            backgroundImage: `url(${currentGame.cover_url})`,
+            backgroundImage: `url(https://kurangames.com/images/${currentGame.cover_url})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
@@ -241,7 +239,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         try {
             const response = await GameAction.deletGameSession({
                 fileId,
-                userId: String(userId),
             });
             if (response.data.success) {
                 toast.success('删除成功');
@@ -254,6 +251,8 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setIsDeletModalOpen(false);
         }
     }, [checkAuth, fileId, userId]);
+    console.log(currentGame);
+    
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
@@ -301,7 +300,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     <span className={styles.ratingLabelUnit}>分</span>
                                 </div>
                                 <div className={styles.ratingScore}>
-                                    {currentGame.rating_count ?? 0}人评价
+                                    {likeCount ?? 0}人评价
                                 </div>
                             </div>
                             <div className={styles.likeContainer}>
@@ -330,7 +329,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                         </span>
                                         <img
                                             className={styles.authorAvatar}
-                                            src={currentGame.avatarUrl?.trim() || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
+                                            src={`https://kurangames.com/images/${currentGame.avatarUrl}` || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
                                             alt="作者头像"
                                         />
                                         <span className={styles.authorName}>
@@ -341,7 +340,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     {!isUnlocked && !isOwner && (
                                         <div className={styles.priceLabel}>
                                             <div className={styles.priceLabelText}>限时特惠</div>
-                                            <div className={styles.originalPrice}>￥256</div>
+                                            <div className={styles.originalPrice}>￥{currentGame.price_amount}</div>
                                         </div>
                                     )}
                                 </div>

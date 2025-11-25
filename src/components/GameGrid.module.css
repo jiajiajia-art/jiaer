@@ -109,6 +109,7 @@
     cursor: pointer;
     padding: 8px 12px;
     box-sizing: border-box;
+    line-height: 1;
 }
 
 .goodsPrice button{
@@ -146,16 +147,25 @@
     font-size: 14px;
     color: #fdbdc0;
     text-decoration: line-through;
+    line-height: 1.1;
+    margin: 0;
+    padding: 0;
 }
 
 .specialPriceText {
     font-size: 22px;
     color: #FFFFFF;
+    line-height: 1.1;
+    margin: 0;
+    padding: 0;
 }
 
 .normalPriceText {
     font-size: 22px;
     color: #FFFFFF;
+    line-height: 1.1;
+    margin: 0;
+    padding: 0;
 }
 
 .emptyState {
@@ -218,7 +228,7 @@
         width: 72px;
         height: 36px;
         border-radius: 10px 0 10px 0;
-        gap: 2px;
+        gap: 0px;
     }
 
     .goodsPrice button,
@@ -227,15 +237,24 @@
     }
 
     .goodsPriceText {
-        font-size: 12px;
+        font-size: 10px;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
     }
 
     .specialPriceText {
-        font-size: 18px;
+        font-size: 14px;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
     }
 
     .normalPriceText {
         font-size: 18px;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
     }
 }
 
