@@ -992,7 +992,7 @@
 .mobilePanelContent {
     position: relative;
     width: min(95vw, 420px);
-    height: 65vh;
+    height: auto;
     display: flex;
     justify-content: center;
     align-items: center;

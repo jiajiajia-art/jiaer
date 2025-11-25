@@ -897,7 +897,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     <div className={`${styles.panelCard} ${styles.playerPanel}`}>
                         {playerOpen && (
                             <PlayerFloatingPanel
-                                isOpen={true}
+                                isOpen={playerOpen}
                                 player={player}
                             />
                         )}
@@ -905,7 +905,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     <div className={`${styles.panelCard} ${styles.inventoryPanel}`}>
                         {inventoryOpen && (
                             <InventoryFloatingPanel
-                                isOpen={true}
+                                isOpen={inventoryOpen}
                                 inventory={inventory}
                                 onEquipItem={onEquipItem || (() => {})}
                                 onUseItem={onUseItem || (() => {})}
@@ -918,7 +918,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     <div className={`${styles.mobilePanelOverlay} ${styles.mobileHistoryModal}`}>
                         <div className={styles.mobilePanelContent}>
                             <ChatHistory
-                                isOpen={true}
+                                isOpen={showHistory}
                                 chatMessages={historyMessages}
                                 loading={loadingHistory}
                                 onClose={() => setShowHistory(false)}
