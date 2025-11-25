@@ -17,9 +17,9 @@ function App() {
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
         {/* <Route path="/createCharacter" element={<CreateCharacter />} /> */}
-        <Route path="/newmain" element={<NewMain />} />
 
         <Route element={<ProtectedRoute />}>
+          <Route path="/newmain" element={<NewMain />} />
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />
