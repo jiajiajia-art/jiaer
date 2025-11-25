@@ -1,0 +1,55 @@
+.pageRoot {
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
+    margin: 0 auto;
+}
+
+.mainContent {
+    color: black;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 200px;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    overflow: visible;
+    padding: 20px;
+    box-sizing: border-box;
+    margin-top: 80px;
+}
+
+/* 中等屏幕适配 (769px - 1080px) */
+@media screen and (min-width: 769px) and (max-width: 1080px) {
+    .main {
+        padding: 20px;
+    }
+}
+
+/* 移动端适配 (768px以下) */
+@media (max-width: 768px) {
+    .pageRoot {
+        width: 100%;
+        min-width: auto;
+        min-height: 100vh;
+        height: auto;
+        background-size: cover;
+        padding-bottom: 90px;
+    }
+
+    .mainContent {
+        margin-bottom: 0;
+    }
+
+    .main {
+        margin-top: 60px;
+        padding: 10px;
+    }
+}

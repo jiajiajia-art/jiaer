@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './MissionSubmitModal.module.css';
-import type { MissionData, Mission } from '../../api/game/missionApi.type';
+import type { MissionData, Mission, CompletionPathRequirements } from '../../api/game/missionApi.type';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface MissionSubmitModalProps {
@@ -9,8 +9,85 @@ interface MissionSubmitModalProps {
     onSubmitMission?: (missionId: string) => Promise<void>;
 }
 
-const MissionItem: React.FC<{ 
-    mission: Mission; 
+const hasRequirementContent = (requirements?: CompletionPathRequirements | null) => {
+    if (!requirements) return false;
+    return Boolean(
+        (requirements.items && requirements.items.length > 0) ||
+        (requirements.relationships && requirements.relationships.length > 0) ||
+        (requirements.locations && requirements.locations.length > 0) ||
+        (requirements.stats && requirements.stats.length > 0)
+    );
+};
+
+const RequirementSections: React.FC<{
+    requirements?: CompletionPathRequirements | null;
+}> = ({ requirements }) => {
+    if (!requirements) {
+        return <p className={styles.requirementEmpty}>暂无额外要求</p>;
+    }
+
+    const hasContent = hasRequirementContent(requirements);
+
+    if (!hasContent) {
+        return <p className={styles.requirementEmpty}>暂无额外要求</p>;
+    }
+
+    return (
+        <div className={styles.requirementGroups}>
+            {requirements.items && requirements.items.length > 0 && (
+                <div className={styles.requirementSection}>
+                    <div className={styles.requirementSectionTitle}>物品</div>
+                    <ul className={styles.requirementList}>
+                        {requirements.items.map((item, index) => (
+                            <li key={`${item.itemName}-${index}`}>
+                                {item.itemName} × {item.quantity}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+            {requirements.relationships && requirements.relationships.length > 0 && (
+                <div className={styles.requirementSection}>
+                    <div className={styles.requirementSectionTitle}>关系</div>
+                    <ul className={styles.requirementList}>
+                        {requirements.relationships.map((relationship, index) => (
+                            <li key={`${relationship.npcName}-${index}`}>
+                                与 {relationship.npcName} 好感 ≥ {relationship.minValue}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+            {requirements.locations && requirements.locations.length > 0 && (
+                <div className={styles.requirementSection}>
+                    <div className={styles.requirementSectionTitle}>地点</div>
+                    <div className={styles.requirementBadges}>
+                        {requirements.locations.map((location, index) => (
+                            <span key={`${location}-${index}`} className={styles.requirementBadge}>
+                                {location}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+            {requirements.stats && requirements.stats.length > 0 && (
+                <div className={styles.requirementSection}>
+                    <div className={styles.requirementSectionTitle}>属性</div>
+                    <ul className={styles.requirementList}>
+                        {requirements.stats.map((stat, index) => (
+                            <li key={`${stat.statName}-${index}`}>
+                                {stat.statName} ≥ {stat.minValue}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const MissionItem: React.FC<{
+    mission: Mission;
     onSubmitMission?: (missionId: string) => Promise<void>;
 }> = ({ mission, onSubmitMission }) => {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -29,6 +106,9 @@ const MissionItem: React.FC<{
         }
     };
 
+    const hasMultipleRequirementPlans =
+        Array.isArray(mission.requirements) && mission.requirements.length > 1;
+
     return (
         <div className={styles.missionItem}>
             <div className={styles.missionHeader}>
@@ -39,23 +119,49 @@ const MissionItem: React.FC<{
             </div>
             <div className={styles.missionDescription}>
                 <p>{mission.description}</p>
-                {mission.completionPaths.length > 0 && (
+                {mission.isStoryMission && mission.completionPaths.length > 0 ? (
                     <div className={styles.missionCompletionPaths}>
-                        <p>推荐完成完成路径：</p>
-                        {mission.completionPaths.map((path) => (
-                            <div key={path.pathId}>{path.description}</div>
-                        ))}
+                        <p className={styles.requirementsTitle}>推荐完成路径：</p>
+                        <div className={styles.pathList}>
+                            {mission.completionPaths.map((path, index) => (
+                                <div key={path.pathId} className={styles.pathCard}>
+                                    <div className={styles.pathHeader}>
+                                        <span className={styles.pathName}>
+                                            {path.name || `路径 ${index + 1}`}
+                                        </span>
+                                    </div>
+                                    {path.description && (
+                                        <p className={styles.pathDescription}>{path.description}</p>
+                                    )}
+                                    <RequirementSections requirements={path.requirements} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className={styles.missionRequirements}>
+                        <p className={styles.requirementsTitle}>完成条件：</p>
+                        {Array.isArray(mission.requirements)
+                            ? mission.requirements.map((req, index) => (
+                                <div key={index} className={styles.requirementGroup}>
+                                    {hasMultipleRequirementPlans && (
+                                        <span className={styles.requirementPlanTag}>方案 {index + 1}</span>
+                                    )}
+                                    <RequirementSections requirements={req} />
+                                </div>
+                              ))
+                            : (
+                                <RequirementSections requirements={mission.requirements ?? null} />
+                            )}
                     </div>
                 )}
             </div>
             <div className={styles.missionReward}>
-                <span className={styles.rewardItem}>经验: {mission.reward.experience}</span>
-                <span className={styles.rewardItem}>金币: {mission.reward.gold}</span>
-                {
-                    mission.reward.items.map((item, index) => (
+                <span className={styles.rewardItem}>经验: {mission.reward?.experience ?? 0}</span>
+                <span className={styles.rewardItem}>金币: {mission.reward?.gold ?? 0}</span>
+                {(mission.reward?.items ?? []).map((item, index) => (
                         <span key={index} className={styles.rewardItem}>{item}</span>
-                    ))
-                }
+                    ))}
                 <button
                     className={styles.submitButton}
                     onClick={handleSubmitMission}

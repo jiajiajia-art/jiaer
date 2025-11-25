@@ -315,7 +315,7 @@ const GameForm: React.FC<GameFormProps> = ({
 
                     {initialGameData?.doc_url && (
                         <a
-                            href={initialGameData.doc_url}
+                            href={`https://kurangames.com/images/${initialGameData.doc_url}`}
                             download
                             className={styles.downloadFileBtn}
                             onClick={(e) => e.stopPropagation()}

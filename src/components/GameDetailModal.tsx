@@ -344,7 +344,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     )}
                                 </div>
 
-                                {!isUnlocked && !isOwner ? (
+                                {!isUnlocked && !isOwner && !currentGame.paid ? (
                                     <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
                                         {currentGame.special_price_amount == 0 ? '免费' : `￥${currentGame.special_price_amount}`}
                                     </button>

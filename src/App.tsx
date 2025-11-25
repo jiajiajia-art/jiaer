@@ -8,6 +8,7 @@ import WareHouse from './page/WareHouse';
 import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
+import Library from './page/Library';
 
 function App() {
 
@@ -17,7 +18,8 @@ function App() {
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
         {/* <Route path="/createCharacter" element={<CreateCharacter />} /> */}
-
+        <Route path="/library" element={<Library />} />
+        <Route path="/specials" element={<Library variant="special" />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/newmain" element={<NewMain />} />
           <Route path="/create" element={<Create />} />

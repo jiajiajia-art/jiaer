@@ -112,7 +112,19 @@
     line-height: 1;
 }
 
-.goodsPrice button{
+.goodsPrice:hover {
+    background-color: #f14351;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.6);
+}
+
+.startGameBtn {
+    font-size: 18px!important;
+    color: #FFFFFF;
+    cursor: pointer;
+}
+
+.goodsPrice button {
     background-color: transparent;
     font-size: 22px;
     font-weight: 600 !important;
@@ -136,7 +148,11 @@
     box-sizing: border-box;
 }
 
-.gameEditBtn button{
+.gameEditBtn:hover {
+    transform: translateY(-2px);
+}
+
+.gameEditBtn button {
     background-color: transparent;
     font-size: 18px;
     color: #FB4655;
@@ -257,4 +273,3 @@
         padding: 0;
     }
 }
-

@@ -87,6 +87,7 @@ const Home: React.FC = () => {
                 // 获取全部游戏（更多数据，用于全部游戏模块）
                 setIsLoadingAll(true);
                 const allResponse = await libraryDataApi.getGameData({
+                    limit: '40',
                 });
 
                 if (allResponse.data.success && allResponse.data.data) {
@@ -211,7 +212,7 @@ const Home: React.FC = () => {
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                                 onClick={() => {
-                                    navigator('/home/library');
+                                    navigator('/specials');
                                 }}
                             >
                                 更多
@@ -238,7 +239,7 @@ const Home: React.FC = () => {
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                                 onClick={() => {
-                                    navigator('/home/library');
+                                    navigator('/library');
                                 }}
                             >
                                 更多

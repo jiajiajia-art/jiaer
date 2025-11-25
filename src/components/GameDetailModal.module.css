@@ -316,6 +316,12 @@
                 -3px 0 8px rgba(251, 73, 88, 0.3);
 }
 
+.priceWrapper:hover {
+    background-color: #f14351;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.6);
+}
+
 .originalPrice {
     font-size: 20px;
     font-weight: 600;

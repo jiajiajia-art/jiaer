@@ -9,7 +9,10 @@ export interface CompletionPathRequirements {
       minValue: number;
     }>;
     locations?: string[];
-    stats?: unknown[];
+    stats?: Array<{
+      statName: string;
+      minValue: number;
+    }>;
   }
   
   // 完成路径
@@ -36,6 +39,7 @@ export interface CompletionPathRequirements {
     isStoryMission: boolean;
     blocksStoryline: boolean;
     completionPaths: CompletionPath[];
+    requirements?: CompletionPathRequirements | CompletionPathRequirements[] | null;
     reward: MissionReward;
     status: string;
     createdAt: string;

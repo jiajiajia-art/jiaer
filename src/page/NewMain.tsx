@@ -9,7 +9,6 @@ import { MdLockClock } from 'react-icons/md';
 import { useEventSystem } from '../hooks/useEventSystem';
 import { useGameData } from '../hooks/useGameData';
 import { useChat } from '../hooks/useChat';
-import { useLore } from '../hooks/useLore';
 import { useInventory } from '../hooks/useInventory';
 import { useMusic } from '../hooks/useMusic';
 import { useAutoFontSize } from '../hooks/useAutoFontSize';
@@ -29,10 +28,20 @@ import MissionsModal from '../components/Mian/MissionsModal';
 import StoryModal from '../components/storyModal/StoryModal';
 
 const NewMain: React.FC = () => {
-    const { player, inventory, scenes, currentSceneId, setCurrentSceneId, backendDataLoaded, worldMapImageUrl } = useGameData();
+    const {
+        player,
+        inventory,
+        scenes,
+        currentSceneId,
+        setCurrentSceneId,
+        backendDataLoaded,
+        worldMapImageUrl,
+        backendLore,
+        loadMissions
+    } = useGameData();
     const { chatOpen, setChatOpen, chatInput, setChatInput, chatMessages, setChatMessages, currentChatNpc, handleStartChatWithNpc, chatWithNpc, loadChatHistory } = useChat();
-    const { gameTimeText } = useLore();
     const { inventoryOpen, setInventoryOpen, equipItem, useItem } = useInventory();
+    const [gameTimeText, setGameTimeText] = useState('');
 
     // 自动调整游戏时间文字大小
     const [gameTimeRef, gameTimeFontSize] = useAutoFontSize<HTMLDivElement>(gameTimeText, {
@@ -55,8 +64,35 @@ const NewMain: React.FC = () => {
     const [alertMessage, setAlertMessage] = useState('');
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
     const [missionModalOpen, setMissionModalOpen] = useState(false);
-    const { loadMissions } = useGameData();
     const { missionData } = useGameStore();
+
+    // 拼接游戏时间文字
+    useEffect(() => {
+        const gameTime = backendLore?.gameTime;
+        if (!gameTime) {
+            setGameTimeText('');
+            return;
+        }
+        const {
+            currentYear,
+            yearName,
+            currentMonth,
+            currentDay,
+            monthNames,
+            season
+        } = gameTime;
+        const monthIndex = typeof currentMonth === 'number' ? currentMonth - 1 : -1;
+        const monthName =
+            Array.isArray(monthNames) && monthIndex >= 0 && monthIndex < monthNames.length
+                ? monthNames[monthIndex]
+                : '未知月';
+        const seasonText = season ? ` (${season})` : '';
+        const yearLabel = yearName ? `${yearName} ` : '';
+        const yearValue = typeof currentYear === 'number' ? `${currentYear}年` : '';
+        const dayValue = typeof currentDay === 'number' ? `${currentDay}日` : '';
+        const text = `${yearLabel}${yearValue} ${monthName} ${dayValue}${seasonText}`.trim();
+        setGameTimeText(text);
+    }, [backendLore]);
 
     // 统一处理三个弹窗的互斥逻辑
     const closeOtherPanels = () => {

@@ -3,7 +3,6 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
-import { HOST_ADDRESS } from '../config';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -60,16 +59,36 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                                 {renderActions(meta)}
                             </div>
                         ) : (
-                            <div className={styles.goodsPrice}>
-                                {showSpecialPrice && meta.special_price_amount ? (
-                                    <>
-                                        <div className={styles.goodsPriceText}>{meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}</div>
-                                        <div className={styles.specialPriceText}>{meta.special_price_amount == 0 ? '免费' : `￥${meta.special_price_amount}`}</div>
-                                    </>
-                                ) : (
-                                    <div className={styles.normalPriceText}>{meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}</div>
-                                )}
-                            </div>
+                            <>
+                                {
+                                    meta.paid ? (
+                                        <div className={styles.gameEditBtn}>
+                                            <button className={styles.startGameBtn}>开始游戏</button>
+                                        </div>
+                                    ) :
+                                        <div className={styles.goodsPrice}>
+                                            {
+                                                // meta.paid ? (
+                                                //     <button className={styles.startGameBtn}>开始游戏</button>
+                                                // ) : 
+                                                showSpecialPrice && meta.special_price_amount ? (
+                                                    <>
+                                                        <div className={styles.goodsPriceText}>
+                                                            {meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}
+                                                        </div>
+                                                        <div className={styles.specialPriceText}>
+                                                            {meta.special_price_amount == 0 ? '免费' : `￥${meta.special_price_amount}`}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className={styles.normalPriceText}>
+                                                        {meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}
+                                                    </div>
+                                                )
+                                            }
+                                        </div>
+                                }
+                            </>
                         )}
                     </div>
                 </div>

@@ -133,13 +133,18 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 {isLoading ? '加载中...' : '开始游戏'}
                             </button>
 
-                            <button
-                                className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
-                                onClick={onPublish}
-                                disabled={isLoading}
-                            >
-                                发布
-                            </button>
+                            {
+                                gameDetail.is_public == 0 && (
+                                    <button
+                                        className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
+                                        onClick={onPublish}
+                                        disabled={isLoading}
+                                    >
+                                        发布
+                                    </button>
+                                )
+                            }
+                            
                         </div>
                     </div>
                 </div>
