@@ -10,6 +10,7 @@ export interface User {
   email: string;
   nickname: string;
   avatarUrl: string;
+  points: number;
 }
 
 // 注册请求

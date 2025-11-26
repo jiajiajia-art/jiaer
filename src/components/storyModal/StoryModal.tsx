@@ -28,6 +28,7 @@ interface StoryModalProps {
     inventory?: Inventory | null;
     onEquipItem?: (item: InventoryItem, slot: keyof EquipmentSlots) => void;
     onUseItem?: (item: InventoryItem) => void;
+    autoStart?: boolean; // 是否自动开始游戏
 }
 
 
@@ -37,9 +38,9 @@ const StoryModal: React.FC<StoryModalProps> = ({
     player = null,
     inventory = null,
     onEquipItem,
-    onUseItem
+    onUseItem,
+    autoStart = false
 }) => {
-    // 基础状态
     const [gameStarted, setGameStarted] = useState(false);
     const [messages, setMessages] = useState<Array<{
         type: 'system' | 'user';
@@ -51,17 +52,14 @@ const StoryModal: React.FC<StoryModalProps> = ({
     }>>([]);
     const [choiceInput, setChoiceInput] = useState<string>('');
 
-    // Refs
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
     const savedChoiceStepRef = useRef<any>(null);
 
-    // Store hooks
     const sessionId = useGameStore((state) => state.sessionId);
     const pdfFileId = useGameStore((state) => state.pdfFileId);
     const scenes = useGameStore((state) => state.scenes);
     const { user } = useAuthStore();
 
-    // 使用自定义 hooks
     const {
         missionData,
         loadingMissions,
@@ -303,7 +301,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
         }
     }, [sessionId, processStreamResponse, loadMissions, loadHistoryMessages, setShowMissionAlert, stepHandlers]);
 
-    const handleStartGame = async () => {
+    const handleStartGame = useCallback(async () => {
         if (pdfFileId && RECORD_CONVERSION) {
             statisticsApi.addConversion({
                 fileId: pdfFileId,
@@ -327,7 +325,17 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 ]);
             }
         });
-    };
+    }, [pdfFileId, user?.user.id, stepHandlers]);
+
+    // 自动开始游戏（当从简介遮罩进入时）
+    useEffect(() => {
+        if (isOpen && autoStart && !gameStarted && sessionId) {
+            const timer = setTimeout(() => {
+                handleStartGame();
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, autoStart, gameStarted, sessionId, handleStartGame]);
 
     const handleChoiceSend = useCallback(() => {
         const inputText = choiceInput.trim();

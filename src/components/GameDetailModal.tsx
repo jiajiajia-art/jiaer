@@ -12,6 +12,7 @@ import { BiLike } from 'react-icons/bi';
 import { RECORD_CONVERSION } from '../config';
 import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
+import payApi from '../api/pay/payApi';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -54,6 +55,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const [likeCount, setLikeCount] = useState(game.like_count || 0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [gameDetail, setGameDetail] = useState<UserGameData | null>(null);
+    const [freeGameClicked, setFreeGameClicked] = useState(false);
 
     // Refs
     const prevIsOpenRef = useRef(false);
@@ -66,6 +68,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const fileId = useMemo(() => currentGame?.file_id || currentGame?.id, [currentGame]);
 
     const [isDeletModalOpen, setIsDeletModalOpen] = useState(false);
+    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
     // 检查用户是否登录
     const checkAuth = useCallback(() => {
@@ -130,12 +133,14 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setGameDetail(game);
             setIsLiked(checkIsLiked(game.reaction));
             setLikeCount(game.like_count || 0);
+            setFreeGameClicked(false); // 重置免费游戏点击状态
             // 存储到 zustand
             setGameDetailToStore(game);
             fetchGameDetail();
         } else {
             setGameDetail(null);
             setIsUnlocked(false);
+            setFreeGameClicked(false);
         }
     }, [isOpen, game, fetchGameDetail, setGameDetailToStore]);
 
@@ -256,8 +261,26 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setIsDeletModalOpen(false);
         }
     }, [checkAuth, fileId, userId]);
-    console.log(currentGame);
-    
+
+
+    const purchaseGame = useCallback(async () => {
+        if (!checkAuth()) return;
+        if (!fileId || !userId) return;
+        try {
+            const response = await payApi.purchasePoints({
+                fileId,
+            });
+            if (response.data.success) {
+                toast.success('购买成功');
+                setIsPurchaseModalOpen(false);
+                fetchGameDetail();
+            } else {
+                toast.error(response.data.message || '购买失败');
+            }
+        } catch (error) {
+            console.error('购买失败:', error);
+        }
+    }, [checkAuth, fileId, userId, fetchGameDetail]);
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
@@ -351,10 +374,32 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                 </div>
 
                                 {!isUnlocked && !isOwner && !currentGame.paid ? (
-                                    <button className={styles.priceWrapper} onClick={() => setIsUnlocked(true)}>
-                                        {currentGame.special_price_amount == 0 ? '免费' : `￥${currentGame.special_price_amount}`}
-                                    </button>
+                                    currentGame.special_price_amount == 0 && freeGameClicked ? (
+                                        <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
+                                            {isLoading ? (
+                                                <div className={styles.loading}>
+                                                    <span className={styles.loadingDot}></span>
+                                                    <span className={styles.loadingDot}></span>
+                                                    <span className={styles.loadingDot}></span>
+                                                </div>
+                                            ) : (
+                                                <span>开始游戏</span>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        <button className={styles.priceWrapper} onClick={() => {
+                                            if (!checkAuth()) return;
+                                            if (currentGame.special_price_amount == 0) {
+                                                setFreeGameClicked(true);
+                                            } else {
+                                                setIsPurchaseModalOpen(true);
+                                            }
+                                        }}>
+                                            {currentGame.special_price_amount == 0 ? '免费' : `￥${currentGame.special_price_amount}`}
+                                        </button>
+                                    )
                                 ) : (
+                                    // 已购买或已解锁，直接显示开始游戏按钮
                                     <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
                                         {isLoading ? (
                                             <div className={styles.loading}>
@@ -372,7 +417,16 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     </div>
                 </div>
             </div>
-            <DeletModal isOpen={isDeletModalOpen} onDelete={handleDeleteSession} onCancel={()=>setIsDeletModalOpen(false)} />
+            <DeletModal isOpen={isDeletModalOpen} onDelete={handleDeleteSession} onCancel={() => setIsDeletModalOpen(false)} />
+            <DeletModal
+                isOpen={isPurchaseModalOpen}
+                onDelete={purchaseGame}
+                onCancel={() => setIsPurchaseModalOpen(false)}
+                title="购买游戏"
+                message={`确认花费 ￥${currentGame.special_price_amount} 购买该游戏吗？`}
+                confirmButtonText="确认购买"
+                cancelButtonText="取消"
+            />
         </div>
     );
 };

@@ -1,13 +1,22 @@
 export interface PayRequest {
-    fileId: string;
-    userId: string;
+    amount: number;
 }
 
 export interface PayResponse {
-    success: boolean;
+    code: number;
     message: string;
     data:{
         outTradeNo: string;
         qrDataUrl: string;
     }
+}
+
+export interface CheckPayStatusResponse {
+    code: number;
+    message: string;
+    data: string;
+}
+
+export interface PurchasePointsRequest {
+    fileId: string;
 }

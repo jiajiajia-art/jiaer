@@ -240,6 +240,78 @@
     gap: 10px;
 }
 
+.qrSection {
+    margin-top: 8px;
+    padding: 20px 16px;
+    border: 1px dashed rgba(251, 70, 85, 0.4);
+    border-radius: 12px;
+    text-align: center;
+    background: #fff9fa;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.qrTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #FB4655;
+}
+
+.qrImage {
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+    align-self: center;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 8px;
+}
+
+.qrHint {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.countdownText {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #FB4655;
+}
+
+.pollingText {
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.successText {
+    font-size: 0.95rem;
+    color: #2f8f46;
+    font-weight: 600;
+}
+
+.qrActions {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.qrActionBtn {
+    padding: 10px 30px;
+    border-radius: 5px;
+    border: none;
+    background: linear-gradient(135deg, #FB4655 0%, #ff6b7a 100%);
+    color: #fff;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.qrActionBtn:hover {
+    opacity: 0.9;
+}
+
 .summaryRow {
     display: flex;
     justify-content: space-between;

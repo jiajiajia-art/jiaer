@@ -24,9 +24,11 @@ const GameIntroOverlay: React.FC<GameIntroOverlayProps> = ({ description, title,
                     {isTyping && <span className={styles.cursor}>|</span>}
                 </div>
                 {!isTyping && (
-                    <button className={styles.closeBtn} onClick={onClose}>
-                        开始游戏
-                    </button>
+                    <div className={styles.buttonContainer}>
+                        <button className={styles.closeBtn} onClick={onClose}>
+                            开始游戏
+                        </button>
+                    </div>
                 )}
             </div>
         </div>

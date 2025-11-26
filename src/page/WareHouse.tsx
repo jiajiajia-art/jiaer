@@ -25,7 +25,7 @@ const WareHouse: React.FC = () => {
                 const response = await libraryDataApi.getWareHouseData();
 
                 if (response.data.success && response.data.data) {
-                    setGames(response.data.data);
+                    setGames(response.data.data.rows);
                 } else {
                     console.error('获取游戏列表失败:', response.data);
                     setGames([]);

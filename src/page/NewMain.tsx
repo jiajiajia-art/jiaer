@@ -55,6 +55,7 @@ const NewMain: React.FC = () => {
     const { sessionId, gameDetail, setGameStarted } = useGameStore();
     const { tracks, isPlaying, play } = useMusic();
     const [showIntroOverlay, setShowIntroOverlay] = useState(false);
+    const [shouldAutoStart, setShouldAutoStart] = useState(false);
 
     const [mapModalOpen, setMapModalOpen] = useState(false);
     const [playerOpen, setPlayerOpen] = useState(false);
@@ -558,11 +559,13 @@ const NewMain: React.FC = () => {
                 isOpen={dialogueOpen}
                 onClose={() => {
                     setDialogueOpen(false);
+                    setShouldAutoStart(false); // 关闭时重置自动开始标志
                 }}
                 player={player}
                 inventory={inventory}
                 onEquipItem={handleEquipItem}
                 onUseItem={handleUseItem}
+                autoStart={shouldAutoStart}
             />
 
             {/* 场景详情弹窗组件 */}
@@ -628,6 +631,9 @@ const NewMain: React.FC = () => {
                     onClose={() => {
                         setShowIntroOverlay(false);
                         setGameStarted(true);
+                        // 打开 StoryModal 并设置自动开始标志
+                        setShouldAutoStart(true);
+                        setDialogueOpen(true);
                     }}
                 />
             )}

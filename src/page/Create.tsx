@@ -15,6 +15,7 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
 import RechargeModal from '../components/RechargeModal';
 import toast from 'react-hot-toast';
+import payApi from '../api/pay/payApi';
 
 const Create: React.FC = () => {
     const { user } = useAuthStore();
@@ -90,7 +91,7 @@ const Create: React.FC = () => {
     const renderGameActions = (game: UserGameData) => {
         // 检查 is_public 的值（0 表示未发布，1 表示已发布）
         const isPublic = game.is_public === 1;
-        
+
         // 未发布或已发布，都跳转到编辑/数据页面
         return (
             <button
@@ -107,6 +108,21 @@ const Create: React.FC = () => {
     const userAvatar = `https://kurangames.com/images/${user?.user?.avatarUrl}` || `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
 
+    const handleRecharge = async (amount: number) => {
+        const response = await payApi.getPayQrCode({
+            amount: amount,
+        });
+        if (response.data.code === 200 && response.data.data) {
+            return {
+                qrDataUrl: response.data.data.qrDataUrl,
+                outTradeNo: response.data.data.outTradeNo
+            };
+        } else {
+            toast.error('充值失败！');
+            return null;
+        }
+    };
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -120,12 +136,6 @@ const Create: React.FC = () => {
                         }}>
                             <HiOutlineLightBulb />
                             <span>创作游戏</span>
-                        </button>
-                        <button 
-                            className={`${styles.createGameButtonItem} ${styles.payButton}`}
-                            onClick={() => setIsRechargeModalOpen(true)}
-                        >
-                            <span>充值</span>
                         </button>
                     </div>
 
@@ -145,6 +155,16 @@ const Create: React.FC = () => {
                                     alt="用户头像"
                                 />
                                 <div className={styles.userName}>{userName}</div>
+                                <div className={styles.userCredit}>
+                                    <span>积分：{user?.user?.points ?? 0} </span>
+                                    <button
+                                        className={`${styles.payButton}`}
+                                        onClick={() => setIsRechargeModalOpen(true)}
+                                    >
+                                        <span>充值</span>
+                                    </button>
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -242,11 +262,7 @@ const Create: React.FC = () => {
             <RechargeModal
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
-                onRecharge={async (amount) => {
-                    // TODO: 调用充值API
-                    console.log('充值金额:', amount);
-                    toast.success(`充值成功！金额：￥${amount.toFixed(2)}`);
-                }}
+                onRecharge={handleRecharge}
             />
         </div>
     );

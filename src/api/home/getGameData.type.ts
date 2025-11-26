@@ -50,5 +50,7 @@ export interface GameDetailResponse {
 
 export interface WareHouseResponse {
     success: boolean;
-    data: UserGameData[];
+    data: {
+        rows:UserGameData[];
+    }
 }

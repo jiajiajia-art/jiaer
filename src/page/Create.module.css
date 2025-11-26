@@ -131,8 +131,22 @@
     font-size: 24px;
 }
 
+.userCredit {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #ffffff;
+}
+
 .payButton {
-    margin-top: 10px;
+    background-color: #fb5b66;
+    border-radius: 5px;
+    padding: 6px 10px;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
 /* 我的数据模块 */
