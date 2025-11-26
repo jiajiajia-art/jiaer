@@ -44,7 +44,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 }) => {
     // Hooks
     const { user } = useAuthStore();
-    const { setPdfFileId, setSessionId } = useGameStore();
+    const { setPdfFileId, setSessionId, setGameDetail: setGameDetailToStore } = useGameStore();
     const navigate = useNavigate();
 
     // 状态
@@ -111,8 +111,12 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 setGameDetail(gameData);
                 setIsLiked(checkIsLiked(gameData.reaction));
                 setLikeCount(gameData.like_count || 0);
+                // 存储到 zustand，供 NewMain 使用
+                setGameDetailToStore(gameData);
             } else {
                 setGameDetail(game);
+                // 存储到 zustand
+                setGameDetailToStore(game);
             }
         } catch (error) {
             console.error('获取剧本详情失败:', error);
@@ -126,12 +130,14 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setGameDetail(game);
             setIsLiked(checkIsLiked(game.reaction));
             setLikeCount(game.like_count || 0);
+            // 存储到 zustand
+            setGameDetailToStore(game);
             fetchGameDetail();
         } else {
             setGameDetail(null);
             setIsUnlocked(false);
         }
-    }, [isOpen, game, fetchGameDetail]);
+    }, [isOpen, game, fetchGameDetail, setGameDetailToStore]);
 
     // 创建会话
     const createSession = useCallback(async (fileId: string): Promise<string | null> => {

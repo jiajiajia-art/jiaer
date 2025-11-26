@@ -16,6 +16,7 @@ import GameForm, { type GameFormData } from '../components/CreateGame/GameForm';
 import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import FooterArea from '../components/Layout/FooterArea';
+import toast, { Toaster } from 'react-hot-toast';
 
 const CreateGame: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -395,6 +396,22 @@ const CreateGame: React.FC = () => {
             alert('发布游戏失败');
         }
     };
+    // 下架游戏
+    const handleUnpublishGame = async (fileId: string) => {
+        if (!fileId) return;
+        try {
+            const response = await GameAction.unpublishGame({ fileId: fileId });
+            if (response.data.success) {
+                navigate('/create');
+            } else {
+                toast.error(response.data.message || '下架游戏失败');
+                console.error('下架游戏失败:', response.data);
+            }
+        } catch (error) {
+            console.error('下架游戏失败:', error);
+            alert('下架游戏失败');
+        }
+    };
 
     return (
         <div className={styles.pageRoot}>
@@ -421,12 +438,23 @@ const CreateGame: React.FC = () => {
                             onDelete={handleDeleteGame}
                             isDeleting={isDeleting}
                             onPublish={() => setShowPublishModal(true)}
+                            onUnpublish={handleUnpublishGame}
                         />
                     ) : (
                         <div className={styles.detailError}>未找到游戏信息</div>
                     )}
                 </>
             )}
+
+            <Toaster
+                position="top-center"
+                containerStyle={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                }}
+            />
 
             <div className={`${styles.mainContent} ${isStatsMode && !showForm ? styles.mainContentHidden : ''}`}>
                 <div className={`${styles.main} ${isStatsMode && !showForm ? styles.mainHidden : ''}`}>

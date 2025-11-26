@@ -2,6 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import styles from './ChatHistory.module.css';
 import ReactMarkdown from 'react-markdown';
 import { cleanTextOnly } from '../../utils/textUtils';
+import historyApi from '../../api/game/history';
+import { useGameStore } from '../../store/gameStore';
+import { FaFileExport } from 'react-icons/fa';
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -32,6 +35,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 }) => {
     const chatMessagesContainerRef = useRef<HTMLDivElement>(null);
     const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+    const { sessionId } = useGameStore();
 
     // 自动滚动到底部的函数
     const scrollToBottom = () => {
@@ -57,6 +61,25 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
 
     if (!isOpen) return null;
 
+    const handleExportChat = async () => {
+        if (!sessionId) return;
+    
+        try {
+            const response = await historyApi.getGameHistory(sessionId);
+
+            const blob = new Blob([response.data]);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `chat-history-${sessionId}.doc`;
+            link.click();
+            
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        } catch (error) {
+            console.error('导出失败:', error);
+        }
+    };
+
     return (
         <div className={styles.chatHistory}>
             {onClose && (
@@ -66,6 +89,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({
                     </button>
                 </div>
             )}
+            <button className={styles.exportChatBtn} onClick={handleExportChat}>
+                <FaFileExport size={16} className={styles.exportChatIcon}/>
+            </button>
             <div
                 className={styles.chatMessages}
                 ref={chatMessagesContainerRef}

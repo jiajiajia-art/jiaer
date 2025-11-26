@@ -18,6 +18,7 @@ interface GameStatsViewProps {
     onDelete: () => void;
     isDeleting: boolean;
     onPublish: () => void;
+    onUnpublish: (fileId: string) => void;
 }
 
 const GameStatsView: React.FC<GameStatsViewProps> = ({
@@ -27,6 +28,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     onDelete,
     isDeleting,
     onPublish,
+    onUnpublish,
 }) => {
     const { user } = useAuthStore();
     const { setPdfFileId, setSessionId } = useGameStore();
@@ -134,7 +136,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                             </button>
 
                             {
-                                gameDetail.is_public == 0 && (
+                                gameDetail.is_public == 0 ?
                                     <button
                                         className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
                                         onClick={onPublish}
@@ -142,9 +144,15 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                     >
                                         发布
                                     </button>
-                                )
+                                    : <button
+                                        className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
+                                        onClick={() => onUnpublish(gameDetail.file_id)}
+                                        disabled={isLoading}
+                                    >
+                                        下架
+                                    </button>
                             }
-                            
+
                         </div>
                     </div>
                 </div>

@@ -13,6 +13,8 @@ import { HiOutlineLightBulb } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
+import RechargeModal from '../components/RechargeModal';
+import toast from 'react-hot-toast';
 
 const Create: React.FC = () => {
     const { user } = useAuthStore();
@@ -24,6 +26,7 @@ const Create: React.FC = () => {
         totalClicks: 0,
         totalAmount: 0,
     });
+    const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
 
     // 将游戏数据分类为已发布和未发布
     const { publishedGames, draftGames } = useMemo(() => {
@@ -118,7 +121,10 @@ const Create: React.FC = () => {
                             <HiOutlineLightBulb />
                             <span>创作游戏</span>
                         </button>
-                        <button className={`${styles.createGameButtonItem} ${styles.payButton}`}>
+                        <button 
+                            className={`${styles.createGameButtonItem} ${styles.payButton}`}
+                            onClick={() => setIsRechargeModalOpen(true)}
+                        >
                             <span>充值</span>
                         </button>
                     </div>
@@ -231,6 +237,17 @@ const Create: React.FC = () => {
             <MobileBottomNav />
 
             <FooterArea />
+
+            {/* 充值弹窗 */}
+            <RechargeModal
+                isOpen={isRechargeModalOpen}
+                onClose={() => setIsRechargeModalOpen(false)}
+                onRecharge={async (amount) => {
+                    // TODO: 调用充值API
+                    console.log('充值金额:', amount);
+                    toast.success(`充值成功！金额：￥${amount.toFixed(2)}`);
+                }}
+            />
         </div>
     );
 };

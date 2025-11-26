@@ -382,17 +382,17 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     <div className={styles.npcAvatarContainer}>
                         {currentNPC ? (
                             <img
-                                src={currentNPC.icon || `${import.meta.env.BASE_URL}data/avatars/hunter.png`}
+                                src={currentNPC.icon || player?.profile?.avatar}
                                 alt={currentNPC.name || stepHandlers.currentStep?.characterId}
                                 className={styles.npcAvatar}
                                 onError={(e) => {
                                     console.error('❌ NPC 头像加载失败:', currentNPC.icon);
-                                    (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}data/avatars/hunter.png`;
+                                    (e.target as HTMLImageElement).src = player?.profile?.avatar || '';
                                 }}
                             />
                         ) : (
                             <img
-                                src={`${import.meta.env.BASE_URL}data/avatars/hunter.png`}
+                                src={player?.profile?.avatar || ''}
                                 alt='角色'
                                 className={styles.npcAvatar}
                             />

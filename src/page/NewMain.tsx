@@ -26,6 +26,8 @@ import AlertModal from '../components/AlertModal';
 import changeSceneApi from '../api/game/changeSenceAPi';
 import MissionsModal from '../components/Mian/MissionsModal';
 import StoryModal from '../components/storyModal/StoryModal';
+import GameIntroOverlay from '../components/storyModal/GameIntroOverlay';
+import { authFetch } from '../api/base';
 
 const NewMain: React.FC = () => {
     const {
@@ -50,8 +52,9 @@ const NewMain: React.FC = () => {
         padding: 28, // 左右内边距总和 (14px * 2)
     });
     const { activeEvent, setActiveEvent, setEventHistory, triggerEventById, closeEvent } = useEventSystem();
-    const { sessionId } = useGameStore();
+    const { sessionId, gameDetail, setGameStarted } = useGameStore();
     const { tracks, isPlaying, play } = useMusic();
+    const [showIntroOverlay, setShowIntroOverlay] = useState(false);
 
     const [mapModalOpen, setMapModalOpen] = useState(false);
     const [playerOpen, setPlayerOpen] = useState(false);
@@ -65,6 +68,48 @@ const NewMain: React.FC = () => {
     const [npcDetail, setNpcDetail] = useState<any | null>(null);
     const [missionModalOpen, setMissionModalOpen] = useState(false);
     const { missionData } = useGameStore();
+
+    // 检测历史记录，判断游戏是否已开始
+    useEffect(() => {
+        const checkHistory = async () => {
+            if (!sessionId) {
+                setGameStarted(false);
+                return;
+            }
+
+            try {
+                const response = await authFetch(`${HOST_ADDRESS}/api/backend/history/${sessionId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const historyArray = data.history || [];
+                    const hasHistory = historyArray.length > 0;
+                    setGameStarted(hasHistory);
+                    
+                    // 如果没有历史记录且游戏详情存在，显示简介遮罩
+                    if (!hasHistory && gameDetail) {
+                        setShowIntroOverlay(true);
+                    } else {
+                        setShowIntroOverlay(false);
+                    }
+                } else {
+                    setGameStarted(false);
+                    if (gameDetail) {
+                        setShowIntroOverlay(true);
+                    }
+                }
+            } catch (error) {
+                console.error('检测历史记录失败:', error);
+                setGameStarted(false);
+                if (gameDetail) {
+                    setShowIntroOverlay(true);
+                }
+            }
+        };
+
+        if (backendDataLoaded && sessionId) {
+            checkHistory();
+        }
+    }, [sessionId, backendDataLoaded, gameDetail, setGameStarted]);
 
     // 拼接游戏时间文字
     useEffect(() => {
@@ -269,7 +314,6 @@ const NewMain: React.FC = () => {
             return false;
         }
     }
-
 
     return (
         <div
@@ -575,6 +619,18 @@ const NewMain: React.FC = () => {
                     return await loadChatHistory(sessionId, npc);
                 }}
             />
+
+            {/* 游戏简介遮罩 */}
+            {showIntroOverlay && gameDetail && (
+                <GameIntroOverlay
+                    title={gameDetail.title}
+                    description={gameDetail.description}
+                    onClose={() => {
+                        setShowIntroOverlay(false);
+                        setGameStarted(true);
+                    }}
+                />
+            )}
         </div>
     );
 }

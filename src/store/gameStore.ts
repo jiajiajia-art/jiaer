@@ -10,6 +10,7 @@ import type {
     GameItem
 } from '../api/game/gameData.type';
 import type { MissionData } from '../api/game/missionApi.type';
+import type { UserGameData } from '../api/home/getGameData.type';
 
 // 重新导出基础类型（从 gameData 导入）
 export type { PlayerProfile, PlayerStats, ScenesMap, Scene, PlayerData, Inventory, GameItem };
@@ -88,6 +89,14 @@ interface GameState {
   missionData: MissionData | null;
   setMissionData: (missionData: MissionData | null) => void;
 
+  // 游戏详情数据（用于显示简介等）
+  gameDetail: UserGameData | null;
+  setGameDetail: (gameDetail: UserGameData | null) => void;
+
+  // 游戏是否已开始（基于历史记录判断）
+  gameStarted: boolean;
+  setGameStarted: (started: boolean) => void;
+
   // 音乐状态（全局共享）
   isPlaying: boolean;
   setIsPlaying: (isPlaying: boolean) => void;
@@ -146,6 +155,14 @@ export const useGameStore = create<GameState>()(
       missionData: null,
       setMissionData: (missionData) => set({ missionData }),
 
+      // 游戏详情数据
+      gameDetail: null,
+      setGameDetail: (gameDetail) => set({ gameDetail }),
+
+      // 游戏是否已开始
+      gameStarted: false,
+      setGameStarted: (started) => set({ gameStarted: started }),
+
       // 音乐状态
       isPlaying: false,
       setIsPlaying: (isPlaying) => set({ isPlaying }),
@@ -160,6 +177,8 @@ export const useGameStore = create<GameState>()(
         player: null,
         inventory: null,
         items: {},
+        gameDetail: null,
+        gameStarted: false,
         isPlaying: false,
         volume: 1,
       }),

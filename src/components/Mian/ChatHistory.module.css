@@ -51,6 +51,33 @@
     object-fit: contain;
 }
 
+.exportChatBtn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    color: #B2440F;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 10px;
+    height: 40px;
+    position: absolute;
+    left: 20px;
+    top: 10px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.exportChatIcon{
+    width: 26px;
+    height: 26px;
+    color: #B2440F;
+    margin-right: 5px;
+}
+
 .loadingMessage {
     text-align: center;
     color: #B69B74;
@@ -207,5 +234,9 @@
         padding: 8px 16px;
         font-size: 0.85rem;
         max-width: 70px;
+    }
+
+    .chatMessages {
+        margin-top: 30px;
     }
 }

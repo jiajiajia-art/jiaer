@@ -599,6 +599,7 @@
 
     .ratingLabelUnit {
         font-size: 22px;
+        margin-bottom: 4px;
     }
 
     .ratingScore {
@@ -645,7 +646,7 @@
 
     .priceWrapper {
         width: 96%;
-        font-size: 19px;
+        font-size: 12px;
         height: 52px;
     }
 }
