@@ -3,7 +3,6 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
-import { RiCopperCoinLine } from 'react-icons/ri';
 
 interface GameGridProps {
     games: UserGameData[];

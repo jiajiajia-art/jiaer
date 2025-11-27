@@ -25,8 +25,8 @@ import SettingModal from '../components/Mian/SettingModal';
 import AlertModal from '../components/AlertModal';
 import changeSceneApi from '../api/game/changeSenceAPi';
 import MissionsModal from '../components/Mian/MissionsModal';
-import StoryModal from '../components/storyModal/StoryModal';
-import GameIntroOverlay from '../components/storyModal/GameIntroOverlay';
+import StoryModal from '../components/StoryModal/StoryModal';
+import GameIntroOverlay from '../components/StoryModal/GameIntroOverlay';
 import { authFetch } from '../api/base';
 
 const NewMain: React.FC = () => {

@@ -8,11 +8,11 @@ import statisticsApi from '../../api/statistics/statisticsApi';
 import { useAuthStore } from '../../store/useAuthStore';
 
 import toast from 'react-hot-toast';
-import { useStoryHistory } from '../../hooks/storyModal/useStoryHistory';
-import { useStoryMissions } from '../../hooks/storyModal/useStoryMissions';
-import { useStoryStep } from '../../hooks/storyModal/useStoryStep';
-import { useStoryTyping } from '../../hooks/storyModal/useStoryTyping';
-import { useMobilePanels } from '../../hooks/storyModal/useMobilePanels';
+import { useStoryHistory } from '../../hooks/story/useStoryHistory';
+import { useStoryMissions } from '../../hooks/story/useStoryMissions';
+import { useStoryStep } from '../../hooks/story/useStoryStep';
+import { useStoryTyping } from '../../hooks/story/useStoryTyping';
+import { useMobilePanels } from '../../hooks/story/useMobilePanels';
 import LeftPanels from './LeftPanels';
 import RightPanels from './RightPanels';
 import MobilePanels from './MobilePanels';
