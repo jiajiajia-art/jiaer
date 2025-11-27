@@ -42,11 +42,11 @@ const StoryModal: React.FC<StoryModalProps> = ({
 }) => {
     const [gameStarted, setGameStarted] = useState(false);
     const [messages, setMessages] = useState<Array<{
-        type: 'system' | 'user';
-        text: string;
-        isTyping?: boolean;
-        isMarkdown?: boolean;
-        actions?: string[];
+            type: 'system' | 'user';
+            text: string;
+            isTyping?: boolean;
+            isMarkdown?: boolean;
+            actions?: string[];
         options?: string[];
     }>>([]);
     const [choiceInput, setChoiceInput] = useState<string>('');
@@ -74,7 +74,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
     const stepHandlers = useStoryStep({
         sessionId,
         onHistoryRefresh: () => loadHistoryMessagesRef.current?.(),
-        onMissionsRefresh: () => loadMissionsRef.current?.(),
+        onMissionDetected: () => loadMissionsRef.current?.(),
         onMessagesClear: () => setMessages([])
     });
 
@@ -190,9 +190,9 @@ const StoryModal: React.FC<StoryModalProps> = ({
     // 初始化加载
     useEffect(() => {
         if (isOpen && sessionId) {
-            loadMissions().then(() => {
-                loadHistoryMessages(true);
-            });
+                loadMissions().then(() => {
+                    loadHistoryMessages(true);
+                });
         }
         if (!isOpen) {
             resetInitialLoad();
@@ -231,7 +231,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
             // 清空当前状态，准备接收新的流式数据
             stepHandlers.setCurrentStep(null);
             stepHandlers.setShowNextButton(false);
-            stepHandlers.setStepQueue([]); // 清空队列
+            stepHandlers.setStepQueue([]);
             setMessages([]);
 
             // 使用 useStoryStep 内部的 processStreamResponse，确保 step 数据正确添加到队列
@@ -248,21 +248,31 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     toast.error(error || `${actionType === 'submit' ? '任务提交' : '任务跳过'}失败`);
                 }
             });
-        } else {
-            // 普通 JSON 响应（成功）
-            try {
-                const data = await response.json();
-                if (data.completed || response.ok) {
-                    toast.success(data.message || `${actionType === 'submit' ? '任务提交' : '任务跳过'}成功`);
-                    await loadMissions();
-                    setShowMissionAlert(false);
-                } else {
-                    toast.error(data.message || `${actionType === 'submit' ? '任务提交' : '任务跳过'}失败`);
-                }
-            } catch (jsonError) {
-                console.error('❌ 解析响应失败:', jsonError);
-                toast.error('响应格式错误');
+            return;
+        }
+
+        try {
+            const data = await response.json();
+            const serverMessage = data?.message;
+            const actionLabel = actionType === 'submit' ? '任务提交' : '任务跳过';
+
+            if (actionType === 'submit') {
+                console.warn(`⚠️ ${actionLabel}未返回流式数据，视为失败。原始响应:`, data);
+                toast.error(serverMessage || `${actionLabel}失败，请满足任务条件后再试`);
+                await loadMissions();
+                return;
             }
+
+            if (data.completed || response.ok) {
+                toast.success(serverMessage || `${actionLabel}成功`);
+                await loadMissions();
+                setShowMissionAlert(false);
+            } else {
+                toast.error(serverMessage || `${actionLabel}失败`);
+            }
+        } catch (jsonError) {
+            console.error('❌ 解析响应失败:', jsonError);
+            toast.error('响应格式错误');
         }
     }, [loadHistoryMessages, loadMissions, setShowMissionAlert, stepHandlers]);
 
@@ -541,7 +551,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 <RightPanels
                     playerOpen={playerOpen}
                     inventoryOpen={inventoryOpen}
-                    player={player}
+                                player={player}
                     inventory={inventory}
                     onEquipItem={onEquipItem}
                     onUseItem={onUseItem}
@@ -556,7 +566,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     loadingMissions={loadingMissions}
                     inventoryOpen={inventoryOpen}
                     playerOpen={playerOpen}
-                    inventory={inventory}
+                                inventory={inventory}
                     player={player}
                     onCloseHistory={closeHistory}
                     onCloseMission={closeMission}

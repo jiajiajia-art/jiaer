@@ -5,6 +5,7 @@ interface UseStepStreamResponseOptions {
     setSelectedOptionIndex: React.Dispatch<React.SetStateAction<number | null>>;
     setIsWaitingForData: React.Dispatch<React.SetStateAction<boolean>>;
     currentRequestId: React.MutableRefObject<number>;
+    onMissionFlag?: () => void | Promise<void>;
 }
 
 interface ProcessStepStreamResponseOptions {
@@ -22,7 +23,35 @@ export const useStepStreamResponse = ({
     setSelectedOptionIndex,
     setIsWaitingForData,
     currentRequestId,
+    onMissionFlag,
 }: UseStepStreamResponseOptions) => {
+    const notifyMissionFlag = useCallback(() => {
+        if (!onMissionFlag) return;
+        try {
+            const result = onMissionFlag();
+            if (result instanceof Promise) {
+                result.catch((error) => {
+                    console.error('❌ mission flag handler error:', error);
+                });
+            }
+        } catch (error) {
+            console.error('❌ mission flag handler error:', error);
+        }
+    }, [onMissionFlag]);
+
+    const shouldTriggerMissionFlag = (data: any) => {
+        if (!data) return false;
+        if (data.newMission) {
+            return true;
+        }
+        if (typeof data.response === 'string' && data.response.includes('[MISSION')) {
+            return true;
+        }
+        if (typeof data.mission === 'boolean') {
+            return data.mission;
+        }
+        return false;
+    };
     /**
      * 处理流式响应（step 类型）
      */
@@ -43,6 +72,7 @@ export const useStepStreamResponse = ({
         let firstStepReceived = false;
 
         try {
+            let missionFlagged = false;
             console.log('📡 开始接收流式数据...');
 
             while (true) {
@@ -77,6 +107,11 @@ export const useStepStreamResponse = ({
                         if (currentRequestId.current !== requestId) {
                             console.log('⚠️ 忽略旧请求的数据');
                             continue;
+                        }
+
+                        if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
+                            missionFlagged = true;
+                            notifyMissionFlag();
                         }
 
                         // 处理 step 类型的数据
@@ -139,6 +174,11 @@ export const useStepStreamResponse = ({
 
                     if (currentRequestId.current !== requestId) {
                         return;
+                    }
+
+                    if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
+                        missionFlagged = true;
+                        notifyMissionFlag();
                     }
 
                     if (jsonData.type === 'step' && jsonData.step) {

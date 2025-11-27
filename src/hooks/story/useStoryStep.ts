@@ -6,14 +6,14 @@ import { HOST_ADDRESS } from '../../config';
 interface UseStoryStepOptions {
     sessionId: string | null;
     onHistoryRefresh?: () => void;
-    onMissionsRefresh?: () => void;
+    onMissionDetected?: () => void | Promise<void>;
     onMessagesClear?: () => void;
 }
 
 export const useStoryStep = ({ 
     sessionId, 
     onHistoryRefresh, 
-    onMissionsRefresh,
+    onMissionDetected,
     onMessagesClear 
 }: UseStoryStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
@@ -25,6 +25,7 @@ export const useStoryStep = ({
     
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
+    const isProcessingStepRef = useRef(false);
 
     // 同步 currentStep 到 ref
     useEffect(() => {
@@ -36,23 +37,33 @@ export const useStoryStep = ({
         setSelectedOptionIndex,
         setIsWaitingForData,
         currentRequestId,
+        onMissionFlag: onMissionDetected,
     });
+
+    const showStep = useCallback(async (step: any) => {
+        if (!step) return;
+
+        setCurrentStep(step);
+        setIsWaitingForData(false);
+        setSelectedOptionIndex(null);
+        setShowNextButton(step.type !== 'choice');
+    }, []);
 
     // 当队列中有 step 且当前没有显示的 step 时，自动显示第一个
     useEffect(() => {
-        if (stepQueue.length > 0 && (!currentStep || isWaitingForData)) {
-            const nextStep = stepQueue[0];
-            setCurrentStep(nextStep);
-            setIsWaitingForData(false);
-            setSelectedOptionIndex(null);
-            setStepQueue(prev => prev.slice(1));
-            setShowNextButton(nextStep.type !== 'choice');
-            
-            if (nextStep.type === 'choice') {
-                onMissionsRefresh?.();
-            }
-        }
-    }, [stepQueue, currentStep, isWaitingForData, onMissionsRefresh]);
+        if (stepQueue.length === 0) return;
+        if (currentStep && !isWaitingForData) return;
+        if (isProcessingStepRef.current) return;
+
+        const nextStep = stepQueue[0];
+        isProcessingStepRef.current = true;
+        setStepQueue(prev => prev.slice(1));
+
+        void (async () => {
+            await showStep(nextStep);
+            isProcessingStepRef.current = false;
+        })();
+    }, [stepQueue, currentStep, isWaitingForData, showStep]);
 
     // 处理流式请求
     const handleStreamAction = useCallback(async (
@@ -126,22 +137,22 @@ export const useStoryStep = ({
     // 处理下一步
     const handleNextStep = useCallback(() => {
         setStepQueue(prev => {
-            if (prev.length > 0) {
-                const nextStep = prev[0];
-                setCurrentStep(nextStep);
-                setShowNextButton(nextStep.type !== 'choice');
-                if (nextStep.type === 'choice') {
-                    onMissionsRefresh?.();
-                }
-                return prev.slice(1);
-            } else {
+            if (prev.length === 0) {
                 setCurrentStep(null);
                 setShowNextButton(false);
                 setIsWaitingForData(true);
                 return prev;
             }
+
+            const [nextStep, ...rest] = prev;
+            void (async () => {
+                isProcessingStepRef.current = true;
+                await showStep(nextStep);
+                isProcessingStepRef.current = false;
+            })();
+            return rest;
         });
-    }, [onMissionsRefresh]);
+    }, [showStep]);
 
     // 处理选择选项
     const handleChoiceOption = useCallback(async (option: { text: string; nextId: string }, optionIndex: number) => {
