@@ -335,12 +335,28 @@
     box-shadow: 0 6px 16px rgba(251, 70, 85, 0.6);
 }
 
+.priceIcon{
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    display: inline-block;
+}
 .originalPrice {
     font-size: 20px;
     font-weight: 600;
     color: #fb4755;
     text-decoration: line-through;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.originalPrice img{
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: inline-block;
 }
 
 .gameRatingContainer {

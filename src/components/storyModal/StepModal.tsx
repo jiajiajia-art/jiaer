@@ -1,8 +1,5 @@
 import React from 'react';
 import styles from './StepModal.module.css';
-import { PiSkipForwardCircleLight } from 'react-icons/pi';
-import skipEraApi from '../../api/game/skipEraApi';
-import { useGameStore } from '../../store/gameStore';
 
 interface StepModalProps {
     currentStep: any;

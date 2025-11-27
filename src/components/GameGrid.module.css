@@ -132,6 +132,15 @@
     cursor: pointer;
 }
 
+.priceIcon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: inline-block;
+}
+
+
+
 /* 游戏编辑按钮 */
 .gameEditBtn {
     border: 1.5px solid #FB4655;
@@ -208,6 +217,13 @@
     padding: 0;
 }
 
+.goodsPriceText img {
+    width: 12px;
+    height: 12px;
+    object-fit: contain;
+    display: inline-block;
+}
+
 .specialPriceText {
     font-size: 22px;
     color: #FFFFFF;
@@ -216,12 +232,30 @@
     padding: 0;
 }
 
+.specialPriceText img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    display: inline-block;
+}
+
 .normalPriceText {
     font-size: 22px;
     color: #FFFFFF;
     line-height: 1.1;
     margin: 0;
     padding: 0;
+}
+
+.priceValue {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: inherit;
+}
+
+.priceValue svg {
+    font-size: 10px;
 }
 
 .emptyState {

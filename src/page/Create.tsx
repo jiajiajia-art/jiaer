@@ -173,7 +173,11 @@ const Create: React.FC = () => {
                                 />
                                 <div className={styles.userName}>{userName}</div>
                                 <div className={styles.userCredit}>
-                                    <span>积分：{user?.user?.points ?? 0} </span>
+                                    <span className={styles.userPoints}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon}/>
+
+                                        积分：{user?.user?.points ?? 0}
+                                    </span>
                                     <button
                                         className={`${styles.payButton}`}
                                         onClick={() => setIsRechargeModalOpen(true)}

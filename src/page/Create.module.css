@@ -138,6 +138,26 @@
     color: #ffffff;
 }
 
+.priceIcon{
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: inline-block;
+}
+
+.userPoints {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+.userPoints svg {
+    font-size: 22px;
+    vertical-align: middle;
+}
+
 .payButton {
     background-color: #FB4655;
     border-radius: 5px;

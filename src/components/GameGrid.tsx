@@ -3,6 +3,7 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
+import { RiCopperCoinLine } from 'react-icons/ri';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -18,6 +19,19 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
             </div>
         );
     }
+
+    const renderPriceValue = (amount?: number | null) => {
+        if (amount == null || amount == 0) {
+            return '免费';
+        }
+        return (
+            <span className={styles.priceValue}>
+                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon}/>
+
+                {amount}
+            </span>
+        );
+    };
 
     return (
         <div className={styles.grid4}>
@@ -69,21 +83,18 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                                     ) :
                                         <div className={styles.goodsPrice}>
                                             {
-                                                // meta.paid ? (
-                                                //     <button className={styles.startGameBtn}>开始游戏</button>
-                                                // ) : 
-                                                 meta.special_price_amount!=null ? (
+                                                 meta.special_price_amount != null ? (
                                                     <>
                                                         <div className={styles.goodsPriceText}>
-                                                            {meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}
+                                                            {renderPriceValue(meta.price_amount)}
                                                         </div>
                                                         <div className={styles.specialPriceText}>
-                                                            {meta.special_price_amount == 0 ? '免费' : `￥${meta.special_price_amount}`}
+                                                            {renderPriceValue(meta.special_price_amount)}
                                                         </div>
                                                     </>
                                                 ) : (
                                                     <div className={styles.normalPriceText}>
-                                                        {meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}
+                                                        {renderPriceValue(meta.price_amount)}
                                                     </div>
                                                 )
                                             }

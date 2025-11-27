@@ -13,7 +13,6 @@ import { RECORD_CONVERSION } from '../config';
 import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
-
 interface GameDetailModalProps {
     isOpen: boolean;
     game: UserGameData;
@@ -52,12 +51,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     // 状态
     const [isLoading, setIsLoading] = useState(false);
-    const [isUnlocked, setIsUnlocked] = useState(false);
     const [isLiked, setIsLiked] = useState(() => checkIsLiked(game.reaction));
     const [likeCount, setLikeCount] = useState(game.like_count || 0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [gameDetail, setGameDetail] = useState<UserGameData | null>(null);
-    const [freeGameClicked, setFreeGameClicked] = useState(false);
 
     // Refs
     const prevIsOpenRef = useRef(false);
@@ -66,7 +63,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     // 计算值
     const currentGame = useMemo(() => gameDetail ?? game, [gameDetail, game]);
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
-    const isOwner = useMemo(() => currentGame.creator_user_id === userId, [currentGame.creator_user_id, userId]);
     const fileId = useMemo(() => currentGame?.file_id || currentGame?.id, [currentGame]);
 
     const [isDeletModalOpen, setIsDeletModalOpen] = useState(false);
@@ -135,14 +131,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setGameDetail(game);
             setIsLiked(checkIsLiked(game.reaction));
             setLikeCount(game.like_count || 0);
-            setFreeGameClicked(false); // 重置免费游戏点击状态
-            // 存储到 zustand
             setGameDetailToStore(game);
             fetchGameDetail();
         } else {
             setGameDetail(null);
-            setIsUnlocked(false);
-            setFreeGameClicked(false);
         }
     }, [isOpen, game, fetchGameDetail, setGameDetailToStore]);
 
@@ -268,12 +260,34 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const purchaseGame = useCallback(async () => {
         if (!checkAuth()) return;
         if (!fileId || !userId) return;
+        
+        // 计算实际价格（优先使用 special_price_amount，否则使用 price_amount）
+        const actualPrice = (currentGame.special_price_amount != null)
+            ? currentGame.special_price_amount
+            : (currentGame.price_amount ?? 0);
+        
+        // 判断是否为免费游戏
+        const isFreeGame = actualPrice == 0;
+        
+        // 如果不是免费游戏，检查积分是否足够
+        if (!isFreeGame) {
+            const userPoints = user?.user.points ?? 0;
+            if (userPoints < actualPrice) {
+                toast.error('积分不足');
+                return;
+            }
+        }
+
         try {
             const response = await payApi.purchasePoints({
                 fileId,
             });
             if (response.data.success) {
-                toast.success('购买成功');
+                if (isFreeGame) {
+                    toast.success('免费游戏已解锁');
+                } else {
+                    toast.success('购买成功');
+                }
                 setIsPurchaseModalOpen(false);
                 await fetchGameDetail();
                 // 通知父组件刷新游戏列表
@@ -284,7 +298,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         } catch (error) {
             console.error('购买失败:', error);
         }
-    }, [checkAuth, fileId, userId, fetchGameDetail, onGameUpdated]);
+    }, [checkAuth, fileId, userId, currentGame.special_price_amount, currentGame.price_amount, user?.user.points, fetchGameDetail, onGameUpdated]);
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
@@ -369,24 +383,29 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                         </span>
                                     </div>
 
-                                    {!isUnlocked && !isOwner && currentGame.special_price_amount!=null && (
+                                    {currentGame.special_price_amount != null && (
                                         <div className={styles.priceLabel}>
                                             <div className={styles.priceLabelText}>限时特惠</div>
-                                            <div className={styles.originalPrice}>￥{currentGame.price_amount}</div>
+                                            <div className={styles.originalPrice}>
+                                                {currentGame.price_amount && currentGame.price_amount > 0 && (
+                                                    <img
+                                                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                                                        alt=""
+                                                        className={styles.priceIcon}
+                                                    />
+                                                )}
+                                                {currentGame.price_amount == 0 ? '免费' : currentGame.price_amount}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
                                 {(() => {
-                                    const canStartDirectly = isUnlocked || isOwner || currentGame.paid;
-                                    
-                                    const isFreeGameClicked = currentGame.special_price_amount == 0 && freeGameClicked;
-                                    
-                                    if (canStartDirectly || isFreeGameClicked) {
+                                    if (currentGame.paid) {
                                         return (
-                                            <button 
-                                                className={styles.priceWrapper} 
-                                                onClick={handleStartGame} 
+                                            <button
+                                                className={styles.priceWrapper}
+                                                onClick={handleStartGame}
                                                 disabled={isLoading}
                                             >
                                                 {isLoading ? (
@@ -401,24 +420,32 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                             </button>
                                         );
                                     }
-                                    
-                                    const price = currentGame.special_price_amount!=null
-                                        ? currentGame.special_price_amount 
+
+                                    const price = currentGame.special_price_amount != null
+                                        ? currentGame.special_price_amount
                                         : currentGame.price_amount;
-                                    const displayPrice = price == 0 ? '免费' : `￥${price}`;
-                                    
+                                    const isFreePrice = price == null || price == 0;
+                                    const displayPrice = isFreePrice ? '免费' : `${price}`;
+
                                     return (
-                                        <button 
-                                            className={styles.priceWrapper} 
+                                        <button
+                                            className={styles.priceWrapper}
                                             onClick={() => {
                                                 if (!checkAuth()) return;
-                                                if (currentGame.special_price_amount == 0) {
-                                                    setFreeGameClicked(true);
+                                                if (currentGame.special_price_amount == 0 && !currentGame.paid) {
+                                                    purchaseGame();
                                                 } else {
                                                     setIsPurchaseModalOpen(true);
                                                 }
                                             }}
-                                        >
+                                            >
+                                            {!isFreePrice && (
+                                                <img
+                                                    src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+                                                    alt=""
+                                                    className={styles.priceIcon}
+                                                />
+                                            )}
                                             {displayPrice}
                                         </button>
                                     );
