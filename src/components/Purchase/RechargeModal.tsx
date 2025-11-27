@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
-import payApi from '../api/pay/payApi';
+import payApi from '../../api/pay/payApi';
 
 interface RechargeModalProps {
     isOpen: boolean;

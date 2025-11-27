@@ -193,7 +193,9 @@ export const useStoryStep = ({
         handleChoiceSend,
         setCurrentStep,
         setShowNextButton,
-        currentRequestId
+        currentRequestId,
+        processStreamResponse, // 暴露 processStreamResponse 供外部使用
+        setStepQueue // 暴露 setStepQueue 供外部使用
     };
 };
 

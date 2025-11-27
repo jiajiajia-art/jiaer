@@ -15,4 +15,7 @@ export const auth = {
 
   resetPassword: (data: ResetPasswordRequest) =>
     api.post<ApiResponse<null>>('/auth/code/verify', data),
+
+  getUserInfo: () =>
+    api.get<ApiResponse<User>>('/auth/user/info'),
 };

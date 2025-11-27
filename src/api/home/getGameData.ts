@@ -5,14 +5,14 @@ const getGameDataApi = {
     getUserData: (request: UserGameRequest) => {
         return api.get<UserGameResponse>(`/auth/games/user`, { params: request });
     },
-    getGameData: (data: PublicGameRequest) => {
-        return api.get<UserGameResponse>(`/auth/games/public`, { params: data });
+    getGameData: (type: string, data: PublicGameRequest) => {
+        return api.get<UserGameResponse>(`/auth/games/public/${type}`, { params: data });
     },
     getGameDetail: (data: GameDetailRequest) => {
         return api.get<GameDetailResponse>(`/auth/games/info`, { params: data });
     },
-    getWareHouseData: () => {
-        return api.get<WareHouseResponse>(`/auth/games/history`);
+    getWareHouseData: (data: PublicGameRequest) => {
+        return api.get<WareHouseResponse>(`/auth/games/history`, { params: data });
     }
 }
 

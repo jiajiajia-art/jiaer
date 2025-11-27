@@ -1,0 +1,101 @@
+.mobilePanelOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2100;
+    background: transparent;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.mobilePanelContent {
+    position: relative;
+    width: min(95vw, 420px);
+    height: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+}
+
+/* 历史记录面板 */
+.mobileHistoryModal .mobilePanelContent {
+    width: 330px;
+    height: 420px;
+}
+
+/* 任务面板 - 需要固定高度 */
+.mobileMissionModal .mobilePanelContent {
+    width: 330px;
+    height: 420px;
+}
+
+/* 背包面板 */
+.mobileInventoryModal .mobilePanelContent {
+    height: auto;
+}
+
+/* 玩家面板 - 不需要固定高度，保持居中 */
+.mobilePlayerModal .mobilePanelContent {
+    height: auto;
+}
+
+@media (max-width: 768px) {
+    .mobilePanelOverlay {
+        display: flex;
+    }
+    
+    .mobileHistoryModal,
+    .mobileMissionModal,
+    .mobileInventoryModal,
+    .mobilePlayerModal {
+        display: flex;
+    }
+
+    /* 移动端覆盖子组件样式 - 使用更具体的选择器替代 !important */
+    .mobileHistoryModal .mobilePanelContent :global(.chatHistory) {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        animation: none;
+    }
+
+    .mobileMissionModal .mobilePanelContent :global(.missionsModal) {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        animation: none;
+    }
+
+    .mobileInventoryModal .mobilePanelContent :global(.inventoryFloatingPanel) {
+        position: relative;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        animation: none;
+    }
+
+    /* 确保关闭按钮可点击 */
+    .mobilePlayerModal .mobilePanelContent :global(.closePlayerBtn) {
+        z-index: 2201;
+        pointer-events: auto;
+    }
+}
+

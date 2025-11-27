@@ -301,6 +301,14 @@
     border-top: 1px solid #e0e0e0;
 }
 
+.missionSubmitButton {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+}
+
 .submitButton {
     background: #fb4755;
     color: #fff;
@@ -311,15 +319,37 @@
     font-size: 14px;
     font-weight: 500;
     transition: all 0.2s ease;
-    margin-left: auto;
 }
 
-.submitButton:hover {
+.submitButton:hover:not(:disabled) {
     background: #e63946;
     transform: scale(1.05);
 }
 
-.submitButton:active {
+.submitButton:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.submitButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.skipButton {
+    background: #fff;
+    color: #fb4755;
+    border: 1.5px solid #fb4755;
+}
+
+.skipButton:hover:not(:disabled) {
+    background: #fff5f6;
+    border-color: #e63946;
+    color: #e63946;
+    transform: scale(1.05);
+}
+
+.skipButton:active:not(:disabled) {
     transform: scale(0.98);
 }
 

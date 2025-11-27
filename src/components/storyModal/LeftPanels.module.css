@@ -1,0 +1,40 @@
+/* 左侧面板容器：历史记录和任务列表 */
+.leftPanels {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.panelCard {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.historyPanel,
+.missionsModalWrapper {
+    width: 350px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    height: 270px;
+    /* overflow: hidden; */
+}
+
+.missionsModalWrapper {
+    height: 250px;
+}
+
+.historyPanel {
+    height: 436px;
+}
+
+@media (max-width: 768px) {
+    .leftPanels {
+        display: none;
+    }
+}
+

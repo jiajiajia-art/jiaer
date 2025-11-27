@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './StoryModal.module.css';
+import styles from './LeftPanels.module.css';
 import ChatHistory from '../Mian/ChatHistory';
 import MissionsModal from '../Mian/MissionsModal';
 import type { ChatMessage } from '../Mian/ChatHistory';

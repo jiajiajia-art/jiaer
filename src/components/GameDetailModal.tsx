@@ -18,6 +18,7 @@ interface GameDetailModalProps {
     isOpen: boolean;
     game: UserGameData;
     onClose: () => void;
+    onGameUpdated?: () => void; // 游戏数据更新后的回调（用于刷新列表）
 }
 
 // 常量
@@ -42,6 +43,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     isOpen,
     game,
     onClose,
+    onGameUpdated,
 }) => {
     // Hooks
     const { user } = useAuthStore();
@@ -273,14 +275,16 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             if (response.data.success) {
                 toast.success('购买成功');
                 setIsPurchaseModalOpen(false);
-                fetchGameDetail();
+                await fetchGameDetail();
+                // 通知父组件刷新游戏列表
+                onGameUpdated?.();
             } else {
                 toast.error(response.data.message || '购买失败');
             }
         } catch (error) {
             console.error('购买失败:', error);
         }
-    }, [checkAuth, fileId, userId, fetchGameDetail]);
+    }, [checkAuth, fileId, userId, fetchGameDetail, onGameUpdated]);
 
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
@@ -365,7 +369,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                         </span>
                                     </div>
 
-                                    {!isUnlocked && !isOwner && (
+                                    {!isUnlocked && !isOwner && currentGame.special_price_amount!=null && (
                                         <div className={styles.priceLabel}>
                                             <div className={styles.priceLabelText}>限时特惠</div>
                                             <div className={styles.originalPrice}>￥{currentGame.price_amount}</div>
@@ -373,45 +377,52 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     )}
                                 </div>
 
-                                {!isUnlocked && !isOwner && !currentGame.paid ? (
-                                    currentGame.special_price_amount == 0 && freeGameClicked ? (
-                                        <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
-                                            {isLoading ? (
-                                                <div className={styles.loading}>
-                                                    <span className={styles.loadingDot}></span>
-                                                    <span className={styles.loadingDot}></span>
-                                                    <span className={styles.loadingDot}></span>
-                                                </div>
-                                            ) : (
-                                                <span>开始游戏</span>
-                                            )}
+                                {(() => {
+                                    const canStartDirectly = isUnlocked || isOwner || currentGame.paid;
+                                    
+                                    const isFreeGameClicked = currentGame.special_price_amount == 0 && freeGameClicked;
+                                    
+                                    if (canStartDirectly || isFreeGameClicked) {
+                                        return (
+                                            <button 
+                                                className={styles.priceWrapper} 
+                                                onClick={handleStartGame} 
+                                                disabled={isLoading}
+                                            >
+                                                {isLoading ? (
+                                                    <div className={styles.loading}>
+                                                        <span className={styles.loadingDot}></span>
+                                                        <span className={styles.loadingDot}></span>
+                                                        <span className={styles.loadingDot}></span>
+                                                    </div>
+                                                ) : (
+                                                    <span>开始游戏</span>
+                                                )}
+                                            </button>
+                                        );
+                                    }
+                                    
+                                    const price = currentGame.special_price_amount!=null
+                                        ? currentGame.special_price_amount 
+                                        : currentGame.price_amount;
+                                    const displayPrice = price == 0 ? '免费' : `￥${price}`;
+                                    
+                                    return (
+                                        <button 
+                                            className={styles.priceWrapper} 
+                                            onClick={() => {
+                                                if (!checkAuth()) return;
+                                                if (currentGame.special_price_amount === 0) {
+                                                    setFreeGameClicked(true);
+                                                } else {
+                                                    setIsPurchaseModalOpen(true);
+                                                }
+                                            }}
+                                        >
+                                            {displayPrice}
                                         </button>
-                                    ) : (
-                                        <button className={styles.priceWrapper} onClick={() => {
-                                            if (!checkAuth()) return;
-                                            if (currentGame.special_price_amount == 0) {
-                                                setFreeGameClicked(true);
-                                            } else {
-                                                setIsPurchaseModalOpen(true);
-                                            }
-                                        }}>
-                                            {currentGame.special_price_amount == 0 ? '免费' : `￥${currentGame.special_price_amount}`}
-                                        </button>
-                                    )
-                                ) : (
-                                    // 已购买或已解锁，直接显示开始游戏按钮
-                                    <button className={styles.priceWrapper} onClick={handleStartGame} disabled={isLoading}>
-                                        {isLoading ? (
-                                            <div className={styles.loading}>
-                                                <span className={styles.loadingDot}></span>
-                                                <span className={styles.loadingDot}></span>
-                                                <span className={styles.loadingDot}></span>
-                                            </div>
-                                        ) : (
-                                            <span>开始游戏</span>
-                                        )}
-                                    </button>
-                                )}
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
@@ -423,7 +434,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 onDelete={purchaseGame}
                 onCancel={() => setIsPurchaseModalOpen(false)}
                 title="购买游戏"
-                message={`确认花费 ￥${currentGame.special_price_amount} 购买该游戏吗？`}
+                message={`确认花费 ${currentGame.special_price_amount > 0 ? currentGame.special_price_amount : currentGame.price_amount} 积分购买该游戏吗？`}
                 confirmButtonText="确认购买"
                 cancelButtonText="取消"
             />

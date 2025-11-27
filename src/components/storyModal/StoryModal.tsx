@@ -5,20 +5,19 @@ import { useGameStore, type EquipmentSlots } from '../../store/gameStore';
 import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';
 import { authFetch } from '../../api/base';
 import statisticsApi from '../../api/statistics/statisticsApi';
-import type { SubmitMissionResponse } from '../../api/game/missionApi.type';
 import { useAuthStore } from '../../store/useAuthStore';
-import MissionSubmitModal from './MissionSubmitModal';
-import StepModal from './StepModal';
-import LeftPanels from './LeftPanels';
-import RightPanels from './RightPanels';
-import MobilePanels from './MobilePanels';
+
 import toast from 'react-hot-toast';
 import { useStoryHistory } from '../../hooks/storyModal/useStoryHistory';
 import { useStoryMissions } from '../../hooks/storyModal/useStoryMissions';
 import { useStoryStep } from '../../hooks/storyModal/useStoryStep';
 import { useStoryTyping } from '../../hooks/storyModal/useStoryTyping';
 import { useMobilePanels } from '../../hooks/storyModal/useMobilePanels';
-import { useStepStreamResponse } from '../../hooks/storyModal/useStepStreamResponse';
+import LeftPanels from './LeftPanels';
+import RightPanels from './RightPanels';
+import MobilePanels from './MobilePanels';
+import StepModal from './StepModal';
+import MissionSubmitModal from './MissionSubmitModal';
 
 interface StoryModalProps {
     isOpen: boolean;
@@ -219,26 +218,53 @@ const StoryModal: React.FC<StoryModalProps> = ({
         }
     }, [isOpen, missionData, stepHandlers]);
 
-    // 使用 Step 流式响应处理 Hook（用于任务提交）
-    const stepQueueRef = useRef<any[]>([]);
-    const selectedOptionIndexRef = useRef<number | null>(null);
-    
-    const { processStreamResponse } = useStepStreamResponse({
-        setStepQueue: (updater: any) => {
-            if (typeof updater === 'function') {
-                stepQueueRef.current = updater(stepQueueRef.current);
-            } else {
-                stepQueueRef.current = updater;
+    // 公共的流式响应处理函数
+    const handleMissionStreamResponse = useCallback(async (
+        response: Response,
+        actionType: 'submit' | 'skip'
+    ) => {
+        const contentType = response.headers.get('content-type');
+
+        if (contentType?.includes('text/event-stream')) {
+            const requestId = ++stepHandlers.currentRequestId.current;
+
+            // 清空当前状态，准备接收新的流式数据
+            stepHandlers.setCurrentStep(null);
+            stepHandlers.setShowNextButton(false);
+            stepHandlers.setStepQueue([]); // 清空队列
+            setMessages([]);
+
+            // 使用 useStoryStep 内部的 processStreamResponse，确保 step 数据正确添加到队列
+            await stepHandlers.processStreamResponse(response, requestId, {
+                onFirstStep: () => {
+                    setShowMissionAlert(false);
+                },
+                onSuccess: async () => {
+                    await loadHistoryMessages();
+                    await loadMissions();
+                },
+                onError: (error) => {
+                    console.error(`❌ ${actionType === 'submit' ? '任务提交' : '任务跳过'}流式处理错误:`, error);
+                    toast.error(error || `${actionType === 'submit' ? '任务提交' : '任务跳过'}失败`);
+                }
+            });
+        } else {
+            // 普通 JSON 响应（成功）
+            try {
+                const data = await response.json();
+                if (data.completed || response.ok) {
+                    toast.success(data.message || `${actionType === 'submit' ? '任务提交' : '任务跳过'}成功`);
+                    await loadMissions();
+                    setShowMissionAlert(false);
+                } else {
+                    toast.error(data.message || `${actionType === 'submit' ? '任务提交' : '任务跳过'}失败`);
+                }
+            } catch (jsonError) {
+                console.error('❌ 解析响应失败:', jsonError);
+                toast.error('响应格式错误');
             }
-        },
-        setSelectedOptionIndex: (value: any) => {
-            selectedOptionIndexRef.current = typeof value === 'function' ? value(selectedOptionIndexRef.current) : value;
-        },
-        setIsWaitingForData: () => {
-            // 这个会在useStoryStep内部处理
-        },
-        currentRequestId: stepHandlers.currentRequestId,
-    });
+        }
+    }, [loadHistoryMessages, loadMissions, setShowMissionAlert, stepHandlers]);
 
     // 处理任务提交
     const handleSubmitMission = useCallback(async (missionId: string) => {
@@ -255,51 +281,34 @@ const StoryModal: React.FC<StoryModalProps> = ({
                     headers: { 'Content-Type': 'application/json' },
                 }
             );
-            const contentType = response.headers.get('content-type');
-
-            if (contentType?.includes('text/event-stream')) {
-                console.log('流式响应');
-                const requestId = ++stepHandlers.currentRequestId.current;
-
-                stepHandlers.setCurrentStep(null);
-                stepHandlers.setShowNextButton(false);
-                setMessages([]);
-
-                await processStreamResponse(response, requestId, {
-                    onFirstStep: () => {
-                        console.log('📝 收到第一个 step，关闭任务提示弹窗');
-                        setShowMissionAlert(false);
-                    },
-                    onSuccess: async () => {
-                        await loadHistoryMessages();
-                    },
-                    onError: (error) => {
-                        console.error('❌ 任务提交流式处理错误:', error);
-                        toast.error(error || '任务提交失败');
-                    }
-                });
-            } else {
-                // 普通 JSON 响应（成功）
-                try {
-                    const data: SubmitMissionResponse = await response.json();
-                    if (data.completed) {
-                        console.log('✅ 任务提交成功');
-                        toast.success(data.message || '任务提交成功');
-                        await loadMissions();
-                    } else {
-                        console.log('❌ 任务提交失败:', data.message);
-                        toast.error(data.message || '任务提交失败');
-                    }
-                } catch (jsonError) {
-                    console.error('❌ 解析响应失败:', jsonError);
-                    toast.error('任务提交响应格式错误');
-                }
-            }
+            await handleMissionStreamResponse(response, 'submit');
         } catch (error) {
             console.error('❌ 任务提交错误:', error);
             toast.error('任务提交失败，请稍后重试');
         }
-    }, [sessionId, processStreamResponse, loadMissions, loadHistoryMessages, setShowMissionAlert, stepHandlers]);
+    }, [sessionId, handleMissionStreamResponse]);
+
+    // 处理跳过任务
+    const handleSkipMission = useCallback(async (missionId: string) => {
+        if (!sessionId) {
+            toast.error('没有 sessionId，无法跳过任务');
+            return;
+        }
+
+        try {
+            const response = await authFetch(
+                `${HOST_ADDRESS}/api/backend/game/session/${sessionId}/missions/${missionId}/abandon`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                }
+            );
+            await handleMissionStreamResponse(response, 'skip');
+        } catch (error) {
+            console.error('❌ 任务跳过错误:', error);
+            toast.error('任务跳过失败，请稍后重试');
+        }
+    }, [sessionId, handleMissionStreamResponse]);
 
     const handleStartGame = useCallback(async () => {
         if (pdfFileId && RECORD_CONVERSION) {
@@ -579,6 +588,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                         missionData={missionData}
                         onClose={() => setShowMissionAlert(false)}
                         onSubmitMission={handleSubmitMission}
+                        onSkipMission={handleSkipMission}
                     />
                 )}
 

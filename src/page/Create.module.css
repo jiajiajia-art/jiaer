@@ -108,7 +108,7 @@
 .createGameButtonItem {
     width: 200px;
     height: 60px;
-    background-color: #fb5b66;
+    background-color: #FB4655;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -139,7 +139,7 @@
 }
 
 .payButton {
-    background-color: #fb5b66;
+    background-color: #FB4655;
     border-radius: 5px;
     padding: 6px 10px;
     color: #ffffff;
@@ -147,6 +147,11 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+}
+
+.payButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* 我的数据模块 */
@@ -224,7 +229,7 @@
 .statValue {
     font-size: 30px;
     font-weight: 700;
-    color: #fb5b66;
+    color: #FB4655;
 }
 
 .statLabel {

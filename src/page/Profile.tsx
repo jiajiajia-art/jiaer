@@ -1,17 +1,34 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
+import { auth } from '../api/account/authApi';
 
 const Profile: React.FC = () => {
-    const { user, logout } = useAuthStore();
+    const { user, logout, updateUser } = useAuthStore();
     const navigate = useNavigate();
 
     const handleLogout = () => {
         logout();
         navigate('/home');
     };
+
+    // 获取用户信息并更新
+    const getUserInfo = async () => {
+        try {
+            const response = await auth.getUserInfo();
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取用户信息失败:', error);
+        }
+    };
+
+    useEffect(() => {
+        getUserInfo();
+    }, []);
 
     return (
         <div className={styles.pageRoot}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './WareHouse.module.css';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -28,29 +28,33 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
         };
     }, [isSpecialLibrary]);
 
+    // 加载游戏数据
+    const loadGames = useCallback(async () => {
+        setIsLoading(true);
+        const type = isSpecialLibrary ? 'with-discount' : 'no-discount';
+        try {
+            const response = await libraryDataApi.getGameData(type,{
+                limit: '40',
+            });
+
+            if (response.data.success && response.data.data) {
+                setGames(response.data.data);
+            } else {
+                console.error('获取游戏列表失败:', response.data);
+                setGames([]);
+            }
+        } catch (error) {
+            console.error('获取游戏列表错误:', error);
+            setGames([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [isSpecialLibrary]);
+
     // 获取游戏数据
     useEffect(() => {
-        const loadGames = async () => {
-            setIsLoading(true);
-            try {
-                const response = await libraryDataApi.getGameData({});
-
-                if (response.data.success && response.data.data) {
-                    setGames(response.data.data);
-                } else {
-                    console.error('获取游戏列表失败:', response.data);
-                    setGames([]);
-                }
-            } catch (error) {
-                console.error('获取游戏列表错误:', error);
-                setGames([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         loadGames();
-    }, [user?.user.id, requestParams]);
+    }, [user?.user.id, requestParams, loadGames]);
 
     // 显示游戏详情
     const showGameDetail = (game: UserGameData) => {
@@ -90,7 +94,6 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
                     ) : (
                         <GameGrid
                             games={games}
-                            showSpecialPrice={true}
                             onGameClick={showGameDetail}
                         />
                     )}
@@ -104,6 +107,7 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
                     isOpen={showGameModal}
                     game={selectedGame}
                     onClose={closeModal}
+                    onGameUpdated={loadGames}
                 />
             )}
 

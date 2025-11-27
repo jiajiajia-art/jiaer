@@ -5,8 +5,9 @@ import toast, { Toaster } from 'react-hot-toast';
 
 interface MissionSubmitModalProps {
     missionData: MissionData | null;
-    onClose?: () => void;
-    onSubmitMission?: (missionId: string) => Promise<void>;
+    onClose: () => void;
+    onSubmitMission: (missionId: string) => Promise<void>;
+    onSkipMission: (missionId: string) => Promise<void>;
 }
 
 const hasRequirementContent = (requirements?: CompletionPathRequirements | null) => {
@@ -88,12 +89,14 @@ const RequirementSections: React.FC<{
 
 const MissionItem: React.FC<{
     mission: Mission;
-    onSubmitMission?: (missionId: string) => Promise<void>;
-}> = ({ mission, onSubmitMission }) => {
+    onSubmitMission: (missionId: string) => Promise<void>;
+    onSkipMission: (missionId: string) => Promise<void>;
+}> = ({ mission, onSubmitMission, onSkipMission }) => {
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [isSkipping, setIsSkipping] = React.useState(false);
 
     const handleSubmitMission = async () => {
-        if (mission.id && !isSubmitting && onSubmitMission) {
+        if (mission.id && !isSubmitting && !isSkipping) {
             try {
                 setIsSubmitting(true);
                 await onSubmitMission(mission.id);
@@ -106,8 +109,23 @@ const MissionItem: React.FC<{
         }
     };
 
+    const handleSkipMission = async () => {
+        if (mission.id && !isSubmitting && !isSkipping) {
+            try {
+                setIsSkipping(true);
+                await onSkipMission(mission.id);
+            } catch (error: any) {
+                console.error('❌ 任务跳过错误:', error);
+                toast.error('任务跳过失败，请稍后重试');
+            } finally {
+                setIsSkipping(false);
+            }
+        }
+    };
+
     const hasMultipleRequirementPlans =
         Array.isArray(mission.requirements) && mission.requirements.length > 1;
+
 
     return (
         <div className={styles.missionItem}>
@@ -149,7 +167,7 @@ const MissionItem: React.FC<{
                                     )}
                                     <RequirementSections requirements={req} />
                                 </div>
-                              ))
+                            ))
                             : (
                                 <RequirementSections requirements={mission.requirements ?? null} />
                             )}
@@ -160,12 +178,21 @@ const MissionItem: React.FC<{
                 <span className={styles.rewardItem}>经验: {mission.reward?.experience ?? 0}</span>
                 <span className={styles.rewardItem}>金币: {mission.reward?.gold ?? 0}</span>
                 {(mission.reward?.items ?? []).map((item, index) => (
-                        <span key={index} className={styles.rewardItem}>{item}</span>
-                    ))}
+                    <span key={index} className={styles.rewardItem}>{item}</span>
+                ))}
+            </div>
+            <div className={styles.missionSubmitButton}>
+                <button
+                    className={`${styles.submitButton} ${styles.skipButton}`}
+                    onClick={handleSkipMission}
+                    disabled={isSubmitting || isSkipping}
+                >
+                    {isSkipping ? '跳过中...' : '跳过任务'}
+                </button>
                 <button
                     className={styles.submitButton}
                     onClick={handleSubmitMission}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isSkipping}
                 >
                     {isSubmitting ? '提交中...' : '任务提交'}
                 </button>
@@ -176,7 +203,8 @@ const MissionItem: React.FC<{
 
 const MissionSubmitModal: React.FC<MissionSubmitModalProps> = ({ 
     missionData, 
-    onSubmitMission
+    onSubmitMission,
+    onSkipMission
 }) => {
     if (!missionData || missionData.activeMissions.length === 0) {
         return null;
@@ -220,6 +248,7 @@ const MissionSubmitModal: React.FC<MissionSubmitModalProps> = ({
                                 key={mission.id}
                                 mission={mission}
                                 onSubmitMission={onSubmitMission}
+                                onSkipMission={onSkipMission}
                             />
                         ))}
                     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './StoryModal.module.css';
+import styles from './MobilePanels.module.css';
 import ChatHistory from '../Mian/ChatHistory';
 import MissionsModal from '../Mian/MissionsModal';
 import PlayerFloatingPanel from '../Mian/PlayerFloatingPanel';
@@ -89,7 +89,7 @@ const MobilePanels: React.FC<MobilePanelsProps> = React.memo(({
 
             {playerOpen && (
                 <div className={`${styles.mobilePanelOverlay} ${styles.mobilePlayerModal}`}>
-                    <div className={`${styles.mobilePanelContent} ${styles.mobilePlayerContent}`}>
+                    <div className={styles.mobilePanelContent}>
                         <PlayerFloatingPanel
                             isOpen={true}
                             onClose={onClosePlayer}

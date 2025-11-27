@@ -1,5 +1,8 @@
 import React from 'react';
 import styles from './StepModal.module.css';
+import { PiSkipForwardCircleLight } from 'react-icons/pi';
+import skipEraApi from '../../api/game/skipEraApi';
+import { useGameStore } from '../../store/gameStore';
 
 interface StepModalProps {
     currentStep: any;
@@ -44,6 +47,15 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
                                         currentStep.type === 'choice' ? '选择' :
                                             currentStep.type}
                             </span>
+
+                            {/* {
+                                currentStep.type === 'choice' && (
+                                    <button className={styles.skipBtn}>
+                                        跳过
+                                        <PiSkipForwardCircleLight className={styles.skipBtnIcon} />
+                                    </button>
+                                )
+                            } */}
                         </div>
                         <div className={styles.stepModalBody}>
                             {currentStep.type === 'choice' ? (

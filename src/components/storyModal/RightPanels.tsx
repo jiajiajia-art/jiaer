@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './StoryModal.module.css';
+import styles from './RightPanels.module.css';
 import PlayerFloatingPanel from '../Mian/PlayerFloatingPanel';
 import InventoryFloatingPanel from '../Mian/InventoryFloatingPanel';
 import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';

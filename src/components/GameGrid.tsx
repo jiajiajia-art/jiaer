@@ -6,12 +6,11 @@ import { IoGameControllerOutline } from 'react-icons/io5';
 
 interface GameGridProps {
     games: UserGameData[];
-    showSpecialPrice?: boolean;
     onGameClick?: (game: UserGameData) => void;
     renderActions?: (game: UserGameData) => React.ReactNode;
 }
 
-const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, onGameClick, renderActions }) => {
+const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }) => {
     if (games.length === 0) {
         return (
             <div className={styles.emptyState}>
@@ -55,7 +54,9 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                         </div>
 
                         {renderActions ? (
-                            <div className={styles.gameEditBtn} onClick={(e) => e.stopPropagation()}>
+                            <div 
+                                className={styles.gameEditBtn} 
+                            >
                                 {renderActions(meta)}
                             </div>
                         ) : (
@@ -71,7 +72,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, showSpecialPrice = false, on
                                                 // meta.paid ? (
                                                 //     <button className={styles.startGameBtn}>开始游戏</button>
                                                 // ) : 
-                                                showSpecialPrice && meta.special_price_amount ? (
+                                                 meta.special_price_amount!=null ? (
                                                     <>
                                                         <div className={styles.goodsPriceText}>
                                                             {meta.price_amount == 0 ? '免费' : `￥${meta.price_amount}`}

@@ -13,12 +13,13 @@ import { HiOutlineLightBulb } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
-import RechargeModal from '../components/RechargeModal';
+import RechargeModal from '../components/Purchase/RechargeModal';
 import toast from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
+import { auth } from '../api/account/authApi';
 
 const Create: React.FC = () => {
-    const { user } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
     const navigate = useNavigate();
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [stats, setStats] = useState({
@@ -82,9 +83,22 @@ const Create: React.FC = () => {
         }
     };
 
+    
+    const getUserInfo = async () => {
+        try {
+        const response = await auth.getUserInfo();
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取用户信息错误:', error);
+        }
+    };
+
     useEffect(() => {
         loadMyGames();
         getGameTotalStats();
+        getUserInfo();
     }, [user?.user.id]);
 
     // 渲染操作按钮
@@ -95,7 +109,9 @@ const Create: React.FC = () => {
         // 未发布或已发布，都跳转到编辑/数据页面
         return (
             <button
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation(); // 阻止事件冒泡到卡片
                     if (!game.file_id) return;
                     navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
                 }}
@@ -113,6 +129,7 @@ const Create: React.FC = () => {
             amount: amount,
         });
         if (response.data.code === 200 && response.data.data) {
+            getUserInfo();
             return {
                 qrDataUrl: response.data.data.qrDataUrl,
                 outTradeNo: response.data.data.outTradeNo
@@ -227,11 +244,17 @@ const Create: React.FC = () => {
                                 <IoIosArrowForward />
                             </button>
                         </div>
-                        <GameGrid
-                            games={publishedGames}
-                            showSpecialPrice={false}
-                            renderActions={renderGameActions}
-                        />
+
+                        {publishedGames.length == 0 ? (
+                            <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
+                                暂无发布作品
+                            </div>
+                        ) : (
+                            <GameGrid
+                                games={publishedGames}
+                                renderActions={renderGameActions}
+                            />
+                        )}
                     </div>
 
                     <div className={styles.shopSection}>
@@ -246,11 +269,16 @@ const Create: React.FC = () => {
                                 <IoIosArrowForward />
                             </button>
                         </div>
-                        <GameGrid
-                            games={draftGames}
-                            showSpecialPrice={false}
-                            renderActions={renderGameActions}
-                        />
+                        {draftGames.length == 0 ? (
+                            <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
+                                开始创作你的第一个作品吧
+                            </div>
+                        ) : (
+                            <GameGrid
+                                games={draftGames}
+                                renderActions={renderGameActions}
+                            />
+                        )}
                     </div>
                 </div>
             </div>
