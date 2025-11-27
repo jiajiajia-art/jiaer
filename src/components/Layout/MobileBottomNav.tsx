@@ -36,12 +36,12 @@ const navItems: Array<{
         iconInactive: 'data/assets/切图/仓库02.png',
         iconActive: 'data/assets/切图/仓库01.png',
     },
-    {
-        key: 'profile',
-        label: '我的',
-        iconInactive: 'data/assets/切图/我的02.png',
-        iconActive: 'data/assets/切图/我的01.png',
-    },
+    // {
+    //     key: 'profile',
+    //     label: '我的',
+    //     iconInactive: 'data/assets/切图/我的02.png',
+    //     iconActive: 'data/assets/切图/我的01.png',
+    // },
 ];
 
 const MobileBottomNav: React.FC = () => {

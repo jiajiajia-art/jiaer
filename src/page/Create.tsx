@@ -184,6 +184,12 @@ const Create: React.FC = () => {
                                     >
                                         <span>充值</span>
                                     </button>
+                                    <button
+                                        className={`${styles.payButton}`}
+                                        onClick={() => navigate('/activity')}
+                                    >
+                                        活动获取积分
+                                    </button>
                                 </div>
 
                             </div>

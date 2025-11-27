@@ -31,6 +31,7 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
     if (!currentStep && !isWaitingForData) {
         return null;
     }
+    
 
     return (
         <div className={styles.stepModal}>
@@ -64,24 +65,37 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
                                         <p className={styles.choiceText}>{currentStep.text}</p>
                                     )}
                                     <div className={styles.choiceOptions}>
-                                        {currentStep.options && currentStep.options.map((option: any, i: number) => (
-                                            <button
-                                                key={i}
-                                                className={styles.choiceOptionBtn}
-                                                onClick={() => onChoiceOption(option, i)}
-                                                disabled={selectedOptionIndex !== null}
-                                            >
-                                                {selectedOptionIndex === i ? (
-                                                    <span className={styles.buttonLoadingDots}>
-                                                        <span></span>
-                                                        <span></span>
-                                                        <span></span>
-                                                    </span>
-                                                ) : (
-                                                    option.text
-                                                )}
-                                            </button>
-                                        ))}
+                                        {currentStep.options && currentStep.options.map((option: any, i: number) => {
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    className={styles.choiceOptionBtn}
+                                                    onClick={() => onChoiceOption(option, i)}
+                                                    disabled={selectedOptionIndex !== null}
+                                                >
+                                                    {selectedOptionIndex === i ? (
+                                                        <span className={styles.buttonLoadingDots}>
+                                                            <span></span>
+                                                            <span></span>
+                                                            <span></span>
+                                                        </span>
+                                                    ) : (
+                                                        <div className={styles.choiceOptionContent}>
+                                                            <span className={styles.choiceOptionText}>{option.text}</span>
+
+                                                            <span className={styles.choiceOptionPrice}>
+                                                                <img
+                                                                    src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+                                                                    alt=""
+                                                                    className={styles.choiceOptionPriceIcon}
+                                                                />
+                                                                2
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                     <div className={styles.choiceInputContainer}>
                                         <input
@@ -104,6 +118,14 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
                                             disabled={!choiceInput.trim() || selectedOptionIndex !== null || isWaitingForData}
                                         >
                                             发送
+                                            <span className={styles.choiceOptionPrice}>
+                                                <img
+                                                    src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+                                                    alt=""
+                                                    className={styles.choiceOptionPriceIcon}
+                                                />
+                                                3
+                                            </span>
                                         </button>
                                     </div>
                                 </>

@@ -5,7 +5,7 @@ import NewMain from './page/NewMain';
 import Home from './page/Home';
 import Create from './page/Create';
 import WareHouse from './page/WareHouse';
-import Profile from './page/Profile';
+// import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
 import Library from './page/Library';
@@ -25,7 +25,7 @@ function App() {
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />
-          <Route path="/profile" element={<Profile />} />
+          {/* <Route path="/profile" element={<Profile />} /> */}
         </Route>
       </Routes>
     </BrowserRouter>
