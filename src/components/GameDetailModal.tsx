@@ -412,7 +412,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                             className={styles.priceWrapper} 
                                             onClick={() => {
                                                 if (!checkAuth()) return;
-                                                if (currentGame.special_price_amount === 0) {
+                                                if (currentGame.special_price_amount == 0) {
                                                     setFreeGameClicked(true);
                                                 } else {
                                                     setIsPurchaseModalOpen(true);
