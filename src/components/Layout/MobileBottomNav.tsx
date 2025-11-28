@@ -78,6 +78,10 @@ const MobileBottomNav: React.FC = () => {
                 navigate('/create');
                 break;
             case 'warehouse':
+                if (!isAuthenticated) {
+                    setIsAuthModalOpen(true);
+                    return;
+                }
                 navigate('/warehouse');
                 break;
             case 'profile':

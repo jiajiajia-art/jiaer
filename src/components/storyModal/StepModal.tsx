@@ -36,8 +36,7 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
     }
 
     // 根据历史记录长度判断是否显示金币（如果历史记录长度大于某个阈值，则显示金币）
-    const shouldShowCoin = historyMessagesLength/2 >= 1;
-    console.log(historyMessagesLength/2);
+    const shouldShowCoin = historyMessagesLength/2 >= 5;
 
     return (
         <div className={styles.stepModal}>
