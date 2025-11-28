@@ -20,3 +20,7 @@ export interface CheckPayStatusResponse {
 export interface PurchasePointsRequest {
     fileId: string;
 }
+
+export interface OptionPointsRequest {
+    type: "option" | "selfDefined";
+}

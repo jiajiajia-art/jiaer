@@ -18,4 +18,10 @@ export const auth = {
 
   getUserInfo: () =>
     api.get<ApiResponse<User>>('/auth/user/info'),
+
+  checkIn: () =>
+    api.post<ApiResponse<null>>('/auth/user/signin'),
+
+  useInviteCode: (data: { inviteCode: string }) =>
+    api.post<ApiResponse<null>>('/auth/invite/use-code', data),
 };

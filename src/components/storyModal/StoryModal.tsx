@@ -377,7 +377,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
     }, [stepHandlers, loadHistoryMessages]);
 
     if (!isOpen) return null;
-
+    
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
@@ -585,6 +585,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                         showNextButton={stepHandlers.showNextButton}
                         selectedOptionIndex={stepHandlers.selectedOptionIndex}
                         choiceInput={choiceInput}
+                        historyMessagesLength={historyMessages.length}
                         onChoiceOption={stepHandlers.handleChoiceOption}
                         onChoiceSend={handleChoiceSend}
                         onChoiceInputChange={setChoiceInput}

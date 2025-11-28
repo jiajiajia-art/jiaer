@@ -11,6 +11,8 @@ export interface User {
   nickname: string;
   avatarUrl: string;
   points: number;
+  inviteCode: string;
+  hasSignedIn: boolean;
 }
 
 // 注册请求

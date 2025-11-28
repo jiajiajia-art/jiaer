@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './StepModal.module.css';
+import ReactMarkdown from 'react-markdown';
 
 interface StepModalProps {
     currentStep: any;
@@ -9,6 +10,7 @@ interface StepModalProps {
     showNextButton: boolean;
     selectedOptionIndex: number | null;
     choiceInput: string;
+    historyMessagesLength?: number; // 历史记录长度
     onChoiceOption: (option: any, index: number) => void;
     onChoiceSend: () => void;
     onChoiceInputChange: (value: string) => void;
@@ -23,6 +25,7 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
     showNextButton,
     selectedOptionIndex,
     choiceInput,
+    historyMessagesLength = 0,
     onChoiceOption,
     onChoiceSend,
     onChoiceInputChange,
@@ -31,7 +34,10 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
     if (!currentStep && !isWaitingForData) {
         return null;
     }
-    
+
+    // 根据历史记录长度判断是否显示金币（如果历史记录长度大于某个阈值，则显示金币）
+    const shouldShowCoin = historyMessagesLength/2 >= 1;
+    console.log(historyMessagesLength/2);
 
     return (
         <div className={styles.stepModal}>
@@ -40,8 +46,7 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
                     <>
                         <div className={styles.stepModalHeader}>
                             <span className={styles.stepTypeLabel}>
-                                {currentStep.type === 'narration' ? '旁白' :
-                                    currentStep.type === 'hint' ? '提示' :
+                                {   currentStep.type === 'hint' ? '提示' :
                                         currentStep.type === 'choice' ? '选择' :
                                             currentStep.type}
                             </span>
@@ -82,15 +87,16 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
                                                     ) : (
                                                         <div className={styles.choiceOptionContent}>
                                                             <span className={styles.choiceOptionText}>{option.text}</span>
-
-                                                            <span className={styles.choiceOptionPrice}>
-                                                                <img
-                                                                    src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
-                                                                    alt=""
-                                                                    className={styles.choiceOptionPriceIcon}
-                                                                />
-                                                                2
-                                                            </span>
+                                                            {shouldShowCoin && (
+                                                                <span className={styles.choiceOptionPrice}>
+                                                                    <img
+                                                                        src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+                                                                        alt=""
+                                                                        className={styles.choiceOptionPriceIcon}
+                                                                    />
+                                                                    2
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </button>
@@ -117,23 +123,35 @@ const StepModal: React.FC<StepModalProps> = React.memo(({
                                             onClick={onChoiceSend}
                                             disabled={!choiceInput.trim() || selectedOptionIndex !== null || isWaitingForData}
                                         >
-                                            发送
-                                            <span className={styles.choiceOptionPrice}>
-                                                <img
-                                                    src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
-                                                    alt=""
-                                                    className={styles.choiceOptionPriceIcon}
-                                                />
-                                                3
-                                            </span>
+                                            {isWaitingForData && selectedOptionIndex === null ? (
+                                                <span className={styles.buttonLoadingDots}>
+                                                    <span></span>
+                                                    <span></span>
+                                                    <span></span>
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    发送
+                                                    {shouldShowCoin && (
+                                                        <span className={styles.choiceOptionPrice}>
+                                                            <img
+                                                                src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+                                                                alt=""
+                                                                className={styles.choiceOptionPriceIcon}
+                                                            />
+                                                            3
+                                                        </span>
+                                                    )}
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </>
                             ) : (
-                                <p>
-                                    {displayedText}
+                                <>
+                                    <ReactMarkdown>{displayedText}</ReactMarkdown>
                                     {isTyping && <span className={styles.cursor}></span>}
-                                </p>
+                                </>
                             )}
                         </div>
                         {showNextButton && currentStep.type !== 'choice' && (

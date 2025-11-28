@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { IoIosArrowForward } from 'react-icons/io';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
+import CheckInModal from '../components/CheckInModal';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
@@ -22,6 +23,8 @@ const Home: React.FC = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuthStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const hasCheckedInSessionRef = useRef(false);
 
     const navigator = useNavigate();
 
@@ -35,6 +38,39 @@ const Home: React.FC = () => {
             game: meta
         }));
     }, [fileMetas]);
+
+    // 监听用户登出，重置检查状态
+    // useEffect(() => {
+    //     if (!user?.user?.id) {
+    //         hasCheckedInSessionRef.current = false;
+    //         setShowCheckInModal(false);
+    //         sessionStorage.removeItem('checkInModalChecked');
+    //     }
+    // }, [user?.user?.id]);
+
+    // 只在登录后检查一次签到弹窗（使用 sessionStorage 记录本次会话）
+    useEffect(() => {
+        if (!user?.user?.id || hasCheckedInSessionRef.current || user?.user?.hasSignedIn) {
+            return;
+        }
+
+        const sessionKey = 'checkInModalChecked';
+        const hasCheckedInSession = sessionStorage.getItem(sessionKey);
+        
+        if (!hasCheckedInSession) {
+            const today = new Date().toDateString();
+            const checkInKey = `checkIn_${user.user.id}_${today}`;
+            const lastCheckInDate = localStorage.getItem(checkInKey);
+            const isCheckedIn = lastCheckInDate === today;
+            
+            if (!isCheckedIn) {
+                setShowCheckInModal(true);
+            }
+            
+            sessionStorage.setItem(sessionKey, 'true');
+            hasCheckedInSessionRef.current = true;
+        }
+    }, [user?.user?.id]);
 
     /**
      * 显示游戏详情（从后端数据）
@@ -109,6 +145,7 @@ const Home: React.FC = () => {
     useEffect(() => {
         loadLibraryData();
     }, [user?.user.id, loadLibraryData]);
+
 
     // 自动轮播
     useEffect(() => {
@@ -268,6 +305,12 @@ const Home: React.FC = () => {
                     onGameUpdated={loadLibraryData}
                 />
             )}
+
+            {/* 签到提示弹窗 */}
+            <CheckInModal
+                isOpen={showCheckInModal}
+                onClose={() => setShowCheckInModal(false)}
+            />
             <MobileBottomNav />
         </div>
     );

@@ -105,6 +105,7 @@ export const useAuthStore = create<AuthState>()(
         import('./gameStore').then(({ useGameStore }) => {
           useGameStore.getState().clearAll();
         });
+        sessionStorage.removeItem('checkInModalChecked');
       },
     }),
     {

@@ -83,10 +83,10 @@ const Create: React.FC = () => {
         }
     };
 
-    
+
     const getUserInfo = async () => {
         try {
-        const response = await auth.getUserInfo();
+            const response = await auth.getUserInfo();
             if (response.data.success && response.data.data) {
                 updateUser(response.data.data);
             }
@@ -154,6 +154,12 @@ const Create: React.FC = () => {
                             <HiOutlineLightBulb />
                             <span>创作游戏</span>
                         </button>
+                        <button
+                            className={`${styles.createGameButtonItem}`}
+                            onClick={() => navigate('/profile')}
+                        >
+                            活动获取积分
+                        </button>
                     </div>
 
                     {/* 用户信息展示区域 */}
@@ -174,7 +180,7 @@ const Create: React.FC = () => {
                                 <div className={styles.userName}>{userName}</div>
                                 <div className={styles.userCredit}>
                                     <span className={styles.userPoints}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon}/>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
 
                                         积分：{user?.user?.points ?? 0}
                                     </span>
@@ -183,12 +189,6 @@ const Create: React.FC = () => {
                                         onClick={() => setIsRechargeModalOpen(true)}
                                     >
                                         <span>充值</span>
-                                    </button>
-                                    <button
-                                        className={`${styles.payButton}`}
-                                        onClick={() => navigate('/activity')}
-                                    >
-                                        活动获取积分
                                     </button>
                                 </div>
 

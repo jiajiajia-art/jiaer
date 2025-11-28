@@ -1,0 +1,174 @@
+.checkInModalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.checkInModalContent {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px 20px 20px;
+    box-sizing: border-box;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.checkInModalImage {
+    width: 36px;
+    max-width: 120px;
+    height: auto;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.checkInModalImage img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+.checkInModalText {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.checkInModalTitle {
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.checkInModalDesc {
+    color: #666;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.checkInPoints {
+    color: #FB4655;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.checkInModalButtons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+.checkInModalCancelBtn,
+.checkInModalCheckInBtn {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    max-width: 120px;
+}
+
+.checkInModalCancelBtn {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.checkInModalCancelBtn:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
+}
+
+.checkInModalCheckInBtn {
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+}
+
+.checkInModalCheckInBtn:hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.4);
+}
+
+.checkInModalCancelBtn:active,
+.checkInModalCheckInBtn:active {
+    transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .checkInModalContent {
+        width: 95%;
+        padding: 25px 15px 15px 15px;
+    }
+
+    .checkInModalImage {
+        max-width: 100px;
+        margin-bottom: 15px;
+    }
+
+    .checkInModalTitle {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+
+    .checkInModalDesc {
+        font-size: 14px;
+    }
+
+    .checkInPoints {
+        font-size: 16px;
+    }
+
+    .checkInModalButtons {
+        gap: 10px;
+    }
+
+    .checkInModalCancelBtn,
+    .checkInModalCheckInBtn {
+        padding: 10px 20px;
+        font-size: 14px;
+        max-width: 100px;
+    }
+}
+

@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStepStreamResponse } from './useStepStreamResponse';
 import { authFetch } from '../../api/base';
 import { HOST_ADDRESS } from '../../config';
+import payApi from '../../api/pay/payApi';
+import { useAuthStore } from '../../store/useAuthStore';
+import { toast } from 'react-hot-toast';
 
 interface UseStoryStepOptions {
     sessionId: string | null;
@@ -26,6 +29,7 @@ export const useStoryStep = ({
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
+    const { user } = useAuthStore();
 
     // 同步 currentStep 到 ref
     useEffect(() => {
@@ -160,6 +164,13 @@ export const useStoryStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
 
+        if (user?.user.points && user.user.points > 2) {
+            await reducePoints("option");
+        } else {
+            toast.error("积分不足");
+            return;
+        }
+
         await handleStreamAction(option.text, {
             onSuccess: () => {
                 onHistoryRefresh?.();
@@ -180,6 +191,14 @@ export const useStoryStep = ({
 
         setIsWaitingForData(true);
         setShowNextButton(false);
+        if (user?.user.points && user.user.points > 3) {
+            await reducePoints("option");
+        } else {
+            toast.error("积分不足");
+            return;
+        }
+
+        await reducePoints("selfDefined");
 
         await handleStreamAction(inputText, {
             onSuccess: () => {
@@ -191,6 +210,14 @@ export const useStoryStep = ({
             }
         });
     }, [handleStreamAction, onHistoryRefresh]);
+
+    const reducePoints = useCallback(async (type: "option" | "selfDefined") => {
+        const response = await payApi.optionPoints({ type });
+        if (response.data.success) {
+            return response.data.data;
+        }
+        return null;
+    }, []);
 
     return {
         currentStep,

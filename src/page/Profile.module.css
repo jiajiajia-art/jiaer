@@ -1,93 +1,283 @@
 .pageRoot {
-    min-height: 64px;
-    width: 100vw;
-    height: 100vh;
-    max-width: 1800px;
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
     margin: 0 auto;
 }
 
 .mainContent {
     color: black;
     display: flex;
-    min-height: calc(100vh - 80px);
-    width: 100%;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 40px;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 200px;
+    min-height: 100vh;
 }
 
 .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    overflow: visible;
+    position: relative;
+}
+
+/* 用户信息展示区域 */
+.userProfileSection {
+    width: 100vw;
+    max-width: 1920px;
+    position: relative;
+    padding: 0;
+    flex-shrink: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 38px;
+}
+
+.userProfileBackground {
+    width: 100%;
+    max-width: 1920px;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+}
+
+.userProfileBlur {
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(20px);
+    -webkit-filter: blur(20px);
+    z-index: 0;
+}
+
+.userProfileBackground::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.userProfileContent {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
     gap: 20px;
-    width: 100%;
-    max-width: 600px;
-    padding: 20px;
-    box-sizing: border-box;
+    z-index: 2;
 }
 
-.avatar {
+.userAvatar {
     width: 120px;
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid #fff;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    margin-top: 80px;
+}
+
+.userName {
+    font-size: 30px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* 功能列表 */
+.functionList {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+.functionItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+.functionItem:last-child {
+    border-bottom: none;
+}
+
+.functionIcon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #B69B74 0%, #a88357 100%);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 24px;
     flex-shrink: 0;
 }
 
-.profileInfo {
+.functionText {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
+    gap: 4px;
+    min-width: 0;
 }
 
-.profileName,
-.profileEmail {
-    text-align: center;
-    font-size: 18px;
-    font-weight: 600;
-    color: #000;
-}
-
-.profileName span,
-.profileEmail span {
-    display: block;
-    padding: 8px 16px;
-}
-
-.logoutBtn {
-    width: 80%;
-    padding: 12px 20px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
+.functionTitle {
     font-size: 16px;
     font-weight: 600;
-    cursor: pointer;
+    color: #262626;
+}
+
+.functionDesc {
+    font-size: 14px;
+    color: #737373;
+    word-break: break-word;
+}
+
+.inviteCodeHighlight {
+    color: #ff0000;
+    font-weight: 700;
+}
+
+/* 按钮基础样式（共同样式） */
+.functionButton {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
     transition: all 0.3s ease;
-    text-align: center;
-    margin-top: 20px;
-    box-shadow: 0 2px 8px rgba(178, 79, 27, 0.3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
-.logoutBtn:hover {
-    background: linear-gradient(135deg, #C85F2B 0%, #9B4A25 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(178, 79, 27, 0.4);
+/* 未签到状态 - 红色渐变 */
+.functionButtonCheckIn {
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    cursor: pointer;
 }
 
-.logoutBtn:active {
-    background: linear-gradient(135deg, #8B3A15 0%, #6B2A0F 100%);
+.functionButtonCheckIn:hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+}
+
+.functionButtonCheckIn:active {
     transform: translateY(0);
 }
 
+/* 已签到状态 - 柔和的蓝灰色渐变 */
+.functionButtonSignedIn {
+    background: #99999998;
+    color: #fff;
+    cursor: not-allowed;
+    box-shadow: 0 2px 6px rgba(108, 155, 210, 0.25);
+}
 
+/* 其他按钮样式（保持原有红色） */
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn) {
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    cursor: pointer;
+}
+
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+}
+
+.functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):active {
+    transform: translateY(0);
+}
+
+.functionButton svg {
+    font-size: 18px;
+}
+
+.inviteInput {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.inviteInput:focus {
+    border-color: #B69B74;
+}
+
+.inviteInput::placeholder {
+    color: #999;
+}
+
+/* 在 1920px 以下时，用户信息区域占据 100% 宽度 */
+@media (max-width: 1920px) {
+    .userProfileSection {
+        max-width: 100vw;
+    }
+
+    .userProfileBackground {
+        max-width: 100%;
+    }
+}
+
+/* 在 1080px 以下时，开始响应式调整 */
+@media (max-width: 1080px) {
+    .main {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .userProfileBackground {
+        height: 300px;
+    }
+
+    .userAvatar {
+        margin-top: 80px;
+        width: 80px;
+        height: 80px;
+        border-width: 2px;
+    }
+
+    .userName {
+        font-size: 24px;
+    }
+
+    .functionList {
+        padding: 0 15px;
+    }
+}
 
 @media (max-width: 768px) {
     .pageRoot {
@@ -99,47 +289,223 @@
         padding-bottom: 90px;
     }
 
-    .settingIcon {
-        position: fixed;
-        right: 20px;
-        top: 10px;
-        width: 48px;
-        height: 48px;
-        cursor: pointer;
-        transition: transform 0.3s ease;
-    }
-
     .mainContent {
         min-height: calc(100vh - 40px - 70px);
-        padding-top: 20px;
+        /* padding-top: 20px; */
     }
 
-    .main {
-        padding: 15px;
-        gap: 15px;
+    .userProfileSection {
+        margin-bottom: 20px;
+    }
+    
+    .userProfileBackground {
+        height: 250px;
     }
 
-    .avatar {
-        width: 100px;
-        height: 100px;
+    .userAvatar {
+        margin-top: 80px;
+        width: 60px;
+        height: 60px;
+        border-width: 2px;
     }
 
-    .profileName,
-    .profileEmail {
-        font-size: 16px;
+    .userName {
+        font-size: 20px;
     }
 
-    .profileName span,
-    .profileEmail span {
-        padding: 6px 12px;
-        font-size: 14px;
+    .functionList {
+        padding: 0 10px;
     }
 
-    .logoutBtn {
-        width: 80%;
-        padding: 10px 16px;
-        font-size: 14px;
-        margin-top: 15px;
+    .functionItem {
+        padding: 16px 16px;
+        gap: 12px;
+    }
+
+    .functionIcon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+
+    .functionTitle {
+        font-size: 15px;
+    }
+
+    .functionDesc {
+        font-size: 13px;
+    }
+
+    .functionButton {
+        padding: 6px 16px;
+        font-size: 13px;
+    }
+
+    .inviteInput {
+        padding: 6px 10px;
+        font-size: 13px;
     }
 }
 
+/* 加入用户群弹窗 */
+.groupModalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.groupModalContent {
+    background: #fff;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease-out;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px 20px 20px;
+    box-sizing: border-box;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.groupModalImage {
+    width: 30px;
+    max-width: 100px;
+    height: auto;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.groupModalImage img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.groupModalText {
+    color: #333;
+    font-size: 16px;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    padding: 0 10px;
+}
+
+.groupNumber {
+    color: #FB4655;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.groupModalButtons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+.groupModalCancelBtn,
+.groupModalCopyBtn {
+    flex: 1;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    max-width: 120px;
+}
+
+.groupModalCancelBtn {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.groupModalCancelBtn:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
+}
+
+.groupModalCopyBtn {
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+}
+
+.groupModalCopyBtn:hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.4);
+}
+
+.groupModalCancelBtn:active,
+.groupModalCopyBtn:active {
+    transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .groupModalContent {
+        width: 95%;
+        padding: 25px 15px 15px 15px;
+    }
+
+    .groupModalImage {
+        max-width: 150px;
+        margin-bottom: 15px;
+    }
+
+    .groupModalText {
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .groupNumber {
+        font-size: 16px;
+    }
+
+    .groupModalButtons {
+        gap: 10px;
+    }
+
+    .groupModalCancelBtn,
+    .groupModalCopyBtn {
+        padding: 10px 20px;
+        font-size: 14px;
+        max-width: 100px;
+    }
+}
