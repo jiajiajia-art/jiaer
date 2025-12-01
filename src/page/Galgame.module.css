@@ -98,7 +98,7 @@
     left: 0;
     right: 0;
     width: 100%;
-    height: 36vh;
+    height: 42vh;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 20%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.3) 80%, transparent 100%);
     z-index: 150;
     pointer-events: none;
@@ -114,12 +114,13 @@
     left: 0;
     right: 0;
     width: 100%;
-    min-height: 120px;
+    min-height: 18vh;
     height: auto;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 10px;
     box-sizing: border-box;
+    padding-bottom: 0px;
 }
 
 .narrationMessage {
@@ -317,7 +318,6 @@
 .nextButtonContainer {
     display: flex;
     justify-content: flex-end;
-    padding: 8px 0;
 }
 
 .nextButton {
@@ -443,6 +443,25 @@
         padding-right: 90px;
         gap: 16px;
         margin-bottom: 10px;
+    }
+}
+
+.cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: #fff;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: baseline;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
     }
 }
 

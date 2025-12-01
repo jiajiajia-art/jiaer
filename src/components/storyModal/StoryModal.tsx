@@ -30,7 +30,6 @@ interface StoryModalProps {
     autoStart?: boolean; // 是否自动开始游戏
 }
 
-
 const StoryModal: React.FC<StoryModalProps> = ({
     isOpen,
     onClose,

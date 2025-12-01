@@ -14,6 +14,7 @@ import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
+
 interface GameDetailModalProps {
     isOpen: boolean;
     game: UserGameData;
@@ -139,7 +140,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         }
     }, [isOpen, game, fetchGameDetail, setGameDetailToStore]);
 
-    // 创建会话
+    // 创建普通游戏会话
     const createSession = useCallback(async (fileId: string): Promise<string | null> => {
         if (!fileId || !userId) {
             return null;
@@ -165,6 +166,32 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setIsLoading(false);
         }
     }, [userId]);
+
+    // 创建 Galgame 会话
+    const createGalgameSession = useCallback(async (presetId: string): Promise<string | null> => {
+        if (!presetId || !userId) {
+            return null;
+        }
+
+        setIsLoading(true);
+        try {
+            // 创建 galgame 会话
+            const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId });
+            if (sessionResponse.data.success && sessionResponse.data.sessionId) {
+                return sessionResponse.data.sessionId;
+            } else {
+                alert(sessionResponse.data.message || '创建游戏失败，请重试');
+                return null;
+            }
+        } catch (error: any) {
+            console.error('❌ Galgame Session 创建错误:', error);
+            const errorMessage = error.response?.data?.message || error.message || '创建游戏失败，请稍后重试';
+            alert(errorMessage);
+            return null;
+        } finally {
+            setIsLoading(false);
+        }
+    }, [userId]);
     
     // 处理开始游戏
     const handleStartGame = useCallback(async () => {
@@ -175,14 +202,29 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return;
         }
 
-        setPdfFileId(fileId);
-        const sessionId = await createSession(fileId);
-
-        if (sessionId) {
-            setSessionId(sessionId);
-            navigate('/newmain');
+        // 判断是否为 Galgame（通过 presetId 字段）
+        const presetId = currentGame.file_id;
+        
+        if (presetId) {
+            // 使用 Galgame 接口
+            setPdfFileId(fileId);
+            const sessionId = await createGalgameSession('c1c0450b-b086-440d-a477-f31fb71adbde');
+            
+            if (sessionId) {
+                setSessionId(sessionId);
+                navigate('/galgame');
+            }
+        } else {
+            // 使用普通游戏接口
+            setPdfFileId(fileId);
+            const sessionId = await createSession(fileId);
+            
+            if (sessionId) {
+                setSessionId(sessionId);
+                navigate('/newmain');
+            }
         }
-    }, [checkAuth, fileId, createSession, setPdfFileId, setSessionId, navigate]);
+    }, [checkAuth, fileId, createSession, createGalgameSession, setPdfFileId, setSessionId, navigate]);
 
     // 处理点赞
     const handleLike = useCallback(() => {
