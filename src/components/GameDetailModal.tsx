@@ -13,6 +13,7 @@ import { RECORD_CONVERSION } from '../config';
 import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
+import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 interface GameDetailModalProps {
     isOpen: boolean;
     game: UserGameData;
@@ -164,7 +165,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setIsLoading(false);
         }
     }, [userId]);
-
+    
     // 处理开始游戏
     const handleStartGame = useCallback(async () => {
         if (!checkAuth()) return;

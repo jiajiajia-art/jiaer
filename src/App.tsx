@@ -9,6 +9,7 @@ import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
 import Library from './page/Library';
+import Galgame from './page/Galgame';
 // import Activity from './page/Activity';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         {/* <Route path="/createCharacter" element={<CreateCharacter />} /> */}
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
+        <Route path="/galgame" element={<Galgame />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/newmain" element={<NewMain />} />
           <Route path="/create" element={<Create />} />

@@ -1,0 +1,448 @@
+.pageRoot {
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mainContent {
+    width: 414px;
+    height: 896px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.topHeader {
+    background: #0000003e;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    width: fit-content;
+    margin: 0 auto;
+    border-radius: 20px;
+    margin-top: 20px;
+    min-width: 180px;
+}
+
+.topHeader svg {
+    font-size: 18px;
+}
+
+.characterContainer {
+    position: absolute;
+    bottom: 0;
+    width: auto;
+    height: 70vh;
+    z-index: 120;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    pointer-events: none;
+}
+
+.characterSlideLeft {
+    left: 0;
+    animation: slideInFromLeft 0.5s ease-out;
+}
+
+.characterSlideRight {
+    right: 0;
+    animation: slideInFromRight 0.5s ease-out;
+}
+
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.characterImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom;
+}
+
+.gameContentWrapper {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 36vh;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 20%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.3) 80%, transparent 100%);
+    z-index: 150;
+    pointer-events: none;
+}
+
+.gameContentWrapper > * {
+    pointer-events: auto;
+}
+
+.messageContainer {
+    position: absolute;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-height: 120px;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.narrationMessage {
+    color: #fff;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    word-break: break-word;
+    margin-bottom: 8px;
+}
+
+.characterMessage {
+    color: #fff;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    word-break: break-word;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.characterName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    border-left: 3px solid #845DFF;
+    padding-left: 10px;
+}
+
+.characterDivider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #fff, transparent);
+    margin: 4px 0;
+}
+
+.characterText {
+    flex: 1;
+    padding-bottom: 4px;
+}
+
+.choiceContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.choiceOption {
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 16px;
+    word-break: break-word;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 16%,
+        black 90%,
+        transparent 100%
+    );
+    background-color: #0000007a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.choiceText {
+    flex: 1;
+    min-width: 0;
+}
+
+.choicePrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.choicePrice img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+}
+
+.choiceOption:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.customInputText {
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 16px;
+    word-break: break-word;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 16%,
+        black 90%,
+        transparent 100%
+    );
+    background-color: #0000007a;
+}
+
+.customInputText:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.customInput {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background-color: #0000007a;
+    padding: 8px 20px;
+    border-radius: 4px;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 16%,
+        black 90%,
+        transparent 100%
+    );
+}
+
+.customInput input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.6;
+    padding: 0;
+}
+
+.customInput input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.customInput button {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 16px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.customInput button:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.nextButtonContainer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 0;
+}
+
+.nextButton {
+    background: transparent;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.nextButton:hover {
+    transform: scale(1.1);
+}
+
+.nextButton svg {
+    width: 28px;
+    height: 28px;
+}
+
+.buttonContainer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 12px 16px;
+    padding-right: 100px;
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    z-index: 200;
+    box-sizing: border-box;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.buttonContainer::-webkit-scrollbar {
+    display: none;
+}
+
+.buttonItem {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    transform: rotate(45deg);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.buttonItem .buttonInner {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+    transform: rotate(-45deg);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.buttonItem .buttonInner img,
+.buttonItem .buttonInner svg {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
+}
+
+.buttonItem .buttonInner span {
+    font-weight: 600;
+    font-size: 9px;
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .mainContent {
+        width: 100%;
+        height: 100vh;
+        max-width: none;
+    }
+
+    .characterContainer {
+        width: auto;
+        height: 70vh;
+        bottom: 0;
+    }
+
+    .messageContainer {
+        bottom: 80px;
+    }
+    
+    .messageContainer {
+        bottom: 80px;
+    }
+    
+    .buttonContainer {
+        padding: 10px 12px;
+        padding-right: 90px;
+        gap: 16px;
+        margin-bottom: 10px;
+    }
+}
+
