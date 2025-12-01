@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
@@ -8,11 +8,12 @@ import { PiMusicNoteDuotone } from "react-icons/pi";
 import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
-import { IoArrowDownCircleOutline } from "react-icons/io5";
 import getGalgamePresetApi from "../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../api/galgame/getGalgamePreset.type";
 import { HOST_ADDRESS } from "../config";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
+import TextModeDisplay from "../components/Galgame/TextModeDisplay";
+import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useGalgameStep } from "../hooks/galgame/useGalgameStep";
 import { useStoryTyping } from "../hooks/story/useStoryTyping";
 import toast from "react-hot-toast";
@@ -51,6 +52,10 @@ const Galgame = () => {
     const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
     const [isStartingGame, setIsStartingGame] = useState<boolean>(false);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
+    const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
+    const [isTextMode, setIsTextMode] = useState<boolean>(false);
+    const [messageHistory, setMessageHistory] = useState<Message[]>([]); // 文本模式下的消息历史
+    const textModeContainerRef = useRef<HTMLDivElement>(null);
 
     // 保留 presetData 用于 StoryIntroModal
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
@@ -163,6 +168,37 @@ const Galgame = () => {
         speed: 60
     });
 
+    // 当等待新数据时，不显示任何内容，避免数据回填问题
+    const finalDisplayText = stepHandlers.isWaitingForData && !stepHandlers.currentStep
+        ? ''
+        : (gameStarted ? displayedText : (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') ? currentMessage.message : ''));
+    
+    // 等待数据时 isTyping 应该是 false
+    const finalIsTyping = (stepHandlers.isWaitingForData && !stepHandlers.currentStep) ? false : isTyping;
+
+    // 当消息完成打字时，将其添加到历史记录（仅文本模式）
+    useEffect(() => {
+        if (isTextMode && gameStarted && currentMessage && 
+            (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') && 
+            !isTyping && currentMessage.message && 
+            !messageHistory.some(m => m.id === currentMessage.id)) {
+            // 检查是否已经存在，避免重复添加
+            setMessageHistory(prev => {
+                if (prev.some(m => m.id === currentMessage.id)) {
+                    return prev;
+                }
+                return [...prev, { ...currentMessage }];
+            });
+        }
+    }, [isTyping, currentMessage, isTextMode, gameStarted, messageHistory]);
+
+    // 文本模式下自动滚动到底部
+    useEffect(() => {
+        if (isTextMode && textModeContainerRef.current) {
+            textModeContainerRef.current.scrollTop = textModeContainerRef.current.scrollHeight;
+        }
+    }, [messageHistory, finalDisplayText, isTextMode]);
+
     void gameTitle;
     void worldSetting;
     void sceneSetting;
@@ -263,12 +299,14 @@ const Galgame = () => {
         setShowStoryIntro(false);
         setGameStarted(true);
 
-        // 清空初始消息，准备接收流式输出
+        // 清空初始消息和历史记录，准备接收流式输出
         setInitialMessages([]);
+        setMessageHistory([]);
 
         await stepHandlers.handleStreamAction('开始游戏', {
             onBeforeRequest: () => {
                 setInitialMessages([]);
+                setMessageHistory([]);
             },
             onSuccess: () => {
                 setIsStartingGame(false);
@@ -284,11 +322,62 @@ const Galgame = () => {
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
+            // 在文本模式下，将当前消息添加到历史记录
+            if (isTextMode && currentMessage && 
+                (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') &&
+                !messageHistory.some(m => m.id === currentMessage.id)) {
+                setMessageHistory(prev => [...prev, { ...currentMessage }]);
+            }
             stepHandlers.handleNextStep();
         }
         setShowCustomInput(false);
         setCustomInputValue('');
-    }, [gameStarted, stepHandlers]);
+    }, [gameStarted, stepHandlers, isTextMode, currentMessage, messageHistory]);
+
+    // 处理自动播放切换
+    const handleAutoPlayToggle = useCallback(() => {
+        setIsAutoPlay(prev => !prev);
+    }, []);
+
+    // 处理文本模式切换
+    const handleTextModeToggle = useCallback(() => {
+        setIsTextMode(prev => {
+            if (!prev) {
+                // 开启文本模式时，将当前消息添加到历史记录
+                if (currentMessage && 
+                    (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') &&
+                    !isTyping &&
+                    !messageHistory.some(m => m.id === currentMessage.id)) {
+                    setMessageHistory(prevHistory => [...prevHistory, { ...currentMessage }]);
+                }
+            }
+            return !prev;
+        });
+    }, [currentMessage, isTyping, messageHistory]);
+
+    // 自动播放逻辑：当打字完成且自动播放开启时，自动触发下一个消息
+    useEffect(() => {
+        if (!isAutoPlay || !gameStarted) return;
+        if (stepHandlers.isWaitingForData) return;
+        if (finalIsTyping) return; // 还在打字中，不触发
+        if (!stepHandlers.showNextButton) return; // 没有下一个按钮，不触发
+        if (currentMessage?.type === 'choice') {
+            // 遇到选择类型时，自动关闭自动播放
+            setIsAutoPlay(false);
+            return;
+        }
+
+        // 延迟一段时间后自动触发下一个消息（给用户时间阅读）
+        const autoPlayTimer = setTimeout(() => {
+            if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
+                handleNextMessage();
+            }
+        }, isTextMode ? 1000 : 600); // 文本模式下延迟稍长一些
+
+        return () => {
+            clearTimeout(autoPlayTimer);
+        };
+    }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, isTextMode]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
         if (!stepHandlers.currentStep || stepHandlers.currentStep.type !== 'choice') {
@@ -374,7 +463,8 @@ const Galgame = () => {
                         <CiLocationOn />
                         <span>{sceneName}</span>
                     </div>
-                    {currentMessage.characterImage && (
+                    {/* 文本模式下不显示立绘 */}
+                    {!isTextMode && currentMessage.characterImage && (
                         <div
                             className={`${styles.characterContainer} ${currentMessage.characterPosition === 'left'
                                 ? styles.characterSlideLeft
@@ -389,139 +479,92 @@ const Galgame = () => {
                         </div>
                     )}
                     <div className={styles.gameContentWrapper}>
-                        <div className={styles.messageContainer}>
-                            {/* 等待数据时的加载状态 */}
-                            {stepHandlers.isWaitingForData && !stepHandlers.currentStep && (
-                                <div className={styles.narrationContainer}>
-                                    <div className={styles.narrationMessage}>
-                                        <span className={styles.cursor}></span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 旁白类型 */}
-                            {!stepHandlers.isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
-                                <div className={styles.narrationContainer}>
-                                    <div className={styles.narrationMessage}>
-                                        <span>
-                                            {gameStarted ? displayedText : currentMessage.message}
-                                            {isTyping && <span className={styles.cursor}></span>}
-                                        </span>
-                                    </div>
-                                    {stepHandlers.showNextButton && !isTyping && (
-                                        <div className={styles.nextButtonContainer}>
-                                            <button
-                                                className={styles.nextButton}
-                                                onClick={handleNextMessage}
-                                                disabled={stepHandlers.isWaitingForData}
-                                            >
-                                                <IoArrowDownCircleOutline />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            {/* 角色对话类型 */}
-                            {!stepHandlers.isWaitingForData && currentMessage && currentMessage.type === 'dialogue' && currentMessage.message && (
-                                <>
-                                    <div className={styles.characterMessage}>
-                                        <div className={styles.characterName}>{currentMessage.characterName}</div>
-                                        <div className={styles.characterDivider}></div>
-                                        <div className={styles.characterText}>
-                                            {gameStarted ? displayedText : currentMessage.message}
-                                            {isTyping && <span className={styles.cursor}></span>}
-                                        </div>
-                                    </div>
-                                    {stepHandlers.showNextButton && !isTyping && (
-                                        <div className={styles.nextButtonContainer}>
-                                            <button
-                                                className={styles.nextButton}
-                                                onClick={handleNextMessage}
-                                                disabled={stepHandlers.isWaitingForData}
-                                            >
-                                                <IoArrowDownCircleOutline />
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                            {/* 选择类型 */}
-                            {!stepHandlers.isWaitingForData && currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
-                                <>
-                                    {/* choice 类型也显示立绘（用户自己的头像） */}
-                                    {worldSetting?.player?.images && (
+                        {isTextMode ? (
+                            <TextModeDisplay
+                                messageHistory={messageHistory}
+                                currentMessage={currentMessage}
+                                finalDisplayText={finalDisplayText}
+                                finalIsTyping={finalIsTyping}
+                                isWaitingForData={stepHandlers.isWaitingForData}
+                                currentStep={stepHandlers.currentStep}
+                                showNextButton={stepHandlers.showNextButton}
+                                isAutoPlay={isAutoPlay}
+                                onNextMessage={handleNextMessage}
+                                containerRef={textModeContainerRef}
+                            />
+                        ) : (
+                            <NormalModeDisplay
+                                currentMessage={currentMessage}
+                                finalDisplayText={finalDisplayText}
+                                finalIsTyping={finalIsTyping}
+                                isWaitingForData={stepHandlers.isWaitingForData}
+                                currentStep={stepHandlers.currentStep}
+                                showNextButton={stepHandlers.showNextButton}
+                                isAutoPlay={isAutoPlay}
+                                onNextMessage={handleNextMessage}
+                            />
+                        )}
+                        {/* 选择类型 */}
+                        {!stepHandlers.isWaitingForData && currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
+                            <>
+                                <div className={styles.choiceContainer}>
+                                    {currentMessage.options.map((option) => (
                                         <div
-                                            className={`${styles.characterContainer} ${currentMessage.characterPosition === 'left'
-                                                ? styles.characterSlideLeft
-                                                : styles.characterSlideRight
-                                                }`}
+                                            key={option.id}
+                                            className={styles.choiceOption}
+                                            onClick={() => handleChoiceClick(option)}
+                                            style={{
+                                                opacity: stepHandlers.selectedOptionIndex !== null &&
+                                                    stepHandlers.selectedOptionIndex !== currentMessage.options?.findIndex((opt: any) => opt.text === option.text)
+                                                    ? 0.5
+                                                    : 1,
+                                                pointerEvents: stepHandlers.isWaitingForData ? 'none' : 'auto'
+                                            }}
                                         >
-                                            <img
-                                                src={`${HOST_ADDRESS}${worldSetting?.player?.images}`}
-                                                alt="角色立绘"
-                                                className={styles.characterImage}
-                                            />
+                                            <span className={styles.choiceText}>{option.text}</span>
+                                            <div className={styles.choicePrice}>
+                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                                <span>2</span>
+                                            </div>
                                         </div>
-                                    )}
-                                    <div className={styles.choiceContainer}>
-                                        {currentMessage.options.map((option) => (
-                                            <div
-                                                key={option.id}
-                                                className={styles.choiceOption}
-                                                onClick={() => handleChoiceClick(option)}
-                                                style={{
-                                                    opacity: stepHandlers.selectedOptionIndex !== null &&
-                                                        stepHandlers.selectedOptionIndex !== currentMessage.options?.findIndex((opt: any) => opt.text === option.text)
-                                                        ? 0.5
-                                                        : 1,
-                                                    pointerEvents: stepHandlers.isWaitingForData ? 'none' : 'auto'
-                                                }}
+                                    ))}
+                                    {!showCustomInput ? (
+                                        <div
+                                            className={styles.customInputText}
+                                            onClick={handleCustomInputClick}
+                                            style={{
+                                                pointerEvents: stepHandlers.isWaitingForData ? 'none' : 'auto',
+                                                opacity: stepHandlers.isWaitingForData ? 0.5 : 1
+                                            }}
+                                        >
+                                            <span>自定义输入</span>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.customInput}>
+                                            <input
+                                                type="text"
+                                                placeholder="请输入..."
+                                                value={customInputValue}
+                                                onChange={(e) => setCustomInputValue(e.target.value)}
+                                                onKeyDown={handleCustomInputKeyDown}
+                                                disabled={stepHandlers.isWaitingForData}
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={handleCustomInputSubmit}
+                                                disabled={stepHandlers.isWaitingForData || !customInputValue.trim()}
                                             >
-                                                <span className={styles.choiceText}>{option.text}</span>
+                                                <span>发送</span>
                                                 <div className={styles.choicePrice}>
                                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                                     <span>2</span>
                                                 </div>
-                                            </div>
-                                        ))}
-                                        {!showCustomInput ? (
-                                            <div
-                                                className={styles.customInputText}
-                                                onClick={handleCustomInputClick}
-                                                style={{
-                                                    pointerEvents: stepHandlers.isWaitingForData ? 'none' : 'auto',
-                                                    opacity: stepHandlers.isWaitingForData ? 0.5 : 1
-                                                }}
-                                            >
-                                                <span>自定义输入</span>
-                                            </div>
-                                        ) : (
-                                            <div className={styles.customInput}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="请输入..."
-                                                    value={customInputValue}
-                                                    onChange={(e) => setCustomInputValue(e.target.value)}
-                                                    onKeyDown={handleCustomInputKeyDown}
-                                                    disabled={stepHandlers.isWaitingForData}
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    onClick={handleCustomInputSubmit}
-                                                    disabled={stepHandlers.isWaitingForData || !customInputValue.trim()}
-                                                >
-                                                    <span>发送</span>
-                                                    <div className={styles.choicePrice}>
-                                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                                        <span>2</span>
-                                                    </div>
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
                         <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
@@ -535,13 +578,21 @@ const Galgame = () => {
                                     <span>历史</span>
                                 </div>
                             </div>
-                            <div className={styles.buttonItem}>
+                            <div 
+                                className={`${styles.buttonItem} ${isTextMode ? styles.buttonItemActive : ''}`}
+                                onClick={handleTextModeToggle}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className={styles.buttonInner}>
                                     <LuFileText />
                                     <span>文本</span>
                                 </div>
                             </div>
-                            <div className={styles.buttonItem}>
+                            <div 
+                                className={`${styles.buttonItem} ${isAutoPlay ? styles.buttonItemActive : ''}`}
+                                onClick={handleAutoPlayToggle}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className={styles.buttonInner}>
                                     <MdOutlineAutoStories />
                                     <span>自动</span>

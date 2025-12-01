@@ -123,6 +123,14 @@
     padding-bottom: 0px;
 }
 
+/* 文本模式下的容器样式 */
+.textModeContainer {
+    max-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 .narrationMessage {
     color: #fff;
     padding: 0;
@@ -376,6 +384,17 @@
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.buttonItem:active {
+    transform: rotate(45deg) scale(0.95);
+}
+
+.buttonItemActive {
+    background: rgba(251, 70, 85, 0.3);
+    border-color: rgba(251, 70, 85, 0.5);
+    box-shadow: 0 2px 12px rgba(251, 70, 85, 0.3);
 }
 
 .buttonItem .buttonInner {
