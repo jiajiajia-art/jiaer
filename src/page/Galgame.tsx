@@ -15,6 +15,7 @@ import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useGalgameStep } from "../hooks/galgame/useGalgameStep";
 import { useStoryTyping } from "../hooks/story/useStoryTyping";
+import { hasJumpTag, hasVibrationTag } from "../utils/textUtils";
 import toast from "react-hot-toast";
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change';
@@ -54,6 +55,7 @@ const Galgame = () => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const currentSceneIdRef = useRef<string | null>(null);
     const isLoadingMusicRef = useRef<boolean>(false);
+    const [characterAnimation, setCharacterAnimation] = useState<'jump' | 'vibration' | null>(null);
 
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
 
@@ -174,9 +176,33 @@ const Galgame = () => {
 
     const plainTextForTyping = useMemo(() => {
         if (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change')) {
-            return currentMessage.message.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2');
+            return currentMessage.message.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2')
+                .replace(/<jump>(.*?)<\/jump>/gi, '$1')
+                .replace(/<vibration>(.*?)<\/vibration>/gi, '$1');
         }
         return '';
+    }, [currentMessage]);
+
+    useEffect(() => {
+        if (currentMessage && currentMessage.type === 'dialogue' && currentMessage.message) {
+            if (hasJumpTag(currentMessage.message)) {
+                setCharacterAnimation('jump');
+                const timer = setTimeout(() => {
+                    setCharacterAnimation(null);
+                }, 600);
+                return () => clearTimeout(timer);
+            } else if (hasVibrationTag(currentMessage.message)) {
+                setCharacterAnimation('vibration');
+                const timer = setTimeout(() => {
+                    setCharacterAnimation(null);
+                }, 600);
+                return () => clearTimeout(timer);
+            } else {
+                setCharacterAnimation(null);
+            }
+        } else {
+            setCharacterAnimation(null);
+        }
     }, [currentMessage]);
 
     const { displayedText, isTyping } = useStoryTyping({
@@ -502,15 +528,9 @@ const Galgame = () => {
 
     return (
         <>
-            <StoryIntroModal
-                isOpen={showStoryIntro}
-                presetData={presetData}
-                onStartGame={handleStartGame}
-                isLoading={isStartingGame}
-            />
             <div className={styles.pageRoot}>
                 <div
-                    className={styles.mainContent}
+                    className={`${styles.mainContent} ${styles.worldVibration} ${characterAnimation === 'vibration' ? styles.worldVibration : ''}`}
                     style={{
                         backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
                         backgroundSize: 'cover',
@@ -524,10 +544,10 @@ const Galgame = () => {
                     </div>
                     {currentMessage.characterImage && (
                         <div
-                            className={`${styles.characterContainer} ${currentMessage.characterPosition === 'left'
+                            className={`${styles.characterContainer} ${styles.characterJump} ${currentMessage.characterPosition === 'left'
                                 ? styles.characterSlideLeft
                                 : styles.characterSlideRight
-                                }`}
+                                } ${characterAnimation === 'jump' ? styles.characterJump : ''}`}
                         >
                             <img
                                 src={currentMessage.characterImage}
@@ -590,11 +610,18 @@ const Galgame = () => {
                                     <PiMusicNoteDuotone />
                                     <span>音乐</span>
                                 </div>
-                            </div>
-                        </div>
                 </div>
             </div>
         </div>
+
+                    <StoryIntroModal
+                        isOpen={showStoryIntro}
+                        presetData={presetData}
+                        onStartGame={handleStartGame}
+                        isLoading={isStartingGame}
+                    />
+                </div>
+            </div>
         </>
     );
 };

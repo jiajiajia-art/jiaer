@@ -93,7 +93,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
 
         const getTextToRender = (): string => {
             const allParts = parseColorMarkup(originalText);
-            
+
             if (displayedPlainText.length >= originalPlainText.length) {
                 // 文本全部输出完成，转换所有颜色标记为 HTML
                 return allParts.map(part => {
@@ -142,7 +142,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         converter.setOption('strikethrough', true);
         converter.setOption('tables', true);
         converter.setOption('tasklists', true);
-        
+
         const html = converter.makeHtml(textToRender);
 
         return <div dangerouslySetInnerHTML={{ __html: html }} />;
@@ -151,7 +151,14 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     return (
         <>
             {currentMessage?.type !== 'choice' && (
-                <div className={styles.messageContainer}>
+                <div
+                    className={styles.messageContainer}
+                    onClick={() => {
+                        if (showNextButton && !finalIsTyping && !isAutoPlay) {
+                            onNextMessage();
+                        }
+                    }}
+                >
                     {isWaitingForData && !currentStep && currentMessage && (
                         <div className={styles.narrationContainer}>
                             <div className={styles.narrationMessage}>
@@ -161,22 +168,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     )}
 
                     {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
-                        <div>
-                            <div className={styles.narrationMessage}>
-                                {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
-                                {finalIsTyping && <span className={styles.cursor}></span>}
-                            </div>
-                            {showNextButton && !finalIsTyping && !isAutoPlay && (
-                                <div className={styles.nextButtonContainer}>
-                                    <button
-                                        className={styles.nextButton}
-                                        onClick={onNextMessage}
-                                        disabled={isWaitingForData}
-                                    >
-                                        <IoArrowDownCircleOutline />
-                                    </button>
-                                </div>
-                            )}
+                        <div className={styles.narrationMessage}>
+                            <div className={styles.characterDivider}></div>
+                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
+                            {finalIsTyping && <span className={styles.cursor}></span>}
                         </div>
                     )}
 
@@ -190,37 +185,14 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                     {finalIsTyping && <span className={styles.cursor}></span>}
                                 </div>
                             </div>
-                            {showNextButton && !finalIsTyping && !isAutoPlay && (
-                                <div className={styles.nextButtonContainer}>
-                                    <button
-                                        className={styles.nextButton}
-                                        onClick={onNextMessage}
-                                        disabled={isWaitingForData}
-                                    >
-                                        <IoArrowDownCircleOutline />
-                                    </button>
-                                </div>
-                            )}
                         </>
                     )}
 
                     {!isWaitingForData && currentMessage && currentMessage.type === 'scene_change' && currentMessage.message && (
-                        <div>
-                            <div className={styles.narrationMessage}>
-                                {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
-                                {finalIsTyping && <span className={styles.cursor}></span>}
-                            </div>
-                            {showNextButton && !finalIsTyping && !isAutoPlay && (
-                                <div className={styles.nextButtonContainer}>
-                                    <button
-                                        className={styles.nextButton}
-                                        onClick={onNextMessage}
-                                        disabled={isWaitingForData}
-                                    >
-                                        <IoArrowDownCircleOutline />
-                                    </button>
-                                </div>
-                            )}
+                        <div className={styles.narrationMessage}>
+                            <div className={styles.characterDivider}></div>
+                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
+                            {finalIsTyping && <span className={styles.cursor}></span>}
                         </div>
                     )}
                 </div>
@@ -232,7 +204,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         const isSelected = selectedOptionIndex !== null &&
                             selectedOptionIndex === currentMessage.options?.findIndex((opt: any) => opt.text === option.text);
                         const isWaiting = isWaitingForData && isSelected;
-                        
+
                         return (
                             <div
                                 key={option.id}

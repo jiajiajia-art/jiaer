@@ -177,8 +177,8 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         try {
             // 创建 galgame 会话
             const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId });
-            if (sessionResponse.data.success && sessionResponse.data.sessionId) {
-                return sessionResponse.data.sessionId;
+            if (sessionResponse.data.success && sessionResponse.data.data.session) {
+                return sessionResponse.data.data.session.session_id;
             } else {
                 alert(sessionResponse.data.message || '创建游戏失败，请重试');
                 return null;

@@ -37,14 +37,15 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     return (
         <div
             className={styles.modalOverlay}
-            style={playerImageUrl ? {
-                backgroundImage: `url(${playerImageUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
-            } : undefined}
         >
-            <div className={styles.modalContent}>
+            <div className={styles.modalContent}
+                style={playerImageUrl ? {
+                    backgroundImage: `url(${playerImageUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                } : undefined}
+            >
                 <div className={styles.modalHeader}>
                     <h1 className={styles.modalTitle}>{title}</h1>
                 </div>

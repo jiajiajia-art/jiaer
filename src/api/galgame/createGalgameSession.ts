@@ -3,7 +3,7 @@ import type { CreateGalgameSessionResponse } from "./createGalgameSession.type";
 
 const createGalgameSessionApi = {
     createGalgameSession: ({presetId}: {presetId: string}) =>
-        api.post<CreateGalgameSessionResponse>(`/visual/session/create`, {presetId}),
+        api.post<CreateGalgameSessionResponse>(`/optical/games/session/create`, {presetId}),
 }
 
 export default createGalgameSessionApi;

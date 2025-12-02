@@ -55,7 +55,19 @@ export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
 export const extractPlainText = (text: string): string => {
     if (!text) return '';
     // 移除所有颜色标签，只保留内容
-    return text.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2');
+    return text.replace(/<(red|yellow|green|blue|purple|jump|vibration)>(.*?)<\/\1>/gi, '$2');
+};
+
+// 检测是否包含 jump 标签
+export const hasJumpTag = (text: string): boolean => {
+    if (!text) return false;
+    return /<jump>.*?<\/jump>/gi.test(text);
+};
+
+// 检测是否包含 vibration 标签
+export const hasVibrationTag = (text: string): boolean => {
+    if (!text) return false;
+    return /<vibration>.*?<\/vibration>/gi.test(text);
 };
 
 // 清理历史记录中的标记文字，并提取 OPTION
