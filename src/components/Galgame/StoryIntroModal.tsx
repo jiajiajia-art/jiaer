@@ -35,7 +35,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     }, [playerImage]);
 
     return (
-        <div 
+        <div
             className={styles.modalOverlay}
             style={playerImageUrl ? {
                 backgroundImage: `url(${playerImageUrl})`,
@@ -55,20 +55,20 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                     </div>
                 </div>
                 <div className={styles.modalFooter}>
-                    {!isTyping && 
-                    <button
-                        className={styles.startButton}
-                        onClick={onStartGame}
-                        disabled={isLoading || isTyping}
-                    >
-                        {isLoading ? 
-                        <div className={styles.loading}>    
-                            <span className={styles.loadingDot}></span>
-                            <span className={styles.loadingDot}></span>
-                            <span className={styles.loadingDot}></span>
-                        </div>
-                         : '开始游戏'}
-                    </button>
+                    {!isTyping &&
+                        <button
+                            className={styles.startButton}
+                            onClick={onStartGame}
+                            disabled={isLoading || isTyping}
+                        >
+                            {isLoading ?
+                                <div className={styles.loading}>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                </div>
+                                : '开始游戏'}
+                        </button>
                     }
                 </div>
             </div>

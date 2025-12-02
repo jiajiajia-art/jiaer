@@ -117,3 +117,15 @@ export interface GetGalgamePresetResponse {
   export interface SceneWithFullNPCs extends Omit<Scene, 'npcs'> {
     fullNPCs: NPC[]
   }
+
+
+  export interface GetGalgameHistoryResponse {
+    success: boolean
+    history: History[]
+    [key: string]: unknown
+  }
+
+  export interface History {
+    role: string
+    content: string
+  }

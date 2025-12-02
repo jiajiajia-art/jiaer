@@ -74,13 +74,13 @@ const Galgame = () => {
                 message: step.content || '',
             };
         } else if (step.type === 'dialogue') {
-            const characterName = step.npcName || step.npcId || '未知角色';
+            const characterName = step.speakerName || step.npcId || '未知角色';
             let characterImage: string | undefined;
 
-            if (step.npcImages?.activeImage) {
-                characterImage = step.npcImages.activeImage.startsWith('http')
-                    ? step.npcImages.activeImage
-                    : `${HOST_ADDRESS}${step.npcImages.activeImage}`;
+            if (step.activeImage) {
+                characterImage = step.activeImage.startsWith('http')
+                    ? step.activeImage
+                    : `${HOST_ADDRESS}${step.activeImage}`;
             }
 
             return {
@@ -166,6 +166,12 @@ const Galgame = () => {
         };
     }, [gameStarted, stepHandlers.currentStep, convertStepToMessage, initialMessages]);
 
+    useEffect(() => {
+        if (gameStarted && stepHandlers.currentStep && showStoryIntro) {
+            setShowStoryIntro(false);
+        }
+    }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
+
     const plainTextForTyping = useMemo(() => {
         if (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change')) {
             return currentMessage.message.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2');
@@ -247,9 +253,7 @@ const Galgame = () => {
         }
 
         setIsStartingGame(true);
-        setShowStoryIntro(false);
         setGameStarted(true);
-
         setInitialMessages([]);
 
         await stepHandlers.handleStreamAction('开始游戏', {
@@ -264,6 +268,7 @@ const Galgame = () => {
                 toast.error(error || '开始游戏失败，请重试');
                 setIsStartingGame(false);
                 setGameStarted(false);
+                setShowStoryIntro(true);
             }
         });
     }, [sessionId, stepHandlers]);
@@ -311,7 +316,7 @@ const Galgame = () => {
         currentSceneIdRef.current = sceneId;
 
         try {
-            const response = await getGalgamePresetApi.getMusic(presetId, soundtrack);
+            const response = await getGalgamePresetApi.getGalgameMusic(presetId, soundtrack);
 
             if (!response.data || !(response.data instanceof Blob)) {
                 console.warn('无法获取音乐数据');
@@ -478,9 +483,9 @@ const Galgame = () => {
     }, [stepHandlers]);
 
     if (isLoading) {
-        return (
-            <div className={styles.pageRoot}>
-                <div className={styles.mainContent}>
+    return (
+        <div className={styles.pageRoot}>
+            <div className={styles.mainContent}>
                     <div style={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -491,7 +496,7 @@ const Galgame = () => {
                         加载中...
                     </div>
                 </div>
-            </div>
+                            </div>
         );
     }
 
@@ -529,7 +534,7 @@ const Galgame = () => {
                                 alt="角色立绘"
                                 className={styles.characterImage}
                             />
-                        </div>
+                </div>
                     )}
                     <div className={styles.gameContentWrapper}>
                         <NormalModeDisplay
@@ -547,11 +552,11 @@ const Galgame = () => {
                             onChoiceClick={handleChoiceClick}
                             onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
                         />
-                        <div className={styles.buttonContainer}>
+                <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                                    <span>{user?.user?.points}</span>
+                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
+                        <span>{user?.user?.points}</span>
                                 </div>
                             </div>
                             <div className={styles.buttonItem}>
@@ -587,9 +592,9 @@ const Galgame = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
                 </div>
             </div>
+        </div>
         </>
     );
 };

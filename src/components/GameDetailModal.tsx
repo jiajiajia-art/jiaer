@@ -201,11 +201,9 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             alert('游戏信息错误，请重试');
             return;
         }
-
-        // 判断是否为 Galgame（通过 presetId 字段）
-        const presetId = currentGame.file_id;
+        console.log(currentGame.version);
         
-        if (presetId) {
+        if (currentGame.version == 'new') {
             // 使用 Galgame 接口
             setPdfFileId(fileId);
             const sessionId = await createGalgameSession('c1c0450b-b086-440d-a477-f31fb71adbde');
@@ -298,7 +296,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setIsDeletModalOpen(false);
         }
     }, [checkAuth, fileId, userId]);
-
 
     const purchaseGame = useCallback(async () => {
         if (!checkAuth()) return;

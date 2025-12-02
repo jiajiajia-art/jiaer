@@ -22,6 +22,7 @@ export interface UserGameData {
     avatarUrl: string;
     total_pv_count?: number;
     paid?: boolean;
+    version: string;
 }
 
 export interface UserGameResponse {

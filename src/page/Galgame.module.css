@@ -51,35 +51,48 @@
     align-items: flex-end;
     justify-content: flex-end;
     pointer-events: none;
+    overflow: hidden;
 }
 
 .characterSlideLeft {
     left: 0;
-    animation: slideInFromLeft 0.5s ease-out;
+    animation: fadeSlideInFromLeft 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.characterSlideLeft .characterImage {
+    object-position: bottom left;
+    width: 150%;
+    margin-left: -20%;
 }
 
 .characterSlideRight {
     right: 0;
-    animation: slideInFromRight 0.5s ease-out;
+    animation: fadeSlideInFromRight 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes slideInFromLeft {
-    from {
-        transform: translateX(-100%);
+.characterSlideRight .characterImage {
+    object-position: bottom right;
+    width: 150%;
+    margin-right: -20%;
+}
+
+@keyframes fadeSlideInFromLeft {
+    0% {
+        transform: translateX(-30px);
         opacity: 0;
     }
-    to {
+    100% {
         transform: translateX(0);
         opacity: 1;
     }
 }
 
-@keyframes slideInFromRight {
-    from {
-        transform: translateX(100%);
+@keyframes fadeSlideInFromRight {
+    0% {
+        transform: translateX(30px);
         opacity: 0;
     }
-    to {
+    100% {
         transform: translateX(0);
         opacity: 1;
     }
@@ -90,6 +103,7 @@
     height: 100%;
     object-fit: contain;
     object-position: bottom;
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gameContentWrapper {
@@ -100,14 +114,24 @@
     width: 100%;
     height: auto;
     min-height: 200px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 20%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.3) 80%, transparent 100%);
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.85) 0%,
+        rgba(0, 0, 0, 0.82) 8%,
+        rgba(0, 0, 0, 0.75) 18%,
+        rgba(0, 0, 0, 0.70) 32%,
+        rgba(0, 0, 0, 0.60) 50%,
+        rgba(0, 0, 0, 0.55) 82%,
+        rgba(0, 0, 0, 0.30) 92%,
+        transparent 100%
+      );
     z-index: 150;
     pointer-events: none;
     display: flex;
     flex-direction: column;
 }
 
-.gameContentWrapper > * {
+.gameContentWrapper>* {
     pointer-events: auto;
 }
 
@@ -174,20 +198,16 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border-radius: 4px;
-    mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 10%,
-        black 90%,
-        transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 16%,
-        black 90%,
-        transparent 100%
-    );
+    mask-image: linear-gradient(to right,
+            transparent 0%,
+            black 10%,
+            black 90%,
+            transparent 100%);
+    -webkit-mask-image: linear-gradient(to right,
+            transparent 0%,
+            black 16%,
+            black 90%,
+            transparent 100%);
     background-color: #0000007a;
     display: flex;
     align-items: center;
@@ -230,20 +250,16 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border-radius: 4px;
-    mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 10%,
-        black 90%,
-        transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 16%,
-        black 90%,
-        transparent 100%
-    );
+    mask-image: linear-gradient(to right,
+            transparent 0%,
+            black 10%,
+            black 90%,
+            transparent 100%);
+    -webkit-mask-image: linear-gradient(to right,
+            transparent 0%,
+            black 16%,
+            black 90%,
+            transparent 100%);
     background-color: #0000007a;
 }
 
@@ -259,20 +275,16 @@
     background-color: #0000007a;
     padding: 8px 20px;
     border-radius: 4px;
-    mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 10%,
-        black 90%,
-        transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 16%,
-        black 90%,
-        transparent 100%
-    );
+    mask-image: linear-gradient(to right,
+            transparent 0%,
+            black 10%,
+            black 90%,
+            transparent 100%);
+    -webkit-mask-image: linear-gradient(to right,
+            transparent 0%,
+            black 16%,
+            black 90%,
+            transparent 100%);
 }
 
 .customInput input {
@@ -433,20 +445,19 @@
 
     .characterContainer {
         width: auto;
-        height: 70vh;
         bottom: 0;
     }
 
     .messageContainer {
         bottom: 80px;
     }
-    
+
     .messageContainer {
         bottom: 80px;
     }
-    
+
     .buttonContainer {
-        padding: 10px 12px;
+        padding: 10px 18px;
         padding-right: 90px;
         gap: 16px;
         margin-bottom: 10px;
@@ -464,11 +475,14 @@
 }
 
 @keyframes blink {
-    0%, 50% {
+
+    0%,
+    50% {
         opacity: 1;
     }
-    51%, 100% {
+
+    51%,
+    100% {
         opacity: 0;
     }
 }
-

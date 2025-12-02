@@ -5,7 +5,7 @@
     height: auto;
     overflow-y: hidden;
     overflow-x: hidden;
-    padding: 10px;
+    padding: 18px;
     box-sizing: border-box;
     padding-bottom: 0px;
     display: flex;
@@ -181,6 +181,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    position: relative;
+    overflow: hidden;
 }
 
 .choiceText {
@@ -292,6 +294,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    position: relative;
+    overflow: hidden;
 }
 
 .customInput button:hover {
@@ -302,6 +306,39 @@
 .customInput button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.progressBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+}
+
+.progressFill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #845DFF, #a78bfa);
+    animation: progressAnimation 2s ease-in-out infinite;
+}
+
+@keyframes progressAnimation {
+    0% {
+        width: 0%;
+    }
+    50% {
+        width: 100%;
+    }
+    100% {
+        width: 0%;
+    }
 }
 
 @media (max-width: 768px) {

@@ -152,7 +152,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         <>
             {currentMessage?.type !== 'choice' && (
                 <div className={styles.messageContainer}>
-                    {isWaitingForData && !currentStep && (
+                    {isWaitingForData && !currentStep && currentMessage && (
                         <div className={styles.narrationContainer}>
                             <div className={styles.narrationMessage}>
                                 <span className={styles.cursor}></span>
@@ -226,49 +226,59 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 </div>
             )}
 
-            {!isWaitingForData && currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
+            {currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
                 <div className={styles.choiceContainer}>
-                    {currentMessage.options.map((option) => (
-                        <div
-                            key={option.id}
-                            className={styles.choiceOption}
-                            onClick={() => onChoiceClick(option)}
-                            style={{
-                                opacity: selectedOptionIndex !== null &&
-                                    selectedOptionIndex !== currentMessage.options?.findIndex((opt: any) => opt.text === option.text)
-                                    ? 0.5
-                                    : 1,
-                                pointerEvents: isWaitingForData ? 'none' : 'auto'
-                            }}
-                        >
-                            <span className={styles.choiceText}>
-                                {(() => {
-                                    const colorClassMap: Record<string, string> = {
-                                        red: styles.colorRed,
-                                        yellow: styles.colorYellow,
-                                        green: styles.colorGreen,
-                                        blue: styles.colorBlue,
-                                        purple: styles.colorPurple,
-                                    };
-                                    const parts = parseColorMarkup(option.text);
-                                    const htmlParts = parts.map(part => {
-                                        if (part.type === 'color' && part.color) {
-                                            return `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
-                                        }
-                                        return part.content;
-                                    }).join('');
-                                    const converter = new Converter();
-                                    converter.setOption('simpleLineBreaks', true);
-                                    const html = converter.makeHtml(htmlParts);
-                                    return <span dangerouslySetInnerHTML={{ __html: html }} />;
-                                })()}
-                            </span>
-                            <div className={styles.choicePrice}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                <span>2</span>
+                    {currentMessage.options.map((option) => {
+                        const isSelected = selectedOptionIndex !== null &&
+                            selectedOptionIndex === currentMessage.options?.findIndex((opt: any) => opt.text === option.text);
+                        const isWaiting = isWaitingForData && isSelected;
+                        
+                        return (
+                            <div
+                                key={option.id}
+                                className={styles.choiceOption}
+                                onClick={() => onChoiceClick(option)}
+                                style={{
+                                    opacity: selectedOptionIndex !== null && !isSelected
+                                        ? 0.5
+                                        : 1,
+                                    pointerEvents: isWaitingForData ? 'none' : 'auto'
+                                }}
+                            >
+                                {isWaiting && (
+                                    <div className={styles.progressBar}>
+                                        <div className={styles.progressFill}></div>
+                                    </div>
+                                )}
+                                <span className={styles.choiceText}>
+                                    {(() => {
+                                        const colorClassMap: Record<string, string> = {
+                                            red: styles.colorRed,
+                                            yellow: styles.colorYellow,
+                                            green: styles.colorGreen,
+                                            blue: styles.colorBlue,
+                                            purple: styles.colorPurple,
+                                        };
+                                        const parts = parseColorMarkup(option.text);
+                                        const htmlParts = parts.map(part => {
+                                            if (part.type === 'color' && part.color) {
+                                                return `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
+                                            }
+                                            return part.content;
+                                        }).join('');
+                                        const converter = new Converter();
+                                        converter.setOption('simpleLineBreaks', true);
+                                        const html = converter.makeHtml(htmlParts);
+                                        return <span dangerouslySetInnerHTML={{ __html: html }} />;
+                                    })()}
+                                </span>
+                                <div className={styles.choicePrice}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                    <span>2</span>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {!showCustomInput ? (
                         <div
                             className={styles.customInputText}
@@ -294,8 +304,18 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <button
                                 onClick={handleCustomInputSubmit}
                                 disabled={isWaitingForData || !customInputValue.trim()}
+                                className={styles.customInputButton}
                             >
-                                <span>发送</span>
+                                {isWaitingForData && (
+                                    <div className={styles.progressBar}>
+                                        <div className={styles.progressFill}></div>
+                                    </div>
+                                )}
+                                {isWaitingForData ? (
+                                    <span style={{ opacity: 0.7 }}>发送中...</span>
+                                ) : (
+                                    <span>发送</span>
+                                )}
                                 <div className={styles.choicePrice}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                     <span>3</span>
