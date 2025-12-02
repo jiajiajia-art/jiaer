@@ -1,24 +1,27 @@
 .messageContainer {
-    position: absolute;
-    bottom: 80px;
-    left: 0;
-    right: 0;
+    flex: 1;
     width: 100%;
-    min-height: 180px;
+    min-height: 240px;
     height: auto;
     overflow-y: hidden;
     overflow-x: hidden;
     padding: 10px;
     box-sizing: border-box;
     padding-bottom: 0px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 80px;
+    padding-top: 60px;
 }
 
 .narrationMessage {
     color: #fff;
     padding: 0;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.7;
+    letter-spacing: 1.2px;
     word-break: break-word;
+    white-space: pre-wrap;
     margin-bottom: 8px;
 }
 
@@ -26,7 +29,8 @@
     color: #fff;
     padding: 0;
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.7;
+    letter-spacing: 1.2px;
     word-break: break-word;
     margin-bottom: 8px;
     display: flex;
@@ -52,6 +56,9 @@
 .characterText {
     flex: 1;
     padding-bottom: 4px;
+    line-height: 1.7;
+    letter-spacing: 1.2px;
+    white-space: pre-wrap;
 }
 
 .nextButtonContainer {
@@ -121,6 +128,14 @@
 .colorPurple {
     color: #a78bfa;
     font-weight: 500;
+}
+
+.code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.9em;
 }
 
 @keyframes blink {

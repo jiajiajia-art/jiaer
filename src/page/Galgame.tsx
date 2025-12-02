@@ -77,10 +77,10 @@ const Galgame = () => {
             const characterName = step.npcName || step.npcId || '未知角色';
             let characterImage: string | undefined;
 
-            if (step.npcImages?.base) {
-                characterImage = step.npcImages.base.startsWith('http')
-                    ? step.npcImages.base
-                    : `${HOST_ADDRESS}${step.npcImages.base}`;
+            if (step.npcImages?.activeImage) {
+                characterImage = step.npcImages.activeImage.startsWith('http')
+                    ? step.npcImages.activeImage
+                    : `${HOST_ADDRESS}${step.npcImages.activeImage}`;
             }
 
             return {

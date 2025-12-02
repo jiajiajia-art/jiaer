@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
+import { Converter } from 'showdown';
 import styles from './NormalModeDisplay.module.css';
-import { parseColorMarkup, extractPlainText, type ColorMarkupPart } from '../../utils/textUtils';
+import { parseColorMarkup, extractPlainText } from '../../utils/textUtils';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change';
 
@@ -77,9 +78,9 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         }
     }, [currentMessage?.type]);
 
-    const renderTextWithColors = useCallback((displayedPlainText: string, originalText: string) => {
+    const renderTextWithMarkdown = useCallback((displayedPlainText: string, originalText: string) => {
         if (!displayedPlainText || !originalText) return null;
-        
+
         const colorClassMap: Record<string, string> = {
             red: styles.colorRed,
             yellow: styles.colorYellow,
@@ -87,161 +88,143 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
             blue: styles.colorBlue,
             purple: styles.colorPurple,
         };
-        
+
         const originalPlainText = extractPlainText(originalText);
-        
-        if (displayedPlainText.length >= originalPlainText.length) {
-            const parts = parseColorMarkup(originalText);
-            return parts.map((part, index) => {
-                if (part.type === 'color' && part.color) {
-                    const colorClass = colorClassMap[part.color];
-                    const content = part.nested && part.nested.length > 0
-                        ? part.nested.map((nestedPart, nestedIndex) => {
-                            if (nestedPart.type === 'color' && nestedPart.color) {
-                                const nestedColorClass = colorClassMap[nestedPart.color];
-                                return (
-                                    <span key={`nested-${nestedIndex}`} className={nestedColorClass}>
-                                        {nestedPart.content}
-                                    </span>
-                                );
-                            }
-                            return <React.Fragment key={`nested-${nestedIndex}`}>{nestedPart.content}</React.Fragment>;
-                        })
-                        : part.content;
-                    return (
-                        <span key={index} className={colorClass}>
-                            {content}
-                        </span>
-                    );
-                }
-                return <React.Fragment key={index}>{part.content}</React.Fragment>;
-            });
-        }
-        
-        const allParts = parseColorMarkup(originalText);
-        const result: ColorMarkupPart[] = [];
-        let currentPlainLength = 0;
-        
-        for (const part of allParts) {
-            if (currentPlainLength >= displayedPlainText.length) break;
+
+        const getTextToRender = (): string => {
+            const allParts = parseColorMarkup(originalText);
             
-            const partPlainText = part.type === 'text' ? part.content : extractPlainText(part.content);
-            const partLength = partPlainText.length;
-            
-            if (currentPlainLength + partLength <= displayedPlainText.length) {
-                result.push(part);
-                currentPlainLength += partLength;
-            } else {
-                const remainingLength = displayedPlainText.length - currentPlainLength;
-                if (part.type === 'text') {
-                    result.push({
-                        type: 'text',
-                        content: part.content.substring(0, remainingLength)
-                    });
+            if (displayedPlainText.length >= originalPlainText.length) {
+                // 文本全部输出完成，转换所有颜色标记为 HTML
+                return allParts.map(part => {
+                    if (part.type === 'color' && part.color) {
+                        return `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
+                    }
+                    return part.content;
+                }).join('');
+            }
+
+            // 文本正在输出中，根据显示长度截取
+            let result = '';
+            let currentPlainLength = 0;
+
+            for (const part of allParts) {
+                if (currentPlainLength >= displayedPlainText.length) break;
+
+                const partPlainText = part.type === 'text' ? part.content : extractPlainText(part.content);
+                const partLength = partPlainText.length;
+
+                if (currentPlainLength + partLength <= displayedPlainText.length) {
+                    if (part.type === 'color' && part.color) {
+                        result += `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
+                    } else {
+                        result += part.content;
+                    }
+                    currentPlainLength += partLength;
                 } else {
+                    const remainingLength = displayedPlainText.length - currentPlainLength;
                     const truncatedContent = partPlainText.substring(0, remainingLength);
-                    result.push({
-                        type: 'color',
-                        content: truncatedContent,
-                        color: part.color
-                    });
+                    if (part.type === 'color' && part.color) {
+                        result += `<span class="${colorClassMap[part.color]}">${truncatedContent}</span>`;
+                    } else {
+                        result += truncatedContent;
+                    }
+                    break;
                 }
-                break;
             }
-        }
+
+            return result;
+        };
+
+        const textToRender = getTextToRender();
+        const converter = new Converter();
+        converter.setOption('simpleLineBreaks', true);
+        converter.setOption('strikethrough', true);
+        converter.setOption('tables', true);
+        converter.setOption('tasklists', true);
         
-        return result.map((part, index) => {
-            if (part.type === 'color' && part.color) {
-                const colorClass = colorClassMap[part.color];
-                return (
-                    <span key={index} className={colorClass}>
-                        {part.content}
-                    </span>
-                );
-            }
-            return <React.Fragment key={index}>{part.content}</React.Fragment>;
-        });
+        const html = converter.makeHtml(textToRender);
+
+        return <div dangerouslySetInnerHTML={{ __html: html }} />;
     }, [styles]);
-    
+
     return (
         <>
-            <div className={styles.messageContainer}>
-                {isWaitingForData && !currentStep && (
-                    <div className={styles.narrationContainer}>
-                        <div className={styles.narrationMessage}>
-                            <span className={styles.cursor}></span>
-                        </div>
-                    </div>
-                )}
-
-                {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
-                    <div>
-                        <div className={styles.narrationMessage}>
-                            <span>
-                                {renderTextWithColors(finalDisplayText, currentMessage.message)}
-                                {finalIsTyping && <span className={styles.cursor}></span>}
-                            </span>
-                        </div>
-                        {showNextButton && !finalIsTyping && !isAutoPlay && (
-                            <div className={styles.nextButtonContainer}>
-                                <button
-                                    className={styles.nextButton}
-                                    onClick={onNextMessage}
-                                    disabled={isWaitingForData}
-                                >
-                                    <IoArrowDownCircleOutline />
-                                </button>
+            {currentMessage?.type !== 'choice' && (
+                <div className={styles.messageContainer}>
+                    {isWaitingForData && !currentStep && (
+                        <div className={styles.narrationContainer}>
+                            <div className={styles.narrationMessage}>
+                                <span className={styles.cursor}></span>
                             </div>
-                        )}
-                    </div>
-                )}
+                        </div>
+                    )}
 
-                {!isWaitingForData && currentMessage && currentMessage.type === 'dialogue' && currentMessage.message && (
-                    <>
-                        <div className={styles.characterMessage}>
-                            <div className={styles.characterName}>{currentMessage.characterName}</div>
-                            <div className={styles.characterDivider}></div>
-                            <div className={styles.characterText}>
-                                {renderTextWithColors(finalDisplayText, currentMessage.message)}
+                    {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
+                        <div>
+                            <div className={styles.narrationMessage}>
+                                {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
                                 {finalIsTyping && <span className={styles.cursor}></span>}
                             </div>
+                            {showNextButton && !finalIsTyping && !isAutoPlay && (
+                                <div className={styles.nextButtonContainer}>
+                                    <button
+                                        className={styles.nextButton}
+                                        onClick={onNextMessage}
+                                        disabled={isWaitingForData}
+                                    >
+                                        <IoArrowDownCircleOutline />
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                        {showNextButton && !finalIsTyping && !isAutoPlay && (
-                            <div className={styles.nextButtonContainer}>
-                                <button
-                                    className={styles.nextButton}
-                                    onClick={onNextMessage}
-                                    disabled={isWaitingForData}
-                                >
-                                    <IoArrowDownCircleOutline />
-                                </button>
-                            </div>
-                        )}
-                    </>
-                )}
+                    )}
 
-                {!isWaitingForData && currentMessage && currentMessage.type === 'scene_change' && currentMessage.message && (
-                    <div>
-                        <div className={styles.narrationMessage}>
-                            <span>
-                                {renderTextWithColors(finalDisplayText, currentMessage.message)}
-                                {finalIsTyping && <span className={styles.cursor}></span>}
-                            </span>
-                        </div>
-                        {showNextButton && !finalIsTyping && !isAutoPlay && (
-                            <div className={styles.nextButtonContainer}>
-                                <button
-                                    className={styles.nextButton}
-                                    onClick={onNextMessage}
-                                    disabled={isWaitingForData}
-                                >
-                                    <IoArrowDownCircleOutline />
-                                </button>
+                    {!isWaitingForData && currentMessage && currentMessage.type === 'dialogue' && currentMessage.message && (
+                        <>
+                            <div className={styles.characterMessage}>
+                                <div className={styles.characterName}>{currentMessage.characterName}</div>
+                                <div className={styles.characterDivider}></div>
+                                <div className={styles.characterText}>
+                                    {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
+                                    {finalIsTyping && <span className={styles.cursor}></span>}
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                            {showNextButton && !finalIsTyping && !isAutoPlay && (
+                                <div className={styles.nextButtonContainer}>
+                                    <button
+                                        className={styles.nextButton}
+                                        onClick={onNextMessage}
+                                        disabled={isWaitingForData}
+                                    >
+                                        <IoArrowDownCircleOutline />
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {!isWaitingForData && currentMessage && currentMessage.type === 'scene_change' && currentMessage.message && (
+                        <div>
+                            <div className={styles.narrationMessage}>
+                                {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
+                                {finalIsTyping && <span className={styles.cursor}></span>}
+                            </div>
+                            {showNextButton && !finalIsTyping && !isAutoPlay && (
+                                <div className={styles.nextButtonContainer}>
+                                    <button
+                                        className={styles.nextButton}
+                                        onClick={onNextMessage}
+                                        disabled={isWaitingForData}
+                                    >
+                                        <IoArrowDownCircleOutline />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {!isWaitingForData && currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
                 <div className={styles.choiceContainer}>
@@ -258,7 +241,28 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 pointerEvents: isWaitingForData ? 'none' : 'auto'
                             }}
                         >
-                                <span className={styles.choiceText}>{renderTextWithColors(option.text, option.text)}</span>
+                            <span className={styles.choiceText}>
+                                {(() => {
+                                    const colorClassMap: Record<string, string> = {
+                                        red: styles.colorRed,
+                                        yellow: styles.colorYellow,
+                                        green: styles.colorGreen,
+                                        blue: styles.colorBlue,
+                                        purple: styles.colorPurple,
+                                    };
+                                    const parts = parseColorMarkup(option.text);
+                                    const htmlParts = parts.map(part => {
+                                        if (part.type === 'color' && part.color) {
+                                            return `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
+                                        }
+                                        return part.content;
+                                    }).join('');
+                                    const converter = new Converter();
+                                    converter.setOption('simpleLineBreaks', true);
+                                    const html = converter.makeHtml(htmlParts);
+                                    return <span dangerouslySetInnerHTML={{ __html: html }} />;
+                                })()}
+                            </span>
                             <div className={styles.choicePrice}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                 <span>2</span>

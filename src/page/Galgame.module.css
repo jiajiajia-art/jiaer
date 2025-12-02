@@ -45,7 +45,7 @@
     position: absolute;
     bottom: 0;
     width: auto;
-    height: 70vh;
+    height: 80vh;
     z-index: 120;
     display: flex;
     align-items: flex-end;
@@ -103,25 +103,12 @@
     background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 20%, rgba(0, 0, 0, 0.7) 40%, rgba(0, 0, 0, 0.5) 60%, rgba(0, 0, 0, 0.3) 80%, transparent 100%);
     z-index: 150;
     pointer-events: none;
+    display: flex;
+    flex-direction: column;
 }
 
 .gameContentWrapper > * {
     pointer-events: auto;
-}
-
-.messageContainer {
-    position: absolute;
-    bottom: 80px;
-    left: 0;
-    right: 0;
-    width: 100%;
-    min-height: 18vh;
-    height: auto;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 10px;
-    box-sizing: border-box;
-    padding-bottom: 0px;
 }
 
 /* 文本模式下的容器样式 */
