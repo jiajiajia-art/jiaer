@@ -207,6 +207,7 @@ export const useGalgameStep = ({
 
     return {
         currentStep,
+        stepQueue,
         showNextButton,
         selectedOptionIndex,
         isWaitingForData,

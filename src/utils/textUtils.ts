@@ -1,3 +1,63 @@
+// 颜色标记解析结果类型
+export interface ColorMarkupPart {
+    type: 'text' | 'color';
+    content: string;
+    color?: string;
+    nested?: ColorMarkupPart[];
+}
+
+// 解析颜色标记，将 <red>文本</red> 等标签转换为包含颜色信息的数组
+export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
+    if (!text) return [];
+    
+    const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
+    const parts: ColorMarkupPart[] = [];
+    let lastIndex = 0;
+    
+    const regex = /<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi;
+    let match;
+    
+    while ((match = regex.exec(text)) !== null) {
+        // 添加普通文本
+        if (match.index > lastIndex) {
+            const plainText = text.substring(lastIndex, match.index);
+            if (plainText) {
+                parts.push({ type: 'text', content: plainText });
+            }
+        }
+        
+        // 添加带颜色的文本
+        const color = match[1].toLowerCase();
+        const content = match[2];
+        if (colorTags.includes(color)) {
+            // 递归处理嵌套的颜色标签
+            const nestedParts = parseColorMarkup(content);
+            parts.push({ type: 'color', content, color, nested: nestedParts.length > 0 ? nestedParts : undefined });
+        } else {
+            parts.push({ type: 'text', content });
+        }
+        
+        lastIndex = regex.lastIndex;
+    }
+    
+    // 添加剩余的普通文本
+    if (lastIndex < text.length) {
+        const remainingText = text.substring(lastIndex);
+        if (remainingText) {
+            parts.push({ type: 'text', content: remainingText });
+        }
+    }
+    
+    return parts.length > 0 ? parts : [{ type: 'text', content: text }];
+};
+
+// 提取纯文本（去掉所有颜色标签）
+export const extractPlainText = (text: string): string => {
+    if (!text) return '';
+    // 移除所有颜色标签，只保留内容
+    return text.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2');
+};
+
 // 清理历史记录中的标记文字，并提取 OPTION
 export const cleanHistoryMessage = (text: string): { cleanedText: string; options: string[] } => {
     if (!text) return { cleanedText: '', options: [] };

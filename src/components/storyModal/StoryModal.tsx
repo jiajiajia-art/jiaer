@@ -376,7 +376,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
     }, [stepHandlers, loadHistoryMessages]);
 
     if (!isOpen) return null;
-    
+
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>

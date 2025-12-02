@@ -12,13 +12,12 @@ import getGalgamePresetApi from "../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../api/galgame/getGalgamePreset.type";
 import { HOST_ADDRESS } from "../config";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
-import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useGalgameStep } from "../hooks/galgame/useGalgameStep";
 import { useStoryTyping } from "../hooks/story/useStoryTyping";
 import toast from "react-hot-toast";
 
-type MessageType = 'dialogue' | 'narration' | 'choice';
+type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change';
 
 interface Message {
     id: number;
@@ -34,33 +33,30 @@ const Galgame = () => {
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
     const [searchParams] = useSearchParams();
-    const presetId = searchParams.get('presetId') || 'c1c0450b-b086-440d-a477-f31fb71adbde'; // 默认值
+    const presetId = searchParams.get('presetId') || 'c1c0450b-b086-440d-a477-f31fb71adbde';
 
-    // 游戏数据状态（分类存储，便于直接访问，避免链式访问）
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [gameTitle, setGameTitle] = useState<string>('Galgame');
-    const [sceneName, setSceneName] = useState<string>('Galgame');
+    const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null>(null);
     const [worldSetting, setWorldSetting] = useState<GetGalgamePresetResponse['worldSetting'] | null>(null);
     const [npcSetting, setNpcSetting] = useState<GetGalgamePresetResponse['npcSetting'] | null>(null);
     const [sceneSetting, setSceneSetting] = useState<GetGalgamePresetResponse['sceneSetting'] | null>(null);
 
-    // UI 状态
-    const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
-    const [customInputValue, setCustomInputValue] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [initialMessages, setInitialMessages] = useState<Message[]>([]);
     const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
     const [isStartingGame, setIsStartingGame] = useState<boolean>(false);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
-    const [isTextMode, setIsTextMode] = useState<boolean>(false);
-    const [messageHistory, setMessageHistory] = useState<Message[]>([]); // 文本模式下的消息历史
-    const textModeContainerRef = useRef<HTMLDivElement>(null);
 
-    // 保留 presetData 用于 StoryIntroModal
+    const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
+    const [currentMusicUrl, setCurrentMusicUrl] = useState<string | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const currentSceneIdRef = useRef<string | null>(null);
+    const isLoadingMusicRef = useRef<boolean>(false);
+
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
 
-    // 使用流式输出的 hooks
     const stepHandlers = useGalgameStep({
         sessionId,
         onMessagesClear: () => {
@@ -68,7 +64,6 @@ const Galgame = () => {
         }
     });
 
-    // 将 step 转换为 Message 格式
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
 
@@ -79,25 +74,13 @@ const Galgame = () => {
                 message: step.content || '',
             };
         } else if (step.type === 'dialogue') {
-            // dialogue 类型：使用 npcId, npcName, npcImages, content
             const characterName = step.npcName || step.npcId || '未知角色';
             let characterImage: string | undefined;
 
-            // 优先使用 step 中的 npcImages
             if (step.npcImages?.base) {
                 characterImage = step.npcImages.base.startsWith('http')
                     ? step.npcImages.base
                     : `${HOST_ADDRESS}${step.npcImages.base}`;
-            } else if (npcSetting?.npcs) {
-                const npc = npcSetting.npcs.find(n =>
-                    n.id === step.npcId ||
-                    n.name === step.npcId
-                );
-                if (npc && npc.images?.base) {
-                    characterImage = npc.images.base.startsWith('http')
-                        ? npc.images.base
-                        : `${HOST_ADDRESS}${npc.images.base}`;
-                }
             }
 
             return {
@@ -131,27 +114,51 @@ const Galgame = () => {
                 message,
                 options,
                 characterImage,
-                characterPosition: 'right', // 用户自己的立绘从右侧滑入
+                characterPosition: 'right',
+            };
+        } else if (step.type === 'scene_change') {
+            const newScene: GetGalgamePresetResponse['sceneSetting']['scenes'][0] = {
+                id: step.sceneId || '',
+                name: step.sceneName || '',
+                type: '',
+                description: step.sceneDescription || '',
+                atmosphere: step.sceneAtmosphere,
+                dangerLevel: step.dangerLevel,
+                images: step.sceneImage,
+                npcs: [],
+                events: [],
+                soundtrack: step.soundtrack,
+            };
+
+            setCurrentScene(newScene);
+
+            if (step.sceneImage) {
+                const sceneImage = step.sceneImage.startsWith('http')
+                    ? step.sceneImage
+                    : `${HOST_ADDRESS}${step.sceneImage}`;
+                setBackgroundImage(sceneImage);
+            }
+
+            return {
+                id: Date.now(),
+                type: 'scene_change',
+                message: step.sceneDescription || step.sceneName || '',
             };
         }
 
         return null;
     }, [npcSetting, worldSetting]);
 
-    // 当前显示的 Message（从 step 转换或使用初始消息）
     const currentMessage = useMemo(() => {
-        // 优先使用流式输出的 step
         if (gameStarted && stepHandlers.currentStep) {
             const converted = convertStepToMessage(stepHandlers.currentStep);
             if (converted) return converted;
         }
 
-        // 如果没有 step，使用初始消息
         if (initialMessages.length > 0) {
             return initialMessages[0];
         }
 
-        // 默认返回一个空的 narration 消息，避免渲染错误
         return {
             id: 0,
             type: 'narration' as MessageType,
@@ -159,51 +166,29 @@ const Galgame = () => {
         };
     }, [gameStarted, stepHandlers.currentStep, convertStepToMessage, initialMessages]);
 
-    // 打字机效果（只在有消息内容时启用）
+    const plainTextForTyping = useMemo(() => {
+        if (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change')) {
+            return currentMessage.message.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2');
+        }
+        return '';
+    }, [currentMessage]);
+
     const { displayedText, isTyping } = useStoryTyping({
-        text: (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue'))
-            ? currentMessage.message
-            : '',
-        enabled: currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') && gameStarted && !!currentMessage.message,
+        text: plainTextForTyping,
+        enabled: currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change') && gameStarted && !!plainTextForTyping,
         speed: 60
     });
 
-    // 当等待新数据时，不显示任何内容，避免数据回填问题
     const finalDisplayText = stepHandlers.isWaitingForData && !stepHandlers.currentStep
         ? ''
-        : (gameStarted ? displayedText : (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') ? currentMessage.message : ''));
-    
-    // 等待数据时 isTyping 应该是 false
+        : (gameStarted ? displayedText : (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change') ? currentMessage.message : ''));
+
     const finalIsTyping = (stepHandlers.isWaitingForData && !stepHandlers.currentStep) ? false : isTyping;
-
-    // 当消息完成打字时，将其添加到历史记录（仅文本模式）
-    useEffect(() => {
-        if (isTextMode && gameStarted && currentMessage && 
-            (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') && 
-            !isTyping && currentMessage.message && 
-            !messageHistory.some(m => m.id === currentMessage.id)) {
-            // 检查是否已经存在，避免重复添加
-            setMessageHistory(prev => {
-                if (prev.some(m => m.id === currentMessage.id)) {
-                    return prev;
-                }
-                return [...prev, { ...currentMessage }];
-            });
-        }
-    }, [isTyping, currentMessage, isTextMode, gameStarted, messageHistory]);
-
-    // 文本模式下自动滚动到底部
-    useEffect(() => {
-        if (isTextMode && textModeContainerRef.current) {
-            textModeContainerRef.current.scrollTop = textModeContainerRef.current.scrollHeight;
-        }
-    }, [messageHistory, finalDisplayText, isTextMode]);
 
     void gameTitle;
     void worldSetting;
     void sceneSetting;
 
-    // 初始化：获取游戏数据
     useEffect(() => {
         const fetchPresetData = async () => {
             if (!presetId) {
@@ -217,27 +202,21 @@ const Galgame = () => {
 
                 if (response.data.success) {
                     const data = response.data;
-
                     setPresetData(data);
-
-                    // 分别存储不同类型的数据
                     setWorldSetting(data.worldSetting);
                     setNpcSetting(data.npcSetting || null);
                     setSceneSetting(data.sceneSetting);
 
-                    // 设置游戏标题
                     if (data.worldSetting?.title) {
                         setGameTitle(data.worldSetting.title);
                     }
 
-                    // 设置场景名称和背景图片
                     let sceneImage = '';
                     if (data.sceneSetting?.scenes && data.sceneSetting.scenes.length > 0) {
                         const firstScene = data.sceneSetting.scenes[0];
-                        if (firstScene.name) {
-                            setSceneName(firstScene.name);
+                        if (firstScene) {
+                            setCurrentScene(firstScene);
                         }
-
                         if (firstScene.images) {
                             sceneImage = firstScene.images.startsWith('http')
                                 ? firstScene.images
@@ -249,33 +228,6 @@ const Galgame = () => {
                     if (!sceneImage) {
                         setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
                     }
-
-                    const initMessages: Message[] = [];
-
-                    if (data.worldSetting?.preamble) {
-                        initMessages.push({
-                            id: 1,
-                            type: 'narration',
-                            message: data.worldSetting.preamble,
-                        });
-                    }
-
-                    if (data.worldSetting?.initialPlot) {
-                        initMessages.push({
-                            id: initMessages.length + 1,
-                            type: 'narration',
-                            message: data.worldSetting.initialPlot,
-                        });
-                    }
-
-                    // 如果没有任何初始消息，使用默认消息
-                    if (initMessages.length === 0) {
-                        setInitialMessages([]);
-                    } else {
-                        setInitialMessages(initMessages);
-                    }
-
-                    // 显示故事介绍弹窗
                     setShowStoryIntro(true);
                 }
             } catch (error) {
@@ -288,7 +240,6 @@ const Galgame = () => {
         fetchPresetData();
     }, [presetId]);
 
-    // 处理开始游戏
     const handleStartGame = useCallback(async () => {
         if (!sessionId) {
             toast.error('没有 sessionId，无法开始游戏');
@@ -299,14 +250,11 @@ const Galgame = () => {
         setShowStoryIntro(false);
         setGameStarted(true);
 
-        // 清空初始消息和历史记录，准备接收流式输出
         setInitialMessages([]);
-        setMessageHistory([]);
 
         await stepHandlers.handleStreamAction('开始游戏', {
             onBeforeRequest: () => {
                 setInitialMessages([]);
-                setMessageHistory([]);
             },
             onSuccess: () => {
                 setIsStartingGame(false);
@@ -322,69 +270,198 @@ const Galgame = () => {
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
-            // 在文本模式下，将当前消息添加到历史记录
-            if (isTextMode && currentMessage && 
-                (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') &&
-                !messageHistory.some(m => m.id === currentMessage.id)) {
-                setMessageHistory(prev => [...prev, { ...currentMessage }]);
-            }
             stepHandlers.handleNextStep();
         }
-        setShowCustomInput(false);
-        setCustomInputValue('');
-    }, [gameStarted, stepHandlers, isTextMode, currentMessage, messageHistory]);
+    }, [gameStarted, stepHandlers]);
 
-    // 处理自动播放切换
     const handleAutoPlayToggle = useCallback(() => {
         setIsAutoPlay(prev => !prev);
     }, []);
 
-    // 处理文本模式切换
-    const handleTextModeToggle = useCallback(() => {
-        setIsTextMode(prev => {
-            if (!prev) {
-                // 开启文本模式时，将当前消息添加到历史记录
-                if (currentMessage && 
-                    (currentMessage.type === 'narration' || currentMessage.type === 'dialogue') &&
-                    !isTyping &&
-                    !messageHistory.some(m => m.id === currentMessage.id)) {
-                    setMessageHistory(prevHistory => [...prevHistory, { ...currentMessage }]);
-                }
-            }
-            return !prev;
-        });
-    }, [currentMessage, isTyping, messageHistory]);
+    const loadAndPlaySceneMusic = useCallback(async (scene?: GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null) => {
+        if (!presetId) return;
 
-    // 自动播放逻辑：当打字完成且自动播放开启时，自动触发下一个消息
+        const targetScene = scene ?? currentScene;
+        const sceneId = targetScene?.id;
+        const soundtrack = targetScene?.soundtrack;
+
+        if (!sceneId || !soundtrack) {
+            console.log('sceneId或soundtrack为空');
+
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+            }
+            setCurrentMusicUrl(null);
+            setIsMusicPlaying(false);
+            isLoadingMusicRef.current = false;
+            currentSceneIdRef.current = null;
+            return;
+        }
+
+        if (currentSceneIdRef.current === sceneId && currentMusicUrl) {
+            return;
+        }
+
+        if (isLoadingMusicRef.current) {
+            return;
+        }
+
+        isLoadingMusicRef.current = true;
+        currentSceneIdRef.current = sceneId;
+
+        try {
+            const response = await getGalgamePresetApi.getMusic(presetId, soundtrack);
+
+            if (!response.data || !(response.data instanceof Blob)) {
+                console.warn('无法获取音乐数据');
+                isLoadingMusicRef.current = false;
+                currentSceneIdRef.current = null;
+                return;
+            }
+
+            const musicUrl = URL.createObjectURL(response.data);
+
+            if (audioRef.current) {
+                audioRef.current.pause();
+                if (currentMusicUrl && currentMusicUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(currentMusicUrl);
+                }
+                audioRef.current.src = '';
+            }
+
+            const audio = new Audio(musicUrl);
+            audio.loop = true;
+            audio.volume = 0.5;
+
+            const handleCanPlay = () => {
+                isLoadingMusicRef.current = false;
+                if (isMusicPlaying && audioRef.current === audio) {
+                    audio.play().catch((error: any) => {
+                        if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                            console.error('播放音乐失败:', error);
+                        }
+                    });
+                }
+            };
+
+            const handleError = () => {
+                console.error('音乐加载失败');
+                setIsMusicPlaying(false);
+                if (currentMusicUrl && currentMusicUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(currentMusicUrl);
+                }
+                setCurrentMusicUrl(null);
+                isLoadingMusicRef.current = false;
+                currentSceneIdRef.current = null;
+                if (audioRef.current === audio) {
+                    audioRef.current = null;
+                }
+            };
+
+            audio.addEventListener('canplay', handleCanPlay, { once: true });
+            audio.addEventListener('error', handleError, { once: true });
+
+            audioRef.current = audio;
+            setCurrentMusicUrl(musicUrl);
+
+            audio.load();
+            setIsMusicPlaying(true);
+            audio.play().catch((error: any) => {
+                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                    console.error('播放音乐失败:', error);
+                }
+                isLoadingMusicRef.current = false;
+            });
+        } catch (error) {
+            console.error('获取音乐失败:', error);
+            isLoadingMusicRef.current = false;
+            currentSceneIdRef.current = null;
+        }
+    }, [presetId, currentScene]);
+
+    const handleMusicToggle = useCallback(() => {
+        if (isMusicPlaying) {
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
+            setIsMusicPlaying(false);
+        } else {
+            if (audioRef.current && currentMusicUrl) {
+                audioRef.current.play().catch((error: any) => {
+                    console.error('播放音乐失败:', error);
+                });
+            } else if (currentScene) {
+                loadAndPlaySceneMusic();
+            }
+            setIsMusicPlaying(true);
+        }
+    }, [isMusicPlaying, currentMusicUrl, currentScene, loadAndPlaySceneMusic]);
+
+    useEffect(() => {
+        if (!gameStarted || !currentScene?.id || !currentScene?.soundtrack) {
+            console.log('currentScene没有音乐数据');
+
+            return;
+        }
+
+        const sceneId = currentScene.id;
+        if (currentSceneIdRef.current === sceneId) {
+            return;
+        }
+
+        loadAndPlaySceneMusic(currentScene);
+    }, [currentScene?.id, currentScene?.soundtrack, gameStarted, loadAndPlaySceneMusic]);
+
+    useEffect(() => {
+        if (!audioRef.current || !currentMusicUrl) return;
+
+        if (isMusicPlaying) {
+            audioRef.current.play().catch((error: any) => {
+                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
+                    console.error('播放音乐失败:', error);
+                }
+            });
+        } else {
+            audioRef.current.pause();
+        }
+    }, [isMusicPlaying, currentMusicUrl]);
+
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+            }
+        };
+    }, []);
+
     useEffect(() => {
         if (!isAutoPlay || !gameStarted) return;
         if (stepHandlers.isWaitingForData) return;
-        if (finalIsTyping) return; // 还在打字中，不触发
-        if (!stepHandlers.showNextButton) return; // 没有下一个按钮，不触发
+        if (finalIsTyping) return;
+        if (!stepHandlers.showNextButton) return;
         if (currentMessage?.type === 'choice') {
-            // 遇到选择类型时，自动关闭自动播放
             setIsAutoPlay(false);
             return;
         }
 
-        // 延迟一段时间后自动触发下一个消息（给用户时间阅读）
         const autoPlayTimer = setTimeout(() => {
             if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
                 handleNextMessage();
             }
-        }, isTextMode ? 1000 : 600); // 文本模式下延迟稍长一些
+        }, 600);
 
         return () => {
             clearTimeout(autoPlayTimer);
         };
-    }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, isTextMode]);
+    }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
         if (!stepHandlers.currentStep || stepHandlers.currentStep.type !== 'choice') {
             return;
         }
 
-        // 找到对应的 option 对象
         const optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
             const optText = typeof opt === 'string' ? opt : (opt.text || opt);
             return optText === option.text;
@@ -398,31 +475,8 @@ const Galgame = () => {
 
             stepHandlers.handleChoiceOption(optionData, optionIndex);
         }
-
-        setShowCustomInput(false);
-        setCustomInputValue('');
     }, [stepHandlers]);
 
-    const handleCustomInputClick = () => {
-        setShowCustomInput(true);
-    };
-
-    const handleCustomInputSubmit = useCallback(() => {
-        if (customInputValue.trim()) {
-            stepHandlers.handleChoiceSend(customInputValue.trim());
-            setCustomInputValue('');
-            setShowCustomInput(false);
-        }
-    }, [customInputValue, stepHandlers]);
-
-    const handleCustomInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            handleCustomInputSubmit();
-        }
-    };
-
-    console.log(worldSetting?.player?.images);
-    console.log(`${HOST_ADDRESS}${worldSetting?.player?.images}`);
     if (isLoading) {
         return (
             <div className={styles.pageRoot}>
@@ -461,10 +515,9 @@ const Galgame = () => {
                 >
                     <div className={styles.topHeader}>
                         <CiLocationOn />
-                        <span>{sceneName}</span>
+                        <span>{currentScene?.name}</span>
                     </div>
-                    {/* 文本模式下不显示立绘 */}
-                    {!isTextMode && currentMessage.characterImage && (
+                    {currentMessage.characterImage && (
                         <div
                             className={`${styles.characterContainer} ${currentMessage.characterPosition === 'left'
                                 ? styles.characterSlideLeft
@@ -479,92 +532,21 @@ const Galgame = () => {
                         </div>
                     )}
                     <div className={styles.gameContentWrapper}>
-                        {isTextMode ? (
-                            <TextModeDisplay
-                                messageHistory={messageHistory}
-                                currentMessage={currentMessage}
-                                finalDisplayText={finalDisplayText}
-                                finalIsTyping={finalIsTyping}
-                                isWaitingForData={stepHandlers.isWaitingForData}
-                                currentStep={stepHandlers.currentStep}
-                                showNextButton={stepHandlers.showNextButton}
-                                isAutoPlay={isAutoPlay}
-                                onNextMessage={handleNextMessage}
-                                containerRef={textModeContainerRef}
-                            />
-                        ) : (
-                            <NormalModeDisplay
-                                currentMessage={currentMessage}
-                                finalDisplayText={finalDisplayText}
-                                finalIsTyping={finalIsTyping}
-                                isWaitingForData={stepHandlers.isWaitingForData}
-                                currentStep={stepHandlers.currentStep}
-                                showNextButton={stepHandlers.showNextButton}
-                                isAutoPlay={isAutoPlay}
-                                onNextMessage={handleNextMessage}
-                            />
-                        )}
-                        {/* 选择类型 */}
-                        {!stepHandlers.isWaitingForData && currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
-                            <>
-                                <div className={styles.choiceContainer}>
-                                    {currentMessage.options.map((option) => (
-                                        <div
-                                            key={option.id}
-                                            className={styles.choiceOption}
-                                            onClick={() => handleChoiceClick(option)}
-                                            style={{
-                                                opacity: stepHandlers.selectedOptionIndex !== null &&
-                                                    stepHandlers.selectedOptionIndex !== currentMessage.options?.findIndex((opt: any) => opt.text === option.text)
-                                                    ? 0.5
-                                                    : 1,
-                                                pointerEvents: stepHandlers.isWaitingForData ? 'none' : 'auto'
-                                            }}
-                                        >
-                                            <span className={styles.choiceText}>{option.text}</span>
-                                            <div className={styles.choicePrice}>
-                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                                <span>2</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {!showCustomInput ? (
-                                        <div
-                                            className={styles.customInputText}
-                                            onClick={handleCustomInputClick}
-                                            style={{
-                                                pointerEvents: stepHandlers.isWaitingForData ? 'none' : 'auto',
-                                                opacity: stepHandlers.isWaitingForData ? 0.5 : 1
-                                            }}
-                                        >
-                                            <span>自定义输入</span>
-                                        </div>
-                                    ) : (
-                                        <div className={styles.customInput}>
-                                            <input
-                                                type="text"
-                                                placeholder="请输入..."
-                                                value={customInputValue}
-                                                onChange={(e) => setCustomInputValue(e.target.value)}
-                                                onKeyDown={handleCustomInputKeyDown}
-                                                disabled={stepHandlers.isWaitingForData}
-                                                autoFocus
-                                            />
-                                            <button
-                                                onClick={handleCustomInputSubmit}
-                                                disabled={stepHandlers.isWaitingForData || !customInputValue.trim()}
-                                            >
-                                                <span>发送</span>
-                                                <div className={styles.choicePrice}>
-                                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                                    <span>2</span>
-                                                </div>
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
+                        <NormalModeDisplay
+                            currentMessage={currentMessage}
+                            finalDisplayText={finalDisplayText}
+                            finalIsTyping={finalIsTyping}
+                            stepHandlers={{
+                                isWaitingForData: stepHandlers.isWaitingForData,
+                                currentStep: stepHandlers.currentStep,
+                                showNextButton: stepHandlers.showNextButton,
+                                selectedOptionIndex: stepHandlers.selectedOptionIndex,
+                            }}
+                            isAutoPlay={isAutoPlay}
+                            onNextMessage={handleNextMessage}
+                            onChoiceClick={handleChoiceClick}
+                            onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
+                        />
                         <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
@@ -578,17 +560,13 @@ const Galgame = () => {
                                     <span>历史</span>
                                 </div>
                             </div>
-                            <div 
-                                className={`${styles.buttonItem} ${isTextMode ? styles.buttonItemActive : ''}`}
-                                onClick={handleTextModeToggle}
-                                style={{ cursor: 'pointer' }}
-                            >
+                            <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
                                     <LuFileText />
                                     <span>文本</span>
                                 </div>
                             </div>
-                            <div 
+                            <div
                                 className={`${styles.buttonItem} ${isAutoPlay ? styles.buttonItemActive : ''}`}
                                 onClick={handleAutoPlayToggle}
                                 style={{ cursor: 'pointer' }}
@@ -598,7 +576,11 @@ const Galgame = () => {
                                     <span>自动</span>
                                 </div>
                             </div>
-                            <div className={styles.buttonItem}>
+                            <div
+                                className={`${styles.buttonItem} ${isMusicPlaying ? styles.buttonItemActive : ''}`}
+                                onClick={handleMusicToggle}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <div className={styles.buttonInner}>
                                     <PiMusicNoteDuotone />
                                     <span>音乐</span>

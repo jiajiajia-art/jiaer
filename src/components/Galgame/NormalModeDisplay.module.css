@@ -1,0 +1,297 @@
+.messageContainer {
+    position: absolute;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-height: 180px;
+    height: auto;
+    overflow-y: hidden;
+    overflow-x: hidden;
+    padding: 10px;
+    box-sizing: border-box;
+    padding-bottom: 0px;
+}
+
+.narrationMessage {
+    color: #fff;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    word-break: break-word;
+    margin-bottom: 8px;
+}
+
+.characterMessage {
+    color: #fff;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1.6;
+    word-break: break-word;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.characterName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    border-left: 3px solid #845DFF;
+    padding-left: 10px;
+}
+
+.characterDivider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #fff, transparent);
+    margin: 4px 0;
+}
+
+.characterText {
+    flex: 1;
+    padding-bottom: 4px;
+}
+
+.nextButtonContainer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.nextButton {
+    background: transparent;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    border: none;
+}
+
+.nextButton:hover {
+    transform: scale(1.1);
+}
+
+.nextButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nextButton svg {
+    width: 28px;
+    height: 28px;
+}
+
+.cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: #fff;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: baseline;
+}
+
+/* 文本颜色标记样式 */
+.colorRed {
+    color: #ff4444;
+    font-weight: 500;
+}
+
+.colorYellow {
+    color: #ffd700;
+    font-weight: 500;
+}
+
+.colorGreen {
+    color: #4ade80;
+    font-weight: 500;
+}
+
+.colorBlue {
+    color: #60a5fa;
+    font-weight: 500;
+}
+
+.colorPurple {
+    color: #a78bfa;
+    font-weight: 500;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+.choiceContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 80px;
+}
+
+.choiceOption {
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 16px;
+    word-break: break-word;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 16%,
+        black 90%,
+        transparent 100%
+    );
+    background-color: #0000007a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.choiceText {
+    flex: 1;
+    min-width: 0;
+}
+
+.choicePrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.choicePrice img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+}
+
+.choiceOption:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.customInputText {
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 16px;
+    word-break: break-word;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 16%,
+        black 90%,
+        transparent 100%
+    );
+    background-color: #0000007a;
+}
+
+.customInputText:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.customInput {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background-color: #0000007a;
+    padding: 8px 20px;
+    border-radius: 4px;
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 10%,
+        black 90%,
+        transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 16%,
+        black 90%,
+        transparent 100%
+    );
+}
+
+.customInput input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.6;
+    padding: 0;
+}
+
+.customInput input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.customInput button {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 16px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.customInput button:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.customInput button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .messageContainer {
+        bottom: 80px;
+    }
+}
+
