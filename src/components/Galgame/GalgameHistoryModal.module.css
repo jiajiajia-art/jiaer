@@ -273,15 +273,6 @@
 }
 
 @media (max-width: 768px) {
-    .modalOverlay {
-        padding-top: 60px;
-        padding-bottom: 80px;
-    }
-    
-    .modalContent {
-        width: 95%;
-        max-height: calc(100vh - 140px);
-    }
     
     .modalHeader {
         padding: 16px 20px;

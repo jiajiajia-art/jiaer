@@ -15,7 +15,7 @@ import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useGalgameStep } from "../hooks/galgame/useGalgameStep";
 import { useStoryTyping } from "../hooks/story/useStoryTyping";
-import { extractPlainText, extractChoiceFromHistory } from "../utils/textUtils";
+import { extractPlainText } from "../utils/textUtils";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
 import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterContainerClassName";
 import { useMusicPlayer } from "../hooks/galgame/useMusicPlayer";
@@ -206,41 +206,41 @@ const Galgame = () => {
     }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
     // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息的 choice 部分
-    useEffect(() => {
-        if (!historyLoading && presetData && history.length > 0 && showStoryIntro) {
-            setShowStoryIntro(false);
-            setGameStarted(true);
+    // useEffect(() => {
+    //     if (!historyLoading && presetData && history.length > 0 && showStoryIntro) {
+    //         setShowStoryIntro(false);
+    //         setGameStarted(true);
             
-            // 查找最后一条助手消息，解析其中的 choice 部分
-            for (let i = history.length - 1; i >= 0; i--) {
-                if (history[i].role === 'assistant' && history[i].content) {
-                    const choiceData = extractChoiceFromHistory(history[i].content);
-                    if (choiceData && choiceData.options.length > 0) {
-                        // 转换为 Message 格式并设置
-                        const choiceMessage: Message = {
-                            id: Date.now(),
-                            type: 'choice',
-                            message: choiceData.title
-                                ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
-                                : (choiceData.text || '请选择你的行动'),
-                            options: choiceData.options.map((opt, index) => ({
-                                id: index + 1,
-                                text: opt,
-                            })),
-                            characterImage: worldSetting?.player?.images
-                                ? (worldSetting.player.images.startsWith('http')
-                                    ? worldSetting.player.images
-                                    : `${HOST_ADDRESS}${worldSetting.player.images}`)
-                                : undefined,
-                            characterPosition: 'right',
-                        };
-                        setInitialMessages([choiceMessage]);
-                        break;
-                    }
-                }
-            }
-        }
-    }, [historyLoading, presetData, history, showStoryIntro, worldSetting]);
+    //         // 查找最后一条助手消息，解析其中的 choice 部分
+    //         for (let i = history.length - 1; i >= 0; i--) {
+    //             if (history[i].role === 'assistant' && history[i].content) {
+    //                 const choiceData = extractChoiceFromHistory(history[i].content);
+    //                 if (choiceData && choiceData.options.length > 0) {
+    //                     // 转换为 Message 格式并设置
+    //                     const choiceMessage: Message = {
+    //                         id: Date.now(),
+    //                         type: 'choice',
+    //                         message: choiceData.title
+    //                             ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
+    //                             : (choiceData.text || '请选择你的行动'),
+    //                         options: choiceData.options.map((opt, index) => ({
+    //                             id: index + 1,
+    //                             text: opt,
+    //                         })),
+    //                         characterImage: worldSetting?.player?.images
+    //                             ? (worldSetting.player.images.startsWith('http')
+    //                                 ? worldSetting.player.images
+    //                                 : `${HOST_ADDRESS}${worldSetting.player.images}`)
+    //                             : undefined,
+    //                         characterPosition: 'right',
+    //                     };
+    //                     setInitialMessages([choiceMessage]);
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }, [historyLoading, presetData, history, showStoryIntro, worldSetting]);
 
     const plainTextForTyping = useMemo(() => {
         if (currentMessage && currentMessage.type !== 'choice') {
@@ -370,7 +370,7 @@ const Galgame = () => {
             if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
                 handleNextMessage();
             }
-        }, 600);
+        }, 2000);
 
         return () => {
             clearTimeout(autoPlayTimer);

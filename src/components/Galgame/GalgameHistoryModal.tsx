@@ -128,7 +128,7 @@ const renderColoredText = (text: string): React.ReactNode => {
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
-const GalgameHistoryModal = ({ isOpen, history, backgroundImage, onClose }: GalgameHistoryModalProps) => {
+const GalgameHistoryModal = ({ isOpen, history, onClose }: GalgameHistoryModalProps) => {
     if (!isOpen) return null;
 
     return (
