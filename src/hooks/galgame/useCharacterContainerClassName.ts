@@ -30,9 +30,9 @@ export const useCharacterContainerClassName = ({
                 classes.push(styles.characterJumpRight);
             }
         } else if (characterAnimation === 'vibration') {
-                classes.push(styles.characterVibration);
-            
+            classes.push(styles.characterVibration);
         }
+        
         // classes.push(styles.characterVibration);
 
         // classes.push(styles.characterJumpLeft);

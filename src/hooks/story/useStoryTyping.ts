@@ -17,7 +17,7 @@ const parseTextParts = (text: string): TextPart[] => {
     if (!text) return [{ type: 'text', content: '' }];
     
     const parts: TextPart[] = [];
-    const animationTags = ['jump', 'vibration', 'hurt'];
+    const animationTags = ['jump', 'vibration', 'injury'];
     const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
     
     // 先完全移除所有动画标签及其内容（包括嵌套的情况）
@@ -53,7 +53,7 @@ const parseTextParts = (text: string): TextPart[] => {
         // 颜色标签，保留内容（但需要递归处理内容中可能残留的标签）
         if (colorTags.includes(tagName)) {
             // 递归处理内容，确保去除其中的动画标签
-            const cleanedContent = content.replace(/<(jump|vibration|hurt)>[^<]*<\/\1>/gi, '');
+            const cleanedContent = content.replace(/<(jump|vibration|injury)>[^<]*<\/\1>/gi, '');
             parts.push({ type: 'color', content: cleanedContent, color: tagName });
         }
         

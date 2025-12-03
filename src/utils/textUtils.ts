@@ -56,7 +56,7 @@ export const extractPlainText = (text: string): string => {
     if (!text) return '';
     
     let result = text;
-    const animationTags = ['jump', 'vibration', 'hurt'];
+    const animationTags = ['jump', 'vibration', 'injury'];
     const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
     
     // 递归去除所有标签，直到没有标签为止（处理嵌套标签）
@@ -122,10 +122,10 @@ export const hasVibrationTag = (text: string): boolean => {
     return /<vibration>.*?<\/vibration>/gi.test(text);
 };
 
-// 检测是否包含 hurt 标签
-export const hasHurtTag = (text: string): boolean => {
+// 检测是否包含 injury 标签
+export const hasinjuryTag = (text: string): boolean => {
     if (!text) return false;
-    return /<hurt>.*?<\/hurt>/gi.test(text);
+    return /<injury>.*?<\/injury>/gi.test(text);
 };
 
 // 清理历史记录中的标记文字，并提取 OPTION

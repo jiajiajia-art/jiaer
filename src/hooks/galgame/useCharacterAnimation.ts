@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { hasJumpTag, hasVibrationTag, hasHurtTag } from '../../utils/textUtils';
+import { hasJumpTag, hasVibrationTag, hasinjuryTag } from '../../utils/textUtils';
 
-export type CharacterAnimationType = 'jump' | 'vibration' | 'hurt' | null;
+export type CharacterAnimationType = 'jump' | 'vibration' | 'injury' | null;
 
 interface UseCharacterAnimationOptions {
     message: string | undefined;
@@ -41,13 +41,9 @@ export const useCharacterAnimation = ({ message, messageType }: UseCharacterAnim
                     //     vibrationTimerRef.current = null;
                     // }, 900);
                 }
-            } else if (hasHurtTag(message)) {
-                // 受伤动画，持续1秒后清除
-                setCharacterAnimation('hurt');
-                vibrationTimerRef.current = setTimeout(() => {
-                    setCharacterAnimation(null);
-                    vibrationTimerRef.current = null;
-                }, 1000);
+            } else if (hasinjuryTag(message)) {
+                // 受伤动画，持续显示直到消息改变（进入下一个step）
+                setCharacterAnimation('injury');
             } else {
                 // 当消息改变且没有跳跃标签时，清除跳跃动画
                 if (characterAnimation === 'jump') {

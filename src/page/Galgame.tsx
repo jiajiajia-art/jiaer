@@ -15,11 +15,13 @@ import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useGalgameStep } from "../hooks/galgame/useGalgameStep";
 import { useStoryTyping } from "../hooks/story/useStoryTyping";
-import { extractPlainText } from "../utils/textUtils";
+import { extractPlainText, extractChoiceFromHistory } from "../utils/textUtils";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
 import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterContainerClassName";
 import { useMusicPlayer } from "../hooks/galgame/useMusicPlayer";
 import toast from "react-hot-toast";
+import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
+import useGalgameHistory from "../hooks/galgame/useGalgameHistory";
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -53,6 +55,9 @@ const Galgame = () => {
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
+    const [showGalgameHistory, setShowGalgameHistory] = useState<boolean>(false);
+
+    const { history, refreshHistory, loading: historyLoading } = useGalgameHistory();
 
     const stepHandlers = useGalgameStep({
         sessionId,
@@ -200,6 +205,43 @@ const Galgame = () => {
         }
     }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
+    // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息的 choice 部分
+    useEffect(() => {
+        if (!historyLoading && presetData && history.length > 0 && showStoryIntro) {
+            setShowStoryIntro(false);
+            setGameStarted(true);
+            
+            // 查找最后一条助手消息，解析其中的 choice 部分
+            for (let i = history.length - 1; i >= 0; i--) {
+                if (history[i].role === 'assistant' && history[i].content) {
+                    const choiceData = extractChoiceFromHistory(history[i].content);
+                    if (choiceData && choiceData.options.length > 0) {
+                        // 转换为 Message 格式并设置
+                        const choiceMessage: Message = {
+                            id: Date.now(),
+                            type: 'choice',
+                            message: choiceData.title
+                                ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
+                                : (choiceData.text || '请选择你的行动'),
+                            options: choiceData.options.map((opt, index) => ({
+                                id: index + 1,
+                                text: opt,
+                            })),
+                            characterImage: worldSetting?.player?.images
+                                ? (worldSetting.player.images.startsWith('http')
+                                    ? worldSetting.player.images
+                                    : `${HOST_ADDRESS}${worldSetting.player.images}`)
+                                : undefined,
+                            characterPosition: 'right',
+                        };
+                        setInitialMessages([choiceMessage]);
+                        break;
+                    }
+                }
+            }
+        }
+    }, [historyLoading, presetData, history, showStoryIntro, worldSetting]);
+
     const plainTextForTyping = useMemo(() => {
         if (currentMessage && currentMessage.type !== 'choice') {
             return extractPlainText(currentMessage.message);
@@ -262,6 +304,9 @@ const Galgame = () => {
                     if (!sceneImage) {
                         setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
                     }
+                    // 如果存在历史记录，不显示开场白，直接进入游戏
+                    // 注意：这里需要等待历史记录加载完成后再判断
+                    // 所以会在下面的 useEffect 中处理
                     setShowStoryIntro(true);
                 }
             } catch (error) {
@@ -374,7 +419,7 @@ const Galgame = () => {
         <>
             <div className={styles.pageRoot}>
                 <div
-                    className={`${styles.mainContent} ${styles.worldVibration}`}
+                    className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}`}
                     style={{
                         backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
                         backgroundSize: 'cover',
@@ -382,10 +427,13 @@ const Galgame = () => {
                         backgroundRepeat: 'no-repeat'
                     }}
                 >
+                    {characterAnimation === 'injury' && (
+                        <div className={styles.injuryBloodSplatter}></div>
+                    )}
                     <div className={styles.topHeader}>
-                        <CiLocationOn />
+                    <CiLocationOn />
                         <span>{currentScene?.name}</span>
-                    </div>
+                </div>
                     {currentMessage.characterImage && (
                         <div className={getCharacterContainerClassName()}>
                             <img
@@ -393,24 +441,26 @@ const Galgame = () => {
                                 alt="角色立绘"
                                 className={styles.characterImage}
                             />
-                </div>
+                            </div>
                     )}
                     <div className={styles.gameContentWrapper}>
-                        <NormalModeDisplay
-                            currentMessage={currentMessage}
-                            finalDisplayText={finalDisplayText}
-                            finalIsTyping={finalIsTyping}
-                            stepHandlers={{
-                                isWaitingForData: stepHandlers.isWaitingForData,
-                                currentStep: stepHandlers.currentStep,
-                                showNextButton: stepHandlers.showNextButton,
-                                selectedOptionIndex: stepHandlers.selectedOptionIndex,
-                            }}
-                            isAutoPlay={isAutoPlay}
-                            onNextMessage={handleNextMessage}
-                            onChoiceClick={handleChoiceClick}
-                            onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
-                        />
+                        {!showGalgameHistory &&
+                            <NormalModeDisplay
+                                currentMessage={currentMessage}
+                                finalDisplayText={finalDisplayText}
+                                finalIsTyping={finalIsTyping}
+                                stepHandlers={{
+                                    isWaitingForData: stepHandlers.isWaitingForData,
+                                    currentStep: stepHandlers.currentStep,
+                                    showNextButton: stepHandlers.showNextButton,
+                                    selectedOptionIndex: stepHandlers.selectedOptionIndex,
+                                }}
+                                isAutoPlay={isAutoPlay}
+                                onNextMessage={handleNextMessage}
+                                onChoiceClick={handleChoiceClick}
+                                onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
+                            />
+                        }
                 <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
@@ -418,7 +468,12 @@ const Galgame = () => {
                         <span>{user?.user?.points}</span>
                                 </div>
                             </div>
-                            <div className={styles.buttonItem}>
+                            <div className={styles.buttonItem}
+                                onClick={() => {
+                                    refreshHistory();
+                                    setShowGalgameHistory(true);
+                                }}
+                            >
                                 <div className={styles.buttonInner}>
                                     <BiHistory />
                                     <span>历史</span>
@@ -458,6 +513,13 @@ const Galgame = () => {
                         presetData={presetData}
                         onStartGame={handleStartGame}
                         isLoading={isStartingGame}
+                    />
+
+                    <GalgameHistoryModal
+                        isOpen={showGalgameHistory}
+                        history={history}
+                        onClose={() => setShowGalgameHistory(false)}
+                        backgroundImage={backgroundImage}
                     />
                 </div>
             </div>

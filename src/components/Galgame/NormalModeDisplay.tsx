@@ -95,10 +95,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
             // 先完全移除所有动画标签，然后再解析颜色标签
             let cleanedText = originalText;
             // 移除所有动画标签及其内容
-            cleanedText = cleanedText.replace(/<(jump|vibration|hurt)>[\s\S]*?<\/\1>/gi, '');
+            cleanedText = cleanedText.replace(/<(jump|vibration|injury)>[\s\S]*?<\/\1>/gi, '');
             // 移除不完整的动画标签
-            cleanedText = cleanedText.replace(/<(jump|vibration|hurt)>/gi, '');
-            cleanedText = cleanedText.replace(/<\/(jump|vibration|hurt)>/gi, '');
+            cleanedText = cleanedText.replace(/<(jump|vibration|injury)>/gi, '');
+            cleanedText = cleanedText.replace(/<\/(jump|vibration|injury)>/gi, '');
             
             const allParts = parseColorMarkup(cleanedText);
 

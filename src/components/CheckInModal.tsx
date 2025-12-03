@@ -17,7 +17,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
             toast.success('签到成功，获得10积分');
             setTimeout(() => {
                 onClose();
-            }, 3000);
+            }, 1000);
         } else {
             const errorMessage = response.data.message || '签到失败';
             toast.error(errorMessage);
