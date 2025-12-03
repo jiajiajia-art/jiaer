@@ -33,7 +33,7 @@ export const useCharacterContainerClassName = ({
                 classes.push(styles.characterVibration);
             
         }
-        classes.push(styles.characterVibration);
+        // classes.push(styles.characterVibration);
 
         // classes.push(styles.characterJumpLeft);
 

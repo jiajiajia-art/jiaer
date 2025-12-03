@@ -5,6 +5,7 @@ import { HOST_ADDRESS } from '../../config';
 import payApi from '../../api/pay/payApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { toast } from 'react-hot-toast';
+import { auth } from '../../api/account/authApi';
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
@@ -25,7 +26,7 @@ export const useGalgameStep = ({
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
-    const { user } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
 
     // 同步 currentStep 到 ref
     useEffect(() => {
@@ -181,13 +182,11 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
         if (user?.user.points && user.user.points > 3) {
-            await reducePoints("option");
+            await reducePoints("selfDefined");
         } else {
             toast.error("积分不足");
             return;
         }
-
-        await reducePoints("selfDefined");
 
         await handleStreamAction(inputText, {
             onError: (error) => {
@@ -200,10 +199,23 @@ export const useGalgameStep = ({
     const reducePoints = useCallback(async (type: "option" | "selfDefined") => {
         const response = await payApi.optionPoints({ type });
         if (response.data.success) {
+            getUserInfo();
+            
             return response.data.data;
         }
         return null;
     }, []);
+
+    const getUserInfo = async () => {
+        try {
+            const response = await auth.getUserInfo();
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取用户信息错误:', error);
+        }
+    };
 
     return {
         currentStep,

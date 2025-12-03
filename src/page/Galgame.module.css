@@ -257,6 +257,24 @@
     100% { transform: translate(0, 0); }
 }
 
+@keyframes worldVibrationFast0 {
+    0% { transform: translate(0, 0); }
+    8% { transform: translate(-4px, -3px); }
+    16% { transform: translate(5px, 2px); }
+    24% { transform: translate(-3px, 4px); }
+    32% { transform: translate(4px, -2px); }
+    40% { transform: translate(-2px, -3px); }
+    48% { transform: translate(3px, 3px); }
+    56% { transform: translate(-2px, -4px); }
+    64% { transform: translate(2px, 2px); }
+    72% { transform: translate(-1px, 2px); }    /* 去掉“几乎不动”的帧，改成轻微偏移 */
+    80% { transform: translate(2px, -1px); }
+    88% { transform: translate(-1px, 2px); }
+    96% { transform: translate(2px, -1px); }
+    100% { transform: translate(1px, -1px); }   /* 不与 0% 完全相同，更自然的循环感 */
+}
+
+
 @keyframes worldVibrationBalanced {
     0% {
         transform: translate(0, 0) rotate(0);
@@ -289,21 +307,6 @@
         transform: translate(0, 0) rotate(0);
     }
 }
-
-/* @keyframes characterShakeXY {
-    0% { transform: skewX(9deg); } 
-    10% { transform: skewX(-8deg); } 
-    20% { transform: skewX(7deg); } 
-    30% { transform: skewX(-6deg); } 
-    40% { transform: skewX(5deg); } 
-    50% { transform: skewX(-4deg); } 
-    60% { transform: skewX(3deg); } 
-    70% { transform: skewX(-2deg); } 
-    80% { transform: skewX(1deg); } 
-    90% { transform: skewX(0deg); } 
-    100% { transform: skewX(0deg); }
-} */
-
 
 @keyframes worldVibrationIntense {
     0% {
