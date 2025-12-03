@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { IoArrowDownCircleOutline } from 'react-icons/io5';
 import { Converter } from 'showdown';
 import styles from './NormalModeDisplay.module.css';
 import { parseColorMarkup, extractPlainText } from '../../utils/textUtils';
+import { IoArrowDownCircleOutline } from 'react-icons/io5';
 
-type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change';
+type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
 interface Message {
     id: number;
@@ -78,7 +78,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         }
     }, [currentMessage?.type]);
 
-    const renderTextWithMarkdown = useCallback((displayedPlainText: string, originalText: string) => {
+    const renderTextWithMarkdown = useCallback((displayedPlainText: string, originalText: string, showCursor: boolean = false) => {
         if (!displayedPlainText || !originalText) return null;
 
         const colorClassMap: Record<string, string> = {
@@ -92,7 +92,15 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         const originalPlainText = extractPlainText(originalText);
 
         const getTextToRender = (): string => {
-            const allParts = parseColorMarkup(originalText);
+            // 先完全移除所有动画标签，然后再解析颜色标签
+            let cleanedText = originalText;
+            // 移除所有动画标签及其内容
+            cleanedText = cleanedText.replace(/<(jump|vibration|hurt)>[\s\S]*?<\/\1>/gi, '');
+            // 移除不完整的动画标签
+            cleanedText = cleanedText.replace(/<(jump|vibration|hurt)>/gi, '');
+            cleanedText = cleanedText.replace(/<\/(jump|vibration|hurt)>/gi, '');
+            
+            const allParts = parseColorMarkup(cleanedText);
 
             if (displayedPlainText.length >= originalPlainText.length) {
                 // 文本全部输出完成，转换所有颜色标记为 HTML
@@ -143,7 +151,20 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         converter.setOption('tables', true);
         converter.setOption('tasklists', true);
 
-        const html = converter.makeHtml(textToRender);
+        let html = converter.makeHtml(textToRender);
+        
+        // 如果显示光标，将光标 HTML 直接插入到文本末尾
+        if (showCursor) {
+            const cursorClassName = styles.cursor;
+            const cursorHtml = `<span class="${cursorClassName}"></span>`;
+            if (html.endsWith('</p>')) {
+                html = html.slice(0, -4) + cursorHtml + '</p>';
+            } else if (html.endsWith('</div>')) {
+                html = html.slice(0, -6) + cursorHtml + '</div>';
+            } else {
+                html += cursorHtml;
+            }
+        }
 
         return <div dangerouslySetInnerHTML={{ __html: html }} />;
     }, [styles]);
@@ -160,18 +181,26 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     }}
                 >
                     {isWaitingForData && !currentStep && currentMessage && (
-                        <div className={styles.narrationContainer}>
-                            <div className={styles.narrationMessage}>
-                                <span className={styles.cursor}></span>
+                        //  <div className={styles.narrationContainer}>
+                        //  <div className={styles.narrationMessage}>
+                        //      <span className={styles.cursor}></span>
+                        //      </div>
+                        <div className={styles.loadingContainer}>
+                            <div className={styles.aiLoader}>
+                                <div className={styles.orbit}></div>
+                                <div className={styles.orbitInner}></div>
+                                <div className={styles.core}></div>
+                            </div>
+                            <div className={styles.statusText}>
+                                AI 推演中<span className={styles.dots}></span>
                             </div>
                         </div>
                     )}
 
                     {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
                         <div className={styles.narrationMessage}>
-                            <div className={styles.characterDivider}></div>
-                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
-                            {finalIsTyping && <span className={styles.cursor}></span>}
+                            <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
+                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
                         </div>
                     )}
 
@@ -181,18 +210,28 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 <div className={styles.characterName}>{currentMessage.characterName}</div>
                                 <div className={styles.characterDivider}></div>
                                 <div className={styles.characterText}>
-                                    {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
-                                    {finalIsTyping && <span className={styles.cursor}></span>}
+                                    {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
                                 </div>
                             </div>
                         </>
                     )}
 
-                    {!isWaitingForData && currentMessage && currentMessage.type === 'scene_change' && currentMessage.message && (
+                    {!isWaitingForData && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && currentMessage.message && (
                         <div className={styles.narrationMessage}>
-                            <div className={styles.characterDivider}></div>
-                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message)}
-                            {finalIsTyping && <span className={styles.cursor}></span>}
+                            <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
+                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                        </div>
+                    )}
+
+                    {showNextButton && !finalIsTyping && !isAutoPlay && (
+                        <div className={styles.nextButtonContainer}>
+                            <button
+                                className={styles.nextButton}
+                                onClick={onNextMessage}
+                                disabled={isWaitingForData}
+                            >
+                                <IoArrowDownCircleOutline />
+                            </button>
                         </div>
                     )}
                 </div>
@@ -203,7 +242,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     {currentMessage.options.map((option) => {
                         const isSelected = selectedOptionIndex !== null &&
                             selectedOptionIndex === currentMessage.options?.findIndex((opt: any) => opt.text === option.text);
-                        const isWaiting = isWaitingForData && isSelected;
+                        // const isWaiting = isWaitingForData && isSelected;
 
                         return (
                             <div
@@ -217,32 +256,13 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                     pointerEvents: isWaitingForData ? 'none' : 'auto'
                                 }}
                             >
-                                {isWaiting && (
+                                {/* {isWaiting && (
                                     <div className={styles.progressBar}>
                                         <div className={styles.progressFill}></div>
                                     </div>
-                                )}
+                                )} */}
                                 <span className={styles.choiceText}>
-                                    {(() => {
-                                        const colorClassMap: Record<string, string> = {
-                                            red: styles.colorRed,
-                                            yellow: styles.colorYellow,
-                                            green: styles.colorGreen,
-                                            blue: styles.colorBlue,
-                                            purple: styles.colorPurple,
-                                        };
-                                        const parts = parseColorMarkup(option.text);
-                                        const htmlParts = parts.map(part => {
-                                            if (part.type === 'color' && part.color) {
-                                                return `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
-                                            }
-                                            return part.content;
-                                        }).join('');
-                                        const converter = new Converter();
-                                        converter.setOption('simpleLineBreaks', true);
-                                        const html = converter.makeHtml(htmlParts);
-                                        return <span dangerouslySetInnerHTML={{ __html: html }} />;
-                                    })()}
+                                    {extractPlainText(option.text)}
                                 </span>
                                 <div className={styles.choicePrice}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />

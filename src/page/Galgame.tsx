@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
@@ -15,10 +15,13 @@ import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useGalgameStep } from "../hooks/galgame/useGalgameStep";
 import { useStoryTyping } from "../hooks/story/useStoryTyping";
-import { hasJumpTag, hasVibrationTag } from "../utils/textUtils";
+import { extractPlainText } from "../utils/textUtils";
+import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
+import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterContainerClassName";
+import { useMusicPlayer } from "../hooks/galgame/useMusicPlayer";
 import toast from "react-hot-toast";
 
-type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change';
+type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
 interface Message {
     id: number;
@@ -49,14 +52,6 @@ const Galgame = () => {
     const [isStartingGame, setIsStartingGame] = useState<boolean>(false);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
-
-    const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
-    const [currentMusicUrl, setCurrentMusicUrl] = useState<string | null>(null);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-    const currentSceneIdRef = useRef<string | null>(null);
-    const isLoadingMusicRef = useRef<boolean>(false);
-    const [characterAnimation, setCharacterAnimation] = useState<'jump' | 'vibration' | null>(null);
-
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
 
     const stepHandlers = useGalgameStep({
@@ -75,6 +70,12 @@ const Galgame = () => {
                 type: 'narration',
                 message: step.content || '',
             };
+        } else if (step.type === 'transition') {
+            return {
+                id: Date.now(),
+                type: 'transition',
+                message: step.content || '',
+            };
         } else if (step.type === 'dialogue') {
             const characterName = step.speakerName || step.npcId || '未知角色';
             let characterImage: string | undefined;
@@ -85,13 +86,19 @@ const Galgame = () => {
                     : `${HOST_ADDRESS}${step.activeImage}`;
             }
 
+            if (step.isPlayer) {
+                characterImage = worldSetting?.player?.images.startsWith('http')
+                    ? worldSetting?.player?.images
+                    : `${HOST_ADDRESS}${worldSetting?.player?.images}`;
+            }
+
             return {
                 id: Date.now(),
                 type: 'dialogue',
                 message: step.content || '',
                 characterName,
                 characterImage,
-                characterPosition: 'left',
+                characterPosition: step.isPlayer ? 'right' : 'left',
             };
         } else if (step.type === 'choice') {
             const options = step.options?.map((opt: any, index: number) => ({
@@ -168,6 +175,25 @@ const Galgame = () => {
         };
     }, [gameStarted, stepHandlers.currentStep, convertStepToMessage, initialMessages]);
 
+    // 使用封装的 hooks
+    const characterAnimation = useCharacterAnimation({
+        message: currentMessage?.message,
+        messageType: currentMessage?.type,
+    });
+
+    const getCharacterContainerClassName = useCharacterContainerClassName({
+        characterPosition: currentMessage?.characterPosition,
+        characterAnimation,
+        styles,
+    });
+
+    const { isMusicPlaying, handleMusicToggle } = useMusicPlayer({
+        presetId,
+        currentScene,
+        gameStarted,
+        isLoading,
+    });
+
     useEffect(() => {
         if (gameStarted && stepHandlers.currentStep && showStoryIntro) {
             setShowStoryIntro(false);
@@ -175,45 +201,21 @@ const Galgame = () => {
     }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
     const plainTextForTyping = useMemo(() => {
-        if (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change')) {
-            return currentMessage.message.replace(/<(red|yellow|green|blue|purple)>(.*?)<\/\1>/gi, '$2')
-                .replace(/<jump>(.*?)<\/jump>/gi, '$1')
-                .replace(/<vibration>(.*?)<\/vibration>/gi, '$1');
+        if (currentMessage && currentMessage.type !== 'choice') {
+            return extractPlainText(currentMessage.message);
         }
         return '';
     }, [currentMessage]);
 
-    useEffect(() => {
-        if (currentMessage && currentMessage.type === 'dialogue' && currentMessage.message) {
-            if (hasJumpTag(currentMessage.message)) {
-                setCharacterAnimation('jump');
-                const timer = setTimeout(() => {
-                    setCharacterAnimation(null);
-                }, 600);
-                return () => clearTimeout(timer);
-            } else if (hasVibrationTag(currentMessage.message)) {
-                setCharacterAnimation('vibration');
-                const timer = setTimeout(() => {
-                    setCharacterAnimation(null);
-                }, 600);
-                return () => clearTimeout(timer);
-            } else {
-                setCharacterAnimation(null);
-            }
-        } else {
-            setCharacterAnimation(null);
-        }
-    }, [currentMessage]);
-
     const { displayedText, isTyping } = useStoryTyping({
         text: plainTextForTyping,
-        enabled: currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change') && gameStarted && !!plainTextForTyping,
+        enabled: currentMessage && currentMessage.type !== 'choice' && gameStarted && !!plainTextForTyping,
         speed: 60
     });
 
     const finalDisplayText = stepHandlers.isWaitingForData && !stepHandlers.currentStep
         ? ''
-        : (gameStarted ? displayedText : (currentMessage && (currentMessage.type === 'narration' || currentMessage.type === 'dialogue' || currentMessage.type === 'scene_change') ? currentMessage.message : ''));
+        : (gameStarted ? displayedText : (currentMessage && currentMessage.type !== 'choice' ? currentMessage.message : ''));
 
     const finalIsTyping = (stepHandlers.isWaitingForData && !stepHandlers.currentStep) ? false : isTyping;
 
@@ -309,164 +311,6 @@ const Galgame = () => {
         setIsAutoPlay(prev => !prev);
     }, []);
 
-    const loadAndPlaySceneMusic = useCallback(async (scene?: GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null) => {
-        if (!presetId) return;
-
-        const targetScene = scene ?? currentScene;
-        const sceneId = targetScene?.id;
-        const soundtrack = targetScene?.soundtrack;
-
-        if (!sceneId || !soundtrack) {
-            console.log('sceneId或soundtrack为空');
-
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = '';
-            }
-            setCurrentMusicUrl(null);
-            setIsMusicPlaying(false);
-            isLoadingMusicRef.current = false;
-            currentSceneIdRef.current = null;
-            return;
-        }
-
-        if (currentSceneIdRef.current === sceneId && currentMusicUrl) {
-            return;
-        }
-
-        if (isLoadingMusicRef.current) {
-            return;
-        }
-
-        isLoadingMusicRef.current = true;
-        currentSceneIdRef.current = sceneId;
-
-        try {
-            const response = await getGalgamePresetApi.getGalgameMusic(presetId, soundtrack);
-
-            if (!response.data || !(response.data instanceof Blob)) {
-                console.warn('无法获取音乐数据');
-                isLoadingMusicRef.current = false;
-                currentSceneIdRef.current = null;
-                return;
-            }
-
-            const musicUrl = URL.createObjectURL(response.data);
-
-            if (audioRef.current) {
-                audioRef.current.pause();
-                if (currentMusicUrl && currentMusicUrl.startsWith('blob:')) {
-                    URL.revokeObjectURL(currentMusicUrl);
-                }
-                audioRef.current.src = '';
-            }
-
-            const audio = new Audio(musicUrl);
-            audio.loop = true;
-            audio.volume = 0.5;
-
-            const handleCanPlay = () => {
-                isLoadingMusicRef.current = false;
-                if (isMusicPlaying && audioRef.current === audio) {
-                    audio.play().catch((error: any) => {
-                        if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
-                            console.error('播放音乐失败:', error);
-                        }
-                    });
-                }
-            };
-
-            const handleError = () => {
-                console.error('音乐加载失败');
-                setIsMusicPlaying(false);
-                if (currentMusicUrl && currentMusicUrl.startsWith('blob:')) {
-                    URL.revokeObjectURL(currentMusicUrl);
-                }
-                setCurrentMusicUrl(null);
-                isLoadingMusicRef.current = false;
-                currentSceneIdRef.current = null;
-                if (audioRef.current === audio) {
-                    audioRef.current = null;
-                }
-            };
-
-            audio.addEventListener('canplay', handleCanPlay, { once: true });
-            audio.addEventListener('error', handleError, { once: true });
-
-            audioRef.current = audio;
-            setCurrentMusicUrl(musicUrl);
-
-            audio.load();
-            setIsMusicPlaying(true);
-            audio.play().catch((error: any) => {
-                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
-                    console.error('播放音乐失败:', error);
-                }
-                isLoadingMusicRef.current = false;
-            });
-        } catch (error) {
-            console.error('获取音乐失败:', error);
-            isLoadingMusicRef.current = false;
-            currentSceneIdRef.current = null;
-        }
-    }, [presetId, currentScene]);
-
-    const handleMusicToggle = useCallback(() => {
-        if (isMusicPlaying) {
-            if (audioRef.current) {
-                audioRef.current.pause();
-            }
-            setIsMusicPlaying(false);
-        } else {
-            if (audioRef.current && currentMusicUrl) {
-                audioRef.current.play().catch((error: any) => {
-                    console.error('播放音乐失败:', error);
-                });
-            } else if (currentScene) {
-                loadAndPlaySceneMusic();
-            }
-            setIsMusicPlaying(true);
-        }
-    }, [isMusicPlaying, currentMusicUrl, currentScene, loadAndPlaySceneMusic]);
-
-    useEffect(() => {
-        if (!gameStarted || !currentScene?.id || !currentScene?.soundtrack) {
-            console.log('currentScene没有音乐数据');
-
-            return;
-        }
-
-        const sceneId = currentScene.id;
-        if (currentSceneIdRef.current === sceneId) {
-            return;
-        }
-
-        loadAndPlaySceneMusic(currentScene);
-    }, [currentScene?.id, currentScene?.soundtrack, gameStarted, loadAndPlaySceneMusic]);
-
-    useEffect(() => {
-        if (!audioRef.current || !currentMusicUrl) return;
-
-        if (isMusicPlaying) {
-            audioRef.current.play().catch((error: any) => {
-                if (error.name !== 'AbortError' && error.name !== 'NotAllowedError') {
-                    console.error('播放音乐失败:', error);
-                }
-            });
-        } else {
-            audioRef.current.pause();
-        }
-    }, [isMusicPlaying, currentMusicUrl]);
-
-    useEffect(() => {
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = '';
-            }
-        };
-    }, []);
-
     useEffect(() => {
         if (!isAutoPlay || !gameStarted) return;
         if (stepHandlers.isWaitingForData) return;
@@ -522,7 +366,7 @@ const Galgame = () => {
                         加载中...
                     </div>
                 </div>
-                            </div>
+            </div>
         );
     }
 
@@ -530,7 +374,7 @@ const Galgame = () => {
         <>
             <div className={styles.pageRoot}>
                 <div
-                    className={`${styles.mainContent} ${styles.worldVibration} ${characterAnimation === 'vibration' ? styles.worldVibration : ''}`}
+                    className={`${styles.mainContent} ${styles.worldVibration}`}
                     style={{
                         backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
                         backgroundSize: 'cover',
@@ -543,12 +387,7 @@ const Galgame = () => {
                         <span>{currentScene?.name}</span>
                     </div>
                     {currentMessage.characterImage && (
-                        <div
-                            className={`${styles.characterContainer} ${styles.characterJump} ${currentMessage.characterPosition === 'left'
-                                ? styles.characterSlideLeft
-                                : styles.characterSlideRight
-                                } ${characterAnimation === 'jump' ? styles.characterJump : ''}`}
-                        >
+                        <div className={getCharacterContainerClassName()}>
                             <img
                                 src={currentMessage.characterImage}
                                 alt="角色立绘"

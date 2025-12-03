@@ -117,7 +117,7 @@ export const useStepStreamResponse = ({
                         // 处理 step 类型的数据
                         if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
-                            console.log('📝 收到新的 step:', step.type, step.id);
+                            console.log('📝 收到新的 step:', step.type);
                             hasReceivedStep = true;
 
                             // 如果是第一个 step，触发回调

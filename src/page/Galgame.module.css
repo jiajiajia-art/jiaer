@@ -9,7 +9,7 @@
 }
 
 .mainContent {
-    width: 414px;
+    width: 100vw;
     height: 896px;
     display: flex;
     flex-direction: column;
@@ -81,6 +81,7 @@
         transform: translateX(-30px);
         opacity: 0;
     }
+
     100% {
         transform: translateX(0);
         opacity: 1;
@@ -92,43 +93,317 @@
         transform: translateX(30px);
         opacity: 0;
     }
+
     100% {
         transform: translateX(0);
         opacity: 1;
     }
 }
 
-@keyframes characterJump {
-    0%, 100% {
-        transform: translateY(0);
+@keyframes characterJumpLeft {
+    0% {
+        transform: translateX(0) translateY(0);
     }
+
+    12.5% {
+        transform: translateX(20px) translateY(-20px);
+    }
+
     25% {
-        transform: translateY(-20px);
+        transform: translateX(35px) translateY(-35px);
     }
+
+    37.5% {
+        transform: translateX(40px) translateY(-20px);
+    }
+
     50% {
-        transform: translateY(-30px);
+        transform: translateX(40px) translateY(0);
     }
+
+    62.5% {
+        transform: translateX(50px) translateY(-20px);
+    }
+
     75% {
-        transform: translateY(-20px);
+        transform: translateX(55px) translateY(-35px);
     }
+
+    87.5% {
+        transform: translateX(60px) translateY(-20px);
+    }
+
+    100% {
+        transform: translateX(60px) translateY(0);
+    }
+}
+
+@keyframes characterJumpRight {
+    0% {
+        transform: translateX(0) translateY(0);
+    }
+
+    12.5% {
+        transform: translateX(-20px) translateY(-20px);
+    }
+
+    25% {
+        transform: translateX(-35px) translateY(-35px);
+    }
+
+    37.5% {
+        transform: translateX(-40px) translateY(-20px);
+    }
+
+    50% {
+        transform: translateX(-40px) translateY(0);
+    }
+
+    62.5% {
+        transform: translateX(-50px) translateY(-20px);
+    }
+
+    75% {
+        transform: translateX(-55px) translateY(-35px);
+    }
+
+    87.5% {
+        transform: translateX(-60px) translateY(-20px);
+    }
+
+    100% {
+        transform: translateX(-60px) translateY(0);
+    }
+}
+
+.characterJumpLeft {
+    animation: characterJumpLeft 0.8s ease-in-out forwards;
+}
+
+.characterJumpRight {
+    animation: characterJumpRight 0.8s ease-in-out forwards;
 }
 
 @keyframes worldVibration {
-    0% { transform: translate(0, 0) rotate(0); }
-    15% { transform: translate(-6px, -3px) rotate(-0.5deg); }
-    30% { transform: translate(4px, 2px) rotate(0.3deg); }
-    45% { transform: translate(-4px, 3px) rotate(-0.3deg); }
-    60% { transform: translate(3px, -2px) rotate(0.2deg); }
-    75% { transform: translate(-2px, 1px) rotate(-0.1deg); }
-    100% { transform: translate(0, 0) rotate(0); }
+    0% {
+        transform: translate(0, 0) rotate(0);
+    }
+
+    10% {
+        transform: translate(-3px, -3px) rotate(-0.5deg);
+    }
+
+    20% {
+        transform: translate(4px, 2px) rotate(0.3deg);
+    }
+
+    30% {
+        transform: translate(-4px, 2px) rotate(-0.3deg);
+    }
+
+    40% {
+        transform: translate(3px, -2px) rotate(0.2deg);
+    }
+
+    50% {
+        transform: translate(-2px, 1px) rotate(-0.1deg);
+    }
+
+    60% {
+        transform: translate(2px, -1px) rotate(0.1deg);
+    }
+
+    70% {
+        transform: translate(-1px, 0) rotate(-0.05deg);
+    }
+
+    80% {
+        transform: translate(1px, 1px) rotate(0.05deg);
+    }
+
+    90% {
+        transform: translate(-1px, -1px) rotate(-0.03deg);
+    }
+
+    100% {
+        transform: translate(0, 0) rotate(0);
+    }
 }
 
-.characterJump {
-    animation: characterJump 0.4s ease-in-out;
+@keyframes worldVibrationSlow {
+    0% { transform: translate(0, 0)}
+    15% { transform: translate(-6px, -3px)}
+    30% { transform: translate(4px, 2px)}
+    45% { transform: translate(-4px, 3px)}
+    60% { transform: translate(3px, -2px)}
+    75% { transform: translate(-2px, 1px)}
+    100% { transform: translate(0, 0)}
+}
+
+@keyframes worldVibrationFast {
+    0% { transform: translate(0, 0); }
+    8% { transform: translate(-3px, -2px); }    /* 更小幅度 */
+    16% { transform: translate(4px, 1px); }
+    24% { transform: translate(-2px, 3px); }
+    32% { transform: translate(3px, -1px); }
+    40% { transform: translate(-1px, -2px); }
+    48% { transform: translate(2px, 2px); }
+    56% { transform: translate(-1px, -3px); }
+    64% { transform: translate(1px, 1px); }
+    72% { transform: translate(0, 1px); }       /* 几乎不移动 */
+    80% { transform: translate(1px, 0); }
+    88% { transform: translate(0, 1px); }
+    96% { transform: translate(1px, 0); }
+    100% { transform: translate(0, 0); }
+}
+
+@keyframes worldVibrationBalanced {
+    0% {
+        transform: translate(0, 0) rotate(0);
+    }
+    12% {
+        transform: translate(-8px, -5px) rotate(-0.5deg); /* 左上 */
+    }
+    24% {
+        transform: translate(7px, 6px) rotate(0.4deg);    /* 右下 */
+    }
+    36% {
+        transform: translate(6px, -4px) rotate(0.3deg);   /* 右上 */
+    }
+    48% {
+        transform: translate(-6px, 5px) rotate(-0.3deg);  /* 左下 */
+    }
+    60% {
+        transform: translate(-7px, 4px) rotate(-0.4deg);  /* 左中 */
+    }
+    72% {
+        transform: translate(5px, -6px) rotate(0.2deg);   /* 右中 */
+    }
+    84% {
+        transform: translate(-3px, -3px) rotate(-0.1deg); /* 左上小 */
+    }
+    96% {
+        transform: translate(2px, 2px) rotate(0.1deg);    /* 右下小 */
+    }
+    100% {
+        transform: translate(0, 0) rotate(0);
+    }
+}
+
+/* @keyframes characterShakeXY {
+    0% { transform: skewX(9deg); } 
+    10% { transform: skewX(-8deg); } 
+    20% { transform: skewX(7deg); } 
+    30% { transform: skewX(-6deg); } 
+    40% { transform: skewX(5deg); } 
+    50% { transform: skewX(-4deg); } 
+    60% { transform: skewX(3deg); } 
+    70% { transform: skewX(-2deg); } 
+    80% { transform: skewX(1deg); } 
+    90% { transform: skewX(0deg); } 
+    100% { transform: skewX(0deg); }
+} */
+
+
+@keyframes worldVibrationIntense {
+    0% {
+        transform: translate(0, 0) rotate(0);
+    }
+    5% {
+        transform: translate(-6px, -5px) rotate(-0.8deg);
+    }
+    10% {
+        transform: translate(5px, 4px) rotate(0.6deg);
+    }
+    15% {
+        transform: translate(-4px, 6px) rotate(-0.7deg);
+    }
+    20% {
+        transform: translate(6px, -3px) rotate(0.5deg);
+    }
+    25% {
+        transform: translate(-5px, -4px) rotate(-0.6deg);
+    }
+    30% {
+        transform: translate(4px, 5px) rotate(0.4deg);
+    }
+    35% {
+        transform: translate(-3px, -6px) rotate(-0.5deg);
+    }
+    40% {
+        transform: translate(5px, 3px) rotate(0.3deg);
+    }
+    45% {
+        transform: translate(-4px, 4px) rotate(-0.4deg);
+    }
+    50% {
+        transform: translate(3px, -5px) rotate(0.2deg);
+    }
+    55% {
+        transform: translate(-2px, 3px) rotate(-0.3deg);
+    }
+    60% {
+        transform: translate(4px, -2px) rotate(0.1deg);
+    }
+    65% {
+        transform: translate(-3px, 2px) rotate(-0.2deg);
+    }
+    70% {
+        transform: translate(2px, -3px) rotate(0.1deg);
+    }
+    75% {
+        transform: translate(-1px, 1px) rotate(-0.1deg);
+    }
+    80% {
+        transform: translate(1px, -1px) rotate(0.05deg);
+    }
+    85% {
+        transform: translate(-2px, 2px) rotate(-0.08deg);
+    }
+    90% {
+        transform: translate(2px, -2px) rotate(0.06deg);
+    }
+    95% {
+        transform: translate(-1px, 1px) rotate(-0.03deg);
+    }
+    100% {
+        transform: translate(0, 0) rotate(0);
+    }
 }
 
 .worldVibration {
-    animation: worldVibration 0.3s ease-in-out;
+    /* animation: worldVibrationIntense 1s ease-in-out; */
+}
+
+.characterVibration {
+    animation: worldVibrationFast 1s ease-in-out;
+    animation-iteration-count: 1;
+}
+
+.characterHurt {
+    /* position: relative; */
+}
+
+.characterHurt::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 0, 0, 0.3);
+    animation: hurtFadeOut 2s ease-out forwards;
+    pointer-events: none;
+    z-index: 2001;
+}
+
+@keyframes hurtFadeOut {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
 }
 
 .characterImage {
@@ -147,17 +422,15 @@
     width: 100%;
     height: auto;
     min-height: 200px;
-    background: linear-gradient(
-        to top,
-        rgba(0, 0, 0, 0.85) 0%,
-        rgba(0, 0, 0, 0.82) 8%,
-        rgba(0, 0, 0, 0.75) 18%,
-        rgba(0, 0, 0, 0.70) 32%,
-        rgba(0, 0, 0, 0.60) 50%,
-        rgba(0, 0, 0, 0.55) 82%,
-        rgba(0, 0, 0, 0.30) 92%,
-        transparent 100%
-      );
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.85) 0%,
+            rgba(0, 0, 0, 0.82) 8%,
+            rgba(0, 0, 0, 0.75) 18%,
+            rgba(0, 0, 0, 0.70) 32%,
+            rgba(0, 0, 0, 0.60) 50%,
+            rgba(0, 0, 0, 0.55) 82%,
+            rgba(0, 0, 0, 0.30) 92%,
+            transparent 100%);
     z-index: 150;
     pointer-events: none;
     display: flex;

@@ -51,11 +51,63 @@ export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
     return parts.length > 0 ? parts : [{ type: 'text', content: text }];
 };
 
-// 提取纯文本（去掉所有颜色标签）
+// 提取纯文本（去掉所有颜色标签和动画标签）
 export const extractPlainText = (text: string): string => {
     if (!text) return '';
-    // 移除所有颜色标签，只保留内容
-    return text.replace(/<(red|yellow|green|blue|purple|jump|vibration)>(.*?)<\/\1>/gi, '$2');
+    
+    let result = text;
+    const animationTags = ['jump', 'vibration', 'hurt'];
+    const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
+    
+    // 递归去除所有标签，直到没有标签为止（处理嵌套标签）
+    let previousResult = '';
+    while (result !== previousResult) {
+        previousResult = result;
+        
+        // 1. 先去除动画标签（完全移除标签和内容，不保留任何内容）
+        for (const tag of animationTags) {
+            // 使用非贪婪匹配，但需要处理嵌套标签
+            // 递归移除所有嵌套的动画标签
+            let tagRemoved = false;
+            do {
+                tagRemoved = false;
+                const regex = new RegExp(`<${tag}>[\\s\\S]*?<\\/${tag}>`, 'gi');
+                const beforeReplace = result;
+                result = result.replace(regex, '');
+                if (result !== beforeReplace) {
+                    tagRemoved = true;
+                }
+            } while (tagRemoved);
+        }
+        
+        // 2. 去除颜色标签（保留内容，只移除标签）
+        for (const tag of colorTags) {
+            const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+            result = result.replace(regex, '$1');
+        }
+        
+        // 3. 去除可能不完整的开始标签（流式输入时可能出现）
+        for (const tag of animationTags) {
+            const regex = new RegExp(`<${tag}>`, 'gi');
+            result = result.replace(regex, '');
+        }
+        for (const tag of colorTags) {
+            const regex = new RegExp(`<${tag}>`, 'gi');
+            result = result.replace(regex, '');
+        }
+        
+        // 4. 去除可能不完整的结束标签
+        for (const tag of animationTags) {
+            const regex = new RegExp(`<\\/${tag}>`, 'gi');
+            result = result.replace(regex, '');
+        }
+        for (const tag of colorTags) {
+            const regex = new RegExp(`<\\/${tag}>`, 'gi');
+            result = result.replace(regex, '');
+        }
+    }
+    
+    return result;
 };
 
 // 检测是否包含 jump 标签
@@ -68,6 +120,12 @@ export const hasJumpTag = (text: string): boolean => {
 export const hasVibrationTag = (text: string): boolean => {
     if (!text) return false;
     return /<vibration>.*?<\/vibration>/gi.test(text);
+};
+
+// 检测是否包含 hurt 标签
+export const hasHurtTag = (text: string): boolean => {
+    if (!text) return false;
+    return /<hurt>.*?<\/hurt>/gi.test(text);
 };
 
 // 清理历史记录中的标记文字，并提取 OPTION

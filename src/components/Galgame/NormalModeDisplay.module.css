@@ -62,8 +62,12 @@
 }
 
 .nextButtonContainer {
+    position: absolute;
+    bottom: 80px;
+    right: 18px;
     display: flex;
     justify-content: flex-end;
+    z-index: 10;
 }
 
 .nextButton {
@@ -97,11 +101,11 @@
 .cursor {
     display: inline-block;
     width: 2px;
-    height: 1em;
+    height: 13px;
     background-color: #fff;
-    margin-left: 2px;
     animation: blink 1s infinite;
     vertical-align: baseline;
+    margin-left: 2px;
 }
 
 /* 文本颜色标记样式 */
@@ -341,9 +345,148 @@
     }
 }
 
+/* AI 加载动画 */
+.loadingContainer {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 20px;
+    justify-content: center;
+}
+
+.aiLoader {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    background-color: #00f2ff;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 18px rgba(0, 242, 255, 0.8);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.orbit {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3.5px solid rgba(255, 255, 255, 0.1);
+    border-top: 3.5px solid #00f2ff;
+    animation: spin 1.5s infinite linear;
+    box-sizing: border-box;
+}
+
+.orbitInner {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 50%;
+    border: 3.5px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 3.5px solid rgba(0, 242, 255, 0.5);
+    animation: spinReverse 3s infinite linear;
+    box-sizing: border-box;
+}
+
+.statusText {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(0, 242, 255, 0.3);
+}
+
+.dots::after {
+    content: '';
+    animation: ellipsis 1.5s infinite;
+    display: inline-block;
+    width: 18px;
+    text-align: left;
+}
+
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.15);
+        opacity: 1;
+        box-shadow: 0 0 25px rgba(0, 242, 255, 1);
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.6;
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spinReverse {
+    0% {
+        transform: rotate(360deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes ellipsis {
+    0% {
+        content: '';
+    }
+    25% {
+        content: '.';
+    }
+    50% {
+        content: '..';
+    }
+    75% {
+        content: '...';
+    }
+}
+
 @media (max-width: 768px) {
     .messageContainer {
         bottom: 80px;
+    }
+    
+    .loadingContainer {
+        gap: 20px;
+    }
+    
+    .aiLoader {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .core {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .statusText {
+        font-size: 18px;
     }
 }
 
