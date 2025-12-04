@@ -10,6 +10,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import CreateGame from './page/CreateGame';
 import Library from './page/Library';
 import Galgame from './page/Galgame';
+import GameSettingsEditor from './page/GameSettingsEditor';
 // import Activity from './page/Activity';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />
+          <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           {/* <Route path="/activity" element={<Activity />} /> */}
           <Route path="/profile" element={<Profile />} />
         </Route>

@@ -1,0 +1,356 @@
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: #E03D4B;
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.9rem;
+}
+
+/* 按钮样式 */
+.ghost {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.ghost:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.ghostSmall:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+/* 布局 */
+.sceneLayout {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) 1fr;
+    gap: 20px;
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 卡片样式 */
+.card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 24px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+/* 场景列表头部 */
+.boardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.chip {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    border: 1px solid transparent;
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(0, 0, 0, 0.6);
+    margin-top: 6px;
+}
+
+/* 场景列表 */
+.sceneList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sceneRow {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.01);
+    transition: 0.2s ease;
+}
+
+.sceneRow:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.sceneRow.active {
+    border-color: #E03D4B;
+    background: rgba(224, 61, 75, 0.04);
+}
+
+.sceneThumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+}
+
+.sceneThumb.empty {
+    border: 1px dashed rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.02);
+    display: grid;
+    place-items: center;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.75rem;
+}
+
+.sceneMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sceneMeta strong {
+    font-size: 0.95rem;
+    color: #1a1a1a;
+}
+
+.sceneMeta p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.82rem;
+    line-height: 1.4;
+}
+
+.mutedSmall {
+    color: rgba(0, 0, 0, 0.5);
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* 卡片头部 */
+.cardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+/* BGM 列表 */
+.bgmList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bgmItem {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 14px;
+    background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: 0.25s ease;
+}
+
+.bgmItem:hover {
+    border-color: rgba(224, 61, 75, 0.15);
+}
+
+/* 场景大图 */
+.sceneHero {
+    width: 100%;
+    height: 280px;
+    border-radius: 20px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sceneHero.empty {
+    border-style: dashed;
+    background: rgba(0, 0, 0, 0.02);
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.heroHint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: 0.2s ease;
+    pointer-events: none;
+}
+
+.sceneHero:hover .heroHint {
+    opacity: 1;
+}
+
+.sceneImageActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sceneImageActions button {
+    flex: 1 1 140px;
+}
+
+/* 表单布局 */
+.formGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.wide {
+    width: 100%;
+}
+
+.formGrid label,
+.bgmItem label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.formGrid label span,
+.bgmItem label span {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+}
+
+.formGrid input,
+.formGrid textarea,
+.formGrid select,
+.bgmItem input,
+.bgmItem textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 11px 14px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formGrid input:focus,
+.formGrid textarea:focus,
+.formGrid select:focus,
+.bgmItem input:focus,
+.bgmItem textarea:focus {
+    outline: none;
+    border-color: #E03D4B;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.formGrid textarea,
+.bgmItem textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+/* 响应式布局 */
+@media (max-width: 1080px) {
+    .sceneLayout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .panelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panelHeader h2 {
+        font-size: 1.4rem;
+    }
+
+    .card {
+        padding: 18px;
+        border-radius: 18px;
+    }
+}

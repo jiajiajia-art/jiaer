@@ -1,3 +1,37 @@
+// ============================================================
+// 文本处理工具函数
+// ============================================================
+// 
+// 【标签类型说明】
+// 
+// 1. 游戏结构标签（API返回的原始消息，需要解析/转换）
+//    - [NARRATION: ...]
+//    - [DIALOGUE: speaker, "..."]
+//    - [CHOICE: ...]...[END_CHOICE]
+//    - [OPTION: ...]
+//    - [SCENE_CHANGE: ...]
+//    - [TRANSITION: ...]
+//
+// 2. 动画标签（需要移除标签，保留内容）
+//    - <jump>...</jump>
+//    - <vibration>...</vibration>
+//    - <injury>...</injury>
+//
+// 3. 颜色标签（保留用于显示）
+//    - <red>...</red>
+//    - <yellow>...</yellow>
+//    - <green>...</green>
+//    - <blue>...</blue>
+//    - <purple>...</purple>
+//
+// 【使用场景】
+// 
+// 1. 正常模式展示 (NormalModeDisplay) - 使用 removeAnimationTags + parseColorMarkup
+// 2. 文本模式展示 (TextModeDisplay) - 使用 removeAnimationTags + parseColorMarkup
+// 3. 历史记录展示 (GalgameHistoryModal) - 使用 processGameTags + removeAnimationTags + parseColorMarkup
+//
+// ============================================================
+
 // 颜色标记解析结果类型
 export interface ColorMarkupPart {
     type: 'text' | 'color';
@@ -6,11 +40,47 @@ export interface ColorMarkupPart {
     nested?: ColorMarkupPart[];
 }
 
-// 解析颜色标记，将 <red>文本</red> 等标签转换为包含颜色信息的数组
+// 动画标签列表
+const ANIMATION_TAGS = ['jump', 'vibration', 'injury'];
+
+// 颜色标签列表
+const COLOR_TAGS = ['red', 'yellow', 'green', 'blue', 'purple'];
+
+// ============================================================
+// 【核心函数1】移除动画标签，保留内容
+// 用于：正常模式、文本模式、历史记录的渲染前处理
+// ============================================================
+export const removeAnimationTags = (text: string): string => {
+    if (!text) return '';
+    
+    let result = text;
+    let previousResult = '';
+    
+    // 循环处理嵌套的动画标签
+    while (result !== previousResult) {
+        previousResult = result;
+        for (const tag of ANIMATION_TAGS) {
+            const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+            result = result.replace(regex, '$1');
+        }
+    }
+    
+    // 移除不完整的动画标签（流式输入时可能出现）
+    for (const tag of ANIMATION_TAGS) {
+        result = result.replace(new RegExp(`<${tag}>`, 'gi'), '');
+        result = result.replace(new RegExp(`<\\/${tag}>`, 'gi'), '');
+    }
+    
+    return result;
+};
+
+// ============================================================
+// 【核心函数2】解析颜色标签
+// 用于：渲染带颜色的文本
+// ============================================================
 export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
     if (!text) return [];
     
-    const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
     const parts: ColorMarkupPart[] = [];
     let lastIndex = 0;
     
@@ -29,7 +99,7 @@ export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
         // 添加带颜色的文本
         const color = match[1].toLowerCase();
         const content = match[2];
-        if (colorTags.includes(color)) {
+        if (COLOR_TAGS.includes(color)) {
             // 递归处理嵌套的颜色标签
             const nestedParts = parseColorMarkup(content);
             parts.push({ type: 'color', content, color, nested: nestedParts.length > 0 ? nestedParts : undefined });
@@ -51,59 +121,166 @@ export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
     return parts.length > 0 ? parts : [{ type: 'text', content: text }];
 };
 
-// 提取纯文本（去掉所有颜色标签和动画标签）
+// ============================================================
+// 【核心函数3】处理游戏结构标签（用于历史记录展示）
+// 将 [NARRATION:], [DIALOGUE:] 等转换为可读文本
+// ============================================================
+export const processGameTags = (content: string): string => {
+    if (!content) return '';
+    
+    let result = content;
+    
+    // 处理 NARRATION 标签 - 保留内容
+    result = result.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
+        return text ? text.trim() : '';
+    });
+    
+    // 处理 DIALOGUE 标签 - 转换为 "说话人："内容""
+    result = result.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_match, speaker, text) => {
+        if (speaker && text) {
+            return `${speaker.trim()}："${text.trim()}"`;
+        }
+        return text ? text.trim() : '';
+    });
+    
+    // 处理 TRANSITION 标签 - 保留内容
+    result = result.replace(/\[TRANSITION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
+        return text ? text.trim() : '';
+    });
+    
+    // 处理 CHOICE 块
+    result = result.replace(/\[CHOICE:([^\]]*)\]([\s\S]*?)\[END_CHOICE\]/gi, (_match, title, innerContent) => {
+        let choiceText = '';
+        if (title) {
+            choiceText += `【${title.trim()}】\n`;
+        }
+        // 移除内容中的 OPTION 标签（选项会在后面单独显示）
+        let cleanedContent = innerContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
+        // 处理内容中的其他标签
+        cleanedContent = cleanedContent.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_m: string, speaker: string, text: string) => {
+            if (speaker && text) {
+                return `${speaker.trim()}："${text.trim()}"`;
+            }
+            return text ? text.trim() : '';
+        });
+        cleanedContent = cleanedContent.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_m: string, text: string) => {
+            return text ? text.trim() : '';
+        });
+        choiceText += cleanedContent.trim();
+        return choiceText;
+    });
+    
+    // 处理单独的 CHOICE 标签
+    result = result.replace(/\[CHOICE:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, title) => {
+        return title ? `【${title.trim()}】\n` : '';
+    });
+    
+    // 处理 OPTION 标签（转换为选项列表格式）
+    const options: string[] = [];
+    result = result.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
+        if (text) {
+            options.push(text.trim());
+        }
+        return '';
+    });
+    
+    // 处理 SCENE_CHANGE 标签
+    result = result.replace(/\[SCENE_CHANGE:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
+        return text ? `场景切换：${text.trim()}` : '';
+    });
+    
+    // 清理多余的换行和空格
+    result = result.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+    
+    // 如果有选项，添加到末尾
+    if (options.length > 0) {
+        result += '\n\n选项：\n';
+        options.forEach((opt, index) => {
+            result += `${index + 1}. ${opt}\n`;
+        });
+    }
+    
+    return result;
+};
+
+// ============================================================
+// 【核心函数4】提取纯文本（去掉所有颜色标签和动画标签）
+// 用于：计算打字机进度、选项文本显示等
+// ============================================================
 export const extractPlainText = (text: string): string => {
     if (!text) return '';
     
-    let result = text;
-    const animationTags = ['jump', 'vibration', 'injury'];
-    const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
+    // 先移除动画标签
+    let result = removeAnimationTags(text);
     
-    // 递归去除所有标签，直到没有标签为止（处理嵌套标签）
+    // 循环移除颜色标签（处理嵌套）
     let previousResult = '';
     while (result !== previousResult) {
         previousResult = result;
-        
-        // 1. 先去除动画标签（完全移除标签和内容，不保留任何内容）
-        for (const tag of animationTags) {
-            // 使用非贪婪匹配，但需要处理嵌套标签
-            // 递归移除所有嵌套的动画标签
-            let tagRemoved = false;
-            do {
-                tagRemoved = false;
-                const regex = new RegExp(`<${tag}>[\\s\\S]*?<\\/${tag}>`, 'gi');
-                const beforeReplace = result;
-                result = result.replace(regex, '');
-                if (result !== beforeReplace) {
-                    tagRemoved = true;
-                }
-            } while (tagRemoved);
-        }
-        
-        // 2. 去除颜色标签（保留内容，只移除标签）
-        for (const tag of colorTags) {
+        for (const tag of COLOR_TAGS) {
             const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
             result = result.replace(regex, '$1');
         }
+    }
+    
+    // 移除不完整的颜色标签（流式输入时可能出现）
+    for (const tag of COLOR_TAGS) {
+        result = result.replace(new RegExp(`<${tag}>`, 'gi'), '');
+        result = result.replace(new RegExp(`<\\/${tag}>`, 'gi'), '');
+    }
+    
+    return result;
+};
+
+// ============================================================
+// 【核心函数5】根据纯文本长度截取带标签的文本（保留颜色标签）
+// 用于：打字机效果中保留颜色显示
+// ============================================================
+export const truncateTextWithTags = (originalText: string, plainTextLength: number): string => {
+    if (!originalText || plainTextLength <= 0) return '';
+    
+    // 先移除动画标签，保留颜色标签
+    const cleanedText = removeAnimationTags(originalText);
+    
+    // 解析颜色标签
+    const parts = parseColorMarkup(cleanedText);
+    
+    // 计算每个部分的纯文本长度，找到截取点
+    let currentPlainLength = 0;
+    let result = '';
+    
+    for (const part of parts) {
+        // 计算这个部分的纯文本长度（递归处理嵌套的颜色标签）
+        let partPlainText = part.content;
+        if (part.type === 'color') {
+            let previousPartText = '';
+            while (partPlainText !== previousPartText) {
+                previousPartText = partPlainText;
+                partPlainText = partPlainText.replace(/<(red|yellow|green|blue|purple)>([\s\S]*?)<\/\1>/gi, '$2');
+            }
+        }
+        const partLength = partPlainText.length;
         
-        // 3. 去除可能不完整的开始标签（流式输入时可能出现）
-        for (const tag of animationTags) {
-            const regex = new RegExp(`<${tag}>`, 'gi');
-            result = result.replace(regex, '');
-        }
-        for (const tag of colorTags) {
-            const regex = new RegExp(`<${tag}>`, 'gi');
-            result = result.replace(regex, '');
-        }
-        
-        // 4. 去除可能不完整的结束标签
-        for (const tag of animationTags) {
-            const regex = new RegExp(`<\\/${tag}>`, 'gi');
-            result = result.replace(regex, '');
-        }
-        for (const tag of colorTags) {
-            const regex = new RegExp(`<\\/${tag}>`, 'gi');
-            result = result.replace(regex, '');
+        if (currentPlainLength + partLength <= plainTextLength) {
+            // 整个部分都包含在内
+            if (part.type === 'color' && part.color) {
+                result += `<${part.color}>${part.content}</${part.color}>`;
+            } else {
+                result += part.content;
+            }
+            currentPlainLength += partLength;
+        } else {
+            // 部分包含，需要截取
+            const remainingLength = plainTextLength - currentPlainLength;
+            if (remainingLength > 0) {
+                const truncatedContent = partPlainText.substring(0, remainingLength);
+                if (part.type === 'color' && part.color) {
+                    result += `<${part.color}>${truncatedContent}</${part.color}>`;
+                } else {
+                    result += truncatedContent;
+                }
+            }
+            break;
         }
     }
     
@@ -284,4 +461,149 @@ export const extractChoiceFromHistory = (text: string): {
         text: choiceText,
         options
     };
+};
+
+// ============================================================
+// 【核心函数6】将历史记录内容解析为文本模式步骤数组
+// 用于：文本模式下显示历史记录的最后一条消息
+// ============================================================
+export interface HistoryStep {
+    id: string;
+    type: 'narration' | 'dialogue' | 'choice' | 'transition' | 'scene_change';
+    content: string;
+    speakerName?: string;
+    title?: string;
+    description?: string;
+    options?: Array<{ id: number; text: string }>;
+}
+
+export const parseHistoryToSteps = (content: string): HistoryStep[] => {
+    if (!content) return [];
+    
+    const steps: HistoryStep[] = [];
+    let stepIndex = 0;
+    
+    // 先提取 CHOICE 块（包含完整的 CHOICE 内容）
+    const choiceBlockRegex = /\[CHOICE:([^\]]*)\]([\s\S]*?)\[END_CHOICE\]/gi;
+    const choiceBlocks: Array<{ match: string; title: string; innerContent: string; startIndex: number; endIndex: number }> = [];
+    let choiceMatch;
+    while ((choiceMatch = choiceBlockRegex.exec(content)) !== null) {
+        choiceBlocks.push({
+            match: choiceMatch[0],
+            title: choiceMatch[1]?.trim() || '',
+            innerContent: choiceMatch[2] || '',
+            startIndex: choiceMatch.index,
+            endIndex: choiceMatch.index + choiceMatch[0].length
+        });
+    }
+    
+    // 提取所有 OPTION
+    const optionRegex = /\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi;
+    const options: string[] = [];
+    let optionMatch;
+    while ((optionMatch = optionRegex.exec(content)) !== null) {
+        const optionText = optionMatch[1]?.trim();
+        if (optionText) {
+            options.push(optionText);
+        }
+    }
+    
+    // 移除 CHOICE 块，然后解析其他内容
+    let contentWithoutChoice = content;
+    choiceBlocks.forEach(block => {
+        contentWithoutChoice = contentWithoutChoice.replace(block.match, '');
+    });
+    
+    // 解析 NARRATION
+    const narrationRegex = /\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi;
+    let narrationMatch;
+    while ((narrationMatch = narrationRegex.exec(contentWithoutChoice)) !== null) {
+        const text = narrationMatch[1]?.trim();
+        if (text) {
+            steps.push({
+                id: `history-narration-${stepIndex++}`,
+                type: 'narration',
+                content: text
+            });
+        }
+    }
+    
+    // 解析 DIALOGUE
+    const dialogueRegex = /\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi;
+    let dialogueMatch;
+    while ((dialogueMatch = dialogueRegex.exec(contentWithoutChoice)) !== null) {
+        const speaker = dialogueMatch[1]?.trim();
+        const text = dialogueMatch[2]?.trim();
+        if (speaker && text) {
+            steps.push({
+                id: `history-dialogue-${stepIndex++}`,
+                type: 'dialogue',
+                content: text,
+                speakerName: speaker
+            });
+        }
+    }
+    
+    // 解析 TRANSITION
+    const transitionRegex = /\[TRANSITION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi;
+    let transitionMatch;
+    while ((transitionMatch = transitionRegex.exec(contentWithoutChoice)) !== null) {
+        const text = transitionMatch[1]?.trim();
+        if (text) {
+            steps.push({
+                id: `history-transition-${stepIndex++}`,
+                type: 'transition',
+                content: text
+            });
+        }
+    }
+    
+    // 解析 SCENE_CHANGE
+    const sceneChangeRegex = /\[SCENE_CHANGE:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi;
+    let sceneChangeMatch;
+    while ((sceneChangeMatch = sceneChangeRegex.exec(contentWithoutChoice)) !== null) {
+        const text = sceneChangeMatch[1]?.trim();
+        if (text) {
+            steps.push({
+                id: `history-scene-${stepIndex++}`,
+                type: 'scene_change',
+                content: text
+            });
+        }
+    }
+    
+    // 如果有 CHOICE 块，添加 choice 步骤
+    if (choiceBlocks.length > 0) {
+        const lastChoice = choiceBlocks[choiceBlocks.length - 1];
+        let description = lastChoice.innerContent;
+        
+        // 移除描述中的 OPTION 标签
+        description = description.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
+        
+        // 处理描述中的其他标签
+        description = description.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_m: string, speaker: string, text: string) => {
+            if (speaker && text) {
+                return `${speaker.trim()}："${text.trim()}"`;
+            }
+            return text ? text.trim() : '';
+        });
+        description = description.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_m: string, text: string) => {
+            return text ? text.trim() : '';
+        });
+        description = description.trim();
+        
+        steps.push({
+            id: `history-choice-${stepIndex++}`,
+            type: 'choice',
+            content: '',
+            title: lastChoice.title,
+            description: description,
+            options: options.map((opt, idx) => ({
+                id: idx + 1,
+                text: opt
+            }))
+        });
+    }
+    
+    return steps;
 };

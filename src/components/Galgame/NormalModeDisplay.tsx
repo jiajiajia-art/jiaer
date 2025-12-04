@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Converter } from 'showdown';
 import styles from './NormalModeDisplay.module.css';
-import { parseColorMarkup, extractPlainText } from '../../utils/textUtils';
+import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
+import ColoredMarkdownText from './ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -78,96 +78,17 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         }
     }, [currentMessage?.type]);
 
+    // 渲染带颜色标签和 Markdown 的文本
+    // 使用统一的 truncateTextWithTags 截取带颜色标签的文本
+    // 使用统一的 ColoredMarkdownText 组件渲染
     const renderTextWithMarkdown = useCallback((displayedPlainText: string, originalText: string, showCursor: boolean = false) => {
         if (!displayedPlainText || !originalText) return null;
-
-        const colorClassMap: Record<string, string> = {
-            red: styles.colorRed,
-            yellow: styles.colorYellow,
-            green: styles.colorGreen,
-            blue: styles.colorBlue,
-            purple: styles.colorPurple,
-        };
-
-        const originalPlainText = extractPlainText(originalText);
-
-        const getTextToRender = (): string => {
-            // 先完全移除所有动画标签，然后再解析颜色标签
-            let cleanedText = originalText;
-            // 移除所有动画标签及其内容
-            cleanedText = cleanedText.replace(/<(jump|vibration|injury)>[\s\S]*?<\/\1>/gi, '');
-            // 移除不完整的动画标签
-            cleanedText = cleanedText.replace(/<(jump|vibration|injury)>/gi, '');
-            cleanedText = cleanedText.replace(/<\/(jump|vibration|injury)>/gi, '');
-            
-            const allParts = parseColorMarkup(cleanedText);
-
-            if (displayedPlainText.length >= originalPlainText.length) {
-                // 文本全部输出完成，转换所有颜色标记为 HTML
-                return allParts.map(part => {
-                    if (part.type === 'color' && part.color) {
-                        return `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
-                    }
-                    return part.content;
-                }).join('');
-            }
-
-            // 文本正在输出中，根据显示长度截取
-            let result = '';
-            let currentPlainLength = 0;
-
-            for (const part of allParts) {
-                if (currentPlainLength >= displayedPlainText.length) break;
-
-                const partPlainText = part.type === 'text' ? part.content : extractPlainText(part.content);
-                const partLength = partPlainText.length;
-
-                if (currentPlainLength + partLength <= displayedPlainText.length) {
-                    if (part.type === 'color' && part.color) {
-                        result += `<span class="${colorClassMap[part.color]}">${part.content}</span>`;
-                    } else {
-                        result += part.content;
-                    }
-                    currentPlainLength += partLength;
-                } else {
-                    const remainingLength = displayedPlainText.length - currentPlainLength;
-                    const truncatedContent = partPlainText.substring(0, remainingLength);
-                    if (part.type === 'color' && part.color) {
-                        result += `<span class="${colorClassMap[part.color]}">${truncatedContent}</span>`;
-                    } else {
-                        result += truncatedContent;
-                    }
-                    break;
-                }
-            }
-
-            return result;
-        };
-
-        const textToRender = getTextToRender();
-        const converter = new Converter();
-        converter.setOption('simpleLineBreaks', true);
-        converter.setOption('strikethrough', true);
-        converter.setOption('tables', true);
-        converter.setOption('tasklists', true);
-
-        let html = converter.makeHtml(textToRender);
         
-        // 如果显示光标，将光标 HTML 直接插入到文本末尾
-        if (showCursor) {
-            const cursorClassName = styles.cursor;
-            const cursorHtml = `<span class="${cursorClassName}"></span>`;
-            if (html.endsWith('</p>')) {
-                html = html.slice(0, -4) + cursorHtml + '</p>';
-            } else if (html.endsWith('</div>')) {
-                html = html.slice(0, -6) + cursorHtml + '</div>';
-            } else {
-                html += cursorHtml;
-            }
-        }
-
-        return <div dangerouslySetInnerHTML={{ __html: html }} />;
-    }, [styles]);
+        // 使用 truncateTextWithTags 根据纯文本长度截取带颜色标签的文本
+        const textToRender = truncateTextWithTags(originalText, displayedPlainText.length);
+        
+        return <ColoredMarkdownText text={textToRender} showCursor={showCursor} />;
+    }, []);
 
     return (
         <>
@@ -181,10 +102,6 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     }}
                 >
                     {isWaitingForData && !currentStep && currentMessage && (
-                        //  <div className={styles.narrationContainer}>
-                        //  <div className={styles.narrationMessage}>
-                        //      <span className={styles.cursor}></span>
-                        //      </div>
                         <div className={styles.loadingContainer}>
                             <div className={styles.aiLoader}>
                                 <div className={styles.orbit}></div>

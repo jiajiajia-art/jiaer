@@ -1,0 +1,409 @@
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: #E03D4B;
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.9rem;
+}
+
+/* 按钮样式 */
+.ghost {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.ghost:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+.ghostTiny {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: rgba(0, 0, 0, 0.6);
+    background: transparent;
+}
+
+.ghostTiny:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+/* 布局 */
+.characterLayout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 20px;
+}
+
+/* 卡片样式 */
+.card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 24px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+/* 角色列表 */
+.characterRoster {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.characterRow {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.01);
+    transition: 0.2s ease;
+}
+
+.characterRow:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.characterRow.active {
+    border-color: #E03D4B;
+    background: rgba(224, 61, 75, 0.04);
+}
+
+.characterThumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+}
+
+.characterMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.characterMeta strong {
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+
+.mutedSmall {
+    color: rgba(0, 0, 0, 0.5);
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.tagRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 2px 10px;
+    font-size: 0.72rem;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+/* 立绘大图 */
+.portraitLarge {
+    width: 100%;
+    height: 320px;
+    border-radius: 20px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.portraitHint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: 0.2s ease;
+    pointer-events: none;
+}
+
+.portraitLarge:hover .portraitHint {
+    opacity: 1;
+}
+
+/* 表单布局 */
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.wide {
+    grid-column: 1 / -1;
+}
+
+.formGrid label,
+.detailBlock label,
+.relationshipRow label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.formGrid label span,
+.detailBlock label span,
+.relationshipRow label span {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+}
+
+.formGrid input,
+.formGrid textarea,
+.detailBlock input,
+.detailBlock textarea,
+.relationshipRow input,
+.relationshipRow textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 11px 14px;
+    background: rgba(0, 0, 0, 0.015);
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formGrid input:focus,
+.formGrid textarea:focus,
+.detailBlock input:focus,
+.detailBlock textarea:focus,
+.relationshipRow input:focus,
+.relationshipRow textarea:focus {
+    outline: none;
+    border-color: #E03D4B;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.formGrid textarea,
+.detailBlock textarea,
+.relationshipRow textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+/* 详情区块 */
+.detailBlock {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.cardHead strong {
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+
+/* 关系列表 */
+.relationshipList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.relationshipRow {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.relationshipRow:hover {
+    border-color: rgba(224, 61, 75, 0.15);
+}
+
+/* 差分网格 */
+.variationGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.variationCard {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 10px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.variationCard p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+}
+
+.variationThumb {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.variationThumb.empty {
+    border: 1px dashed rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.02);
+    display: grid;
+    place-items: center;
+}
+
+.variationActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.variationActions button {
+    flex: 1 1 60px;
+}
+
+.addCard {
+    border: 1px dashed rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    background: transparent;
+    color: #1a1a1a;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 180px;
+    display: grid;
+    place-items: center;
+    transition: 0.2s ease;
+}
+
+.addCard:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+    background: rgba(224, 61, 75, 0.02);
+}
+
+/* 响应式布局 */
+@media (max-width: 1080px) {
+    .characterLayout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .panelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panelHeader h2 {
+        font-size: 1.4rem;
+    }
+
+    .card {
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .formGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .variationGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -81,7 +81,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
     // 当弹窗打开时记录浏览统计
     useEffect(() => {
-        if (RECORD_CONVERSION || !isOpen) return;
+        if (!RECORD_CONVERSION || !isOpen) return;
 
         const wasClosed = !prevIsOpenRef.current;
         const justOpened = wasClosed && isOpen;
@@ -178,7 +178,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             // 创建 galgame 会话
             const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId });
             if (sessionResponse.data.success) {
-                return sessionResponse.data.sessionId;
+                return sessionResponse.data.data.session.session_id;
             } else {
                 alert(sessionResponse.data.message || '创建游戏失败，请重试');
                 return null;

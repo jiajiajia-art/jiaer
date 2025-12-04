@@ -1,0 +1,217 @@
+:root {
+    --primary: #E03D4B;
+    --primary-light: #FF5A67;
+    --primary-dark: #C42D3A;
+    --primary-glow: rgba(224, 61, 75, 0.35);
+    --bg-main: #FAFBFC;
+    --bg-card: #FFFFFF;
+    --text-primary: #1A1D21;
+    --text-secondary: rgba(26, 29, 33, 0.65);
+    --text-muted: rgba(26, 29, 33, 0.45);
+    --border-light: rgba(26, 29, 33, 0.08);
+    --border-medium: rgba(26, 29, 33, 0.12);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+    --shadow-primary: 0 4px 20px rgba(224, 61, 75, 0.25);
+    --radius-sm: 10px;
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.appShell {
+    display: flex;
+    height: 100vh;
+    background: var(--bg-main);
+}
+
+.main {
+    flex: 1;
+    padding: 40px 56px 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* 顶部标题栏 */
+.topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border-light);
+    position: relative;
+}
+
+.topBar::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary), transparent);
+    border-radius: 1px;
+}
+
+.topBar h1 {
+    margin: 8px 0 0;
+    font-size: clamp(1.75rem, 2.8vw, 2.25rem);
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.subtitle {
+    margin: 10px 0 0;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    max-width: 560px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 0.72rem;
+    color: var(--primary);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.eyebrow::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: var(--primary);
+    border-radius: 2px;
+    transform: rotate(45deg);
+}
+
+/* 顶部操作按钮组 */
+.topActions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.primary {
+    border-radius: 12px;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    box-shadow: var(--shadow-primary);
+    position: relative;
+    overflow: hidden;
+}
+
+.primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: var(--transition-fast);
+}
+
+.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(224, 61, 75, 0.35);
+}
+
+.primary:hover::before {
+    opacity: 1;
+}
+
+.primary:active {
+    transform: translateY(0);
+}
+
+.ghost {
+    border-radius: 12px;
+    border: 1.5px solid var(--border-medium);
+    padding: 11px 22px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    color: var(--text-primary);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+}
+
+.ghost:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(224, 61, 75, 0.04);
+    box-shadow: var(--shadow-md);
+}
+
+/* 面板容器 */
+.panel {
+    display: none;
+    flex-direction: column;
+    gap: 28px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.panel.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 响应式布局 */
+@media (max-width: 1080px) {
+    .appShell {
+        flex-direction: column;
+    }
+
+    .main {
+        padding: 28px 24px;
+    }
+}
+
+@media (max-width: 720px) {
+    .topBar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .topActions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .topBar h1 {
+        font-size: 1.5rem;
+    }
+    .main {
+        padding: 20px 16px;
+        gap: 24px;
+    }
+}

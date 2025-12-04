@@ -20,17 +20,22 @@ const parseTextParts = (text: string): TextPart[] => {
     const animationTags = ['jump', 'vibration', 'injury'];
     const colorTags = ['red', 'yellow', 'green', 'blue', 'purple'];
     
-    // 先完全移除所有动画标签及其内容（包括嵌套的情况）
+    // 移除所有动画标签，但保留内容（包括嵌套的情况）
     let processedText = text;
     for (const tag of animationTags) {
         // 使用非贪婪匹配，但需要处理嵌套标签
-        // 递归移除所有嵌套的动画标签
+        // 递归移除所有嵌套的动画标签，但保留内容
         let previousText = '';
         while (processedText !== previousText) {
             previousText = processedText;
-            const regex = new RegExp(`<${tag}>[\\s\\S]*?<\\/${tag}>`, 'gi');
-            processedText = processedText.replace(regex, '');
+            const regex = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+            processedText = processedText.replace(regex, '$1');
         }
+    }
+    // 移除不完整的动画标签
+    for (const tag of animationTags) {
+        processedText = processedText.replace(new RegExp(`<${tag}>`, 'gi'), '');
+        processedText = processedText.replace(new RegExp(`<\\/${tag}>`, 'gi'), '');
     }
     
     // 现在处理颜色标签
@@ -52,8 +57,8 @@ const parseTextParts = (text: string): TextPart[] => {
         
         // 颜色标签，保留内容（但需要递归处理内容中可能残留的标签）
         if (colorTags.includes(tagName)) {
-            // 递归处理内容，确保去除其中的动画标签
-            const cleanedContent = content.replace(/<(jump|vibration|injury)>[^<]*<\/\1>/gi, '');
+            // 递归处理内容，确保去除其中的动画标签，但保留内容
+            const cleanedContent = content.replace(/<(jump|vibration|injury)>([\s\S]*?)<\/\1>/gi, '$1');
             parts.push({ type: 'color', content: cleanedContent, color: tagName });
         }
         

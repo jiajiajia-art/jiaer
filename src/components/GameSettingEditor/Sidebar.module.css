@@ -1,0 +1,259 @@
+.sidebar {
+    width: 280px;
+    height: 100vh;
+    padding: 32px 24px;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
+}
+
+/* 品牌区域 */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.badge {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #E03D4B 0%, #FF5A67 100%);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.3);
+}
+
+.brandLabel {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+    color: #1a1a1a;
+}
+
+.brandDesc {
+    margin: 2px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.82rem;
+}
+
+/* 导航区域 */
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.navBtn {
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 14px 16px;
+    background: transparent;
+    text-align: left;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.navBtn::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    background: linear-gradient(180deg, #E03D4B, #FF5A67);
+    border-radius: 0 2px 2px 0;
+    transition: height 0.25s ease;
+}
+
+.navBtn small {
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.navBtn:hover:not(.disabled) {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.navBtn:hover:not(.disabled)::before {
+    height: 18px;
+}
+
+/* 激活状态 */
+.navBtn.active {
+    border-color: rgba(224, 61, 75, 0.15);
+    background: rgba(224, 61, 75, 0.06);
+    color: #E03D4B;
+    font-weight: 600;
+}
+
+.navBtn.active::before {
+    height: 24px;
+    box-shadow: 0 0 8px rgba(224, 61, 75, 0.4);
+}
+
+.navBtn.active small {
+    color: rgba(224, 61, 75, 0.7);
+}
+
+/* 禁用状态 */
+.navBtn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.navBtn.disabled small {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.navBtn.disabled:hover {
+    background: transparent;
+}
+
+/* 底部区域 */
+.sidebarFooter {
+    margin-top: auto;
+    padding: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.footerLabel {
+    margin: 0;
+    font-size: 0.72rem;
+    color: rgba(0, 0, 0, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+
+.footerValue {
+    margin: 6px 0 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+    width: 100%;
+}
+
+.ghostSmall:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+/* 响应式布局 */
+@media (max-width: 1080px) {
+    .sidebar {
+        width: auto;
+        height: auto;
+        flex-direction: row;
+        align-items: center;
+        overflow-x: auto;
+        padding: 14px 20px;
+        border-right: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        gap: 24px;
+    }
+
+    .brand {
+        flex-shrink: 0;
+    }
+
+    .nav {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .navBtn {
+        padding: 10px 14px;
+        font-size: 0.88rem;
+        white-space: nowrap;
+    }
+
+    .navBtn::before {
+        top: auto;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 3px;
+        border-radius: 2px 2px 0 0;
+    }
+
+    .navBtn:hover:not(.disabled)::before {
+        width: 18px;
+        height: 3px;
+    }
+
+    .navBtn.active::before {
+        width: 24px;
+        height: 3px;
+    }
+
+    .sidebarFooter {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .sidebar {
+        padding: 12px 14px;
+    }
+
+    .badge {
+        width: 36px;
+        height: 36px;
+        font-size: 0.8rem;
+        border-radius: 10px;
+    }
+
+    .brandLabel {
+        font-size: 0.9rem;
+    }
+
+    .brandDesc {
+        display: none;
+    }
+
+    .navBtn {
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    .navBtn small {
+        display: none;
+    }
+}

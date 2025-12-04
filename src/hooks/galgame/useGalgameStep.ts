@@ -196,6 +196,68 @@ export const useGalgameStep = ({
         });
     }, [handleStreamAction, user?.user.points]);
 
+    // 处理重新生成
+    const handleRegenerate = useCallback(async (
+        messageIndex: number,
+        options?: {
+            onBeforeRequest?: () => void;
+            onSuccess?: () => void;
+            onError?: (error: string) => void;
+        }
+    ) => {
+        if (!sessionId) {
+            options?.onError?.('没有 sessionId，无法发送请求...');
+            return;
+        }
+
+        try {
+            const requestId = ++currentRequestId.current;
+            
+            setCurrentStep(null);
+            setStepQueue([]);
+            setShowNextButton(false);
+            setIsWaitingForData(true);
+            setLoading(true);
+
+            onMessagesClear?.();
+            options?.onBeforeRequest?.();
+
+            // 重新生成接口
+            const response = await authFetch(
+                `${HOST_ADDRESS}/api/visual/session/${sessionId}/regenerate`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "historyIndex": messageIndex })
+                }
+            );
+
+            if (response.ok) {
+                await processStreamResponse(response, requestId, {
+                    onSuccess: async () => {
+                        if (options?.onSuccess) {
+                            await options.onSuccess();
+                        }
+                    },
+                    onError: options?.onError
+                });
+            } else {
+                const errorMsg = `请求失败: ${response.statusText}`;
+                setLoading(false);
+                setSelectedOptionIndex(null);
+                setIsWaitingForData(false);
+                options?.onError?.(errorMsg);
+            }
+        } catch (error) {
+            const errorMsg = `请求错误: ${error instanceof Error ? error.message : '未知错误'}`;
+            console.error('❌', errorMsg);
+            setLoading(false);
+            setSelectedOptionIndex(null);
+            setIsWaitingForData(false);
+            options?.onError?.(errorMsg);
+        }
+    }, [sessionId, processStreamResponse, onMessagesClear]);
+
     const reducePoints = useCallback(async (type: "option" | "selfDefined") => {
         const response = await payApi.optionPoints({ type });
         if (response.data.success) {
@@ -228,6 +290,7 @@ export const useGalgameStep = ({
         handleNextStep,
         handleChoiceOption,
         handleChoiceSend,
+        handleRegenerate,
         setCurrentStep,
         setShowNextButton,
         currentRequestId,

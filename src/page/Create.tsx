@@ -156,6 +156,12 @@ const Create: React.FC = () => {
                         </button>
                         <button
                             className={`${styles.createGameButtonItem}`}
+                            onClick={() => navigate('/gameSettingsEditor')}
+                        >
+                            编辑
+                        </button>
+                        <button
+                            className={`${styles.createGameButtonItem}`}
                             onClick={() => navigate('/profile')}
                         >
                             活动获取积分

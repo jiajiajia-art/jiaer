@@ -33,12 +33,26 @@
     width: fit-content;
     margin: 0 auto;
     border-radius: 20px;
-    margin-top: 20px;
+    margin-top: 16px;
     min-width: 180px;
+    transition: all 0.3s ease;
 }
 
 .topHeader svg {
     font-size: 18px;
+}
+
+/* 文本模式下的位置显示 */
+.topHeaderTextMode {
+    background: linear-gradient(135deg, rgba(224, 61, 75, 0.15) 0%, rgba(224, 61, 75, 0.08) 100%);
+    border: 1px solid rgba(224, 61, 75, 0.3);
+    color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 20px rgba(224, 61, 75, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+}
+
+.topHeaderTextMode svg {
+    color: #E03D4B;
 }
 
 .characterContainer {
@@ -555,6 +569,10 @@
 
 .gameContentWrapper>* {
     pointer-events: auto;
+}
+
+.gameContentWrapperTextMode {
+    background: none;
 }
 
 /* 文本模式下的容器样式 */

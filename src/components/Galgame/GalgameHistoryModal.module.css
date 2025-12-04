@@ -13,10 +13,9 @@
 
 .modalContent {
     width: 414px;
-    max-height: 896px; /* 减去头部和底部的空间 */
+    height: 896px; /* 减去头部和底部的空间 */
     /* background: rgba(0, 0, 0, 0.85); */
-    background-color: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(2px);
+    background-color: rgba(0, 0, 0, 0.2);
     /* border-radius: 12px; */
     display: flex;
     flex-direction: column;
@@ -28,22 +27,34 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.02);
 }
 
 .modalTitle {
     margin: 0;
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 600;
     color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modalTitle::before {
+    content: '';
+    width: 3px;
+    height: 16px;
+    background: #E03D4B;
+    border-radius: 2px;
 }
 
 .closeButton {
     background: transparent;
     border: none;
-    color: #fff;
-    font-size: 32px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 24px;
     line-height: 1;
     cursor: pointer;
     padding: 0;
@@ -52,13 +63,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
 .closeButton:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
 }
 
 .modalBody {
@@ -69,17 +80,16 @@
 }
 
 .modalBody::-webkit-scrollbar {
-    width: 8px;
+    width: 4px;
 }
 
 .modalBody::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+    background: transparent;
 }
 
 .modalBody::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+    border-radius: 2px;
 }
 
 .modalBody::-webkit-scrollbar-thumb:hover {
@@ -90,7 +100,8 @@
 .chatMessages {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
+    margin-bottom: 30px;
 }
 
 .messageWrapper {
@@ -101,32 +112,227 @@
 /* 用户消息气泡 - 右侧 */
 .userBubble {
     align-self: flex-end;
-    background: rgba(46, 46, 46, 0.746);
-    /* border: 1px solid rgba(28, 28, 28, 0.5); */
-    color: #fff;
-    padding: 10px 14px;
-    border-radius: 12px;
-    max-width: 75%;
-    word-break: break-word;
-    font-size: 15px;
-    line-height: 1.6;
-    letter-spacing: 0.3px;
     margin-left: auto;
+    max-width: 78%;
+    background: linear-gradient(135deg, rgba(224, 61, 75, 0.9) 0%, rgba(200, 50, 65, 0.9) 100%);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 16px 16px 4px 16px;
+    word-break: break-word;
+    font-size: 14px;
+    line-height: 1.65;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.2);
+    position: relative;
+}
+
+/* 助手消息气泡包装器 */
+.assistantBubbleWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 88%;
 }
 
 /* 助手消息气泡 - 左侧 */
 .assistantBubble {
     align-self: flex-start;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.15);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
-    padding: 12px 14px;
-    border-radius: 12px;
-    max-width: 80%;
+    backdrop-filter: blur(12px);
+    color: rgba(255, 255, 255, 0.95);
+    padding: 14px 16px;
+    border-radius: 4px 16px 16px 16px;
+    width: 100%;
     word-break: break-word;
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.75;
     letter-spacing: 0.3px;
+    position: relative;
+}
+
+/* 助手气泡内的段落间距 */
+.assistantBubble p {
+    margin: 0 0 10px 0;
+}
+
+.assistantBubble p:last-child {
+    margin-bottom: 0;
+}
+
+/* 操作按钮组 */
+.actionButtons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.assistantBubbleWrapper:hover .actionButtons {
+    opacity: 1;
+}
+
+/* 编辑按钮 */
+.editButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: rgb(255, 255, 255);
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.editButton:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #60a5fa;
+}
+
+.editButton svg {
+    font-size: 12px;
+}
+
+/* 重新生成按钮 */
+.regenerateButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: rgb(255, 255, 255);
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.regenerateButton:hover {
+    background: rgba(224, 61, 75, 0.12);
+    border-color: rgba(224, 61, 75, 0.35);
+    color: #E03D4B;
+}
+
+.regenerateButton:active {
+    transform: scale(0.97);
+}
+
+.regenerateButton svg {
+    font-size: 12px;
+}
+
+/* 编辑容器 - 继承 assistantBubbleWrapper 的宽度 */
+.editContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+/* 编辑文本框 - 样式与 assistantBubble 对齐 */
+.editTextarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 14px 16px;
+    border-radius: 4px 16px 16px 16px;
+    border: 1px solid rgba(255, 255, 255);
+    background: rgba(164, 162, 162, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 13px;
+    line-height: 1.7;
+    letter-spacing: 0.3px;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+    resize: none;
+    box-sizing: border-box;
+    word-break: break-word;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.editTextarea:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255);
+}
+
+.editTextarea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 编辑操作按钮 */
+.editActions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.saveButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+    padding: 7px 16px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.5);
+}
+
+.saveButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saveButton svg {
+    font-size: 14px;
+}
+
+.cancelButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.6);
+    padding: 7px 16px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancelButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.cancelButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.cancelButton svg {
+    font-size: 14px;
 }
 
 .speakerName {
@@ -238,42 +444,55 @@
     color: rgba(255, 255, 255, 0.9);
     flex: 1;
 }
-
 /* 文本颜色标记样式 */
 .colorRed {
-    color: #ff4444;
+    color: #ff6b6b !important;
     font-weight: 500;
 }
 
 .colorYellow {
-    color: #ffd700;
+    color: #ffd93d !important;
     font-weight: 500;
 }
 
 .colorGreen {
-    color: #4ade80;
+    color: #69db7c !important;
     font-weight: 500;
 }
 
 .colorBlue {
-    color: #60a5fa;
+    color: #74c0fc !important;
     font-weight: 500;
 }
 
 .colorPurple {
-    color: #a78bfa;
+    color: #da77f2 !important;
     font-weight: 500;
 }
 
 .emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60%;
     text-align: center;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 16px;
-    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 14px;
+    gap: 12px;
+}
+
+.emptyState::before {
+    content: '📜';
+    font-size: 40px;
+    opacity: 0.6;
 }
 
 @media (max-width: 768px) {
-    
+    .modalContent{
+        width: 100vw;
+        height: 100vh;
+    }
     .modalHeader {
         padding: 16px 20px;
     }
@@ -291,4 +510,5 @@
         line-height: 1.6;
     }
 }
+
 

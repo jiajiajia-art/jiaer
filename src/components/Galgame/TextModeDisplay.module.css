@@ -1,0 +1,347 @@
+/* 文本模式容器 - 作为页面主体内容 */
+.textModeContainer {
+    width: 100%;
+    height: calc(100vh - 160px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 80px;
+}
+
+.messagesContainer {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.messagesContainer::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messagesContainer::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.emptyState {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+}
+
+/* 加载状态 */
+.loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 40px 20px;
+    height: 100%;
+}
+
+.aiLoader {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.orbit {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    animation: spin 1.2s linear infinite;
+}
+
+.orbitInner {
+    position: absolute;
+    top: 15%;
+    left: 15%;
+    width: 70%;
+    height: 70%;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-top-color: rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite reverse;
+}
+
+.core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+}
+
+.statusText {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.dots::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% {
+        content: '.';
+    }
+    40% {
+        content: '..';
+    }
+    60%, 100% {
+        content: '...';
+    }
+}
+
+/* 消息包装器 */
+.messageWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 旁白气泡 */
+.narrationBubble {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 16px;
+    border-left: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.narrationLabel {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.narrationContent {
+    font-size: 15px;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.narrationContent > div {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* 对话气泡 */
+.dialogueBubble {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px 16px;
+    border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.speakerName {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 6px;
+    font-weight: 600;
+    border-left: 3px solid #845DFF;
+    padding-left: 8px;
+}
+
+.dialogueContent {
+    font-size: 15px;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.dialogueContent > div {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+/* 选择气泡 */
+.choiceBubble {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.choiceTitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.95);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.choiceDescription {
+    font-size: 14px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.choiceDescription > div {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.optionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.optionItem {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.optionItem:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateX(4px);
+}
+
+.optionNumber {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.optionText {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+    line-height: 1.5;
+    flex: 1;
+    word-wrap: break-word;
+}
+
+/* 场景切换气泡 */
+.sceneChangeBubble {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    text-align: center;
+}
+
+.sceneChangeBubble > div > div {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.sceneChangeBubble > div {
+    font-size: 14px;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+/* 文本颜色标记样式 - 使用 !important 确保覆盖父元素颜色 */
+.colorRed {
+    color: #ff4444 !important;
+    font-weight: 500;
+}
+
+.colorYellow {
+    color: #ffd700 !important;
+    font-weight: 500;
+}
+
+.colorGreen {
+    color: #4ade80 !important;
+    font-weight: 500;
+}
+
+.colorBlue {
+    color: #60a5fa !important;
+    font-weight: 500;
+}
+
+.colorPurple {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500;
+}
+
+/* 光标动画 */
+.cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: rgba(255, 255, 255, 0.9);
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: baseline;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+    .messagesContainer {
+        padding: 12px 16px;
+        gap: 10px;
+    }
+
+    .narrationBubble,
+    .dialogueBubble,
+    .choiceBubble {
+        padding: 10px 14px;
+    }
+
+    .narrationContent,
+    .dialogueContent {
+        font-size: 14px;
+    }
+
+    .optionText {
+        font-size: 14px;
+    }
+}
+

@@ -1,0 +1,259 @@
+.panelContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: #E03D4B;
+    font-weight: 600;
+}
+
+.panelHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.9rem;
+}
+
+/* 按钮样式 */
+.ghost {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.ghost:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.ghostSmall:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+.ghostTiny {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: rgba(0, 0, 0, 0.6);
+    background: transparent;
+    align-self: flex-end;
+}
+
+.ghostTiny:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+/* 单栏表单容器 */
+.formContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+/* 表单行 */
+.formRow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fieldHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fieldLabel {
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.fieldHint {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.5);
+    line-height: 1.4;
+}
+
+/* 输入框样式 - 限定在 formContainer 内 */
+.formContainer input,
+.formContainer textarea,
+.storylineRow input,
+.storylineRow textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formContainer input:focus,
+.formContainer textarea:focus,
+.storylineRow input:focus,
+.storylineRow textarea:focus {
+    outline: none;
+    border-color: #E03D4B;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.formContainer textarea,
+.storylineRow textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.6;
+}
+
+/* 故事线区块 */
+.storylineSection {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    padding-top: 20px;
+    margin-top: 8px;
+}
+
+.storylineHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.storylineHeader > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.storylineList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.storylineRow {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.25s ease;
+}
+
+.storylineRow:hover {
+    border-color: rgba(224, 61, 75, 0.15);
+    background: rgba(224, 61, 75, 0.02);
+}
+
+.storylineMeta {
+    display: flex;
+    gap: 12px;
+}
+
+.storylineMeta label {
+    flex: 1;
+}
+
+.wide {
+    width: 100%;
+}
+
+.storylineRow label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.storylineRow label span {
+    font-size: 0.82rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+}
+
+.emptyHint {
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 0.85rem;
+    margin: 0;
+    padding: 16px;
+    text-align: center;
+    border: 1px dashed rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+}
+
+/* 响应式布局 */
+@media (max-width: 720px) {
+    .panelHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .panelHeader h2 {
+        font-size: 1.4rem;
+    }
+
+    .formContainer {
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .storylineHeader {
+        flex-direction: column;
+        gap: 12px;
+    }
+}

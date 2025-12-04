@@ -172,6 +172,8 @@
 
 @media (max-width: 768px) {
     .modalContent {
+        width: 100vw;
+        height: 100vh;
         padding: 30px 20px 20px 20px;
     }
 
