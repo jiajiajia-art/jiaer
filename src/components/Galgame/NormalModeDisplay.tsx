@@ -3,6 +3,7 @@ import styles from './NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
+import useGalgameHistory from '../../hooks/galgame/useGalgameHistory';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -47,7 +48,9 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
 
-    const { isWaitingForData, currentStep, showNextButton, selectedOptionIndex } = stepHandlers;
+    const { history } = useGalgameHistory();
+
+    const { isWaitingForData, currentStep, showNextButton } = stepHandlers;
 
     const handleCustomInputClick = useCallback(() => {
         setShowCustomInput(true);
@@ -154,48 +157,29 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 </div>
             )}
 
-            {currentMessage && currentMessage.type === 'choice' && currentMessage.options && (
+            {currentMessage && currentMessage.type === 'choice' && currentMessage.options && !isWaitingForData && (
                 <div className={styles.choiceContainer}>
-                    {currentMessage.options.map((option) => {
-                        const isSelected = selectedOptionIndex !== null &&
-                            selectedOptionIndex === currentMessage.options?.findIndex((opt: any) => opt.text === option.text);
-                        // const isWaiting = isWaitingForData && isSelected;
-
-                        return (
-                            <div
-                                key={option.id}
-                                className={styles.choiceOption}
-                                onClick={() => onChoiceClick(option)}
-                                style={{
-                                    opacity: selectedOptionIndex !== null && !isSelected
-                                        ? 0.5
-                                        : 1,
-                                    pointerEvents: isWaitingForData ? 'none' : 'auto'
-                                }}
-                            >
-                                {/* {isWaiting && (
-                                    <div className={styles.progressBar}>
-                                        <div className={styles.progressFill}></div>
-                                    </div>
-                                )} */}
-                                <span className={styles.choiceText}>
-                                    {extractPlainText(option.text)}
-                                </span>
+                    {currentMessage.options.map((option) => (
+                        <div
+                            key={option.id}
+                            className={styles.choiceOption}
+                            onClick={() => onChoiceClick(option)}
+                        >
+                            <span className={styles.choiceText}>
+                                {extractPlainText(option.text)}
+                            </span>
+                            {history.length > 10 && (
                                 <div className={styles.choicePrice}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                     <span>2</span>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            )}
+                        </div>
+                    ))}
                     {!showCustomInput ? (
                         <div
                             className={styles.customInputText}
                             onClick={handleCustomInputClick}
-                            style={{
-                                pointerEvents: isWaitingForData ? 'none' : 'auto',
-                                opacity: isWaitingForData ? 0.5 : 1
-                            }}
                         >
                             <span>自定义输入</span>
                         </div>
@@ -207,31 +191,36 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 value={customInputValue}
                                 onChange={(e) => handleCustomInputChange(e.target.value)}
                                 onKeyDown={handleCustomInputKeyDown}
-                                disabled={isWaitingForData}
                                 autoFocus
                             />
                             <button
                                 onClick={handleCustomInputSubmit}
-                                disabled={isWaitingForData || !customInputValue.trim()}
+                                disabled={!customInputValue.trim()}
                                 className={styles.customInputButton}
                             >
-                                {isWaitingForData && (
-                                    <div className={styles.progressBar}>
-                                        <div className={styles.progressFill}></div>
+                                <span>发送</span>
+                                {history.length > 10 && (
+                                    <div className={styles.choicePrice}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                        <span>3</span>
                                     </div>
                                 )}
-                                {isWaitingForData ? (
-                                    <span style={{ opacity: 0.7 }}>发送中...</span>
-                                ) : (
-                                    <span>发送</span>
-                                )}
-                                <div className={styles.choicePrice}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>3</span>
-                                </div>
                             </button>
                         </div>
                     )}
+                </div>
+            )}
+
+            {currentMessage && currentMessage.type === 'choice' && isWaitingForData && (
+                <div className={styles.loadingContainer}>
+                    <div className={styles.aiLoader}>
+                        <div className={styles.orbit}></div>
+                        <div className={styles.orbitInner}></div>
+                        <div className={styles.core}></div>
+                    </div>
+                    <div className={styles.statusText}>
+                        AI 推演中<span className={styles.dots}></span>
+                    </div>
                 </div>
             )}
         </>

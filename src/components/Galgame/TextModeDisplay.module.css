@@ -257,6 +257,99 @@
     word-wrap: break-word;
 }
 
+.pointsCost {
+    color: rgba(255, 200, 100, 0.8);
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.freeBadge {
+    color: rgba(74, 222, 128, 0.9);
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+/* 自定义输入区域 */
+.customInputSection {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.customInputHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.pointsCostHint {
+    color: rgba(255, 200, 100, 0.8);
+    font-size: 12px;
+}
+
+.freeHint {
+    color: rgba(74, 222, 128, 0.9);
+    font-size: 12px;
+}
+
+.customInputWrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.customInput {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.customInput::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.customInput:focus {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.customInput:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.customInputButton {
+    background: rgba(224, 61, 75, 0.8);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.customInputButton:hover:not(:disabled) {
+    background: rgba(224, 61, 75, 1);
+}
+
+.customInputButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* 场景切换气泡 */
 .sceneChangeBubble {
     background: rgba(255, 255, 255, 0.06);

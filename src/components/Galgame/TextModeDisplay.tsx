@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './TextModeDisplay.module.css';
+import useGalgameHistory from '../../hooks/galgame/useGalgameHistory';
 
 interface TextModalStep {
     id: string;
@@ -23,7 +24,17 @@ interface TextModeDisplayProps {
     isWaitingForData: boolean;
     onNextStep: () => void;
     onChoiceClick?: (option: { id: number; text: string }) => void;
+    onCustomInputSubmit?: (value: string) => void;
 }
+
+// 积分消耗配置
+const POINTS_CONFIG = {
+    option: 2,      // 选择选项消耗2积分
+    custom: 3,      // 自定义输入消耗3积分
+};
+
+// 前5回免费（每回2条消息，共10条）
+const FREE_ROUNDS_THRESHOLD = 10;
 
 const MessageItem: React.FC<{
     step: TextModalStep;
@@ -32,13 +43,29 @@ const MessageItem: React.FC<{
     currentDisplayText: string;
     isTyping: boolean;
     onChoiceClick?: (option: { id: number; text: string }) => void;
-}> = ({ step, isCurrentStep, currentDisplayText, isTyping, onChoiceClick }) => {
+    onCustomInputSubmit?: (value: string) => void;
+}> = ({ step, isCurrentStep, currentDisplayText, isTyping, onChoiceClick, onCustomInputSubmit }) => {
+    const [customInput, setCustomInput] = useState('');
+    const { history } = useGalgameHistory();
+
     if (!step) return null;
+
+    const handleCustomSubmit = () => {
+        if (customInput.trim() && onCustomInputSubmit && !isTyping) {
+            onCustomInputSubmit(customInput.trim());
+            setCustomInput('');
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCustomSubmit();
+        }
+    };
 
     // 根据类型渲染不同的消息样式
     if (step.type === 'narration' || step.type === 'transition') {
-        // 对于当前步骤且正在打字，使用 currentDisplayText（已保留颜色标签，支持丝滑打字效果）
-        // 对于已完成步骤，使用原始 content（保留颜色标签）
         const displayText = isCurrentStep && isTyping && currentDisplayText
             ? currentDisplayText
             : (step.content || '');
@@ -57,9 +84,6 @@ const MessageItem: React.FC<{
 
     if (step.type === 'dialogue') {
         const speaker = step.speakerName || '';
-        // console.log(step);
-        // 对于当前步骤且正在打字，使用 currentDisplayText（已保留颜色标签，支持丝滑打字效果）
-        // 对于已完成步骤，使用原始 content（保留颜色标签）
         const displayText = isCurrentStep && isTyping && currentDisplayText
             ? currentDisplayText
             : (step.content || '');
@@ -89,25 +113,60 @@ const MessageItem: React.FC<{
                         </div>
                     )}
                     {step.options && step.options.length > 0 && (
-                        <div className={styles.optionsList}>
-                            {step.options.map((opt) => (
-                                <div 
-                                    key={opt.id} 
-                                    className={styles.optionItem}
-                                    onClick={() => {
-                                        if (onChoiceClick && !isTyping) {
-                                            onChoiceClick(opt);
+                        <>
+                            <div className={styles.optionsList}>
+                                {step.options.map((opt) => (
+                                    <div 
+                                        key={opt.id} 
+                                        className={styles.optionItem}
+                                        onClick={() => {
+                                            if (onChoiceClick && !isTyping) {
+                                                onChoiceClick(opt);
+                                            }
+                                        }}
+                                        style={{ 
+                                            cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
+                                        }}
+                                    >
+                                        <span className={styles.optionNumber}>{opt.id}</span>
+                                        <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
+                                        {history.length > FREE_ROUNDS_THRESHOLD 
+                                            ? <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                            : <span className={styles.freeBadge}>免费</span>
                                         }
-                                    }}
-                                    style={{ 
-                                        cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
-                                    }}
-                                >
-                                    <span className={styles.optionNumber}>{opt.id}</span>
-                                    <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* 自定义输入区域 */}
+                            <div className={styles.customInputSection}>
+                                <div className={styles.customInputHeader}>
+                                    <span>或者自定义输入</span>
+                                    {history.length > FREE_ROUNDS_THRESHOLD 
+                                        ? <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                                        : <span className={styles.freeHint}>免费</span>
+                                    }
                                 </div>
-                            ))}
-                        </div>
+                                <div className={styles.customInputWrapper}>
+                                    <input
+                                        type="text"
+                                        className={styles.customInput}
+                                        placeholder="输入你想说的话或行动..."
+                                        value={customInput}
+                                        onChange={(e) => setCustomInput(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        disabled={isTyping}
+                                    />
+                                    <button 
+                                        className={styles.customInputButton}
+                                        onClick={handleCustomSubmit}
+                                        disabled={!customInput.trim() || isTyping}
+                                    >
+                                        发送
+                                    </button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
@@ -115,8 +174,6 @@ const MessageItem: React.FC<{
     }
 
     if (step.type === 'scene_change') {
-        // 对于当前步骤且正在打字，使用 currentDisplayText（已处理过的）
-        // 对于已完成步骤，使用原始 content（保留颜色标签）
         const displayText = isCurrentStep && isTyping && currentDisplayText
             ? currentDisplayText
             : (step.content || '');
@@ -141,15 +198,14 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     showNextButton,
     isWaitingForData,
     onNextStep,
-    onChoiceClick
+    onChoiceClick,
+    onCustomInputSubmit
 }) => {
-    // 文本模式下自动输出下一个step（默认开启）
     const autoPlayTimerRef = useRef<number | null>(null);
     const previousIsTypingRef = useRef<boolean>(false);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     
     useEffect(() => {
-        // 文本模式默认自动播放
         if (previousIsTypingRef.current && 
             !isTyping && 
             showNextButton && 
@@ -169,7 +225,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
         };
     }, [isTyping, showNextButton, isWaitingForData, onNextStep]);
 
-    // 自动滚动到底部
     useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -204,6 +259,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                             currentDisplayText={index === currentStepIndex ? currentDisplayText : ''}
                             isTyping={index === currentStepIndex ? isTyping : false}
                             onChoiceClick={onChoiceClick}
+                            onCustomInputSubmit={onCustomInputSubmit}
                         />
                     ))}
                 </div>
@@ -213,4 +269,3 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
 };
 
 export default TextModeDisplay;
-

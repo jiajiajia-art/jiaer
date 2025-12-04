@@ -69,6 +69,7 @@ const Galgame = () => {
 
     const stepHandlers = useGalgameStep({
         sessionId,
+        historyLength: history.length, // 传递历史长度用于判断是否免费
         onMessagesClear: () => {
             setInitialMessages([]);
             // 清空已完成步骤和引用，避免残留数据
@@ -350,7 +351,7 @@ const Galgame = () => {
 
     // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息
     useEffect(() => {
-        if (showStoryIntro) {
+        if (history.length > 0) {
             setShowStoryIntro(false);
             setGameStarted(true);
             processHistoryRecord();
@@ -723,6 +724,12 @@ const Galgame = () => {
                                     previousStepRef.current = null;
                                     previousIsTypingRef.current = false;
                                     handleChoiceClick(option);
+                                }}
+                                onCustomInputSubmit={(value) => {
+                                    setCompletedSteps([]);
+                                    previousStepRef.current = null;
+                                    previousIsTypingRef.current = false;
+                                    stepHandlers.handleChoiceSend(value);
                                 }}
                             />
                         )}

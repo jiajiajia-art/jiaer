@@ -9,11 +9,16 @@ import { auth } from '../../api/account/authApi';
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
+    historyLength?: number; // 历史消息长度，用于判断是否免费
     onMessagesClear?: () => void;
 }
 
+// 前5回免费（每回2条消息，共10条）
+const FREE_ROUNDS_THRESHOLD = 10;
+
 export const useGalgameStep = ({ 
     sessionId, 
+    historyLength = 0,
     onMessagesClear 
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
@@ -157,11 +162,16 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
 
-        if (user?.user.points && user.user.points > 2) {
-            await reducePoints("option");
-        } else {
-            toast.error("积分不足");
-            return;
+        // 前5回免费，之后需要扣除积分
+        if (historyLength > FREE_ROUNDS_THRESHOLD) {
+            if (user?.user.points && user.user.points > 2) {
+                await reducePoints("option");
+            } else {
+                toast.error("积分不足");
+                setIsWaitingForData(false);
+                setSelectedOptionIndex(null);
+                return;
+            }
         }
 
         await handleStreamAction(option.text, {
@@ -171,7 +181,7 @@ export const useGalgameStep = ({
                 setSelectedOptionIndex(null);
             }
         });
-    }, [handleStreamAction, user?.user.points]);
+    }, [handleStreamAction, user?.user.points, historyLength]);
 
     // 处理输入框发送
     const handleChoiceSend = useCallback(async (inputText: string) => {
@@ -181,11 +191,16 @@ export const useGalgameStep = ({
 
         setIsWaitingForData(true);
         setShowNextButton(false);
-        if (user?.user.points && user.user.points > 3) {
-            await reducePoints("selfDefined");
-        } else {
-            toast.error("积分不足");
-            return;
+        
+        // 前5回免费，之后需要扣除积分
+        if (historyLength > FREE_ROUNDS_THRESHOLD) {
+            if (user?.user.points && user.user.points > 3) {
+                await reducePoints("selfDefined");
+            } else {
+                toast.error("积分不足");
+                setIsWaitingForData(false);
+                return;
+            }
         }
 
         await handleStreamAction(inputText, {
@@ -194,7 +209,7 @@ export const useGalgameStep = ({
                 setIsWaitingForData(false);
             }
         });
-    }, [handleStreamAction, user?.user.points]);
+    }, [handleStreamAction, user?.user.points, historyLength]);
 
     // 处理重新生成
     const handleRegenerate = useCallback(async (
