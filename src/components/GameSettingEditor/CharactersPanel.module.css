@@ -94,6 +94,24 @@
     font-weight: 600;
 }
 
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.ghostSmall:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
 /* 角色列表 */
 .characterRoster {
     display: flex;
@@ -134,11 +152,32 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    flex: 1;
 }
 
 .characterMeta strong {
     font-size: 1rem;
     color: #1a1a1a;
+}
+
+.deleteButton {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+    background: none;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    padding: 0;
+    color: #4f4f4f;
+}
+
+.deleteButton:hover {
+    color: #E03D4B;
 }
 
 .mutedSmall {
@@ -158,7 +197,7 @@
 .tag {
     display: inline-flex;
     align-items: center;
-    border-radius: 999px;
+    border-radius: 5px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     padding: 2px 10px;
     font-size: 0.72rem;
@@ -282,6 +321,23 @@
 .cardHead strong {
     font-size: 1rem;
     color: #1a1a1a;
+}
+
+.collapsibleHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px 0;
+}
+
+.collapsibleHeader strong {
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+
+.collapsedContent {
+    display: none;
 }
 
 /* 关系列表 */

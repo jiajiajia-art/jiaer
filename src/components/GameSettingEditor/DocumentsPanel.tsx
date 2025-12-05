@@ -12,12 +12,12 @@ interface DocumentsPanelProps {
 // 解析步骤配置（时间单位：秒）
 const PARSING_STEPS = [
     { label: '上传完成', duration: 3 },
-    { label: '解析世界观', duration: 180 },
-    { label: '提取角色 / 场景', duration: 120 },
-    { label: '生成剧情节点', duration: 120 },
+    { label: '解析世界观', duration: 60 },
+    { label: '提取角色 / 场景', duration: 35 },
+    { label: '生成剧情节点', duration: 22 },
 ];
 
-const TOTAL_DURATION = PARSING_STEPS.reduce((sum, step) => sum + step.duration, 0);
+const TOTAL_DURATION = PARSING_STEPS.reduce((sum, step) => sum + step.duration, 0); // 总共 120 秒（2 分钟）
 const MAX_FAKE_PROGRESS = 95;
 
 const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
@@ -104,8 +104,19 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
         let elapsedTime = 0;
         const interval = 100;
+        let hasReachedMaxProgress = false;
 
         progressIntervalRef.current = window.setInterval(() => {
+            // 如果 API 已经完成，立即跳到 100%
+            if (apiCompletedRef.current) {
+                if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current);
+                    progressIntervalRef.current = null;
+                }
+                finishProgress();
+                return;
+            }
+
             elapsedTime += interval / 1000;
 
             const rawProgress = (elapsedTime / TOTAL_DURATION) * 100;
@@ -124,23 +135,25 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             }
             setCurrentStepIndex(Math.min(stepIndex, PARSING_STEPS.length - 1));
 
-            if (rawProgress >= MAX_FAKE_PROGRESS) {
-                if (apiCompletedRef.current) {
-                    if (progressIntervalRef.current) {
-                        clearInterval(progressIntervalRef.current);
-                        progressIntervalRef.current = null;
-                    }
-                    finishProgress();
-                }
+            // 如果到达最大进度但 API 还没完成，继续等待（延迟）
+            if (rawProgress >= MAX_FAKE_PROGRESS && !hasReachedMaxProgress) {
+                hasReachedMaxProgress = true;
+                // 继续等待 API 完成，进度条保持在 95%
             }
         }, interval);
     }, [onParsingStart, finishProgress]);
 
+    // 当 API 提前完成时，立即跳到 100%
     useEffect(() => {
-        if (apiCompleted && progress >= MAX_FAKE_PROGRESS && !isCompleted && !apiError) {
+        if (apiCompleted && !isCompleted && !apiError) {
+            // 如果进度条还在运行，停止它并立即完成
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
+            }
             finishProgress();
         }
-    }, [apiCompleted, progress, isCompleted, apiError, finishProgress]);
+    }, [apiCompleted, isCompleted, apiError, finishProgress]);
 
     useEffect(() => {
         return () => {

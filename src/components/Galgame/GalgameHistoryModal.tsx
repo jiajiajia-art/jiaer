@@ -19,6 +19,7 @@ const GalgameHistoryModal = ({ isOpen, history, onClose, onRegenerate, onEditSav
     const [editContent, setEditContent] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const modalBodyRef = useRef<HTMLDivElement>(null);
 
     // 自动调整 textarea 高度
     const adjustTextareaHeight = useCallback(() => {
@@ -35,6 +36,25 @@ const GalgameHistoryModal = ({ isOpen, history, onClose, onRegenerate, onEditSav
             adjustTextareaHeight();
         }
     }, [editContent, editingIndex, adjustTextareaHeight]);
+
+    // 当历史记录变化或模态框打开时，滚动到底部
+    useEffect(() => {
+        if (isOpen && modalBodyRef.current) {
+            // 使用 requestAnimationFrame 和 setTimeout 确保 DOM 已完全渲染
+            const scrollToBottom = () => {
+                if (modalBodyRef.current) {
+                    const container = modalBodyRef.current;
+                    // 滚动到底部
+                    container.scrollTop = container.scrollHeight;
+                }
+            };
+            
+            // 使用双重延迟确保内容已渲染
+            requestAnimationFrame(() => {
+                setTimeout(scrollToBottom, 100);
+            });
+        }
+    }, [isOpen, history]);
 
     if (!isOpen) return null;
 
@@ -77,18 +97,20 @@ const GalgameHistoryModal = ({ isOpen, history, onClose, onRegenerate, onEditSav
     };
 
     return (
-        <div className={styles.modalOverlay}
-            style={{
-                backgroundImage: `url(${backgroundImage})`
-            }}
-         onClick={onClose}>
+        <div className={styles.modalOverlay} >
             <div className={styles.modalContent}
+            style={{
+                backgroundImage: `url(${backgroundImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+            }}
              onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
                     <h2 className={styles.modalTitle}>历史记录</h2>
                     <button className={styles.closeButton} onClick={onClose}>×</button>
                 </div>
-                <div className={styles.modalBody}>
+                <div className={styles.modalBody} ref={modalBodyRef}>
                     {history.length === 0 ? (
                         <div className={styles.emptyState}>暂无历史记录</div>
                     ) : (

@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styles from './ScenesPanel.module.css';
+import type { AllGameData, SceneSetting } from '../../api/galgame/EditorData.type';
+import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
+import EditorApi from '../../api/galgame/EditorData';
+import { toast } from 'react-hot-toast';
+import DeletModal from '../goodsModal/DeletModal';
+import { RiDeleteBin5Line } from 'react-icons/ri';
 
 interface BgmItem {
     id: string;
@@ -7,7 +13,7 @@ interface BgmItem {
     description: string;
 }
 
-interface Scene {
+interface LocalScene {
     id: string;
     name: string;
     type: string;
@@ -16,54 +22,104 @@ interface Scene {
     bgmId: string;
 }
 
-const ScenesPanel: React.FC = () => {
-    const [activeSceneId, setActiveSceneId] = useState<string>('scene01');
+interface ScenesPanelProps {
+    gameData?: AllGameData | null;
+    isLoading?: boolean;
+    fileId?: string | null;
+    onGetData?: (getDataFn: () => Partial<AllGameData> | null) => void;
+    onDataChange?: () => void; // 数据变化回调，用于刷新数据
+}
 
-    const [bgmLibrary, setBgmLibrary] = useState<BgmItem[]>([
+const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, fileId, onGetData, onDataChange }) => {
+    const [activeSceneId, setActiveSceneId] = useState<string>('');
+    const [sceneData, setSceneData] = useState<LocalScene[]>([]);
+    const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
+    const [newSceneData, setNewSceneData] = useState<LocalScene | null>(null);
+    const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+    const [sceneToDelete, setSceneToDelete] = useState<string | null>(null);
+
+    const [bgmLibrary, _setBgmLibrary] = useState<BgmItem[]>([
         { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
         { id: 'bgm-battle', name: '量子引擎警报', description: '紧张 / 战斗准备' },
         { id: 'bgm-dream', name: '星潮呢喃', description: '浪漫 / 深夜' },
     ]);
 
-    const [sceneData, setSceneData] = useState<Scene[]>([
-        {
-            id: 'scene01',
-            name: '中央天幕',
-            type: '校园 · 室外',
-            desc: '巨型玻璃穹顶映出银河，学生在此完成星际宣誓。',
-            image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
-            bgmId: 'bgm-morning',
-        },
-        {
-            id: 'scene02',
-            name: '量子引擎仓',
-            type: '科技 · 室内',
-            desc: '蓝白色能量舱室，脉冲光随剧情强度闪烁。',
-            image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80',
-            bgmId: 'bgm-battle',
-        },
-        {
-            id: 'scene03',
-            name: '宿舍 · B507',
-            type: '生活 · 室内',
-            desc: '暖色灯带与城市夜景，适合情感铺垫与回忆杀。',
-            image: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=900&q=80',
-            bgmId: 'bgm-dream',
-        },
-        {
-            id: 'scene04',
-            name: '星舰甲板',
-            type: '太空 · 户外',
-            desc: '无重力粒子雨，重大剧情节点触发地点。',
-            image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=900&q=80',
-            bgmId: '',
-        },
-    ]);
+    // 当 gameData 变化时，填充场景数据
+    useEffect(() => {
+        if (gameData?.sceneSetting?.scenes) {
+            const scenes = gameData.sceneSetting.scenes;
+            const convertedScenes: LocalScene[] = scenes.map((scene) => ({
+                id: scene.id || '',
+                name: scene.name || '',
+                type: scene.type || '',
+                desc: scene.description || '',
+                image: scene.images || '',
+                bgmId: scene.soundtrack || '',
+            }));
+
+            setSceneData(convertedScenes);
+            if (convertedScenes.length > 0) {
+                setActiveSceneId(convertedScenes[0].id);
+            }
+        }
+    }, [gameData]);
+
+    // 将 sceneData 转换为 sceneSetting 格式
+    const getSceneSettingData = useCallback((): SceneSetting | null => {
+        if (!gameData?.sceneSetting) return null;
+
+        const scenes = sceneData
+            .filter(scene => !scene.id.startsWith('temp-')) // 过滤掉临时场景
+            .map(scene => ({
+                id: scene.id,
+                name: scene.name,
+                type: scene.type || '',
+                description: scene.desc || '',
+                atmosphere: undefined,
+                dangerLevel: undefined,
+                images: scene.image || undefined,
+                items: undefined,
+                events: [],
+                soundtrack: scene.bgmId || undefined,
+            }));
+
+        return {
+            scenes,
+        };
+    }, [sceneData, gameData]);
+
+    // 提供给父组件的数据获取函数
+    useEffect(() => {
+        if (onGetData) {
+            onGetData(() => {
+                const sceneSetting = getSceneSettingData();
+                if (!sceneSetting) return null;
+                return { sceneSetting };
+            });
+        }
+    }, [onGetData, getSceneSettingData]);
 
     const activeScene = sceneData.find(s => s.id === activeSceneId) || sceneData[0];
 
+    // 如果没有场景数据，显示空状态
+    if (sceneData.length === 0 || !activeScene) {
+        return (
+            <div className={styles.panelContent}>
+                <div className={styles.panelHeader}>
+                    <div>
+                        <p className={styles.eyebrow}>Step 4</p>
+                        <h2>场景绑定 BGM</h2>
+                        <p className={styles.subtitle}>
+                            {isLoading ? '正在加载场景数据...' : '暂无场景数据，请先上传文档并等待解析完成'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // 更新场景字段
-    const updateSceneField = (field: keyof Scene, value: string) => {
+    const updateSceneField = (field: keyof LocalScene, value: string) => {
         setSceneData(prev =>
             prev.map(scene =>
                 scene.id === activeSceneId ? { ...scene, [field]: value } : scene
@@ -71,37 +127,190 @@ const ScenesPanel: React.FC = () => {
         );
     };
 
-    // 添加场景
-    const addScene = () => {
-        const name = prompt('请输入场景名称', `新场景 ${sceneData.length + 1}`) || '未命名场景';
-        const newScene: Scene = {
-            id: `scene-${Date.now()}`,
-            name,
-            type: '自定义场景',
-            desc: '请补充场景描述，用于提示美术风格与剧情氛围。',
+    // 打开新增场景面板
+    const openAddNewPanel = () => {
+        const newScene: LocalScene = {
+            id: `temp-${Date.now()}`,
+            name: '',
+            type: '',
+            desc: '',
             image: '',
             bgmId: '',
         };
-        setSceneData(prev => [newScene, ...prev]);
-        setActiveSceneId(newScene.id);
+        setNewSceneData(newScene);
+        setIsAddingNew(true);
+        setActiveSceneId(''); // 清空当前选中
     };
 
-    // 更新 BGM
-    const updateBgm = (bgmId: string, key: 'name' | 'description', value: string) => {
-        setBgmLibrary(prev =>
-            prev.map(bgm => bgm.id === bgmId ? { ...bgm, [key]: value } : bgm)
-        );
+    // 取消新增
+    const cancelAddNew = () => {
+        setIsAddingNew(false);
+        setNewSceneData(null);
+        if (sceneData.length > 0) {
+            setActiveSceneId(sceneData[0].id);
+        }
     };
 
-    // 添加 BGM
-    const addBgm = () => {
-        const newBgm: BgmItem = {
-            id: `bgm-${Date.now()}`,
-            name: '新音轨',
-            description: '待补充描述',
+    // 确认新增场景
+    const confirmAddNew = async () => {
+        if (!fileId || !newSceneData) {
+            console.log('缺少必要数据，无法新增场景', { fileId, newSceneData });
+
+            toast.error('缺少必要数据，无法新增场景');
+            return;
+        }
+
+        // 生成新的场景 ID（小写英文，下划线连接）
+        const newSceneId = `scene_${Date.now()}`;
+
+        const sceneDataForApi: ApiScene = {
+            id: newSceneId,
+            name: newSceneData.name || '未命名场景',
+            type: newSceneData.type || '',
+            description: newSceneData.desc || '暂无描述',
+            images: newSceneData.image || undefined,
+            soundtrack: newSceneData.bgmId || undefined,
+            npcs: [],
+            events: [],
         };
-        setBgmLibrary(prev => [newBgm, ...prev]);
+
+        try {
+            const response = await EditorApi.addScene(fileId, sceneDataForApi);
+            if (response.data?.success) {
+                // 创建本地 LocalScene 对象
+                const createdScene: LocalScene = {
+                    ...newSceneData,
+                    id: newSceneId,
+                };
+                // 新增场景放在最上面
+                setSceneData(prev => [createdScene, ...prev]);
+                setActiveSceneId(createdScene.id);
+                setIsAddingNew(false);
+                setNewSceneData(null);
+                toast.success('场景创建成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('创建场景失败');
+            }
+        } catch (error) {
+            console.error('创建场景时出错:', error);
+            toast.error('创建场景失败，请重试');
+        }
     };
+
+    // 确认修改场景（直接使用当前选中的场景数据）
+    const confirmEdit = async () => {
+        if (!fileId || !activeScene) {
+            toast.error('缺少必要数据，无法保存修改');
+            return;
+        }
+        
+        const sceneToSave = activeScene;
+
+        const sceneDataForApi: ApiScene = {
+            id: sceneToSave.id,
+            name: sceneToSave.name || '未命名场景',
+            type: sceneToSave.type || '',
+            description: sceneToSave.desc || '暂无描述',
+            images: sceneToSave.image || undefined,
+            soundtrack: sceneToSave.bgmId || undefined,
+            npcs: [],
+            events: [],
+        };
+
+        try {
+            const response = await EditorApi.updateScene(fileId, sceneDataForApi);
+            if (response.data?.success) {
+                toast.success('场景更新成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('更新场景失败');
+            }
+        } catch (error) {
+            console.error('更新场景时出错:', error);
+            toast.error('更新场景失败，请重试');
+        }
+    };
+
+    // 更新新增场景的字段
+    const updateNewSceneField = (field: keyof LocalScene, value: string) => {
+        if (!newSceneData) return;
+        setNewSceneData({ ...newSceneData, [field]: value });
+    };
+
+    // 删除场景
+    const handleDeleteClick = (sceneId: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // 阻止触发场景选择
+        setSceneToDelete(sceneId);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!sceneToDelete || !fileId) {
+            setDeleteModalOpen(false);
+            setSceneToDelete(null);
+            return;
+        }
+
+        try {
+            const response = await EditorApi.deleteScene(fileId, sceneToDelete);
+            if (response.data?.success) {
+                setSceneData(prev => {
+                    const filtered = prev.filter(scene => scene.id !== sceneToDelete);
+                    // 如果删除的是当前选中的场景，切换到第一个场景
+                    if (sceneToDelete === activeSceneId) {
+                        if (filtered.length > 0) {
+                            setActiveSceneId(filtered[0].id);
+                        } else {
+                            setActiveSceneId('');
+                        }
+                    }
+                    return filtered;
+                });
+                toast.success('场景删除成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('删除场景失败');
+            }
+        } catch (error) {
+            console.error('删除场景时出错:', error);
+            toast.error('删除场景失败，请重试');
+        } finally {
+            setDeleteModalOpen(false);
+            setSceneToDelete(null);
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setDeleteModalOpen(false);
+        setSceneToDelete(null);
+    };
+
+    // // 更新 BGM
+    // const updateBgm = (bgmId: string, key: 'name' | 'description', value: string) => {
+    //     setBgmLibrary(prev =>
+    //         prev.map(bgm => bgm.id === bgmId ? { ...bgm, [key]: value } : bgm)
+    //     );
+    // };
+
+    // // 添加 BGM
+    // const addBgm = () => {
+    //     const newBgm: BgmItem = {
+    //         id: `bgm-${Date.now()}`,
+    //         name: '新音轨',
+    //         description: '待补充描述',
+    //     };
+    //     setBgmLibrary(prev => [newBgm, ...prev]);
+    // };
 
     return (
         <div className={styles.panelContent}>
@@ -122,9 +331,8 @@ const ScenesPanel: React.FC = () => {
                         <div className={styles.boardHead}>
                             <div>
                                 <h3>解析出的场景</h3>
-                                <span className={styles.chip}>与角色档案类似的编辑体验</span>
                             </div>
-                            <button className={styles.ghostSmall} onClick={addScene}>+ 新增场景</button>
+                            <button className={styles.ghostSmall} onClick={openAddNewPanel}>+ 新增场景</button>
                         </div>
                         <div className={styles.sceneList}>
                             {sceneData.map((scene) => (
@@ -140,7 +348,16 @@ const ScenesPanel: React.FC = () => {
                                         {!scene.image && <span>待上传</span>}
                                     </div>
                                     <div className={styles.sceneMeta}>
-                                        <strong>{scene.name}</strong>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                            <strong>{scene.name}</strong>
+                                            <button
+                                                className={styles.deleteButton}
+                                                onClick={(e) => handleDeleteClick(scene.id, e)}
+                                                title="删除场景"
+                                            >
+                                                <RiDeleteBin5Line />
+                                            </button>
+                                        </div>
                                         <p className={styles.mutedSmall}>{scene.desc}</p>
                                     </div>
                                 </article>
@@ -149,7 +366,7 @@ const ScenesPanel: React.FC = () => {
                     </div>
 
                     {/* BGM 素材库 */}
-                    <div className={styles.card}>
+                    {/* <div className={styles.card}>
                         <div className={styles.cardHead}>
                             <h3>BGM 素材库</h3>
                             <button className={styles.ghostSmall} onClick={addBgm}>上传 BGM</button>
@@ -177,62 +394,153 @@ const ScenesPanel: React.FC = () => {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* 右栏 - 场景详情 */}
                 <div className={styles.card}>
-                    {/* 场景背景大图 */}
-                    <div
-                        className={`${styles.sceneHero} ${!activeScene.image ? styles.empty : ''}`}
-                        style={activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}}
-                    >
-                        {activeScene.image ? (
-                            <span className={styles.heroHint}>点击替换背景</span>
-                        ) : (
-                            <span>点击上传背景图</span>
-                        )}
-                    </div>
+                    {/* 右侧面板头部 - 确认/取消按钮 */}
+                    {isAddingNew && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+                            <button className={styles.ghostSmall} onClick={confirmAddNew}>
+                                确认增加
+                            </button>
+                            <button className={styles.ghostSmall} onClick={cancelAddNew}>
+                                取消
+                            </button>
+                        </div>
+                    )}
+                    
+                    {/* 正常模式下显示确认修改按钮 */}
+                    {!isAddingNew && activeScene && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+                            <button className={styles.ghostSmall} onClick={confirmEdit}>
+                                确认修改
+                            </button>
+                        </div>
+                    )}
 
-                    <div className={styles.sceneImageActions}>
-                        <button className={styles.ghostSmall}>上传背景</button>
-                        <button className={styles.ghostSmall}>AI 重新生成</button>
-                    </div>
 
-                    <div className={styles.formGrid}>
-                        <label>
-                            <span>场景名称</span>
-                            <input
-                                type="text"
-                                value={activeScene.name}
-                                onChange={(e) => updateSceneField('name', e.target.value)}
-                            />
-                        </label>
-                        <label className={styles.wide}>
-                            <span>场景描述</span>
-                            <textarea
-                                rows={3}
-                                value={activeScene.desc}
-                                onChange={(e) => updateSceneField('desc', e.target.value)}
-                            />
-                        </label>
-                        <label>
-                            <span>特殊 BGM</span>
-                            <select
-                                value={activeScene.bgmId}
-                                onChange={(e) => updateSceneField('bgmId', e.target.value)}
+                    {isAddingNew && newSceneData ? (
+                        /* 新增场景表单 */
+                        <>
+                            {/* 场景背景大图 */}
+                            <div
+                                className={`${styles.sceneHero} ${!newSceneData.image ? styles.empty : ''}`}
+                                style={newSceneData.image ? { backgroundImage: `url('${newSceneData.image}')` } : {}}
                             >
-                                <option value="">不绑定特殊 BGM</option>
-                                {bgmLibrary.map((bgm) => (
-                                    <option key={bgm.id} value={bgm.id}>
-                                        {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                    </div>
+                                {newSceneData.image ? (
+                                    <span className={styles.heroHint}>点击替换背景</span>
+                                ) : (
+                                    <span>点击上传背景图</span>
+                                )}
+                            </div>
+
+                            <div className={styles.sceneImageActions}>
+                                <button className={styles.ghostSmall}>上传背景</button>
+                                <button className={styles.ghostSmall}>AI 重新生成</button>
+                            </div>
+
+                            <div className={styles.formGrid}>
+                                <label>
+                                    <span>场景名称</span>
+                                    <input
+                                        type="text"
+                                        value={newSceneData.name}
+                                        onChange={(e) => updateNewSceneField('name', e.target.value)}
+                                    />
+                                </label>
+                                <label className={styles.wide}>
+                                    <span>场景描述</span>
+                                    <textarea
+                                        rows={3}
+                                        value={newSceneData.desc}
+                                        onChange={(e) => updateNewSceneField('desc', e.target.value)}
+                                    />
+                                </label>
+                                <label>
+                                    <span>特殊 BGM</span>
+                                    <select
+                                        value={newSceneData.bgmId}
+                                        onChange={(e) => updateNewSceneField('bgmId', e.target.value)}
+                                    >
+                                        <option value="">不绑定特殊 BGM</option>
+                                        {bgmLibrary.map((bgm) => (
+                                            <option key={bgm.id} value={bgm.id}>
+                                                {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+                        </>
+                    ) : (
+                        /* 正常显示选中的场景详情 */
+                        <>
+                            {/* 场景背景大图 */}
+                            <div
+                                className={`${styles.sceneHero} ${!activeScene.image ? styles.empty : ''}`}
+                                style={activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}}
+                            >
+                                {activeScene.image ? (
+                                    <span className={styles.heroHint}>点击替换背景</span>
+                                ) : (
+                                    <span>点击上传背景图</span>
+                                )}
+                            </div>
+
+                            <div className={styles.sceneImageActions}>
+                                <button className={styles.ghostSmall}>上传背景</button>
+                                <button className={styles.ghostSmall}>AI 重新生成</button>
+                            </div>
+
+                            <div className={styles.formGrid}>
+                                <label>
+                                    <span>场景名称</span>
+                                    <input
+                                        type="text"
+                                        value={activeScene.name}
+                                        onChange={(e) => updateSceneField('name', e.target.value)}
+                                    />
+                                </label>
+                                <label className={styles.wide}>
+                                    <span>场景描述</span>
+                                    <textarea
+                                        rows={3}
+                                        value={activeScene.desc}
+                                        onChange={(e) => updateSceneField('desc', e.target.value)}
+                                    />
+                                </label>
+                                <label>
+                                    <span>特殊 BGM</span>
+                                    <select
+                                        value={activeScene.bgmId}
+                                        onChange={(e) => updateSceneField('bgmId', e.target.value)}
+                                    >
+                                        <option value="">不绑定特殊 BGM</option>
+                                        {bgmLibrary.map((bgm) => (
+                                            <option key={bgm.id} value={bgm.id}>
+                                                {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
+
+            {/* 删除确认弹窗 */}
+            <DeletModal
+                isOpen={deleteModalOpen}
+                onDelete={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+                title="删除场景"
+                message="删除后场景数据不可恢复，请谨慎操作！"
+                confirmButtonText="确认删除"
+                cancelButtonText="我再想想"
+            />
         </div>
     );
 };

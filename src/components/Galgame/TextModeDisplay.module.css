@@ -1,11 +1,12 @@
 /* 文本模式容器 - 作为页面主体内容 */
 .textModeContainer {
     width: 100%;
-    height: calc(100vh - 160px);
+    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-bottom: 80px;
+    min-height: 0;
+    padding-bottom: 80px;
 }
 
 .messagesContainer {

@@ -175,6 +175,19 @@
     color: #1a1a1a;
 }
 
+.deleteButton {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+    background: none;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.deleteButton:hover {
+    color: #E03D4B;
+}
+
 .sceneMeta p {
     margin: 0;
     color: rgba(0, 0, 0, 0.5);

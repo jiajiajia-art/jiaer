@@ -393,15 +393,31 @@ export const extractChoiceFromHistory = (text: string): {
     }
     
     // 提取所有 OPTION
+    // 支持多种格式：
+    // 1. [OPTION: "内容"]
+    // 2. [OPTION: 内容]
+    // 3. [OPTION: 文本："内容"]
     const options: string[] = [];
-    const optionRegex = /\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi;
+    const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
     let optionMatch;
     while ((optionMatch = optionRegex.exec(text)) !== null) {
-        const optionText = optionMatch[1]?.trim();
+        let optionText = optionMatch[1]?.trim() || '';
+        
+        // 如果包含引号，提取引号内的内容
+        const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
+        if (quotedMatch && quotedMatch[1]) {
+            optionText = quotedMatch[1];
+        } else {
+            // 如果没有引号格式，移除可能的引号
+            optionText = optionText.replace(/^["']|["']$/g, '');
+        }
+        
         if (optionText && !options.includes(optionText)) {
             options.push(optionText);
         }
     }
+    
+    console.log('extractChoiceFromHistory - 提取的 options:', options);
     
     // 如果没有选项，返回 null
     if (options.length === 0) {
@@ -497,22 +513,40 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
         });
     }
     
-    // 提取所有 OPTION
-    const optionRegex = /\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi;
-    const options: string[] = [];
-    let optionMatch;
-    while ((optionMatch = optionRegex.exec(content)) !== null) {
-        const optionText = optionMatch[1]?.trim();
-        if (optionText) {
-            options.push(optionText);
-        }
-    }
-    
     // 移除 CHOICE 块，然后解析其他内容
     let contentWithoutChoice = content;
     choiceBlocks.forEach(block => {
         contentWithoutChoice = contentWithoutChoice.replace(block.match, '');
     });
+    
+    // 提取所有 OPTION（从整个 content 中提取，因为 OPTION 可能在 CHOICE 块内）
+    // 支持多种格式：
+    // 1. [OPTION: "内容"]
+    // 2. [OPTION: 内容]
+    // 3. [OPTION: 文本："内容"]
+    const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
+    const options: string[] = [];
+    let optionMatch;
+    // 重置正则的 lastIndex
+    optionRegex.lastIndex = 0;
+    while ((optionMatch = optionRegex.exec(content)) !== null) {
+        let optionText = optionMatch[1]?.trim() || '';
+        
+        // 如果包含引号，提取引号内的内容
+        const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
+        if (quotedMatch && quotedMatch[1]) {
+            optionText = quotedMatch[1];
+        } else {
+            // 如果没有引号格式，移除可能的引号
+            optionText = optionText.replace(/^["']|["']$/g, '');
+        }
+        
+        if (optionText && !options.includes(optionText)) {
+            options.push(optionText);
+        }
+    }
+    
+    console.log('parseHistoryToSteps - 提取的 options:', options);
     
     // 解析 NARRATION
     const narrationRegex = /\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi;
@@ -577,7 +611,7 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
         const lastChoice = choiceBlocks[choiceBlocks.length - 1];
         let description = lastChoice.innerContent;
         
-        // 移除描述中的 OPTION 标签
+        // 移除描述中的 OPTION 标签（使用更精确的正则）
         description = description.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
         
         // 处理描述中的其他标签
@@ -592,16 +626,23 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
         });
         description = description.trim();
         
+        // 确保 options 数组不为空
+        const choiceOptions = options.length > 0 
+            ? options.map((opt, idx) => ({
+                id: idx + 1,
+                text: opt
+            }))
+            : [];
+        
+        console.log('parseHistoryToSteps - choice 步骤 options:', choiceOptions);
+        
         steps.push({
             id: `history-choice-${stepIndex++}`,
             type: 'choice',
             content: '',
             title: lastChoice.title,
             description: description,
-            options: options.map((opt, idx) => ({
-                id: idx + 1,
-                text: opt
-            }))
+            options: choiceOptions
         });
     }
     

@@ -157,7 +157,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 </div>
             )}
 
-            {currentMessage && currentMessage.type === 'choice' && currentMessage.options && !isWaitingForData && (
+            {currentMessage && currentMessage.type === 'choice' && currentMessage.options && currentMessage.options.length > 0 && !isWaitingForData && (
                 <div className={styles.choiceContainer}>
                     {currentMessage.options.map((option) => (
                         <div

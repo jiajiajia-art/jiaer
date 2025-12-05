@@ -189,11 +189,15 @@ const Galgame = () => {
     }, [npcSetting, worldSetting]);
 
     const currentMessage = useMemo(() => {
-        if (gameStarted && stepHandlers.currentStep) {
+        // 优先使用 currentStep（如果存在且不是空的）
+        if (gameStarted && stepHandlers.currentStep && stepHandlers.currentStep.type) {
             const converted = convertStepToMessage(stepHandlers.currentStep);
-            if (converted) return converted;
+            if (converted) {
+                return converted;
+            }
         }
 
+        // 如果没有 currentStep 或 currentStep 为空，使用 initialMessages（历史记录解析出的选项）
         if (initialMessages.length > 0) {
             return initialMessages[0];
         }
@@ -245,10 +249,12 @@ const Galgame = () => {
     // 转换步骤为文本模式格式
     const convertStepsToTextModalFormat = useCallback((steps: any[]): any[] => {
         return steps
-            .filter(step => step != null && step.type) // 过滤掉 null/undefined 和没有 type 的步骤
+            .filter(step => step != null && step.type)
             .map((step, index) => {
+                // 使用稳定的 ID，避免每次渲染都重新生成
+                const stableId = step.id || `step-${step.type}-${index}-${(step.content || '').substring(0, 20)}`;
                 const baseStep = {
-                    id: `text-${Date.now()}-${index}`,
+                    id: stableId,
                     type: step.type,
                     content: step.content || '',
                 };
@@ -258,6 +264,7 @@ const Galgame = () => {
                         ...baseStep,
                         speakerName: step.speakerName || step.npcId,
                         characterName: step.speakerName || step.npcId || '未知角色',
+                        isPlayer: step.isPlayer || false,
                     };
                 }
 
@@ -286,18 +293,19 @@ const Galgame = () => {
             for (let i = history.length - 1; i >= 0; i--) {
                 if (history[i].role === 'assistant' && history[i].content) {
                     const content = history[i].content;
-                    
+
                     // 解析为文本模式步骤
                     const historySteps = parseHistoryToSteps(content);
+
                     if (historySteps.length > 0) {
-                        // 将所有步骤（包括 choice）添加到已完成列表
-                        // 这样文本模式下可以显示完整的历史记录
                         setCompletedSteps(historySteps);
-                        
+
                         // 如果有 choice，也转换为 Message 格式并设置（用于正常模式）
                         const choiceStep = historySteps.find(s => s.type === 'choice');
+
                         if (choiceStep && choiceStep.options && choiceStep.options.length > 0) {
                             const choiceData = extractChoiceFromHistory(content);
+
                             if (choiceData) {
                                 const choiceMessage: Message = {
                                     id: Date.now(),
@@ -307,7 +315,7 @@ const Galgame = () => {
                                         : (choiceData.text || '请选择你的行动'),
                                     options: choiceData.options.map((opt, index) => ({
                                         id: index + 1,
-                                        text: extractPlainText(opt), 
+                                        text: extractPlainText(opt),
                                     })),
                                     characterImage: worldSetting?.player?.images
                                         ? (worldSetting.player.images.startsWith('http')
@@ -322,7 +330,22 @@ const Galgame = () => {
                     } else {
                         // 如果没有解析出步骤，尝试只解析 choice
                         const choiceData = extractChoiceFromHistory(content);
+
                         if (choiceData && choiceData.options.length > 0) {
+                            // 创建一个 choice 步骤用于文本模式
+                            const choiceStep: any = {
+                                id: `history-choice-${Date.now()}`,
+                                type: 'choice',
+                                content: '',
+                                title: choiceData.title,
+                                description: choiceData.text,
+                                options: choiceData.options.map((opt, index) => ({
+                                    id: index + 1,
+                                    text: opt
+                                }))
+                            };
+                            setCompletedSteps([choiceStep]);
+
                             const choiceMessage: Message = {
                                 id: Date.now(),
                                 type: 'choice',
@@ -331,7 +354,7 @@ const Galgame = () => {
                                     : (choiceData.text || '请选择你的行动'),
                                 options: choiceData.options.map((opt, index) => ({
                                     id: index + 1,
-                                    text: extractPlainText(opt), 
+                                    text: extractPlainText(opt),
                                 })),
                                 characterImage: worldSetting?.player?.images
                                     ? (worldSetting.player.images.startsWith('http')
@@ -351,12 +374,13 @@ const Galgame = () => {
 
     // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息
     useEffect(() => {
-        if (history.length > 0) {
+        // 等待历史记录加载完成和预设数据加载完成
+        if (!historyLoading && presetData && history.length > 0) {
             setShowStoryIntro(false);
             setGameStarted(true);
             processHistoryRecord();
         }
-    }, [showStoryIntro, processHistoryRecord]);
+    }, [historyLoading, presetData, history.length, showStoryIntro, processHistoryRecord]);
 
     // 当切换到文本模式时，如果历史记录存在但步骤为空，且不是在等待新数据，处理历史记录
     useEffect(() => {
@@ -385,98 +409,128 @@ const Galgame = () => {
 
     const finalIsTyping = (stepHandlers.isWaitingForData && !stepHandlers.currentStep) ? false : isTyping;
 
-    // 将步骤添加到已完成列表的辅助函数
-    const addStepToCompleted = useCallback((step: any) => {
-        if (!step) return;
-        setCompletedSteps(prev => {
-            const exists = prev.some(s => {
-                if (!s || !step) return false;
-                // 使用 type 和 content 进行比较，确保不会重复
-                return s.type === step.type &&
-                    s.content === step.content &&
-                    (s.type !== 'dialogue' ||
-                        (s.speakerName === step.speakerName &&
-                            s.npcId === step.npcId));
-            });
-            if (!exists) {
-                return [...prev, step];
-            }
-            return prev;
-        });
-    }, []);
-
+    // 简化的步骤管理：只在 currentStep 变化时处理
+    // 关键：只有正常模式已经显示完的step（打字完成）才添加到已完成列表
+    // 这样文本模式就只会显示正常模式已经显示过的step，保持状态统一
     useEffect(() => {
-        if (previousStepRef.current &&
-            stepHandlers.currentStep &&
-            stepHandlers.currentStep !== previousStepRef.current &&
-            !finalIsTyping) {
-            addStepToCompleted(previousStepRef.current);
+        const currentStep = stepHandlers.currentStep;
+        const prevStep = previousStepRef.current;
+
+        // 当 currentStep 变化时，将旧的步骤添加到已完成列表
+        // 但只有在打字完成时才添加，确保正常模式已经显示完这个step
+        if (prevStep && currentStep !== prevStep) {
+            // 只有当打字完成时（!isTyping），才将旧步骤添加到已完成列表
+            // 这样确保正常模式已经显示完这个step，文本模式才能显示它
+            if (!isTyping) {
+                setCompletedSteps(prev => {
+                    // 检查是否已存在
+                    const exists = prev.some(s =>
+                        s && s.type === prevStep.type && s.content === prevStep.content
+                    );
+                    if (!exists) {
+                        return [...prev, prevStep];
+                    }
+                    return prev;
+                });
+            }
         }
 
-        if (previousStepRef.current && !stepHandlers.currentStep && !finalIsTyping) {
-            addStepToCompleted(previousStepRef.current);
-        }
+        previousStepRef.current = currentStep;
+        previousIsTypingRef.current = isTyping;
+    }, [stepHandlers.currentStep, isTyping]);
 
-        if (previousIsTypingRef.current &&
-            !finalIsTyping &&
-            stepHandlers.currentStep &&
-            stepHandlers.currentStep === previousStepRef.current) {
-            // 当前步骤打字完成，将其添加到已完成列表
-            addStepToCompleted(stepHandlers.currentStep);
-        }
-
-        previousStepRef.current = stepHandlers.currentStep;
-        previousIsTypingRef.current = finalIsTyping;
-    }, [stepHandlers.currentStep, finalIsTyping, addStepToCompleted]);
-
-    // 计算当前步骤在所有步骤（已完成 + 当前）中的索引
-    // 确保 currentStep 不会在 completedSteps 中重复
+    // 计算文本模式显示的所有步骤
+    // 关键：只显示正常模式已经显示过的step，保持状态统一
+    // 对于 choice 类型的步骤，只保留最后一个，避免重复显示
     const allStepsForTextModal = useMemo(() => {
-        const filteredCompletedSteps = completedSteps.filter(s => {
-            if (!s) return false;
-            if (!stepHandlers.currentStep) return true;
-            const isSame = s.type === stepHandlers.currentStep.type &&
-                s.content === stepHandlers.currentStep.content &&
-                (s.type !== 'dialogue' ||
-                    (s.speakerName === stepHandlers.currentStep.speakerName &&
-                        s.npcId === stepHandlers.currentStep.npcId));
-            return !isSame;
-        });
+        // 过滤有效步骤（这些是正常模式已经显示完的step）
+        let validSteps = completedSteps.filter(s => s && s.type);
 
-        const all = [...filteredCompletedSteps];
-        if (stepHandlers.currentStep) {
-            all.push(stepHandlers.currentStep);
+        // 如果有当前步骤，添加到末尾（如果还没在列表中）
+        // 当前步骤是正常模式正在显示的step，文本模式也应该显示它
+        if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
+            const currentExists = validSteps.some(s =>
+                s && s.type === stepHandlers.currentStep.type &&
+                s.content === stepHandlers.currentStep.content
+            );
+            if (!currentExists) {
+                // 只添加当前步骤，不添加其他未显示的step
+                validSteps = [...validSteps, stepHandlers.currentStep];
+            }
         }
-        return all;
+
+        // 对于 choice 类型的步骤，只保留最后一个
+        // 找到所有 choice 步骤的索引
+        const choiceIndices: number[] = [];
+        validSteps.forEach((step, index) => {
+            if (step && step.type === 'choice') {
+                choiceIndices.push(index);
+            }
+        });
+
+        // 如果有多个 choice 步骤，只保留最后一个
+        if (choiceIndices.length > 1) {
+            // 从后往前移除除了最后一个之外的所有 choice 步骤
+            for (let i = choiceIndices.length - 2; i >= 0; i--) {
+                validSteps.splice(choiceIndices[i], 1);
+            }
+        }
+
+        // 只返回已经显示过的step，不返回其他已请求但未显示的step
+        return validSteps;
     }, [completedSteps, stepHandlers.currentStep]);
 
+    // 当前步骤的索引
     const currentStepIndex = useMemo(() => {
-        if (!stepHandlers.currentStep) return -1;
-        const filteredCompletedSteps = completedSteps.filter(s => {
-            if (!s) return false;
-            if (!stepHandlers.currentStep) return true;
-            return !(s.type === stepHandlers.currentStep.type &&
-                s.content === stepHandlers.currentStep.content);
-        });
-        return filteredCompletedSteps.length;
-    }, [completedSteps, stepHandlers.currentStep]);
+        // 如果有 currentStep，查找它的索引
+        if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
+            const index = allStepsForTextModal.findIndex(s =>
+                s && s.type === stepHandlers.currentStep.type &&
+                s.content === stepHandlers.currentStep.content
+            );
+            if (index >= 0) return index;
+        }
+
+        // 如果没有 currentStep，但 initialMessages 中有 choice，查找最后一个 choice 步骤
+        if (initialMessages.length > 0 && initialMessages[0].type === 'choice') {
+            // 从后往前查找最后一个 choice 步骤
+            for (let i = allStepsForTextModal.length - 1; i >= 0; i--) {
+                if (allStepsForTextModal[i] && allStepsForTextModal[i].type === 'choice') {
+                    return i;
+                }
+            }
+        }
+
+        // 否则返回最后一个步骤的索引
+        if (allStepsForTextModal.length > 0) {
+            return allStepsForTextModal.length - 1;
+        }
+
+        return -1;
+    }, [allStepsForTextModal, stepHandlers.currentStep, initialMessages]);
 
     // 获取当前步骤的打字机文本（保留颜色标签，实现丝滑打字效果）
+    // 这个文本只用于当前正在打字的步骤
     const textModalDisplayText = useMemo(() => {
-        if (stepHandlers.currentStep && currentMessage && currentMessage.type !== 'choice') {
-            // 获取原始带标签的文本
+        // 只有在当前步骤存在且不是 choice 类型，且正在打字时才返回打字文本
+        if (stepHandlers.currentStep &&
+            stepHandlers.currentStep.type !== 'choice' &&
+            currentMessage &&
+            currentMessage.type !== 'choice' &&
+            isTyping &&
+            displayedText.length > 0) {
             const originalText = currentMessage.message || '';
-            // 获取当前打字进度（纯文本长度）
             const currentPlainLength = displayedText.length;
-            
+
+            // 打字中返回截取的文本
             if (currentPlainLength > 0) {
-                // 根据当前打字进度，从原始文本中截取带标签的部分
                 const textWithTags = truncateTextWithTags(originalText, currentPlainLength);
                 return textWithTags;
             }
         }
+        // 打字完成或没有当前步骤时返回空字符串，让组件显示完整内容
         return '';
-    }, [stepHandlers.currentStep, currentMessage, displayedText]);
+    }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
 
     void gameTitle;
     void worldSetting;
@@ -646,9 +700,9 @@ const Galgame = () => {
     }, [stepHandlers, currentMessage]);
 
     if (isLoading) {
-    return (
-        <div className={styles.pageRoot}>
-            <div className={styles.mainContent}>
+        return (
+            <div className={styles.pageRoot}>
+                <div className={styles.mainContent}>
                     <div style={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -659,7 +713,7 @@ const Galgame = () => {
                         加载中...
                     </div>
                 </div>
-                            </div>
+            </div>
         );
     }
 
@@ -690,25 +744,27 @@ const Galgame = () => {
                                 alt="角色立绘"
                                 className={styles.characterImage}
                             />
-                </div>
+                        </div>
                     )}
-                    <div className={styles.gameContentWrapper}>
+                    <div className={`${styles.gameContentWrapper} ${isTextMode ? styles.gameContentWrapperTextMode : ''}`}>
                         {!showGalgameHistory && !isTextMode && (
-                            <NormalModeDisplay
-                                currentMessage={currentMessage}
-                                finalDisplayText={finalDisplayText}
-                                finalIsTyping={finalIsTyping}
-                                stepHandlers={{
-                                    isWaitingForData: stepHandlers.isWaitingForData,
-                                    currentStep: stepHandlers.currentStep,
-                                    showNextButton: stepHandlers.showNextButton,
-                                    selectedOptionIndex: stepHandlers.selectedOptionIndex,
-                                }}
-                                isAutoPlay={isAutoPlay}
-                                onNextMessage={handleNextMessage}
-                                onChoiceClick={handleChoiceClick}
-                                onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
-                            />
+                            <>
+                                <NormalModeDisplay
+                                    currentMessage={currentMessage}
+                                    finalDisplayText={finalDisplayText}
+                                    finalIsTyping={finalIsTyping}
+                                    stepHandlers={{
+                                        isWaitingForData: stepHandlers.isWaitingForData,
+                                        currentStep: stepHandlers.currentStep,
+                                        showNextButton: stepHandlers.showNextButton,
+                                        selectedOptionIndex: stepHandlers.selectedOptionIndex,
+                                    }}
+                                    isAutoPlay={isAutoPlay}
+                                    onNextMessage={handleNextMessage}
+                                    onChoiceClick={handleChoiceClick}
+                                    onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
+                                />
+                            </>
                         )}
                         {!showGalgameHistory && isTextMode && (
                             <TextModeDisplay
@@ -716,9 +772,7 @@ const Galgame = () => {
                                 currentStepIndex={currentStepIndex}
                                 currentDisplayText={textModalDisplayText}
                                 isTyping={finalIsTyping}
-                                showNextButton={stepHandlers.showNextButton}
                                 isWaitingForData={stepHandlers.isWaitingForData}
-                                onNextStep={handleNextMessage}
                                 onChoiceClick={(option) => {
                                     setCompletedSteps([]);
                                     previousStepRef.current = null;
@@ -733,11 +787,11 @@ const Galgame = () => {
                                 }}
                             />
                         )}
-                <div className={styles.buttonContainer}>
+                        <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
-                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                        <span>{user?.user?.points}</span>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
+                                    <span>{user?.user?.points}</span>
                                 </div>
                             </div>
                             <div className={styles.buttonItem}
@@ -760,6 +814,8 @@ const Galgame = () => {
                                     if (newTextMode && !isAutoPlay) {
                                         setIsAutoPlay(true);
                                     }
+                                    // 切换模式时，如果当前步骤正在打字，确保已完成步骤显示完整内容
+                                    // 通过清空 textModalDisplayText 的依赖来触发重新计算
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >
@@ -787,9 +843,9 @@ const Galgame = () => {
                                     <PiMusicNoteDuotone />
                                     <span>音乐</span>
                                 </div>
-                </div>
-            </div>
-        </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <StoryIntroModal
                         isOpen={showStoryIntro}

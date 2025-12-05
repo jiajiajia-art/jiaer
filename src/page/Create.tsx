@@ -154,12 +154,12 @@ const Create: React.FC = () => {
                             <HiOutlineLightBulb />
                             <span>创作游戏</span>
                         </button>
-                        <button
+                        {/* <button
                             className={`${styles.createGameButtonItem}`}
                             onClick={() => navigate('/gameSettingsEditor')}
                         >
                             编辑
-                        </button>
+                        </button> */}
                         <button
                             className={`${styles.createGameButtonItem}`}
                             onClick={() => navigate('/profile')}

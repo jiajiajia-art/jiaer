@@ -168,15 +168,9 @@
 .storylineHeader {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 16px;
     margin-bottom: 16px;
-}
-
-.storylineHeader > div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
 }
 
 .storylineList {
@@ -234,6 +228,13 @@
     text-align: center;
     border: 1px dashed rgba(0, 0, 0, 0.1);
     border-radius: 12px;
+}
+
+.collapseIcon {
+    font-size: 0.7rem;
+    color: rgba(0, 0, 0, 0.4);
+    transition: transform 0.2s ease;
+    user-select: none;
 }
 
 /* 响应式布局 */

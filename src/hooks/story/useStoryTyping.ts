@@ -79,11 +79,15 @@ const parseTextParts = (text: string): TextPart[] => {
 export const useStoryTyping = ({ text, enabled, speed = 60 }: UseStoryTypingOptions) => {
     const [displayedText, setDisplayedText] = useState<string>('');
     const [isTyping, setIsTyping] = useState(false);
-    const typingTimeoutRef = useRef<number | null>(null);
+    const rafRef = useRef<number | null>(null);
+    const lastTimeRef = useRef<number>(0);
+    const currentIndexRef = useRef<number>(0);
+    const plainTextRef = useRef<string>('');
 
     useEffect(() => {
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
         }
 
         if (!enabled || !text) {
@@ -101,30 +105,47 @@ export const useStoryTyping = ({ text, enabled, speed = 60 }: UseStoryTypingOpti
             .map(part => part.content)
             .join('');
         
+        plainTextRef.current = plainText;
+        currentIndexRef.current = 0;
+        lastTimeRef.current = 0;
+        
         setDisplayedText('');
         setIsTyping(true);
 
-        let currentIndex = 0;
-
-        const typeNextChar = () => {
-            if (currentIndex < plainText.length) {
-                // 直接显示纯文本，因为已经跳过了所有动画标签
-                const partialText = plainText.substring(0, currentIndex + 1);
-                setDisplayedText(partialText);
+        // 使用 requestAnimationFrame 实现更流畅的打字效果
+        const typeNextChar = (timestamp: number) => {
+            if (!lastTimeRef.current) {
+                lastTimeRef.current = timestamp;
+            }
+            
+            const elapsed = timestamp - lastTimeRef.current;
+            
+            // 根据经过的时间计算应该显示多少字符
+            if (elapsed >= speed) {
+                const charsToAdd = Math.floor(elapsed / speed);
+                currentIndexRef.current = Math.min(
+                    currentIndexRef.current + charsToAdd,
+                    plainTextRef.current.length
+                );
+                lastTimeRef.current = timestamp;
                 
-                currentIndex++;
-                typingTimeoutRef.current = setTimeout(typeNextChar, speed);
+                const partialText = plainTextRef.current.substring(0, currentIndexRef.current);
+                setDisplayedText(partialText);
+            }
+            
+            if (currentIndexRef.current < plainTextRef.current.length) {
+                rafRef.current = requestAnimationFrame(typeNextChar);
             } else {
                 setIsTyping(false);
-                setDisplayedText(plainText);
+                setDisplayedText(plainTextRef.current);
             }
         };
 
-        typingTimeoutRef.current = setTimeout(typeNextChar, speed);
+        rafRef.current = requestAnimationFrame(typeNextChar);
 
         return () => {
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
             }
         };
     }, [text, enabled, speed]);

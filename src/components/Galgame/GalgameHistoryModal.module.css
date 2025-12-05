@@ -15,7 +15,7 @@
     width: 414px;
     height: 896px; /* 减去头部和底部的空间 */
     /* background: rgba(0, 0, 0, 0.85); */
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.151);
     /* border-radius: 12px; */
     display: flex;
     flex-direction: column;
@@ -53,7 +53,7 @@
 .closeButton {
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgb(255, 255, 255);
     font-size: 24px;
     line-height: 1;
     cursor: pointer;
