@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { AllGameData, NPC, WorldSetting, Player } from "./EditorData.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -52,6 +52,10 @@ const EditorApi = {
             },
         });
     },
+    generateNpcImage: (data: GenerateNpcImageRequest) =>
+        api.post<AllGameData>(`/visual/images/generate-npc`, data),
+    generateSceneImage: (data: GenerateSceneImageRequest) =>
+        api.post<AllGameData>(`/visual/images/generate-scene`, data),
 }
 
 export default EditorApi;

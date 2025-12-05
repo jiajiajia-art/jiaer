@@ -82,3 +82,29 @@ interface Scene {
 interface Metadata {
     [key: string]: any;                 // 元数据，结构不固定
 }
+
+
+
+export interface GenerateNpcImageRequest {
+    npc: {
+        id: string;
+        name: string;
+        age: number;
+        gender: string;
+        job: string;
+        race: string;
+        description: string;
+        appearance: string;
+    };
+    fileId: string;
+    removeBg: boolean;
+}
+
+export interface GenerateSceneImageRequest {
+    scene: {
+        id: string;
+        name: string;
+        description: string;
+    };
+    fileId: string;
+}
