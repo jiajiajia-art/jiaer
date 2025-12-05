@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import useGalgameHistory from "../hooks/galgame/useGalgameHistory";
+import statisticsApi from "../api/statistics/statisticsApi";
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -606,6 +607,7 @@ const Galgame = () => {
             },
             onSuccess: () => {
                 setIsStartingGame(false);
+                addConversion();
             },
             onError: (error) => {
                 console.error('❌ 开始游戏失败:', error);
@@ -616,6 +618,20 @@ const Galgame = () => {
             }
         });
     }, [sessionId, stepHandlers]);
+
+    const addConversion = useCallback(async () => {
+        if (!presetId || !user?.user.id) {
+            return;
+        }
+        try {
+            await statisticsApi.addConversion({
+                fileId: presetId,
+                userId: String(user?.user.id)
+            });
+        } catch (error) {
+            console.error('记录游戏统计失败:', error);
+        }
+    }, [presetId, user?.user.id]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {

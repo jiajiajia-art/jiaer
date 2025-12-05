@@ -23,7 +23,6 @@ function App() {
         {/* <Route path="/createCharacter" element={<CreateCharacter />} /> */}
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
-        <Route path="/galgame" element={<Galgame />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/newmain" element={<NewMain />} />
           <Route path="/create" element={<Create />} />
@@ -32,6 +31,7 @@ function App() {
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           {/* <Route path="/activity" element={<Activity />} /> */}
           <Route path="/profile" element={<Profile />} />
+          <Route path="/galgame" element={<Galgame />} />
         </Route>
       </Routes>
     </BrowserRouter>

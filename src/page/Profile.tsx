@@ -116,7 +116,7 @@ const Profile: React.FC = () => {
         }
         const response = await auth.checkIn();
         if (response.data.success) {
-            toast.success('签到成功，获得10积分');
+            toast.success('签到成功，获得9积分');
             getUserInfo();
         }
     };

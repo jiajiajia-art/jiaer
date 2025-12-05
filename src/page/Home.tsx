@@ -40,13 +40,13 @@ const Home: React.FC = () => {
     }, [fileMetas]);
 
     // 监听用户登出，重置检查状态
-    // useEffect(() => {
-    //     if (!user?.user?.id) {
-    //         hasCheckedInSessionRef.current = false;
-    //         setShowCheckInModal(false);
-    //         sessionStorage.removeItem('checkInModalChecked');
-    //     }
-    // }, [user?.user?.id]);
+    useEffect(() => {
+        if (!user?.user?.id) {
+            hasCheckedInSessionRef.current = false;
+            setShowCheckInModal(false);
+            sessionStorage.removeItem('checkInModalChecked');
+        }
+    }, [user?.user?.id]);
 
     // 只在登录后检查一次签到弹窗（使用 sessionStorage 记录本次会话）
     useEffect(() => {
