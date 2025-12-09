@@ -4,21 +4,19 @@ import type { UserGameData } from '../../api/home/getGameData.type';
 
 interface PublishSettingsModalProps {
     isOpen: boolean;
-    game: UserGameData | null;
     onClose: () => void;
     onPublish: (price: number | null, isFree: boolean) => void;
 }
 
 const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     isOpen,
-    game,
     onClose,
     onPublish,
 }) => {
     const [price, setPrice] = useState<string>('0');
     const [isFree, setIsFree] = useState(false);
 
-    if (!isOpen || !game) return null;
+    if (!isOpen) return null;
 
     const handleSubmit = () => {
         const priceValue = isFree ? null : (price ? parseFloat(price) : null);

@@ -5,12 +5,20 @@
   box-sizing: border-box;
 }
 
-/* 全局字体设置 - 使用 !important 确保优先级 */
+/* @font-face {
+  font-family: 'MyCustomFont';
+  src: url('/font/QingNiaoHuaGuangJianDaBiaoSong-2.ttf') format('truetype'),
+       url('/font/汇文明朝体.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+} */
+
 body,
 html,
 #root,
 * {
-  font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+  font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 html,

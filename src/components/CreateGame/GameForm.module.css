@@ -282,12 +282,15 @@
 }
 
 .createGameBtn {
-    background-color: #FB5B67;
+    background-image: url('/data/assets/create/测试体验框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    /* background-color: #FB5B67; */
     color: #FFFFFF;
 }
 
 .createGameBtn:hover:not(:disabled) {
-    background-color: #e04a56;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(251, 91, 103, 0.3);
 }

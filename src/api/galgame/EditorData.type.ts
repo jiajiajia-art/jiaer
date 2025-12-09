@@ -108,3 +108,15 @@ export interface GenerateSceneImageRequest {
     };
     fileId: string;
 }
+
+export interface GenerateVariantImageRequest {
+    npcId: string,              
+    baseImagePath: string,       
+    variant: {
+        type: 'expression' | 'clothing' | 'pose',  
+        value: string,             
+        description?: string       
+    },
+    fileId: string,              
+    removeBg?: boolean;
+}

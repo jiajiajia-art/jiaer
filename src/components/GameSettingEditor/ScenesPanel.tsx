@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ScenesPanel.module.css';
 import type { AllGameData, SceneSetting } from '../../api/galgame/EditorData.type';
 import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
@@ -37,6 +37,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
     const [newSceneData, setNewSceneData] = useState<LocalScene | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [sceneToDelete, setSceneToDelete] = useState<string | null>(null);
+    const sceneFileInputRef = useRef<HTMLInputElement>(null);
+    const newSceneFileInputRef = useRef<HTMLInputElement>(null);
 
     const [bgmLibrary, _setBgmLibrary] = useState<BgmItem[]>([
         { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
@@ -295,6 +297,143 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         setSceneToDelete(null);
     };
 
+    // 处理场景图片点击（触发文件选择）
+    const handleSceneImageClick = () => {
+        if (isAddingNew && newSceneFileInputRef.current) {
+            newSceneFileInputRef.current.click();
+        } else if (sceneFileInputRef.current) {
+            sceneFileInputRef.current.click();
+        }
+    };
+
+    // 上传场景图片
+    const handleUploadSceneImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+            toast.error('请选择图片文件');
+            return;
+        }
+
+        // 验证文件大小（例如限制为 5MB）
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('图片大小不能超过 5MB');
+            return;
+        }
+
+        if (!fileId) {
+            toast.error('缺少文件ID，无法上传');
+            return;
+        }
+
+        // 确定目标场景ID
+        let targetSceneId = '';
+
+        if (isAddingNew && newSceneData) {
+            // 新增模式：需要先创建场景
+            const newSceneId = `scene_${Date.now()}`;
+            
+            const sceneDataForApi: ApiScene = {
+                id: newSceneId,
+                name: newSceneData.name || '未命名场景',
+                type: newSceneData.type || '',
+                description: newSceneData.desc || '暂无描述',
+                images: undefined, // 先不上传图片，等创建成功后再上传
+                soundtrack: newSceneData.bgmId || undefined,
+                npcs: [],
+                events: [],
+            };
+
+            try {
+                const createResponse = await EditorApi.addScene(fileId, sceneDataForApi);
+                if (!createResponse.data?.success) {
+                    toast.error('创建场景失败，无法上传图片');
+                    return;
+                }
+                
+                // 创建成功后，更新本地数据
+                const createdScene: LocalScene = {
+                    ...newSceneData,
+                    id: newSceneId,
+                };
+                setSceneData(prev => [createdScene, ...prev]);
+                setActiveSceneId(newSceneId);
+                setIsAddingNew(false);
+                setNewSceneData(null);
+                targetSceneId = newSceneId;
+            } catch (error) {
+                console.error('创建场景时出错:', error);
+                toast.error('创建场景失败，请重试');
+                return;
+            }
+        } else {
+            // 正常模式
+            targetSceneId = activeSceneId;
+        }
+
+        // 如果目标场景ID为空，说明当前没有选中有效的场景
+        if (!targetSceneId) {
+            toast.error('请先选择场景');
+            return;
+        }
+
+        try {
+            const response = await EditorApi.uploadSceneImage(fileId, targetSceneId, file);
+            if (response.data?.success) {
+                toast.success('场景图片上传成功');
+                // 刷新数据以获取最新的图片URL
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('上传场景图片失败');
+            }
+        } catch (error) {
+            console.error('上传场景图片时出错:', error);
+            toast.error('上传场景图片失败，请重试');
+        } finally {
+            // 清空文件输入，以便可以再次选择同一文件
+            if (sceneFileInputRef.current) {
+                sceneFileInputRef.current.value = '';
+            }
+            if (newSceneFileInputRef.current) {
+                newSceneFileInputRef.current.value = '';
+            }
+        }
+    };
+
+    const regenerateSceneImage = async (scene: LocalScene) => {
+        if (!fileId || !scene) {
+            return;
+        }
+        try {
+            const response = await EditorApi.generateSceneImage({ 
+                fileId, 
+                scene: { 
+                    id: scene.id, 
+                    name: scene.name, 
+                    description: scene.desc 
+                } });
+            if (response.data?.success) {
+                console.log(response.data);
+                toast.success('场景图片重新生成成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('重新生成场景图片失败');
+            }
+        }catch(error){
+            console.error('重新生成场景图片时出错:', error);
+            toast.error('重新生成场景图片失败，请重试');
+        }
+    };
+
     // // 更新 BGM
     // const updateBgm = (bgmId: string, key: 'name' | 'description', value: string) => {
     //     setBgmLibrary(prev =>
@@ -427,7 +566,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                             {/* 场景背景大图 */}
                             <div
                                 className={`${styles.sceneHero} ${!newSceneData.image ? styles.empty : ''}`}
-                                style={newSceneData.image ? { backgroundImage: `url('${newSceneData.image}')` } : {}}
+                                onClick={handleSceneImageClick}
+                                style={{ cursor: 'pointer', ...(newSceneData.image ? { backgroundImage: `url('${newSceneData.image}')` } : {}) }}
                             >
                                 {newSceneData.image ? (
                                     <span className={styles.heroHint}>点击替换背景</span>
@@ -437,9 +577,20 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                             </div>
 
                             <div className={styles.sceneImageActions}>
-                                <button className={styles.ghostSmall}>上传背景</button>
-                                <button className={styles.ghostSmall}>AI 重新生成</button>
+                                <button className={styles.ghostSmall} onClick={handleSceneImageClick}>上传背景</button>
+                                {newSceneData && (
+                                    <button className={styles.ghostSmall} onClick={() => regenerateSceneImage(newSceneData)}>AI 重新生成</button>
+                                )}
                             </div>
+                            
+                            {/* 隐藏的文件输入（新增场景） */}
+                            <input
+                                type="file"
+                                ref={newSceneFileInputRef}
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={handleUploadSceneImage}
+                            />
 
                             <div className={styles.formGrid}>
                                 <label>
@@ -480,7 +631,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                             {/* 场景背景大图 */}
                             <div
                                 className={`${styles.sceneHero} ${!activeScene.image ? styles.empty : ''}`}
-                                style={activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}}
+                                onClick={handleSceneImageClick}
+                                style={{ cursor: 'pointer', ...(activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}) }}
                             >
                                 {activeScene.image ? (
                                     <span className={styles.heroHint}>点击替换背景</span>
@@ -490,9 +642,20 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                             </div>
 
                             <div className={styles.sceneImageActions}>
-                                <button className={styles.ghostSmall}>上传背景</button>
-                                <button className={styles.ghostSmall}>AI 重新生成</button>
+                                <button className={styles.ghostSmall} onClick={handleSceneImageClick}>重新上传</button>
+                                {activeScene && (
+                                    <button className={styles.ghostSmall} onClick={() => regenerateSceneImage(activeScene)}>AI 重新生成</button>
+                                )}
                             </div>
+                            
+                            {/* 隐藏的文件输入（正常模式） */}
+                            <input
+                                type="file"
+                                ref={sceneFileInputRef}
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={handleUploadSceneImage}
+                            />
 
                             <div className={styles.formGrid}>
                                 <label>

@@ -189,36 +189,64 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 22px;
+    gap: 10px;
+    width: 100%;
 }
 
-.sectionHeader hr {
+.sectionDividerDesktop {
     flex: 1;
-    height: 1px;
-    border: none;
-    background-color: #D9D9D9;
-    margin: 0 20px;
+    min-width: 0;
+    height: auto;
+    object-fit: contain;
+    margin: 0;
+    display: block;
+}
+
+.sectionDividerMobile {
+    display: none;
+    flex: 1;
+    min-width: 0;
+    height: 20px;
+    object-fit: contain;
+    margin: 0;
 }
 
 .sectionTitle {
-    font-size: 30px;
-    color: #262626;
-    font-weight: 600;
+    width: 150px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.sectionTitle img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .more {
     width: auto;
-    height: 40px;
+    height: 20px;
     cursor: pointer;
     transition: color 0.3s ease;
     position: relative;
     z-index: 10;
     background-color: transparent;
     outline: none;
+    border: none;
     color: #737373;
     font-size: 20px;
     display: flex;
     align-items: center;
-    border: none;
+    gap: 4px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.more img {
+    width: auto;
+    height: 100%;
+    object-fit: contain;
+    flex-shrink: 0;
 }
 
 .moreText {
@@ -323,8 +351,32 @@
         max-width: 100%;
     }
 
-    .sectionHeader{
+    .sectionHeader {
         margin-bottom: 10px;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .sectionDividerDesktop {
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        display: block;
+    }
+
+    .sectionDividerMobile {
+        display: none;
+    }
+
+    .sectionTitle {
+        width: 120px;
+        height: 50px;
+    }
+
+    .more {
+        height: 36px;
+        font-size: 18px;
     }
 }
 
@@ -376,16 +428,53 @@
         font-size: 14px;
     }
 
-    .sectionHeader hr {
-        margin: 0 10px;
+    .sectionHeader {
+        gap: 6px;
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 6px;
+    }
+
+    .sectionDividerDesktop {
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+        margin: 0;
+        display: none;
+    }
+
+    .sectionDividerMobile {
+        display: block;
+        flex: 1;
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+        object-fit: contain;
     }
 
     .sectionTitle {
-        font-size: 20px;
+        width: 80px;
+        height: 32px;
+        flex-shrink: 0;
+    }
+
+    .sectionTitle img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
 
     .more {
         font-size: 14px;
+        height: 20px;
+        gap: 2px;
+        flex-shrink: 0;
+    }
+
+    .more img {
+        height: 14px;
+        width: auto;
     }
 }
 

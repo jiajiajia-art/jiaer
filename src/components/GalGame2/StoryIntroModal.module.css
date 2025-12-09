@@ -1,0 +1,200 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+    width: 414px;
+    height: 896px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 30px 30px 30px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+.modalHeader {
+    flex-shrink: 0;
+    text-align: center;
+    margin-bottom: 50px;
+    z-index: 1;
+}
+
+.modalTitle {
+    font-size: 28px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    letter-spacing: 1px;
+}
+
+.modalBody {
+    min-height: 300px;
+    display: flex;
+    align-items: start;
+    justify-content: center;
+    width: 100%;
+    margin: 0 auto;
+    z-index: 1;
+}
+
+.preambleText {
+    color: #fff;
+    font-size: 16px;
+    line-height: 1.8;
+    letter-spacing: 1px;
+    text-align: center;
+    margin: 0;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    word-break: break-word;
+    max-width: 700px;
+    min-height: 80px;
+}
+
+.modalFooter {
+    flex-shrink: 0;
+    padding: 24px 20px 0 20px;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    z-index: 1;
+}
+
+.startButton {
+    padding: 14px 48px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.startButton:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.startButton:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.startButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.loadingDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+    animation: loadingBounce 1.4s infinite ease-in-out;
+}
+
+.loadingDot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.loadingDot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.loadingDot:nth-child(3) {
+    animation-delay: 0s;
+}
+
+@keyframes loadingBounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+    40% {
+        transform: translateY(-8px);
+        opacity: 1;
+    }
+}
+
+.cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: #fff;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: baseline;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .modalContent {
+        width: 100vw;
+        height: 100vh;
+        padding: 30px 20px 20px 20px;
+    }
+
+    .modalTitle {
+        font-size: 24px;
+    }
+
+    .preambleText {
+        font-size: 16px;
+        line-height: 1.8;
+        letter-spacing: 1px;
+        padding: 20px 20px;
+    }
+
+    .modalFooter {
+        padding: 20px 16px 0 16px;
+    }
+
+    .startButton {
+        padding: 12px 40px;
+        font-size: 16px;
+    }
+}
+

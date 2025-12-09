@@ -6,7 +6,6 @@ import GameGrid from '../components/GameGrid';
 import { useAuthStore } from '../store/useAuthStore';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
-import { IoIosArrowForward } from 'react-icons/io';
 import { IoEye, IoStatsChartSharp, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
@@ -17,9 +16,11 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import toast from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import { auth } from '../api/account/authApi';
+import { useEditorStore } from '../store/editorStore';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
+    const { clearState } = useEditorStore();
     const navigate = useNavigate();
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [stats, setStats] = useState({
@@ -156,7 +157,11 @@ const Create: React.FC = () => {
                         </button>
                         <button
                             className={`${styles.createGameButtonItem}`}
-                            onClick={() => navigate('/gameSettingsEditor')}
+                            onClick={() => {
+                                // setFileId('');
+                                clearState();
+                                navigate('/gameSettingsEditor')
+                            }}
                         >
                             编辑
                         </button>
@@ -205,15 +210,25 @@ const Create: React.FC = () => {
                     {/* 我的数据模块 */}
                     <div className={styles.statsSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>我的数据</div>
-                            <hr />
+                            <div className={styles.sectionTitle}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/create/我的数据.png`} alt="" />
+                            </div>
+                            <img
+                                className={styles.sectionDividerDesktop}
+                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`}
+                                alt=""
+                            />
+                            <img
+                                className={styles.sectionDividerMobile}
+                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
+                                alt=""
+                            />
                             <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 每晚12:00更新
-                                <IoIosArrowForward />
-                            </button>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />                            </button>
                         </div>
                         <div className={styles.statsGrid}>
                             <div className={styles.statBox}>
@@ -250,15 +265,26 @@ const Create: React.FC = () => {
                     {/* 发布作品模块 */}
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>发布作品</div>
-                            <hr />
+                            <div className={styles.sectionTitle}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/create/发布作品.png`} alt="" />
+                            </div>
+                            <img
+                                className={styles.sectionDividerDesktop}
+                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`}
+                                alt=""
+                            />
+                            <img
+                                className={styles.sectionDividerMobile}
+                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
+                                alt=""
+                            />
                             <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 更多
-                                <IoIosArrowForward />
-                            </button>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" /> 
+                           </button>
                         </div>
 
                         {publishedGames.length == 0 ? (
@@ -275,14 +301,25 @@ const Create: React.FC = () => {
 
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>草稿箱</div>
-                            <hr />
+                            <div className={styles.sectionTitle}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/create/草稿箱.png`} alt="" />
+                            </div>
+                            <img
+                                className={styles.sectionDividerDesktop}
+                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`}
+                                alt=""
+                            />
+                            <img
+                                className={styles.sectionDividerMobile}
+                                src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
+                                alt=""
+                            />
                             <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 更多
-                                <IoIosArrowForward />
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
                         {draftGames.length == 0 ? (

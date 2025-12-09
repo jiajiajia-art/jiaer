@@ -121,18 +121,25 @@
     margin-bottom: 22px;
 }
 
-.sectionHeader hr {
+.sectionDividerDesktop {
     flex: 1;
-    height: 1px;
-    border: none;
-    background-color: #D9D9D9;
-    margin: 0 20px;
+    min-width: 0;
+    height: auto;
+    object-fit: contain;
+    margin: 0;
+    display: block;
 }
 
 .sectionTitle {
-    font-size: 30px;
-    color: #262626;
-    font-weight: 600;
+    width: 150px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.sectionTitle img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .more {
@@ -218,8 +225,12 @@
 
 .editGameBtn {
     flex: 0 0 70%;
-    background: #FB4655;
+    /* background: #FB4655; */
     color: #FFFFFF;
+    background-image: url('/data/assets/create/测试体验框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .editGameBtn:hover {
@@ -436,6 +447,8 @@
         flex: 0 0 70%;
         padding: 12px 20px;
         font-size: 14px;
+        background:#FB4655;
+        background-image: none;
     }
 
     .deleteGameBtn {

@@ -8,7 +8,6 @@ import statisticsApi from '../api/statistics/statisticsApi';
 import createSessionApi from '../api/createGame/createSessionApi';
 import GameAction from '../api/game/gameAction';
 import getGameDataApi from '../api/home/getGameData';
-import { BiLike } from 'react-icons/bi';
 import { RECORD_CONVERSION } from '../config';
 import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
@@ -26,7 +25,7 @@ interface GameDetailModalProps {
 const LIKE_DEBOUNCE_DELAY = 300;
 const DEFAULT_RATING = '9.0';
 const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
-const CLOSE_BUTTON_PATH = 'data/assets/关闭.png';
+const CLOSE_BUTTON_PATH = 'data/assets/gameDetail/关闭.png';
 
 // 判断是否点赞的辅助函数
 const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
@@ -206,11 +205,13 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         if (currentGame.version == 'new') {
             // 使用 Galgame 接口
             setPdfFileId(fileId);
-            const sessionId = await createGalgameSession('c1c0450b-b086-440d-a477-f31fb71adbde');
+            // 使用 fileId 作为 presetId
+            const sessionId = await createGalgameSession(fileId);
             
             if (sessionId) {
                 setSessionId(sessionId);
-                navigate('/galgame');
+                // 通过 URL 参数传递 presetId
+                navigate(`/galgame`);
             }
         } else {
             // 使用普通游戏接口
@@ -390,8 +391,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                 </div>
                             </div>
                             <div className={styles.likeContainer}>
-                                <BiLike
-                                    className={`${styles.detailGameLike} ${isLiked ? styles.detailGameLikeActive : ''}`}
+                                <img
+                                    src={`${import.meta.env.BASE_URL}data/assets/gameDetail/${isLiked ? '点赞' : '未点赞'}.png`}
+                                    alt="点赞"
+                                    className={styles.detailGameLike}
                                     onClick={handleLike}
                                 />
                                 {likeCount > 0 && (

@@ -8,6 +8,7 @@ import styles from './GameStatsView.module.css';
 import { useAuthStore, authModalStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
 import createSessionApi from '../../api/createGame/createSessionApi';
+import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/game/gameAction';
 import type { GameStatsResponse } from '../../api/game/gameAction.Api';
 
@@ -39,34 +40,52 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     /**
      * 创建会话
      */
-    const createSession = async (fileId: string): Promise<string | null> => {
+    const createSession = async (fileId: string): Promise<{ sessionId: string | null; redirectUrl: string }> => {
         if (!fileId) {
             console.error('没有 fileId，无法创建 session');
-            return null;
+            return { sessionId: null, redirectUrl: '' };
         }
 
         if (!user?.user?.userId || !user?.user?.id) {
             alert('用户信息错误，无法创建 session');
-            return null;
+            return { sessionId: null, redirectUrl: '' };
         }
 
         setIsLoading(true);
         try {
-            const response = await createSessionApi.getSession({
-                fileId: fileId,
-            });
+            // 根据游戏版本判断进入的模式
+            if (gameDetail.version == 'new') {
+                // Galgame 模式
+                const response = await createGalgameSessionApi.createGalgameSession({
+                    presetId: fileId,
+                });
 
-            if (response.data.success) {
-                const data = response.data.data;
-                return data?.session.session_id || null;
+                if (response.data.success) {
+                    const sessionId = response.data.data.session.session_id;
+                    return { sessionId, redirectUrl: `/galgame` };
+                } else {
+                    alert(response.data.message || '创建游戏失败，请重试');
+                    return { sessionId: null, redirectUrl: '' };
+                }
             } else {
-                alert(response.data.message || '创建游戏失败，请重试');
-                return null;
+                // 普通模式（Story）
+                const response = await createSessionApi.getSession({
+                    fileId: fileId,
+                });
+
+                if (response.data.success) {
+                    const data = response.data.data;
+                    const sessionId = data?.session.session_id || null;
+                    return { sessionId, redirectUrl: '/newmain' };
+                } else {
+                    alert(response.data.message || '创建游戏失败，请重试');
+                    return { sessionId: null, redirectUrl: '' };
+                }
             }
         } catch (error) {
             console.error('❌ Session 创建错误:', error);
             alert('创建游戏失败，请稍后重试');
-            return null;
+            return { sessionId: null, redirectUrl: '' };
         } finally {
             setIsLoading(false);
         }
@@ -91,10 +110,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         setPdfFileId(fileId);
 
         // 创建会话
-        const sessionId = await createSession(fileId);
-        if (sessionId) {
+        const { sessionId, redirectUrl } = await createSession(fileId);
+        if (sessionId && redirectUrl) {
             setSessionId(sessionId);
-            navigate('/newmain');
+            navigate(redirectUrl);
         }
     };
 
@@ -160,14 +179,16 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             <div className={styles.heroStatsWrapper}>
                 <div className={styles.statsSection}>
                     <div className={styles.sectionHeader}>
-                        <div className={styles.sectionTitle}>我的数据</div>
-                        <hr />
+                        <div className={styles.sectionTitle}>
+                            <img src={`${import.meta.env.BASE_URL}data/assets/create/我的数据.png`} alt="我的数据" />
+                        </div>
+                        <img className={styles.sectionDividerDesktop} src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} alt="分界线" />
                         <button
                             type="button"
                             className={`${styles.more} ${styles.moreText}`}
                         >
                             每晚12:00更新
-                            <IoIosArrowForward />
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="箭头" />
                         </button>
                     </div>
                     <div className={styles.statsGrid}>

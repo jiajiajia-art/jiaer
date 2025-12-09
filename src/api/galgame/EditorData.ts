@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest } from "./EditorData.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -22,7 +22,17 @@ const EditorApi = {
     updateScene: (fileId:string, data:Scene) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/scenes/${data.id}`, data),
 
-
+    uploadGameCover: (fileId:string, file:File) => {
+        const formData = new FormData();
+        formData.append('cover', file);
+        formData.append('fileId', fileId);
+        return api.post<AllGameData>(`/optical/games/upload-cover`, 
+            formData , {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    },
     uploadPlayerImage: (fileId:string, data:{file:File, variat:string}) => {
         const formData = new FormData();
         formData.append('image', data.file);
@@ -53,9 +63,17 @@ const EditorApi = {
         });
     },
     generateNpcImage: (data: GenerateNpcImageRequest) =>
-        api.post<AllGameData>(`/visual/images/generate-npc`, data),
+        api.post<AllGameData>(`/visual/images/generate-npc`, data, {
+            timeout: 0,
+        }),
     generateSceneImage: (data: GenerateSceneImageRequest) =>
-        api.post<AllGameData>(`/visual/images/generate-scene`, data),
+        api.post<AllGameData>(`/visual/images/generate-scene`, data, {
+            timeout: 0,
+        }),
+    generateVariantImage: (data: GenerateVariantImageRequest) =>
+        api.post<AllGameData>(`/visual/images/generate-npc-variant`, data, {
+            timeout: 0,
+        }),
 }
 
 export default EditorApi;

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './WorldPanel.module.css';
 import type { AllGameData, WorldSetting } from '../../api/galgame/EditorData.type';
 import { MdArrowDropDown } from 'react-icons/md';
+import EditorApi from '../../api/galgame/EditorData';
 
 interface WorldField {
     id: string;
@@ -22,9 +23,12 @@ interface WorldPanelProps {
     gameData?: AllGameData | null;
     isLoading?: boolean;
     onGetData?: (getDataFn: () => Partial<AllGameData> | null) => void;
+    handleSubmit?: () => void;
+    isSubmitting?: boolean;
+    fileId?: string;
 }
 
-const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
+const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData, handleSubmit, isSubmitting = false, fileId }) => {
 
     // 默认表单字段（不包括文风要求，文风要求单独处理）
     const defaultFields: WorldField[] = [
@@ -59,19 +63,19 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
     useEffect(() => {
         if (gameData?.worldSetting && gameData?.fileId) {
             const currentFileId = gameData.fileId;
-            
+
             // 如果 fileId 变化了，说明是新的游戏数据，需要重新填充
             if (lastFileIdRef.current !== currentFileId) {
                 lastFileIdRef.current = currentFileId;
-                
+
                 const ws = gameData.worldSetting;
                 // 保存原始数据（深拷贝）
                 originalDataRef.current = JSON.parse(JSON.stringify(ws));
-                
-                const worldRulesText = ws.WorldRules 
+
+                const worldRulesText = ws.WorldRules
                     ? Object.entries(ws.WorldRules).map(([key, value]) => `${key}: ${value}`).join('\n')
                     : '';
-                const playerRoleText = ws.player 
+                const playerRoleText = ws.player
                     ? `${ws.player.name} (${ws.player.gender}${ws.player.age ? `, ${ws.player.age}岁` : ''}${ws.player.race ? `, ${ws.player.race}` : ''})`
                     : '';
 
@@ -183,7 +187,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
                 const ageMatch = playerDetails.match(/(\d+)岁/);
                 const raceMatch = playerDetails.match(/,\s*([^,]+)$/);
                 const genderMatch = playerDetails.match(/^([^,]+)/);
-                
+
                 if (genderMatch) playerGender = genderMatch[1].trim();
                 if (ageMatch) playerAge = parseInt(ageMatch[1]);
                 if (raceMatch) playerRace = raceMatch[1].trim();
@@ -194,7 +198,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
         }
 
         // 转换故事线为 keyEvents
-        const keyEvents = storylines.length > 0 
+        const keyEvents = storylines.length > 0
             ? storylines.map(line => ({
                 title: line.tag,
                 description: line.content,
@@ -289,10 +293,6 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
         }
     }, [onGetData, getWorldSettingData]);
 
-
-    // 当提交成功后，清除 localStorage（由父组件通过回调通知）
-    // 这个逻辑已经移到了父组件的提交成功回调中
-
     return (
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
@@ -301,7 +301,18 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
                     <h2>世界观 & 表单化设定</h2>
                     <p className={styles.subtitle}>所有内容均来自 AI 解析，请校对这些内容</p>
                 </div>
-                <button className={styles.ghost}>导出为模板</button>
+                {handleSubmit && (
+                    <button
+                        className={styles.primary}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleSubmit();
+                        }}
+                        disabled={!fileId || !gameData || isSubmitting}
+                    >
+                        {isSubmitting ? '提交中...' : '确认修改'}
+                    </button>
+                )}
             </div>
 
             {/* 单栏表单 */}
@@ -334,8 +345,8 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData }) => {
                         <span className={styles.fieldLabel}>故事线（可选）</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {isStorylineExpanded && (
-                                <button 
-                                    className={styles.ghostSmall} 
+                                <button
+                                    className={styles.ghostSmall}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         addStoryline();

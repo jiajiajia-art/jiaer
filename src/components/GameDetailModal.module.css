@@ -191,8 +191,11 @@
     color: #fff;
     display: inline-block;
     flex-shrink: 0; /* 防止被挤压 */
-    background: #FB4754;
-    padding: 4px 8px;
+    background-image: url('/data/assets/gameDetail/游戏类型框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 16px 10px 0px 16px;
     margin-bottom: 16px;
     white-space: nowrap; /* 防止文字换行 */
 }
@@ -309,7 +312,8 @@
     justify-content: center;
     gap: 12px;
     position: relative;
-    background-image: url('/data/assets/开始按钮.png');
+    background-image: url('/data/assets/gameDetail/价格按钮大.png');
+    background-color: transparent;
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -327,12 +331,11 @@
                 0 -3px 8px rgba(251, 73, 88, 0.3),
                 3px 0 8px rgba(251, 73, 88, 0.3),
                 -3px 0 8px rgba(251, 73, 88, 0.3);
+    overflow: visible; /* 允许阴影溢出 */
 }
 
 .priceWrapper:hover {
-    background-color: #f14351;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.6);
 }
 
 .priceIcon{
@@ -341,6 +344,7 @@
     object-fit: contain;
     display: inline-block;
 }
+
 .originalPrice {
     font-size: 20px;
     font-weight: 600;
@@ -575,10 +579,12 @@
     }
 
     .priceWrapper {
-        width: 98%;
-        margin: 0px;
+        width: 100%;
+        margin: 0 auto;
         font-size: 20px;
         height: 55px;
+        background-size: 105% 105%; /* 放大背景图片以显示完整阴影 */
+        background-position: center;
     }
 }
 
@@ -682,8 +688,18 @@
     }
 
     .priceWrapper {
-        width: 96%;
+        width: 100%;
         font-size: 12px;
         height: 52px;
+        background-image: url('/data/assets/gameDetail/按钮.png');
+        background-size: 105% 105%; /* 放大背景图片以显示完整阴影 */
+        background-position: center;
+        box-shadow: none;
+        margin: 0 auto; /* 确保居中 */
+    }
+
+    .priceIcon{
+        width: 18px;
+        height: 18px;
     }
 }

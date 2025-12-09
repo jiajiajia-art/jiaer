@@ -46,8 +46,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
     const getItemStatus = (itemId: string) => {
         if (itemId === 'documents') {
             if (isParsing) return 'active';
+            // 如果当前面板是 documents，应该显示为 active，不管是否已解析
+            if (activePanel === itemId) return 'active';
             if (isParsed) return 'done';
-            return activePanel === itemId ? 'active' : '';
+            return '';
         }
         // 后面的项目：如果已解析完成，都可以点击
         if (isParsed) {
@@ -87,11 +89,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                 })}
             </nav>
 
-            <div className={styles.sidebarFooter}>
+            {/* <div className={styles.sidebarFooter}>
                 <p className={styles.footerLabel}>当前账号</p>
                 <p className={styles.footerValue}>柚子 · 创作者</p>
                 <button className={styles.ghostSmall}>切换作品</button>
-            </div>
+            </div> */}
         </aside>
     );
 };

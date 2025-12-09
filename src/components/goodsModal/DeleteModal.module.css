@@ -41,42 +41,86 @@
     }
 }
 
-.deletModal {
-    width: 860px;
-    height: 374px;
+.deleteModal {
+    width: 760px;
+    min-height: 374px;
     background: #ffffff;
     border-radius: 12px;
-    padding: 40px 32px;
+    overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     min-width: 400px;
     display: flex;
     flex-direction: column;
+}
+
+/* 红色顶部区域 */
+.modalHeader {
+    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
+    padding: 6px 32px;
+    min-height: 60px;
+    display: flex;
     align-items: center;
+}
+
+.headerContent {
+    width: 100%;
+    display: flex;
     justify-content: space-between;
+    align-items: center;
+}
+
+.titleIcon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon {
+    width: 32px;
+    height: 32px;
+    filter: brightness(0) invert(1);
 }
 
 .title {
     font-size: 28px;
     font-weight: 600;
-    color: #000000;
-    margin: 0 0 16px 0;
+    color: #ffffff;
+    margin: 0;
+}
+
+/* 白色内容区域 */
+.modalBody {
+    padding: 20px 32px;
+    flex: 1;
+    gap: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+}
+
+.messageWrapper {
+    margin-bottom: 40px;
     text-align: center;
+    max-width: 80%;
 }
 
 .message {
-    font-size: 20px;
-    color: #FB4655;
-    margin: 0 0 32px 0;
+    font-size: 24px;
+    color: #FB4755;
+    margin: 0;
     text-align: center;
-    line-height: 1.5;
-    font-weight: 600;
+    line-height: 1.6;
+    font-weight: 500;
 }
 
 .buttonGroup {
     display: flex;
-    gap: 16px;
-    width: 70%;
-    justify-content: space-between;
+    gap: 24px;
+    width: 100%;
+    max-width: 600px;
+    justify-content: center;
 }
 
 .confirmButton,
@@ -85,7 +129,6 @@
     height: 60px;
     font-size: 18px;
     font-weight: 500;
-    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
     border: none;
@@ -95,12 +138,15 @@
 .confirmButton {
     background: #ffffff;
     color: #FB4655;
-    border: 2px solid #FB4655;
+    background-image: url('/data/assets/create/确认删除框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .confirmButton:hover {
-    background: #FB4655;
     color: #ffffff;
+    background-image: url('/data/assets/create/我再想想框.png');
 }
 
 .confirmButton:active {
@@ -108,12 +154,11 @@
 }
 
 .cancelButton {
-    background: #FB4655;
     color: #ffffff;
-}
-
-.cancelButton:hover {
-    background: #e63946;
+    background-image: url('/data/assets/create/我再想想框.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .cancelButton:active {
@@ -121,9 +166,6 @@
 }
 
 .closeButton {
-    position: absolute;
-    top: 0px;
-    right: -60px;
     width: 40px;
     height: 40px;
     display: flex;
@@ -131,15 +173,23 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 10;
-    font-size: 24px;
-    padding: 0;
-    outline: none;
     background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.closeButton img {
+    width: 60px;
+    height: 60px;
+    filter: brightness(0) invert(1);
 }
 
 .closeButton:active {
     transform: scale(0.95);
+}
+
+.closeButton:hover {
+    opacity: 0.8;
 }
 
 /* 移动端适配 (768px以下) */
@@ -155,49 +205,108 @@
         box-sizing: border-box;
     }
 
-    .deletModal {
+    .deleteModal {
         width: 95vw;
         max-width: calc(100vw - 40px);
-        min-height: 250px;
+        min-height: auto;
         height: auto;
-        padding: 28px 24px;
-        border-radius: 6px;
+        border-radius: 8px;
         box-sizing: border-box;
         min-width: 300px;
     }
 
+    .modalHeader {
+        padding: 16px 20px;
+        min-height: 60px;
+    }
+
+    .titleIcon {
+        gap: 8px;
+    }
+
+    .icon {
+        width: 36px;
+        height: 36px;
+    }
+
     .title {
-        font-size: 22px;
-        margin: 0 0 16px 0;
+        font-size: 20px;
+    }
+
+    .modalBody {
+        padding: 20px 20px;
+        gap: 0px;
+    }
+
+    .messageWrapper {
+        margin-bottom: 30px;
+        max-width: 90%;
     }
 
     .message {
         font-size: 16px;
-        margin: 0 0 28px 0;
+        line-height: 1.5;
     }
 
     .buttonGroup {
+        gap: 16px;
         width: 100%;
-        gap: 12px;
-        flex-direction: row;
-        justify-content: space-between;
+        max-width: 280px;
     }
 
     .confirmButton,
     .cancelButton {
-        flex: 1;
-        height: 48px;
+        width: 100%;
+        height: 50px;
         font-size: 16px;
-        min-width: 0;
-        border-radius: 0px;
     }
 
     .closeButton {
-        top: 10px;
-        right: 10px;
         width: 36px;
         height: 36px;
-        font-size: 20px;
+    }
+
+    .closeButton img {
+        width: 36px;
+        height: 36px;
     }
 }
 
+/* 小屏幕手机适配 (480px以下) */
+@media (max-width: 480px) {
+    .deleteModal {
+        width: 90vw;
+        max-width: none;
+    }
+
+    .modalHeader {
+        padding: 14px 16px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .icon {
+        width: auto;
+        height: 30px;
+    }
+
+    .modalBody {
+        padding: 24px 16px;
+    }
+
+    .message {
+        font-size: 15px;
+    }
+
+    .buttonGroup {
+        max-width: 100%;
+    }
+
+    .confirmButton,
+    .cancelButton {
+        height: 48px;
+        font-size: 15px;
+    }
+}

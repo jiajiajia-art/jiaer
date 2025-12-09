@@ -1,12 +1,14 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import styles from './DocumentsPanel.module.css';
 import { BsUpload } from 'react-icons/bs';
-
+import EditorApi from '../../api/galgame/EditorData';
+import toast from 'react-hot-toast';
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<boolean>;
     isParsing: boolean;
     onParsingStart: () => void;
     onParsingComplete: () => void;
+    fileId: string;
 }
 
 // 解析步骤配置（时间单位：秒）
@@ -24,10 +26,15 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     onFileUpload,
     isParsing,
     onParsingStart,
-    onParsingComplete
+    onParsingComplete,
+    fileId
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [coverPreview, setCoverPreview] = useState<string | null>(null);
+    const [coverUploading, setCoverUploading] = useState<boolean>(false);
+    const [coverError, setCoverError] = useState<string | null>(null);
     const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
     const [progress, setProgress] = useState<number>(0);
     const [apiCompleted, setApiCompleted] = useState<boolean>(false);
@@ -65,6 +72,65 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const handleDropzoneClick = () => {
         fileInputRef.current?.click();
     };
+
+    const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                setCoverError('请上传图片文件');
+                return;
+            }
+            // 验证文件大小（例如：最大 5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                setCoverError('图片大小不能超过 5MB');
+                return;
+            }
+            setCoverError(null);
+            // 创建预览
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCoverPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+
+            // 上传封面
+            uploadCover(file);
+        }
+    };
+
+    const handleCoverClick = () => {
+        coverInputRef.current?.click();
+    };
+
+    const handleRemoveCover = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCoverPreview(null);
+        if (coverInputRef.current) {
+            coverInputRef.current.value = '';
+        }
+    };
+
+    const uploadCover = useCallback(async (file: File) => {
+        if (!fileId) {
+            setCoverError('缺少文件ID，无法上传封面');
+            return;
+        }
+        try {
+            setCoverUploading(true);
+            setCoverError(null);
+            const response = await EditorApi.uploadGameCover(fileId, file);
+            if (response.data.success) {
+                toast.success('封面上传成功');
+            }
+            console.log('封面上传成功:', response.data);
+            setCoverUploading(false);
+        } catch (error) {
+            console.error('上传封面失败:', error);
+            setCoverError('封面上传失败，请重试');
+            setCoverUploading(false);
+        }
+    }, [fileId]);
 
     const finishProgress = useCallback(() => {
         if (progressIntervalRef.current) {
@@ -200,7 +266,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         一键上传 PDF / Word，系统自动拆解世界观、角色与剧情节点
                     </p>
                 </div>
-                <button className={styles.ghost}>查看解析历史</button>
+                {/* <button className={styles.ghost}>查看解析历史</button> */}
             </div>
 
             <div className={styles.twoCol}>
@@ -212,7 +278,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
                     {!uploadedFile ? (
                         <div className={styles.dropzone} onClick={handleDropzoneClick}>
-                            <BsUpload className={styles.uploadIcon} size={24} />
+                            <BsUpload className={styles.coverUploadIcon} size={32} />
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -263,6 +329,44 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         }
                     </p>
                 </div>
+            </div>
+            <div className={styles.uploadCover}>
+                {/* <p className={styles.eyebrow}>Step 1</p> */}
+                <h2>游戏封面图片上传</h2>
+                <div className={styles.coverUploadArea} onClick={handleCoverClick}>
+                    <input
+                        ref={coverInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/webp"
+                        hidden
+                        onChange={handleCoverSelect}
+                        disabled={coverUploading || !fileId}
+                    />
+                    {coverPreview ? (
+                        <div className={styles.coverPreviewContainer}>
+                            <img src={coverPreview} alt="封面预览" className={styles.coverPreview} />
+                            <div className={styles.coverActions}>
+                                <button
+                                    type="button"
+                                    className={styles.removeCoverBtn}
+                                    onClick={handleRemoveCover}
+                                    disabled={coverUploading}
+                                >
+                                    移除
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className={styles.coverPlaceholder}>
+                            <BsUpload className={styles.coverUploadIcon} size={32} />
+                            <p className={styles.coverUploadText}>点击上传封面图片</p>
+                            <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
+                        </div>
+                    )}
+                </div>
+                {coverError && (
+                    <p className={styles.coverErrorText}>{coverError}</p>
+                )}
             </div>
         </div>
     );

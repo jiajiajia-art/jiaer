@@ -11,6 +11,7 @@ import CreateGame from './page/CreateGame';
 import Library from './page/Library';
 import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
+import GalgameMap from './page/GalgameMap';
 // import Activity from './page/Activity';
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
           {/* <Route path="/activity" element={<Activity />} /> */}
           <Route path="/profile" element={<Profile />} />
           <Route path="/galgame" element={<Galgame />} />
+          <Route path="/galgameMap" element={<GalgameMap />} />
         </Route>
       </Routes>
     </BrowserRouter>

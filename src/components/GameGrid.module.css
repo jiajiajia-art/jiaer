@@ -96,7 +96,10 @@
 }
 
 .goodsPrice {
-    background: #FB4655;
+    background-image: url('/data/assets/home/价格按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     height: 50px;
     width: 100px;
     border-radius: 10px 0 10px 0px;
@@ -113,9 +116,7 @@
 }
 
 .goodsPrice:hover {
-    background-color: #f14351;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(251, 70, 85, 0.6);
 }
 
 .startGameBtn {
@@ -126,7 +127,7 @@
 
 .goodsPrice button {
     background-color: transparent;
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 600 !important;
     color: #fff;
     cursor: pointer;
@@ -139,11 +140,12 @@
     display: inline-block;
 }
 
-
-
 /* 游戏编辑按钮 */
 .gameEditBtn {
-    border: 1.5px solid #FB4655;
+    background-image: url('/data/assets/home/镂空按钮.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
     height: 50px;
     width: 100px;
     border-radius: 10px 0 10px 0;
@@ -155,7 +157,6 @@
     cursor: pointer;
     padding: 8px 12px;
     box-sizing: border-box;
-    background: transparent;
     font-size: 16px;
     font-weight: 500;
     color: #FB4655;
@@ -186,17 +187,8 @@
 
 .gameEditBtn:hover {
     transform: translateY(-2px);
-    background: rgba(251, 91, 102, 0.04);
-    border-color: #ff9aa5;
-    box-shadow: 0 4px 12px rgba(251, 91, 102, 0.15);
-    color: #ff8a95;
 }
 
-.gameEditBtn:active {
-    transform: translateY(0);
-    background: rgba(251, 91, 102, 0.12);
-    box-shadow: 0 2px 6px rgba(251, 91, 102, 0.15);
-}
 
 .gameEditBtn button {
     background-color: transparent;
@@ -225,7 +217,7 @@
 }
 
 .specialPriceText {
-    font-size: 22px;
+    font-size: 18px;
     color: #FFFFFF;
     line-height: 1.1;
     margin: 0;
@@ -240,7 +232,7 @@
 }
 
 .normalPriceText {
-    font-size: 22px;
+    font-size: 18px;
     color: #FFFFFF;
     line-height: 1.1;
     margin: 0;

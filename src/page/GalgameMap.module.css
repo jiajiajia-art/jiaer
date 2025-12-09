@@ -1,0 +1,161 @@
+/* GalgameMap.module.css */
+
+.page {
+    width: 100%;
+    height: 100vh;
+    background: #f7f9fc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.mapContainer {
+    position: relative;
+    width: 414px;
+    height: 896px;
+    max-width: 100%;
+    max-height: 100vh;
+    background-color: #ffffff;
+    background-size: cover;
+    background-position: center;
+    /* 只有在大屏时显示圆角 */
+    border-radius: 0; 
+    box-shadow: none;
+    overflow: hidden; 
+    display: flex;
+    flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+    .mapContainer {
+        border-radius: 20px;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+}
+
+.scrollArea {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    position: relative;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+}
+
+.scrollArea:active {
+    cursor: grabbing;
+}
+
+.scrollArea::-webkit-scrollbar {
+    display: none;
+}
+
+.mapOverlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), rgba(0,0,0,0.05));
+    pointer-events: none;
+    z-index: 1;
+}
+
+.mapSvg {
+    display: block;
+    min-width: 100%;
+    min-height: 100%;
+    z-index: 2;
+    overflow: visible;
+}
+
+/* --- 节点样式修复：解决抖动问题 --- */
+
+.sceneNode {
+    cursor: pointer;
+    /* 移除 transform 效果，避免与 SVG transform 冲突 */
+    transition: filter 0.2s ease;
+    transform-origin: center center;
+    transform-box: fill-box;
+    will-change: transform;
+}
+
+/* 悬停时只添加发光效果，放大效果移到内部元素 */
+.sceneNode:hover {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+    z-index: 10;
+}
+
+.sceneItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.2s ease;
+}
+
+/* 悬停放大内部元素，而不是外部容器 */
+.sceneNode:hover .sceneItem {
+    transform: scale(1.05);
+}
+
+/* 圆形头像 - 尺寸缩小 */
+.sceneThumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%; /* 纯圆形 */
+    position: relative;
+    z-index: 2;
+    
+    /* 边框样式 */
+    border: 2px solid #e8eaef;
+    box-shadow: 
+        0 4px 10px rgba(0, 0, 0, 0.18),
+        inset 0 0 6px rgba(0, 0, 0, 0.2);
+    
+    background: #f4f6fa;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+/* 选中/悬停状态 */
+.sceneNode:hover .sceneThumb {
+    border-color: #fff;
+    box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.5),
+        0 6px 14px rgba(0, 0, 0, 0.2);
+}
+
+.sceneThumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 场景名称 - 字体缩小 */
+.sceneName {
+    margin-top: 2px;
+    z-index: 3;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    white-space: nowrap;
+    text-align: center;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.sceneNode:hover .sceneName {
+    background: #f0f4ff;
+    color: #111;
+}

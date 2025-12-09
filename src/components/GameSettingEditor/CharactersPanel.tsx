@@ -17,6 +17,8 @@ interface Variation {
     id: string;
     label: string;
     img: string;
+    type?: string; // 差分类型值，如 'happy', 'sad' 等
+    description?: string; // 差分描述（可选）
 }
 
 interface Character {
@@ -56,9 +58,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
     const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
     const [newCharacterData, setNewCharacterData] = useState<Character | null>(null);
+    const [variationModalOpen, setVariationModalOpen] = useState<boolean>(false);
+    const [newVariationType, setNewVariationType] = useState<string>('');
+    const [newVariationLabel, setNewVariationLabel] = useState<string>('');
+    const [newVariationDescription, setNewVariationDescription] = useState<string>('');
     const playerFileInputRef = useRef<HTMLInputElement>(null);
     const npcFileInputRef = useRef<HTMLInputElement>(null);
-    const editingFileInputRef = useRef<HTMLInputElement>(null);
+    const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
     // 当 gameData 变化时，填充角色数据
     useEffect(() => {
@@ -71,6 +77,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                         id: `v${idx}`,
                         label,
                         img,
+                        type: label, // 使用 label 作为 type
                     }))
                     : [];
 
@@ -124,11 +131,11 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             }
 
             setCharacterData(convertedCharacters);
-            if (convertedCharacters.length > 0) {
+            if (convertedCharacters.length > 0 && !isAddingNew) {
                 setActiveCharacterId(convertedCharacters[0].id);
             }
         }
-    }, [gameData]);
+    }, [gameData, isAddingNew]);
 
     // 将 characterData 转换为 npcSetting 格式
     const getNpcSettingData = useCallback((): NPCSetting | null => {
@@ -146,7 +153,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 // 将 variations 转换回 images 对象
                 const images: { [key: string]: string } = {};
                 char.variations.forEach(variation => {
-                    if (variation.label && variation.img) {
+                    if (variation.type && variation.img) {
+                        images[variation.type] = variation.img;
+                    } else if (variation.label && variation.img) {
                         images[variation.label] = variation.img;
                     }
                 });
@@ -185,19 +194,28 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         }
     }, [onGetData, getNpcSettingData]);
 
-    // 更新角色字段
+    // 获取当前显示的角色（统一处理新增和编辑模式）
+    const currentCharacter = isAddingNew && newCharacterData 
+        ? newCharacterData 
+        : (characterData.find(c => c.id === activeCharacterId) || characterData[0]);
+
+    // 更新角色字段（统一处理新增和编辑模式）
     const updateField = (field: keyof Character, value: string | string[]) => {
-        setCharacterData(prev =>
-            prev.map(char =>
-                char.id === activeCharacterId ? { ...char, [field]: value } : char
-            )
-        );
+        if (isAddingNew && newCharacterData) {
+            // 新增模式
+            setNewCharacterData({ ...newCharacterData, [field]: value });
+        } else {
+            // 正常模式
+            setCharacterData(prev =>
+                prev.map(char =>
+                    char.id === activeCharacterId ? { ...char, [field]: value } : char
+                )
+            );
+        }
     };
 
-    const activeCharacter = characterData.find(c => c.id === activeCharacterId) || characterData[0];
-
-    // 如果没有角色数据，显示空状态
-    if (characterData.length === 0 || !activeCharacter) {
+    // 如果没有角色数据且不在新增模式，显示空状态
+    if (!isAddingNew && (characterData.length === 0 || !currentCharacter)) {
         return (
             <div className={styles.panelContent}>
                 <div className={styles.panelHeader}>
@@ -222,60 +240,146 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         }
     };
 
-    // 关系管理
+    // 关系管理（统一处理新增和编辑模式）
     const addRelationship = () => {
         const newRel: Relationship = { id: `r-${Date.now()}`, name: '', description: '' };
-        setCharacterData(prev =>
-            prev.map(char =>
-                char.id === activeCharacterId
-                    ? { ...char, relationships: [...char.relationships, newRel] }
-                    : char
-            )
-        );
+        if (isAddingNew && newCharacterData) {
+            setNewCharacterData({
+                ...newCharacterData,
+                relationships: [...newCharacterData.relationships, newRel],
+            });
+        } else {
+            setCharacterData(prev =>
+                prev.map(char =>
+                    char.id === activeCharacterId
+                        ? { ...char, relationships: [...char.relationships, newRel] }
+                        : char
+                )
+            );
+        }
     };
 
     const updateRelationship = (relId: string, key: 'name' | 'description', value: string) => {
-        setCharacterData(prev =>
-            prev.map(char =>
-                char.id === activeCharacterId
-                    ? {
-                        ...char,
-                        relationships: char.relationships.map(r =>
-                            r.id === relId ? { ...r, [key]: value } : r
-                        ),
-                    }
-                    : char
-            )
-        );
+        if (isAddingNew && newCharacterData) {
+            setNewCharacterData({
+                ...newCharacterData,
+                relationships: newCharacterData.relationships.map(r =>
+                    r.id === relId ? { ...r, [key]: value } : r
+                ),
+            });
+        } else {
+            setCharacterData(prev =>
+                prev.map(char =>
+                    char.id === activeCharacterId
+                        ? {
+                            ...char,
+                            relationships: char.relationships.map(r =>
+                                r.id === relId ? { ...r, [key]: value } : r
+                            ),
+                        }
+                        : char
+                )
+            );
+        }
     };
 
     const removeRelationship = (relId: string) => {
-        setCharacterData(prev =>
-            prev.map(char =>
-                char.id === activeCharacterId
-                    ? { ...char, relationships: char.relationships.filter(r => r.id !== relId) }
-                    : char
-            )
-        );
+        if (isAddingNew && newCharacterData) {
+            setNewCharacterData({
+                ...newCharacterData,
+                relationships: newCharacterData.relationships.filter(r => r.id !== relId),
+            });
+        } else {
+            setCharacterData(prev =>
+                prev.map(char =>
+                    char.id === activeCharacterId
+                        ? { ...char, relationships: char.relationships.filter(r => r.id !== relId) }
+                        : char
+                )
+            );
+        }
     };
 
-    // 差分管理
+    // 差分类型选项
+    const VARIATION_TYPES = [
+        {
+            value: 'expression',
+            label: '表情',
+        },
+        {
+            value: 'clothing',
+            label: '服装',
+        },
+        {
+            value: 'pose',
+            label: '姿势',
+        },
+    ];
+
+    // 打开新增差分弹窗
+    const openAddVariationModal = () => {
+        setNewVariationType('');
+        setNewVariationLabel('');
+        setNewVariationDescription('');
+        setVariationModalOpen(true);
+    };
+
+    // 关闭新增差分弹窗
+    const closeVariationModal = () => {
+        setVariationModalOpen(false);
+        setNewVariationType('');
+        setNewVariationLabel('');
+        setNewVariationDescription('');
+    };
+
+    // 确认添加差分
+    const confirmAddVariation = () => {
+        if (!newVariationType) {
+            toast.error('请选择差分类型');
+            return;
+        }
+
+        if (!newVariationLabel || !newVariationLabel.trim()) {
+            toast.error('请输入差分标签');
+            return;
+        }
+
+        const newVar: Variation = {
+            id: `v-${Date.now()}`,
+            label: newVariationLabel.trim(),
+            img: '',
+            type: newVariationType,
+            description: newVariationDescription || undefined,
+        };
+
+        if (isAddingNew && newCharacterData) {
+            // 新增模式
+            setNewCharacterData({
+                ...newCharacterData,
+                variations: [...newCharacterData.variations, newVar],
+            });
+        } else {
+            // 正常模式
+            setCharacterData(prev =>
+                prev.map(char =>
+                    char.id === activeCharacterId
+                        ? { ...char, variations: [...char.variations, newVar] }
+                        : char
+                )
+            );
+        }
+
+        closeVariationModal();
+    };
+
+    // 差分管理（保留原函数名以兼容）
     const addVariation = () => {
-        const label = prompt('输入差分标签', '新差分');
-        if (!label) return;
-        const newVar: Variation = { id: `v-${Date.now()}`, label, img: '' };
-        setCharacterData(prev =>
-            prev.map(char =>
-                char.id === activeCharacterId
-                    ? { ...char, variations: [...char.variations, newVar] }
-                    : char
-            )
-        );
+        openAddVariationModal();
     };
 
-    // 打开新增角色面板
+    // 打开新增角色面板（使用空角色数据）
     const openAddNewPanel = () => {
-        const newCharacter: Character = {
+        const emptyCharacter: Character = {
             id: `temp-${Date.now()}`,
             name: '',
             callName: '',
@@ -294,7 +398,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             relationships: [],
             variations: [],
         };
-        setNewCharacterData(newCharacter);
+        setNewCharacterData(emptyCharacter);
         setIsAddingNew(true);
         setActiveCharacterId(''); // 清空当前选中
     };
@@ -308,14 +412,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         }
     };
 
-    // 确认修改角色（直接使用当前选中的角色数据）
+    // 确认修改/新增角色（统一处理）
     const confirmEdit = async () => {
-        if (!fileId || !activeCharacter) {
+        const characterToSave = isAddingNew && newCharacterData 
+            ? newCharacterData 
+            : currentCharacter;
+        
+        if (!fileId || !characterToSave) {
             toast.error('缺少必要数据，无法保存修改');
             return;
         }
-        
-        const characterToSave = activeCharacter;
 
         // 如果是主角，使用 updatePlayer API
         if (characterToSave.id === 'player') {
@@ -345,7 +451,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 toast.error('更新主角信息失败，请重试');
             }
         } else {
-            // 更新 NPC 信息
+            // 更新或新增 NPC 信息
             // 从 identity 中解析 race 和 job
             const identityParts = characterToSave.identity.split(' · ');
             const race = identityParts.length > 1 ? identityParts[0] : undefined;
@@ -354,7 +460,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             // 将 variations 转换回 images 对象
             const images: { [key: string]: string } = {};
             characterToSave.variations.forEach(variation => {
-                if (variation.label && variation.img) {
+                if (variation.type && variation.img) {
+                    images[variation.type] = variation.img;
+                } else if (variation.label && variation.img) {
                     images[variation.label] = variation.img;
                 }
             });
@@ -363,7 +471,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             const playerRelationship = characterToSave.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
             const npcData: NPC = {
-                id: characterToSave.id,
+                id: characterToSave.id.startsWith('temp-') ? `npc_${Date.now()}` : characterToSave.id,
                 name: characterToSave.name || '',
                 gender: characterToSave.gender || '',
                 job: job || undefined,
@@ -377,94 +485,37 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             };
 
             try {
-                const response = await EditorApi.updateNpc(fileId, npcData);
+                let response;
+                if (isAddingNew) {
+                    // 新增模式
+                    response = await EditorApi.addNpc(fileId, npcData);
+                } else {
+                    // 更新模式
+                    response = await EditorApi.updateNpc(fileId, npcData);
+                }
+                
                 if (response.data?.success) {
-                    toast.success('角色更新成功');
+                    toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
                     // 刷新数据
                     if (onDataChange) {
                         onDataChange();
                     }
+                    // 如果是新增模式，关闭新增面板
+                    if (isAddingNew) {
+                        setIsAddingNew(false);
+                        setNewCharacterData(null);
+                        if (characterData.length > 0) {
+                            setActiveCharacterId(characterData[0].id);
+                        }
+                    }
                 } else {
-                    toast.error('更新角色失败');
+                    toast.error(isAddingNew ? '创建角色失败' : '更新角色失败');
                 }
             } catch (error) {
-                console.error('更新角色时出错:', error);
-                toast.error('更新角色失败，请重试');
+                console.error(isAddingNew ? '创建角色时出错:' : '更新角色时出错:', error);
+                toast.error(isAddingNew ? '创建角色失败，请重试' : '更新角色失败，请重试');
             }
         }
-    };
-
-    // 确认新增角色
-    const confirmAddNew = async () => {
-        if (!fileId || !newCharacterData) {
-            toast.error('缺少必要数据，无法新增角色');
-            return;
-        }
-
-        // 生成新的 NPC ID（小写英文，下划线连接）
-        const newNpcId = `npc_${Date.now()}`;
-        
-        // 从 identity 中解析 race 和 job
-        const identityParts = newCharacterData.identity.split(' · ');
-        const race = identityParts.length > 1 ? identityParts[0] : undefined;
-        const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || newCharacterData.role);
-
-        // 将 variations 转换回 images 对象
-        const images: { [key: string]: string } = {};
-        newCharacterData.variations.forEach(variation => {
-            if (variation.label && variation.img) {
-                images[variation.label] = variation.img;
-            }
-        });
-
-        // 获取与玩家的关系
-        const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
-
-        const newNpc: NPC = {
-            id: newNpcId,
-            name: newCharacterData.name || '未命名角色',
-            gender: newCharacterData.gender || '',
-            description: newCharacterData.background || '暂无描述',
-            appearance: newCharacterData.appearance || '',
-            tone: newCharacterData.speech || '',
-            job: job || undefined,
-            race: race || undefined,
-            personality: newCharacterData.personality && newCharacterData.personality.length > 0 ? newCharacterData.personality.join(', ') : undefined,
-            relationship: playerRelationship?.description || undefined,
-            images: Object.keys(images).length > 0 ? images : undefined,
-        };
-
-        try {
-            const response = await EditorApi.addNpc(fileId || '893d61c0-5fbe-4251-b83c-4e9bcfb4bda3', newNpc);
-            if (response.data?.success) {
-                // 创建本地 Character 对象
-                const createdCharacter: Character = {
-                    ...newCharacterData,
-                    id: newNpcId,
-                };
-                // 新增角色放在最上面
-                setCharacterData(prev => [createdCharacter, ...prev]);
-                setActiveCharacterId(createdCharacter.id);
-                setIsAddingNew(false);
-                setNewCharacterData(null);
-                toast.success('角色创建成功');
-                // 刷新数据
-                if (onDataChange) {
-                    onDataChange();
-                }
-            } else {
-                toast.error('创建角色失败');
-            }
-        } catch (error) {
-            console.error('创建角色时出错:', error);
-            toast.error('创建角色失败，请重试');
-        }
-    };
-
-    // 更新新增角色的字段
-    const updateNewCharacterField = (field: keyof Character, value: string | string[]) => {
-        if (!newCharacterData) return;
-        setNewCharacterData({ ...newCharacterData, [field]: value });
     };
 
     // 删除角色
@@ -526,14 +577,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         setCharacterToDelete(null);
     };
 
-    // 触发文件选择 - 根据角色类型使用不同的 input
+    // 触发文件选择
     const handlePortraitClick = () => {
         if (isAddingNew && newCharacterData) {
             // 新增模式
-            editingFileInputRef.current?.click();
+            npcFileInputRef.current?.click();
         } else {
             // 正常模式 - 区分玩家和NPC
-            if (activeCharacter?.id === 'player') {
+            if (currentCharacter?.id === 'player') {
                 playerFileInputRef.current?.click();
             } else {
                 npcFileInputRef.current?.click();
@@ -541,74 +592,91 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         }
     };
 
-    // 上传玩家图片
-    const handleUploadPlayerImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) {
-            return;
-        }
-
-        // 验证文件类型
+    // 验证文件
+    const validateFile = (file: File): boolean => {
         if (!file.type.startsWith('image/')) {
             toast.error('请选择图片文件');
-            return;
+            return false;
         }
-
-        // 验证文件大小（例如限制为 5MB）
         if (file.size > 5 * 1024 * 1024) {
             toast.error('图片大小不能超过 5MB');
-            return;
+            return false;
+        }
+        return true;
+    };
+
+    // 创建新NPC（用于新增模式下上传图片前先创建角色）
+    const createNewNpcForUpload = async (): Promise<string | null> => {
+        if (!fileId || !newCharacterData) {
+            return null;
         }
 
-        if (!fileId) {
-            toast.error('缺少文件ID，无法上传');
-            return;
-        }
+        const targetCharacterId = `npc_${Date.now()}`;
+        const identityParts = newCharacterData.identity.split(' · ');
+        const race = identityParts.length > 1 ? identityParts[0] : undefined;
+        const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || newCharacterData.role);
 
+        const images: { [key: string]: string } = {};
+        newCharacterData.variations.forEach(variation => {
+            if (variation.type && variation.img) {
+                images[variation.type] = variation.img;
+            } else if (variation.label && variation.img) {
+                images[variation.label] = variation.img;
+            }
+        });
+
+        const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
+
+        const newNpc: NPC = {
+            id: targetCharacterId,
+            name: newCharacterData.name || '未命名角色',
+            gender: newCharacterData.gender || '',
+            job: job || undefined,
+            race: race || undefined,
+            description: newCharacterData.background || '暂无描述',
+            appearance: newCharacterData.appearance || '',
+            personality: newCharacterData.personality && newCharacterData.personality.length > 0 ? newCharacterData.personality.join(', ') : undefined,
+            tone: newCharacterData.speech || '',
+            relationship: playerRelationship?.description || undefined,
+            images: Object.keys(images).length > 0 ? images : undefined,
+        };
 
         try {
-            const response = await EditorApi.uploadPlayerImage(fileId, {
-                file,
-                variat: 'base',
-            });
-            if (response.data?.success) {
-                toast.success('玩家图片上传成功');
-                // 刷新数据以获取最新的图片URL
-                if (onDataChange) {
-                    onDataChange();
-                }
-                // 更新本地数据中的图片URL
-                // updateField('portrait', response.data.player.images.base || '');
-            } else {
-                toast.error('上传失败，请重试');
+            const createResponse = await EditorApi.addNpc(fileId, newNpc);
+            if (!createResponse.data?.success) {
+                toast.error('创建角色失败，无法上传图片');
+                return null;
             }
+            
+            const createdCharacter: Character = {
+                ...newCharacterData,
+                id: targetCharacterId,
+            };
+            setCharacterData(prev => [createdCharacter, ...prev]);
+            setActiveCharacterId(targetCharacterId);
+            setIsAddingNew(false);
+            setNewCharacterData(null);
+            return targetCharacterId;
         } catch (error) {
-            console.error('上传玩家图片时出错:', error);
-            toast.error('上传图片失败，请重试');
-        } finally {
-            // 清空 input 值，以便可以重复选择同一文件
-            if (playerFileInputRef.current) {
-                playerFileInputRef.current.value = '';
-            }
+            console.error('创建角色时出错:', error);
+            toast.error('创建角色失败，请重试');
+            return null;
         }
     };
 
-    // 上传NPC图片（包括编辑模式和新增模式）
-    const handleUploadNpcImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) {
-            return;
+    // 统一的上传图片方法
+    const handleUploadImage = async (
+        file: File,
+        options: {
+            type: 'player' | 'npc' | 'variation';
+            characterId?: string | null;
+            variant?: string;
+            inputRef?: React.RefObject<HTMLInputElement | null> | { current: HTMLInputElement | null };
+            successMessage?: string;
         }
-
-        // 验证文件类型
-        if (!file.type.startsWith('image/')) {
-            toast.error('请选择图片文件');
-            return;
-        }
-
-        // 验证文件大小（例如限制为 5MB）
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('图片大小不能超过 5MB');
+    ) => {
+        // 验证文件
+        if (!validateFile(file)) {
             return;
         }
 
@@ -617,94 +685,50 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             return;
         }
 
-        // 确定目标角色ID
-        let targetCharacterId = '';
-        let isNewCharacter = false;
-
-        if (isAddingNew && newCharacterData) {
-            // 新增模式：需要先创建角色
-            isNewCharacter = true;
-            
-            // 生成新的 NPC ID
-            targetCharacterId = `npc_${Date.now()}`;
-            
-            // 创建新角色
-            const identityParts = newCharacterData.identity.split(' · ');
-            const race = identityParts.length > 1 ? identityParts[0] : undefined;
-            const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || newCharacterData.role);
-
-            const images: { [key: string]: string } = {};
-            newCharacterData.variations.forEach(variation => {
-                if (variation.label && variation.img) {
-                    images[variation.label] = variation.img;
-                }
-            });
-
-            const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
-
-            const newNpc: NPC = {
-                id: targetCharacterId,
-                name: newCharacterData.name || '未命名角色',
-                gender: newCharacterData.gender || '',
-                job: job || undefined,
-                race: race || undefined,
-                description: newCharacterData.background || '暂无描述',
-                appearance: newCharacterData.appearance || '',
-                personality: newCharacterData.personality && newCharacterData.personality.length > 0 ? newCharacterData.personality.join(', ') : undefined,
-                tone: newCharacterData.speech || '',
-                relationship: playerRelationship?.description || undefined,
-                images: Object.keys(images).length > 0 ? images : undefined,
-            };
-
-            try {
-                const createResponse = await EditorApi.addNpc(fileId, newNpc);
-                if (!createResponse.data?.success) {
-                    toast.error('创建角色失败，无法上传图片');
-                    return;
-                }
-                
-                // 创建成功后，更新本地数据
-                const createdCharacter: Character = {
-                    ...newCharacterData,
-                    id: targetCharacterId,
-                };
-                setCharacterData(prev => [createdCharacter, ...prev]);
-                setActiveCharacterId(targetCharacterId);
-                setIsAddingNew(false);
-                setNewCharacterData(null);
-            } catch (error) {
-                console.error('创建角色时出错:', error);
-                toast.error('创建角色失败，请重试');
-                return;
-            }
-        } else {
-            // 正常模式
-            targetCharacterId = activeCharacterId;
-        }
-
-        // 如果目标角色ID为空，说明当前没有选中有效的角色
-        if (!targetCharacterId) {
-            toast.error('请先选择角色');
-            return;
-        }
+        const { type, characterId, variant = 'base', inputRef, successMessage } = options;
 
         try {
-            const response = await EditorApi.uploadNpcImage(fileId, targetCharacterId, {
-                file,
-                variat: 'base',
-            });
+            let response;
+            let targetCharacterId: string | undefined = characterId || undefined;
+
+            // 如果是新增模式且上传NPC图片，需要先创建角色
+            if (type === 'npc' && isAddingNew && newCharacterData && !targetCharacterId) {
+                const newId = await createNewNpcForUpload();
+                if (!newId) {
+                    return;
+                }
+                targetCharacterId = newId;
+            }
+
+            // 根据类型调用不同的API
+            if (type === 'player') {
+                response = await EditorApi.uploadPlayerImage(fileId, {
+                    file,
+                    variat: variant,
+                });
+            } else if (type === 'npc' || type === 'variation') {
+                if (!targetCharacterId) {
+                    toast.error('缺少角色ID，无法上传');
+                    return;
+                }
+                response = await EditorApi.uploadNpcImage(fileId, targetCharacterId, {
+                    file,
+                    variat: variant,
+                });
+            } else {
+                toast.error('未知的上传类型');
+                return;
+            }
+
             if (response.data?.success) {
-                toast.success('角色图片上传成功');
-                // 刷新数据以获取最新的图片URL
+                toast.success(successMessage || '图片上传成功');
+                // 刷新数据
                 if (onDataChange) {
                     onDataChange();
                 }
                 
-                // 根据当前模式更新图片URL
-                if (isNewCharacter) {
-                    // 新增模式已处理，不需要额外操作
-                } else {
-                    // 正常模式
+                // 如果是NPC基础立绘，更新本地portrait
+                if (type === 'npc' && variant === 'base' && targetCharacterId && !isAddingNew) {
                     const firstImageUrl = response.data?.npcSetting?.npcs.find(npc => npc.id === targetCharacterId)?.images?.base || '';
                     if (firstImageUrl) {
                         updateField('portrait', firstImageUrl);
@@ -717,13 +741,129 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             console.error('上传图片时出错:', error);
             toast.error('上传图片失败，请重试');
         } finally {
-            // 清空 input 值，以便可以重复选择同一文件
-            if (npcFileInputRef.current) {
-                npcFileInputRef.current.value = '';
+            // 清空 input 值
+            if (inputRef && 'current' in inputRef && inputRef.current) {
+                inputRef.current.value = '';
             }
-            if (editingFileInputRef.current) {
-                editingFileInputRef.current.value = '';
+        }
+    };
+
+    // 上传玩家图片
+    const handleUploadPlayerImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        await handleUploadImage(file, {
+            type: 'player',
+            variant: 'base',
+            inputRef: playerFileInputRef,
+            successMessage: '玩家图片上传成功',
+        });
+    };
+
+    // 上传NPC基础立绘
+    const handleUploadNpcImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const characterId = isAddingNew && newCharacterData ? undefined : activeCharacterId;
+        
+        await handleUploadImage(file, {
+            type: 'npc',
+            characterId,
+            variant: 'base',
+            inputRef: npcFileInputRef,
+            successMessage: '角色图片上传成功',
+        });
+    };
+
+    const regenerateNpcImage = async (npc: Character) => {
+        if (!fileId || !npc) {
+            return;
+        }
+        try {
+            const { id, name, age, gender, job, race, description, appearance } = npc as any;
+            const response = await EditorApi.generateNpcImage({
+                fileId,
+                npc: { id, name, age, gender, job, race, description, appearance },
+                removeBg: false
+            });
+            if (response.data?.success) {
+                toast.success('NPC图片重新生成成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('重新生成NPC图片失败');
             }
+        } catch (error) {
+            console.error('重新生成NPC图片时出错:', error);
+            toast.error('重新生成NPC图片失败，请重试');
+        }
+    };
+
+    // 必填字段列表（除了描述外的所有字段）
+    const requiredFields = ['name', 'gender', 'identity', 'appearance', 'speech'];
+
+    // 上传差分图片
+    const handleUploadVariationImage = async (variation: Variation, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!currentCharacter || currentCharacter.id === 'player') {
+            toast.error('缺少必要数据，无法上传');
+            return;
+        }
+
+        const inputRef = { current: variationFileInputRefs.current[variation.id] };
+
+        await handleUploadImage(file, {
+            type: 'variation',
+            characterId: currentCharacter.id,
+            variant: variation.label,
+            inputRef,
+            successMessage: '差分图片上传成功',
+        });
+    };
+
+    // AI 生成差分图片
+    const regenerateVariationImage = async (variation: Variation) => {
+        if (!fileId || !variation || !currentCharacter || currentCharacter.id === 'player') {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+
+        // 需要基础图片URL，如果没有则提示
+        if (!currentCharacter.portrait) {
+            toast.error('请先上传角色基础立绘');
+            return;
+        }
+
+        try {
+            const response = await EditorApi.generateVariantImage({
+                fileId,
+                npcId: currentCharacter.id,
+                baseImagePath: currentCharacter.portrait,
+                variant: {
+                    type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
+                    value: variation.label,
+                    description: variation.description,
+                },
+                removeBg: false,
+            });
+            if (response.data?.success) {
+                toast.success('差分图片生成成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('生成差分图片失败');
+            }
+        } catch (error) {
+            console.error('生成差分图片时出错:', error);
+            toast.error('生成差分图片失败，请重试');
         }
     };
 
@@ -752,7 +892,11 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             <article
                                 key={character.id}
                                 className={`${styles.characterRow} ${character.id === activeCharacterId ? styles.active : ''}`}
-                                onClick={() => setActiveCharacterId(character.id)}
+                                onClick={() => {
+                                    if (!isAddingNew) {
+                                        setActiveCharacterId(character.id);
+                                    }
+                                }}
                             >
                                 <div
                                     className={styles.characterThumb}
@@ -787,150 +931,126 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     </div>
                 </div>
 
-                {/* 右栏 - 角色详情 */}
-                <div className={styles.card}>
-                    {/* 隐藏的图片上传 inputs */}
-                    <input 
-                        ref={playerFileInputRef}
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleUploadPlayerImage} 
-                        style={{ display: 'none' }}
-                    />
-                    <input 
-                        ref={npcFileInputRef}
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleUploadNpcImage} 
-                        style={{ display: 'none' }}
-                    />
-                    <input 
-                        ref={editingFileInputRef}
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleUploadNpcImage} 
-                        style={{ display: 'none' }}
-                    />
-                    
-                    {/* 右侧面板头部 - 确认/取消按钮 */}
-                    {isAddingNew && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-                            <button className={styles.ghostSmall} onClick={confirmAddNew}>
-                                确认增加
-                            </button>
-                            <button className={styles.ghostSmall} onClick={cancelAddNew}>
-                                取消
-                            </button>
-                        </div>
-                    )}
-                    
-                    {/* 正常模式下显示确认修改按钮 */}
-                    {!isAddingNew && activeCharacter && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-                            <button className={styles.ghostSmall} onClick={confirmEdit}>
-                                确认修改
-                            </button>
-                        </div>
-                    )}
-                    
-                    {isAddingNew && newCharacterData ? (
-                        /* 新增角色表单 */
+                {/* 右栏 - 角色详情（统一表单） */}
+                {currentCharacter && (
+                    <div className={styles.card}>
+                        {/* 隐藏的图片上传 inputs */}
+                        <input 
+                            ref={playerFileInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleUploadPlayerImage} 
+                            style={{ display: 'none' }}
+                        />
+                        <input 
+                            ref={npcFileInputRef}
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleUploadNpcImage} 
+                            style={{ display: 'none' }}
+                        />
+
+                        {/* 右侧面板头部 - 确认/取消按钮 */}
+                        {isAddingNew ? (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+                                <button className={styles.ghostSmall} onClick={confirmEdit}>
+                                    确认增加
+                                </button>
+                                <button className={styles.ghostSmall} onClick={cancelAddNew}>
+                                    取消
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+                                <button className={styles.ghostSmall} onClick={confirmEdit}>
+                                    确认修改
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* 统一表单 */}
                         <>
                             {/* 立绘 */}
                             <div
                                 className={styles.portraitLarge}
-                                style={{ backgroundImage: newCharacterData.portrait ? `url('${newCharacterData.portrait}')` : 'none', cursor: 'pointer' }}
+                                style={{ backgroundImage: currentCharacter.portrait ? `url('${currentCharacter.portrait}')` : 'none', cursor: 'pointer' }}
                                 onClick={handlePortraitClick}
                             >
-                                <span className={styles.portraitHint}>点击上传角色基础立绘</span>
+                                <span className={styles.portraitHint}>
+                                    {isAddingNew ? '点击上传角色基础立绘' : '点击替换角色基础立绘'}
+                                </span>
+                            </div>
+
+                            <div className={styles.portraitImageActions}>
+                                <button className={styles.ghostSmall} onClick={handlePortraitClick}>
+                                    {isAddingNew ? '上传立绘' : '重新上传'}
+                                </button>
+                                {currentCharacter && currentCharacter.id !== 'player' && (
+                                    <button 
+                                        className={styles.ghostSmall} 
+                                        onClick={() => regenerateNpcImage(currentCharacter)}
+                                    >AI 重新生成</button>
+                                )}
                             </div>
 
                             {/* 基础信息表单 */}
                             <div className={styles.formGrid}>
                                 <label>
-                                    <span>姓名</span>
-                                    <input type="text" value={newCharacterData.name} onChange={(e) => updateNewCharacterField('name', e.target.value)} />
+                                    <span>姓名{requiredFields.includes('name') && <span className={styles.required}>*</span>}</span>
+                                    <input 
+                                        type="text" 
+                                        value={currentCharacter.name} 
+                                        onChange={(e) => handleFieldChange('name', e.target.value)} 
+                                    />
                                 </label>
                                 <label>
                                     <span>称呼 / 昵称</span>
-                                    <input type="text" value={newCharacterData.callName} onChange={(e) => updateNewCharacterField('callName', e.target.value)} />
+                                    <input 
+                                        type="text" 
+                                        value={currentCharacter.callName} 
+                                        onChange={(e) => handleFieldChange('callName', e.target.value)} 
+                                    />
                                 </label>
                                 <label>
-                                    <span>性别 / 形体</span>
-                                    <input type="text" value={newCharacterData.gender} onChange={(e) => updateNewCharacterField('gender', e.target.value)} />
+                                    <span>性别 / 形体{requiredFields.includes('gender') && <span className={styles.required}>*</span>}</span>
+                                    <input 
+                                        type="text" 
+                                        value={currentCharacter.gender} 
+                                        onChange={(e) => handleFieldChange('gender', e.target.value)} 
+                                    />
                                 </label>
                                 <label>
-                                    <span>身份 / 当前身份</span>
-                                    <input type="text" value={newCharacterData.identity} onChange={(e) => updateNewCharacterField('identity', e.target.value)} />
-                                </label>
-                                <label className={styles.wide}>
-                                    <span>性格标签</span>
-                                    <textarea 
-                                        rows={2} 
-                                        value={newCharacterData.personality.join(' / ')} 
-                                        onChange={(e) => {
-                                            const tags = e.target.value.split(/[，,\/、\s]+/).map(tag => tag.trim()).filter(Boolean);
-                                            updateNewCharacterField('personality', tags);
-                                        }}
-                                        placeholder="输入性格标签，用 / 或 ，分隔"
+                                    <span>身份 / 当前身份{requiredFields.includes('identity') && <span className={styles.required}>*</span>}</span>
+                                    <input 
+                                        type="text" 
+                                        value={currentCharacter.identity} 
+                                        onChange={(e) => handleFieldChange('identity', e.target.value)} 
                                     />
                                 </label>
                                 <label className={styles.wide}>
-                                    <span>口癖 / 语气</span>
-                                    <textarea rows={3} value={newCharacterData.speech} onChange={(e) => updateNewCharacterField('speech', e.target.value)} />
-                                </label>
-                                <label className={styles.wide}>
-                                    <span>外貌描述 / Prompt</span>
-                                    <textarea rows={3} value={newCharacterData.appearance} onChange={(e) => updateNewCharacterField('appearance', e.target.value)} />
-                                </label>
-                            </div>
-                        </>
-                    ) : (
-                        /* 正常显示选中的角色详情 */
-                        <>
-                            {/* 立绘 */}
-                            <div
-                                className={styles.portraitLarge}
-                                style={{ backgroundImage: activeCharacter.portrait ? `url('${activeCharacter.portrait}')` : 'none', cursor: 'pointer' }}
-                                onClick={handlePortraitClick}
-                            >
-                                <span className={styles.portraitHint}>点击替换角色基础立绘</span>
-                            </div>
-
-                            {/* 基础信息表单 */}
-                            <div className={styles.formGrid}>
-                                <label>
-                                    <span>姓名</span>
-                                    <input type="text" value={activeCharacter.name} onChange={(e) => handleFieldChange('name', e.target.value)} />
-                                </label>
-                                <label>
-                                    <span>称呼 / 昵称</span>
-                                    <input type="text" value={activeCharacter.callName} onChange={(e) => handleFieldChange('callName', e.target.value)} />
-                                </label>
-                                <label>
-                                    <span>性别 / 形体</span>
-                                    <input type="text" value={activeCharacter.gender} onChange={(e) => handleFieldChange('gender', e.target.value)} />
-                                </label>
-                                <label>
-                                    <span>身份 / 当前身份</span>
-                                    <input type="text" value={activeCharacter.identity} onChange={(e) => handleFieldChange('identity', e.target.value)} />
-                                </label>
-                                <label className={styles.wide}>
                                     <span>性格标签</span>
                                     <textarea 
                                         rows={2} 
-                                        value={activeCharacter.personality.join(' / ')} 
+                                        value={currentCharacter.personality.join(' / ')} 
                                         onChange={(e) => handleFieldChange('personality', e.target.value)}
                                         placeholder="输入性格标签，用 / 或 ，分隔"
                                     />
                                 </label>
                                 <label className={styles.wide}>
-                                    <span>口癖 / 语气</span>
-                                    <textarea rows={3} value={activeCharacter.speech} onChange={(e) => handleFieldChange('speech', e.target.value)} />
+                                    <span>口癖 / 语气{requiredFields.includes('speech') && <span className={styles.required}>*</span>}</span>
+                                    <textarea 
+                                        rows={3} 
+                                        value={currentCharacter.speech} 
+                                        onChange={(e) => handleFieldChange('speech', e.target.value)} 
+                                    />
                                 </label>
                                 <label className={styles.wide}>
-                                    <span>外貌描述 / Prompt</span>
-                                    <textarea rows={3} value={activeCharacter.appearance} onChange={(e) => handleFieldChange('appearance', e.target.value)} />
+                                    <span>外貌描述 / Prompt{requiredFields.includes('appearance') && <span className={styles.required}>*</span>}</span>
+                                    <textarea 
+                                        rows={3} 
+                                        value={currentCharacter.appearance} 
+                                        onChange={(e) => handleFieldChange('appearance', e.target.value)} 
+                                    />
                                 </label>
                             </div>
 
@@ -951,23 +1071,43 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     <div className={styles.formGrid}>
                                         <label className={styles.wide}>
                                             <span>人物背景故事</span>
-                                            <textarea rows={4} value={activeCharacter.background} onChange={(e) => handleFieldChange('background', e.target.value)} />
+                                            <textarea 
+                                                rows={4} 
+                                                value={currentCharacter.background} 
+                                                onChange={(e) => handleFieldChange('background', e.target.value)} 
+                                            />
                                         </label>
                                         <label className={styles.wide}>
                                             <span>成长经历 / 转折</span>
-                                            <textarea rows={4} value={activeCharacter.growth} onChange={(e) => handleFieldChange('growth', e.target.value)} />
+                                            <textarea 
+                                                rows={4} 
+                                                value={currentCharacter.growth} 
+                                                onChange={(e) => handleFieldChange('growth', e.target.value)} 
+                                            />
                                         </label>
                                         <label>
                                             <span>短期目标</span>
-                                            <input type="text" value={activeCharacter.goalShort} onChange={(e) => handleFieldChange('goalShort', e.target.value)} />
+                                            <input 
+                                                type="text" 
+                                                value={currentCharacter.goalShort} 
+                                                onChange={(e) => handleFieldChange('goalShort', e.target.value)} 
+                                            />
                                         </label>
                                         <label>
                                             <span>长期愿景</span>
-                                            <input type="text" value={activeCharacter.goalLong} onChange={(e) => handleFieldChange('goalLong', e.target.value)} />
+                                            <input 
+                                                type="text" 
+                                                value={currentCharacter.goalLong} 
+                                                onChange={(e) => handleFieldChange('goalLong', e.target.value)} 
+                                            />
                                         </label>
                                         <label className={styles.wide}>
                                             <span>隐藏秘密 / 禁忌</span>
-                                            <textarea rows={3} value={activeCharacter.secret} onChange={(e) => handleFieldChange('secret', e.target.value)} />
+                                            <textarea 
+                                                rows={3} 
+                                                value={currentCharacter.secret} 
+                                                onChange={(e) => handleFieldChange('secret', e.target.value)} 
+                                            />
                                         </label>
                                     </div>
                                 )}
@@ -998,20 +1138,31 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                 </div>
                                 {isRelationshipExpanded && (
                                     <div className={styles.relationshipList}>
-                                        {activeCharacter.relationships.length === 0 ? (
+                                        {currentCharacter.relationships.length === 0 ? (
                                             <p className={styles.mutedSmall}>暂无关系。可添加与其他 NPC 的亲疏、不同身份下的角色差异等信息。</p>
                                         ) : (
-                                            activeCharacter.relationships.map((rel) => (
+                                            currentCharacter.relationships.map((rel) => (
                                                 <div key={rel.id} className={styles.relationshipRow}>
                                                     <label>
                                                         <span>对象 / 称呼</span>
-                                                        <input type="text" value={rel.name} onChange={(e) => updateRelationship(rel.id, 'name', e.target.value)} />
+                                                        <input 
+                                                            type="text" 
+                                                            value={rel.name} 
+                                                            onChange={(e) => updateRelationship(rel.id, 'name', e.target.value)} 
+                                                        />
                                                     </label>
                                                     <label className={styles.wide}>
                                                         <span>关系描述</span>
-                                                        <textarea rows={3} value={rel.description} onChange={(e) => updateRelationship(rel.id, 'description', e.target.value)} />
+                                                        <textarea 
+                                                            rows={3} 
+                                                            value={rel.description} 
+                                                            onChange={(e) => updateRelationship(rel.id, 'description', e.target.value)} 
+                                                        />
                                                     </label>
-                                                    <button className={styles.ghostTiny} onClick={() => removeRelationship(rel.id)}>删除</button>
+                                                    <button 
+                                                        className={styles.ghostTiny} 
+                                                        onClick={() => removeRelationship(rel.id)}
+                                                    >删除</button>
                                                 </div>
                                             ))
                                         )}
@@ -1023,10 +1174,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             <div className={styles.detailBlock}>
                                 <div className={styles.cardHead}>
                                     <strong>立绘差分</strong>
-                                    <span className={styles.mutedSmall}>默认 + {activeCharacter.variations.length} 个差分</span>
+                                    <span className={styles.mutedSmall}>默认 + {currentCharacter.variations.length} 个差分</span>
                                 </div>
                                 <div className={styles.variationGrid}>
-                                    {activeCharacter.variations.map((variation) => (
+                                    {currentCharacter.variations.map((variation) => (
                                         <div key={variation.id} className={styles.variationCard}>
                                             <div
                                                 className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
@@ -1035,9 +1186,35 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                                 {!variation.img && <span className={styles.mutedSmall}>等待图片</span>}
                                             </div>
                                             <p>{variation.label}</p>
+                                            {variation.description && (
+                                                <p className={styles.mutedSmall} style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                                    {variation.description}
+                                                </p>
+                                            )}
                                             <div className={styles.variationActions}>
-                                                <button className={styles.ghostTiny}>上传图片</button>
-                                                <button className={styles.ghostTiny}>AI 生成</button>
+                                                <input
+                                                    ref={(el) => {
+                                                        if (el) {
+                                                            variationFileInputRefs.current[variation.id] = el;
+                                                        }
+                                                    }}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    style={{ display: 'none' }}
+                                                    onChange={(e) => handleUploadVariationImage(variation, e)}
+                                                />
+                                                <button 
+                                                    className={styles.ghostTiny}
+                                                    onClick={() => variationFileInputRefs.current[variation.id]?.click()}
+                                                >
+                                                    上传图片
+                                                </button>
+                                                <button 
+                                                    className={styles.ghostTiny}
+                                                    onClick={() => regenerateVariationImage(variation)}
+                                                >
+                                                    AI 生成
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
@@ -1045,9 +1222,52 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                 </div>
                             </div>
                         </>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
+
+            {/* 新增差分弹窗 */}
+            {variationModalOpen && (
+                <div className={styles.modalOverlay} onClick={closeVariationModal}>
+                    <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.modalHeader}>
+                            <h3>新增差分</h3>
+                            <button className={styles.modalClose} onClick={closeVariationModal}>×</button>
+                        </div>
+                        <div className={styles.modalBody}>
+                            <label>
+                                <span>差分类型<span className={styles.required}>*</span></span>
+                                <select 
+                                    value={newVariationType} 
+                                    onChange={(e) => setNewVariationType(e.target.value)}
+                                >
+                                    <option value="">请选择类型</option>
+                                    {VARIATION_TYPES.map(type => (
+                                        <option key={type.value} value={type.value}>{type.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>
+                                <span>差分标签<span className={styles.required}>*</span></span>
+                                <input type="text" value={newVariationLabel} onChange={(e) => setNewVariationLabel(e.target.value)} />
+                            </label>
+                            <label>
+                                <span>描述（可选）</span>
+                                <textarea 
+                                    rows={3} 
+                                    value={newVariationDescription} 
+                                    onChange={(e) => setNewVariationDescription(e.target.value)}
+                                    placeholder="输入差分描述..."
+                                />
+                            </label>
+                        </div>
+                        <div className={styles.modalFooter}>
+                            <button className={styles.ghostSmall} onClick={closeVariationModal}>取消</button>
+                            <button className={styles.ghostSmall} onClick={confirmAddVariation}>确认</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 删除确认弹窗 */}
             <DeletModal

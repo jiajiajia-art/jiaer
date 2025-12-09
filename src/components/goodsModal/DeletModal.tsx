@@ -25,15 +25,41 @@ const DeletModal: React.FC<DeletModalProps> = ({
     return (
         <div className={styles.modalOverlay} onClick={onCancel}>
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
-                <button className={styles.closeButton} onClick={onCancel}>
-                    <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt="关闭" />
-                </button>
-                <div className={styles.deletModal}>
-                    <h1 className={styles.title}>{title}</h1>
-                    <p className={styles.message}>{message}</p>
-                    <div className={styles.buttonGroup}>
-                        <button className={styles.confirmButton} onClick={onDelete}>{confirmButtonText}</button>
-                        <button className={styles.cancelButton} onClick={onCancel}>{cancelButtonText}</button>
+                <div className={styles.deleteModal}>
+                    {/* 红色顶部区域 */}
+                    <div className={styles.modalHeader}>
+                        <div className={styles.headerContent}>
+                            <div className={styles.titleIcon}>
+                                <img 
+                                    src={`${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png`} 
+                                    alt="删除图标"
+                                    className={styles.icon}
+                                />
+                            </div>
+                            <h1 className={styles.title}>{title}</h1>
+                            <button className={styles.closeButton} onClick={onCancel}>
+                                <img 
+                                    src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} 
+                                    alt="关闭" 
+                                />
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* 白色内容区域 */}
+                    <div className={styles.modalBody}>
+                        <div className={styles.messageWrapper}>
+                            <p className={styles.message}>{message}</p>
+                        </div>
+                        
+                        <div className={styles.buttonGroup}>
+                            <button className={styles.confirmButton} onClick={onDelete}>
+                                {confirmButtonText}
+                            </button>
+                            <button className={styles.cancelButton} onClick={onCancel}>
+                                {cancelButtonText}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

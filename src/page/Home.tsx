@@ -8,7 +8,6 @@ import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
-import { IoIosArrowForward } from 'react-icons/io';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
@@ -56,17 +55,17 @@ const Home: React.FC = () => {
 
         const sessionKey = 'checkInModalChecked';
         const hasCheckedInSession = sessionStorage.getItem(sessionKey);
-        
+
         if (!hasCheckedInSession) {
             const today = new Date().toDateString();
             const checkInKey = `checkIn_${user.user.id}_${today}`;
             const lastCheckInDate = localStorage.getItem(checkInKey);
             const isCheckedIn = lastCheckInDate === today;
-            
+
             if (!isCheckedIn) {
                 setShowCheckInModal(true);
             }
-            
+
             sessionStorage.setItem(sessionKey, 'true');
             hasCheckedInSessionRef.current = true;
         }
@@ -107,7 +106,7 @@ const Home: React.FC = () => {
         try {
             // 获取限时优惠游戏（前8个，有特殊价格的）
             setIsLoadingSpecial(true);
-            const specialResponse = await libraryDataApi.getGameData('with-discount',{
+            const specialResponse = await libraryDataApi.getGameData('with-discount', {
                 limit: '8',
             });
 
@@ -121,7 +120,7 @@ const Home: React.FC = () => {
 
             // 获取全部游戏（更多数据，用于全部游戏模块）
             setIsLoadingAll(true);
-            const allResponse = await libraryDataApi.getGameData('no-discount',{
+            const allResponse = await libraryDataApi.getGameData('no-discount', {
                 limit: '40',
             });
 
@@ -213,7 +212,9 @@ const Home: React.FC = () => {
                                                                         showGameDetail(item.game)
                                                                     }
                                                                 >
-                                                                    开始游戏
+                                                                    <img 
+                                                                    src={`${import.meta.env.BASE_URL}data/assets/home/开始游戏.png`} 
+                                                                    alt="开始游戏"  />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -244,8 +245,10 @@ const Home: React.FC = () => {
                     {/* 限时优惠模块 */}
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>限时优惠</div>
-                            <hr />
+                            <div className={styles.sectionTitle}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/限时优惠.png`} alt="限时优惠" />
+                            </div>
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} className={styles.sectionDivider} alt="" />
                             <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
@@ -254,7 +257,7 @@ const Home: React.FC = () => {
                                 }}
                             >
                                 更多
-                                <IoIosArrowForward />
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
                         {isLoadingSpecial ? (
@@ -270,9 +273,11 @@ const Home: React.FC = () => {
                     {/* 全部游戏模块 */}
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
-                            <div className={styles.sectionTitle}>全部游戏</div>
-                            <hr />
-                            <button
+                            <div className={styles.sectionTitle}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/全部游戏.png`} alt="全部游戏" />
+                            </div>
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} className={styles.sectionDivider} alt="" /> 
+                           <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                                 onClick={() => {
@@ -280,7 +285,7 @@ const Home: React.FC = () => {
                                 }}
                             >
                                 更多
-                                <IoIosArrowForward />
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
                         {isLoadingAll ? (

@@ -17,6 +17,7 @@ import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import FooterArea from '../components/Layout/FooterArea';
 import toast, { Toaster } from 'react-hot-toast';
+import { useEditorStore } from '../store/editorStore';
 
 const CreateGame: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -49,6 +50,7 @@ const CreateGame: React.FC = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const { setFileId } = useEditorStore();
 
     const convertUrlToFile = async (url: string, filename: string) => {
         const response = await fetch(url);
@@ -413,6 +415,15 @@ const CreateGame: React.FC = () => {
         }
     };
 
+    const editGame = () => {
+        if(gameDetail?.version == 'old') {
+            setShowForm(true);
+        } else {
+            setFileId(gameId);
+            navigate(`/gameSettingsEditor`);
+        }
+    }
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -434,7 +445,7 @@ const CreateGame: React.FC = () => {
                         <GameStatsView
                             gameDetail={gameDetail}
                             heroBackground={heroBackground}
-                            onEdit={() => setShowForm(true)}
+                            onEdit={() => editGame()}
                             onDelete={handleDeleteGame}
                             isDeleting={isDeleting}
                             onPublish={() => setShowPublishModal(true)}
@@ -479,7 +490,6 @@ const CreateGame: React.FC = () => {
             {gameDetail && (
                 <PublishSettingsModal
                     isOpen={showPublishModal}
-                    game={gameDetail}
                     onClose={() => setShowPublishModal(false)}
                     onPublish={handlePublishGame}
                 />

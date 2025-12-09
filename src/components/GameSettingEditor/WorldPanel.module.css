@@ -35,6 +35,49 @@
 }
 
 /* 按钮样式 */
+.primary {
+    border-radius: 12px;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #fff;
+    background: linear-gradient(135deg, #E03D4B 0%, #FF5A67 100%);
+    box-shadow: 0 4px 20px rgba(224, 61, 75, 0.25);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(224, 61, 75, 0.35);
+}
+
+.primary:hover:not(:disabled)::before {
+    opacity: 1;
+}
+
+.primary:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .ghost {
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.12);

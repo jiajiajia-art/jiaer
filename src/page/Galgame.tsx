@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
@@ -40,8 +40,8 @@ interface Message {
 const Galgame = () => {
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
-    const [searchParams] = useSearchParams();
-    const presetId = searchParams.get('presetId') || 'c1c0450b-b086-440d-a477-f31fb71adbde';
+
+    const { pdfFileId } = useGameStore();
 
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [gameTitle, setGameTitle] = useState<string>('Galgame');
@@ -223,7 +223,7 @@ const Galgame = () => {
     });
 
     const { isMusicPlaying, handleMusicToggle } = useMusicPlayer({
-        presetId,
+        presetId: pdfFileId || '',
         currentScene,
         gameStarted,
         isLoading,
@@ -539,14 +539,15 @@ const Galgame = () => {
 
     useEffect(() => {
         const fetchPresetData = async () => {
-            if (!presetId) {
+            console.log(pdfFileId);
+            if (!pdfFileId) {
                 setIsLoading(false);
                 return;
             }
 
             try {
                 setIsLoading(true);
-                const response = await getGalgamePresetApi.getGalgamePreset(presetId);
+                const response = await getGalgamePresetApi.getGalgamePreset(pdfFileId);
 
                 if (response.data.success) {
                     const data = response.data;
@@ -589,7 +590,7 @@ const Galgame = () => {
         };
 
         fetchPresetData();
-    }, [presetId]);
+    }, [pdfFileId]);
 
     const handleStartGame = useCallback(async () => {
         if (!sessionId) {
@@ -620,18 +621,18 @@ const Galgame = () => {
     }, [sessionId, stepHandlers]);
 
     const addConversion = useCallback(async () => {
-        if (!presetId || !user?.user.id) {
+        if (!pdfFileId || !user?.user.id) {
             return;
         }
         try {
             await statisticsApi.addConversion({
-                fileId: presetId,
+                fileId: pdfFileId,
                 userId: String(user?.user.id)
             });
         } catch (error) {
             console.error('记录游戏统计失败:', error);
         }
-    }, [presetId, user?.user.id]);
+    }, [pdfFileId, user?.user.id]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
@@ -716,9 +717,9 @@ const Galgame = () => {
     }, [stepHandlers, currentMessage]);
 
     if (isLoading) {
-        return (
-            <div className={styles.pageRoot}>
-                <div className={styles.mainContent}>
+    return (
+        <div className={styles.pageRoot}>
+            <div className={styles.mainContent}>
                     <div style={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -729,7 +730,7 @@ const Galgame = () => {
                         加载中...
                     </div>
                 </div>
-            </div>
+                            </div>
         );
     }
 
@@ -760,7 +761,7 @@ const Galgame = () => {
                                 alt="角色立绘"
                                 className={styles.characterImage}
                             />
-                        </div>
+                </div>
                     )}
                     <div className={`${styles.gameContentWrapper} ${isTextMode ? styles.gameContentWrapperTextMode : ''}`}>
                         {!showGalgameHistory && !isTextMode && (
@@ -803,11 +804,11 @@ const Galgame = () => {
                                 }}
                             />
                         )}
-                        <div className={styles.buttonContainer}>
+                <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                                    <span>{user?.user?.points}</span>
+                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
+                        <span>{user?.user?.points}</span>
                                 </div>
                             </div>
                             <div className={styles.buttonItem}
@@ -859,9 +860,9 @@ const Galgame = () => {
                                     <PiMusicNoteDuotone />
                                     <span>音乐</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+            </div>
+        </div>
 
                     <StoryIntroModal
                         isOpen={showStoryIntro}
