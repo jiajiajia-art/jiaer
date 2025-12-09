@@ -375,9 +375,10 @@
 /* 差分网格 */
 .variationGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr); /* 固定四列 */
+    gap: 20px; /* 固定间距 */
     margin-top: 8px;
+    min-width: 400px;
 }
 
 .variationCard {
@@ -399,7 +400,7 @@
 
 .variationThumb {
     width: 100%;
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 9 / 16; /* 高16：宽9 */
     border-radius: 12px;
     background-size: cover;
     background-position: center;
@@ -659,6 +660,7 @@
 
     .variationGrid {
         grid-template-columns: repeat(2, 1fr);
+        gap: calc(50% / 4); /* 响应式时每个卡片约为50%宽度，间距为其四分之一 */
     }
 
     /* 弹窗响应式 */

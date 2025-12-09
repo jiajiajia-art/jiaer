@@ -27,6 +27,53 @@
     flex-direction: column;
 }
 
+.errorState {
+    text-align: center;
+    color: #333;
+}
+
+.errorState h2 {
+    margin-bottom: 10px;
+    color: #e03d4b;
+}
+
+.errorState p {
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.errorState button {
+    padding: 10px 30px;
+    background: #e03d4b;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.errorState button:hover {
+    background: #c9303e;
+}
+
+.mapContainer {
+    position: relative;
+    width: 414px;
+    height: 896px;
+    max-width: 100%;
+    max-height: 100vh;
+    background-color: #ffffff;
+    background-size: cover;
+    background-position: center;
+    /* 只有在大屏时显示圆角 */
+    border-radius: 0; 
+    box-shadow: none;
+    overflow: hidden; 
+    display: flex;
+    flex-direction: column;
+}
+
 @media (min-width: 1024px) {
     .mapContainer {
         border-radius: 20px;
@@ -158,4 +205,13 @@
 .sceneNode:hover .sceneName {
     background: #f0f4ff;
     color: #111;
+}
+
+@media (max-width: 768px) {
+    .mapContainer {
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+    }    
 }

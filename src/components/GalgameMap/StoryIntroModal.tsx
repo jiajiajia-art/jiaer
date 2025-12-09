@@ -1,27 +1,27 @@
 import React, { useMemo } from 'react';
 import styles from './StoryIntroModal.module.css';
-import type { GetGalgamePresetResponse } from '../../api/galgame/getGalgamePreset.type';
 import { useStoryTyping } from '../../hooks/story/useStoryTyping';
 import { HOST_ADDRESS } from '../../config';
+import type { AllGameData } from '../../api/worldInteraction/mapWorldData.type';
 
 interface StoryIntroModalProps {
     isOpen: boolean;
-    presetData: GetGalgamePresetResponse | null;
+    gameData: AllGameData | null;
     onStartGame: () => void;
     isLoading?: boolean;
 }
 
 const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     isOpen,
-    presetData,
+    gameData,
     onStartGame,
     isLoading = false,
 }) => {
     if (!isOpen) return null;
 
-    const title = presetData?.worldSetting?.title || '故事';
-    const preamble = presetData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
-    const playerImage = presetData?.sceneSetting?.scenes[0]?.images;
+    const title = gameData?.worldSetting?.title || '故事';
+    const preamble = gameData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
+    const backgroundImage = gameData?.sceneSetting?.scenes[0]?.image || null;
 
     const { displayedText, isTyping } = useStoryTyping({
         text: preamble,
@@ -29,18 +29,18 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
         speed: 50
     });
 
-    const playerImageUrl = useMemo(() => {
-        if (!playerImage) return null;
-        return playerImage.startsWith('http') ? playerImage : `${HOST_ADDRESS}${playerImage}`;
-    }, [playerImage]);
+    const backgroundImageUrl = useMemo(() => {
+        if (!backgroundImage) return null;
+        return backgroundImage.startsWith('http') ? backgroundImage : `${HOST_ADDRESS}${backgroundImage}`;
+    }, [backgroundImage]);
 
     return (
         <div
             className={styles.modalOverlay}
         >
             <div className={styles.modalContent}
-                style={playerImageUrl ? {
-                    backgroundImage: `url(${playerImageUrl})`,
+                style={backgroundImageUrl ? {
+                    backgroundImage: `url(${backgroundImageUrl})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat'

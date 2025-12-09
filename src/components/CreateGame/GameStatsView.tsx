@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoEye, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
-import { IoIosArrowForward } from 'react-icons/io';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
 import { useAuthStore, authModalStore } from '../../store/useAuthStore';

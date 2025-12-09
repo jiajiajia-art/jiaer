@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, use } from 'react';
 import styles from './CharactersPanel.module.css';
-import type { AllGameData, NPCSetting, NPC } from '../../api/galgame/EditorData.type';
+import type { AllGameData, NPCSetting, NPC, Player } from '../../api/galgame/EditorData.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import DeletModal from '../goodsModal/DeletModal';
 import EditorApi from '../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
+import { useEditorStore } from '../../store/editorStore';
 
 interface Relationship {
     id: string;
@@ -44,12 +45,11 @@ interface Character {
 interface CharactersPanelProps {
     gameData?: AllGameData | null;
     isLoading?: boolean;
-    fileId?: string | null;
     onGetData?: (getDataFn: () => Partial<AllGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
 }
 
-const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading = false, fileId, onGetData, onDataChange }) => {
+const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading = false, onGetData, onDataChange }) => {
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
@@ -65,6 +65,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
     const playerFileInputRef = useRef<HTMLInputElement>(null);
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+    const { fileId } = useEditorStore();
 
     // 当 gameData 变化时，填充角色数据
     useEffect(() => {
@@ -72,7 +73,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             const npcs = gameData.npcSetting.npcs;
             const convertedCharacters: Character[] = npcs.map((npc, index) => {
                 // 转换 images 对象为 variations 数组
-                const variations: Variation[] = npc.images 
+                const variations: Variation[] = npc.images
                     ? Object.entries(npc.images).map(([label, img], idx) => ({
                         id: `v${idx}`,
                         label,
@@ -109,6 +110,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             // 添加玩家角色
             if (gameData.worldSetting?.player) {
                 const player = gameData.worldSetting.player;
+                // 玩家仅当有 images 对象时才转换为 variations
+                const playerVariations: Variation[] = player.images
+                    ? Object.entries(player.images).map(([label, img], idx) => ({
+                        id: `v${idx}`,
+                        label,
+                        img,
+                        type: label,
+                    }))
+                    : [];
+
                 convertedCharacters.unshift({
                     id: 'player',
                     name: player.name || '玩家',
@@ -119,14 +130,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: player.personality ? [player.personality] : [],
                     speech: player.tone || '',
                     appearance: player.appearance || '',
-                    portrait: '',
+                    portrait: player.image || '', // 使用 image 字段作为主要上传的肚像
                     background: '',
                     growth: '',
                     goalShort: '',
                     goalLong: '',
                     secret: '',
                     relationships: [],
-                    variations: [],
+                    variations: playerVariations, // 仅有 images 对象时才有差分
                 });
             }
 
@@ -195,8 +206,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
     }, [onGetData, getNpcSettingData]);
 
     // 获取当前显示的角色（统一处理新增和编辑模式）
-    const currentCharacter = isAddingNew && newCharacterData 
-        ? newCharacterData 
+    const currentCharacter = isAddingNew && newCharacterData
+        ? newCharacterData
         : (characterData.find(c => c.id === activeCharacterId) || characterData[0]);
 
     // 更新角色字段（统一处理新增和编辑模式）
@@ -414,10 +425,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
 
     // 确认修改/新增角色（统一处理）
     const confirmEdit = async () => {
-        const characterToSave = isAddingNew && newCharacterData 
-            ? newCharacterData 
+        const characterToSave = isAddingNew && newCharacterData
+            ? newCharacterData
             : currentCharacter;
-        
+
         if (!fileId || !characterToSave) {
             toast.error('缺少必要数据，无法保存修改');
             return;
@@ -426,6 +437,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         // 如果是主角，使用 updatePlayer API
         if (characterToSave.id === 'player') {
             // 更新主角信息
+            // 将 variations 转换回 images 对象
+            const images: { [key: string]: string } = {};
+            characterToSave.variations.forEach(variation => {
+                if (variation.type && variation.img) {
+                    images[variation.type] = variation.img;
+                } else if (variation.label && variation.img) {
+                    images[variation.label] = variation.img;
+                }
+            });
+
             const playerData = {
                 name: characterToSave.name || '',
                 gender: characterToSave.gender || '',
@@ -433,10 +454,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 appearance: characterToSave.appearance || '',
                 personality: characterToSave.personality && characterToSave.personality.length > 0 ? characterToSave.personality.join(', ') : undefined,
                 tone: characterToSave.speech || undefined,
+                image: characterToSave.portrait || '', // 主要上传的肚像
+                images: Object.keys(images).length > 0 ? images : undefined, // 差分对象
             };
-            
+
             try {
-                const response = await EditorApi.updatePlayer(fileId, playerData);
+                const response = await EditorApi.updatePlayer(fileId, playerData as Player);
                 if (response.data?.success) {
                     toast.success('主角信息更新成功');
                     // 刷新数据
@@ -493,7 +516,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     // 更新模式
                     response = await EditorApi.updateNpc(fileId, npcData);
                 }
-                
+
                 if (response.data?.success) {
                     toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
                     // 刷新数据
@@ -647,7 +670,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 toast.error('创建角色失败，无法上传图片');
                 return null;
             }
-            
+
             const createdCharacter: Character = {
                 ...newCharacterData,
                 id: targetCharacterId,
@@ -726,7 +749,42 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 if (onDataChange) {
                     onDataChange();
                 }
-                
+
+                // 如果是玩家图片，更新 portrait 或 variations
+                if (type === 'player' && !isAddingNew) {
+                    setCharacterData(prev =>
+                        prev.map(char => {
+                            if (char.id === 'player') {
+                                // 如果是 base 变体，更新 portrait
+                                if (variant === 'base') {
+                                    return { ...char, portrait: response.data?.worldSetting?.player?.image || char.portrait };
+                                }
+                                // 否则检查是否已存在该variant的variation
+                                const existingVarIndex = char.variations.findIndex(v => v.label === variant);
+                                if (existingVarIndex >= 0) {
+                                    // 更新现有的
+                                    const newVariations = [...char.variations];
+                                    newVariations[existingVarIndex] = {
+                                        ...newVariations[existingVarIndex],
+                                        img: response.data?.worldSetting?.player?.images?.[variant] || '',
+                                    };
+                                    return { ...char, variations: newVariations };
+                                } else {
+                                    // 添加新的
+                                    const newVar: Variation = {
+                                        id: `v-${Date.now()}`,
+                                        label: variant,
+                                        img: response.data?.worldSetting?.player?.images?.[variant] || '',
+                                        type: variant,
+                                    };
+                                    return { ...char, variations: [...char.variations, newVar] };
+                                }
+                            }
+                            return char;
+                        })
+                    );
+                }
+
                 // 如果是NPC基础立绘，更新本地portrait
                 if (type === 'npc' && variant === 'base' && targetCharacterId && !isAddingNew) {
                     const firstImageUrl = response.data?.npcSetting?.npcs.find(npc => npc.id === targetCharacterId)?.images?.base || '';
@@ -767,11 +825,11 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         if (!file) return;
 
         const characterId = isAddingNew && newCharacterData ? undefined : activeCharacterId;
-        
+
         await handleUploadImage(file, {
             type: 'npc',
             characterId,
-            variant: 'base',
+            variant: '',
             inputRef: npcFileInputRef,
             successMessage: '角色图片上传成功',
         });
@@ -811,13 +869,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (!currentCharacter || currentCharacter.id === 'player') {
+        if (!currentCharacter) {
             toast.error('缺少必要数据，无法上传');
             return;
         }
 
         const inputRef = { current: variationFileInputRefs.current[variation.id] };
 
+        // NPC 使用 uploadNpcImage
         await handleUploadImage(file, {
             type: 'variation',
             characterId: currentCharacter.id,
@@ -825,11 +884,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             inputRef,
             successMessage: '差分图片上传成功',
         });
+
     };
 
     // AI 生成差分图片
     const regenerateVariationImage = async (variation: Variation) => {
-        if (!fileId || !variation || !currentCharacter || currentCharacter.id === 'player') {
+        if (!fileId || !variation || !currentCharacter) {
             toast.error('缺少必要数据，无法生成');
             return;
         }
@@ -843,7 +903,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         try {
             const response = await EditorApi.generateVariantImage({
                 fileId,
-                npcId: currentCharacter.id,
+                npcId: currentCharacter.id === 'player' ? 'player' : currentCharacter.id, // 玩家使用 "player" 作为 ID
                 baseImagePath: currentCharacter.portrait,
                 variant: {
                     type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
@@ -935,18 +995,18 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 {currentCharacter && (
                     <div className={styles.card}>
                         {/* 隐藏的图片上传 inputs */}
-                        <input 
+                        <input
                             ref={playerFileInputRef}
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleUploadPlayerImage} 
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadPlayerImage}
                             style={{ display: 'none' }}
                         />
-                        <input 
+                        <input
                             ref={npcFileInputRef}
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleUploadNpcImage} 
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadNpcImage}
                             style={{ display: 'none' }}
                         />
 
@@ -967,13 +1027,18 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                 </button>
                             </div>
                         )}
-                        
+
                         {/* 统一表单 */}
                         <>
                             {/* 立绘 */}
                             <div
                                 className={styles.portraitLarge}
-                                style={{ backgroundImage: currentCharacter.portrait ? `url('${currentCharacter.portrait}')` : 'none', cursor: 'pointer' }}
+                                style={{ 
+                                    backgroundImage: currentCharacter.portrait ? `url('${currentCharacter.portrait}')` : 'none', 
+                                    backgroundSize: 'contain',
+                                    backgroundPosition: 'center',
+                                    backgroundRepeat: 'no-repeat',
+                                }}
                                 onClick={handlePortraitClick}
                             >
                                 <span className={styles.portraitHint}>
@@ -986,8 +1051,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     {isAddingNew ? '上传立绘' : '重新上传'}
                                 </button>
                                 {currentCharacter && currentCharacter.id !== 'player' && (
-                                    <button 
-                                        className={styles.ghostSmall} 
+                                    <button
+                                        className={styles.ghostSmall}
                                         onClick={() => regenerateNpcImage(currentCharacter)}
                                     >AI 重新生成</button>
                                 )}
@@ -997,68 +1062,68 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             <div className={styles.formGrid}>
                                 <label>
                                     <span>姓名{requiredFields.includes('name') && <span className={styles.required}>*</span>}</span>
-                                    <input 
-                                        type="text" 
-                                        value={currentCharacter.name} 
-                                        onChange={(e) => handleFieldChange('name', e.target.value)} 
+                                    <input
+                                        type="text"
+                                        value={currentCharacter.name}
+                                        onChange={(e) => handleFieldChange('name', e.target.value)}
                                     />
                                 </label>
                                 <label>
                                     <span>称呼 / 昵称</span>
-                                    <input 
-                                        type="text" 
-                                        value={currentCharacter.callName} 
-                                        onChange={(e) => handleFieldChange('callName', e.target.value)} 
+                                    <input
+                                        type="text"
+                                        value={currentCharacter.callName}
+                                        onChange={(e) => handleFieldChange('callName', e.target.value)}
                                     />
                                 </label>
                                 <label>
                                     <span>性别 / 形体{requiredFields.includes('gender') && <span className={styles.required}>*</span>}</span>
-                                    <input 
-                                        type="text" 
-                                        value={currentCharacter.gender} 
-                                        onChange={(e) => handleFieldChange('gender', e.target.value)} 
+                                    <input
+                                        type="text"
+                                        value={currentCharacter.gender}
+                                        onChange={(e) => handleFieldChange('gender', e.target.value)}
                                     />
                                 </label>
                                 <label>
                                     <span>身份 / 当前身份{requiredFields.includes('identity') && <span className={styles.required}>*</span>}</span>
-                                    <input 
-                                        type="text" 
-                                        value={currentCharacter.identity} 
-                                        onChange={(e) => handleFieldChange('identity', e.target.value)} 
+                                    <input
+                                        type="text"
+                                        value={currentCharacter.identity}
+                                        onChange={(e) => handleFieldChange('identity', e.target.value)}
                                     />
                                 </label>
                                 <label className={styles.wide}>
                                     <span>性格标签</span>
-                                    <textarea 
-                                        rows={2} 
-                                        value={currentCharacter.personality.join(' / ')} 
+                                    <textarea
+                                        rows={2}
+                                        value={currentCharacter.personality.join(' / ')}
                                         onChange={(e) => handleFieldChange('personality', e.target.value)}
                                         placeholder="输入性格标签，用 / 或 ，分隔"
                                     />
                                 </label>
                                 <label className={styles.wide}>
                                     <span>口癖 / 语气{requiredFields.includes('speech') && <span className={styles.required}>*</span>}</span>
-                                    <textarea 
-                                        rows={3} 
-                                        value={currentCharacter.speech} 
-                                        onChange={(e) => handleFieldChange('speech', e.target.value)} 
+                                    <textarea
+                                        rows={3}
+                                        value={currentCharacter.speech}
+                                        onChange={(e) => handleFieldChange('speech', e.target.value)}
                                     />
                                 </label>
                                 <label className={styles.wide}>
                                     <span>外貌描述 / Prompt{requiredFields.includes('appearance') && <span className={styles.required}>*</span>}</span>
-                                    <textarea 
-                                        rows={3} 
-                                        value={currentCharacter.appearance} 
-                                        onChange={(e) => handleFieldChange('appearance', e.target.value)} 
+                                    <textarea
+                                        rows={3}
+                                        value={currentCharacter.appearance}
+                                        onChange={(e) => handleFieldChange('appearance', e.target.value)}
                                     />
                                 </label>
                             </div>
 
                             {/* 人物背景 & 动机（可折叠） */}
                             <div className={styles.detailBlock}>
-                                <div 
-                                    className={styles.collapsibleHeader} 
-                                    style={{ cursor: 'pointer' }} 
+                                <div
+                                    className={styles.collapsibleHeader}
+                                    style={{ cursor: 'pointer' }}
                                     onClick={() => setIsBackgroundExpanded(!isBackgroundExpanded)}
                                 >
                                     <strong>人物背景 & 动机（可选）</strong>
@@ -1071,42 +1136,42 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     <div className={styles.formGrid}>
                                         <label className={styles.wide}>
                                             <span>人物背景故事</span>
-                                            <textarea 
-                                                rows={4} 
-                                                value={currentCharacter.background} 
-                                                onChange={(e) => handleFieldChange('background', e.target.value)} 
+                                            <textarea
+                                                rows={4}
+                                                value={currentCharacter.background}
+                                                onChange={(e) => handleFieldChange('background', e.target.value)}
                                             />
                                         </label>
                                         <label className={styles.wide}>
                                             <span>成长经历 / 转折</span>
-                                            <textarea 
-                                                rows={4} 
-                                                value={currentCharacter.growth} 
-                                                onChange={(e) => handleFieldChange('growth', e.target.value)} 
+                                            <textarea
+                                                rows={4}
+                                                value={currentCharacter.growth}
+                                                onChange={(e) => handleFieldChange('growth', e.target.value)}
                                             />
                                         </label>
                                         <label>
                                             <span>短期目标</span>
-                                            <input 
-                                                type="text" 
-                                                value={currentCharacter.goalShort} 
-                                                onChange={(e) => handleFieldChange('goalShort', e.target.value)} 
+                                            <input
+                                                type="text"
+                                                value={currentCharacter.goalShort}
+                                                onChange={(e) => handleFieldChange('goalShort', e.target.value)}
                                             />
                                         </label>
                                         <label>
                                             <span>长期愿景</span>
-                                            <input 
-                                                type="text" 
-                                                value={currentCharacter.goalLong} 
-                                                onChange={(e) => handleFieldChange('goalLong', e.target.value)} 
+                                            <input
+                                                type="text"
+                                                value={currentCharacter.goalLong}
+                                                onChange={(e) => handleFieldChange('goalLong', e.target.value)}
                                             />
                                         </label>
                                         <label className={styles.wide}>
                                             <span>隐藏秘密 / 禁忌</span>
-                                            <textarea 
-                                                rows={3} 
-                                                value={currentCharacter.secret} 
-                                                onChange={(e) => handleFieldChange('secret', e.target.value)} 
+                                            <textarea
+                                                rows={3}
+                                                value={currentCharacter.secret}
+                                                onChange={(e) => handleFieldChange('secret', e.target.value)}
                                             />
                                         </label>
                                     </div>
@@ -1115,16 +1180,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
 
                             {/* 人物关系（可折叠） */}
                             <div className={styles.detailBlock}>
-                                <div 
-                                    className={styles.collapsibleHeader} 
-                                    style={{ cursor: 'pointer' }} 
+                                <div
+                                    className={styles.collapsibleHeader}
+                                    style={{ cursor: 'pointer' }}
                                     onClick={() => setIsRelationshipExpanded(!isRelationshipExpanded)}
                                 >
                                     <strong>人物关系（可选）</strong>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         {isRelationshipExpanded && (
-                                            <button 
-                                                className={styles.ghostSmall} 
+                                            <button
+                                                className={styles.ghostSmall}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     addRelationship();
@@ -1145,22 +1210,22 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                                 <div key={rel.id} className={styles.relationshipRow}>
                                                     <label>
                                                         <span>对象 / 称呼</span>
-                                                        <input 
-                                                            type="text" 
-                                                            value={rel.name} 
-                                                            onChange={(e) => updateRelationship(rel.id, 'name', e.target.value)} 
+                                                        <input
+                                                            type="text"
+                                                            value={rel.name}
+                                                            onChange={(e) => updateRelationship(rel.id, 'name', e.target.value)}
                                                         />
                                                     </label>
                                                     <label className={styles.wide}>
                                                         <span>关系描述</span>
-                                                        <textarea 
-                                                            rows={3} 
-                                                            value={rel.description} 
-                                                            onChange={(e) => updateRelationship(rel.id, 'description', e.target.value)} 
+                                                        <textarea
+                                                            rows={3}
+                                                            value={rel.description}
+                                                            onChange={(e) => updateRelationship(rel.id, 'description', e.target.value)}
                                                         />
                                                     </label>
-                                                    <button 
-                                                        className={styles.ghostTiny} 
+                                                    <button
+                                                        className={styles.ghostTiny}
                                                         onClick={() => removeRelationship(rel.id)}
                                                     >删除</button>
                                                 </div>
@@ -1171,56 +1236,60 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             </div>
 
                             {/* 立绘差分 */}
-                            <div className={styles.detailBlock}>
-                                <div className={styles.cardHead}>
-                                    <strong>立绘差分</strong>
-                                    <span className={styles.mutedSmall}>默认 + {currentCharacter.variations.length} 个差分</span>
-                                </div>
-                                <div className={styles.variationGrid}>
-                                    {currentCharacter.variations.map((variation) => (
-                                        <div key={variation.id} className={styles.variationCard}>
-                                            <div
-                                                className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
-                                                style={variation.img ? { backgroundImage: `url('${variation.img}')` } : {}}
-                                            >
-                                                {!variation.img && <span className={styles.mutedSmall}>等待图片</span>}
-                                            </div>
-                                            <p>{variation.label}</p>
-                                            {variation.description && (
-                                                <p className={styles.mutedSmall} style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                                                    {variation.description}
-                                                </p>
-                                            )}
-                                            <div className={styles.variationActions}>
-                                                <input
-                                                    ref={(el) => {
-                                                        if (el) {
-                                                            variationFileInputRefs.current[variation.id] = el;
-                                                        }
-                                                    }}
-                                                    type="file"
-                                                    accept="image/*"
-                                                    style={{ display: 'none' }}
-                                                    onChange={(e) => handleUploadVariationImage(variation, e)}
-                                                />
-                                                <button 
-                                                    className={styles.ghostTiny}
-                                                    onClick={() => variationFileInputRefs.current[variation.id]?.click()}
+                            {
+                                currentCharacter.id !== 'player' &&
+                                <div className={styles.detailBlock}>
+                                    <div className={styles.cardHead}>
+                                        <strong>立绘差分</strong>
+                                        <span className={styles.mutedSmall}>默认 + {currentCharacter.variations.length} 个差分</span>
+                                    </div>
+                                    <div className={styles.variationGrid}>
+                                        {currentCharacter.variations.map((variation) => (
+                                            <div key={variation.id} className={styles.variationCard}>
+                                                <div
+                                                    className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
+                                                    style={variation.img ? { backgroundImage: `url('${variation.img}')` } : {}}
                                                 >
-                                                    上传图片
-                                                </button>
-                                                <button 
-                                                    className={styles.ghostTiny}
-                                                    onClick={() => regenerateVariationImage(variation)}
-                                                >
-                                                    AI 生成
-                                                </button>
+                                                    {!variation.img && <span className={styles.mutedSmall}>等待图片</span>}
+                                                </div>
+                                                <p>{variation.label}</p>
+                                                {variation.description && (
+                                                    <p className={styles.mutedSmall} style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                                        {variation.description}
+                                                    </p>
+                                                )}
+                                                <div className={styles.variationActions}>
+                                                    <input
+                                                        ref={(el) => {
+                                                            if (el) {
+                                                                variationFileInputRefs.current[variation.id] = el;
+                                                            }
+                                                        }}
+                                                        type="file"
+                                                        accept="image/*"
+                                                        style={{ display: 'none' }}
+                                                        onChange={(e) => handleUploadVariationImage(variation, e)}
+                                                    />
+                                                    <button
+                                                        className={styles.ghostTiny}
+                                                        onClick={() => variationFileInputRefs.current[variation.id]?.click()}
+                                                    >
+                                                        上传图片
+                                                    </button>
+                                                    <button
+                                                        className={styles.ghostTiny}
+                                                        onClick={() => regenerateVariationImage(variation)}
+                                                    >
+                                                        AI 生成
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                    <button className={styles.addCard} onClick={addVariation}>+ 新差分</button>
+                                        ))}
+                                        <button className={styles.addCard} onClick={addVariation}>+ 新差分</button>
+                                    </div>
                                 </div>
-                            </div>
+                            }
+
                         </>
                     </div>
                 )}
@@ -1237,8 +1306,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                         <div className={styles.modalBody}>
                             <label>
                                 <span>差分类型<span className={styles.required}>*</span></span>
-                                <select 
-                                    value={newVariationType} 
+                                <select
+                                    value={newVariationType}
                                     onChange={(e) => setNewVariationType(e.target.value)}
                                 >
                                     <option value="">请选择类型</option>
@@ -1253,9 +1322,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             </label>
                             <label>
                                 <span>描述（可选）</span>
-                                <textarea 
-                                    rows={3} 
-                                    value={newVariationDescription} 
+                                <textarea
+                                    rows={3}
+                                    value={newVariationDescription}
                                     onChange={(e) => setNewVariationDescription(e.target.value)}
                                     placeholder="输入差分描述..."
                                 />

@@ -13,6 +13,7 @@ import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
+import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -191,6 +192,26 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             setIsLoading(false);
         }
     }, [userId]);
+
+    const createMapWorldSession = useCallback(async (fileId: string): Promise<string | null> => {
+        if (!fileId || !userId) {
+            return null;
+        }   
+        try {
+            const response = await createWorldSessionApi.createWorldSession({fileId}); 
+            if (response.data.success) {
+                return response.data.session.sessionId;
+            } else {
+                alert(response.data.message || '创建游戏失败，请重试');
+                return null;
+            } 
+        } catch (error) {
+            console.error('❌ World Session 创建错误:', error);
+            alert('创建游戏失败，请稍后重试');
+            return null;
+        }
+    }, [userId]);
+
     
     // 处理开始游戏
     const handleStartGame = useCallback(async () => {
@@ -213,7 +234,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 // 通过 URL 参数传递 presetId
                 navigate(`/galgame`);
             }
-        } else {
+        } else if(currentGame.version == 'old') {
             // 使用普通游戏接口
             setPdfFileId(fileId);
             const sessionId = await createSession(fileId);
@@ -222,7 +243,15 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 setSessionId(sessionId);
                 navigate('/newmain');
             }
-        }
+        } else if(currentGame.version == 'map-plugin-version') {
+            // 使用地图世界接口
+            setPdfFileId(fileId);
+            const sessionId = await createMapWorldSession(fileId);
+            if (sessionId) {    
+                setSessionId(sessionId);
+                navigate('/galgameMap');
+            }
+        } 
     }, [checkAuth, fileId, createSession, createGalgameSession, setPdfFileId, setSessionId, navigate]);
 
     // 处理点赞

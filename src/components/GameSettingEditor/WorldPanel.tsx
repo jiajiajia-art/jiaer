@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './WorldPanel.module.css';
 import type { AllGameData, WorldSetting } from '../../api/galgame/EditorData.type';
 import { MdArrowDropDown } from 'react-icons/md';
-import EditorApi from '../../api/galgame/EditorData';
 
 interface WorldField {
     id: string;
@@ -308,7 +307,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData, handleSubm
                             e.preventDefault();
                             handleSubmit();
                         }}
-                        disabled={!fileId || !gameData || isSubmitting}
+                        disabled={ !gameData || isSubmitting}
                     >
                         {isSubmitting ? '提交中...' : '确认修改'}
                     </button>

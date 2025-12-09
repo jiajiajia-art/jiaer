@@ -49,6 +49,7 @@ const GameSettingsEditor = () => {
         const formData = new FormData();
         formData.append('document', file);
         try {
+            // 不设置 timeout，允许后端有足够时间处理文件上传和解析
             const response = await authFetch('/api/optical/games/upload', {
                 method: 'POST',
                 body: formData,
@@ -62,7 +63,7 @@ const GameSettingsEditor = () => {
                 if (uploadedFileId) {
                     console.log("Uploaded File ID:", uploadedFileId);
                     
-                    // 使用 Zustand store 更新 fileId（自动保存到 sessionStorage）
+                    // 使用 Zustand store 更新 fileId（自动保存到 localStorage）
                     setFileId(uploadedFileId);
                     setIsParsed(false);
                 }
@@ -231,7 +232,7 @@ const GameSettingsEditor = () => {
                                         name: scene.name,
                                         type: scene.type || '',
                                         description: scene.description || '',
-                                        images: scene.images,
+                                        images: scene.image,
                                         soundtrack: scene.soundtrack,
                                         npcs: [],
                                         events: [],
@@ -428,7 +429,6 @@ const GameSettingsEditor = () => {
                     <CharactersPanel
                         gameData={gameData}
                         isLoading={isLoadingData}
-                        fileId={fileId}
                         onGetData={(getDataFn) => { charactersPanelGetDataRef.current = getDataFn; }}
                         onDataChange={() => {
                             if (fileId) {

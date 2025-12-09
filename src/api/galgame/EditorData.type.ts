@@ -35,6 +35,10 @@ export interface Player {
     appearance: string;              // 外貌描述
     personality?: string;            // 性格
     tone?: string;                   // 语气
+    image: string;                 // 角色图片URL
+    images?: {
+        [variant: string]: string;
+    }
 }
 
 // NPCSetting 类型
@@ -73,7 +77,7 @@ interface Scene {
     description: string;                // 详细描述
     atmosphere?: string;                // 氛围描述
     dangerLevel?: number;              // 危险等级（1-10）
-    images?: string;                   // 场景图片URL
+    image?: string;                    // 场景图片URL
     items?: string[];                  // 可用物品数组
     events?: string[];                 // 可能发生的事件数组
     soundtrack?: string;               // 背景音乐文件名
@@ -82,8 +86,6 @@ interface Scene {
 interface Metadata {
     [key: string]: any;                 // 元数据，结构不固定
 }
-
-
 
 export interface GenerateNpcImageRequest {
     npc: {
