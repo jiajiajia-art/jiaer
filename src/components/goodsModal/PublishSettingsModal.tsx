@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import styles from './PublishSettingsModal.module.css';
-import type { UserGameData } from '../../api/home/getGameData.type';
 
 interface PublishSettingsModalProps {
     isOpen: boolean;

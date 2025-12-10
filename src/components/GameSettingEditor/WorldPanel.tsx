@@ -27,7 +27,7 @@ interface WorldPanelProps {
     fileId?: string;
 }
 
-const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData, handleSubmit, isSubmitting = false, fileId }) => {
+const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData, handleSubmit, isSubmitting = false }) => {
 
     // 默认表单字段（不包括文风要求，文风要求单独处理）
     const defaultFields: WorldField[] = [

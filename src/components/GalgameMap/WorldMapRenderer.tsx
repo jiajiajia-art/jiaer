@@ -32,7 +32,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [isReady, setIsReady] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
-    const { eventData, setEventData } = useMapGalgameStore();
+    const { eventData } = useMapGalgameStore();
 
     // 延迟加载和尺寸重试机制
     useEffect(() => {
@@ -229,11 +229,10 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const canvasWidth = containerSize.width > 0 ? containerSize.width : 800;
     const canvasHeight = containerSize.height > 0 ? containerSize.height : 600;
 
-    const eventLocation = useMemo(() => {
-        if (!eventData) return null;
+    // const eventLocation = useMemo(() => {
+    //     if (!eventData) return null;
 
-
-    }, [eventData]);
+    // }, [eventData]);
 
     return (
         <>

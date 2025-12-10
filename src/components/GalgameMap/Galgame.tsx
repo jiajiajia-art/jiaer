@@ -20,8 +20,6 @@ import { useStoryTyping } from "../../hooks/story/useStoryTyping";
 import NormalModeDisplay from "../Galgame/NormalModeDisplay";
 import TextModeDisplay from "../Galgame/TextModeDisplay";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
-import statisticsApi from "../../api/statistics/statisticsApi";
-import StoryIntroModal from "./StoryIntroModal";
 import GalgameHistoryModal from "../Galgame/GalgameHistoryModal";
 
 
@@ -53,7 +51,6 @@ const Galgame = () => {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [initialMessages, setInitialMessages] = useState<Message[]>([]);
     const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
-    const [isStartingGame, setIsStartingGame] = useState<boolean>(false);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
@@ -592,47 +589,47 @@ const Galgame = () => {
         fetchPresetData();
     }, [pdfFileId]);
 
-    const handleStartGame = useCallback(async () => {
-        if (!sessionId) {
-            toast.error('没有 sessionId，无法开始游戏');
-            return;
-        }
+    // const handleStartGame = useCallback(async () => {
+    //     if (!sessionId) {
+    //         toast.error('没有 sessionId，无法开始游戏');
+    //         return;
+    //     }
 
-        setIsStartingGame(true);
-        setGameStarted(true);
-        setInitialMessages([]);
+    //     setIsStartingGame(true);
+    //     setGameStarted(true);
+    //     setInitialMessages([]);
 
-        await stepHandlers.handleStreamAction('开始游戏', {
-            onBeforeRequest: () => {
-                setInitialMessages([]);
-            },
-            onSuccess: () => {
-                setIsStartingGame(false);
-                addConversion();
-            },
-            onError: (error) => {
-                console.error('❌ 开始游戏失败:', error);
-                toast.error(error || '开始游戏失败，请重试');
-                setIsStartingGame(false);
-                setGameStarted(false);
-                setShowStoryIntro(true);
-            }
-        });
-    }, [sessionId, stepHandlers]);
+    //     await stepHandlers.handleStreamAction('开始游戏', {
+    //         onBeforeRequest: () => {
+    //             setInitialMessages([]);
+    //         },
+    //         onSuccess: () => {
+    //             setIsStartingGame(false);
+    //             addConversion();
+    //         },
+    //         onError: (error) => {
+    //             console.error('❌ 开始游戏失败:', error);
+    //             toast.error(error || '开始游戏失败，请重试');
+    //             setIsStartingGame(false);
+    //             setGameStarted(false);
+    //             setShowStoryIntro(true);
+    //         }
+    //     });
+    // }, [sessionId, stepHandlers]);
 
-    const addConversion = useCallback(async () => {
-        if (!pdfFileId || !user?.user.id) {
-            return;
-        }
-        try {
-            await statisticsApi.addConversion({
-                fileId: pdfFileId,
-                userId: String(user?.user.id)
-            });
-        } catch (error) {
-            console.error('记录游戏统计失败:', error);
-        }
-    }, [pdfFileId, user?.user.id]);
+    // const addConversion = useCallback(async () => {
+    //     if (!pdfFileId || !user?.user.id) {
+    //         return;
+    //     }
+    //     try {
+    //         await statisticsApi.addConversion({
+    //             fileId: pdfFileId,
+    //             userId: String(user?.user.id)
+    //         });
+    //     } catch (error) {
+    //         console.error('记录游戏统计失败:', error);
+    //     }
+    // }, [pdfFileId, user?.user.id]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {

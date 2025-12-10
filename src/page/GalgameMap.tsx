@@ -20,7 +20,7 @@ const GalgameMap = () => {
     const { pdfFileId } = useGameStore();
     const [gameData, setGameData] = useState<AllGameData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
     const [showStoryIntro, setShowStoryIntro] = useState(true);
     const [isReady, setIsReady] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
