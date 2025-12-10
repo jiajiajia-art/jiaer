@@ -6,6 +6,15 @@ import { useGameStore } from "../store/gameStore";
 import WorldMapRenderer from "../components/GalgameMap/WorldMapRenderer";
 import type { AllGameData } from "../api/worldInteraction/mapWorldData.type";
 import StoryIntroModal from "../components/GalgameMap/StoryIntroModal";
+import interactionApi from "../api/worldInteraction/interactionApi";
+import type { GameEvent, NPCInfo, SubsceneInfo } from "../api/worldInteraction/interactionApi.type";
+import { useMapGalgameStore } from "../store/mapGalgameStore";
+
+export interface EventData {
+    event: GameEvent;
+    npc: NPCInfo;
+    subscene: SubsceneInfo;
+}
 
 const GalgameMap = () => {
     const { pdfFileId } = useGameStore();
@@ -15,6 +24,8 @@ const GalgameMap = () => {
     const [showStoryIntro, setShowStoryIntro] = useState(true);
     const [isReady, setIsReady] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const { sessionId } = useGameStore();
+    const { eventData, setEventData } = useMapGalgameStore();
 
     useEffect(() => {
         getMapWorldData();
@@ -62,8 +73,27 @@ const GalgameMap = () => {
         }
     };
 
-    const handleStartGame = () => {
-        setShowStoryIntro(false);
+    const handleStartGame = async () => {
+        if (!pdfFileId || !sessionId) {
+            console.log('缺少 fileId 或 sessionId');
+            setIsLoading(false);
+            return;
+        }
+        const response = await interactionApi.distributeEvent({ 
+            fileId: pdfFileId, 
+            sessionId: sessionId
+        });
+        if (response.data.success) {
+            console.log(response.data);
+            setEventData({
+                event: response.data.event,
+                npc: response.data.npc,
+                subscene: response.data.subscene,
+            });
+            setShowStoryIntro(false);
+        } else {
+            setError('分发事件失败');
+        }
     };
 
     return (
@@ -74,6 +104,7 @@ const GalgameMap = () => {
                         gameData={gameData} 
                         isLoading={isLoading} 
                         key={showStoryIntro ? 'intro' : 'game'} // 添加key强制重新渲染
+                        eventData={eventData}
                     />
                 )}
                 <StoryIntroModal

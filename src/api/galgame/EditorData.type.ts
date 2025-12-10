@@ -35,7 +35,6 @@ export interface Player {
     appearance: string;              // 外貌描述
     personality?: string;            // 性格
     tone?: string;                   // 语气
-    image: string;                 // 角色图片URL
     images?: {
         [variant: string]: string;
     }

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styles from './SceneModal.module.css';
+import { MdOutlineArrowCircleLeft } from 'react-icons/md';
 
 // NPC 类型定义
 interface NPCData {
@@ -91,9 +92,9 @@ const SceneModal: React.FC<SceneModalProps> = ({
             {/* 顶部标题 */}
             <div className={styles.titleBar}>
                 <div className={styles.backButton} onClick={handleBack}>
-                    ←
+                    <MdOutlineArrowCircleLeft size={24} />
                 </div>
-                <div className={styles.title}>
+                <div className={styles.titleText}>
                     {displayData.name}
                 </div>
                 <div className={styles.rightPlaceholder}></div>

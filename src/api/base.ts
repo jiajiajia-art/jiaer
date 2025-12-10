@@ -74,7 +74,6 @@ const refreshAccessToken = async (): Promise<string> => {
   }
 };
 
-
 export const createApi = (config?: ApiConfig): AxiosInstance => {
   const instance = axios.create({
     baseURL: config?.baseURL || BASE_URL,

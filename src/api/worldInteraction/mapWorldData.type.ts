@@ -34,8 +34,7 @@ export interface SubScene {
     description: string;
     image: string;
     npcs: string[];
-    x: number;
-    y: number;
+    position: [number, number];
 }
 
 export interface Scene {
@@ -45,8 +44,7 @@ export interface Scene {
     image: string;
     subscenes: SubScene[];
     soundtrack: string;
-    x: number;
-    y: number;
+    position: [number, number];
 }
 
 export interface WorldSetting {

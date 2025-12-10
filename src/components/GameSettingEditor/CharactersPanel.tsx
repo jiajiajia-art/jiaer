@@ -92,7 +92,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: npc.personality ? [npc.personality] : [],
                     speech: npc.tone || '',
                     appearance: npc.appearance || '',
-                    portrait: npc.images ? Object.values(npc.images)[0] || '' : '',
+                    portrait: npc.images?.base ? npc.images.base : (npc.images ? Object.values(npc.images)[0] : ''),
                     background: npc.description || '',
                     growth: '',
                     goalShort: '',
@@ -130,7 +130,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: player.personality ? [player.personality] : [],
                     speech: player.tone || '',
                     appearance: player.appearance || '',
-                    portrait: player.image || '', // 使用 image 字段作为主要上传的肚像
+                    portrait: player.images?.base || '', // 使用 image 字段作为主要上传的肚像
                     background: '',
                     growth: '',
                     goalShort: '',
@@ -757,7 +757,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             if (char.id === 'player') {
                                 // 如果是 base 变体，更新 portrait
                                 if (variant === 'base') {
-                                    return { ...char, portrait: response.data?.worldSetting?.player?.image || char.portrait };
+                                    return { ...char, portrait: response.data?.worldSetting?.player?.images?.base || char.portrait };
                                 }
                                 // 否则检查是否已存在该variant的variation
                                 const existingVarIndex = char.variations.findIndex(v => v.label === variant);
@@ -829,7 +829,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         await handleUploadImage(file, {
             type: 'npc',
             characterId,
-            variant: '',
+            variant: currentCharacter?.id == 'player' ? 'base' : currentCharacter?.variations.find(v => v.label === 'base')?.label || 'base',
             inputRef: npcFileInputRef,
             successMessage: '角色图片上传成功',
         });

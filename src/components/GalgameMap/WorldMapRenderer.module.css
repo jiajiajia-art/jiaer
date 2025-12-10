@@ -109,6 +109,14 @@
     object-fit: cover;
 }
 
+.eventLocation {
+    position: absolute;
+    top: -10px;
+    right: 0;
+    font-size: 32px;
+    font-weight: bold;
+}
+
 /* 节点文字 */
 .nodeText {
     width: 100%;

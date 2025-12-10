@@ -4,21 +4,24 @@ import styles from './WorldMapRenderer.module.css';
 import type { AllGameData, Scene, SubScene } from '../../api/worldInteraction/mapWorldData.type';
 import { MdOutlineArrowCircleLeft } from 'react-icons/md';
 import SceneModal from './SceneModal';
+import type { EventData } from '../../page/GalgameMap';
+import { useMapGalgameStore } from '../../store/mapGalgameStore';
 
 interface WorldMapRendererProps {
     gameData: AllGameData | null;
     isLoading?: boolean;
     onSceneClick?: (sceneId: string) => void;
     onSubsceneClick?: (subsceneId: string, parentSceneId: string) => void;
+    eventData: EventData | null;
 }
 
 type ViewMode = 'mainScenes' | 'subScenes';
 
-const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({ 
-    gameData, 
+const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
+    gameData,
     isLoading,
     onSceneClick,
-    onSubsceneClick 
+    onSubsceneClick,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
@@ -29,6 +32,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [isReady, setIsReady] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
+    const { eventData, setEventData } = useMapGalgameStore();
 
     // 延迟加载和尺寸重试机制
     useEffect(() => {
@@ -72,12 +76,12 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
 
         const updateContainerSize = () => {
             if (!containerRef.current) return;
-            
+
             requestAnimationFrame(() => {
                 const rect = containerRef.current!.getBoundingClientRect();
                 const newWidth = Math.max(rect.width, 300);
                 const newHeight = Math.max(rect.height, 400);
-                
+
                 if (containerSize.width !== newWidth || containerSize.height !== newHeight) {
                     setContainerSize({
                         width: newWidth,
@@ -88,7 +92,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         };
 
         window.addEventListener('resize', updateContainerSize);
-        
+
         const resizeObserver = new ResizeObserver(updateContainerSize);
         if (containerRef.current) {
             resizeObserver.observe(containerRef.current);
@@ -103,15 +107,15 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     // 处理场景数据
     const scenes = useMemo(() => {
         if (!gameData?.sceneSetting?.scenes) return [];
-        
+
         return gameData.sceneSetting.scenes.map(scene => ({
             ...scene,
-            x: scene.x ?? 0.5,
-            y: scene.y ?? 0.5,
+            x: scene.position[0] ?? 0.5,
+            y: scene.position[1] ?? 0.5,
             subscenes: scene.subscenes?.map(subscene => ({
                 ...subscene,
-                x: subscene.x ?? 0.5,
-                y: subscene.y ?? 0.5
+                x: subscene.position[0] ?? 0.5,
+                y: subscene.position[1] ?? 0.5
             })) || []
         }));
     }, [gameData]);
@@ -121,7 +125,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         if (!isReady) return;
 
         let isMounted = true;
-        
+
         const updateBackground = () => {
             if (viewMode === 'mainScenes') {
                 // 主场景视图：使用第一个场景的图片作为背景
@@ -158,10 +162,10 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const calculatePixelPosition = (normalizedPos: { x: number; y: number }) => {
         const safeWidth = containerSize.width > 0 ? containerSize.width : 800;
         const safeHeight = containerSize.height > 0 ? containerSize.height : 600;
-        
+
         const x = Math.max(0, Math.min(1, normalizedPos.x || 0.5));
         const y = Math.max(0, Math.min(1, normalizedPos.y || 0.5));
-        
+
         return {
             x: x * safeWidth,
             y: y * safeHeight
@@ -182,11 +186,11 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     // 处理子场景点击
     const handleSubsceneClick = (subscene: SubScene) => {
         if (!selectedScene) return;
-        
+
         // 设置选中的子场景并显示模态框
         setSelectedSubscene(subscene);
         setShowSceneModal(true);
-        
+
         onSubsceneClick?.(subscene.id, selectedScene.id);
     };
 
@@ -225,6 +229,12 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const canvasWidth = containerSize.width > 0 ? containerSize.width : 800;
     const canvasHeight = containerSize.height > 0 ? containerSize.height : 600;
 
+    const eventLocation = useMemo(() => {
+        if (!eventData) return null;
+
+
+    }, [eventData]);
+
     return (
         <>
             {/* SceneModal - 点击子场景时显示 */}
@@ -240,7 +250,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                 />
             )}
 
-            <div 
+            <div
                 className={styles.mapContainer}
                 style={{
                     backgroundImage: backgroundImage ? `url("${backgroundImage}")` : undefined,
@@ -258,12 +268,12 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                         <div className={styles.backButton} onClick={handleBackToMainScenes}>
                             <MdOutlineArrowCircleLeft size={24} />
                         </div>
-                        
+
                         {/* 标题居中 */}
                         <div className={styles.titleText}>
                             {selectedScene.name}
                         </div>
-                        
+
                         {/* 右边空div保持平衡 */}
                         <div className={styles.rightPlaceholder} />
                     </div>
@@ -278,14 +288,14 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                 )}
 
                 {/* 地图内容区域 */}
-                <div 
+                <div
                     className={styles.mapContent}
-                    style={{ 
+                    style={{
                         display: isReady ? 'flex' : 'none',
                         height: viewMode === 'subScenes' && selectedScene ? 'calc(100% - 64px)' : '100%'
                     }}
                 >
-                    <div 
+                    <div
                         className={styles.mapCanvas}
                         style={{
                             position: 'relative',
@@ -296,7 +306,10 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                         {/* 主场景视图 */}
                         {viewMode === 'mainScenes' && isReady && !showSceneModal && scenes.map(scene => {
                             const position = calculatePixelPosition({ x: scene.x, y: scene.y });
-                            
+                            const hasEventInSubscene = scene.subscenes.some(subscene =>
+                                subscene.id === eventData?.subscene?.id
+                            );
+
                             return (
                                 <div
                                     key={scene.id}
@@ -313,30 +326,37 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                     {/* 场景图片 */}
                                     <div className={styles.nodeImageContainer}>
                                         {scene.image ? (
-                                            <img
-                                                src={scene.image}
-                                                alt={scene.name}
-                                                className={styles.nodeImage}
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    target.style.display = 'none';
-                                                    const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
-                                                    if (fallback) {
-                                                        fallback.style.display = 'flex';
-                                                    }
-                                                }}
-                                            />
+                                            <>
+                                                <img
+                                                    src={scene.image}
+                                                    alt={scene.name}
+                                                    className={styles.nodeImage}
+                                                    onError={(e) => {
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.style.display = 'none';
+                                                        const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
+                                                        if (fallback) {
+                                                            fallback.style.display = 'flex';
+                                                        }
+                                                    }}
+                                                />
+                                                {hasEventInSubscene && (
+                                                    <div className={styles.eventLocation} style={{ color: 'red' }}>
+                                                        !
+                                                    </div>
+                                                )}
+                                            </>
                                         ) : null}
-                                        <div 
+                                        <div
                                             className={styles.nodeText}
-                                            style={{ 
-                                                display: scene.image ? 'none' : 'flex' 
+                                            style={{
+                                                display: scene.image ? 'none' : 'flex'
                                             }}
                                         >
                                             {scene.name.charAt(0)}
                                         </div>
                                     </div>
-                                    
+
                                     {/* 场景名称 */}
                                     <div className={styles.nodeName}>
                                         {scene.name}
@@ -347,8 +367,11 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
 
                         {/* 子场景视图 */}
                         {viewMode === 'subScenes' && selectedScene && isReady && !showSceneModal && selectedScene.subscenes.map(subscene => {
-                            const position = calculatePixelPosition({ x: subscene.x, y: subscene.y });
-                            
+                            const position = calculatePixelPosition({ x: subscene.position[0], y: subscene.position[1] });
+                            const isEventLocation = eventData?.subscene?.id === subscene.id;
+
+                            console.log(`子场景 ${subscene.name} (${subscene.id}) 是否是事件地点:`, isEventLocation);
+
                             return (
                                 <div
                                     key={subscene.id}
@@ -365,30 +388,38 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                     {/* 子场景图片 */}
                                     <div className={styles.nodeImageContainer}>
                                         {subscene.image ? (
-                                            <img
-                                                src={subscene.image}
-                                                alt={subscene.name}
-                                                className={styles.nodeImage}
-                                                onError={(e) => {
-                                                    const target = e.target as HTMLImageElement;
-                                                    target.style.display = 'none';
-                                                    const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
-                                                    if (fallback) {
-                                                        fallback.style.display = 'flex';
-                                                    }
-                                                }}
-                                            />
+                                            <>
+                                                <img
+                                                    src={subscene.image}
+                                                    alt={subscene.name}
+                                                    className={styles.nodeImage}
+                                                    onError={(e) => {
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.style.display = 'none';
+                                                        const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
+                                                        if (fallback) {
+                                                            fallback.style.display = 'flex';
+                                                        }
+                                                    }}
+                                                />
+                                                {/* 修正判断条件 */}
+                                                {isEventLocation && (
+                                                    <div className={styles.eventLocation} style={{ color: 'red' }}>
+                                                        !
+                                                    </div>
+                                                )}
+                                            </>
                                         ) : null}
-                                        <div 
+                                        <div
                                             className={styles.nodeText}
-                                            style={{ 
-                                                display: subscene.image ? 'none' : 'flex' 
+                                            style={{
+                                                display: subscene.image ? 'none' : 'flex'
                                             }}
                                         >
                                             {subscene.name.charAt(0)}
                                         </div>
                                     </div>
-                                    
+
                                     {/* 子场景名称 */}
                                     <div className={styles.nodeName}>
                                         {subscene.name}
@@ -396,6 +427,140 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                 </div>
                             );
                         })}
+                    </div>
+                    <div
+                        className={styles.mapContent}
+                        style={{
+                            display: isReady ? 'flex' : 'none',
+                            height: viewMode === 'subScenes' && selectedScene ? 'calc(100% - 64px)' : '100%'
+                        }}
+                    >
+                        <div
+                            className={styles.mapCanvas}
+                            style={{
+                                position: 'relative',
+                                width: canvasWidth,
+                                height: canvasHeight,
+                            }}
+                        >
+                            {/* 主场景视图 */}
+                            {viewMode === 'mainScenes' && isReady && !showSceneModal && scenes.map(scene => {
+                                const position = calculatePixelPosition({ x: scene.x, y: scene.y });
+
+                                return (
+                                    <div
+                                        key={scene.id}
+                                        className={styles.sceneNode}
+                                        style={{
+                                            position: 'absolute',
+                                            left: position.x - 30,
+                                            top: position.y - 30,
+                                            width: 60,
+                                            height: 60,
+                                        }}
+                                        onClick={() => handleMainSceneClick(scene)}
+                                    >
+                                        {/* 场景图片 */}
+                                        <div className={styles.nodeImageContainer}>
+                                            {scene.image ? (
+                                                <>
+                                                    <img
+                                                        src={scene.image}
+                                                        alt={scene.name}
+                                                        className={styles.nodeImage}
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.style.display = 'none';
+                                                            const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
+                                                            if (fallback) {
+                                                                fallback.style.display = 'flex';
+                                                            }
+                                                        }}
+                                                    />
+                                                    {scene.subscenes.some(subscene => subscene.id == eventData?.subscene.id) && (
+                                                        <div className={styles.eventLocation}>
+                                                            !
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : null}
+                                            <div
+                                                className={styles.nodeText}
+                                                style={{
+                                                    display: scene.image ? 'none' : 'flex'
+                                                }}
+                                            >
+                                                {scene.name.charAt(0)}
+                                            </div>
+                                        </div>
+
+                                        {/* 场景名称 */}
+                                        <div className={styles.nodeName}>
+                                            {scene.name}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* 子场景视图 */}
+                            {viewMode === 'subScenes' && selectedScene && isReady && !showSceneModal && selectedScene.subscenes.map(subscene => {
+                                const position = calculatePixelPosition({ x: subscene.position[0], y: subscene.position[1] });
+
+                                return (
+                                    <div
+                                        key={subscene.id}
+                                        className={styles.subsceneNode}
+                                        style={{
+                                            position: 'absolute',
+                                            left: position.x - 25,
+                                            top: position.y - 25,
+                                            width: 50,
+                                            height: 50,
+                                        }}
+                                        onClick={() => handleSubsceneClick(subscene)}
+                                    >
+                                        {/* 子场景图片 */}
+                                        <div className={styles.nodeImageContainer}>
+                                            {subscene.image ? (
+                                                <>
+                                                    <img
+                                                        src={subscene.image}
+                                                        alt={subscene.name}
+                                                        className={styles.nodeImage}
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.style.display = 'none';
+                                                            const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
+                                                            if (fallback) {
+                                                                fallback.style.display = 'flex';
+                                                            }
+                                                        }}
+                                                    />
+                                                    {subscene.id == eventData?.subscene.id && (
+                                                        <div className={styles.eventLocation}>
+                                                            !
+                                                        </div>
+                                                    )}
+                                                </>
+                                            ) : null}
+                                            <div
+                                                className={styles.nodeText}
+                                                style={{
+                                                    display: subscene.image ? 'none' : 'flex'
+                                                }}
+                                            >
+                                                {subscene.name.charAt(0)}
+                                            </div>
+                                        </div>
+
+                                        {/* 子场景名称 */}
+                                        <div className={styles.nodeName}>
+                                            {subscene.name}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
