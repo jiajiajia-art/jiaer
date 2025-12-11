@@ -16,6 +16,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
 }
 
 .titleText {
@@ -29,16 +30,23 @@
     padding: 10px;
 }
 
+
 .backButton {
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    cursor: pointer;
     color: white;
+    font-size: 24px;
+    cursor: pointer;
     border-radius: 50%;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.backButton:hover {
+    transform: scale(1.1);
 }
 
 .rightPlaceholder {
@@ -161,56 +169,4 @@
     flex: 1;
     font-size: 16px;
     color: rgba(255, 255, 255, 0.7);
-}
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-    .titleBar {
-        padding: 10px 12px;
-    }
-    
-    .titleText {
-        font-size: 15px;
-    }
-    
-    .backButton {
-        width: 36px;
-        height: 36px;
-    }
-    
-    .rightPlaceholder {
-        width: 36px;
-    }
-    
-    .mapContent {
-        padding: 15px;
-    }
-    
-    .nodeName {
-        font-size: 11px;
-    }
-}
-
-@media (max-width: 480px) {
-    .titleText {
-        font-size: 14px;
-    }
-    
-    .backButton {
-        width: 32px;
-        height: 32px;
-    }
-    
-    .backButton svg {
-        width: 20px;
-        height: 20px;
-    }
-    
-    .rightPlaceholder {
-        width: 32px;
-    }
-    
-    .mapContent {
-        padding: 10px;
-    }
 }

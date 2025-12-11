@@ -1,26 +1,26 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { CiLocationOn } from "react-icons/ci";
-import styles from './Galgame.module.css';
-import { PiMusicNoteDuotone } from "react-icons/pi";
-import { BiHistory } from "react-icons/bi";
+import { IoArrowBack } from "react-icons/io5";
+import { MdCheckCircle } from "react-icons/md";
+import styles from './interactWithNpc.module.css';
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
-import { extractChoiceFromHistory, extractPlainText, truncateTextWithTags, parseHistoryToSteps } from "../../utils/textUtils";
-import toast from "react-hot-toast";
+import { BiHistory } from "react-icons/bi";
+import { PiMusicNoteDuotone } from "react-icons/pi";
+import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
+import { useMapGalgameStore, MapViewState } from "../../store/mapGalgameStore";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import useGalgameHistory from "../../hooks/galgame/useGalgameHistory";
-import { useGalgameStep } from "../../hooks/galgame/useGalgameStep";
+import { useWorldInteractionStep } from "../../hooks/galgame/useWorldInteractionStep";
 import { HOST_ADDRESS } from "../../config";
 import { useCharacterAnimation } from "../../hooks/galgame/useCharacterAnimation";
 import { useCharacterContainerClassName } from "../../hooks/galgame/useCharacterContainerClassName";
-import { useMusicPlayer } from "../../hooks/galgame/useMusicPlayer";
 import { useStoryTyping } from "../../hooks/story/useStoryTyping";
-import NormalModeDisplay from "../Galgame/NormalModeDisplay";
-import TextModeDisplay from "../Galgame/TextModeDisplay";
+import NormalModeDisplay from "./NormalModeDisplay";
+import TextModeDisplay from "./TextModeDisplay";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
-import GalgameHistoryModal from "../Galgame/GalgameHistoryModal";
+import interactionApi from "../../api/worldInteraction/interactionApi";
 
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -35,11 +35,16 @@ interface Message {
     options?: Array<{ id: number; text: string }>;
 }
 
-const Galgame = () => {
+const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
+
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
-
     const { pdfFileId } = useGameStore();
+    const { eventData, setEventData, setCurrentView } = useMapGalgameStore();
+    const [isLoadingNextRound, setIsLoadingNextRound] = useState(false);
+
+    // 从 eventData 获取 eventId
+    const eventId = eventData?.event?.eventId || null;
 
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [gameTitle, setGameTitle] = useState<string>('Galgame');
@@ -49,45 +54,28 @@ const Galgame = () => {
     const [sceneSetting, setSceneSetting] = useState<GetGalgamePresetResponse['sceneSetting'] | null>(null);
 
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [initialMessages, setInitialMessages] = useState<Message[]>([]);
-    const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
-    const [showGalgameHistory, setShowGalgameHistory] = useState<boolean>(false);
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
     const [completedSteps, setCompletedSteps] = useState<any[]>([]); // 已完成的步骤
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
-
-    const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
     // 当 currentStep 变化且打字机已完成时，将之前的 step 加入已完成列表
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
 
-    const stepHandlers = useGalgameStep({
+    const stepHandlers = useWorldInteractionStep({
         sessionId,
-        historyLength: history.length, // 传递历史长度用于判断是否免费
+        eventId,
+        fileId: pdfFileId,
         onMessagesClear: () => {
-            setInitialMessages([]);
             // 清空已完成步骤和引用，避免残留数据
             setCompletedSteps([]);
             previousStepRef.current = null;
             previousIsTypingRef.current = false;
         }
     });
-
-    // 当新请求开始时，清空已完成的步骤
-    useEffect(() => {
-        const currentRequestId = stepHandlers.currentRequestId?.current || 0;
-        if (currentRequestId !== currentRequestIdRef.current) {
-            currentRequestIdRef.current = currentRequestId;
-            setCompletedSteps([]);
-            // 同时清空引用，避免残留数据
-            previousStepRef.current = null;
-            previousIsTypingRef.current = false;
-        }
-    }, [stepHandlers.currentRequestId?.current]);
 
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
@@ -129,10 +117,19 @@ const Galgame = () => {
                 characterPosition: step.isPlayer ? 'right' : 'left',
             };
         } else if (step.type === 'choice') {
-            const options = step.options?.map((opt: any, index: number) => ({
-                id: index + 1,
-                text: typeof opt === 'string' ? opt : (opt.text || opt),
-            })) || [];
+            const options = step.options?.map((opt: any, index: number) => {
+                if (typeof opt === 'string') {
+                    return {
+                        id: index + 1,
+                        text: opt,
+                    };
+                }
+                return {
+                    id: opt.optionId || index + 1,
+                    text: opt.text || opt,
+                    optionId: opt.optionId,
+                };
+            }) || [];
 
             const message = step.title
                 ? (step.description ? `${step.title}\n${step.description}` : step.title)
@@ -187,7 +184,7 @@ const Galgame = () => {
     }, [npcSetting, worldSetting]);
 
     const currentMessage = useMemo(() => {
-        // 优先使用 currentStep（如果存在且不是空的）
+        // 使用 currentStep（如果存在且不是空的）
         if (gameStarted && stepHandlers.currentStep && stepHandlers.currentStep.type) {
             const converted = convertStepToMessage(stepHandlers.currentStep);
             if (converted) {
@@ -195,17 +192,12 @@ const Galgame = () => {
             }
         }
 
-        // 如果没有 currentStep 或 currentStep 为空，使用 initialMessages（历史记录解析出的选项）
-        if (initialMessages.length > 0) {
-            return initialMessages[0];
-        }
-
         return {
             id: 0,
             type: 'narration' as MessageType,
             message: '',
         };
-    }, [gameStarted, stepHandlers.currentStep, convertStepToMessage, initialMessages]);
+    }, [gameStarted, stepHandlers.currentStep, convertStepToMessage]);
 
     // 使用封装的 hooks
     const characterAnimation = useCharacterAnimation({
@@ -218,19 +210,6 @@ const Galgame = () => {
         characterAnimation,
         styles,
     });
-
-    const { isMusicPlaying, handleMusicToggle } = useMusicPlayer({
-        presetId: pdfFileId || '',
-        currentScene,
-        gameStarted,
-        isLoading,
-    });
-
-    useEffect(() => {
-        if (gameStarted && stepHandlers.currentStep && showStoryIntro) {
-            setShowStoryIntro(false);
-        }
-    }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
     // 当新请求开始时，清空已完成的步骤
     useEffect(() => {
@@ -267,10 +246,19 @@ const Galgame = () => {
                 }
 
                 if (step.type === 'choice') {
-                    const options = step.options?.map((opt: any, idx: number) => ({
-                        id: idx + 1,
-                        text: typeof opt === 'string' ? opt : (opt.text || opt),
-                    })) || [];
+                    const options = step.options?.map((opt: any, idx: number) => {
+                        if (typeof opt === 'string') {
+                            return {
+                                id: idx + 1,
+                                text: opt,
+                            };
+                        }
+                        return {
+                            id: opt.optionId || idx + 1,
+                            text: opt.text || opt,
+                            optionId: opt.optionId,
+                        };
+                    }) || [];
 
                     return {
                         ...baseStep,
@@ -284,109 +272,32 @@ const Galgame = () => {
             });
     }, []);
 
-    // 处理历史记录的函数
-    const processHistoryRecord = useCallback(() => {
-        if (!historyLoading && presetData && history.length > 0) {
-            // 查找最后一条助手消息
-            for (let i = history.length - 1; i >= 0; i--) {
-                if (history[i].role === 'assistant' && history[i].content) {
-                    const content = history[i].content;
-
-                    // 解析为文本模式步骤
-                    const historySteps = parseHistoryToSteps(content);
-
-                    if (historySteps.length > 0) {
-                        setCompletedSteps(historySteps);
-
-                        // 如果有 choice，也转换为 Message 格式并设置（用于正常模式）
-                        const choiceStep = historySteps.find((s: { type: string; }) => s.type === 'choice');
-
-                        if (choiceStep && choiceStep.options && choiceStep.options.length > 0) {
-                            const choiceData = extractChoiceFromHistory(content);
-
-                            if (choiceData) {
-                                const choiceMessage: Message = {
-                                    id: Date.now(),
-                                    type: 'choice',
-                                    message: choiceData.title
-                                        ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
-                                        : (choiceData.text || '请选择你的行动'),
-                                    options: choiceData.options.map((opt: any, index: number) => ({
-                                        id: index + 1,
-                                        text: extractPlainText(opt),
-                                    })),
-                                    characterImage: worldSetting?.player?.images
-                                        ? (worldSetting.player.images.startsWith('http')
-                                            ? worldSetting.player.images
-                                            : `${HOST_ADDRESS}${worldSetting.player.images}`)
-                                        : undefined,
-                                    characterPosition: 'right',
-                                };
-                                setInitialMessages([choiceMessage]);
-                            }
-                        }
-                    } else {
-                        // 如果没有解析出步骤，尝试只解析 choice
-                        const choiceData = extractChoiceFromHistory(content);
-
-                        if (choiceData && choiceData.options.length > 0) {
-                            // 创建一个 choice 步骤用于文本模式
-                            const choiceStep: any = {
-                                id: `history-choice-${Date.now()}`,
-                                type: 'choice',
-                                content: '',
-                                title: choiceData.title,
-                                description: choiceData.text,
-                                options: choiceData.options.map((opt: any, index: number) => ({
-                                    id: index + 1,
-                                    text: opt
-                                }))
-                            };
-                            setCompletedSteps([choiceStep]);
-
-                            const choiceMessage: Message = {
-                                id: Date.now(),
-                                type: 'choice',
-                                message: choiceData.title
-                                    ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
-                                    : (choiceData.text || '请选择你的行动'),
-                                options: choiceData.options.map((opt: any, index: number) => ({
-                                    id: index + 1,
-                                    text: extractPlainText(opt),
-                                })),
-                                characterImage: worldSetting?.player?.images
-                                    ? (worldSetting.player.images.startsWith('http')
-                                        ? worldSetting.player.images
-                                        : `${HOST_ADDRESS}${worldSetting.player.images}`)
-                                    : undefined,
-                                characterPosition: 'right',
-                            };
-                            setInitialMessages([choiceMessage]);
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }, [historyLoading, presetData, history, worldSetting]);
-
-    // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息
+    // 初始化游戏：当预设数据加载完成后自动开始
     useEffect(() => {
-        // 等待历史记录加载完成和预设数据加载完成
-        if (!historyLoading && presetData && history.length > 0) {
-            setShowStoryIntro(false);
+        if (presetData && !gameStarted && sessionId && eventId && pdfFileId) {
             setGameStarted(true);
-            processHistoryRecord();
+            // 自动发送初始交互请求
+            stepHandlers.handleInteract({
+                onError: (error) => {
+                    console.error('❌ 开始交互失败:', error);
+                }
+            });
         }
-    }, [historyLoading, presetData, history.length, showStoryIntro, processHistoryRecord]);
+    }, [presetData, gameStarted, sessionId, eventId, pdfFileId]); // 移除 stepHandlers 依赖，避免无限循环
 
-    // 当切换到文本模式时，如果历史记录存在但步骤为空，且不是在等待新数据，处理历史记录
-    useEffect(() => {
-        // 如果正在等待新数据（用户点击了选项），不要重新加载历史记录
-        if (isTextMode && gameStarted && completedSteps.length === 0 && !historyLoading && history.length > 0 && presetData && !stepHandlers.isWaitingForData && !stepHandlers.currentStep) {
-            processHistoryRecord();
+    const handleNextMessage = useCallback(() => {
+        if (gameStarted && stepHandlers.showNextButton) {
+            // 检查队列是否为空，如果为空则不执行
+            if (stepHandlers.stepQueue && stepHandlers.stepQueue.length === 0) {
+                return;
+            }
+            stepHandlers.handleNextStep();
         }
-    }, [isTextMode, gameStarted, completedSteps.length, historyLoading, history.length, presetData, processHistoryRecord, stepHandlers.isWaitingForData, stepHandlers.currentStep]);
+    }, [gameStarted, stepHandlers]);
+
+    const handleAutoPlayToggle = useCallback(() => {
+        setIsAutoPlay(prev => !prev);
+    }, []);
 
     const plainTextForTyping = useMemo(() => {
         if (currentMessage && currentMessage.type !== 'choice') {
@@ -489,23 +400,130 @@ const Galgame = () => {
             if (index >= 0) return index;
         }
 
-        // 如果没有 currentStep，但 initialMessages 中有 choice，查找最后一个 choice 步骤
-        if (initialMessages.length > 0 && initialMessages[0].type === 'choice') {
-            // 从后往前查找最后一个 choice 步骤
-            for (let i = allStepsForTextModal.length - 1; i >= 0; i--) {
-                if (allStepsForTextModal[i] && allStepsForTextModal[i].type === 'choice') {
-                    return i;
-                }
-            }
-        }
-
         // 否则返回最后一个步骤的索引
         if (allStepsForTextModal.length > 0) {
             return allStepsForTextModal.length - 1;
         }
 
         return -1;
-    }, [allStepsForTextModal, stepHandlers.currentStep, initialMessages]);
+    }, [allStepsForTextModal, stepHandlers.currentStep]);
+
+    // 检查是否应该显示"继续游戏"按钮（有 newEvent）
+    const shouldShowContinueButton = useMemo(() => {
+        if (stepHandlers.isWaitingForData) return false;
+        if (!stepHandlers.currentStep) return false;
+        if (stepHandlers.currentStep.type === 'choice') return false;
+        if (stepHandlers.showNextButton) return false;
+        if (finalIsTyping) return false;
+        if (stepHandlers.stepQueue && stepHandlers.stepQueue.length > 0) return false;
+        // 检查是否有完整的新事件（event, npc, subscene）
+        if (!stepHandlers.newEvent) return false;
+        if (!stepHandlers.newEvent.event || !stepHandlers.newEvent.npc || !stepHandlers.newEvent.subscene) return false;
+        return true;
+    }, [stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, stepHandlers.stepQueue, stepHandlers.newEvent, finalIsTyping]);
+
+    // 检查是否应该显示"结束回合"按钮（没有 newEvent，需要调用 next-round）
+    const shouldShowEndRoundButton = useMemo(() => {
+        if (stepHandlers.isWaitingForData) return false;
+        if (!stepHandlers.currentStep) return false;
+        if (stepHandlers.currentStep.type === 'choice') return false;
+        if (stepHandlers.showNextButton) return false;
+        if (finalIsTyping) return false;
+        if (stepHandlers.stepQueue && stepHandlers.stepQueue.length > 0) return false;
+        // 如果没有 newEvent，或者 newEvent 只有 completedEvent 但没有完整事件信息
+        if (!stepHandlers.newEvent) return true;
+        // 如果有 newEvent 但没有完整的事件信息（只有 completedEvent），也需要显示结束回合
+        if (stepHandlers.newEvent.completedEvent && (!stepHandlers.newEvent.event || !stepHandlers.newEvent.npc || !stepHandlers.newEvent.subscene)) {
+            return true;
+        }
+        return false;
+    }, [stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, stepHandlers.stepQueue, stepHandlers.newEvent, finalIsTyping]);
+
+    // 处理继续游戏（有 newEvent）
+    const handleContinue = useCallback(() => {
+        if (stepHandlers.newEvent?.event && stepHandlers.newEvent.npc && stepHandlers.newEvent.subscene) {
+            setEventData({
+                event: stepHandlers.newEvent.event,
+                npc: stepHandlers.newEvent.npc,
+                subscene: stepHandlers.newEvent.subscene,
+            });
+            stepHandlers.clearNewEvent?.();
+            setCurrentView(MapViewState.WORLD_MAP);
+        }
+    }, [stepHandlers, setEventData, setCurrentView]);
+
+    // 处理结束回合（没有 newEvent，需要调用 next-round）
+    const handleEndRound = useCallback(async () => {
+        // 清除可能存在的 completedEvent 标记
+        if (stepHandlers.newEvent) {
+            stepHandlers.clearNewEvent?.();
+        }
+        
+        try {
+            if (!sessionId) {
+                console.error('缺少 sessionId');
+                return;
+            }
+            setIsLoadingNextRound(true);
+            const response = await interactionApi.nextRound(sessionId);
+            if (response.data.success && response.data.activeEvents && response.data.activeEvents.length > 0) {
+                // 使用第一个活跃事件
+                const firstEvent = response.data.activeEvents[0];
+                
+                // 从 presetData 中查找对应的 NPC 和 subscene
+                let foundNpc: any = null;
+                let foundSubscene: any = null;
+                
+                if (presetData) {
+                    // 查找 NPC
+                    if (presetData.npcSetting?.npcs) {
+                        foundNpc = presetData.npcSetting.npcs.find(npc => npc.id === firstEvent.targetNpcId);
+                    }
+                    
+                    // 查找 subscene
+                    if (presetData.sceneSetting?.scenes) {
+                        for (const scene of presetData.sceneSetting.scenes) {
+                            if (scene.subscenes && Array.isArray(scene.subscenes)) {
+                                foundSubscene = scene.subscenes.find((sub: any) => sub.id === firstEvent.targetSubsceneId);
+                                if (foundSubscene) {
+                                    // 添加父场景名称
+                                    foundSubscene = {
+                                        ...foundSubscene,
+                                        parentSceneName: scene.name
+                                    };
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 如果找到了 NPC 和 subscene，保存到 store
+                if (foundNpc && foundSubscene) {
+                    setEventData({
+                        event: firstEvent,
+                        npc: {
+                            id: foundNpc.id,
+                            name: foundNpc.name,
+                            image: foundNpc.images?.base || foundNpc.images || '',
+                        },
+                        subscene: {
+                            id: foundSubscene.id,
+                            name: foundSubscene.name,
+                            image: foundSubscene.image || '',
+                            parentSceneName: foundSubscene.parentSceneName || '',
+                        },
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('开始新回合失败:', error);
+        } finally {
+            setIsLoadingNextRound(false);
+            // 加载完成后自动返回世界地图
+            setCurrentView(MapViewState.WORLD_MAP);
+        }
+    }, [stepHandlers, setEventData, setCurrentView, sessionId, presetData]);
 
     // 获取当前步骤的打字机文本（保留颜色标签，实现丝滑打字效果）
     // 这个文本只用于当前正在打字的步骤
@@ -574,10 +592,6 @@ const Galgame = () => {
                     if (!sceneImage) {
                         setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
                     }
-                    // 如果存在历史记录，不显示开场白，直接进入游戏
-                    // 注意：这里需要等待历史记录加载完成后再判断
-                    // 所以会在下面的 useEffect 中处理
-                    setShowStoryIntro(true);
                 }
             } catch (error) {
                 console.error('获取游戏数据失败:', error);
@@ -588,58 +602,6 @@ const Galgame = () => {
 
         fetchPresetData();
     }, [pdfFileId]);
-
-    // const handleStartGame = useCallback(async () => {
-    //     if (!sessionId) {
-    //         toast.error('没有 sessionId，无法开始游戏');
-    //         return;
-    //     }
-
-    //     setIsStartingGame(true);
-    //     setGameStarted(true);
-    //     setInitialMessages([]);
-
-    //     await stepHandlers.handleStreamAction('开始游戏', {
-    //         onBeforeRequest: () => {
-    //             setInitialMessages([]);
-    //         },
-    //         onSuccess: () => {
-    //             setIsStartingGame(false);
-    //             addConversion();
-    //         },
-    //         onError: (error) => {
-    //             console.error('❌ 开始游戏失败:', error);
-    //             toast.error(error || '开始游戏失败，请重试');
-    //             setIsStartingGame(false);
-    //             setGameStarted(false);
-    //             setShowStoryIntro(true);
-    //         }
-    //     });
-    // }, [sessionId, stepHandlers]);
-
-    // const addConversion = useCallback(async () => {
-    //     if (!pdfFileId || !user?.user.id) {
-    //         return;
-    //     }
-    //     try {
-    //         await statisticsApi.addConversion({
-    //             fileId: pdfFileId,
-    //             userId: String(user?.user.id)
-    //         });
-    //     } catch (error) {
-    //         console.error('记录游戏统计失败:', error);
-    //     }
-    // }, [pdfFileId, user?.user.id]);
-
-    const handleNextMessage = useCallback(() => {
-        if (gameStarted && stepHandlers.showNextButton) {
-            stepHandlers.handleNextStep();
-        }
-    }, [gameStarted, stepHandlers]);
-
-    const handleAutoPlayToggle = useCallback(() => {
-        setIsAutoPlay(prev => !prev);
-    }, []);
 
     // 文本模式默认开启自动播放
     useEffect(() => {
@@ -672,7 +634,7 @@ const Galgame = () => {
         };
     }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, isTextMode]);
 
-    const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
+    const handleChoiceClick = useCallback((option: { id: number | string; text: string; optionId?: string }) => {
         if (!currentMessage || currentMessage.type !== 'choice' || !currentMessage.options) {
             return;
         }
@@ -682,35 +644,49 @@ const Galgame = () => {
         previousStepRef.current = null;
         previousIsTypingRef.current = false;
 
-        const optionIndex = currentMessage.options.findIndex((opt) => {
-            return opt.text === option.text || opt.id === option.id;
-        });
+        // 优先使用 optionId，如果没有则从 currentStep 中查找
+        let optionId: string | undefined = option.optionId;
+        let optionIndex = -1;
 
-        if (optionIndex < 0) {
-            return;
-        }
-
-        const optionObj = currentMessage.options[optionIndex];
-        const optionText = optionObj.text;
-
+        // 从 currentStep 中查找选项
         if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
-            const stepOptionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
-                const optText = typeof opt === 'string' ? opt : (opt.text || opt);
-                return optText === optionText;
+            optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
+                if (typeof opt === 'string') {
+                    return opt === option.text;
+                }
+                return opt.text === option.text || opt.optionId === option.optionId || opt.optionId === option.id;
             }) ?? -1;
 
-            if (stepOptionIndex >= 0) {
-                const stepOptionObj = stepHandlers.currentStep.options[stepOptionIndex];
-                const optionData = typeof stepOptionObj === 'string'
-                    ? { text: stepOptionObj, nextId: '' }
-                    : stepOptionObj;
-
-                stepHandlers.handleChoiceOption(optionData, stepOptionIndex);
-                return;
+            if (optionIndex >= 0) {
+                const stepOption = stepHandlers.currentStep.options?.[optionIndex];
+                if (stepOption && typeof stepOption !== 'string') {
+                    optionId = stepOption.optionId || optionId;
+                }
             }
         }
 
-        stepHandlers.handleChoiceSend(optionText);
+        // 如果还没找到，从 currentMessage 中查找
+        if (optionIndex < 0) {
+            optionIndex = currentMessage.options.findIndex((opt: any) => {
+                return opt.text === option.text || opt.id === option.id || opt.optionId === option.optionId;
+            });
+            
+            if (optionIndex >= 0) {
+                const msgOption = currentMessage.options[optionIndex] as any;
+                optionId = msgOption.optionId || optionId;
+            }
+        }
+
+        if (optionIndex < 0 || !optionId) {
+            console.error('❌ 无法找到选项或 optionId:', { option, optionIndex, optionId });
+            return;
+        }
+
+        stepHandlers.handleChoiceOption(optionId, optionIndex, {
+            onError: (error) => {
+                console.error('❌ 选择选项失败:', error);
+            }
+        });
     }, [stepHandlers, currentMessage]);
 
     if (isLoading) {
@@ -744,6 +720,9 @@ const Galgame = () => {
                         backgroundColor: isTextMode ? '#000' : 'transparent'
                     }}
                 >
+                    <div className={styles.backButton} onClick={onClose}>
+                            <IoArrowBack />
+                        </div>
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
@@ -761,7 +740,7 @@ const Galgame = () => {
                         </div>
                     )}
                     <div className={`${styles.gameContentWrapper} ${isTextMode ? styles.gameContentWrapperTextMode : ''}`}>
-                        {!showGalgameHistory && !isTextMode && (
+                        {!isTextMode && (
                             <>
                                 <NormalModeDisplay
                                     currentMessage={currentMessage}
@@ -776,11 +755,13 @@ const Galgame = () => {
                                     isAutoPlay={isAutoPlay}
                                     onNextMessage={handleNextMessage}
                                     onChoiceClick={handleChoiceClick}
-                                    onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
+                                    onCustomInputSubmit={() => {
+                                        // 世界交互模式不支持自定义输入
+                                    }}
                                 />
                             </>
                         )}
-                        {!showGalgameHistory && isTextMode && (
+                        {isTextMode && (
                             <TextModeDisplay
                                 steps={convertStepsToTextModalFormat(allStepsForTextModal)}
                                 currentStepIndex={currentStepIndex}
@@ -793,11 +774,8 @@ const Galgame = () => {
                                     previousIsTypingRef.current = false;
                                     handleChoiceClick(option);
                                 }}
-                                onCustomInputSubmit={(value) => {
-                                    setCompletedSteps([]);
-                                    previousStepRef.current = null;
-                                    previousIsTypingRef.current = false;
-                                    stepHandlers.handleChoiceSend(value);
+                                onCustomInputSubmit={() => {
+                                    // 世界交互模式不支持自定义输入
                                 }}
                             />
                         )}
@@ -808,11 +786,9 @@ const Galgame = () => {
                                     <span>{user?.user?.points}</span>
                                 </div>
                             </div>
-                            <div className={styles.buttonItem}
-                                onClick={() => {
-                                    refreshHistory();
-                                    setShowGalgameHistory(true);
-                                }}
+                            <div
+                                className={styles.buttonItem}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
                                     <BiHistory />
@@ -828,8 +804,6 @@ const Galgame = () => {
                                     if (newTextMode && !isAutoPlay) {
                                         setIsAutoPlay(true);
                                     }
-                                    // 切换模式时，如果当前步骤正在打字，确保已完成步骤显示完整内容
-                                    // 通过清空 textModalDisplayText 的依赖来触发重新计算
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >
@@ -849,8 +823,7 @@ const Galgame = () => {
                                 </div>
                             </div>
                             <div
-                                className={`${styles.buttonItem} ${isMusicPlaying ? styles.buttonItemActive : ''}`}
-                                onClick={handleMusicToggle}
+                                className={styles.buttonItem}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
@@ -859,31 +832,47 @@ const Galgame = () => {
                                 </div>
                             </div>
                         </div>
+                        
+                        {/* 继续游戏按钮 - 有 newEvent 时显示 */}
+                        {shouldShowContinueButton && !isLoadingNextRound && (
+                            <div 
+                                className={styles.continueButton} 
+                                onClick={handleContinue}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <MdCheckCircle />
+                                <span>继续游戏</span>
+                            </div>
+                        )}
+
+                        {/* 结束回合按钮 - 没有 newEvent 时显示 */}
+                        {shouldShowEndRoundButton && (
+                            <div 
+                                className={styles.endRoundButton} 
+                                onClick={handleEndRound}
+                                style={{ 
+                                    opacity: isLoadingNextRound ? 0.6 : 1,
+                                    cursor: isLoadingNextRound ? 'not-allowed' : 'pointer'
+                                }}
+                            >
+                                {isLoadingNextRound ? (
+                                    <>
+                                        <div className={styles.loadingSpinner}></div>
+                                        <span>加载中...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <MdCheckCircle />
+                                        <span>结束回合</span>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
-
-                    <GalgameHistoryModal
-                        isOpen={showGalgameHistory}
-                        history={history}
-                        onClose={() => setShowGalgameHistory(false)}
-                        backgroundImage={backgroundImage}
-                        onRegenerate={(messageIndex) => {
-                            setShowGalgameHistory(false);
-                            setCompletedSteps([]);
-                            previousStepRef.current = null;
-                            previousIsTypingRef.current = false;
-                            stepHandlers.handleRegenerate(messageIndex, {
-                                onError: (error) => {
-                                    toast.error(error || '重新生成失败');
-                                }
-                            });
-                        }}
-                        onEditSave={editHistory}
-                    />
-
                 </div>
             </div>
         </>
     );
 };
 
-export default Galgame;
+export default InteractWithNpc;

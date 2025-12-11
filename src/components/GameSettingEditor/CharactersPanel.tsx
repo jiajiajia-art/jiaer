@@ -130,7 +130,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: player.personality ? [player.personality] : [],
                     speech: player.tone || '',
                     appearance: player.appearance || '',
-                    portrait: player.images?.base || '', // 使用 image 字段作为主要上传的肚像
+                    portrait: player.image || player.images?.base || '', // 使用 image 字段作为主要上传的肚像
                     background: '',
                     growth: '',
                     goalShort: '',

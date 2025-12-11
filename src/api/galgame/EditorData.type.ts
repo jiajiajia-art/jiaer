@@ -38,6 +38,7 @@ export interface Player {
     images?: {
         [variant: string]: string;
     }
+    image?: string;
 }
 
 // NPCSetting 类型

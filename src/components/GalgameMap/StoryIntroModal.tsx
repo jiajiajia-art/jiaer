@@ -8,14 +8,14 @@ interface StoryIntroModalProps {
     isOpen: boolean;
     gameData: AllGameData | null;
     onStartGame: () => void;
-    isLoading?: boolean;
+    isDistributingEvent: boolean;
 }
 
 const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     isOpen,
     gameData,
     onStartGame,
-    isLoading = false,
+    isDistributingEvent = false,
 }) => {
     if (!isOpen) return null;
 
@@ -60,9 +60,9 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                         <button
                             className={styles.startButton}
                             onClick={onStartGame}
-                            disabled={isLoading || isTyping}
+                            disabled={isDistributingEvent || isTyping}
                         >
-                            {isLoading ?
+                            {isDistributingEvent ?
                                 <div className={styles.loading}>
                                     <span className={styles.loadingDot}></span>
                                     <span className={styles.loadingDot}></span>
