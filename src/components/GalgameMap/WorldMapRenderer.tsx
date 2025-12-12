@@ -5,7 +5,6 @@ import type { AllGameData, Scene, SubScene } from '../../api/worldInteraction/ma
 import { MdOutlineArrowCircleLeft } from 'react-icons/md';
 import type { EventData } from '../../page/GalgameMap';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
-import { GiColiseum } from 'react-icons/gi';
 import { IoMdCloseCircle } from 'react-icons/io';
 
 interface WorldMapRendererProps {

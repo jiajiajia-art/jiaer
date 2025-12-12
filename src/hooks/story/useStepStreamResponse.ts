@@ -114,6 +114,32 @@ export const useStepStreamResponse = ({
                             notifyMissionFlag();
                         }
 
+                        // 处理顶层的 error 类型（不是 step 格式）
+                        if (jsonData.type === 'error') {
+                            let errorMessage = jsonData.message || jsonData.error || '发生错误';
+                            
+                            // 尝试解析 message 中可能包含的嵌套 JSON
+                            if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
+                                try {
+                                    const parsed = JSON.parse(errorMessage);
+                                    if (parsed.error?.message) {
+                                        errorMessage = parsed.error.message;
+                                    } else if (parsed.message) {
+                                        errorMessage = parsed.message;
+                                    }
+                                } catch (e) {
+                                    // 解析失败，使用原始 message
+                                }
+                            }
+                            
+                            alert(errorMessage);
+                            setSelectedOptionIndex(null);
+                            setIsWaitingForData(false);
+                            options?.onError?.(errorMessage);
+                            hasReceivedStep = true;
+                            continue;
+                        }
+
                         // 处理 step 类型的数据
                         if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
@@ -179,6 +205,31 @@ export const useStepStreamResponse = ({
                     if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
                         missionFlagged = true;
                         notifyMissionFlag();
+                    }
+
+                    // 处理顶层的 error 类型
+                    if (jsonData.type === 'error') {
+                        let errorMessage = jsonData.message || jsonData.error || '发生错误';
+                        
+                        // 尝试解析 message 中可能包含的嵌套 JSON
+                        if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
+                            try {
+                                const parsed = JSON.parse(errorMessage);
+                                if (parsed.error?.message) {
+                                    errorMessage = parsed.error.message;
+                                } else if (parsed.message) {
+                                    errorMessage = parsed.message;
+                                }
+                            } catch (e) {
+                                // 解析失败，使用原始 message
+                            }
+                        }
+                        
+                        alert(errorMessage);
+                        setSelectedOptionIndex(null);
+                        setIsWaitingForData(false);
+                        options?.onError?.(errorMessage);
+                        return;
                     }
 
                     if (jsonData.type === 'step' && jsonData.step) {

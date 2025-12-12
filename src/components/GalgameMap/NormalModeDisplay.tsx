@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import styles from '../Galgame/NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';

@@ -58,8 +58,11 @@ const Galgame = () => {
     const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
     const [showGalgameHistory, setShowGalgameHistory] = useState<boolean>(false);
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
-    const [completedSteps, setCompletedSteps] = useState<any[]>([]); // 已完成的步骤
+    const [completedSteps, setCompletedSteps] = useState<any[]>([]);
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
+    const historyProcessedRef = useRef<boolean>(false); // 避免历史重复解析导致状态抖动
+    const [showTimeoutModal, setShowTimeoutModal] = useState(false); // 等待超时提示
+    const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
@@ -67,17 +70,53 @@ const Galgame = () => {
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
 
+    const resetDisplayedSteps = useCallback(() => {
+        setCompletedSteps([]);
+        previousStepRef.current = null;
+        previousIsTypingRef.current = false;
+    }, []);
+
+    // 当资源切换（如重新选择文件）时重置历史处理标记和已展示步骤
+    useEffect(() => {
+        historyProcessedRef.current = false;
+        resetDisplayedSteps();
+        setInitialMessages([]);
+        setGameStarted(false);
+        setShowStoryIntro(false);
+    }, [pdfFileId, resetDisplayedSteps]);
+
     const stepHandlers = useGalgameStep({
         sessionId,
         historyLength: history.length, // 传递历史长度用于判断是否免费
         onMessagesClear: () => {
             setInitialMessages([]);
             // 清空已完成步骤和引用，避免残留数据
-            setCompletedSteps([]);
-            previousStepRef.current = null;
-            previousIsTypingRef.current = false;
+            resetDisplayedSteps();
         }
     });
+
+    // 等待超时提示：isWaitingForData 持续过长则弹出
+    useEffect(() => {
+        if (timeoutTimerRef.current) {
+            clearTimeout(timeoutTimerRef.current);
+            timeoutTimerRef.current = null;
+        }
+
+        if (stepHandlers.isWaitingForData) {
+            timeoutTimerRef.current = setTimeout(() => {
+                setShowTimeoutModal(true);
+            }, 10000);
+        } else {
+            setShowTimeoutModal(false);
+        }
+
+        return () => {
+            if (timeoutTimerRef.current) {
+                clearTimeout(timeoutTimerRef.current);
+                timeoutTimerRef.current = null;
+            }
+        };
+    }, [stepHandlers.isWaitingForData]);
 
     // 当新请求开始时，清空已完成的步骤
     useEffect(() => {
@@ -234,18 +273,6 @@ const Galgame = () => {
         }
     }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
-    // 当新请求开始时，清空已完成的步骤
-    useEffect(() => {
-        const currentRequestId = stepHandlers.currentRequestId?.current || 0;
-        if (currentRequestId !== currentRequestIdRef.current) {
-            currentRequestIdRef.current = currentRequestId;
-            setCompletedSteps([]);
-            // 同时清空引用，避免残留数据
-            previousStepRef.current = null;
-            previousIsTypingRef.current = false;
-        }
-    }, [stepHandlers.currentRequestId?.current]);
-
     // 转换步骤为文本模式格式
     const convertStepsToTextModalFormat = useCallback((steps: any[]): any[] => {
         return steps
@@ -375,18 +402,28 @@ const Galgame = () => {
     // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息
     useEffect(() => {
         // 等待历史记录加载完成和预设数据加载完成
-        if (!historyLoading && presetData && history.length > 0) {
-            setShowStoryIntro(false);
-            setGameStarted(true);
-            processHistoryRecord();
+        if (historyLoading || !presetData) return;
+
+        if (history.length > 0) {
+            if (!historyProcessedRef.current) {
+                setShowStoryIntro(false);
+                setGameStarted(true);
+                processHistoryRecord();
+                historyProcessedRef.current = true;
+            }
+        } else if (!historyProcessedRef.current) {
+            // 首次且没有历史，保留开场白
+            setShowStoryIntro(true);
+            historyProcessedRef.current = true;
         }
-    }, [historyLoading, presetData, history.length, showStoryIntro, processHistoryRecord]);
+    }, [historyLoading, presetData, history.length, processHistoryRecord]);
 
     // 当切换到文本模式时，如果历史记录存在但步骤为空，且不是在等待新数据，处理历史记录
     useEffect(() => {
         // 如果正在等待新数据（用户点击了选项），不要重新加载历史记录
         if (isTextMode && gameStarted && completedSteps.length === 0 && !historyLoading && history.length > 0 && presetData && !stepHandlers.isWaitingForData && !stepHandlers.currentStep) {
             processHistoryRecord();
+            historyProcessedRef.current = true;
         }
     }, [isTextMode, gameStarted, completedSteps.length, historyLoading, history.length, presetData, processHistoryRecord, stepHandlers.isWaitingForData, stepHandlers.currentStep]);
 
@@ -460,7 +497,6 @@ const Galgame = () => {
         }
 
         // 对于 choice 类型的步骤，只保留最后一个
-        // 找到所有 choice 步骤的索引
         const choiceIndices: number[] = [];
         validSteps.forEach((step, index) => {
             if (step && step.type === 'choice') {
@@ -468,7 +504,6 @@ const Galgame = () => {
             }
         });
 
-        // 如果有多个 choice 步骤，只保留最后一个
         if (choiceIndices.length > 1) {
             // 从后往前移除除了最后一个之外的所有 choice 步骤
             for (let i = choiceIndices.length - 2; i >= 0; i--) {
@@ -577,8 +612,7 @@ const Galgame = () => {
                         setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
                     }
                     // 如果存在历史记录，不显示开场白，直接进入游戏
-                    // 注意：这里需要等待历史记录加载完成后再判断
-                    // 所以会在下面的 useEffect 中处理
+
                     setShowStoryIntro(true);
                 }
             } catch (error) {
@@ -590,34 +624,6 @@ const Galgame = () => {
 
         fetchPresetData();
     }, [pdfFileId]);
-
-    const handleStartGame = useCallback(async () => {
-        if (!sessionId) {
-            toast.error('没有 sessionId，无法开始游戏');
-            return;
-        }
-
-        setIsStartingGame(true);
-        setGameStarted(true);
-        setInitialMessages([]);
-
-        await stepHandlers.handleStreamAction('开始游戏', {
-            onBeforeRequest: () => {
-                setInitialMessages([]);
-            },
-            onSuccess: () => {
-                setIsStartingGame(false);
-                addConversion();
-            },
-            onError: (error) => {
-                console.error('❌ 开始游戏失败:', error);
-                toast.error(error || '开始游戏失败，请重试');
-                setIsStartingGame(false);
-                setGameStarted(false);
-                setShowStoryIntro(true);
-            }
-        });
-    }, [sessionId, stepHandlers]);
 
     const addConversion = useCallback(async () => {
         if (!pdfFileId || !user?.user.id) {
@@ -632,6 +638,35 @@ const Galgame = () => {
             console.error('记录游戏统计失败:', error);
         }
     }, [pdfFileId, user?.user.id]);
+
+    const handleStartGame = useCallback(async () => {
+        if (!sessionId) {
+            toast.error('没有 sessionId，无法开始游戏');
+            return;
+        }
+
+        setIsStartingGame(true);
+        setGameStarted(true);
+        setInitialMessages([]);
+
+        await stepHandlers.handleStreamAction('开始游戏', {
+            onBeforeRequest: () => {
+                setInitialMessages([]);
+                resetDisplayedSteps();
+            },
+            onSuccess: () => {
+                setIsStartingGame(false);
+                addConversion();
+            },
+            onError: (error) => {
+                console.error('❌ 开始游戏失败:', error);
+                toast.error(error || '开始游戏失败，请重试');
+                setIsStartingGame(false);
+                setGameStarted(false);
+                setShowStoryIntro(true);
+            }
+        });
+    }, [sessionId, stepHandlers, resetDisplayedSteps, addConversion]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
@@ -667,7 +702,7 @@ const Galgame = () => {
             if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
                 handleNextMessage();
             }
-        }, 2000);
+        }, 1000);
 
         return () => {
             clearTimeout(autoPlayTimer);
@@ -680,9 +715,7 @@ const Galgame = () => {
         }
 
         // 清空已完成步骤和引用，避免残留数据
-        setCompletedSteps([]);
-        previousStepRef.current = null;
-        previousIsTypingRef.current = false;
+        resetDisplayedSteps();
 
         const optionIndex = currentMessage.options.findIndex((opt) => {
             return opt.text === option.text || opt.id === option.id;
@@ -713,12 +746,12 @@ const Galgame = () => {
         }
 
         stepHandlers.handleChoiceSend(optionText);
-    }, [stepHandlers, currentMessage]);
+    }, [stepHandlers, currentMessage, resetDisplayedSteps]);
 
     if (isLoading) {
-    return (
-        <div className={styles.pageRoot}>
-            <div className={styles.mainContent}>
+        return (
+            <div className={styles.pageRoot}>
+                <div className={styles.mainContent}>
                     <div style={{
                         display: 'flex',
                         justifyContent: 'center',
@@ -729,7 +762,7 @@ const Galgame = () => {
                         加载中...
                     </div>
                 </div>
-                            </div>
+            </div>
         );
     }
 
@@ -760,7 +793,7 @@ const Galgame = () => {
                                 alt="角色立绘"
                                 className={styles.characterImage}
                             />
-                </div>
+                        </div>
                     )}
                     <div className={`${styles.gameContentWrapper} ${isTextMode ? styles.gameContentWrapperTextMode : ''}`}>
                         {!showGalgameHistory && !isTextMode && (
@@ -790,24 +823,20 @@ const Galgame = () => {
                                 isTyping={finalIsTyping}
                                 isWaitingForData={stepHandlers.isWaitingForData}
                                 onChoiceClick={(option) => {
-                                    setCompletedSteps([]);
-                                    previousStepRef.current = null;
-                                    previousIsTypingRef.current = false;
+                                    resetDisplayedSteps();
                                     handleChoiceClick(option);
                                 }}
                                 onCustomInputSubmit={(value) => {
-                                    setCompletedSteps([]);
-                                    previousStepRef.current = null;
-                                    previousIsTypingRef.current = false;
+                                    resetDisplayedSteps();
                                     stepHandlers.handleChoiceSend(value);
                                 }}
                             />
                         )}
-                <div className={styles.buttonContainer}>
+                        <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
-                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                        <span>{user?.user?.points}</span>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
+                                    <span>{user?.user?.points}</span>
                                 </div>
                             </div>
                             <div className={styles.buttonItem}
@@ -859,9 +888,9 @@ const Galgame = () => {
                                     <PiMusicNoteDuotone />
                                     <span>音乐</span>
                                 </div>
-                </div>
-            </div>
-        </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <StoryIntroModal
                         isOpen={showStoryIntro}
@@ -877,9 +906,7 @@ const Galgame = () => {
                         backgroundImage={backgroundImage}
                         onRegenerate={(messageIndex) => {
                             setShowGalgameHistory(false);
-                            setCompletedSteps([]);
-                            previousStepRef.current = null;
-                            previousIsTypingRef.current = false;
+                            resetDisplayedSteps();
                             stepHandlers.handleRegenerate(messageIndex, {
                                 onError: (error) => {
                                     toast.error(error || '重新生成失败');
@@ -888,6 +915,32 @@ const Galgame = () => {
                         }}
                         onEditSave={editHistory}
                     />
+
+                    {showTimeoutModal && (
+                        <div className={styles.timeoutOverlay}>
+                            <div className={styles.timeoutCard}>
+                                <div className={styles.timeoutTitle}>网络或服务响应超时</div>
+                                <div className={styles.timeoutDesc}>如果长时间无响应，可尝试刷新重试</div>
+                                <div className={styles.timeoutActions}>
+                                    <button
+                                        className={styles.timeoutCancel}
+                                        onClick={() => setShowTimeoutModal(false)}
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        className={styles.timeoutRetry}
+                                        onClick={() => {
+                                            setShowTimeoutModal(false);
+                                            window.location.reload();
+                                        }}
+                                    >
+                                        刷新
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                 </div>
             </div>

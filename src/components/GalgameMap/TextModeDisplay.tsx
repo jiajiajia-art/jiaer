@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, memo } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
 import styles from '../Galgame/TextModeDisplay.module.css';

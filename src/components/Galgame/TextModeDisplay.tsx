@@ -42,6 +42,7 @@ interface MessageItemProps {
     currentDisplayText: string;
     isTyping: boolean;
     historyLength: number;
+    isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
 }
@@ -52,6 +53,7 @@ const MessageItem = memo<MessageItemProps>(({
     currentDisplayText, 
     isTyping, 
     historyLength,
+    isWaitingForData,
     onChoiceClick, 
     onCustomInputSubmit 
 }) => {
@@ -118,6 +120,12 @@ const MessageItem = memo<MessageItemProps>(({
     }
 
     if (step.type === 'choice') {
+        // 只对当前步骤做延迟渲染，历史 choice 不受影响
+        // 避免在打字中或等待流时提前把选项插入列表中间
+        if (isCurrentStep && (isWaitingForData || isTyping)) {
+            return null;
+        }
+
         return (
             <div className={styles.messageWrapper}>
                 <div className={styles.choiceBubble}>
@@ -239,12 +247,13 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
             ) : (
                 <div className={styles.messagesContainer} ref={messagesContainerRef}>
                     {steps.map((step, index) => {
-                        if (isWaitingForData && step.type === 'choice') {
-                            return null;
-                        }
-                        
                         // 只有当前步骤才传递打字相关状态
                         const isCurrent = index === currentStepIndex && currentStepIndex >= 0;
+
+                        // 避免等待流数据时把“当前正在生成”的 choice 插入中间；历史 choice 正常显示
+                        if (isCurrent && isWaitingForData && step.type === 'choice') {
+                            return null;
+                        }
                         
                         return (
                             <MessageItem
@@ -255,6 +264,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 currentDisplayText={isCurrent ? currentDisplayText : ''}
                                 isTyping={isCurrent ? isTyping : false}
                                 historyLength={historyLength}
+                                isWaitingForData={isWaitingForData}
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
                             />

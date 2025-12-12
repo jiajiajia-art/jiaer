@@ -33,10 +33,10 @@ const EditorApi = {
             },
         });
     },
-    uploadPlayerImage: (fileId:string, data:{file:File, variat:string}) => {
+    uploadPlayerImage: (fileId:string, data:{file:File, variant:string}) => {
         const formData = new FormData();
         formData.append('image', data.file);
-        formData.append('variat', data.variat);
+        formData.append('variat', data.variant);
         return api.post<AllGameData>(`/visual/edit/${fileId}/player/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',

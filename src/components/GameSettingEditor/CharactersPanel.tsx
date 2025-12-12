@@ -67,6 +67,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
     const { fileId } = useEditorStore();
 
+    // 为图片 URL 添加时间戳，避免缓存导致的旧图显示
+    const withCacheBust = (url?: string) => {
+        if (!url) return '';
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}cb=${Date.now()}`;
+    };
+
     // 当 gameData 变化时，填充角色数据
     useEffect(() => {
         if (gameData?.npcSetting?.npcs) {
@@ -77,7 +84,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     ? Object.entries(npc.images).map(([label, img], idx) => ({
                         id: `v${idx}`,
                         label,
-                        img,
+                        img: withCacheBust(img),
                         type: label, // 使用 label 作为 type
                     }))
                     : [];
@@ -92,7 +99,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: npc.personality ? [npc.personality] : [],
                     speech: npc.tone || '',
                     appearance: npc.appearance || '',
-                    portrait: npc.images?.base ? npc.images.base : (npc.images ? Object.values(npc.images)[0] : ''),
+                    portrait: npc.images?.base ? withCacheBust(npc.images.base) : (npc.images ? withCacheBust(Object.values(npc.images)[0]) : ''),
                     background: npc.description || '',
                     growth: '',
                     goalShort: '',
@@ -115,7 +122,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     ? Object.entries(player.images).map(([label, img], idx) => ({
                         id: `v${idx}`,
                         label,
-                        img,
+                        img: withCacheBust(img),
                         type: label,
                     }))
                     : [];
@@ -130,7 +137,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: player.personality ? [player.personality] : [],
                     speech: player.tone || '',
                     appearance: player.appearance || '',
-                    portrait: player.image || player.images?.base || '', // 使用 image 字段作为主要上传的肚像
+                    portrait: withCacheBust(player.image || player.images?.base || ''), // 使用 image 字段作为主要上传的肚像
                     background: '',
                     growth: '',
                     goalShort: '',
@@ -727,7 +734,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             if (type === 'player') {
                 response = await EditorApi.uploadPlayerImage(fileId, {
                     file,
-                    variat: variant,
+                    variant,
                 });
             } else if (type === 'npc' || type === 'variation') {
                 if (!targetCharacterId) {
@@ -757,7 +764,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                             if (char.id === 'player') {
                                 // 如果是 base 变体，更新 portrait
                                 if (variant === 'base') {
-                                    return { ...char, portrait: response.data?.worldSetting?.player?.images?.base || char.portrait };
+                                    const newPortrait = withCacheBust(
+                                        response.data?.worldSetting?.player?.images?.base ||
+                                        response.data?.worldSetting?.player?.image ||
+                                        char.portrait
+                                    );
+                                    return { ...char, portrait: newPortrait };
                                 }
                                 // 否则检查是否已存在该variant的variation
                                 const existingVarIndex = char.variations.findIndex(v => v.label === variant);
@@ -766,7 +778,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     const newVariations = [...char.variations];
                                     newVariations[existingVarIndex] = {
                                         ...newVariations[existingVarIndex],
-                                        img: response.data?.worldSetting?.player?.images?.[variant] || '',
+                                        img: withCacheBust(response.data?.worldSetting?.player?.images?.[variant] || response.data?.worldSetting?.player?.image || ''),
                                     };
                                     return { ...char, variations: newVariations };
                                 } else {
@@ -774,7 +786,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     const newVar: Variation = {
                                         id: `v-${Date.now()}`,
                                         label: variant,
-                                        img: response.data?.worldSetting?.player?.images?.[variant] || '',
+                                        img: withCacheBust(response.data?.worldSetting?.player?.images?.[variant] || response.data?.worldSetting?.player?.image || ''),
                                         type: variant,
                                     };
                                     return { ...char, variations: [...char.variations, newVar] };
@@ -789,7 +801,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 if (type === 'npc' && variant === 'base' && targetCharacterId && !isAddingNew) {
                     const firstImageUrl = response.data?.npcSetting?.npcs.find(npc => npc.id === targetCharacterId)?.images?.base || '';
                     if (firstImageUrl) {
-                        updateField('portrait', firstImageUrl);
+                        updateField('portrait', withCacheBust(firstImageUrl));
                     }
                 }
             } else {
