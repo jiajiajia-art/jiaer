@@ -34,6 +34,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
             title: '场景 / BGM',
             subtitle: '背景 + 配乐绑定',
         },
+        {
+            id: 'mapEdit',
+            number: '5',
+            title: '地图编辑',
+            subtitle: '子场景 / 场景 / 地图',
+        },
     ];
 
     const isItemDisabled = (itemId: string) => {

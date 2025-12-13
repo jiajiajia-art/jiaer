@@ -1,3 +1,5 @@
+import type { SubScene } from "../worldInteraction/mapWorldData.type";
+
 export interface AllGameData {
     success: true,
     fileId: string,
@@ -81,6 +83,7 @@ interface Scene {
     items?: string[];                  // 可用物品数组
     events?: string[];                 // 可能发生的事件数组
     soundtrack?: string;               // 背景音乐文件名
+    subscenes: SubScene[];
 }
 
 interface Metadata {

@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import { useAuthStore } from '../store/useAuthStore';
+import MapPanel from '../components/GameSettingEditor/MapPanel';
 
 const GameSettingsEditor = () => {
     // 从 Zustand store 获取状态和方法
@@ -362,7 +363,7 @@ const GameSettingsEditor = () => {
                         <h1>游戏创作流程</h1>
                         <p className={styles.subtitle}>
                             Step 1 上传 Word / PDF → Step 2 表单化校对世界观 → Step 3 角色差分 → Step 4
-                            场景绑定 BGM
+                            场景绑定 BGM → Step 5 地图与子场景布局
                         </p>
                     </div>
 
@@ -450,6 +451,10 @@ const GameSettingsEditor = () => {
                             }
                         }}
                     />
+                </section>
+
+                <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
+                    <MapPanel sceneSetting={gameData?.sceneSetting} fileId={fileId || ''} />
                 </section>
             </main>
             {showPublishModal && (

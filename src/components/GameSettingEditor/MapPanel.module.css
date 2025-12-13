@@ -1,0 +1,755 @@
+.mapSection {
+    margin: 0 0 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.mapHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: #E03D4B;
+    font-weight: 600;
+}
+
+.mapTabs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mapTab {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.mapTabActive {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(224, 61, 75, 0.25);
+}
+
+.mapEditor {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.9fr);
+    gap: 16px;
+    margin-top: 10px;
+    align-items: stretch;
+    min-width: 0;
+}
+
+.mapPreview {
+    position: relative;
+    background: #f8fafc;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-md);
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    max-height: 800px;
+}
+
+.mapPreviewActions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 30;
+}
+
+.mapActionBtn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(4px);
+}
+
+.mapActionBtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 1);
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.25);
+}
+
+.mapActionBtn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.mapActionBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* 地图加载遮罩 */
+.mapLoadingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.888);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 16px;
+}
+
+.mapLoadingSpinner {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+}
+
+.spinnerRing {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 3px solid transparent;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spinnerRotate 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.spinnerRing:nth-child(1) {
+    animation-delay: -0.45s;
+}
+
+.spinnerRing:nth-child(2) {
+    animation-delay: -0.3s;
+    border-top-color: var(--primary-light);
+}
+
+.spinnerRing:nth-child(3) {
+    animation-delay: -0.15s;
+    border-top-color: rgba(224, 61, 75, 0.3);
+}
+
+@keyframes spinnerRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.mapLoadingText {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sceneImage {
+    max-width: 1200px;
+    max-height: 800px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+}
+
+/* 已放置的NPC */
+.placedNPC {
+    position: absolute;
+    cursor: move;
+    z-index: 10;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.placedNPC:hover {
+    border-color: rgba(224, 61, 75, 0.4);
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.2);
+}
+
+.placedNPCSelected {
+    border-color: rgba(224, 61, 75, 0.8);
+    box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.3), 0 4px 12px rgba(224, 61, 75, 0.3);
+}
+
+.placedNPCDragging {
+    opacity: 0.6;
+    cursor: grabbing;
+}
+
+.npcImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    border-radius: 6px;
+}
+
+.npcControls {
+    position: absolute;
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 6px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-light);
+    white-space: nowrap;
+    z-index: 20;
+}
+
+.scaleBtn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.scaleBtn:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.scaleText {
+    font-size: 12px;
+    color: var(--text-primary);
+    font-weight: 500;
+    min-width: 40px;
+    text-align: center;
+}
+
+.removeBtn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-danger, #dc3545);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.removeBtn:hover {
+    background: var(--text-danger, #dc3545);
+    color: #fff;
+    border-color: var(--text-danger, #dc3545);
+}
+
+.mapOverlayHint {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.78);
+    color: var(--text-primary);
+    font-size: 12px;
+    backdrop-filter: blur(4px);
+    border: 1px solid var(--border-light);
+}
+
+.mapSidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    align-items: stretch;
+}
+
+.subSceneList {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+}
+
+.npcPalette {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.subSceneList h4,
+.npcPalette h4 {
+    color: var(--text-primary);
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.subSceneItems {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.subSceneItem {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 10px;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.subSceneItem:hover {
+    border-color: rgba(224, 61, 75, 0.35);
+}
+
+.subSceneItemActive {
+    border-color: rgba(224, 61, 75, 0.7);
+    box-shadow: 0 0 0 1px rgba(224, 61, 75, 0.25);
+    background: #fff7f8;
+}
+
+.subSceneThumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, #fff2f4, #ffe7ea);
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+}
+
+.subSceneThumbImage {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    background: linear-gradient(135deg, #fff2f4, #ffe7ea);
+}
+
+.subSceneMeta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.subSceneName {
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.subSceneParent {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.subSceneDesc {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+.npcItems {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.npcItem {
+    background: #fff;
+    border: 1px dashed var(--border-light);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.npcItem:active {
+    cursor: grabbing;
+}
+
+.npcItemDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+
+.defaultNpcImage {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    /* background: linear-gradient(135deg, #ffcdd4, #ff9cab); */
+    border: 1px solid var(--border-light);
+}
+
+.npcName {
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.npcHint {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.npcCount {
+    margin-top: 4px;
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.hintSelected {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+/* 确认区域 */
+.confirmSection {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.confirmBtn {
+    width: 100%;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 
+        0 4px 12px rgba(224, 61, 75, 0.25),
+        0 8px 24px rgba(224, 61, 75, 0.15),
+        0 12px 36px rgba(224, 61, 75, 0.1);
+}
+
+.confirmBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 6px 16px rgba(224, 61, 75, 0.35),
+        0 12px 32px rgba(224, 61, 75, 0.2),
+        0 18px 48px rgba(224, 61, 75, 0.15);
+}
+
+.confirmBtn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.confirmBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.confirmHint {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-align: center;
+}
+
+/* 子场景图标（场景tab中使用） */
+.placedSubScene {
+    position: absolute;
+    cursor: move;
+    z-index: 20;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    pointer-events: auto;
+    transform: translateZ(0);
+    animation: fadeIn 0.3s ease;
+}
+
+.placedSubScene:hover {
+    transform: scale(1.1);
+}
+
+.subSceneIcon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.subSceneLabel {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-light);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    line-height: 1.2;
+}
+
+/* 场景列表样式 */
+.sceneItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    transition: all 0.15s ease;
+    margin-bottom: 8px;
+}
+
+.sceneItem:hover {
+    border-color: rgba(224, 61, 75, 0.35);
+    background: #fff;
+}
+
+.sceneItemActive {
+    border-color: rgba(224, 61, 75, 0.7);
+    box-shadow: 0 0 0 1px rgba(224, 61, 75, 0.25);
+    background: #fff7f8;
+}
+
+.expandIcon {
+    color: var(--text-muted);
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.expandIcon:hover {
+    color: var(--primary);
+}
+
+.sceneName {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.subSceneCount {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.subScenesList {
+    margin-left: 24px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 子场景编辑表单 */
+.subSceneEditForm {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.subSceneEditForm h4 {
+    color: var(--text-primary);
+    margin: 0 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.formField {
+    margin-bottom: 16px;
+}
+
+.formField label {
+    display: block;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+
+.formValue {
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.formSelect {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.formSelect:hover {
+    border-color: rgba(224, 61, 75, 0.35);
+}
+
+.formSelect:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.1);
+}
+
+.formActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.formBtn {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.formBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.25);
+}
+
+.formBtnCancel {
+    flex: 1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.formBtnCancel:hover {
+    background: #f9fafb;
+    border-color: rgba(224, 61, 75, 0.35);
+}
+
+@media (max-width: 1100px) {
+    .mapEditor {
+        grid-template-columns: 1fr;
+    }
+    .mapSidebar {
+        display: none;
+    }
+    .mapPreview {
+        min-height: 240px;
+    }
+}

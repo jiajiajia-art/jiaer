@@ -35,6 +35,10 @@ export interface SubScene {
     image: string;
     npcs: string[];
     position: [number, number];
+    npcs_slots: {
+        position: [number, number];
+        zoom: number;
+    }[];
 }
 
 export interface Scene {
