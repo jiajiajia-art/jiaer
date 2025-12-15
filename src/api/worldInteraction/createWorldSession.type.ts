@@ -21,3 +21,117 @@ export interface CreateWorldSessionResponse {
         }
     }
 }
+
+
+interface KeyEvent {
+    title: string;
+    description: string;
+  }
+  
+  // 玩家角色类型
+  interface Player {
+    name: string;
+    age: number;
+    gender: string;
+    personality: string;
+    appearance: string;
+    tone: string;
+    imagePath: string;
+  }
+  
+  // NPC图像类型
+  interface NPCImages {
+    base: string;
+    [key: string]: string; // 动态的表情图片
+  }
+  
+  // NPC类型
+  interface NPC {
+    id: string;
+    name: string;
+    age: number;
+    gender: string;
+    description: string;
+    appearance: string;
+    personality: string;
+    tone: string;
+    images: NPCImages;
+  }
+  
+  // NPC插槽位置类型
+  interface NPCsSlot {
+    position: [number, number];
+    zoom: number;
+  }
+  
+  // 子场景类型（包含父场景信息）
+  interface SubsceneWithParent {
+    id: string;
+    name: string;
+    description: string;
+    image: string;
+    npcs: string[];
+    position: [number, number];
+    npcs_slots?: NPCsSlot[];
+    parentSceneId: string;
+    parentSceneName: string;
+  }
+  
+  // 子场景类型（不包含父场景信息）
+  interface Subscene {
+    id: string;
+    name: string;
+    description: string;
+    image: string;
+    npcs: string[];
+    position: [number, number];
+    npcs_slots?: NPCsSlot[];
+  }
+  
+  // 场景类型
+  interface Scene {
+    id: string;
+    name: string;
+    description: string;
+    image: string;
+    subscenes: Subscene[];
+    soundtrack: string;
+    position: [number, number];
+  }
+  
+  // 世界信息类型
+  interface WorldInfo {
+    title: string;
+    summary: string;
+    themes: string[];
+    image: string;
+  }
+  
+  // 状态类型
+  interface GameState {
+    sessionId: string;
+    fileId: string;
+    currentRound: number;
+    worldInfo: WorldInfo;
+    player: Player;
+    currentKeyEvent: KeyEvent;
+    currentKeyEventIndex: number;
+    completedKeyEvents: string[];
+    totalKeyEvents: number;
+    allKeyEventsCompleted: boolean;
+    activeEvents: any[]; // 根据实际情况可以进一步定义
+    scenes: Scene[];
+    allSubscenes: SubsceneWithParent[];
+    npcs: NPC[];
+    visitedScenes: string[];
+    visitedSubscenes: string[];
+    totalEvents: number;
+    eventHistory: any[]; // 根据实际情况可以进一步定义
+  }
+
+  
+
+export interface GetWorldFilesBySessionResponse {
+    success: boolean;
+    state: GameState;
+}

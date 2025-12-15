@@ -6,6 +6,7 @@ import { MdOutlineArrowCircleLeft } from 'react-icons/md';
 import type { EventData } from '../../page/GalgameMap';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
 import { IoMdCloseCircle } from 'react-icons/io';
+import { useNavigate } from 'react-router-dom';
 
 interface WorldMapRendererProps {
     gameData: AllGameData | null;
@@ -36,6 +37,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const [isReady, setIsReady] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
     const { eventData } = useMapGalgameStore();
+    const navigator = useNavigate();
 
     // 延迟加载和尺寸重试机制
     useEffect(() => {
@@ -113,8 +115,8 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
 
         return gameData.sceneSetting.scenes.map(scene => ({
             ...scene,
-            x: scene.position[0] ?? 0.5,
-            y: scene.position[1] ?? 0.5,
+            x: scene.position?.[0] ?? 0.5,
+            y: scene.position?.[1] ?? 0.5,
             subscenes: scene.subscenes?.map(subscene => ({
                 ...subscene,
                 x: subscene.position[0] ?? 0.5,
@@ -130,9 +132,9 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         let isMounted = true;
 
         const updateBackground = () => {
-            if (viewMode === 'mainScenes') {
+            if (viewMode === 'mainScenes') {                
                 // 主场景视图：使用第一个场景的图片作为背景
-                const firstSceneImage = gameData?.sceneSetting?.scenes[0]?.image;
+                const firstSceneImage = gameData?.worldSetting.worldMapImage+'/dummy';
                 if (firstSceneImage && isMounted) {
                     setBackgroundImage(firstSceneImage);
                 }
@@ -152,12 +154,17 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     // 强制刷新背景图片
     const refreshBackground = () => {
         if (viewMode === 'mainScenes') {
-            const firstSceneImage = gameData?.sceneSetting?.scenes[0]?.image;
+            console.log(selectedScene);
+
+            const firstSceneImage = gameData?.worldSetting.worldMapImage+'/dummy';
             if (firstSceneImage) {
                 setBackgroundImage(firstSceneImage + '?t=' + Date.now());
+                console.log("firstSceneImage", firstSceneImage);
             }
         } else if (viewMode === 'subScenes' && selectedScene?.image) {
             setBackgroundImage(selectedScene.image + '?t=' + Date.now());
+            console.log("selectedScene.image", selectedScene.image);
+            
         }
     };
 
@@ -180,8 +187,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         if (scene.subscenes && scene.subscenes.length > 0) {
             setSelectedScene(scene);
             setViewMode('subScenes');
-            // 切换视图时刷新背景
-            setTimeout(refreshBackground, 50);
         }
     };
 
@@ -246,7 +251,9 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                 {
                     viewMode === 'mainScenes' && (
                         <div className={styles.titleBar}>
-                            <div className={styles.backButton} onClick={handleBackToMainScenes}>
+                            <div className={styles.backButton} onClick={()=>{
+                                navigator('/home')
+                            }}>
                                 <IoMdCloseCircle size={24} />
                             </div>
                         </div>
@@ -360,8 +367,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                         {viewMode === 'subScenes' && selectedScene && isReady && selectedScene.subscenes.map(subscene => {
                             const position = calculatePixelPosition({ x: subscene.position[0], y: subscene.position[1] });
                             const isEventLocation = eventData?.subscene?.id === subscene.id;
-
-                            console.log(`子场景 ${subscene.name} (${subscene.id}) 是否是事件地点:`, isEventLocation);
 
                             return (
                                 <div

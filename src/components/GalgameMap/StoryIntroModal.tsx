@@ -20,8 +20,8 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     if (!isOpen) return null;
 
     const title = gameData?.worldSetting?.title || '故事';
-    const preamble = gameData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
-    const backgroundImage = gameData?.sceneSetting?.scenes[0]?.image || null;
+    const preamble = gameData?.worldSetting?.summary || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
+    const backgroundImage = gameData?.worldSetting.worldMapImage+'/dummy' || null;
 
     const { displayedText, isTyping } = useStoryTyping({
         text: preamble,
@@ -31,7 +31,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
 
     const backgroundImageUrl = useMemo(() => {
         if (!backgroundImage) return null;
-        return backgroundImage.startsWith('http') ? backgroundImage : `${HOST_ADDRESS}${backgroundImage}`;
+        return backgroundImage.startsWith('http') ? backgroundImage : `${backgroundImage}`;
     }, [backgroundImage]);
 
     return (

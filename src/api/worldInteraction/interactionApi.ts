@@ -24,13 +24,15 @@ interface NextRoundResponse {
 
 const interactionApi = {
     distributeEvent: ({
-        fileId,
         sessionId,
     }: {
-        fileId: string,
         sessionId: string,
     }) =>
-        api.post<EventResponse>(`/world-interaction/session/${sessionId}/distribute-event`, {fileId},{timeout: 0}),
+        api.post<EventResponse>(
+            `/world-interaction/session/${sessionId}/distribute-event`,
+            {},
+            { timeout: 1500000 },
+        ),
     
     nextRound: (sessionId: string) =>
         api.post<NextRoundResponse>(`/world-interaction/session/${sessionId}/next-round`, {}, {timeout: 0}),

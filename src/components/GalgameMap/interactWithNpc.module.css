@@ -2,15 +2,17 @@
     width: 100%;
     min-height: 100vh;
     position: relative;
-    background: #fff;
+    background: #000;
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .mainContent {
     width: 414px;
-    height: 896px;
+    min-height: 896px;
+    height: 100vh;
+    max-height: 896px;
     display: flex;
     flex-direction: column;
     position: relative;

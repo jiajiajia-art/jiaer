@@ -193,12 +193,12 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         }
     }, [userId]);
 
-    const createMapWorldSession = useCallback(async (fileId: string): Promise<string | null> => {
-        if (!fileId || !userId) {
+    const createMapWorldSession = useCallback(async (presetId: string): Promise<string | null> => {
+        if (!presetId || !userId) {
             return null;
         }   
         try {
-            const response = await createWorldSessionApi.createWorldSession({fileId}); 
+            const response = await createWorldSessionApi.createWorldSession({presetId}); 
             if (response.data.success) {
                 return response.data.session.sessionId;
             } else {

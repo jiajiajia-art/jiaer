@@ -1,7 +1,6 @@
 // GalgameMap.tsx
 import { useEffect, useState, useRef } from "react";
 import styles from "./GalgameMap.module.css";
-import MapWorldData from "../api/worldInteraction/mapWorldData";
 import { useGameStore } from "../store/gameStore";
 import WorldMapRenderer from "../components/GalgameMap/WorldMapRenderer";
 import type { AllGameData } from "../api/worldInteraction/mapWorldData.type";
@@ -13,6 +12,7 @@ import type { GameEvent, NPCInfo, SubsceneInfo } from "../api/worldInteraction/i
 import { useMapGalgameStore, MapViewState } from "../store/mapGalgameStore";
 import { adaptWorldGameData } from "../api/common/gameDataAdapter";
 import type { WorldInteractionGameData } from "../api/worldInteraction/worldInteractionApi.type";
+import createWorldSessionApi from "../api/worldInteraction/createWorldSession";
 
 export interface EventData {
     event: GameEvent;
@@ -48,7 +48,7 @@ const GalgameMap = () => {
 
     useEffect(() => {
         getMapWorldData();
-    }, [pdfFileId]);
+    }, [sessionId]);
 
     // 确保组件在显示前已经准备好
     useEffect(() => {
@@ -68,7 +68,7 @@ const GalgameMap = () => {
     }, [currentView]);
 
     const getMapWorldData = async () => {
-        if (!pdfFileId) {
+        if (!sessionId) {
             setIsLoading(false);
             return;
         }
@@ -76,10 +76,41 @@ const GalgameMap = () => {
         setIsLoading(true);
 
         try {
-            const response = await MapWorldData.getMapWorldData(pdfFileId);
-            if (response.data?.success && response.data) {
-                // 使用适配器将 WorldInteractionGameData 转换为 UnifiedGameData
-                const unifiedData = adaptWorldGameData(response.data as WorldInteractionGameData);
+            const response = await createWorldSessionApi.getWorldFilesBySession(sessionId);
+            if (response.data?.success && response.data.state) {
+                const state = response.data.state;
+                const worldFormatData: WorldInteractionGameData = {
+                    success: true,
+                    fileId: state.fileId,
+                    worldSetting: {
+                        title: state.worldInfo?.title || '',
+                        summary: state.worldInfo?.summary || '',
+                        background: state.worldInfo?.summary || '',
+                        Theme: state.worldInfo?.themes || [],
+                        preamble: '',
+                        initialPlot: '',
+                        literary: '',
+                        keyEvents: state.currentKeyEvent ? [state.currentKeyEvent] : [],
+                        Player: {
+                            name: state.player?.name || '',
+                            age: state.player?.age || 0,
+                            gender: state.player?.gender || '',
+                            personality: state.player?.personality || '',
+                            appearance: state.player?.appearance || '',
+                            tone: state.player?.tone || '',
+                            imagePath: state.player?.imagePath || '',
+                        },
+                        worldMapImage: state.worldInfo?.image || '',
+                    },
+                    npcSetting: {
+                        npcs: state.npcs || [],
+                    },
+                    sceneSetting: {
+                        scenes: state.scenes || [],
+                    },
+                };
+
+                const unifiedData = adaptWorldGameData(worldFormatData);
                 setGameData(unifiedData);
                 console.log('获取地图世界数据成功');
             }
@@ -102,7 +133,6 @@ const GalgameMap = () => {
             setSelectedSubscene(null);
             
             const response = await interactionApi.distributeEvent({
-                fileId: pdfFileId,
                 sessionId: sessionId
             });
             if (response.data.success) {
@@ -179,8 +209,11 @@ const GalgameMap = () => {
                 )}
 
                 {/* NPC交互界面 */}
-                {currentView === MapViewState.INTERACT_NPC && (
-                    <InteractWithNpc onClose={handleBack} />
+                {currentView === MapViewState.INTERACT_NPC && gameData && (
+                    <InteractWithNpc 
+                        gameData={gameData}
+                        onClose={handleBack}
+                     />
                 )}
             </div>
         </div>

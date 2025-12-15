@@ -147,7 +147,6 @@ const NewMain: React.FC = () => {
         if (mapModalOpen) setMapModalOpen(false);
     };
 
-
     // ==================== 音乐系统相关 ====================
     const hasStartedPlayingRef = useRef(false);
     useEffect(() => {

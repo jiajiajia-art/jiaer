@@ -19,11 +19,6 @@ const worldEditor = {
             }
         );
     },
-    getWorldFile: (fileId: string) => {
-        return api.get<WorldInteractionGameData>(
-            `/api/world-interaction/files/${fileId}`
-        );
-    },
     setZoomNpc: (fileId: string, sceneId: string, subsceneId: string, npcSlots: NpcSlot[]) => {
         return api.put<ApiResponse<SubScene>>(
             `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${subsceneId}/npc-slots`,

@@ -11,7 +11,6 @@ import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
 import { useMapGalgameStore, MapViewState } from "../../store/mapGalgameStore";
-import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
 import { useWorldInteractionStep } from "../../hooks/galgame/useWorldInteractionStep";
 import { HOST_ADDRESS } from "../../config";
 import { useCharacterAnimation } from "../../hooks/galgame/useCharacterAnimation";
@@ -19,8 +18,8 @@ import { useCharacterContainerClassName } from "../../hooks/galgame/useCharacter
 import { useStoryTyping } from "../../hooks/story/useStoryTyping";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
-import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import interactionApi from "../../api/worldInteraction/interactionApi";
+import type { AllGameData, Scene } from "../../api/worldInteraction/mapWorldData.type";
 
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -35,7 +34,7 @@ interface Message {
     options?: Array<{ id: number; text: string }>;
 }
 
-const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
+const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData: AllGameData }) => {
 
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
@@ -47,16 +46,9 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
     const eventId = eventData?.event?.eventId || null;
 
     const [backgroundImage, setBackgroundImage] = useState<string>('');
-    const [gameTitle, setGameTitle] = useState<string>('Galgame');
-    const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null>(null);
-    const [worldSetting, setWorldSetting] = useState<GetGalgamePresetResponse['worldSetting'] | null>(null);
-    const [npcSetting, setNpcSetting] = useState<GetGalgamePresetResponse['npcSetting'] | null>(null);
-    const [sceneSetting, setSceneSetting] = useState<GetGalgamePresetResponse['sceneSetting'] | null>(null);
-
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [currentScene, setCurrentScene] = useState<Scene | null>(null);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
-    const [presetData, setPresetData] = useState<GetGalgamePresetResponse | null>(null);
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
     const [completedSteps, setCompletedSteps] = useState<any[]>([]); // 已完成的步骤
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
@@ -76,6 +68,32 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
             previousIsTypingRef.current = false;
         }
     });
+
+    const worldSetting = useMemo(() => gameData?.worldSetting, [gameData]);
+    const npcSetting = useMemo(() => gameData?.npcSetting, [gameData]);
+    const sceneSetting = useMemo(() => gameData?.sceneSetting, [gameData]);
+
+    const resolveImageUrl = (rawImage?: any) => {
+        const image =
+            typeof rawImage === 'string'
+                ? rawImage
+                : (rawImage && typeof rawImage === 'object' && ('base' in rawImage || 'url' in rawImage))
+                    ? (rawImage.base || rawImage.url || '')
+                    : '';
+
+        if (!image) return undefined;
+        return image.startsWith('http') ? image : `${HOST_ADDRESS}${image}`;
+    };
+
+    // 初始化 currentScene 和背景，使用父组件传入的 gameData
+    useEffect(() => {
+        const firstScene = sceneSetting?.scenes?.[0];
+        if (firstScene) {
+            setCurrentScene(firstScene);
+            const firstImage = resolveImageUrl(firstScene.image);
+            if (firstImage) setBackgroundImage(firstImage);
+        }
+    }, [sceneSetting]);
 
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
@@ -97,15 +115,11 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
             let characterImage: string | undefined;
 
             if (step.activeImage) {
-                characterImage = step.activeImage.startsWith('http')
-                    ? step.activeImage
-                    : `${HOST_ADDRESS}${step.activeImage}`;
+                characterImage = resolveImageUrl(step.activeImage);
             }
 
             if (step.isPlayer) {
-                characterImage = worldSetting?.player?.images.startsWith('http')
-                    ? worldSetting?.player?.images
-                    : `${HOST_ADDRESS}${worldSetting?.player?.images}`;
+                characterImage = resolveImageUrl(worldSetting?.player?.images || worldSetting?.player?.imagePath);
             }
 
             return {
@@ -136,10 +150,8 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
                 : (step.description || '请选择你的行动');
 
             let characterImage: string | undefined;
-            if (worldSetting?.player?.images) {
-                characterImage = worldSetting.player.images.startsWith('http')
-                    ? worldSetting.player.images
-                    : `${HOST_ADDRESS}${worldSetting.player.images}`;
+            if (worldSetting?.player?.images || worldSetting?.player?.imagePath) {
+                characterImage = resolveImageUrl(worldSetting.player.images || worldSetting.player.imagePath);
             }
 
             return {
@@ -151,26 +163,25 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
                 characterPosition: 'right',
             };
         } else if (step.type === 'scene_change') {
-            const newScene: GetGalgamePresetResponse['sceneSetting']['scenes'][0] = {
+            const newScene: Scene = {
                 id: step.sceneId || '',
                 name: step.sceneName || '',
                 type: '',
                 description: step.sceneDescription || '',
                 atmosphere: step.sceneAtmosphere,
                 dangerLevel: step.dangerLevel,
-                images: step.sceneImage,
-                npcs: [],
+                image: step.sceneImage || '',
                 events: [],
                 soundtrack: step.soundtrack,
+                subscenes: [],
+                position: [0.5, 0.5],
             };
 
             setCurrentScene(newScene);
 
             if (step.sceneImage) {
-                const sceneImage = step.sceneImage.startsWith('http')
-                    ? step.sceneImage
-                    : `${HOST_ADDRESS}${step.sceneImage}`;
-                setBackgroundImage(sceneImage);
+                const sceneImage = resolveImageUrl(step.sceneImage);
+                if (sceneImage) setBackgroundImage(sceneImage);
             }
 
             return {
@@ -272,18 +283,17 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
             });
     }, []);
 
-    // 初始化游戏：当预设数据加载完成后自动开始
+    // 初始化游戏：父组件已传入 gameData，直接启动
     useEffect(() => {
-        if (presetData && !gameStarted && sessionId && eventId && pdfFileId) {
+        if (!gameStarted && sessionId && eventId && pdfFileId && gameData) {
             setGameStarted(true);
-            // 自动发送初始交互请求
             stepHandlers.handleInteract({
                 onError: (error) => {
                     console.error('❌ 开始交互失败:', error);
                 }
             });
         }
-    }, [presetData, gameStarted, sessionId, eventId, pdfFileId]); // 移除 stepHandlers 依赖，避免无限循环
+    }, [gameStarted, sessionId, eventId, pdfFileId, gameData, stepHandlers]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
@@ -474,19 +484,17 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
                 let foundNpc: any = null;
                 let foundSubscene: any = null;
                 
-                if (presetData) {
-                    // 查找 NPC
-                    if (presetData.npcSetting?.npcs) {
-                        foundNpc = presetData.npcSetting.npcs.find(npc => npc.id === firstEvent.targetNpcId);
+                // 使用父组件传入的 gameData 查找 NPC 和 subscene
+                if (gameData) {
+                    if (gameData.npcSetting?.npcs) {
+                        foundNpc = gameData.npcSetting.npcs.find(npc => npc.id === firstEvent.targetNpcId);
                     }
-                    
-                    // 查找 subscene
-                    if (presetData.sceneSetting?.scenes) {
-                        for (const scene of presetData.sceneSetting.scenes) {
+
+                    if (gameData.sceneSetting?.scenes) {
+                        for (const scene of gameData.sceneSetting.scenes) {
                             if (scene.subscenes && Array.isArray(scene.subscenes)) {
                                 foundSubscene = scene.subscenes.find((sub: any) => sub.id === firstEvent.targetSubsceneId);
                                 if (foundSubscene) {
-                                    // 添加父场景名称
                                     foundSubscene = {
                                         ...foundSubscene,
                                         parentSceneName: scene.name
@@ -523,7 +531,7 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
             // 加载完成后自动返回世界地图
             setCurrentView(MapViewState.WORLD_MAP);
         }
-    }, [stepHandlers, setEventData, setCurrentView, sessionId, presetData]);
+    }, [stepHandlers, setEventData, setCurrentView, sessionId, gameData]);
 
     // 获取当前步骤的打字机文本（保留颜色标签，实现丝滑打字效果）
     // 这个文本只用于当前正在打字的步骤
@@ -548,60 +556,7 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
         return '';
     }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
 
-    void gameTitle;
-    void worldSetting;
     void sceneSetting;
-
-    useEffect(() => {
-        const fetchPresetData = async () => {
-            console.log(pdfFileId);
-            if (!pdfFileId) {
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                setIsLoading(true);
-                const response = await getGalgamePresetApi.getGalgamePreset(pdfFileId);
-
-                if (response.data.success) {
-                    const data = response.data;
-                    setPresetData(data);
-                    setWorldSetting(data.worldSetting);
-                    setNpcSetting(data.npcSetting || null);
-                    setSceneSetting(data.sceneSetting);
-
-                    if (data.worldSetting?.title) {
-                        setGameTitle(data.worldSetting.title);
-                    }
-
-                    let sceneImage = '';
-                    if (data.sceneSetting?.scenes && data.sceneSetting.scenes.length > 0) {
-                        const firstScene = data.sceneSetting.scenes[0];
-                        if (firstScene) {
-                            setCurrentScene(firstScene);
-                        }
-                        if (firstScene.images) {
-                            sceneImage = firstScene.images.startsWith('http')
-                                ? firstScene.images
-                                : `${HOST_ADDRESS}${firstScene.images}`;
-                            setBackgroundImage(sceneImage);
-                        }
-                    }
-
-                    if (!sceneImage) {
-                        setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
-                    }
-                }
-            } catch (error) {
-                console.error('获取游戏数据失败:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchPresetData();
-    }, [pdfFileId]);
 
     // 文本模式默认开启自动播放
     useEffect(() => {
@@ -689,23 +644,23 @@ const InteractWithNpc = ({ onClose }: { onClose: () => void }) => {
         });
     }, [stepHandlers, currentMessage]);
 
-    if (isLoading) {
-        return (
-            <div className={styles.pageRoot}>
-                <div className={styles.mainContent}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100%',
-                        color: '#fff'
-                    }}>
-                        加载中...
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // if (isLoading) {
+    //     return (
+    //         <div className={styles.pageRoot}>
+    //             <div className={styles.mainContent}>
+    //                 <div style={{
+    //                     display: 'flex',
+    //                     justifyContent: 'center',
+    //                     alignItems: 'center',
+    //                     height: '100%',
+    //                     color: '#fff'
+    //                 }}>
+    //                     加载中...
+    //                 </div>
+    //             </div>
+    //         </div>
+    //     );
+    // }
 
     return (
         <>

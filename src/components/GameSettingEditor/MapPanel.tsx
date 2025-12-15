@@ -105,6 +105,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const mapImageInputRef = useRef<HTMLInputElement>(null);
     const currentSceneIdRef = useRef<string | null>(null);
     const currentSubSceneIdRef = useRef<string | null>(null);
+    // 为缺失 position 的子场景提供一次性随机初始位置，保证可见且可拖拽
+    const subSceneDefaultPosRef = useRef<Record<string, { x: number; y: number }>>({});
 
     useEffect(() => {
         if (isActive) {
@@ -225,20 +227,38 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         const loadedSubScenes: PlacedSubScene[] = [];
         if (currentScene.subscenes) {
             currentScene.subscenes.forEach(subScene => {
-                // 确保position存在且是有效的数组
+                let x: number | undefined;
+                let y: number | undefined;
+
+                // 后端可能缺少 position，这里兜底为稳定随机值（仅第一次生成）
                 if (subScene.position && Array.isArray(subScene.position) && subScene.position.length >= 2) {
-                    const x = subScene.position[0];
-                    const y = subScene.position[1];
-                    // 确保位置值在有效范围内（0-1）
-                    if (typeof x === 'number' && typeof y === 'number' && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
-                        loadedSubScenes.push({
-                            id: subScene.id,
-                            name: subScene.name,
-                            x: x,
-                            y: y,
-                            parentSceneId: currentScene.id
-                        });
+                    x = subScene.position[0];
+                    y = subScene.position[1];
+                } else {
+                    const cached = subSceneDefaultPosRef.current[subScene.id];
+                    if (cached) {
+                        x = cached.x;
+                        y = cached.y;
+                    } else {
+                        // 生成 0.2~0.8 的随机位置，避免贴边
+                        const rand = () => 0.2 + Math.random() * 0.6;
+                        x = rand();
+                        y = rand();
+                        subSceneDefaultPosRef.current[subScene.id] = { x, y };
                     }
+                }
+
+                // 确保在 0-1 区间
+                if (typeof x === 'number' && typeof y === 'number') {
+                    const clampedX = Math.max(0, Math.min(1, x));
+                    const clampedY = Math.max(0, Math.min(1, y));
+                    loadedSubScenes.push({
+                        id: subScene.id,
+                        name: subScene.name,
+                        x: clampedX,
+                        y: clampedY,
+                        parentSceneId: currentScene.id
+                    });
                 }
             });
         }
