@@ -167,6 +167,15 @@ const Create: React.FC = () => {
                         </button>
                         <button
                             className={`${styles.createGameButtonItem}`}
+                            onClick={() => {
+                                clearState();
+                                navigate('/gameSettingsEditor?mode=worldInteraction')
+                            }}
+                        >
+                            地图编辑
+                        </button>
+                        <button
+                            className={`${styles.createGameButtonItem}`}
                             onClick={() => navigate('/profile')}
                         >
                             活动获取积分

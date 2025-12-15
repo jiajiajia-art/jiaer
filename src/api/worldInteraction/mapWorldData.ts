@@ -1,9 +1,9 @@
 import { api } from "../base";
-import type { AllGameData } from "./mapWorldData.type";
+import type { WorldInteractionGameData } from "./worldInteractionApi.type";
 
 const MapWorldData = {
     getMapWorldData: (fileId: string) =>
-        api.get<AllGameData>(`/world-interaction/files/${fileId}`),
+        api.get<WorldInteractionGameData>(`/world-interaction/files/${fileId}`),
 }
 
 export default MapWorldData;

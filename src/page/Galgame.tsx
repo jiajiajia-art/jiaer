@@ -156,9 +156,18 @@ const Galgame = () => {
             }
 
             if (step.isPlayer) {
-                characterImage = worldSetting?.player?.images.startsWith('http')
-                    ? worldSetting?.player?.images
-                    : `${HOST_ADDRESS}${worldSetting?.player?.images}`;
+                // player.images 可能是对象 { base: "..." } 或字符串
+                const images = worldSetting?.player?.images as any;
+                if (images) {
+                    const playerImage = typeof images === 'string' 
+                        ? images 
+                        : (images?.base || images);
+                    if (playerImage && typeof playerImage === 'string') {
+                        characterImage = playerImage.startsWith('http')
+                            ? playerImage
+                            : `${HOST_ADDRESS}${playerImage}`;
+                    }
+                }
             }
 
             return {
@@ -180,10 +189,17 @@ const Galgame = () => {
                 : (step.description || '请选择你的行动');
 
             let characterImage: string | undefined;
-            if (worldSetting?.player?.images) {
-                characterImage = worldSetting.player.images.startsWith('http')
-                    ? worldSetting.player.images
-                    : `${HOST_ADDRESS}${worldSetting.player.images}`;
+            // player.images 可能是对象 { base: "..." } 或字符串
+            const images = worldSetting?.player?.images as any;
+            if (images) {
+                const playerImage = typeof images === 'string' 
+                    ? images 
+                    : (images?.base || images);
+                if (playerImage && typeof playerImage === 'string') {
+                    characterImage = playerImage.startsWith('http')
+                        ? playerImage
+                        : `${HOST_ADDRESS}${playerImage}`;
+                }
             }
 
             return {
@@ -344,11 +360,20 @@ const Galgame = () => {
                                         id: index + 1,
                                         text: extractPlainText(opt),
                                     })),
-                                    characterImage: worldSetting?.player?.images
-                                        ? (worldSetting.player.images.startsWith('http')
-                                            ? worldSetting.player.images
-                                            : `${HOST_ADDRESS}${worldSetting.player.images}`)
-                                        : undefined,
+                                    characterImage: (() => {
+                                        const images = worldSetting?.player?.images as any;
+                                        if (images) {
+                                            const playerImage = typeof images === 'string' 
+                                                ? images 
+                                                : (images?.base || images);
+                                            if (playerImage && typeof playerImage === 'string') {
+                                                return playerImage.startsWith('http')
+                                                    ? playerImage
+                                                    : `${HOST_ADDRESS}${playerImage}`;
+                                            }
+                                        }
+                                        return undefined;
+                                    })(),
                                     characterPosition: 'right',
                                 };
                                 setInitialMessages([choiceMessage]);
@@ -383,11 +408,20 @@ const Galgame = () => {
                                     id: index + 1,
                                     text: extractPlainText(opt),
                                 })),
-                                characterImage: worldSetting?.player?.images
-                                    ? (worldSetting.player.images.startsWith('http')
-                                        ? worldSetting.player.images
-                                        : `${HOST_ADDRESS}${worldSetting.player.images}`)
-                                    : undefined,
+                                characterImage: (() => {
+                                    const images = worldSetting?.player?.images as any;
+                                    if (images) {
+                                        const playerImage = typeof images === 'string' 
+                                            ? images 
+                                            : (images?.base || images);
+                                        if (playerImage && typeof playerImage === 'string') {
+                                            return playerImage.startsWith('http')
+                                                ? playerImage
+                                                : `${HOST_ADDRESS}${playerImage}`;
+                                        }
+                                    }
+                                    return undefined;
+                                })(),
                                 characterPosition: 'right',
                             };
                             setInitialMessages([choiceMessage]);
@@ -600,11 +634,17 @@ const Galgame = () => {
                         if (firstScene) {
                             setCurrentScene(firstScene);
                         }
-                        if (firstScene.images) {
-                            sceneImage = firstScene.images.startsWith('http')
-                                ? firstScene.images
-                                : `${HOST_ADDRESS}${firstScene.images}`;
+                        // 场景图片可能是 image 或 images 字段
+                        const sceneImageUrl = (firstScene as any).image || firstScene.images;
+                        console.log('场景图片URL:', sceneImageUrl, 'firstScene:', firstScene);
+                        if (sceneImageUrl) {
+                            sceneImage = sceneImageUrl.startsWith('http')
+                                ? sceneImageUrl
+                                : `${HOST_ADDRESS}${sceneImageUrl}`;
+                            console.log('设置背景图片:', sceneImage);
                             setBackgroundImage(sceneImage);
+                        } else {
+                            console.warn('场景图片URL为空，firstScene:', firstScene);
                         }
                     }
 

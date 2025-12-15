@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ScenesPanel.module.css';
-import type { AllGameData, SceneSetting } from '../../api/galgame/EditorData.type';
+import type { UnifiedGameData, SceneSetting } from '../../api/common/gameData.type';
 import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
 import EditorApi from '../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
@@ -23,10 +23,10 @@ interface LocalScene {
 }
 
 interface ScenesPanelProps {
-    gameData?: AllGameData | null;
+    gameData?: UnifiedGameData | null;
     isLoading?: boolean;
     fileId?: string | null;
-    onGetData?: (getDataFn: () => Partial<AllGameData> | null) => void;
+    onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
 }
 
@@ -72,18 +72,23 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
 
         const scenes = sceneData
             .filter(scene => !scene.id.startsWith('temp-')) // 过滤掉临时场景
-            .map(scene => ({
-                id: scene.id,
-                name: scene.name,
-                type: scene.type || '',
-                description: scene.desc || '',
-                atmosphere: undefined,
-                dangerLevel: undefined,
-                image: scene.image || undefined,
-                items: undefined,
-                events: [],
-                soundtrack: scene.bgmId || undefined,
-            }));
+            .map(scene => {
+                // 从原始数据中获取 subscenes，如果不存在则使用空数组
+                const originalScene = gameData?.sceneSetting?.scenes?.find(s => s.id === scene.id);
+                return {
+                    id: scene.id,
+                    name: scene.name,
+                    type: scene.type || '',
+                    description: scene.desc || '',
+                    atmosphere: undefined,
+                    dangerLevel: undefined,
+                    image: scene.image || undefined,
+                    items: undefined,
+                    events: [],
+                    soundtrack: scene.bgmId || undefined,
+                    subscenes: originalScene?.subscenes || [], // 添加 subscenes 字段
+                };
+            });
 
         return {
             scenes,

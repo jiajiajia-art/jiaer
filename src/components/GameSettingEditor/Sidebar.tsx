@@ -6,10 +6,11 @@ interface SidebarProps {
     onPanelChange: (panelId: string) => void;
     isParsing: boolean;
     isParsed: boolean;
+    mode?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed }) => {
-    const navItems = [
+const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed, mode = 'visual' }) => {
+    const baseNavItems = [
         {
             id: 'documents',
             number: '1',
@@ -34,13 +35,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
             title: '场景 / BGM',
             subtitle: '背景 + 配乐绑定',
         },
-        {
-            id: 'mapEdit',
-            number: '5',
-            title: '地图编辑',
-            subtitle: '子场景 / 场景 / 地图',
-        },
     ];
+
+    // 只在 worldInteraction 模式下添加地图编辑模块
+    const navItems = mode === 'worldInteraction' 
+        ? [
+            ...baseNavItems,
+            {
+                id: 'mapEdit',
+                number: '5',
+                title: '地图编辑',
+                subtitle: '子场景 / 场景 / 地图',
+            },
+        ]
+        : baseNavItems;
 
     const isItemDisabled = (itemId: string) => {
         if (itemId === 'documents') return false;

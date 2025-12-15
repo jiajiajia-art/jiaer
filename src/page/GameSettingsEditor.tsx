@@ -7,33 +7,43 @@ import ScenesPanel from '../components/GameSettingEditor/ScenesPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
 import { authFetch } from '../api/base';
 import EditorApi from '../api/galgame/EditorData';
-import type { AllGameData } from '../api/galgame/EditorData.type';
+import type { UnifiedGameData } from '../api/common/gameData.type';
 import type { Scene as ApiScene } from '../api/galgame/getGalgamePreset.type';
+import { adaptVisualGameData, adaptWorldGameData } from '../api/common/gameDataAdapter';
+import type { AllGameData as VisualGameData } from '../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
 import { toast, Toaster } from 'react-hot-toast';
 import { useEditorStore } from '../store/editorStore';
 import GameAction from '../api/game/gameAction';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
+import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
 import { useAuthStore } from '../store/useAuthStore';
+import { useGameStore } from '../store/gameStore';
 import MapPanel from '../components/GameSettingEditor/MapPanel';
+import MapWorldData from '../api/worldInteraction/mapWorldData';
+import worldEditor from '../api/worldInteraction/worldEditor';
 
 const GameSettingsEditor = () => {
     // 从 Zustand store 获取状态和方法
     const { fileId, activePanel, isParsed, setFileId, setActivePanel, setIsParsed } = useEditorStore();
     const { user} = useAuthStore();
-    
+    const { setPdfFileId, setSessionId } = useGameStore();
+    const [searchParams] = useSearchParams();
+    const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'    
     const [isParsing, setIsParsing] = useState<boolean>(false);
-    const [gameData, setGameData] = useState<AllGameData | null>(null);
+    const [gameData, setGameData] = useState<UnifiedGameData | null>(null);
     const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
     const navigate = useNavigate();
+    const hasFetchedRef = useRef<string | null>(null); // 跟踪已请求的 fileId    
 
     // 各个面板的数据获取函数引用
-    const worldPanelGetDataRef = useRef<() => Partial<AllGameData> | null>(null);
-    const charactersPanelGetDataRef = useRef<() => Partial<AllGameData> | null>(null);
-    const scenesPanelGetDataRef = useRef<() => Partial<AllGameData> | null>(null);
+    const worldPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
+    const charactersPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
+    const scenesPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
 
     const handlePanelChange = (panelId: string) => {
         if (isParsing && panelId !== 'documents') {
@@ -46,32 +56,50 @@ const GameSettingsEditor = () => {
     };
 
     const handleFileUpload = async (file: File): Promise<boolean> => {
-        // fetchEditorData('893d61c0-5fbe-4251-b83c-4e9bcfb4bda3');
-        const formData = new FormData();
-        formData.append('document', file);
         try {
-            // 不设置 timeout，允许后端有足够时间处理文件上传和解析
-            const response = await authFetch('/api/optical/games/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            if (response.ok) {
-                const data = await response.json();
-                console.log('File uploaded successfully:', data);
+            let uploadedFileId: string | undefined;
+            
+            // 根据模式选择不同的上传接口
+            if (mode === 'worldInteraction') {
+                // 使用世界交互模式的上传接口
+                const response = await worldEditor.uploadWorldFile(file);
 
-                // 从响应中获取 fileId
-                const uploadedFileId = data.fileId || data.data?.fileId || data.file_id;
-                if (uploadedFileId) {
-                    console.log("Uploaded File ID:", uploadedFileId);
-                    
-                    // 使用 Zustand store 更新 fileId（自动保存到 localStorage）
-                    setFileId(uploadedFileId);
-                    setIsParsed(false);
+                const fileIdFromResp = response.data.fileId;
+                if (fileIdFromResp) {
+                    uploadedFileId = fileIdFromResp;
+                    console.log('World file uploaded successfully:', response.data);
+                } else {
+                    console.error('Error uploading world file: missing fileId', response.data);
+                    return false;
                 }
-
+            } else {
+                // 默认使用视觉编辑模式的上传接口
+                const formData = new FormData();
+                formData.append('document', file);
+                // 不设置 timeout，允许后端有足够时间处理文件上传和解析
+                const response = await authFetch('/api/optical/games/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('File uploaded successfully:', data);
+                    // 从响应中获取 fileId
+                    uploadedFileId = data.fileId || data.data?.fileId || data.file_id;
+                } else {
+                    console.error('Error uploading file:', response.statusText);
+                    return false;
+                }
+            }
+            
+            if (uploadedFileId) {
+                console.log("Uploaded File ID:", uploadedFileId);
+                // 使用 Zustand store 更新 fileId（自动保存到 sessionStorage）
+                setFileId(uploadedFileId);
+                setIsParsed(false);
                 return true;
             } else {
-                console.error('Error uploading file:', response.statusText);
+                console.error('No fileId returned from upload');
                 return false;
             }
         } catch (error) {
@@ -81,44 +109,63 @@ const GameSettingsEditor = () => {
     };
 
     // 获取编辑器数据
-    const fetchEditorData = useCallback(async (id: string) => {
-        if (!id) return;
+    const fetchEditorData = useCallback(async (id: string, dataMode?: string) => {
+        if (!id || isLoadingData) return; // 如果正在加载，避免重复请求
 
         setIsLoadingData(true);
         try {
-            const response = await EditorApi.getEditorData(id);
+            // 根据模式选择不同的 API
+            const currentMode = dataMode || mode;
+            let response;
+            
+            if (currentMode === 'worldInteraction') {
+                // 使用世界交互 API
+                response = await MapWorldData.getMapWorldData(id);
+            } else {
+                // 默认使用视觉编辑 API
+                response = await EditorApi.getEditorData(id);
+            }
+            
             if (response.data?.success && response.data) {
-                setGameData(response.data);
-                // 从响应中获取 fileId 并设置（如果还没有设置的话）
-                if (response.data.fileId) {
-                    // 使用 Zustand store 更新 fileId（自动保存到 sessionStorage）
-                    setFileId(response.data.fileId);
+                // 根据模式转换数据为统一格式
+                let unifiedData: UnifiedGameData;
+                if (currentMode === 'worldInteraction') {
+                    unifiedData = adaptWorldGameData(response.data as WorldInteractionGameData);
+                } else {
+                    unifiedData = adaptVisualGameData(response.data as VisualGameData);
                 }
-                console.log('Editor data fetched successfully:', response.data);
+                
+                setGameData(unifiedData);
+                // 注意：不要更新 fileId，避免触发 useEffect 无限循环
+                // 如果需要更新 fileId，应该在调用 fetchEditorData 之前更新
+                console.log('Editor data fetched and adapted successfully:', unifiedData);
             } else {
                 console.error('Failed to fetch editor data');
+                // 请求失败时，清除 hasFetchedRef，允许重试
+                if (hasFetchedRef.current === id) {
+                    hasFetchedRef.current = null;
+                }
             }
         } catch (error) {
             console.error('Error fetching editor data:', error);
+            // 请求失败时，清除 hasFetchedRef，允许重试
+            if (hasFetchedRef.current === id) {
+                hasFetchedRef.current = null;
+            }
         } finally {
             setIsLoadingData(false);
         }
-    }, []);
+    }, [mode, isLoadingData]);
 
-    // 初始化：如果有保存的 fileId 且已解析，自动加载数据
+    // 初始化：如果有保存的 fileId，自动加载数据
     useEffect(() => {
-        if (fileId && isParsed && !gameData && !isLoadingData) {
-            fetchEditorData(fileId);
-        }
-    }, [fileId, isParsed, gameData, isLoadingData, fetchEditorData]);
-
-    useEffect(() => {
-        if (fileId){
+        if (fileId && fileId !== hasFetchedRef.current && !isLoadingData) {
+            hasFetchedRef.current = fileId;
             setIsParsed(true);
             fetchEditorData(fileId);
             setActivePanel('world');
         }
-    }, []);
+    }, [fileId]);
 
     const handleParsingStart = useCallback(() => {
         setIsParsing(true);
@@ -312,32 +359,42 @@ const GameSettingsEditor = () => {
     };
 
     const createGalgameSession = useCallback(async () => {
-        console.log('pdfF', fileId);
-        
-        if (!fileId || !user?.user?.id) {
-            return null;
-        }
-        console.log('测试体验');
-        
+        if (!fileId || !user?.user?.id) return null;
+
         try {
-            // 创建 galgame 会话
-            const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId: fileId });
-            if (sessionResponse.data.success) {
-                const sessionId = sessionResponse.data.data.session.session_id;
-                // 成功创建会话后跳转到galgame页面
-                navigate(`/galgame`);
-                return sessionId;
+            // 根据模式选择不同的会话创建接口
+            if (mode === 'worldInteraction') {
+                const sessionResponse = await createWorldSessionApi.createWorldSession({ fileId });
+                if (sessionResponse.data.success) {
+                    const sessionId = sessionResponse.data.session.sessionId;
+                    setPdfFileId(fileId);
+                    setSessionId(sessionId);
+                    navigate(`/galgameMap`);
+                    return sessionId;
+                } else {
+                    toast.error((sessionResponse.data as any)?.message || '创建世界交互游戏失败，请重试');
+                    return null;
+                }
             } else {
-                toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
-                return null;
+                const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId: fileId });
+                if (sessionResponse.data.success) {
+                    const sessionId = sessionResponse.data.data.session.session_id;
+                    setPdfFileId(fileId);
+                    setSessionId(sessionId);
+                    navigate(`/galgame`);
+                    return sessionId;
+                } else {
+                    toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
+                    return null;
+                }
             }
         } catch (error: any) {
-            console.error('❌ Galgame Session 创建错误:', error);
-            const errorMessage = error.response?.data?.message || error.message || '创建游戏失败，请稍后重试';
+            console.error('❌ Session 创建错误:', error);
+            const errorMessage = error?.response?.data?.message || error?.response?.data?.error || error.message || '创建游戏失败，请稍后重试';
             toast.error(errorMessage);
             return null;
         }
-    }, [user?.user?.id, fileId, navigate]);
+    }, [user?.user?.id, fileId, navigate, setPdfFileId, setSessionId, mode]);
 
     return (
         <div className={styles.appShell}>
@@ -355,6 +412,7 @@ const GameSettingsEditor = () => {
                 onPanelChange={handlePanelChange}
                 isParsing={isParsing}
                 isParsed={isParsed}
+                mode={mode ?? undefined}
             />
             <main className={styles.main}>
                 <header className={styles.topBar}>
@@ -390,20 +448,6 @@ const GameSettingsEditor = () => {
                         >
                             直接发布
                         </button>
-
-                        {/* {showSubmitButton && (
-                            <button
-                                className={styles.primary}
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    console.log('按钮被点击', { fileId, gameData: !!gameData, isSubmitting, isLoadingData, activePanel });
-                                    handleSubmit();
-                                }}
-                                disabled={!fileId || !gameData || isSubmitting || isLoadingData}
-                            >
-                                {isSubmitting ? '提交中...' : '确认修改'}
-                            </button>
-                        )} */}
                     </div>
                 </header>
 
@@ -453,17 +497,20 @@ const GameSettingsEditor = () => {
                     />
                 </section>
 
-                <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
-                    <MapPanel 
-                        sceneSetting={gameData?.sceneSetting} 
-                        fileId={fileId || ''} 
-                        onDataChange={() => {
-                            if (fileId) {
-                                fetchEditorData(fileId);
-                            }
-                        }}
-                    />
-                </section>
+                {/* 只在 worldInteraction 模式下显示 MapPanel（模块五） */}
+                {mode === 'worldInteraction' && (
+                    <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
+                        <MapPanel 
+                            sceneSetting={gameData?.sceneSetting} 
+                            fileId={fileId || ''} 
+                            onDataChange={() => {
+                                if (fileId) {
+                                    fetchEditorData(fileId);
+                                }
+                            }}
+                        />
+                    </section>
+                )}
             </main>
             {showPublishModal && (
                 <PublishSettingsModal

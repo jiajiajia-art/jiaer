@@ -1,80 +1,22 @@
-export interface KeyEvent {
-    title: string;
-    description: string;
-}
+// 使用统一的类型定义
+import type { 
+    UnifiedGameData,
+    WorldSetting as UnifiedWorldSetting,
+    Player as UnifiedPlayer,
+    NPC as UnifiedNPC,
+    Scene as UnifiedScene,
+    SceneSetting as UnifiedSceneSetting,
+    NPCSetting as UnifiedNPCSetting
+} from "../common/gameData.type";
 
-export interface PlayerCharacter {
-    name: string;
-    age: number;
-    gender: string;
-    personality: string;
-    appearance: string;
-    tone: string;
-    imagePath: string;
-}
+// 重新导出统一类型，保持向后兼容
+export type { KeyEvent, SubScene } from "../common/gameData.type";
+export type PlayerCharacter = UnifiedPlayer;
+export type NPC = UnifiedNPC;
+export type Scene = UnifiedScene;
+export type WorldSetting = UnifiedWorldSetting;
+export type NPCSetting = UnifiedNPCSetting;
+export type SceneSetting = UnifiedSceneSetting;
 
-export interface NPC {
-    id: string;
-    name: string;
-    age: number;
-    gender: string;
-    description: string;
-    appearance: string;
-    personality: string;
-    tone: string;
-    images: {
-        base: string;
-        [key: string]: string;
-    };
-}
-
-export interface SubScene {
-    id: string;
-    name: string;
-    description: string;
-    image: string;
-    npcs: string[];
-    position: [number, number];
-    npcs_slots: {
-        position: [number, number];
-        zoom: number;
-    }[];
-}
-
-export interface Scene {
-    id: string;
-    name: string;
-    description: string;
-    image: string;
-    subscenes: SubScene[];
-    soundtrack: string;
-    position: [number, number];
-}
-
-export interface WorldSetting {
-    title: string;
-    summary: string;
-    background: string;
-    Theme: string[];
-    preamble: string;
-    initialPlot: string;
-    literary: string;
-    keyEvents: KeyEvent[];
-    Player: PlayerCharacter;
-}
-
-export interface NPCSetting {
-    npcs: NPC[];
-}
-
-export interface SceneSetting {
-    scenes: Scene[];
-}
-
-export interface AllGameData {
-    success: boolean;
-    fileId: string;
-    worldSetting: WorldSetting;
-    npcSetting: NPCSetting;
-    sceneSetting: SceneSetting;
-}
+// 为了向后兼容，保留原有类型定义
+export type AllGameData = UnifiedGameData;

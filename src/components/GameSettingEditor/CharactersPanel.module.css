@@ -142,10 +142,11 @@
 
 .characterThumb {
     width: 72px;
-    height: 72px;
+    height: 100%;
     border-radius: 12px;
-    background-size: cover;
+    background-size: contain;
     background-position: center;
+    background-repeat: no-repeat;
 }
 
 .characterMeta {

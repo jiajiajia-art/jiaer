@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './WorldPanel.module.css';
-import type { AllGameData, WorldSetting } from '../../api/galgame/EditorData.type';
+import type { UnifiedGameData, WorldSetting } from '../../api/common/gameData.type';
 import { MdArrowDropDown } from 'react-icons/md';
 
 interface WorldField {
@@ -19,9 +19,9 @@ interface StoryLine {
 }
 
 interface WorldPanelProps {
-    gameData?: AllGameData | null;
+    gameData?: UnifiedGameData | null;
     isLoading?: boolean;
-    onGetData?: (getDataFn: () => Partial<AllGameData> | null) => void;
+    onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
     handleSubmit?: () => void;
     isSubmitting?: boolean;
     fileId?: string;
@@ -286,8 +286,8 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData, handleSubm
             onGetData(() => {
                 const worldSettingDiff = getWorldSettingData();
                 if (!worldSettingDiff) return null;
-                // 类型断言：Partial<WorldSetting> 可以安全地作为 Partial<AllGameData> 的一部分
-                return { worldSetting: worldSettingDiff } as Partial<AllGameData>;
+                // 类型断言：Partial<WorldSetting> 可以安全地作为 Partial<UnifiedGameData> 的一部分
+                return { worldSetting: worldSettingDiff } as Partial<UnifiedGameData>;
             });
         }
     }, [onGetData, getWorldSettingData]);
@@ -402,7 +402,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({ gameData, onGetData, handleSubm
                 <div className={styles.storylineSection}>
                     <div className={styles.storylineHeader} style={{ marginBottom: isToneExpanded ? '8px' : '0', cursor: 'pointer' }} onClick={() => setIsToneExpanded(!isToneExpanded)}>
                         <span className={styles.fieldLabel}>文风要求（可选）</span>
-                        <MdArrowDropDown size={30} style={{ transform: isStorylineExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                        <MdArrowDropDown size={30} style={{ transform: isToneExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                             </div>
                     {isToneExpanded && (
                         <>

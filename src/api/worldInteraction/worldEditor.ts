@@ -2,8 +2,28 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { Scene, SubScene } from "./mapWorldData.type";
 import type { generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
+import type { WorldInteractionGameData } from "./worldInteractionApi.type";
 
 const worldEditor = {
+    uploadWorldFile: (file: File) => {
+        const formData = new FormData();
+        formData.append('document', file);
+        return api.post<WorldInteractionGameData>(
+            `/worldInteraction/document/upload`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                timeout: 1500000,
+            }
+        );
+    },
+    getWorldFile: (fileId: string) => {
+        return api.get<WorldInteractionGameData>(
+            `/api/world-interaction/files/${fileId}`
+        );
+    },
     setZoomNpc: (fileId: string, sceneId: string, subsceneId: string, npcSlots: NpcSlot[]) => {
         return api.put<ApiResponse<SubScene>>(
             `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${subsceneId}/npc-slots`,

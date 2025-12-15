@@ -11,6 +11,8 @@ import InteractWithNpc from "../components/GalgameMap/interactWithNpc";
 import interactionApi from "../api/worldInteraction/interactionApi";
 import type { GameEvent, NPCInfo, SubsceneInfo } from "../api/worldInteraction/interactionApi.type";
 import { useMapGalgameStore, MapViewState } from "../store/mapGalgameStore";
+import { adaptWorldGameData } from "../api/common/gameDataAdapter";
+import type { WorldInteractionGameData } from "../api/worldInteraction/worldInteractionApi.type";
 
 export interface EventData {
     event: GameEvent;
@@ -75,10 +77,11 @@ const GalgameMap = () => {
 
         try {
             const response = await MapWorldData.getMapWorldData(pdfFileId);
-            if (response.data.success && response.data) {
-                setGameData(response.data);
+            if (response.data?.success && response.data) {
+                // 使用适配器将 WorldInteractionGameData 转换为 UnifiedGameData
+                const unifiedData = adaptWorldGameData(response.data as WorldInteractionGameData);
+                setGameData(unifiedData);
                 console.log('获取地图世界数据成功');
-                
             }
         } catch (error) {
             console.error("获取地图世界数据失败:", error);

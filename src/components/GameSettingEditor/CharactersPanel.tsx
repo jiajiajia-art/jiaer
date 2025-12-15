@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './CharactersPanel.module.css';
-import type { AllGameData, NPCSetting, NPC, Player } from '../../api/galgame/EditorData.type';
+import type { UnifiedGameData, NPCSetting, NPC, Player } from '../../api/common/gameData.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import DeletModal from '../goodsModal/DeletModal';
 import EditorApi from '../../api/galgame/EditorData';
@@ -43,9 +43,9 @@ interface Character {
 }
 
 interface CharactersPanelProps {
-    gameData?: AllGameData | null;
+    gameData?: UnifiedGameData | null;
     isLoading?: boolean;
-    onGetData?: (getDataFn: () => Partial<AllGameData> | null) => void;
+    onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
 }
 
@@ -178,6 +178,17 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     }
                 });
 
+                // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
+                let finalImages: { base: string; [key: string]: string } | undefined = undefined;
+                if (Object.keys(images).length > 0) {
+                    if (!images.base) {
+                        // 优先使用 portrait，否则使用第一个 variation 的图片
+                        images.base = char.portrait || Object.values(images)[0] || '';
+                    }
+                    // 类型断言：确保 base 属性存在
+                    finalImages = images as { base: string; [key: string]: string };
+                }
+
                 // 获取与玩家的关系（从 relationships 中查找）
                 const playerRelationship = char.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
@@ -192,7 +203,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     personality: char.personality && char.personality.length > 0 ? char.personality.join(', ') : undefined,
                     tone: char.speech || '',
                     relationship: playerRelationship?.description || undefined,
-                    images: Object.keys(images).length > 0 ? images : undefined,
+                    images: finalImages,
                 };
             });
 
@@ -497,6 +508,17 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 }
             });
 
+            // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
+            let finalImages: { base: string; [key: string]: string } | undefined = undefined;
+            if (Object.keys(images).length > 0) {
+                if (!images.base) {
+                    // 优先使用 portrait，否则使用第一个 variation 的图片
+                    images.base = characterToSave.portrait || Object.values(images)[0] || '';
+                }
+                // 类型断言：确保 base 属性存在
+                finalImages = images as { base: string; [key: string]: string };
+            }
+
             // 获取与玩家的关系
             const playerRelationship = characterToSave.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
@@ -511,7 +533,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 personality: characterToSave.personality && characterToSave.personality.length > 0 ? characterToSave.personality.join(', ') : undefined,
                 tone: characterToSave.speech || '',
                 relationship: playerRelationship?.description || undefined,
-                images: Object.keys(images).length > 0 ? images : undefined,
+                images: finalImages,
             };
 
             try {
@@ -655,6 +677,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             }
         });
 
+        // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
+        let finalImages: { base: string; [key: string]: string } | undefined = undefined;
+        if (Object.keys(images).length > 0) {
+            if (!images.base) {
+                images.base = newCharacterData.portrait || Object.values(images)[0] || '';
+            }
+            // 类型断言：确保 base 属性存在
+            finalImages = images as { base: string; [key: string]: string };
+        }
+
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
         const newNpc: NPC = {
@@ -668,7 +700,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             personality: newCharacterData.personality && newCharacterData.personality.length > 0 ? newCharacterData.personality.join(', ') : undefined,
             tone: newCharacterData.speech || '',
             relationship: playerRelationship?.description || undefined,
-            images: Object.keys(images).length > 0 ? images : undefined,
+            images: finalImages,
         };
 
         try {
