@@ -4,7 +4,6 @@ import worldEditor from '../../api/worldInteraction/worldEditor';
 import type { NpcSlot } from '../../api/worldInteraction/worldEditor.type';
 import toast from 'react-hot-toast';
 import { IoMdArrowDropdown, IoMdArrowDropright } from 'react-icons/io';
-import gameDataApi from '../../api/game/gameData';
 
 interface SubScene {
     id: string;
@@ -31,8 +30,10 @@ interface MapPanelProps {
     sceneSetting?: {
         scenes?: Scene[];
     };
+    worldMapImage?: string | null;
     fileId: string;
     onDataChange?: () => void; // 数据变更回调，用于刷新数据
+    isActive?: boolean; // 当前面板是否可见，用于刷新布局
 }
 
 interface PlacedNPC {
@@ -53,18 +54,18 @@ interface PlacedSubScene {
 const DEFAULT_SCENE_IMAGE = 'http://localhost:3000/api/visual/presets/c1c0450b-b086-440d-a477-f31fb71adbde/images/scenes/shire.png';
 const DEFAULT_MAP_IMAGE = DEFAULT_SCENE_IMAGE; // 大地图默认图片
 const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
-const DEFAULT_SUBSCENE_ICON = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
+const DEFAULT_SUBSCENE_ICON = `${import.meta.env.BASE_URL}data/assets/defaultScene.png`;
 const BASE_NPC_WIDTH = 100;
 const BASE_NPC_HEIGHT = 150;
 const SUBSCENE_ICON_SIZE = 40;
-const SCENE_ICON_SIZE = 50; // 场景图标大小
+const SCENE_ICON_SIZE = 40; // 场景图标大小
 const DEFAULT_SCALE = 1.0;
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.0;
 const SCALE_STEP = 0.1;
 const MAX_NPCS = 3;
 
-const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange }) => {
+const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId, onDataChange, isActive }) => {
     // 子场景tab状态
     const [mapTab, setMapTab] = useState<'subScene' | 'scene' | 'map'>('subScene');
     const [selectedSubSceneId, setSelectedSubSceneId] = useState<string | null>(null);
@@ -105,6 +106,12 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
     const currentSceneIdRef = useRef<string | null>(null);
     const currentSubSceneIdRef = useRef<string | null>(null);
 
+    useEffect(() => {
+        if (isActive) {
+            setMapTab('subScene');
+        }
+    }, [isActive]);
+
     // 计算属性，提取subscenes
     const subScenes = useMemo<SubScene[]>(() => {
         if (!sceneSetting?.scenes) return [];
@@ -134,6 +141,24 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
     const sceneImageUrl = mapTab === 'scene' && currentScene?.image 
         ? currentScene.image 
         : DEFAULT_SCENE_IMAGE;
+
+    // 地图 tab 使用的图片地址（优先上传/生成后的 url，其次后端返回的 worldMapImage + '/dummy'，最后默认图）
+    const mapImageSources = useMemo(() => {
+        const base = worldMapImageUrl || worldMapImage || null;
+        const dummy = base ? `${base}/dummy` : null;
+        return { dummy, base };
+    }, [worldMapImageUrl, worldMapImage]);
+
+    const currentMapSrc = mapImageSources.dummy || mapImageSources.base || DEFAULT_MAP_IMAGE;
+
+    // 同步后端返回的 worldMapImage 到本地状态（用于刷新后直接使用 /dummy 路径）
+    useEffect(() => {
+        if (worldMapImage) {
+            setWorldMapImageUrl(worldMapImage);
+        } else {
+            setWorldMapImageUrl(null);
+        }
+    }, [worldMapImage]);
 
     // 当图片URL改变时，重置加载状态
     useEffect(() => {
@@ -248,25 +273,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
         setSelectedSceneIdInMap(null);
     }, [mapTab, sceneSetting?.scenes]);
 
-    // 获取世界地图URL（在数据刷新后或组件初始化时）
-    useEffect(() => {
-        if (mapTab === 'map' && fileId) {
-            const fetchWorldMap = async () => {
-                try {
-                    const response = await gameDataApi.getWorldMap(fileId);
-                    // 将blob转换为URL
-                    const imageUrl = URL.createObjectURL(response.data);
-                    setWorldMapImageUrl(imageUrl);
-                    setMapImageLoaded(false); // 重置加载状态
-                } catch (error) {
-                    // 如果获取失败，使用默认图片
-                    setWorldMapImageUrl(null);
-                }
-            };
-            fetchWorldMap();
-        }
-    }, [mapTab, fileId, sceneSetting]); // 当数据刷新时，sceneSetting会更新，触发重新获取
-
     // 监听窗口大小变化，确保NPC和子场景跟随图片移动
     useEffect(() => {
         const handleResize = () => {
@@ -279,7 +285,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
 
     // 监听容器尺寸变化，确保容器准备好后再计算位置
     useEffect(() => {
-        if (mapTab !== 'subScene') {
+        // 仅在当前面板可见且是子场景 tab 时检查容器
+        if (!isActive || mapTab !== 'subScene') {
             setContainerReady(false);
             return;
         }
@@ -316,11 +323,17 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
         };
         window.addEventListener('resize', handleResize);
 
+        // 如果图片已加载且容器可见，立即标记为 ready（处理刷新后首次进入的情况）
+        const image = imageRef.current;
+        if (image && image.complete) {
+            setImageLoaded(true);
+        }
+
         return () => {
             resizeObserver.disconnect();
             window.removeEventListener('resize', handleResize);
         };
-    }, [mapTab]);
+    }, [mapTab, isActive]);
 
     // 计算图片在 object-fit: contain 模式下的实际显示尺寸和偏移
     const getImageDisplayBounds = useCallback((image: HTMLImageElement, container: HTMLDivElement) => {
@@ -1430,7 +1443,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                                 </div>
                             )}
                             
-                            {/* <div className={styles.confirmSection}> */}
                                 <button 
                                     className={styles.confirmBtn}
                                     onClick={handleSaveSubScenePositions}
@@ -1438,13 +1450,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                                 >
                                     确认保存子场景位置
                                 </button>
-                                {/* <div className={styles.confirmHint}>
-                                    {placedSubScenes.length === 0 
-                                        ? '暂无子场景位置需要保存'
-                                        : `将保存 ${placedSubScenes.length} 个子场景的位置信息`
-                                    }
-                                </div>
-                            </div> */}
                         </div>
                     </React.Fragment>
                 )}
@@ -1491,16 +1496,22 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                             </div>
                             <img 
                                 ref={mapImageRef}
-                                src={worldMapImageUrl || DEFAULT_MAP_IMAGE} 
+                                src={`${currentMapSrc}`} 
                                 alt="世界地图" 
                                 className={styles.sceneImage}
                                 draggable={false}
-                                key={worldMapImageUrl || 'default'} // 添加key以强制重新加载
+                                key={currentMapSrc} // 添加key以强制重新加载
                                 onLoad={() => {
                                     setMapImageLoaded(true);
                                 }}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
+                                    // 如果当前是 dummy 路径失败，尝试回退 base 原图
+                                    if (mapImageSources.dummy && target.src === mapImageSources.dummy && mapImageSources.base) {
+                                        target.src = mapImageSources.base;
+                                        return;
+                                    }
+                                    // 再次失败则回退默认
                                     if (target.src !== DEFAULT_MAP_IMAGE) {
                                         target.src = DEFAULT_MAP_IMAGE;
                                         setWorldMapImageUrl(null); // 清除无效的URL

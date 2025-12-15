@@ -503,6 +503,7 @@ const GameSettingsEditor = () => {
                         <MapPanel 
                             sceneSetting={gameData?.sceneSetting} 
                             fileId={fileId || ''} 
+                            isActive={activePanel === 'mapEdit'}
                             onDataChange={() => {
                                 if (fileId) {
                                     fetchEditorData(fileId);
