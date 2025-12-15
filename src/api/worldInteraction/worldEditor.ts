@@ -1,7 +1,7 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { NpcSlot } from "./worldEditor.type";
+import type { generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
 
 const worldEditor = {
     setZoomNpc: (fileId: string, sceneId: string, subsceneId: string, npcSlots: NpcSlot[]) => {
@@ -40,7 +40,7 @@ const worldEditor = {
     setWorldMapImage: (fileId: string, file: File) => {
         const formData = new FormData();
         formData.append('image', file);
-        return api.post<ApiResponse<SubScene>>(
+        return api.post<generateWorldMapImageResponse>(
             `/world-interaction/edit/${fileId}/world-map/image`,
             formData,
             {
@@ -51,7 +51,7 @@ const worldEditor = {
         );
     },
     generateWorldMapImage: (fileId: string) => {
-        return api.post<ApiResponse<SubScene>>(
+        return api.post<generateWorldMapImageResponse>(
             `/world-interaction/images/generate-world-map`,
             {
                 fileId: fileId

@@ -454,7 +454,15 @@ const GameSettingsEditor = () => {
                 </section>
 
                 <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
-                    <MapPanel sceneSetting={gameData?.sceneSetting} fileId={fileId || ''} />
+                    <MapPanel 
+                        sceneSetting={gameData?.sceneSetting} 
+                        fileId={fileId || ''} 
+                        onDataChange={() => {
+                            if (fileId) {
+                                fetchEditorData(fileId);
+                            }
+                        }}
+                    />
                 </section>
             </main>
             {showPublishModal && (

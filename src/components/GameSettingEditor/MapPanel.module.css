@@ -9,9 +9,16 @@
 .mapHeader {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
     align-items: flex-start;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+}
+
+.mapHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 700;
 }
 
 .eyebrow {
@@ -23,10 +30,19 @@
     font-weight: 600;
 }
 
+.subtitle {
+    margin: 4px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.9rem;
+}
+
 .mapTabs {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    margin-top: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
 }
 
 .mapTab {

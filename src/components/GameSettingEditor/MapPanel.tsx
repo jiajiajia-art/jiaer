@@ -4,6 +4,7 @@ import worldEditor from '../../api/worldInteraction/worldEditor';
 import type { NpcSlot } from '../../api/worldInteraction/worldEditor.type';
 import toast from 'react-hot-toast';
 import { IoMdArrowDropdown, IoMdArrowDropright } from 'react-icons/io';
+import gameDataApi from '../../api/game/gameData';
 
 interface SubScene {
     id: string;
@@ -84,6 +85,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
     const [imageLoaded, setImageLoaded] = useState(false);
     const [sceneImageLoaded, setSceneImageLoaded] = useState(false);
     const [mapImageLoaded, setMapImageLoaded] = useState(false);
+    const [containerReady, setContainerReady] = useState(false);
+    const [worldMapImageUrl, setWorldMapImageUrl] = useState<string | null>(null);
     
     // 地图tab状态
     const [placedScenes, setPlacedScenes] = useState<Array<{ id: string; name: string; x: number; y: number }>>([]);
@@ -245,6 +248,25 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
         setSelectedSceneIdInMap(null);
     }, [mapTab, sceneSetting?.scenes]);
 
+    // 获取世界地图URL（在数据刷新后或组件初始化时）
+    useEffect(() => {
+        if (mapTab === 'map' && fileId) {
+            const fetchWorldMap = async () => {
+                try {
+                    const response = await gameDataApi.getWorldMap(fileId);
+                    // 将blob转换为URL
+                    const imageUrl = URL.createObjectURL(response.data);
+                    setWorldMapImageUrl(imageUrl);
+                    setMapImageLoaded(false); // 重置加载状态
+                } catch (error) {
+                    // 如果获取失败，使用默认图片
+                    setWorldMapImageUrl(null);
+                }
+            };
+            fetchWorldMap();
+        }
+    }, [mapTab, fileId, sceneSetting]); // 当数据刷新时，sceneSetting会更新，触发重新获取
+
     // 监听窗口大小变化，确保NPC和子场景跟随图片移动
     useEffect(() => {
         const handleResize = () => {
@@ -255,24 +277,67 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // 监听容器尺寸变化，确保容器准备好后再计算位置
+    useEffect(() => {
+        if (mapTab !== 'subScene') {
+            setContainerReady(false);
+            return;
+        }
+
+        const container = previewRef.current;
+        if (!container) {
+            setContainerReady(false);
+            return;
+        }
+
+        // 检查容器是否可见且有尺寸
+        const checkContainer = () => {
+            const rect = container.getBoundingClientRect();
+            const isVisible = rect.width > 0 && rect.height > 0 && 
+                             window.getComputedStyle(container).display !== 'none' &&
+                             window.getComputedStyle(container).visibility !== 'hidden';
+            
+            setContainerReady(isVisible);
+        };
+
+        // 立即检查一次
+        checkContainer();
+
+        // 使用 ResizeObserver 监听容器尺寸变化
+        const resizeObserver = new ResizeObserver(() => {
+            checkContainer();
+        });
+
+        resizeObserver.observe(container);
+
+        // 也监听窗口大小变化
+        const handleResize = () => {
+            checkContainer();
+        };
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [mapTab]);
+
     // 计算图片在 object-fit: contain 模式下的实际显示尺寸和偏移
     const getImageDisplayBounds = useCallback((image: HTMLImageElement, container: HTMLDivElement) => {
-        // 如果图片还没加载完成，等待一下再计算
+        // 必须确保图片完全加载
         if (!image.complete || !image.naturalWidth || !image.naturalHeight) {
-            // 尝试使用当前显示尺寸，但这不是最准确的
-            const imageRect = image.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            return {
-                displayWidth: imageRect.width || containerRect.width,
-                displayHeight: imageRect.height || containerRect.height,
-                offsetX: imageRect.left - containerRect.left,
-                offsetY: imageRect.top - containerRect.top
-            };
+            return { displayWidth: 0, displayHeight: 0, offsetX: 0, offsetY: 0 };
         }
 
         const containerRect = container.getBoundingClientRect();
         const containerWidth = containerRect.width;
         const containerHeight = containerRect.height;
+        
+        // 如果容器尺寸无效，返回0
+        if (containerWidth <= 0 || containerHeight <= 0) {
+            return { displayWidth: 0, displayHeight: 0, offsetX: 0, offsetY: 0 };
+        }
+        
         const naturalWidth = image.naturalWidth;
         const naturalHeight = image.naturalHeight;
         
@@ -499,10 +564,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
             
             if (response.data.success) {
                 toast.success('NPC位置已保存');
-                // 通知父组件刷新数据
-                if (onDataChange) {
-                    onDataChange();
-                }
             }
         } catch (error: any) {
             console.error('保存失败:', error);
@@ -513,11 +574,18 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
     const getNPCPosition = useCallback((npc: PlacedNPC) => {
         const image = imageRef.current;
         const preview = previewRef.current;
-        if (!image || !preview || !imageLoaded) return { left: 0, top: 0, width: 0, height: 0 };
+        if (!image || !preview || !imageLoaded || !containerReady) {
+            return { left: 0, top: 0, width: 0, height: 0 };
+        }
         
         // 获取图片实际显示区域
         const bounds = getImageDisplayBounds(image, preview);
         const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+        
+        // 验证显示尺寸是否有效
+        if (displayWidth <= 0 || displayHeight <= 0) {
+            return { left: 0, top: 0, width: 0, height: 0 };
+        }
         
         const width = BASE_NPC_WIDTH * npc.scale;
         const height = BASE_NPC_HEIGHT * npc.scale;
@@ -534,7 +602,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
         const top = centerY - height / 2;
         
         return { left, top, width, height };
-    }, [getImageDisplayBounds, windowSize, imageLoaded]);
+    }, [getImageDisplayBounds, windowSize, imageLoaded, containerReady]);
 
     // 子场景拖拽处理
     const handleSubSceneDragStart = useCallback((e: React.DragEvent, subSceneId: string) => {
@@ -765,9 +833,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
             
             if (response.data.success) {
                 toast.success(`成功保存 ${placedScenes.length} 个场景的位置`);
-                if (onDataChange) {
-                    onDataChange();
-                }
             } else {
                 toast.error('保存失败，请检查网络连接');
             }
@@ -789,6 +854,10 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
             const response = await worldEditor.generateWorldMapImage(fileId);
             if (response.data.success) {
                 toast.success('大地图生成成功');
+                if (response.data.imagePath) {
+                    setWorldMapImageUrl(response.data.imagePath);
+                    setMapImageLoaded(false); // 重置加载状态，触发图片重新加载
+                }
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -814,6 +883,12 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
             const response = await worldEditor.setWorldMapImage(fileId, file);
             if (response.data.success) {
                 toast.success('大地图上传成功');
+                // 更新地图图片URL
+                if (response.data.imagePath) {
+                    setWorldMapImageUrl(response.data.imagePath);
+                    setMapImageLoaded(false); // 重置加载状态，触发图片重新加载
+                }
+                // 刷新数据以获取最新的地图信息
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -936,10 +1011,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
             
             if (response.data.success) {
                 toast.success(`成功保存 ${placedSubScenes.length} 个子场景的位置`);
-                // 通知父组件刷新数据
-                if (onDataChange) {
-                    onDataChange();
-                }
             } else {
                 toast.error('保存失败，请检查网络连接');
             }
@@ -955,7 +1026,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                 <div>
                     <p className={styles.eyebrow}>Step 5</p>
                     <h2>地图编辑</h2>
-                    <p className={styles.subtitle}>子场景 / 场景 / 地图 多视图预览</p>
+                    <p className={styles.subtitle}>构建三级地图结构：子场景 -{'>'} 场景 -{'>'} 地图</p>
                 </div>
             </div>
             <div className={styles.mapTabs}>
@@ -990,7 +1061,26 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                                 className={styles.sceneImage}
                                 draggable={false}
                                 onLoad={() => {
-                                    setImageLoaded(true);
+                                    // 使用双重 requestAnimationFrame 确保容器尺寸已稳定
+                                    requestAnimationFrame(() => {
+                                        requestAnimationFrame(() => {
+                                            const container = previewRef.current;
+                                            if (container) {
+                                                const rect = container.getBoundingClientRect();
+                                                if (rect.width > 0 && rect.height > 0) {
+                                                    setImageLoaded(true);
+                                                } else {
+                                                    // 延迟再试一次
+                                                    setTimeout(() => {
+                                                        const rect2 = container.getBoundingClientRect();
+                                                        if (rect2.width > 0 && rect2.height > 0) {
+                                                            setImageLoaded(true);
+                                                        }
+                                                    }, 100);
+                                                }
+                                            }
+                                        });
+                                    });
                                 }}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
@@ -1002,7 +1092,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                                 }}
                             />
                             
-                            {imageLoaded && placedNPCs.map(npc => {
+                            {(imageLoaded && containerReady) && placedNPCs.map(npc => {
                                 const pos = getNPCPosition(npc);
                                 const isSelected = selectedNPCId === npc.id;
                                 const isDragging = draggingNPCId === npc.id;
@@ -1401,10 +1491,11 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                             </div>
                             <img 
                                 ref={mapImageRef}
-                                src={DEFAULT_MAP_IMAGE} 
+                                src={worldMapImageUrl || DEFAULT_MAP_IMAGE} 
                                 alt="世界地图" 
                                 className={styles.sceneImage}
                                 draggable={false}
+                                key={worldMapImageUrl || 'default'} // 添加key以强制重新加载
                                 onLoad={() => {
                                     setMapImageLoaded(true);
                                 }}
@@ -1412,6 +1503,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, fileId, onDataChange 
                                     const target = e.target as HTMLImageElement;
                                     if (target.src !== DEFAULT_MAP_IMAGE) {
                                         target.src = DEFAULT_MAP_IMAGE;
+                                        setWorldMapImageUrl(null); // 清除无效的URL
                                     } else {
                                         setMapImageLoaded(true);
                                     }
