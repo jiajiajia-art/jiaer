@@ -61,6 +61,7 @@ const SceneModal: React.FC<SceneModalProps> = ({
     };
 
     const relatedNpcs = getRelatedNpcs();
+    const isTargetSubscene = eventData?.subscene?.id === displayData.id;
 
     // 计算NPC的位置布局
     const getNpcPositionStyle = (index: number, total: number) => {
@@ -112,24 +113,25 @@ const SceneModal: React.FC<SceneModalProps> = ({
                 </div>
 
                 {/* NPC层 - 悬浮在背景之上 */}
-                <div className={styles.npcLayer}>
-                    {relatedNpcs.map((npc, index) => (
-                        <div 
-                            key={npc.id}
-                            className={styles.npcContainer}
-                            style={getNpcPositionStyle(index, relatedNpcs.length)}
-                            onClick={() => onNpcInteract?.()}
-                        >
-                            <img 
-                                src={npc.images?.base || ''} 
-                                alt={npc.name}
-                                className={styles.npcImage}
-                            />
-                            <img src={`${import.meta.env.BASE_URL}/data/assets/任务.png`} alt="任务" className={styles.eventLocation} />
-
-                        </div>
-                    ))}
-                </div>
+                {isTargetSubscene && relatedNpcs.length > 0 && (
+                    <div className={styles.npcLayer}>
+                        {relatedNpcs.map((npc, index) => (
+                            <div 
+                                key={npc.id}
+                                className={styles.npcContainer}
+                                style={getNpcPositionStyle(index, relatedNpcs.length)}
+                                onClick={() => onNpcInteract?.()}
+                            >
+                                <img 
+                                    src={npc.images?.base || ''} 
+                                    alt={npc.name}
+                                    className={styles.npcImage}
+                                />
+                                <img src={`${import.meta.env.BASE_URL}/data/assets/任务.png`} alt="任务" className={styles.eventLocation} />
+                            </div>
+                        ))}
+                    </div>
+                )}
 
             </div>
         </div>
