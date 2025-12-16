@@ -135,6 +135,98 @@
     font-size: 24px;
 }
 
+/* 创作类型弹窗 */
+.createTypeModalOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.createTypeModal {
+    background-color: #ffffff;
+    border-radius: 18px;
+    padding: 24px 28px 20px;
+    min-width: 320px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.18);
+}
+
+.createTypeModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.createTypeModalTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.createTypeModalDesc {
+    font-size: 13px;
+    color: #6B7280;
+    margin-bottom: 18px;
+    line-height: 1.6;
+}
+
+.createTypeOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.createTypeOptionPrimary {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #fee2e2, #fecaca);
+    color: #b91c1c;
+    border: 1px solid rgba(248, 113, 113, 0.6);
+}
+
+.createTypeOption {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background-color: #ffffff;
+    color: #b91c1c;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.createTypeModalFooter {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.createTypeCancelButton {
+    font-size: 13px;
+    color: #6B7280;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.createTypeCancelButton:hover {
+    background-color: #F3F4F6;
+    color: #4B5563;
+}
+
 .userCredit {
     display: flex;
     align-items: center;

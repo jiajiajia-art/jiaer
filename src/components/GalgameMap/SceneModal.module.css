@@ -52,6 +52,7 @@
     pointer-events: auto; /* NPC图片可以有点击事件 */
     z-index: 10; /* NPC在最上层 */
     min-width: 200px; /* 最小宽度 */
+    cursor: pointer;
 }
 
 /* NPC图片 */
@@ -69,7 +70,7 @@
 .eventLocation {
     position: absolute;
     top: 0;
-    right: 0;
+    right: 20px;
     width: 46px;
     height: 46px;
 }

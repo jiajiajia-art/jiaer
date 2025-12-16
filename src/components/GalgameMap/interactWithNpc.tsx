@@ -92,6 +92,7 @@ const InteractWithNpc = ({
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
     const [completedSteps, setCompletedSteps] = useState<any[]>([]); // 已完成的步骤
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
+    const hasInitializedRef = useRef(false);
 
     // 当 currentStep 变化且打字机已完成时，将之前的 step 加入已完成列表
     const previousStepRef = useRef<any>(null);
@@ -266,16 +267,23 @@ const InteractWithNpc = ({
 
     // 初始化游戏：当 gameData 加载完成后自动开始
     useEffect(() => {
+        // 确保只执行一次
+        if (hasInitializedRef.current) return;
+        
         if (gameData && !gameStarted && sessionId && eventId && pdfFileId) {
+            hasInitializedRef.current = true;
             setGameStarted(true);
-            // 自动发送初始交互请求
-            stepHandlers.handleInteract({
-                onError: (error) => {
-                    console.error('❌ 开始交互失败:', error);
-                }
-            });
+            
+            // 添加延迟，确保状态更新后再执行
+            setTimeout(() => {
+                stepHandlers.handleInteract({
+                    onError: (error) => {
+                        console.error('❌ 开始交互失败:', error);
+                    }
+                });
+            }, 100);
         }
-    }, [gameData, gameStarted, sessionId, eventId, pdfFileId]);
+    }, [gameData, gameStarted, sessionId, eventId, pdfFileId, stepHandlers]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {

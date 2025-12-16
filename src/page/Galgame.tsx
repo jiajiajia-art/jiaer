@@ -42,6 +42,11 @@ const Galgame = () => {
 
     const { pdfFileId } = useGameStore();
 
+    // 存储完整 allSteps 的 key（按 sessionId 隔离）
+    const allStepsStorageKey = useMemo(() => {
+        return sessionId ? `galgame-allsteps-${sessionId}` : 'galgame-allsteps';
+    }, [sessionId]);
+
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [gameTitle, setGameTitle] = useState<string>('Galgame');
     const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null>(null);
@@ -90,6 +95,14 @@ const Galgame = () => {
             setInitialMessages([]);
             // 清空已完成步骤和引用，避免残留数据
             resetDisplayedSteps();
+        },
+        onCompleteAllSteps: (steps: any[]) => {
+            try {
+                localStorage.setItem(allStepsStorageKey, JSON.stringify(steps));
+                console.log('[Galgame] 存储完整 allSteps，数量:', Array.isArray(steps) ? steps.length : 0);
+            } catch (e) {
+                console.warn('[Galgame] 存储 allSteps 失败:', e);
+            }
         }
     });
 
@@ -326,6 +339,28 @@ const Galgame = () => {
             if (lastMessage.role === 'assistant' && lastMessage.content) {
                 const content = lastMessage.content;
 
+                // 2.0 优先尝试使用本地完整 allSteps 恢复（只在最后一条是助手消息时考虑）
+                try {
+                    const rawAllSteps = localStorage.getItem(allStepsStorageKey);
+                    if (rawAllSteps) {
+                        const savedSteps = JSON.parse(rawAllSteps);
+                        if (Array.isArray(savedSteps) && savedSteps.length > 0) {
+                            console.log('[Galgame] 使用本地 allSteps 恢复，数量:', savedSteps.length);
+                            setShowStoryIntro(false);
+                            setGameStarted(true);
+                            resetDisplayedSteps();
+                            setInitialMessages([]);
+                            const [first, ...rest] = savedSteps;
+                            stepHandlers.setCurrentStep(first || null);
+                            stepHandlers.setStepQueue(rest || []);
+                            stepHandlers.setShowNextButton(first?.type !== 'choice');
+                            return; // 使用 allSteps 恢复后不再继续解析历史文本
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Galgame] 读取本地 allSteps 失败:', e);
+                }
+
                 // 尝试解析为步骤（文本模式用）
                 const historySteps = parseHistoryToSteps(content);
                 const hasChoiceInHistory = historySteps.some(
@@ -436,7 +471,7 @@ const Galgame = () => {
                 }
             }
         }
-    }, [historyLoading, presetData, history, worldSetting, stepHandlers]);
+    }, [historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps]);
     // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息
     useEffect(() => {
         // 等待历史记录加载完成和预设数据加载完成

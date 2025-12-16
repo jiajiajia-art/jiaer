@@ -6,6 +6,8 @@ interface UseStepStreamResponseOptions {
     setIsWaitingForData: React.Dispatch<React.SetStateAction<boolean>>;
     currentRequestId: React.MutableRefObject<number>;
     onMissionFlag?: () => void | Promise<void>;
+    // 完整 steps（allSteps）回调，用于在 type: 'complete' 时一次性拿到所有 step
+    onCompleteAllSteps?: (steps: any[]) => void;
 }
 
 interface ProcessStepStreamResponseOptions {
@@ -24,6 +26,7 @@ export const useStepStreamResponse = ({
     setIsWaitingForData,
     currentRequestId,
     onMissionFlag,
+    onCompleteAllSteps,
 }: UseStepStreamResponseOptions) => {
     const notifyMissionFlag = useCallback(() => {
         if (!onMissionFlag) return;
@@ -140,7 +143,7 @@ export const useStepStreamResponse = ({
                             continue;
                         }
 
-                        // 处理 step 类型的数据
+                        // 处理 step 类型的数据（增量 step）
                         if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
                             console.log('📝 收到新的 step:', step.type);
@@ -181,6 +184,15 @@ export const useStepStreamResponse = ({
                                     console.log('📋 队列更新（完整数据），当前队列长度:', newQueue.length);
                                     return newQueue;
                                 });
+                            }
+                        }
+
+                        // 处理 complete 事件，携带 allSteps（后端已完全生成的步骤列表）
+                        if (jsonData.type === 'complete' && Array.isArray(jsonData.allSteps)) {
+                            try {
+                                onCompleteAllSteps?.(jsonData.allSteps);
+                            } catch (e) {
+                                console.warn('onCompleteAllSteps 回调执行失败:', e);
                             }
                         }
                     } catch (e) {

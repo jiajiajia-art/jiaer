@@ -30,6 +30,7 @@ const Create: React.FC = () => {
         totalAmount: 0,
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+    const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
 
     // 将游戏数据分类为已发布和未发布
     const { publishedGames, draftGames } = useMemo(() => {
@@ -141,6 +142,23 @@ const Create: React.FC = () => {
         }
     };
 
+    const handleSelectGameType = (type: 'roleplay' | 'text' | 'visual') => {
+        // 根据选择的类型跳转到不同的创作流程
+        if (type === 'text') {
+            // 文字游戏：原来的 /createGame
+            navigate('/createGame');
+        } else if (type === 'visual') {
+            // 视觉小说：使用编辑器进行视觉设定
+            clearState();
+            navigate('/gameSettingsEditor');
+        } else if (type === 'roleplay') {
+            // 角色扮演：使用世界交互 / 地图模式
+            clearState();
+            navigate('/gameSettingsEditor?mode=worldInteraction');
+        }
+        setIsCreateTypeModalOpen(false);
+    };
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -149,30 +167,14 @@ const Create: React.FC = () => {
                 <div className={styles.main}>
                     {/* 创作游戏按钮 */}
                     <div className={styles.createGameButton}>
-                        <button className={styles.createGameButtonItem} onClick={() => {
-                            navigate('/createGame');
-                        }}>
+                        <button
+                            className={styles.createGameButtonItem}
+                            onClick={() => {
+                                setIsCreateTypeModalOpen(true);
+                            }}
+                        >
                             <HiOutlineLightBulb />
                             <span>创作游戏</span>
-                        </button>
-                        <button
-                            className={`${styles.createGameButtonItem}`}
-                            onClick={() => {
-                                // setFileId('');
-                                clearState();
-                                navigate('/gameSettingsEditor')
-                            }}
-                        >
-                            编辑
-                        </button>
-                        <button
-                            className={`${styles.createGameButtonItem}`}
-                            onClick={() => {
-                                clearState();
-                                navigate('/gameSettingsEditor?mode=worldInteraction')
-                            }}
-                        >
-                            地图编辑
                         </button>
                         <button
                             className={`${styles.createGameButtonItem}`}
@@ -347,6 +349,57 @@ const Create: React.FC = () => {
             <MobileBottomNav />
 
             <FooterArea />
+
+            {/* 创作类型选择弹窗 */}
+            {isCreateTypeModalOpen && (
+                <div
+                    className={styles.createTypeModalOverlay}
+                    onClick={() => setIsCreateTypeModalOpen(false)}
+                >
+                    <div
+                        className={styles.createTypeModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.createTypeModalHeader}>
+                            <div className={styles.createTypeModalTitle}>
+                                选择需创建游戏类型
+                            </div>
+                        </div>
+                        <div className={styles.createTypeModalDesc}>
+                            请选择你要创作的游戏形态，我们会为你匹配合适的创作流程。
+                        </div>
+                        <div className={styles.createTypeOptions}>
+                            <button
+                                className={`${styles.createGameButtonItem} ${styles.createTypeOption}`}
+                                onClick={() => handleSelectGameType('roleplay')}
+                            >
+                                <span>角色扮演</span>
+                            </button>
+                            <button
+                                className={`${styles.createGameButtonItem} ${styles.createTypeOption}`}
+                                onClick={() => handleSelectGameType('text')}
+                            >
+                                <span>文字游戏</span>
+                            </button>
+                            <button
+                                className={`${styles.createGameButtonItem} ${styles.createTypeOption}`}
+                                onClick={() => handleSelectGameType('visual')}
+                            >
+                                <span>视觉小说</span>
+                            </button>
+                        </div>
+                        <div className={styles.createTypeModalFooter}>
+                            <button
+                                type="button"
+                                onClick={() => setIsCreateTypeModalOpen(false)}
+                                className={styles.createTypeCancelButton}
+                            >
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 充值弹窗 */}
             <RechargeModal

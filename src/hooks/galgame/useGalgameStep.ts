@@ -11,6 +11,8 @@ interface UseGalgameStepOptions {
     sessionId: string | null;
     historyLength?: number; // 历史消息长度，用于判断是否免费
     onMessagesClear?: () => void;
+    // 后端流式返回 complete 时携带的 allSteps
+    onCompleteAllSteps?: (steps: any[]) => void;
 }
 
 // 前5回免费（每回2条消息，共10条）
@@ -19,7 +21,8 @@ const FREE_ROUNDS_THRESHOLD = 10;
 export const useGalgameStep = ({ 
     sessionId, 
     historyLength = 0,
-    onMessagesClear 
+    onMessagesClear,
+    onCompleteAllSteps,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -45,6 +48,7 @@ export const useGalgameStep = ({
         currentRequestId,
         // Galgame 不需要 mission 检测
         onMissionFlag: undefined,
+        onCompleteAllSteps,
     });
 
     const showStep = useCallback(async (step: any) => {

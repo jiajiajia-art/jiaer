@@ -353,8 +353,8 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                                     }}
                                                 />
                                                 {hasEventInSubscene && (
-                                                    <div className={styles.eventLocation} style={{ color: 'red' }}>
-                                                        !
+                                                    <div className={styles.eventLocation}>
+                                                        <img src={`${import.meta.env.BASE_URL}data/assets/任务.png`} alt="" />
                                                     </div>
                                                 )}
                                             </>
@@ -414,8 +414,8 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                                 />
                                                 {/* 修正判断条件 */}
                                                 {isEventLocation && (
-                                                    <div className={styles.eventLocation} style={{ color: 'red' }}>
-                                                        !
+                                                    <div className={styles.eventLocation}>
+                                                        <img src={`${import.meta.env.BASE_URL}data/assets/任务.png`} alt="" />
                                                     </div>
                                                 )}
                                             </>
