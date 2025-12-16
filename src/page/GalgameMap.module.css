@@ -57,23 +57,6 @@
     background: #c9303e;
 }
 
-.mapContainer {
-    position: relative;
-    width: 414px;
-    height: 896px;
-    max-width: 100%;
-    max-height: 100vh;
-    background-color: #ffffff;
-    background-size: cover;
-    background-position: center;
-    /* 只有在大屏时显示圆角 */
-    border-radius: 0; 
-    box-shadow: none;
-    overflow: hidden; 
-    display: flex;
-    flex-direction: column;
-}
-
 @media (min-width: 1024px) {
     .mapContainer {
         border-radius: 20px;

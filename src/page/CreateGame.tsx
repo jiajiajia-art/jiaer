@@ -419,6 +419,7 @@ const CreateGame: React.FC = () => {
         if(gameDetail?.version == 'old') {
             setShowForm(true);
         } else if(gameDetail?.version == 'map-plugin-version') {
+            setFileId(gameId)
             navigate(`/gameSettingsEditor?mode=worldInteraction`);
         } else {
             setFileId(gameId);

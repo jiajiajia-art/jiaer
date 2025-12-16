@@ -22,6 +22,28 @@ interface WorldMapRendererProps {
 }
 
 type ViewMode = 'mainScenes' | 'subScenes';
+type ViewStackItem = { mode: ViewMode; scene?: Scene | null };
+const buildInitialViewStack = (): ViewStackItem[] => {
+    try {
+        const cached = sessionStorage.getItem('worldMapViewStack');
+        if (cached) {
+            const parsed = JSON.parse(cached) as ViewStackItem[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+            }
+        }
+    } catch (_) {
+    }
+    return [{ mode: 'mainScenes', scene: null }];
+};
+
+const buildMainBackground = (gameData: AllGameData | null | undefined) => {
+    const worldMapImage = gameData?.worldSetting?.worldMapImage;
+    const firstSceneImage = gameData?.sceneSetting?.scenes?.[0]?.image;
+    if (worldMapImage) return `${worldMapImage}/dummy`;
+    if (firstSceneImage) return firstSceneImage;
+    return '';
+};
 
 const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     gameData,
@@ -30,8 +52,8 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     onSubsceneClick,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
-    const [viewMode, setViewMode] = useState<ViewMode>('mainScenes');
+    const initialStackRef = useRef<ViewStackItem[]>(buildInitialViewStack());
+    const [viewStack, setViewStack] = useState<ViewStackItem[]>(initialStackRef.current);
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [isReady, setIsReady] = useState(false);
@@ -125,7 +147,20 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         }));
     }, [gameData]);
 
-    // 更新背景图片
+    const currentView = viewStack[viewStack.length - 1] || { mode: 'mainScenes' as ViewMode, scene: null };
+    const viewMode = currentView.mode;
+    const selectedScene = viewMode === 'subScenes' ? currentView.scene || null : null;
+
+    // 持久化视图栈，避免组件重新挂载时回到主地图
+    useEffect(() => {
+        try {
+            sessionStorage.setItem('worldMapViewStack', JSON.stringify(viewStack));
+        } catch (_) {
+            /* ignore */
+        }
+    }, [viewStack]);
+
+    // 更新背景图片（视图变更时）
     useEffect(() => {
         if (!isReady) return;
 
@@ -133,13 +168,11 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
 
         const updateBackground = () => {
             if (viewMode === 'mainScenes') {                
-                // 主场景视图：使用第一个场景的图片作为背景
-                const firstSceneImage = gameData?.worldSetting.worldMapImage+'/dummy';
-                if (firstSceneImage && isMounted) {
-                    setBackgroundImage(firstSceneImage);
+                const img = buildMainBackground(gameData);
+                if (img && isMounted) {
+                    setBackgroundImage(img);
                 }
             } else if (viewMode === 'subScenes' && selectedScene?.image && isMounted) {
-                // 子场景视图：使用主场景的图片作为背景
                 setBackgroundImage(selectedScene.image);
             }
         };
@@ -150,23 +183,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
             isMounted = false;
         };
     }, [viewMode, selectedScene, gameData, isReady]);
-
-    // 强制刷新背景图片
-    const refreshBackground = () => {
-        if (viewMode === 'mainScenes') {
-            console.log(selectedScene);
-
-            const firstSceneImage = gameData?.worldSetting.worldMapImage+'/dummy';
-            if (firstSceneImage) {
-                setBackgroundImage(firstSceneImage + '?t=' + Date.now());
-                console.log("firstSceneImage", firstSceneImage);
-            }
-        } else if (viewMode === 'subScenes' && selectedScene?.image) {
-            setBackgroundImage(selectedScene.image + '?t=' + Date.now());
-            console.log("selectedScene.image", selectedScene.image);
-            
-        }
-    };
 
     // 计算像素位置
     const calculatePixelPosition = (normalizedPos: { x: number; y: number }) => {
@@ -182,11 +198,10 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         };
     };
 
-    // 处理主场景点击
+    // 处理主场景点击：推入栈
     const handleMainSceneClick = (scene: Scene) => {
         if (scene.subscenes && scene.subscenes.length > 0) {
-            setSelectedScene(scene);
-            setViewMode('subScenes');
+            setViewStack(prev => [...prev, { mode: 'subScenes', scene }]);
         }
     };
 
@@ -207,12 +222,20 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         onSubsceneClick?.(subscene.id, selectedScene.id);
     };
 
-    // 返回主场景视图
+    // 返回上一层（栈弹出）；若已在根层则保持
     const handleBackToMainScenes = () => {
-        setSelectedScene(null);
-        setViewMode('mainScenes');
-        // 切换视图时刷新背景
-        setTimeout(refreshBackground, 50);
+        setViewStack(prev => {
+            if (prev.length <= 1) return prev;
+            const next = prev.slice(0, -1);
+            const top = next[next.length - 1];
+            if (top?.mode === 'mainScenes') {
+                const img = buildMainBackground(gameData);
+                if (img) setBackgroundImage(img);
+            } else if (top?.mode === 'subScenes' && top.scene?.image) {
+                setBackgroundImage(top.scene.image);
+            }
+            return next;
+        });
     };
 
     if (isLoading) {
@@ -250,7 +273,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
             >
                 {
                     viewMode === 'mainScenes' && (
-                        <div className={styles.titleBar}>
+                        <div className={styles.closeTitleBar}>
                             <div className={styles.backButton} onClick={()=>{
                                 navigator('/home')
                             }}>
@@ -262,18 +285,9 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                 {/* 子场景视图时才显示标题栏 */}
                 {viewMode === 'subScenes' && selectedScene && (
                     <div className={styles.titleBar}>
-                        {/* 返回按钮在最左边 */}
-                        <div className={styles.backButton} onClick={handleBackToMainScenes}>
-                            <MdOutlineArrowCircleLeft size={24} />
-                        </div>
-
-                        {/* 标题居中 */}
-                        <div className={styles.titleText}>
+                        <div className={styles.titleText} onClick={handleBackToMainScenes}>
                             {selectedScene.name}
                         </div>
-
-                        {/* 右边空div保持平衡 */}
-                        <div className={styles.rightPlaceholder} />
                     </div>
                 )}
 

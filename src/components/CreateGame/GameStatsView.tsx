@@ -10,6 +10,7 @@ import createSessionApi from '../../api/createGame/createSessionApi';
 import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/game/gameAction';
 import type { GameStatsResponse } from '../../api/game/gameAction.Api';
+import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -66,7 +67,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     alert(response.data.message || '创建游戏失败，请重试');
                     return { sessionId: null, redirectUrl: '' };
                 }
-            } else {
+            } else if(gameDetail.version == 'old') {
                 // 普通模式（Story）
                 const response = await createSessionApi.getSession({
                     fileId: fileId,
@@ -80,6 +81,19 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     alert(response.data.message || '创建游戏失败，请重试');
                     return { sessionId: null, redirectUrl: '' };
                 }
+            } else if(gameDetail.version == 'map-plugin-version'){
+                const response = await createWorldSessionApi.createWorldSession({fileId}); 
+                if (response.data.success) {
+                    const sessionId = response.data.session.sessionId;
+                    return { sessionId, redirectUrl: '/galgameMap'};
+                } else {
+                    alert(response.data.message || '创建游戏失败，请重试');
+                    return { sessionId: null, redirectUrl: '' };
+                } 
+            } else {
+                // 未知版本类型
+                alert('未知的游戏版本类型，无法创建会话');
+                return { sessionId: null, redirectUrl: '' };
             }
         } catch (error) {
             console.error('❌ Session 创建错误:', error);

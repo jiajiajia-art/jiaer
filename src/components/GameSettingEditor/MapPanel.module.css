@@ -193,8 +193,8 @@
 }
 
 .sceneImage {
-    max-width: 1200px;
-    max-height: 800px;
+    max-width: 414px;
+    max-height: 896px;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -207,10 +207,11 @@
     position: absolute;
     cursor: move;
     z-index: 10;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 2px solid transparent;
     border-radius: 8px;
     animation: fadeIn 0.3s ease;
+    will-change: transform, opacity;
 }
 
 @keyframes fadeIn {
@@ -393,7 +394,7 @@
 
 .subSceneThumb {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    height: 72px;
     background: linear-gradient(135deg, #fff2f4, #ffe7ea);
     border-radius: 10px;
     border: 1px solid var(--border-light);
@@ -401,18 +402,28 @@
 
 .subSceneThumbImage {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    height: 72px;
     object-fit: cover;
     border-radius: 10px;
     border: 1px solid var(--border-light);
     background: linear-gradient(135deg, #fff2f4, #ffe7ea);
+    display: block;
 }
 
 .subSceneMeta {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 6px;
+}
+
+/* 子场景缩略图外层包装，限制纵向拉伸，保证列表行高度稳定 */
+.subSceneThumbWrapper {
+    position: relative;
+    width: 100%;
+    height: 72px;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 .subSceneName {
@@ -557,7 +568,7 @@
     position: absolute;
     cursor: move;
     z-index: 20;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -565,6 +576,7 @@
     pointer-events: auto;
     transform: translateZ(0);
     animation: fadeIn 0.3s ease;
+    will-change: transform, opacity;
 }
 
 .placedSubScene:hover {
@@ -756,6 +768,44 @@
 .formBtnCancel:hover {
     background: #f9fafb;
     border-color: rgba(224, 61, 75, 0.35);
+}
+
+/* 加载遮罩 */
+.loadingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 16px;
+}
+
+.loadingSpinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary, #E03D4B);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loadingText {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
 }
 
 @media (max-width: 1100px) {

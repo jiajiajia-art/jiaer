@@ -1,3 +1,5 @@
+import type { PlayerCharacter } from "./worldInteractionApi.type";
+
 export interface CreateWorldSessionResponse {
     success: true,
     message: string,
@@ -99,13 +101,18 @@ interface KeyEvent {
     position: [number, number];
   }
   
-  // 世界信息类型
-  interface WorldInfo {
+  export interface WorldInfo {
     title: string;
     summary: string;
-    themes: string[];
-    image: string;
-  }
+    background: string;
+    Theme: string[];
+    preamble: string;
+    initialPlot: string;
+    literary: string;
+    keyEvents: KeyEvent[];
+    Player: PlayerCharacter;  // 注意：大写 P
+    worldMapImage: string;
+}
   
   // 状态类型
   interface GameState {

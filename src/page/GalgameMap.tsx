@@ -82,26 +82,7 @@ const GalgameMap = () => {
                 const worldFormatData: WorldInteractionGameData = {
                     success: true,
                     fileId: state.fileId,
-                    worldSetting: {
-                        title: state.worldInfo?.title || '',
-                        summary: state.worldInfo?.summary || '',
-                        background: state.worldInfo?.summary || '',
-                        Theme: state.worldInfo?.themes || [],
-                        preamble: '',
-                        initialPlot: '',
-                        literary: '',
-                        keyEvents: state.currentKeyEvent ? [state.currentKeyEvent] : [],
-                        Player: {
-                            name: state.player?.name || '',
-                            age: state.player?.age || 0,
-                            gender: state.player?.gender || '',
-                            personality: state.player?.personality || '',
-                            appearance: state.player?.appearance || '',
-                            tone: state.player?.tone || '',
-                            imagePath: state.player?.imagePath || '',
-                        },
-                        worldMapImage: state.worldInfo?.image || '',
-                    },
+                    worldSetting: state.worldInfo,
                     npcSetting: {
                         npcs: state.npcs || [],
                     },
@@ -209,11 +190,8 @@ const GalgameMap = () => {
                 )}
 
                 {/* NPC交互界面 */}
-                {currentView === MapViewState.INTERACT_NPC && gameData && (
-                    <InteractWithNpc 
-                        gameData={gameData}
-                        onClose={handleBack}
-                     />
+                {currentView === MapViewState.INTERACT_NPC && (
+                    <InteractWithNpc onClose={handleBack} gameData={gameData} />
                 )}
             </div>
         </div>

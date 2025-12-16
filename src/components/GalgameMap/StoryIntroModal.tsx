@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import styles from './StoryIntroModal.module.css';
 import { useStoryTyping } from '../../hooks/story/useStoryTyping';
-import { HOST_ADDRESS } from '../../config';
 import type { AllGameData } from '../../api/worldInteraction/mapWorldData.type';
 
 interface StoryIntroModalProps {
@@ -20,7 +19,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     if (!isOpen) return null;
 
     const title = gameData?.worldSetting?.title || '故事';
-    const preamble = gameData?.worldSetting?.summary || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
+    const preamble = gameData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
     const backgroundImage = gameData?.worldSetting.worldMapImage+'/dummy' || null;
 
     const { displayedText, isTyping } = useStoryTyping({

@@ -39,6 +39,7 @@ const GameSettingsEditor = () => {
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
     const navigate = useNavigate();
     const hasFetchedRef = useRef<string | null>(null); // 跟踪已请求的 fileId    
+    const hasLoadedMapRef = useRef<boolean>(false); // 跟踪是否已为地图面板加载过最新数据
 
     // 各个面板的数据获取函数引用
     const worldPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
@@ -52,6 +53,19 @@ const GameSettingsEditor = () => {
         if (!isParsed && panelId !== 'documents') {
             return;
         }
+
+        // 首次进入地图编辑面板时，确保拉取一次最新的世界交互数据（包含场景位置信息）
+        if (
+            panelId === 'mapEdit' &&
+            mode === 'worldInteraction' &&
+            fileId &&
+            !isLoadingData &&
+            !hasLoadedMapRef.current
+        ) {
+            hasLoadedMapRef.current = true;
+            fetchEditorData(fileId, 'worldInteraction');
+        }
+
         setActivePanel(panelId);
     };
 
@@ -501,7 +515,8 @@ const GameSettingsEditor = () => {
                 {mode === 'worldInteraction' && (
                     <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
                         <MapPanel 
-                            sceneSetting={gameData?.sceneSetting} 
+                            sceneSetting={gameData?.sceneSetting}
+                            worldMapImage={gameData?.worldSetting?.worldMapImage || null}
                             fileId={fileId || ''} 
                             isActive={activePanel === 'mapEdit'}
                             onDataChange={() => {

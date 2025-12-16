@@ -87,7 +87,14 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const [sceneImageLoaded, setSceneImageLoaded] = useState(false);
     const [mapImageLoaded, setMapImageLoaded] = useState(false);
     const [containerReady, setContainerReady] = useState(false);
+    const [mapContainerReady, setMapContainerReady] = useState(false);
     const [worldMapImageUrl, setWorldMapImageUrl] = useState<string | null>(null);
+    
+    // 内容就绪状态（用于延迟显示，确保位置计算正确）
+    const [isSubSceneContentReady, setIsSubSceneContentReady] = useState(false);
+    const [isSceneContentReady, setIsSceneContentReady] = useState(false);
+    const [isMapContentReady, setIsMapContentReady] = useState(false);
+    const [forceUpdate, setForceUpdate] = useState(0); // 强制重新计算位置的触发器
     
     // 地图tab状态
     const [placedScenes, setPlacedScenes] = useState<Array<{ id: string; name: string; x: number; y: number }>>([]);
@@ -105,14 +112,68 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const mapImageInputRef = useRef<HTMLInputElement>(null);
     const currentSceneIdRef = useRef<string | null>(null);
     const currentSubSceneIdRef = useRef<string | null>(null);
-    // 为缺失 position 的子场景提供一次性随机初始位置，保证可见且可拖拽
+    // 为缺失 position 的子场景/场景提供一次性随机初始位置，保证可见且可拖拽
     const subSceneDefaultPosRef = useRef<Record<string, { x: number; y: number }>>({});
+    const sceneDefaultPosRef = useRef<Record<string, { x: number; y: number }>>({});
 
     useEffect(() => {
         if (isActive) {
             setMapTab('subScene');
         }
     }, [isActive]);
+
+    // 每次tab切换时重置内容就绪状态
+    useEffect(() => {
+        setIsSubSceneContentReady(false);
+        setIsSceneContentReady(false);
+        setIsMapContentReady(false);
+        setForceUpdate(prev => prev + 1);
+    }, [mapTab]);
+
+    // 子场景tab内容就绪检测
+    useEffect(() => {
+        if (mapTab === 'subScene') {
+            if (imageLoaded && containerReady) {
+                const timer = setTimeout(() => {
+                    setIsSubSceneContentReady(true);
+                    setForceUpdate(prev => prev + 1);
+                }, 50);
+                return () => clearTimeout(timer);
+            } else {
+                setIsSubSceneContentReady(false);
+            }
+        }
+    }, [mapTab, imageLoaded, containerReady]);
+
+    // 场景tab内容就绪检测
+    useEffect(() => {
+        if (mapTab === 'scene') {
+            if (sceneImageLoaded) {
+                const timer = setTimeout(() => {
+                    setIsSceneContentReady(true);
+                    setForceUpdate(prev => prev + 1);
+                }, 50);
+                return () => clearTimeout(timer);
+            } else {
+                setIsSceneContentReady(false);
+            }
+        }
+    }, [mapTab, sceneImageLoaded]);
+
+    // 地图tab内容就绪检测
+    useEffect(() => {
+        if (mapTab === 'map') {
+            if (mapImageLoaded && mapContainerReady) {
+                const timer = setTimeout(() => {
+                    setIsMapContentReady(true);
+                    setForceUpdate(prev => prev + 1);
+                }, 50);
+                return () => clearTimeout(timer);
+            } else {
+                setIsMapContentReady(false);
+            }
+        }
+    }, [mapTab, mapImageLoaded, mapContainerReady]);
 
     // 计算属性，提取subscenes
     const subScenes = useMemo<SubScene[]>(() => {
@@ -140,9 +201,16 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         return sceneSetting.scenes[0];
     }, [sceneSetting?.scenes, selectedSceneId]);
 
-    const sceneImageUrl = mapTab === 'scene' && currentScene?.image 
-        ? currentScene.image 
-        : DEFAULT_SCENE_IMAGE;
+    // 根据当前 tab 选择显示的底图：子场景优先 subScene.image，其次父场景图，再默认；场景 tab 用场景图
+    const sceneImageUrl = useMemo(() => {
+        if (mapTab === 'subScene') {
+            return currentSubScene?.image || currentScene?.image || DEFAULT_SCENE_IMAGE;
+        }
+        if (mapTab === 'scene') {
+            return currentScene?.image || DEFAULT_SCENE_IMAGE;
+        }
+        return DEFAULT_SCENE_IMAGE;
+    }, [mapTab, currentSubScene?.image, currentScene?.image]);
 
     // 地图 tab 使用的图片地址（优先上传/生成后的 url，其次后端返回的 worldMapImage + '/dummy'，最后默认图）
     const mapImageSources = useMemo(() => {
@@ -276,17 +344,42 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
 
         const loadedScenes: Array<{ id: string; name: string; x: number; y: number }> = [];
         sceneSetting.scenes.forEach(scene => {
+            let x: number | undefined;
+            let y: number | undefined;
+
             if (scene.position && Array.isArray(scene.position) && scene.position.length >= 2) {
-                const x = scene.position[0];
-                const y = scene.position[1];
-                if (typeof x === 'number' && typeof y === 'number' && x >= 0 && x <= 1 && y >= 0 && y <= 1) {
-                    loadedScenes.push({
-                        id: scene.id,
-                        name: scene.name,
-                        x: x,
-                        y: y
-                    });
+                x = scene.position[0];
+                y = scene.position[1];
+
+                // 如果后端给的是 [0,0]（左上角默认），视为「未布置」，改用前端稳定随机
+                if (x === 0 && y === 0) {
+                    x = undefined;
+                    y = undefined;
                 }
+            }
+
+            if (typeof x !== 'number' || typeof y !== 'number') {
+                const cached = sceneDefaultPosRef.current[scene.id];
+                if (cached) {
+                    x = cached.x;
+                    y = cached.y;
+                } else {
+                    const rand = () => 0.2 + Math.random() * 0.6;
+                    x = rand();
+                    y = rand();
+                    sceneDefaultPosRef.current[scene.id] = { x, y };
+                }
+            }
+
+            if (typeof x === 'number' && typeof y === 'number') {
+                const clampedX = Math.max(0, Math.min(1, x));
+                const clampedY = Math.max(0, Math.min(1, y));
+                loadedScenes.push({
+                    id: scene.id,
+                    name: scene.name,
+                    x: clampedX,
+                    y: clampedY
+                });
             }
         });
         setPlacedScenes(loadedScenes);
@@ -303,7 +396,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // 监听容器尺寸变化，确保容器准备好后再计算位置
+    // 监听容器尺寸变化（子场景 tab），确保容器准备好后再计算位置
     useEffect(() => {
         // 仅在当前面板可见且是子场景 tab 时检查容器
         if (!isActive || mapTab !== 'subScene') {
@@ -330,16 +423,24 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         // 立即检查一次
         checkContainer();
 
-        // 使用 ResizeObserver 监听容器尺寸变化
-        const resizeObserver = new ResizeObserver(() => {
+        // 使用防抖优化ResizeObserver，避免频繁更新
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+        const updatePositions = () => {
             checkContainer();
+            setForceUpdate(prev => prev + 1);
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePositions, 100);
         });
 
         resizeObserver.observe(container);
 
-        // 也监听窗口大小变化
+        // 也监听窗口大小变化（防抖）
         const handleResize = () => {
-            checkContainer();
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePositions, 100);
         };
         window.addEventListener('resize', handleResize);
 
@@ -350,6 +451,63 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         }
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [mapTab, isActive]);
+
+    // 监听地图容器尺寸变化（地图 tab），避免在隐藏状态下计算为 0 尺寸
+    useEffect(() => {
+        if (!isActive || mapTab !== 'map') {
+            setMapContainerReady(false);
+            return;
+        }
+
+        const container = mapPreviewRef.current;
+        if (!container) {
+            setMapContainerReady(false);
+            return;
+        }
+
+        const checkContainer = () => {
+            const rect = container.getBoundingClientRect();
+            const isVisible =
+                rect.width > 0 &&
+                rect.height > 0 &&
+                window.getComputedStyle(container).display !== 'none' &&
+                window.getComputedStyle(container).visibility !== 'hidden';
+            setMapContainerReady(isVisible);
+        };
+
+        checkContainer();
+
+        // 使用防抖优化ResizeObserver
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+        const updatePositions = () => {
+            checkContainer();
+            setForceUpdate(prev => prev + 1);
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePositions, 100);
+        });
+        resizeObserver.observe(container);
+
+        const handleResize = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(updatePositions, 100);
+        };
+        window.addEventListener('resize', handleResize);
+
+        const image = mapImageRef.current;
+        if (image && image.complete) {
+            setMapImageLoaded(true);
+        }
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
             resizeObserver.disconnect();
             window.removeEventListener('resize', handleResize);
         };
@@ -607,8 +765,21 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const getNPCPosition = useCallback((npc: PlacedNPC) => {
         const image = imageRef.current;
         const preview = previewRef.current;
+        
+        // 如果条件不满足，返回不可见标记
         if (!image || !preview || !imageLoaded || !containerReady) {
-            return { left: 0, top: 0, width: 0, height: 0 };
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
+        
+        // 检查图片是否真正加载完成
+        if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
+        
+        // 检查容器尺寸是否有效
+        const previewRect = preview.getBoundingClientRect();
+        if (previewRect.width <= 0 || previewRect.height <= 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
         }
         
         // 获取图片实际显示区域
@@ -617,7 +788,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         
         // 验证显示尺寸是否有效
         if (displayWidth <= 0 || displayHeight <= 0) {
-            return { left: 0, top: 0, width: 0, height: 0 };
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
         }
         
         const width = BASE_NPC_WIDTH * npc.scale;
@@ -634,8 +805,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         const left = centerX - width / 2;
         const top = centerY - height / 2;
         
-        return { left, top, width, height };
-    }, [getImageDisplayBounds, windowSize, imageLoaded, containerReady]);
+        return { left, top, width, height, visible: true };
+    }, [getImageDisplayBounds, windowSize, imageLoaded, containerReady, forceUpdate]);
 
     // 子场景拖拽处理
     const handleSubSceneDragStart = useCallback((e: React.DragEvent, subSceneId: string) => {
@@ -717,11 +888,30 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const getSubScenePosition = useCallback((subScene: PlacedSubScene) => {
         const image = sceneImageRef.current;
         const preview = scenePreviewRef.current;
-        if (!image || !preview || !sceneImageLoaded) return { left: 0, top: 0, width: 0, height: 0 };
+        
+        if (!image || !preview || !sceneImageLoaded) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
+        
+        // 检查图片是否真正加载完成
+        if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
+        
+        // 检查容器尺寸是否有效
+        const previewRect = preview.getBoundingClientRect();
+        if (previewRect.width <= 0 || previewRect.height <= 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
         
         // 获取图片实际显示区域（考虑 object-fit: contain）
         const bounds = getImageDisplayBounds(image, preview);
         const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+        
+        // 验证显示尺寸是否有效
+        if (displayWidth <= 0 || displayHeight <= 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
         
         const size = SUBSCENE_ICON_SIZE;
         
@@ -736,17 +926,36 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         const left = centerX - size / 2;
         const top = centerY - size / 2;
         
-        return { left, top, width: size, height: size };
-    }, [getImageDisplayBounds, windowSize, sceneImageLoaded]);
+        return { left, top, width: size, height: size, visible: true };
+    }, [getImageDisplayBounds, windowSize, sceneImageLoaded, forceUpdate]);
 
     // 地图tab场景位置计算
     const getScenePosition = useCallback((scene: { id: string; name: string; x: number; y: number }) => {
         const image = mapImageRef.current;
         const preview = mapPreviewRef.current;
-        if (!image || !preview || !mapImageLoaded) return { left: 0, top: 0, width: 0, height: 0 };
+        
+        if (!image || !preview || !mapImageLoaded || !mapContainerReady) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
+        
+        // 检查图片是否真正加载完成
+        if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
+        
+        // 检查容器尺寸是否有效
+        const previewRect = preview.getBoundingClientRect();
+        if (previewRect.width <= 0 || previewRect.height <= 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
         
         const bounds = getImageDisplayBounds(image, preview);
         const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+        
+        // 验证显示尺寸是否有效
+        if (displayWidth <= 0 || displayHeight <= 0) {
+            return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
+        }
         
         const size = SCENE_ICON_SIZE;
         
@@ -759,8 +968,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         const left = centerX - size / 2;
         const top = centerY - size / 2;
         
-        return { left, top, width: size, height: size };
-    }, [getImageDisplayBounds, windowSize, mapImageLoaded]);
+        return { left, top, width: size, height: size, visible: true };
+    }, [getImageDisplayBounds, windowSize, mapImageLoaded, mapContainerReady, forceUpdate]);
 
     // 场景拖拽处理（地图tab）
     const handleSceneMouseDown = useCallback((e: React.MouseEvent, sceneId: string) => {
@@ -1102,12 +1311,14 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                                 const rect = container.getBoundingClientRect();
                                                 if (rect.width > 0 && rect.height > 0) {
                                                     setImageLoaded(true);
+                                                    setForceUpdate(prev => prev + 1);
                                                 } else {
                                                     // 延迟再试一次
                                                     setTimeout(() => {
                                                         const rect2 = container.getBoundingClientRect();
                                                         if (rect2.width > 0 && rect2.height > 0) {
                                                             setImageLoaded(true);
+                                                            setForceUpdate(prev => prev + 1);
                                                         }
                                                     }, 100);
                                                 }
@@ -1125,10 +1336,22 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 }}
                             />
                             
-                            {(imageLoaded && containerReady) && placedNPCs.map(npc => {
+                            {/* 加载遮罩 */}
+                            {!isSubSceneContentReady && (
+                                <div className={styles.loadingOverlay}>
+                                    <div className={styles.loadingSpinner}></div>
+                                    <div className={styles.loadingText}>正在加载场景...</div>
+                                </div>
+                            )}
+                            
+                            {/* 只在内容准备好时才渲染NPC */}
+                            {isSubSceneContentReady && placedNPCs.map(npc => {
                                 const pos = getNPCPosition(npc);
                                 const isSelected = selectedNPCId === npc.id;
                                 const isDragging = draggingNPCId === npc.id;
+                                
+                                // 如果位置不可见，不渲染
+                                if (!pos.visible) return null;
                                 
                                 return (
                                     <div
@@ -1139,6 +1362,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             top: `${pos.top}px`,
                                             width: `${pos.width}px`,
                                             height: `${pos.height}px`,
+                                            opacity: pos.visible ? 1 : 0,
+                                            transition: 'opacity 0.3s ease',
                                         }}
                                         onMouseDown={(e) => handleNPCMouseDown(e, npc.id)}
                                         onWheel={(e) => handleWheel(e, npc.id)}
@@ -1211,7 +1436,26 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             className={`${styles.subSceneItem} ${selectedSubSceneId === sub.id ? styles.subSceneItemActive : ''}`}
                                             onClick={() => setSelectedSubSceneId(sub.id)}
                                         >
-                                            <div className={styles.subSceneThumb} />
+                                            <div className={styles.subSceneThumbWrapper}>
+                                                {sub.image ? (
+                                                    <img
+                                                        src={sub.image}
+                                                        alt={sub.name}
+                                                        className={styles.subSceneThumbImage}
+                                                        onError={(e) => {
+                                                            const target = e.target as HTMLImageElement;
+                                                            target.onerror = null;
+                                                            target.style.display = 'none';
+                                                            const placeholder = target.nextElementSibling as HTMLElement;
+                                                            if (placeholder) placeholder.style.display = 'block';
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <div
+                                                    className={styles.subSceneThumb}
+                                                    style={{ display: sub.image ? 'none' : 'block' }}
+                                                />
+                                            </div>
                                             <div className={styles.subSceneMeta}>
                                                 <div className={styles.subSceneName}>{sub.name}</div>
                                                 {sub.parentName && <div className={styles.subSceneParent}>父场景：{sub.parentName}</div>}
@@ -1290,6 +1534,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 draggable={false}
                                 onLoad={() => {
                                     setSceneImageLoaded(true);
+                                    setForceUpdate(prev => prev + 1);
                                 }}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
@@ -1301,10 +1546,22 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 }}
                             />
                             
-                            {sceneImageLoaded && placedSubScenes.map(subScene => {
+                            {/* 加载遮罩 */}
+                            {!isSceneContentReady && (
+                                <div className={styles.loadingOverlay}>
+                                    <div className={styles.loadingSpinner}></div>
+                                    <div className={styles.loadingText}>正在加载场景...</div>
+                                </div>
+                            )}
+                            
+                            {/* 只在内容准备好时才渲染子场景 */}
+                            {isSceneContentReady && placedSubScenes.map(subScene => {
                                 const pos = getSubScenePosition(subScene);
                                 const isSelected = selectedSubSceneIdInScene === subScene.id;
                                 const isDragging = draggingSubSceneId === subScene.id;
+                                
+                                // 如果位置不可见，不渲染
+                                if (!pos.visible) return null;
                                 
                                 return (
                                     <div
@@ -1315,6 +1572,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             top: `${pos.top}px`,
                                             width: `${pos.width}px`,
                                             minHeight: `${pos.height}px`,
+                                            opacity: pos.visible ? 1 : 0,
+                                            transition: 'opacity 0.3s ease',
                                         }}
                                         draggable
                                         onDragStart={(e) => handleSubSceneDragStart(e, subScene.id)}
@@ -1395,7 +1654,26 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                                                         handleSubSceneClick(placedSubScene);
                                                                     }}
                                                                 >
-                                                                    <div className={styles.subSceneThumb} />
+                                                                    <div className={styles.subSceneThumbWrapper}>
+                                                                        {subScene.image ? (
+                                                                            <img
+                                                                                src={subScene.image}
+                                                                                alt={subScene.name}
+                                                                                className={styles.subSceneThumbImage}
+                                                                                onError={(e) => {
+                                                                                    const target = e.target as HTMLImageElement;
+                                                                                    target.onerror = null;
+                                                                                    target.style.display = 'none';
+                                                                                    const placeholder = target.nextElementSibling as HTMLElement;
+                                                                                    if (placeholder) placeholder.style.display = 'block';
+                                                                                }}
+                                                                            />
+                                                                        ) : null}
+                                                                        <div
+                                                                            className={styles.subSceneThumb}
+                                                                            style={{ display: subScene.image ? 'none' : 'block' }}
+                                                                        />
+                                                                    </div>
                                                                     <div className={styles.subSceneMeta}>
                                                                         <div className={styles.subSceneName}>{subScene.name}</div>
                                                                         {subScene.description && (
@@ -1523,6 +1801,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 key={currentMapSrc} // 添加key以强制重新加载
                                 onLoad={() => {
                                     setMapImageLoaded(true);
+                                    setForceUpdate(prev => prev + 1);
                                 }}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement;
@@ -1541,10 +1820,22 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 }}
                             />
                             
-                            {mapImageLoaded && placedScenes.map(scene => {
+                            {/* 加载遮罩 */}
+                            {!isMapContentReady && (
+                                <div className={styles.loadingOverlay}>
+                                    <div className={styles.loadingSpinner}></div>
+                                    <div className={styles.loadingText}>正在加载地图...</div>
+                                </div>
+                            )}
+                            
+                            {/* 只在内容准备好时才渲染场景 */}
+                            {isMapContentReady && placedScenes.map(scene => {
                                 const pos = getScenePosition(scene);
                                 const isSelected = selectedSceneIdInMap === scene.id;
                                 const isDragging = draggingSceneId === scene.id;
+                                
+                                // 如果位置不可见，不渲染
+                                if (!pos.visible) return null;
                                 
                                 return (
                                     <div
@@ -1555,6 +1846,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             top: `${pos.top}px`,
                                             width: `${pos.width}px`,
                                             minHeight: `${pos.height}px`,
+                                            opacity: pos.visible ? 1 : 0,
+                                            transition: 'opacity 0.3s ease',
                                         }}
                                         onMouseDown={(e) => handleSceneMouseDown(e, scene.id)}
                                         onClick={() => setSelectedSceneIdInMap(scene.id)}

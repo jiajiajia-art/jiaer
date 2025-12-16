@@ -103,13 +103,9 @@ const SceneModal: React.FC<SceneModalProps> = ({
             <div className={styles.contentLayer}>
                 {/* 顶部标题栏 */}
                 <div className={styles.titleBar}>
-                    <div className={styles.backButton} onClick={handleBack}>
-                        <MdOutlineArrowCircleLeft size={24} />
-                    </div>
-                    <div className={styles.titleText}>
+                    <div className={styles.titleText} onClick={handleBack}>
                         {displayData.name}
                     </div>
-                    <div className={styles.rightPlaceholder}></div>
                 </div>
 
                 {/* NPC层 - 悬浮在背景之上 */}

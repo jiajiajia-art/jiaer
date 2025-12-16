@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { CiLocationOn } from "react-icons/ci";
-import { IoArrowBack } from "react-icons/io5";
 import { MdCheckCircle } from "react-icons/md";
 import styles from './interactWithNpc.module.css';
 import { LuFileText } from "react-icons/lu";
@@ -19,7 +18,7 @@ import { useStoryTyping } from "../../hooks/story/useStoryTyping";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
 import interactionApi from "../../api/worldInteraction/interactionApi";
-import type { AllGameData, Scene } from "../../api/worldInteraction/mapWorldData.type";
+import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
 
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -34,7 +33,26 @@ interface Message {
     options?: Array<{ id: number; text: string }>;
 }
 
-const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData: AllGameData }) => {
+// 工具函数：处理图片URL
+const getImageUrl = (image: string | undefined): string | undefined => {
+    if (!image) return undefined;
+    return image.startsWith('http') ? image : `${HOST_ADDRESS}${image}`;
+};
+
+// 工具函数：获取玩家图片
+const getPlayerImage = (playerImages: string | { [variant: string]: string } | undefined): string | undefined => {
+    if (!playerImages) return undefined;
+    const image = typeof playerImages === 'string' ? playerImages : (playerImages as any)?.base || '';
+    return image ? getImageUrl(image) : undefined;
+};
+
+const InteractWithNpc = ({ 
+    onClose, 
+    gameData 
+}: { 
+    onClose: () => void;
+    gameData: AllGameData | null;
+}) => {
 
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
@@ -45,8 +63,30 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
     // 从 eventData 获取 eventId
     const eventId = eventData?.event?.eventId || null;
 
-    const [backgroundImage, setBackgroundImage] = useState<string>('');
-    const [currentScene, setCurrentScene] = useState<Scene | null>(null);
+    // 从 gameData 中获取数据
+    const worldSetting = gameData?.worldSetting || null;
+    const sceneSetting = gameData?.sceneSetting || null;
+    
+    // 获取当前子场景信息
+    const currentSubscene = eventData?.subscene || null;
+    
+    // 获取背景图片：优先使用 eventData.subscene.image，否则从 gameData 中查找
+    const backgroundImage = useMemo(() => {
+        if (eventData?.subscene?.image) {
+            return getImageUrl(eventData.subscene.image) || '';
+        }
+        
+        if (eventData?.subscene?.id && sceneSetting?.scenes) {
+            for (const scene of sceneSetting.scenes) {
+                const subscene = scene.subscenes?.find((sub: any) => sub.id === eventData.subscene.id);
+                if (subscene?.image) {
+                    return getImageUrl(subscene.image) || '';
+                }
+            }
+        }
+        
+        return '';
+    }, [eventData?.subscene?.image, eventData?.subscene?.id, sceneSetting]);
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
@@ -69,32 +109,6 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         }
     });
 
-    const worldSetting = useMemo(() => gameData?.worldSetting, [gameData]);
-    const npcSetting = useMemo(() => gameData?.npcSetting, [gameData]);
-    const sceneSetting = useMemo(() => gameData?.sceneSetting, [gameData]);
-
-    const resolveImageUrl = (rawImage?: any) => {
-        const image =
-            typeof rawImage === 'string'
-                ? rawImage
-                : (rawImage && typeof rawImage === 'object' && ('base' in rawImage || 'url' in rawImage))
-                    ? (rawImage.base || rawImage.url || '')
-                    : '';
-
-        if (!image) return undefined;
-        return image.startsWith('http') ? image : `${HOST_ADDRESS}${image}`;
-    };
-
-    // 初始化 currentScene 和背景，使用父组件传入的 gameData
-    useEffect(() => {
-        const firstScene = sceneSetting?.scenes?.[0];
-        if (firstScene) {
-            setCurrentScene(firstScene);
-            const firstImage = resolveImageUrl(firstScene.image);
-            if (firstImage) setBackgroundImage(firstImage);
-        }
-    }, [sceneSetting]);
-
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
 
@@ -112,15 +126,9 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
             };
         } else if (step.type === 'dialogue') {
             const characterName = step.speakerName || step.npcId || '未知角色';
-            let characterImage: string | undefined;
-
-            if (step.activeImage) {
-                characterImage = resolveImageUrl(step.activeImage);
-            }
-
-            if (step.isPlayer) {
-                characterImage = resolveImageUrl(worldSetting?.player?.images || worldSetting?.player?.imagePath);
-            }
+            const characterImage = step.isPlayer 
+                ? getPlayerImage(worldSetting?.player?.images)
+                : getImageUrl(step.activeImage);
 
             return {
                 id: Date.now(),
@@ -133,10 +141,7 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         } else if (step.type === 'choice') {
             const options = step.options?.map((opt: any, index: number) => {
                 if (typeof opt === 'string') {
-                    return {
-                        id: index + 1,
-                        text: opt,
-                    };
+                    return { id: index + 1, text: opt };
                 }
                 return {
                     id: opt.optionId || index + 1,
@@ -149,41 +154,17 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
                 ? (step.description ? `${step.title}\n${step.description}` : step.title)
                 : (step.description || '请选择你的行动');
 
-            let characterImage: string | undefined;
-            if (worldSetting?.player?.images || worldSetting?.player?.imagePath) {
-                characterImage = resolveImageUrl(worldSetting.player.images || worldSetting.player.imagePath);
-            }
-
             return {
                 id: Date.now(),
                 type: 'choice',
                 message,
                 options,
-                characterImage,
+                characterImage: getPlayerImage(worldSetting?.player?.images),
                 characterPosition: 'right',
             };
         } else if (step.type === 'scene_change') {
-            const newScene: Scene = {
-                id: step.sceneId || '',
-                name: step.sceneName || '',
-                type: '',
-                description: step.sceneDescription || '',
-                atmosphere: step.sceneAtmosphere,
-                dangerLevel: step.dangerLevel,
-                image: step.sceneImage || '',
-                events: [],
-                soundtrack: step.soundtrack,
-                subscenes: [],
-                position: [0.5, 0.5],
-            };
-
-            setCurrentScene(newScene);
-
-            if (step.sceneImage) {
-                const sceneImage = resolveImageUrl(step.sceneImage);
-                if (sceneImage) setBackgroundImage(sceneImage);
-            }
-
+            // 场景切换时，背景图片会通过 eventData.subscene.image 自动更新
+            // 这里不需要手动设置，因为 backgroundImage 已经通过 useMemo 从 eventData 计算得出
             return {
                 id: Date.now(),
                 type: 'scene_change',
@@ -192,7 +173,7 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         }
 
         return null;
-    }, [npcSetting, worldSetting]);
+    }, [worldSetting]);
 
     const currentMessage = useMemo(() => {
         // 使用 currentStep（如果存在且不是空的）
@@ -283,17 +264,18 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
             });
     }, []);
 
-    // 初始化游戏：父组件已传入 gameData，直接启动
+    // 初始化游戏：当 gameData 加载完成后自动开始
     useEffect(() => {
-        if (!gameStarted && sessionId && eventId && pdfFileId && gameData) {
+        if (gameData && !gameStarted && sessionId && eventId && pdfFileId) {
             setGameStarted(true);
+            // 自动发送初始交互请求
             stepHandlers.handleInteract({
                 onError: (error) => {
                     console.error('❌ 开始交互失败:', error);
                 }
             });
         }
-    }, [gameStarted, sessionId, eventId, pdfFileId, gameData, stepHandlers]);
+    }, [gameData, gameStarted, sessionId, eventId, pdfFileId]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
@@ -328,74 +310,50 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
 
     const finalIsTyping = (stepHandlers.isWaitingForData && !stepHandlers.currentStep) ? false : isTyping;
 
-    // 简化的步骤管理：只在 currentStep 变化时处理
-    // 关键：只有正常模式已经显示完的step（打字完成）才添加到已完成列表
-    // 这样文本模式就只会显示正常模式已经显示过的step，保持状态统一
+    // 步骤管理：当步骤变化且打字完成时，添加到已完成列表
     useEffect(() => {
         const currentStep = stepHandlers.currentStep;
         const prevStep = previousStepRef.current;
 
-        // 当 currentStep 变化时，将旧的步骤添加到已完成列表
-        // 但只有在打字完成时才添加，确保正常模式已经显示完这个step
-        if (prevStep && currentStep !== prevStep) {
-            // 只有当打字完成时（!isTyping），才将旧步骤添加到已完成列表
-            // 这样确保正常模式已经显示完这个step，文本模式才能显示它
-            if (!isTyping) {
-                setCompletedSteps(prev => {
-                    // 检查是否已存在
-                    const exists = prev.some(s =>
-                        s && s.type === prevStep.type && s.content === prevStep.content
-                    );
-                    if (!exists) {
-                        return [...prev, prevStep];
-                    }
-                    return prev;
-                });
-            }
+        if (prevStep && currentStep !== prevStep && !isTyping) {
+            setCompletedSteps(prev => {
+                const exists = prev.some(s =>
+                    s && s.type === prevStep.type && s.content === prevStep.content
+                );
+                return exists ? prev : [...prev, prevStep];
+            });
         }
 
         previousStepRef.current = currentStep;
         previousIsTypingRef.current = isTyping;
     }, [stepHandlers.currentStep, isTyping]);
 
-    // 计算文本模式显示的所有步骤
-    // 关键：只显示正常模式已经显示过的step，保持状态统一
-    // 对于 choice 类型的步骤，只保留最后一个，避免重复显示
+    // 计算文本模式显示的所有步骤：只显示已完成的步骤和当前步骤，choice 类型只保留最后一个
     const allStepsForTextModal = useMemo(() => {
-        // 过滤有效步骤（这些是正常模式已经显示完的step）
         let validSteps = completedSteps.filter(s => s && s.type);
 
-        // 如果有当前步骤，添加到末尾（如果还没在列表中）
-        // 当前步骤是正常模式正在显示的step，文本模式也应该显示它
-        if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
-            const currentExists = validSteps.some(s =>
-                s && s.type === stepHandlers.currentStep.type &&
+        // 添加当前步骤（如果不存在）
+        if (stepHandlers.currentStep?.type) {
+            const exists = validSteps.some(s =>
+                s.type === stepHandlers.currentStep.type &&
                 s.content === stepHandlers.currentStep.content
             );
-            if (!currentExists) {
-                // 只添加当前步骤，不添加其他未显示的step
+            if (!exists) {
                 validSteps = [...validSteps, stepHandlers.currentStep];
             }
         }
 
-        // 对于 choice 类型的步骤，只保留最后一个
-        // 找到所有 choice 步骤的索引
-        const choiceIndices: number[] = [];
-        validSteps.forEach((step, index) => {
-            if (step && step.type === 'choice') {
-                choiceIndices.push(index);
-            }
-        });
-
-        // 如果有多个 choice 步骤，只保留最后一个
+        // choice 类型只保留最后一个
+        const choiceIndices = validSteps
+            .map((step, index) => step?.type === 'choice' ? index : -1)
+            .filter(idx => idx >= 0);
+        
         if (choiceIndices.length > 1) {
-            // 从后往前移除除了最后一个之外的所有 choice 步骤
             for (let i = choiceIndices.length - 2; i >= 0; i--) {
                 validSteps.splice(choiceIndices[i], 1);
             }
         }
 
-        // 只返回已经显示过的step，不返回其他已请求但未显示的step
         return validSteps;
     }, [completedSteps, stepHandlers.currentStep]);
 
@@ -418,36 +376,30 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         return -1;
     }, [allStepsForTextModal, stepHandlers.currentStep]);
 
-    // 检查是否应该显示"继续游戏"按钮（有 newEvent）
-    const shouldShowContinueButton = useMemo(() => {
-        if (stepHandlers.isWaitingForData) return false;
-        if (!stepHandlers.currentStep) return false;
-        if (stepHandlers.currentStep.type === 'choice') return false;
-        if (stepHandlers.showNextButton) return false;
-        if (finalIsTyping) return false;
-        if (stepHandlers.stepQueue && stepHandlers.stepQueue.length > 0) return false;
-        // 检查是否有完整的新事件（event, npc, subscene）
-        if (!stepHandlers.newEvent) return false;
-        if (!stepHandlers.newEvent.event || !stepHandlers.newEvent.npc || !stepHandlers.newEvent.subscene) return false;
-        return true;
-    }, [stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, stepHandlers.stepQueue, stepHandlers.newEvent, finalIsTyping]);
+    // 检查是否应该显示按钮的通用条件
+    const canShowButtons = useMemo(() => {
+        return !stepHandlers.isWaitingForData &&
+               stepHandlers.currentStep &&
+               stepHandlers.currentStep.type !== 'choice' &&
+               !stepHandlers.showNextButton &&
+               !finalIsTyping &&
+               (!stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0);
+    }, [stepHandlers.isWaitingForData, stepHandlers.currentStep, stepHandlers.showNextButton, stepHandlers.stepQueue, finalIsTyping]);
 
-    // 检查是否应该显示"结束回合"按钮（没有 newEvent，需要调用 next-round）
+    // 检查是否应该显示"继续游戏"按钮（有完整 newEvent）
+    const shouldShowContinueButton = useMemo(() => {
+        if (!canShowButtons) return false;
+        const newEvent = stepHandlers.newEvent;
+        return !!(newEvent?.event && newEvent.npc && newEvent.subscene);
+    }, [canShowButtons, stepHandlers.newEvent]);
+
+    // 检查是否应该显示"结束回合"按钮（没有完整 newEvent）
     const shouldShowEndRoundButton = useMemo(() => {
-        if (stepHandlers.isWaitingForData) return false;
-        if (!stepHandlers.currentStep) return false;
-        if (stepHandlers.currentStep.type === 'choice') return false;
-        if (stepHandlers.showNextButton) return false;
-        if (finalIsTyping) return false;
-        if (stepHandlers.stepQueue && stepHandlers.stepQueue.length > 0) return false;
-        // 如果没有 newEvent，或者 newEvent 只有 completedEvent 但没有完整事件信息
-        if (!stepHandlers.newEvent) return true;
-        // 如果有 newEvent 但没有完整的事件信息（只有 completedEvent），也需要显示结束回合
-        if (stepHandlers.newEvent.completedEvent && (!stepHandlers.newEvent.event || !stepHandlers.newEvent.npc || !stepHandlers.newEvent.subscene)) {
-            return true;
-        }
-        return false;
-    }, [stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, stepHandlers.stepQueue, stepHandlers.newEvent, finalIsTyping]);
+        if (!canShowButtons) return false;
+        const newEvent = stepHandlers.newEvent;
+        return !newEvent || 
+               (newEvent.completedEvent && (!newEvent.event || !newEvent.npc || !newEvent.subscene));
+    }, [canShowButtons, stepHandlers.newEvent]);
 
     // 处理继续游戏（有 newEvent）
     const handleContinue = useCallback(() => {
@@ -462,58 +414,45 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         }
     }, [stepHandlers, setEventData, setCurrentView]);
 
-    // 处理结束回合（没有 newEvent，需要调用 next-round）
+    // 处理结束回合（调用 next-round 获取新事件）
     const handleEndRound = useCallback(async () => {
-        // 清除可能存在的 completedEvent 标记
-        if (stepHandlers.newEvent) {
-            stepHandlers.clearNewEvent?.();
-        }
+        stepHandlers.clearNewEvent?.();
         
+        if (!sessionId) {
+            console.error('缺少 sessionId');
+            return;
+        }
+
         try {
-            if (!sessionId) {
-                console.error('缺少 sessionId');
-                return;
-            }
             setIsLoadingNextRound(true);
             const response = await interactionApi.nextRound(sessionId);
-            if (response.data.success && response.data.activeEvents && response.data.activeEvents.length > 0) {
-                // 使用第一个活跃事件
+            
+            if (response.data.success && response.data.activeEvents?.length > 0) {
                 const firstEvent = response.data.activeEvents[0];
                 
-                // 从 presetData 中查找对应的 NPC 和 subscene
-                let foundNpc: any = null;
-                let foundSubscene: any = null;
+                // 查找对应的 NPC 和 subscene
+                const foundNpc = gameData?.npcSetting?.npcs?.find(npc => npc.id === firstEvent.targetNpcId);
                 
-                // 使用父组件传入的 gameData 查找 NPC 和 subscene
-                if (gameData) {
-                    if (gameData.npcSetting?.npcs) {
-                        foundNpc = gameData.npcSetting.npcs.find(npc => npc.id === firstEvent.targetNpcId);
-                    }
-
-                    if (gameData.sceneSetting?.scenes) {
-                        for (const scene of gameData.sceneSetting.scenes) {
-                            if (scene.subscenes && Array.isArray(scene.subscenes)) {
-                                foundSubscene = scene.subscenes.find((sub: any) => sub.id === firstEvent.targetSubsceneId);
-                                if (foundSubscene) {
-                                    foundSubscene = {
-                                        ...foundSubscene,
-                                        parentSceneName: scene.name
-                                    };
-                                    break;
-                                }
-                            }
-                        }
+                let foundSubscene: any = null;
+                for (const scene of gameData?.sceneSetting?.scenes || []) {
+                    foundSubscene = scene.subscenes?.find((sub: any) => sub.id === firstEvent.targetSubsceneId);
+                    if (foundSubscene) {
+                        foundSubscene = { ...foundSubscene, parentSceneName: scene.name };
+                        break;
                     }
                 }
                 
-                // 如果找到了 NPC 和 subscene，保存到 store
                 if (foundNpc && foundSubscene) {
+                    const npcImage = typeof foundNpc.images === 'string' 
+                        ? foundNpc.images 
+                        : foundNpc.images?.base || '';
+                    
                     setEventData({
                         event: firstEvent,
                         npc: {
                             id: foundNpc.id,
                             name: foundNpc.name,
-                            image: foundNpc.images?.base || foundNpc.images || '',
+                            image: npcImage,
                         },
                         subscene: {
                             id: foundSubscene.id,
@@ -528,7 +467,6 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
             console.error('开始新回合失败:', error);
         } finally {
             setIsLoadingNextRound(false);
-            // 加载完成后自动返回世界地图
             setCurrentView(MapViewState.WORLD_MAP);
         }
     }, [stepHandlers, setEventData, setCurrentView, sessionId, gameData]);
@@ -555,8 +493,6 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         // 打字完成或没有当前步骤时返回空字符串，让组件显示完整内容
         return '';
     }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
-
-    void sceneSetting;
 
     // 文本模式默认开启自动播放
     useEffect(() => {
@@ -644,24 +580,6 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
         });
     }, [stepHandlers, currentMessage]);
 
-    // if (isLoading) {
-    //     return (
-    //         <div className={styles.pageRoot}>
-    //             <div className={styles.mainContent}>
-    //                 <div style={{
-    //                     display: 'flex',
-    //                     justifyContent: 'center',
-    //                     alignItems: 'center',
-    //                     height: '100%',
-    //                     color: '#fff'
-    //                 }}>
-    //                     加载中...
-    //                 </div>
-    //             </div>
-    //         </div>
-    //     );
-    // }
-
     return (
         <>
             <div className={styles.pageRoot}>
@@ -675,15 +593,12 @@ const InteractWithNpc = ({ onClose, gameData }: { onClose: () => void, gameData:
                         backgroundColor: isTextMode ? '#000' : 'transparent'
                     }}
                 >
-                    <div className={styles.backButton} onClick={onClose}>
-                            <IoArrowBack />
-                        </div>
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
-                    <div className={`${styles.topHeader} ${isTextMode ? styles.topHeaderTextMode : ''}`}>
+                    <div className={`${styles.topHeader} ${isTextMode ? styles.topHeaderTextMode : ''}`}  onClick={onClose}>
                         <CiLocationOn />
-                        <span>{currentScene?.name}</span>
+                        <span>{currentSubscene?.name}</span>
                     </div>
                     {currentMessage.characterImage && !isTextMode && (
                         <div className={getCharacterContainerClassName()}>

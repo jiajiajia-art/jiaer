@@ -87,7 +87,8 @@ function adaptWorldWorldSetting(ws?: WorldInteractionGameData['worldSetting']): 
         literary: ws.literary,
         keyEvents: ws.keyEvents,
         WorldRules: undefined, // worldInteraction 模式没有 WorldRules
-        player: adaptWorldPlayer(ws.Player), // 注意：worldInteraction 使用大写的 Player
+        // 后端实际返回的是 player（小写），兼容 Player（大写）
+        player: adaptWorldPlayer((ws as any).player || (ws as any).Player),
         worldMapImage: ws.worldMapImage,
     };
 }
@@ -109,18 +110,46 @@ function adaptVisualPlayer(p: VisualGameData['worldSetting']['player']): Player 
     };
 }
 
-function adaptWorldPlayer(p?: WorldInteractionGameData['worldSetting']['Player']): Player {
+function adaptWorldPlayer(p?: WorldInteractionGameData['worldSetting']['Player'] | any): Player {
+    if (!p) {
+        return {
+            name: '',
+            age: undefined,
+            gender: '',
+            race: undefined,
+            appearance: '',
+            personality: '',
+            tone: '',
+            image: undefined,
+            images: undefined,
+            imagePath: undefined,
+        };
+    }
+    
+    // 处理 images：如果 images 是空对象或不存在，使用 imagePath 作为 base
+    let images: { base: string; [key: string]: string } | undefined = undefined;
+    if (p.images && typeof p.images === 'object' && Object.keys(p.images).length > 0) {
+        // images 有内容，直接使用
+        images = p.images as { base: string; [key: string]: string };
+    } else if (p.imagePath) {
+        // images 为空或不存在，使用 imagePath 作为 base
+        images = { base: p.imagePath };
+    }
+    
+    // image 字段：优先使用 imagePath，否则使用 images.base
+    const image = p.imagePath || (images?.base);
+    
     return {
-        name: p?.name || '',
-        age: p?.age,
-        gender: p?.gender || '',
+        name: p.name || '',
+        age: p.age,
+        gender: p.gender || '',
         race: undefined, // worldInteraction 模式没有 race
-        appearance: p?.appearance || '',
-        personality: p?.personality || '',
-        tone: p?.tone || '',
-        image: undefined, // worldInteraction 模式使用 imagePath
-        images: undefined,
-        imagePath: p?.imagePath,
+        appearance: p.appearance || '',
+        personality: p.personality || '',
+        tone: p.tone || '',
+        image: image,
+        images: images,
+        imagePath: p.imagePath,
     };
 }
 
