@@ -61,8 +61,6 @@ const Galgame = () => {
     const [completedSteps, setCompletedSteps] = useState<any[]>([]);
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
     const historyProcessedRef = useRef<boolean>(false); // 避免历史重复解析导致状态抖动
-    const [showTimeoutModal, setShowTimeoutModal] = useState(false); // 等待超时提示
-    const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
@@ -94,29 +92,6 @@ const Galgame = () => {
             resetDisplayedSteps();
         }
     });
-
-    // 等待超时提示：isWaitingForData 持续过长则弹出
-    useEffect(() => {
-        if (timeoutTimerRef.current) {
-            clearTimeout(timeoutTimerRef.current);
-            timeoutTimerRef.current = null;
-        }
-
-        if (stepHandlers.isWaitingForData) {
-            timeoutTimerRef.current = setTimeout(() => {
-                setShowTimeoutModal(true);
-            }, 10000);
-        } else {
-            setShowTimeoutModal(false);
-        }
-
-        return () => {
-            if (timeoutTimerRef.current) {
-                clearTimeout(timeoutTimerRef.current);
-                timeoutTimerRef.current = null;
-            }
-        };
-    }, [stepHandlers.isWaitingForData]);
 
     // 当新请求开始时，清空已完成的步骤
     useEffect(() => {
@@ -159,8 +134,8 @@ const Galgame = () => {
                 // player.images 可能是对象 { base: "..." } 或字符串
                 const images = worldSetting?.player?.images as any;
                 if (images) {
-                    const playerImage = typeof images === 'string' 
-                        ? images 
+                    const playerImage = typeof images === 'string'
+                        ? images
                         : (images?.base || images);
                     if (playerImage && typeof playerImage === 'string') {
                         characterImage = playerImage.startsWith('http')
@@ -192,8 +167,8 @@ const Galgame = () => {
             // player.images 可能是对象 { base: "..." } 或字符串
             const images = worldSetting?.player?.images as any;
             if (images) {
-                const playerImage = typeof images === 'string' 
-                    ? images 
+                const playerImage = typeof images === 'string'
+                    ? images
                     : (images?.base || images);
                 if (playerImage && typeof playerImage === 'string') {
                     characterImage = playerImage.startsWith('http')
@@ -332,72 +307,39 @@ const Galgame = () => {
     // 处理历史记录的函数
     const processHistoryRecord = useCallback(() => {
         if (!historyLoading && presetData && history.length > 0) {
-            // 查找最后一条助手消息
-            for (let i = history.length - 1; i >= 0; i--) {
-                if (history[i].role === 'assistant' && history[i].content) {
-                    const content = history[i].content;
+            // 只处理最后一条历史消息
+            const lastMessage = history[history.length - 1];
 
-                    // 解析为文本模式步骤
-                    const historySteps = parseHistoryToSteps(content);
-
-                    if (historySteps.length > 0) {
-                        setCompletedSteps(historySteps);
-
-                        // 如果有 choice，也转换为 Message 格式并设置（用于正常模式）
-                        const choiceStep = historySteps.find(s => s.type === 'choice');
-
-                        if (choiceStep && choiceStep.options && choiceStep.options.length > 0) {
-                            const choiceData = extractChoiceFromHistory(content);
-
-                            if (choiceData) {
-                                const choiceMessage: Message = {
-                                    id: Date.now(),
-                                    type: 'choice',
-                                    message: choiceData.title
-                                        ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
-                                        : (choiceData.text || '请选择你的行动'),
-                                    options: choiceData.options.map((opt, index) => ({
-                                        id: index + 1,
-                                        text: extractPlainText(opt),
-                                    })),
-                                    characterImage: (() => {
-                                        const images = worldSetting?.player?.images as any;
-                                        if (images) {
-                                            const playerImage = typeof images === 'string' 
-                                                ? images 
-                                                : (images?.base || images);
-                                            if (playerImage && typeof playerImage === 'string') {
-                                                return playerImage.startsWith('http')
-                                                    ? playerImage
-                                                    : `${HOST_ADDRESS}${playerImage}`;
-                                            }
-                                        }
-                                        return undefined;
-                                    })(),
-                                    characterPosition: 'right',
-                                };
-                                setInitialMessages([choiceMessage]);
-                            }
+            // 情况1：最后一条是用户消息 -> 重新发送
+            if (lastMessage.role === 'user' && lastMessage.content) {
+                if (!stepHandlers.isWaitingForData) {
+                    stepHandlers.handleStreamAction(lastMessage.content, {
+                        onError: (error) => {
+                            console.error('自动重发用户消息失败:', error);
                         }
-                    } else {
-                        // 如果没有解析出步骤，尝试只解析 choice
+                    });
+                }
+                return; // 处理完毕
+            }
+
+            // 情况2：最后一条是助手消息 -> 检查是否有choice
+            if (lastMessage.role === 'assistant' && lastMessage.content) {
+                const content = lastMessage.content;
+
+                // 尝试解析为步骤（文本模式用）
+                const historySteps = parseHistoryToSteps(content);
+                const hasChoiceInHistory = historySteps.some(
+                    (s: any) => s && s.type === 'choice' && s.options && s.options.length > 0
+                );
+
+                if (historySteps.length > 0) {
+                    setCompletedSteps(historySteps);
+
+                    // 如果有 choice，设置为初始消息
+                    const choiceStep = historySteps.find(s => s.type === 'choice');
+                    if (choiceStep && choiceStep.options && choiceStep.options.length > 0) {
                         const choiceData = extractChoiceFromHistory(content);
-
-                        if (choiceData && choiceData.options.length > 0) {
-                            // 创建一个 choice 步骤用于文本模式
-                            const choiceStep: any = {
-                                id: `history-choice-${Date.now()}`,
-                                type: 'choice',
-                                content: '',
-                                title: choiceData.title,
-                                description: choiceData.text,
-                                options: choiceData.options.map((opt, index) => ({
-                                    id: index + 1,
-                                    text: opt
-                                }))
-                            };
-                            setCompletedSteps([choiceStep]);
-
+                        if (choiceData) {
                             const choiceMessage: Message = {
                                 id: Date.now(),
                                 type: 'choice',
@@ -411,8 +353,8 @@ const Galgame = () => {
                                 characterImage: (() => {
                                     const images = worldSetting?.player?.images as any;
                                     if (images) {
-                                        const playerImage = typeof images === 'string' 
-                                            ? images 
+                                        const playerImage = typeof images === 'string'
+                                            ? images
                                             : (images?.base || images);
                                         if (playerImage && typeof playerImage === 'string') {
                                             return playerImage.startsWith('http')
@@ -427,12 +369,74 @@ const Galgame = () => {
                             setInitialMessages([choiceMessage]);
                         }
                     }
-                    break;
+                } else {
+                    // 如果没有解析出步骤，尝试只解析 choice
+                    const choiceData = extractChoiceFromHistory(content);
+                    if (choiceData && choiceData.options.length > 0) {
+                        // 创建 choice 步骤用于文本模式
+                        const choiceStep: any = {
+                            id: `history-choice-${Date.now()}`,
+                            type: 'choice',
+                            content: '',
+                            title: choiceData.title,
+                            description: choiceData.text,
+                            options: choiceData.options.map((opt, index) => ({
+                                id: index + 1,
+                                text: opt
+                            }))
+                        };
+                        setCompletedSteps([choiceStep]);
+
+                        const choiceMessage: Message = {
+                            id: Date.now(),
+                            type: 'choice',
+                            message: choiceData.title
+                                ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
+                                : (choiceData.text || '请选择你的行动'),
+                            options: choiceData.options.map((opt, index) => ({
+                                id: index + 1,
+                                text: extractPlainText(opt),
+                            })),
+                            characterImage: (() => {
+                                const images = worldSetting?.player?.images as any;
+                                if (images) {
+                                    const playerImage = typeof images === 'string'
+                                        ? images
+                                        : (images?.base || images);
+                                    if (playerImage && typeof playerImage === 'string') {
+                                        return playerImage.startsWith('http')
+                                            ? playerImage
+                                            : `${HOST_ADDRESS}${playerImage}`;
+                                    }
+                                }
+                                return undefined;
+                            })(),
+                            characterPosition: 'right',
+                        };
+                        setInitialMessages([choiceMessage]);
+                    }
+                }
+
+                // 情况3：最后一条是助手消息但没有choice -> 查找倒数第一条用户消息并重新发送
+                if (!hasChoiceInHistory && history.length >= 2) {
+                    // 查找倒数第一条用户消息
+                    for (let i = history.length - 2; i >= 0; i--) {
+                        if (history[i].role === 'user' && history[i].content) {
+                            const lastUserMessage = history[i].content;
+                            if (!stepHandlers.isWaitingForData) {
+                                stepHandlers.handleStreamAction(lastUserMessage, {
+                                    onError: (error) => {
+                                        console.error('自动重发倒数第一条用户消息失败:', error);
+                                    }
+                                });
+                            }
+                            break;
+                        }
+                    }
                 }
             }
         }
-    }, [historyLoading, presetData, history, worldSetting]);
-
+    }, [historyLoading, presetData, history, worldSetting, stepHandlers]);
     // 如果存在历史记录，不显示开场白，直接进入游戏，并解析最后一条消息
     useEffect(() => {
         // 等待历史记录加载完成和预设数据加载完成
@@ -651,9 +655,8 @@ const Galgame = () => {
                     if (!sceneImage) {
                         setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
                     }
-                    // 如果存在历史记录，不显示开场白，直接进入游戏
-
-                    setShowStoryIntro(true);
+                    // 如果存在历史记录，不显示开场白
+                    setShowStoryIntro(history.length === 0);
                 }
             } catch (error) {
                 console.error('获取游戏数据失败:', error);
@@ -663,7 +666,7 @@ const Galgame = () => {
         };
 
         fetchPresetData();
-    }, [pdfFileId]);
+    }, [pdfFileId, history.length]);
 
     const addConversion = useCallback(async () => {
         if (!pdfFileId || !user?.user.id) {
@@ -760,14 +763,11 @@ const Galgame = () => {
         const optionIndex = currentMessage.options.findIndex((opt) => {
             return opt.text === option.text || opt.id === option.id;
         });
+        if (optionIndex < 0) return;
 
-        if (optionIndex < 0) {
-            return;
-        }
+        const optionText = currentMessage.options[optionIndex].text;
 
-        const optionObj = currentMessage.options[optionIndex];
-        const optionText = optionObj.text;
-
+        // 如果当前步骤存在并且是 choice，按正常流程扣“option”积分
         if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
             const stepOptionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
                 const optText = typeof opt === 'string' ? opt : (opt.text || opt);
@@ -785,7 +785,8 @@ const Galgame = () => {
             }
         }
 
-        stepHandlers.handleChoiceSend(optionText);
+        // 历史消息或无 currentStep 时也走 handleChoiceOption，避免被当成自定义输入扣 3 分
+        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex);
     }, [stepHandlers, currentMessage, resetDisplayedSteps]);
 
     if (isLoading) {
@@ -955,32 +956,6 @@ const Galgame = () => {
                         }}
                         onEditSave={editHistory}
                     />
-
-                    {showTimeoutModal && (
-                        <div className={styles.timeoutOverlay}>
-                            <div className={styles.timeoutCard}>
-                                <div className={styles.timeoutTitle}>网络或服务响应超时</div>
-                                <div className={styles.timeoutDesc}>如果长时间无响应，可尝试刷新重试</div>
-                                <div className={styles.timeoutActions}>
-                                    <button
-                                        className={styles.timeoutCancel}
-                                        onClick={() => setShowTimeoutModal(false)}
-                                    >
-                                        取消
-                                    </button>
-                                    <button
-                                        className={styles.timeoutRetry}
-                                        onClick={() => {
-                                            setShowTimeoutModal(false);
-                                            window.location.reload();
-                                        }}
-                                    >
-                                        刷新
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                 </div>
             </div>
