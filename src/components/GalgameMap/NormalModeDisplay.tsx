@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import styles from '../Galgame/NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
@@ -42,41 +42,41 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     isAutoPlay,
     onNextMessage,
     onChoiceClick,
-    // onCustomInputSubmit,
+    onCustomInputSubmit,
 }) => {
-    // const [showCustomInput, setShowCustomInput] = useState(false);
-    // const [customInputValue, setCustomInputValue] = useState('');
+    const [showCustomInput, setShowCustomInput] = useState(false);
+    const [customInputValue, setCustomInputValue] = useState('');
 
     const { isWaitingForData, currentStep, showNextButton } = stepHandlers;
 
-    // const handleCustomInputClick = useCallback(() => {
-    //     setShowCustomInput(true);
-    // }, []);
+    const handleCustomInputClick = useCallback(() => {
+        setShowCustomInput(true);
+    }, []);
 
-    // const handleCustomInputChange = useCallback((value: string) => {
-    //     setCustomInputValue(value);
-    // }, []);
+    const handleCustomInputChange = useCallback((value: string) => {
+        setCustomInputValue(value);
+    }, []);
 
-    // const handleCustomInputSubmit = useCallback(() => {
-    //     if (customInputValue.trim()) {
-    //         onCustomInputSubmit(customInputValue.trim());
-    //         setCustomInputValue('');
-    //         setShowCustomInput(false);
-    //     }
-    // }, [customInputValue, onCustomInputSubmit]);
+    const handleCustomInputSubmitClick = useCallback(() => {
+        if (customInputValue.trim()) {
+            onCustomInputSubmit(customInputValue.trim());
+            setCustomInputValue('');
+            setShowCustomInput(false);
+        }
+    }, [customInputValue, onCustomInputSubmit]);
 
-    // const handleCustomInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    //     if (e.key === 'Enter') {
-    //         handleCustomInputSubmit();
-    //     }
-    // }, [handleCustomInputSubmit]);
+    const handleCustomInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleCustomInputSubmitClick();
+        }
+    }, [handleCustomInputSubmitClick]);
 
-    // useEffect(() => {
-    //     if (currentMessage?.type !== 'choice') {
-    //         setShowCustomInput(false);
-    //         setCustomInputValue('');
-    //     }
-    // }, [currentMessage?.type]);
+    useEffect(() => {
+        if (currentMessage?.type !== 'choice') {
+            setShowCustomInput(false);
+            setCustomInputValue('');
+        }
+    }, [currentMessage?.type]);
 
     // 渲染带颜色标签和 Markdown 的文本
     // 使用统一的 truncateTextWithTags 截取带颜色标签的文本
@@ -171,10 +171,14 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             </span>
                         </div>
                     ))}
-                    {/* {!showCustomInput ? (
+                    {!showCustomInput ? (
                         <div
                             className={styles.customInputText}
                             onClick={handleCustomInputClick}
+                            style={{ 
+                                cursor: (!isWaitingForData && !finalIsTyping) ? 'pointer' : 'default',
+                                opacity: (isWaitingForData || finalIsTyping) ? 0.6 : 1
+                            }}
                         >
                             <span>自定义输入</span>
                         </div>
@@ -187,16 +191,17 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 onChange={(e) => handleCustomInputChange(e.target.value)}
                                 onKeyDown={handleCustomInputKeyDown}
                                 autoFocus
+                                disabled={isWaitingForData || finalIsTyping}
                             />
                             <button
-                                onClick={handleCustomInputSubmit}
-                                disabled={!customInputValue.trim()}
+                                onClick={handleCustomInputSubmitClick}
+                                disabled={!customInputValue.trim() || isWaitingForData || finalIsTyping}
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
                             </button>
                         </div>
-                    )} */}
+                    )}
                 </div>
             )}
 

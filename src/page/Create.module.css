@@ -185,16 +185,6 @@
     margin-bottom: 18px;
 }
 
-.createTypeOptionPrimary {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: linear-gradient(90deg, #fee2e2, #fecaca);
-    color: #b91c1c;
-    border: 1px solid rgba(248, 113, 113, 0.6);
-}
-
 .createTypeOption {
     width: 100%;
     justify-content: flex-start;
@@ -203,6 +193,11 @@
     background-color: #ffffff;
     color: #b91c1c;
     border: 1px solid rgba(248, 113, 113, 0.3);
+    cursor: pointer;
+}
+
+.createTypeOption:hover {
+    box-shadow: 0 6px 14px rgba(248, 113, 113, 0.18);
 }
 
 .createTypeModalFooter {

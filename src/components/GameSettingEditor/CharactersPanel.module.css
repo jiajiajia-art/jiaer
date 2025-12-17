@@ -633,6 +633,22 @@
     box-shadow: 0 4px 12px rgba(224, 61, 75, 0.3);
 }
 
+.modalFooter .ghostSmall:disabled,
+.modalFooter .ghostSmall:disabled:hover {
+    background: #f0f0f0;
+    color: #666;
+    border-color: #f0f0f0;
+}
+
+/* 立绘操作区按钮禁用态样式 */
+.portraitImageActions .ghostSmall:disabled,
+.portraitImageActions .ghostSmall:disabled:hover {
+    background: #f0f0f0;
+    color: #666;
+    border-color: #f0f0f0;
+    cursor: not-allowed;
+}
+
 /* 响应式布局 */
 @media (max-width: 1080px) {
     .characterLayout {

@@ -1,6 +1,6 @@
 // ==================== 导入 ====================
 import React, { useEffect, useState, useRef } from 'react';
-import styles from './NewMain.module.css';
+import styles from './RpgGame.module.css';
 import { HOST_ADDRESS } from '../config';
 import { useGameStore } from '../store/gameStore';
 import { MdLockClock } from 'react-icons/md';
@@ -14,22 +14,22 @@ import { useMusic } from '../hooks/useMusic';
 import { useAutoFontSize } from '../hooks/useAutoFontSize';
 
 // 组件
-import NpcModal from '../components/Mian/NpcModal';
-import SceneDetailModal from '../components/Mian/SceneDetailModal';
-import EventModal from '../components/Mian/EventModal';
-import PlayerFloatingPanel from '../components/Mian/PlayerFloatingPanel';
-import InventoryFloatingPanel from '../components/Mian/InventoryFloatingPanel';
-import MapModal from '../components/Mian/MapModal';
-import ChatPanel from '../components/Mian/ChatPanel';
-import SettingModal from '../components/Mian/SettingModal';
+import NpcModal from '../components/Rpg/NpcModal';
+import SceneDetailModal from '../components/Rpg/SceneDetailModal';
+import EventModal from '../components/Rpg/EventModal';
+import PlayerFloatingPanel from '../components/Rpg/PlayerFloatingPanel';
+import InventoryFloatingPanel from '../components/Rpg/InventoryFloatingPanel';
+import MapModal from '../components/Rpg/MapModal';
+import ChatPanel from '../components/Rpg/ChatPanel';
+import SettingModal from '../components/Rpg/SettingModal';
 import AlertModal from '../components/AlertModal';
-import changeSceneApi from '../api/game/changeSenceAPi';
-import MissionsModal from '../components/Mian/MissionsModal';
+import changeSceneApi from '../api/rpgGame/changeSenceAPi';
+import MissionsModal from '../components/Rpg/MissionsModal';
 import StoryModal from '../components/storyModal/StoryModal';
 import GameIntroOverlay from '../components/storyModal/GameIntroOverlay';
 import { authFetch } from '../api/base';
 
-const NewMain: React.FC = () => {
+const RgpGame: React.FC = () => {
     const {
         player,
         inventory,
@@ -640,4 +640,4 @@ const NewMain: React.FC = () => {
     );
 }
 
-export default NewMain;
+export default RgpGame;

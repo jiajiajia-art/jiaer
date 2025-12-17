@@ -17,7 +17,6 @@ import { useCharacterContainerClassName } from "../../hooks/galgame/useCharacter
 import { useStoryTyping } from "../../hooks/story/useStoryTyping";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
-import interactionApi from "../../api/worldInteraction/interactionApi";
 import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
 
 
@@ -30,7 +29,7 @@ interface Message {
     characterName?: string;
     characterImage?: string;
     characterPosition?: 'left' | 'right';
-    options?: Array<{ id: number; text: string }>;
+    options?: Array<{ id: number; text: string; optionId?: string }>;
 }
 
 // 工具函数：处理图片URL
@@ -48,17 +47,20 @@ const getPlayerImage = (playerImages: string | { [variant: string]: string } | u
 
 const InteractWithNpc = ({ 
     onClose, 
-    gameData 
+    gameData,
+    onEndRound,
+    isEndingRound,
 }: { 
     onClose: () => void;
     gameData: AllGameData | null;
+    onEndRound: () => void;
+    isEndingRound: boolean;
 }) => {
 
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
     const { pdfFileId } = useGameStore();
     const { eventData, setEventData, setCurrentView } = useMapGalgameStore();
-    const [isLoadingNextRound, setIsLoadingNextRound] = useState(false);
 
     // 从 eventData 获取 eventId
     const eventId = eventData?.event?.eventId || null;
@@ -87,6 +89,7 @@ const InteractWithNpc = ({
         
         return '';
     }, [eventData?.subscene?.image, eventData?.subscene?.id, sceneSetting]);
+    
     const [gameStarted, setGameStarted] = useState<boolean>(false);
     const [isAutoPlay, setIsAutoPlay] = useState<boolean>(false);
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
@@ -126,10 +129,12 @@ const InteractWithNpc = ({
                 message: step.content || '',
             };
         } else if (step.type === 'dialogue') {
-            const characterName = step.speakerName || step.npcId || '未知角色';
-            const characterImage = step.isPlayer 
+            // 根据新的数据类型，使用 speakerId 来判断是否是玩家
+            const isPlayer = step.speakerId === 'player' || step.speakerId === 'Player' || step.speakerId === worldSetting?.player?.name;
+            const characterName = step.speakerName || step.npcId || step.speakerId || '未知角色';
+            const characterImage = isPlayer 
                 ? getPlayerImage(worldSetting?.player?.images)
-                : getImageUrl(step.activeImage);
+                : getImageUrl(step.activeImage || step.npcImages?.base);
 
             return {
                 id: Date.now(),
@@ -137,7 +142,7 @@ const InteractWithNpc = ({
                 message: step.content || '',
                 characterName,
                 characterImage,
-                characterPosition: step.isPlayer ? 'right' : 'left',
+                characterPosition: isPlayer ? 'right' : 'left',
             };
         } else if (step.type === 'choice') {
             const options = step.options?.map((opt: any, index: number) => {
@@ -145,9 +150,9 @@ const InteractWithNpc = ({
                     return { id: index + 1, text: opt };
                 }
                 return {
-                    id: opt.optionId || index + 1,
+                    id: index + 1,
                     text: opt.text || opt,
-                    optionId: opt.optionId,
+                    optionId: opt.optionId ? String(opt.optionId) : undefined,
                 };
             }) || [];
 
@@ -230,11 +235,13 @@ const InteractWithNpc = ({
                 };
 
                 if (step.type === 'dialogue') {
+                    // 根据新的数据类型，使用 speakerId 来判断是否是玩家
+                    const isPlayer = step.speakerId === 'player' || step.speakerId === 'Player' || step.speakerId === worldSetting?.player?.name;
                     return {
                         ...baseStep,
-                        speakerName: step.speakerName || step.npcId,
-                        characterName: step.speakerName || step.npcId || '未知角色',
-                        isPlayer: step.isPlayer || false,
+                        speakerName: step.speakerName || step.npcId || step.speakerId,
+                        characterName: step.speakerName || step.npcId || step.speakerId || '未知角色',
+                        isPlayer: isPlayer,
                     };
                 }
 
@@ -247,9 +254,9 @@ const InteractWithNpc = ({
                             };
                         }
                         return {
-                            id: opt.optionId || idx + 1,
+                            id: idx + 1,
                             text: opt.text || opt,
-                            optionId: opt.optionId,
+                            optionId: opt.optionId ? String(opt.optionId) : undefined,
                         };
                     }) || [];
 
@@ -263,7 +270,7 @@ const InteractWithNpc = ({
 
                 return baseStep;
             });
-    }, []);
+    }, [worldSetting]);
 
     // 初始化游戏：当 gameData 加载完成后自动开始
     useEffect(() => {
@@ -422,62 +429,12 @@ const InteractWithNpc = ({
         }
     }, [stepHandlers, setEventData, setCurrentView]);
 
-    // 处理结束回合（调用 next-round 获取新事件）
-    const handleEndRound = useCallback(async () => {
+    // 结束回合：仅做本组件内的状态清理，实际的 next-round 请求由父组件统一处理
+    const handleEndRound = useCallback(() => {
         stepHandlers.clearNewEvent?.();
-        
-        if (!sessionId) {
-            console.error('缺少 sessionId');
-            return;
-        }
-
-        try {
-            setIsLoadingNextRound(true);
-            const response = await interactionApi.nextRound(sessionId);
-            
-            if (response.data.success && response.data.activeEvents?.length > 0) {
-                const firstEvent = response.data.activeEvents[0];
-                
-                // 查找对应的 NPC 和 subscene
-                const foundNpc = gameData?.npcSetting?.npcs?.find(npc => npc.id === firstEvent.targetNpcId);
-                
-                let foundSubscene: any = null;
-                for (const scene of gameData?.sceneSetting?.scenes || []) {
-                    foundSubscene = scene.subscenes?.find((sub: any) => sub.id === firstEvent.targetSubsceneId);
-                    if (foundSubscene) {
-                        foundSubscene = { ...foundSubscene, parentSceneName: scene.name };
-                        break;
-                    }
-                }
-                
-                if (foundNpc && foundSubscene) {
-                    const npcImage = typeof foundNpc.images === 'string' 
-                        ? foundNpc.images 
-                        : foundNpc.images?.base || '';
-                    
-                    setEventData({
-                        event: firstEvent,
-                        npc: {
-                            id: foundNpc.id,
-                            name: foundNpc.name,
-                            image: npcImage,
-                        },
-                        subscene: {
-                            id: foundSubscene.id,
-                            name: foundSubscene.name,
-                            image: foundSubscene.image || '',
-                            parentSceneName: foundSubscene.parentSceneName || '',
-                        },
-                    });
-                }
-            }
-        } catch (error) {
-            console.error('开始新回合失败:', error);
-        } finally {
-            setIsLoadingNextRound(false);
-            setCurrentView(MapViewState.WORLD_MAP);
-        }
-    }, [stepHandlers, setEventData, setCurrentView, sessionId, gameData]);
+        // 交给父组件统一调用 nextRound
+        onEndRound();
+    }, [stepHandlers, onEndRound]);
 
     // 获取当前步骤的打字机文本（保留颜色标签，实现丝滑打字效果）
     // 这个文本只用于当前正在打字的步骤
@@ -533,60 +490,93 @@ const InteractWithNpc = ({
         };
     }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, isTextMode]);
 
-    const handleChoiceClick = useCallback((option: { id: number | string; text: string; optionId?: string }) => {
-        if (!currentMessage || currentMessage.type !== 'choice' || !currentMessage.options) {
-            return;
-        }
-
+    const handleChoiceClick = useCallback((option: { text: string; optionId?: string }) => {
         // 清空已完成步骤和引用，避免残留数据
         setCompletedSteps([]);
         previousStepRef.current = null;
         previousIsTypingRef.current = false;
 
-        // 优先使用 optionId，如果没有则从 currentStep 中查找
+        // optionId 可以是真实的 optionId（string 类型）或者用户自定义输入的文本（string 类型）
         let optionId: string | undefined = option.optionId;
         let optionIndex = -1;
 
-        // 从 currentStep 中查找选项
-        if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
-            optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
-                if (typeof opt === 'string') {
-                    return opt === option.text;
-                }
-                return opt.text === option.text || opt.optionId === option.optionId || opt.optionId === option.id;
-            }) ?? -1;
+        // 如果 optionId 存在，说明可能是用户自定义输入（直接使用）或者是真实 optionId
+        // 如果 optionId 不存在，需要从 currentStep 或 currentMessage 中查找
+        if (!optionId) {
+            // 从 currentStep 中查找选项
+            if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
+                optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
+                    if (typeof opt === 'string') {
+                        return opt === option.text;
+                    }
+                    return opt.text === option.text || opt.optionId === option.optionId;
+                }) ?? -1;
 
-            if (optionIndex >= 0) {
-                const stepOption = stepHandlers.currentStep.options?.[optionIndex];
-                if (stepOption && typeof stepOption !== 'string') {
-                    optionId = stepOption.optionId || optionId;
+                if (optionIndex >= 0) {
+                    const stepOption = stepHandlers.currentStep.options?.[optionIndex];
+                    if (stepOption && typeof stepOption !== 'string') {
+                        optionId = stepOption.optionId ? String(stepOption.optionId) : undefined;
+                    }
                 }
             }
-        }
 
-        // 如果还没找到，从 currentMessage 中查找
-        if (optionIndex < 0) {
-            optionIndex = currentMessage.options.findIndex((opt: any) => {
-                return opt.text === option.text || opt.id === option.id || opt.optionId === option.optionId;
-            });
+            // 如果还没找到，从 currentMessage 中查找
+            if (optionIndex < 0 && currentMessage && currentMessage.type === 'choice' && currentMessage.options) {
+                optionIndex = currentMessage.options.findIndex((opt: any) => {
+                    return opt.text === option.text || opt.optionId === option.optionId;
+                });
+                
+                if (optionIndex >= 0) {
+                    const msgOption = currentMessage.options[optionIndex] as any;
+                    optionId = msgOption.optionId ? String(msgOption.optionId) : undefined;
+                }
+            }
+        } else {
+            // 如果 optionId 存在，尝试找到对应的 optionIndex（用于显示选中状态）
+            if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
+                optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
+                    if (typeof opt === 'string') {
+                        return false;
+                    }
+                    return opt.optionId === optionId || String(opt.optionId) === optionId;
+                }) ?? -1;
+            }
             
-            if (optionIndex >= 0) {
-                const msgOption = currentMessage.options[optionIndex] as any;
-                optionId = msgOption.optionId || optionId;
+            if (optionIndex < 0 && currentMessage && currentMessage.type === 'choice' && currentMessage.options) {
+                optionIndex = currentMessage.options.findIndex((opt: any) => {
+                    return opt.optionId === optionId || String(opt.optionId) === optionId;
+                });
             }
         }
 
-        if (optionIndex < 0 || !optionId) {
+        // optionId 必须存在（可以是真实 optionId 或用户自定义输入的文本）
+        if (!optionId) {
             console.error('❌ 无法找到选项或 optionId:', { option, optionIndex, optionId });
             return;
         }
 
-        stepHandlers.handleChoiceOption(optionId, optionIndex, {
+        // 如果 optionIndex 没找到，使用 -1（表示是用户自定义输入）
+        const finalOptionIndex = optionIndex >= 0 ? optionIndex : -1;
+
+        stepHandlers.handleChoiceOption(optionId, finalOptionIndex, {
             onError: (error) => {
                 console.error('❌ 选择选项失败:', error);
             }
         });
     }, [stepHandlers, currentMessage]);
+
+    // 处理用户自定义输入
+    const handleCustomInputSubmit = useCallback((customText: string) => {
+        if (!customText.trim()) {
+            return;
+        }
+
+        // 将用户自定义输入的文本作为 optionId 传递
+        handleChoiceClick({
+            text: customText,
+            optionId: customText.trim()
+        });
+    }, [handleChoiceClick]);
 
     return (
         <>
@@ -633,9 +623,7 @@ const InteractWithNpc = ({
                                     isAutoPlay={isAutoPlay}
                                     onNextMessage={handleNextMessage}
                                     onChoiceClick={handleChoiceClick}
-                                    onCustomInputSubmit={() => {
-                                        // 世界交互模式不支持自定义输入
-                                    }}
+                                    onCustomInputSubmit={handleCustomInputSubmit}
                                 />
                             </>
                         )}
@@ -652,9 +640,7 @@ const InteractWithNpc = ({
                                     previousIsTypingRef.current = false;
                                     handleChoiceClick(option);
                                 }}
-                                onCustomInputSubmit={() => {
-                                    // 世界交互模式不支持自定义输入
-                                }}
+                                onCustomInputSubmit={handleCustomInputSubmit}
                             />
                         )}
                         <div className={styles.buttonContainer}>
@@ -712,7 +698,7 @@ const InteractWithNpc = ({
                         </div>
                         
                         {/* 继续游戏按钮 - 有 newEvent 时显示 */}
-                        {shouldShowContinueButton && !isLoadingNextRound && (
+                        {shouldShowContinueButton && !isEndingRound && (
                             <div 
                                 className={styles.continueButton} 
                                 onClick={handleContinue}
@@ -727,13 +713,17 @@ const InteractWithNpc = ({
                         {shouldShowEndRoundButton && (
                             <div 
                                 className={styles.endRoundButton} 
-                                onClick={handleEndRound}
+                                onClick={() => {
+                                    if (!isEndingRound) {
+                                        handleEndRound();
+                                    }
+                                }}
                                 style={{ 
-                                    opacity: isLoadingNextRound ? 0.6 : 1,
-                                    cursor: isLoadingNextRound ? 'not-allowed' : 'pointer'
+                                    opacity: isEndingRound ? 0.6 : 1,
+                                    cursor: isEndingRound ? 'not-allowed' : 'pointer'
                                 }}
                             >
-                                {isLoadingNextRound ? (
+                            {isEndingRound ? (
                                     <>
                                         <div className={styles.loadingSpinner}></div>
                                         <span>加载中...</span>

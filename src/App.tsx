@@ -1,7 +1,6 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // import CreateCharacter from './page/CreateCharacter';
-import NewMain from './page/NewMain';
 import Home from './page/Home';
 import Create from './page/Create';
 import WareHouse from './page/WareHouse';
@@ -12,10 +11,10 @@ import Library from './page/Library';
 import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
+import RpgGame from './page/RpgGame';
 // import Activity from './page/Activity';
 
 function App() {
-
   return (
     <BrowserRouter basename='/funloom'>
       <Routes>
@@ -25,7 +24,7 @@ function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/newmain" element={<NewMain />} />
+          <Route path="/rpgGame" element={<RpgGame />} />
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />

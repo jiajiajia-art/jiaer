@@ -6,7 +6,7 @@ export interface CreateWorldSessionRequest {
 }
 const createWorldSessionApi = {
     createWorldSession: (data:CreateWorldSessionRequest) =>
-        api.post<CreateWorldSessionResponse>(`/world-interaction/session/create`, data),
+        api.post<CreateWorldSessionResponse>(`/worldInteraction/session/create`, data),
     getWorldFilesBySession: (sessionId: string) =>
         api.get<GetWorldFilesBySessionResponse>(`/world-interaction/session/${sessionId}`),
 }

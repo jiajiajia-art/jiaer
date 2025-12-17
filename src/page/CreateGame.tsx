@@ -9,7 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
-import GameAction from '../api/game/gameAction';
+import GameAction from '../api/rpgGame/gameAction';
 import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
 import DeletModal from '../components/goodsModal/DeletModal';
 import GameForm, { type GameFormData } from '../components/CreateGame/GameForm';

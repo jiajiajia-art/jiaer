@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
-import type { NPC } from '../api/game/gameData.type';
+import type { NPC } from '../api/rpgGame/gameData.type';
 import { useStreamResponse } from './useStreamResponse';
 
 export interface ChatMessage {

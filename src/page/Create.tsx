@@ -370,19 +370,19 @@ const Create: React.FC = () => {
                         </div>
                         <div className={styles.createTypeOptions}>
                             <button
-                                className={`${styles.createGameButtonItem} ${styles.createTypeOption}`}
+                                className={`${styles.createTypeOption}`}
                                 onClick={() => handleSelectGameType('roleplay')}
                             >
                                 <span>角色扮演</span>
                             </button>
                             <button
-                                className={`${styles.createGameButtonItem} ${styles.createTypeOption}`}
+                                className={`${styles.createTypeOption}`}
                                 onClick={() => handleSelectGameType('text')}
                             >
                                 <span>文字游戏</span>
                             </button>
                             <button
-                                className={`${styles.createGameButtonItem} ${styles.createTypeOption}`}
+                                className={`${styles.createTypeOption}`}
                                 onClick={() => handleSelectGameType('visual')}
                             >
                                 <span>视觉小说</span>

@@ -8,8 +8,8 @@ import { useAuthStore, authModalStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
 import createSessionApi from '../../api/createGame/createSessionApi';
 import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
-import GameAction from '../../api/game/gameAction';
-import type { GameStatsResponse } from '../../api/game/gameAction.Api';
+import GameAction from '../../api/rpgGame/gameAction';
+import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 
 interface GameStatsViewProps {
@@ -84,7 +84,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             } else if(gameDetail.version == 'map-plugin-version'){
                 const response = await createWorldSessionApi.createWorldSession({fileId}); 
                 if (response.data.success) {
-                    const sessionId = response.data.session.sessionId;
+                    const sessionId = response.data.data.session.session_id;
                     return { sessionId, redirectUrl: '/galgameMap'};
                 } else {
                     alert(response.data.message || '创建游戏失败，请重试');

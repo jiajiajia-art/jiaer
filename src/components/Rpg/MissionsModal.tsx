@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './MissionsModal.module.css';
-import type { MissionData, Mission } from '../../api/game/missionApi.type';
+import type { MissionData, Mission } from '../../api/rpgGame/missionApi.type';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 
 interface MissionsModalProps {

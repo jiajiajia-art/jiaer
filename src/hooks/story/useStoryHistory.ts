@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { authFetch } from '../../api/base';
 import { HOST_ADDRESS } from '../../config';
-import type { ChatMessage } from '../../components/Mian/ChatHistory';
+import type { ChatMessage } from '../../components/Rpg/ChatHistory';
 import { cleanHistoryMessage, extractChoiceFromHistory } from '../../utils/textUtils';
-import type { MissionData } from '../../api/game/missionApi.type';
+import type { MissionData } from '../../api/rpgGame/missionApi.type';
 
 interface UseStoryHistoryOptions {
     sessionId: string | null;

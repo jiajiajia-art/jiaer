@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { EventResponse } from "./interactionApi.type";
+import type { EventResponse, GetActiveEventsResponse, GetWorldInteractionHistoryResponse } from "./interactionApi.type";
 
 interface NextRoundResponse {
     success: boolean;
@@ -33,9 +33,12 @@ const interactionApi = {
             {},
             { timeout: 1500000 },
         ),
-    
     nextRound: (sessionId: string) =>
         api.post<NextRoundResponse>(`/world-interaction/session/${sessionId}/next-round`, {}, {timeout: 0}),
+    getWorldInteractionHistory: (sessionId: string) =>
+        api.get<GetWorldInteractionHistoryResponse>(`/world-interaction/session/${sessionId}/history`),
+    getActiveEvents: (sessionId: string) =>
+        api.get<GetActiveEventsResponse>(`/world-interaction/session/${sessionId}/events/active`),
 }
 
 export default interactionApi;

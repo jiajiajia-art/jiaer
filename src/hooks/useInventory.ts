@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Inventory, InventoryItem } from '../api/game/gameData.type';
+import type { Inventory, InventoryItem } from '../api/rpgGame/gameData.type';
 import { useGameStore } from '../store/gameStore';
 
 // EquipmentSlots 类型定义（后端数据结构：equipment 存储的是物品ID字符串）

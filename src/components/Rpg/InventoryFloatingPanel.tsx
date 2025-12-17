@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './InventoryFloatingPanel.module.css';
-import type { Inventory, InventoryItem } from '../../api/game/gameData.type';
+import type { Inventory, InventoryItem } from '../../api/rpgGame/gameData.type';
 import { useGameStore } from '../../store/gameStore';
 
 interface EquipmentSlots {

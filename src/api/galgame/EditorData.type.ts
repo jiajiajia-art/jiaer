@@ -44,6 +44,7 @@ export interface GenerateNpcImageRequest {
     };
     fileId: string;
     removeBg: boolean;
+    mode: string;
 }
 
 export interface GenerateSceneImageRequest {
@@ -53,6 +54,7 @@ export interface GenerateSceneImageRequest {
         description: string;
     };
     fileId: string;
+    mode: string;
 }
 
 export interface GenerateVariantImageRequest {

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import styles from './ChatHistory.module.css';
 import ReactMarkdown from 'react-markdown';
 import { cleanTextOnly } from '../../utils/textUtils';
-import historyApi from '../../api/game/history';
+import historyApi from '../../api/rpgGame/history';
 import { useGameStore } from '../../store/gameStore';
 import { FaFileExport } from 'react-icons/fa';
 

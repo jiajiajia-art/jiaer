@@ -14,7 +14,7 @@ import type { AllGameData as VisualGameData } from '../api/galgame/EditorData.ty
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
 import { toast, Toaster } from 'react-hot-toast';
 import { useEditorStore } from '../store/editorStore';
-import GameAction from '../api/game/gameAction';
+import GameAction from '../api/rpgGame/gameAction';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
@@ -221,7 +221,7 @@ const GameSettingsEditor = () => {
                                 setIsSubmitting(false);
                                 return;
                             }
-                            response = await EditorApi.updateWorldSetting(fileId, worldSettingDiff);
+                            response = mode === 'worldInteraction' ? await worldEditor.updateWorldSetting(fileId, worldSettingDiff) : await EditorApi.updateWorldSetting(fileId, worldSettingDiff);
                         } else {
                             toast.error('没有需要保存的修改');
                             setIsSubmitting(false);
@@ -247,7 +247,9 @@ const GameSettingsEditor = () => {
                                 }
                                 // 批量更新所有 NPC
                                 const updatePromises = npcs.map(npc =>
-                                    EditorApi.updateNpc(fileId, npc)
+                                    mode === 'worldInteraction' 
+                                        ? worldEditor.updateNpc(fileId, npc)
+                                        : EditorApi.updateNpc(fileId, npc)
                                 );
                                 const results = await Promise.all(updatePromises);
                                 // 检查是否全部成功
@@ -288,18 +290,23 @@ const GameSettingsEditor = () => {
                                 }
                                 // 批量更新所有场景
                                 const updatePromises = scenes.map(scene => {
-                                    // 确保场景数据包含必需的字段
-                                    const sceneData: ApiScene = {
-                                        id: scene.id,
-                                        name: scene.name,
-                                        type: scene.type || '',
-                                        description: scene.description || '',
-                                        images: scene.image,
-                                        soundtrack: scene.soundtrack,
-                                        npcs: [],
-                                        events: [],
-                                    };
-                                    return EditorApi.updateScene(fileId, sceneData);
+                                    if (mode === 'worldInteraction') {
+                                        // worldInteraction 模式：直接使用 UnifiedScene（包含 subscenes）
+                                        return worldEditor.updateScene(fileId, scene);
+                                    } else {
+                                        // visual 模式：转换为 ApiScene（不包含 subscenes）
+                                        const sceneData: ApiScene = {
+                                            id: scene.id,
+                                            name: scene.name,
+                                            type: scene.type || '',
+                                            description: scene.description || '',
+                                            images: scene.image,
+                                            soundtrack: scene.soundtrack,
+                                            npcs: [],
+                                            events: [],
+                                        };
+                                        return EditorApi.updateScene(fileId, sceneData);
+                                    }
                                 });
                                 const results = await Promise.all(updatePromises);
                                 // 检查是否全部成功
@@ -347,7 +354,7 @@ const GameSettingsEditor = () => {
         } finally {
             setIsSubmitting(false);
         }
-    }, [fileId, gameData, activePanel]);
+    }, [fileId, gameData, activePanel, mode, fetchEditorData]);
 
     const handlePublishGame = async (price: number | null, isFree: boolean) => {
         if (!fileId) return;
@@ -380,7 +387,7 @@ const GameSettingsEditor = () => {
             if (mode === 'worldInteraction') {
                 const sessionResponse = await createWorldSessionApi.createWorldSession({ fileId });
                 if (sessionResponse.data.success) {
-                    const sessionId = sessionResponse.data.session.sessionId;
+                    const sessionId = sessionResponse.data.data.session.session_id;
                     setPdfFileId(fileId);
                     setSessionId(sessionId);
                     navigate(`/galgameMap`);
@@ -494,6 +501,7 @@ const GameSettingsEditor = () => {
                                 fetchEditorData(fileId);
                             }
                         }}
+                        mode={mode || 'visual'}
                     />
                 </section>
 
@@ -508,6 +516,7 @@ const GameSettingsEditor = () => {
                                 fetchEditorData(fileId);
                             }
                         }}
+                        mode={mode || 'visual'}
                     />
                 </section>
 

@@ -5,7 +5,8 @@ import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type'
 import EditorApi from '../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
 import DeletModal from '../goodsModal/DeletModal';
-import { RiDeleteBin5Line } from 'react-icons/ri';
+import { RiDeleteBin5Line, RiArrowDownSLine, RiArrowRightSLine } from 'react-icons/ri';
+import worldEditor from '../../api/worldInteraction/worldEditor';
 
 interface BgmItem {
     id: string;
@@ -28,17 +29,33 @@ interface ScenesPanelProps {
     fileId?: string | null;
     onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
+    mode?: string;
 }
 
-const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, fileId, onGetData, onDataChange }) => {
+const ScenesPanel: React.FC<ScenesPanelProps> = ({ 
+    gameData, 
+    isLoading = false, 
+    fileId, 
+    onGetData, 
+    onDataChange, 
+    mode = 'visual' 
+}) => {
     const [activeSceneId, setActiveSceneId] = useState<string>('');
+    const [activeSubsceneId, setActiveSubsceneId] = useState<string | null>(null);
+    const [activeSubsceneDraft, setActiveSubsceneDraft] = useState<LocalScene | null>(null);
     const [sceneData, setSceneData] = useState<LocalScene[]>([]);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
     const [newSceneData, setNewSceneData] = useState<LocalScene | null>(null);
+    const [isAddingNewSubscene, setIsAddingNewSubscene] = useState<boolean>(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [sceneToDelete, setSceneToDelete] = useState<string | null>(null);
+    const [subsceneDeleteModalOpen, setSubsceneDeleteModalOpen] = useState<boolean>(false);
+    const [subsceneToDelete, setSubsceneToDelete] = useState<{ sceneId: string; subsceneId: string } | null>(null);
+    const [subsceneCollapsed, setSubsceneCollapsed] = useState<Record<string, boolean>>({});
     const sceneFileInputRef = useRef<HTMLInputElement>(null);
     const newSceneFileInputRef = useRef<HTMLInputElement>(null);
+    const [isGeneratingAllSceneImages, setIsGeneratingAllSceneImages] = useState<boolean>(false);
+    const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
 
     const [bgmLibrary, _setBgmLibrary] = useState<BgmItem[]>([
         { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
@@ -61,7 +78,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
 
             setSceneData(convertedScenes);
             if (convertedScenes.length > 0) {
-                setActiveSceneId(convertedScenes[0].id);
+                setActiveSceneId(prev => prev || convertedScenes[0].id);
             }
         }
     }, [gameData]);
@@ -134,6 +151,13 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         );
     };
 
+    // 更新子场景字段
+    const updateSubsceneField = (field: keyof LocalScene, value: string) => {
+        if (activeSubsceneDraft) {
+            setActiveSubsceneDraft({ ...activeSubsceneDraft, [field]: value });
+        }
+    };
+
     // 打开新增场景面板
     const openAddNewPanel = () => {
         const newScene: LocalScene = {
@@ -147,6 +171,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         setNewSceneData(newScene);
         setIsAddingNew(true);
         setActiveSceneId(''); // 清空当前选中
+        setActiveSubsceneId(null);
+        setActiveSubsceneDraft(null);
     };
 
     // 取消新增
@@ -155,6 +181,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         setNewSceneData(null);
         if (sceneData.length > 0) {
             setActiveSceneId(sceneData[0].id);
+            setActiveSubsceneId(null);
+            setActiveSubsceneDraft(null);
         }
     };
 
@@ -182,7 +210,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         };
 
         try {
-            const response = await EditorApi.addScene(fileId, sceneDataForApi);
+            const response = mode === 'worldInteraction'
+                ? await worldEditor.addScene(fileId, sceneDataForApi as any)
+                : await EditorApi.addScene(fileId, sceneDataForApi);
             if (response.data?.success) {
                 // 创建本地 LocalScene 对象
                 const createdScene: LocalScene = {
@@ -229,7 +259,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         };
 
         try {
-            const response = await EditorApi.updateScene(fileId, sceneDataForApi);
+            const response = mode === 'worldInteraction'
+                ? await worldEditor.updateScene(fileId, sceneDataForApi as any)
+                : await EditorApi.updateScene(fileId, sceneDataForApi);
             if (response.data?.success) {
                 toast.success('场景更新成功');
                 // 刷新数据
@@ -243,6 +275,121 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
             console.error('更新场景时出错:', error);
             toast.error('更新场景失败，请重试');
         }
+    };
+
+    // 打开新增子场景面板
+    const openAddNewSubscene = () => {
+        if (!activeSceneId) {
+            toast.error('请先选择一个父场景');
+            return;
+        }
+        if (mode !== 'worldInteraction') {
+            toast.error('子场景功能仅在世界交互模式下可用');
+            return;
+        }
+        const newSubscene: LocalScene = {
+            id: `temp-subscene-${Date.now()}`,
+            name: '',
+            type: '',
+            desc: '',
+            image: '',
+            bgmId: '',
+        };
+        setActiveSubsceneDraft(newSubscene);
+        setActiveSubsceneId(newSubscene.id);
+        setIsAddingNewSubscene(true);
+    };
+
+    // 取消新增子场景
+    const cancelAddNewSubscene = () => {
+        setIsAddingNewSubscene(false);
+        setActiveSubsceneId(null);
+        setActiveSubsceneDraft(null);
+    };
+
+    // 确认修改/新增子场景
+    const confirmSubsceneEdit = async () => {
+        if (!fileId || !activeSubsceneDraft || !activeSceneId) {
+            toast.error('缺少必要数据，无法保存修改');
+            return;
+        }
+
+        // 只在 worldInteraction 模式下才能操作子场景
+        if (mode !== 'worldInteraction') {
+            toast.error('子场景功能仅在世界交互模式下可用');
+            return;
+        }
+
+        // 构建子场景数据
+        const subsceneData: any = {
+            id: isAddingNewSubscene ? `subscene_${Date.now()}` : activeSubsceneDraft.id,
+            name: activeSubsceneDraft.name || '未命名子场景',
+            description: activeSubsceneDraft.desc || '',
+            image: activeSubsceneDraft.image || '',
+            npcs: [],
+            position: [0, 0],
+            npcs_slots: [],
+        };
+
+        // 如果是编辑模式，从原始数据中获取完整信息（保留 position, npcs 等字段）
+        if (!isAddingNewSubscene) {
+            const originalScene = gameData?.sceneSetting?.scenes?.find(s => s.id === activeSceneId);
+            const originalSubscene = originalScene?.subscenes?.find(sub => sub.id === activeSubsceneDraft.id);
+            if (originalSubscene) {
+                subsceneData.npcs = originalSubscene.npcs || [];
+                subsceneData.position = originalSubscene.position || [0, 0];
+                subsceneData.npcs_slots = originalSubscene.npcs_slots || [];
+            }
+        }
+
+        try {
+            let response;
+            if (isAddingNewSubscene) {
+                // 新增模式
+                response = await worldEditor.addSubScene(fileId, activeSceneId, subsceneData);
+            } else {
+                // 更新模式
+                response = await worldEditor.updateSubScene(fileId, activeSceneId, subsceneData);
+            }
+            
+            if (response.data?.success) {
+                toast.success(isAddingNewSubscene ? '子场景创建成功' : '子场景更新成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+                // 如果是新增模式，关闭新增面板
+                if (isAddingNewSubscene) {
+                    setIsAddingNewSubscene(false);
+                    setActiveSubsceneId(null);
+                    setActiveSubsceneDraft(null);
+                }
+            } else {
+                toast.error(isAddingNewSubscene ? '创建子场景失败' : '更新子场景失败');
+            }
+        } catch (error) {
+            console.error(isAddingNewSubscene ? '创建子场景时出错:' : '更新子场景时出错:', error);
+            toast.error(isAddingNewSubscene ? '创建子场景失败，请重试' : '更新子场景失败，请重试');
+        }
+    };
+
+    const toggleSubsceneCollapse = (sceneId: string) => {
+        setSubsceneCollapsed((prev) => ({
+            ...prev,
+            [sceneId]: !prev[sceneId],
+        }));
+    };
+
+    // 统一退出新增模式（父场景或子场景）
+    const exitCreateModes = () => {
+        if (isAddingNew) {
+            setIsAddingNew(false);
+            setNewSceneData(null);
+        }
+        if (isAddingNewSubscene) {
+            setIsAddingNewSubscene(false);
+        }
+        setActiveSubsceneDraft(null);
     };
 
     // 更新新增场景的字段
@@ -266,7 +413,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         }
 
         try {
-            const response = await EditorApi.deleteScene(fileId, sceneToDelete);
+            const response = mode === 'worldInteraction'
+                ? await worldEditor.deleteScene(fileId, sceneToDelete)
+                : await EditorApi.deleteScene(fileId, sceneToDelete);
             if (response.data?.success) {
                 setSceneData(prev => {
                     const filtered = prev.filter(scene => scene.id !== sceneToDelete);
@@ -300,6 +449,51 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
     const handleCancelDelete = () => {
         setDeleteModalOpen(false);
         setSceneToDelete(null);
+    };
+
+    // 删除子场景
+    const handleConfirmSubsceneDelete = async () => {
+        if (!subsceneToDelete || !fileId) {
+            setSubsceneDeleteModalOpen(false);
+            setSubsceneToDelete(null);
+            return;
+        }
+
+        if (mode !== 'worldInteraction') {
+            toast.error('子场景功能仅在世界交互模式下可用');
+            setSubsceneDeleteModalOpen(false);
+            setSubsceneToDelete(null);
+            return;
+        }
+
+        try {
+            const response = await worldEditor.deleteSubScene(fileId, subsceneToDelete.sceneId, subsceneToDelete.subsceneId);
+            if (response.data?.success) {
+                // 如果删除的是当前选中的子场景，清空选中状态
+                if (subsceneToDelete.subsceneId === activeSubsceneId) {
+                    setActiveSubsceneId(null);
+                    setActiveSubsceneDraft(null);
+                }
+                toast.success('子场景删除成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('删除子场景失败');
+            }
+        } catch (error) {
+            console.error('删除子场景时出错:', error);
+            toast.error('删除子场景失败，请重试');
+        } finally {
+            setSubsceneDeleteModalOpen(false);
+            setSubsceneToDelete(null);
+        }
+    };
+
+    const handleCancelSubsceneDelete = () => {
+        setSubsceneDeleteModalOpen(false);
+        setSubsceneToDelete(null);
     };
 
     // 处理场景图片点击（触发文件选择）
@@ -354,7 +548,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
             };
 
             try {
-                const createResponse = await EditorApi.addScene(fileId, sceneDataForApi);
+                const createResponse = mode === 'worldInteraction'
+                    ? await worldEditor.addScene(fileId, sceneDataForApi as any)
+                    : await EditorApi.addScene(fileId, sceneDataForApi);
                 if (!createResponse.data?.success) {
                     toast.error('创建场景失败，无法上传图片');
                     return;
@@ -375,8 +571,39 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                 toast.error('创建场景失败，请重试');
                 return;
             }
+        } else if (activeSubsceneId && activeSubsceneDraft) {
+            // 子场景模式：上传子场景图片
+            if (mode !== 'worldInteraction') {
+                toast.error('子场景功能仅在世界交互模式下可用');
+                return;
+            }
+            if (!activeSubsceneId) {
+                toast.error('缺少子场景ID，无法上传');
+                return;
+            }
+            try {
+                const response = await worldEditor.uploadSubSceneImage(fileId, activeSceneId, activeSubsceneId, file);
+                if (response.data?.success) {
+                    toast.success('子场景图片上传成功');
+                    // 刷新数据以获取最新的图片URL
+                    if (onDataChange) {
+                        onDataChange();
+                    }
+                } else {
+                    toast.error('上传子场景图片失败');
+                }
+            } catch (error) {
+                console.error('上传子场景图片时出错:', error);
+                toast.error('上传子场景图片失败，请重试');
+            } finally {
+                // 清空文件输入
+                if (sceneFileInputRef.current) {
+                    sceneFileInputRef.current.value = '';
+                }
+            }
+            return;
         } else {
-            // 正常模式
+            // 正常模式（主场景）
             targetSceneId = activeSceneId;
         }
 
@@ -387,7 +614,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         }
 
         try {
-            const response = await EditorApi.uploadSceneImage(fileId, targetSceneId, file);
+            const response = mode === 'worldInteraction'
+                ? await worldEditor.uploadSceneImage(fileId, targetSceneId, file)
+                : await EditorApi.uploadSceneImage(fileId, targetSceneId, file);
             if (response.data?.success) {
                 toast.success('场景图片上传成功');
                 // 刷新数据以获取最新的图片URL
@@ -416,13 +645,16 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
             return;
         }
         try {
+            setIsGeneratingSingleSceneImage(true);
             const response = await EditorApi.generateSceneImage({ 
                 fileId, 
                 scene: { 
                     id: scene.id, 
                     name: scene.name, 
                     description: scene.desc 
-                } });
+                },
+                mode: mode
+            });
             if (response.data?.success) {
                 console.log(response.data);
                 toast.success('场景图片重新生成成功');
@@ -436,25 +668,36 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
         }catch(error){
             console.error('重新生成场景图片时出错:', error);
             toast.error('重新生成场景图片失败，请重试');
+        } finally {
+            setIsGeneratingSingleSceneImage(false);
         }
     };
+    
 
-    // // 更新 BGM
-    // const updateBgm = (bgmId: string, key: 'name' | 'description', value: string) => {
-    //     setBgmLibrary(prev =>
-    //         prev.map(bgm => bgm.id === bgmId ? { ...bgm, [key]: value } : bgm)
-    //     );
-    // };
-
-    // // 添加 BGM
-    // const addBgm = () => {
-    //     const newBgm: BgmItem = {
-    //         id: `bgm-${Date.now()}`,
-    //         name: '新音轨',
-    //         description: '待补充描述',
-    //     };
-    //     setBgmLibrary(prev => [newBgm, ...prev]);
-    // };
+    const generateAllSceneImages = async () => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+        try {
+            setIsGeneratingAllSceneImages(true);
+            const response = await worldEditor.generateAllSceneImages(fileId);
+            if (response.data?.success) {
+                toast.success('所有场景立绘生成成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('生成所有场景立绘失败');
+            }
+        } catch (error) {
+            console.error('生成所有场景立绘时出错:', error);
+            toast.error('生成所有场景立绘失败，请重试');
+        } finally {
+            setIsGeneratingAllSceneImages(false);
+        }
+    };
 
     return (
         <div className={styles.panelContent}>
@@ -464,7 +707,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                     <h2>场景背景 & BGM 绑定</h2>
                     <p className={styles.subtitle}>AI 生成场景描述，可直接选择上一步上传的 BGM</p>
                 </div>
-                <button className={styles.ghost}>导出场景脚本</button>
+                <button className={styles.ghost} onClick={generateAllSceneImages} disabled={isGeneratingAllSceneImages}>
+                    {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
+                </button>
             </div>
 
             <div className={styles.sceneLayout}>
@@ -479,66 +724,130 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                             <button className={styles.ghostSmall} onClick={openAddNewPanel}>+ 新增场景</button>
                         </div>
                         <div className={styles.sceneList}>
-                            {sceneData.map((scene) => (
-                                <article
-                                    key={scene.id}
-                                    className={`${styles.sceneRow} ${scene.id === activeSceneId ? styles.active : ''}`}
-                                    onClick={() => setActiveSceneId(scene.id)}
-                                >
-                                    <div
-                                        className={`${styles.sceneThumb} ${!scene.image ? styles.empty : ''}`}
-                                        style={scene.image ? { backgroundImage: `url('${scene.image}')` } : {}}
-                                    >
-                                        {!scene.image && <span>待上传</span>}
-                                    </div>
-                                    <div className={styles.sceneMeta}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                            <strong>{scene.name}</strong>
-                                            <button
-                                                className={styles.deleteButton}
-                                                onClick={(e) => handleDeleteClick(scene.id, e)}
-                                                title="删除场景"
+                            {sceneData.map((scene) => {
+                                const originalScene = mode === 'worldInteraction'
+                                    ? gameData?.sceneSetting?.scenes?.find((s: any) => s.id === scene.id)
+                                    : null;
+                                const subscenes: any[] = (originalScene?.subscenes || []) as any[];
+
+                                return (
+                                    <React.Fragment key={scene.id}>
+                                        {/* 父场景卡片 */}
+                                        <article
+                                            className={`${styles.sceneRow} ${scene.id === activeSceneId && !activeSubsceneId ? styles.active : ''}`}
+                                            onClick={() => {
+                                                exitCreateModes();
+                                                setActiveSceneId(scene.id);
+                                                setActiveSubsceneId(null);
+                                                setActiveSubsceneDraft(null);
+                                            }}
+                                        >
+                                            <div
+                                                className={`${styles.sceneThumb} ${!scene.image ? styles.empty : ''}`}
+                                                style={scene.image ? { backgroundImage: `url('${scene.image}')` } : {}}
                                             >
-                                                <RiDeleteBin5Line />
-                                            </button>
-                                        </div>
-                                        <p className={styles.mutedSmall}>{scene.desc}</p>
-                                    </div>
-                                </article>
-                            ))}
+                                                {!scene.image && <span>待上传</span>}
+                                            </div>
+                                            <div className={styles.sceneMeta}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                                    <strong>{scene.name}</strong>
+                                                    <button
+                                                        className={styles.deleteButton}
+                                                        onClick={(e) => handleDeleteClick(scene.id, e)}
+                                                        title="删除场景"
+                                                    >
+                                                        <RiDeleteBin5Line />
+                                                    </button>
+                                                </div>
+                                                <p className={styles.mutedSmall}>{scene.desc}</p>
+                                            </div>
+                                        </article>
+
+                                        {/* 子场景卡片（独立盒子，轻微缩进） */}
+                                        {mode === 'worldInteraction' && (
+                                            <div className={styles.subsceneList}>
+                                                <div className={styles.subsceneHeader}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleSubsceneCollapse(scene.id);
+                                                            }}
+                                                            style={{ backgroundColor: 'transparent', border: 'none', cursor: 'pointer' }}
+                                                            aria-label={subsceneCollapsed[scene.id] ? '展开子场景' : '折叠子场景'}
+                                                            title={subsceneCollapsed[scene.id] ? '展开子场景' : '折叠子场景'}
+                                                        >
+                                                            {subsceneCollapsed[scene.id] ? <RiArrowRightSLine size={16} /> : <RiArrowDownSLine size={16} />}
+                                                        </button>
+                                                        <span className={styles.subsceneHeaderText}>
+                                                            子场景（{subscenes.length}）
+                                                        </span>
+                                                    </div>
+                                                    <button 
+                                                        className={styles.ghostSmall} 
+                                                        onClick={openAddNewSubscene}
+                                                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                                                    >
+                                                        + 新增子场景
+                                                    </button>
+                                                </div>
+                                                {!subsceneCollapsed[scene.id] && subscenes.map((sub) => {
+                                                    const subId = sub.id || sub.name;
+                                                    const isActiveSub = activeSubsceneId === subId;
+                                                    return (
+                                                        <article
+                                                            key={subId}
+                                                            className={`${styles.sceneRow} ${styles.subsceneRowCard} ${isActiveSub ? styles.active : ''}`}
+                                                            onClick={() => {
+                                                                exitCreateModes();
+                                                                setActiveSceneId(scene.id);
+                                                                setActiveSubsceneId(subId);
+                                                                setActiveSubsceneDraft({
+                                                                    id: subId,
+                                                                    name: sub.name || '未命名子场景',
+                                                                    type: sub.type || '',
+                                                                    desc: sub.description || '',
+                                                                    image: sub.image || '',
+                                                                    bgmId: sub.soundtrack || scene.bgmId || '',
+                                                                });
+                                                            }}
+                                                        >
+                                                            <div
+                                                                className={`${styles.sceneThumb} ${!sub.image ? styles.empty : ''}`}
+                                                                style={sub.image ? { backgroundImage: `url('${sub.image}')` } : {}}
+                                                            >
+                                                                {!sub.image && <span>待生成或上传</span>}
+                                                            </div>
+                                                            <div className={styles.sceneMeta}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                        <strong>{sub.name || '未命名子场景'}</strong>
+                                                                        <span className={styles.subsceneTag}>子场景</span>
+                                                                    </div>
+                                                                    <button
+                                                                        className={styles.deleteButton}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setSubsceneToDelete({ sceneId: scene.id, subsceneId: subId });
+                                                                            setSubsceneDeleteModalOpen(true);
+                                                                        }}
+                                                                        title="删除子场景"
+                                                                    >
+                                                                        <RiDeleteBin5Line />
+                                                                    </button>
+                                                                </div>
+                                                                <p className={styles.mutedSmall}>{sub.description}</p>
+                                                            </div>
+                                                        </article>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </div>
                     </div>
-
-                    {/* BGM 素材库 */}
-                    {/* <div className={styles.card}>
-                        <div className={styles.cardHead}>
-                            <h3>BGM 素材库</h3>
-                            <button className={styles.ghostSmall} onClick={addBgm}>上传 BGM</button>
-                        </div>
-                        <p className={styles.mutedSmall}>上传音频并补充描述，绑定到具体场景即可实现环境切换。</p>
-                        <ul className={styles.bgmList}>
-                            {bgmLibrary.map((bgm) => (
-                                <li key={bgm.id} className={styles.bgmItem}>
-                                    <label>
-                                        <span>名称</span>
-                                        <input
-                                            type="text"
-                                            value={bgm.name}
-                                            onChange={(e) => updateBgm(bgm.id, 'name', e.target.value)}
-                                        />
-                                    </label>
-                                    <label className={styles.wide}>
-                                        <span>描述</span>
-                                        <textarea
-                                            rows={2}
-                                            value={bgm.description}
-                                            onChange={(e) => updateBgm(bgm.id, 'description', e.target.value)}
-                                        />
-                                    </label>
-                                </li>
-                            ))}
-                        </ul>
-                    </div> */}
                 </div>
 
                 {/* 右栏 - 场景详情 */}
@@ -558,12 +867,24 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                     {/* 正常模式下显示确认修改按钮 */}
                     {!isAddingNew && activeScene && (
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-                            <button className={styles.ghostSmall} onClick={confirmEdit}>
-                                确认修改
-                            </button>
+                            {activeSubsceneId ? (
+                                <>
+                                    <button className={styles.ghostSmall} onClick={confirmSubsceneEdit}>
+                                        {isAddingNewSubscene ? '确认增加' : '确认修改'}
+                                    </button>
+                                    {isAddingNewSubscene && (
+                                        <button className={styles.ghostSmall} onClick={cancelAddNewSubscene}>
+                                            取消
+                                        </button>
+                                    )}
+                                </>
+                            ) : (
+                                <button className={styles.ghostSmall} onClick={confirmEdit}>
+                                    确认修改
+                                </button>
+                            )}
                         </div>
                     )}
-
 
                     {isAddingNew && newSceneData ? (
                         /* 新增场景表单 */
@@ -579,12 +900,23 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                                 ) : (
                                     <span>点击上传背景图</span>
                                 )}
+                                {isGeneratingSingleSceneImage && (
+                                    <div className="loadingOverlay">
+                                        <div className="loadingSpinner"></div>
+                                        <div className="loadingText">正在生成场景图片...</div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className={styles.sceneImageActions}>
                                 <button className={styles.ghostSmall} onClick={handleSceneImageClick}>上传背景</button>
                                 {newSceneData && (
-                                    <button className={styles.ghostSmall} onClick={() => regenerateSceneImage(newSceneData)}>AI 重新生成</button>
+                                    <button 
+                                        className={styles.ghostSmall} 
+                                        onClick={() => regenerateSceneImage(newSceneData)}
+                                        disabled={isGeneratingSingleSceneImage}
+                                        style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                    >AI 重新生成</button>
                                 )}
                             </div>
                             
@@ -631,75 +963,156 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                             </div>
                         </>
                     ) : (
-                        /* 正常显示选中的场景详情 */
+                        /* 正常显示选中的详情：主场景或子场景 */
                         <>
-                            {/* 场景背景大图 */}
-                            <div
-                                className={`${styles.sceneHero} ${!activeScene.image ? styles.empty : ''}`}
-                                onClick={handleSceneImageClick}
-                                style={{ cursor: 'pointer', ...(activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}) }}
-                            >
-                                {activeScene.image ? (
-                                    <span className={styles.heroHint}>点击替换背景</span>
-                                ) : (
-                                    <span>点击上传背景图</span>
-                                )}
-                            </div>
-
-                            <div className={styles.sceneImageActions}>
-                                <button className={styles.ghostSmall} onClick={handleSceneImageClick}>重新上传</button>
-                                {activeScene && (
-                                    <button className={styles.ghostSmall} onClick={() => regenerateSceneImage(activeScene)}>AI 重新生成</button>
-                                )}
-                            </div>
-                            
-                            {/* 隐藏的文件输入（正常模式） */}
-                            <input
-                                type="file"
-                                ref={sceneFileInputRef}
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                onChange={handleUploadSceneImage}
-                            />
-
-                            <div className={styles.formGrid}>
-                                <label>
-                                    <span>场景名称</span>
-                                    <input
-                                        type="text"
-                                        value={activeScene.name}
-                                        onChange={(e) => updateSceneField('name', e.target.value)}
-                                    />
-                                </label>
-                                <label className={styles.wide}>
-                                    <span>场景描述</span>
-                                    <textarea
-                                        rows={3}
-                                        value={activeScene.desc}
-                                        onChange={(e) => updateSceneField('desc', e.target.value)}
-                                    />
-                                </label>
-                                <label>
-                                    <span>特殊 BGM</span>
-                                    <select
-                                        value={activeScene.bgmId}
-                                        onChange={(e) => updateSceneField('bgmId', e.target.value)}
+                            {mode === 'worldInteraction' && activeSubsceneId && activeSubsceneDraft ? (
+                                /* 子场景编辑盒子：复用父场景的完整布局 */
+                                <>
+                                    {/* 场景背景大图 */}
+                                    <div
+                                        className={`${styles.sceneHero} ${!activeSubsceneDraft.image ? styles.empty : ''}`}
+                                        onClick={handleSceneImageClick}
+                                        style={{ cursor: 'pointer', ...(activeSubsceneDraft.image ? { backgroundImage: `url('${activeSubsceneDraft.image}')` } : {}) }}
                                     >
-                                        <option value="">不绑定特殊 BGM</option>
-                                        {bgmLibrary.map((bgm) => (
-                                            <option key={bgm.id} value={bgm.id}>
-                                                {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            </div>
+                                        {activeSubsceneDraft.image ? (
+                                            <span className={styles.heroHint}>点击替换背景</span>
+                                        ) : (
+                                            <span>点击上传背景图</span>
+                                        )}
+                                        {isGeneratingSingleSceneImage && (
+                                            <div className="loadingOverlay">
+                                                <div className="loadingSpinner"></div>
+                                                <div className="loadingText">正在生成场景图片...</div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className={styles.sceneImageActions}>
+                                        <button className={styles.ghostSmall} onClick={handleSceneImageClick}>上传背景</button>
+                                        {activeSubsceneDraft && (
+                                            <button 
+                                                className={styles.ghostSmall} 
+                                                onClick={() => regenerateSceneImage(activeSubsceneDraft)}
+                                                disabled={isGeneratingSingleSceneImage}
+                                                style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                            >AI 重新生成</button>
+                                        )}
+                                    </div>
+                                    
+                                    {/* 隐藏的文件输入（子场景模式） */}
+                                    <input
+                                        type="file"
+                                        ref={sceneFileInputRef}
+                                        accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={handleUploadSceneImage}
+                                    />
+
+                                    <div className={styles.formGrid}>
+                                        <label>
+                                            <span>场景名称</span>
+                                            <input
+                                                type="text"
+                                                value={activeSubsceneDraft.name}
+                                                onChange={(e) => updateSubsceneField('name', e.target.value)}
+                                            />
+                                        </label>
+                                        <label className={styles.wide}>
+                                            <span>场景描述</span>
+                                            <textarea
+                                                rows={3}
+                                                value={activeSubsceneDraft.desc}
+                                                onChange={(e) => updateSubsceneField('desc', e.target.value)}
+                                            />
+                                        </label>
+                                        <label>
+                                            <span>特殊 BGM</span>
+                                            <select
+                                                value={activeSubsceneDraft.bgmId}
+                                                onChange={(e) => updateSubsceneField('bgmId', e.target.value)}
+                                            >
+                                                <option value="">不绑定特殊 BGM</option>
+                                                {bgmLibrary.map((bgm) => (
+                                                    <option key={bgm.id} value={bgm.id}>
+                                                        {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
+                                </>
+                            ) : (
+                                /* 主场景编辑盒子（原逻辑） */
+                                <>
+                                    {/* 场景背景大图 */}
+                                    <div
+                                        className={`${styles.sceneHero} ${!activeScene.image ? styles.empty : ''}`}
+                                        onClick={handleSceneImageClick}
+                                        style={{ cursor: 'pointer', ...(activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}) }}
+                                    >
+                                        {activeScene.image ? (
+                                            <span className={styles.heroHint}>点击替换背景</span>
+                                        ) : (
+                                            <span>点击上传背景图</span>
+                                        )}
+                                    </div>
+
+                                    <div className={styles.sceneImageActions}>
+                                        <button className={styles.ghostSmall} onClick={handleSceneImageClick}>重新上传</button>
+                                        {activeScene && (
+                                            <button className={styles.ghostSmall} onClick={() => regenerateSceneImage(activeScene)}>AI 重新生成</button>
+                                        )}
+                                    </div>
+                                    
+                                    {/* 隐藏的文件输入（正常模式） */}
+                                    <input
+                                        type="file"
+                                        ref={sceneFileInputRef}
+                                        accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={handleUploadSceneImage}
+                                    />
+
+                                    <div className={styles.formGrid}>
+                                        <label>
+                                            <span>场景名称</span>
+                                            <input
+                                                type="text"
+                                                value={activeScene.name}
+                                                onChange={(e) => updateSceneField('name', e.target.value)}
+                                            />
+                                        </label>
+                                        <label className={styles.wide}>
+                                            <span>场景描述</span>
+                                            <textarea
+                                                rows={3}
+                                                value={activeScene.desc}
+                                                onChange={(e) => updateSceneField('desc', e.target.value)}
+                                            />
+                                        </label>
+                                        <label>
+                                            <span>特殊 BGM</span>
+                                            <select
+                                                value={activeScene.bgmId}
+                                                onChange={(e) => updateSceneField('bgmId', e.target.value)}
+                                            >
+                                                <option value="">不绑定特殊 BGM</option>
+                                                {bgmLibrary.map((bgm) => (
+                                                    <option key={bgm.id} value={bgm.id}>
+                                                        {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
+                                </>
+                            )}
                         </>
                     )}
                 </div>
             </div>
 
-            {/* 删除确认弹窗 */}
+            {/* 删除场景确认弹窗 */}
             <DeletModal
                 isOpen={deleteModalOpen}
                 onDelete={handleConfirmDelete}
@@ -709,6 +1122,24 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({ gameData, isLoading = false, 
                 confirmButtonText="确认删除"
                 cancelButtonText="我再想想"
             />
+
+            {/* 删除子场景确认弹窗 */}
+            <DeletModal
+                isOpen={subsceneDeleteModalOpen}
+                onDelete={handleConfirmSubsceneDelete}
+                onCancel={handleCancelSubsceneDelete}
+                title="删除子场景"
+                message="删除后子场景数据不可恢复，请谨慎操作！"
+                confirmButtonText="确认删除"
+                cancelButtonText="我再想想"
+            />
+
+            {isGeneratingAllSceneImages && (
+                <div className="loadingOverlay">
+                    <div className="loadingSpinner"></div>
+                    <div className="loadingText">正在生成场景立绘...</div>
+                </div>
+            )}
         </div>
     );
 };

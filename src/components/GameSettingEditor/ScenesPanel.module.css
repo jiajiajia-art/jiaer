@@ -91,6 +91,8 @@
     flex-direction: column;
     gap: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 .card h3 {
@@ -195,6 +197,87 @@
     color: rgba(0, 0, 0, 0.5);
     font-size: 0.82rem;
     line-height: 1.4;
+}
+
+/* 子场景列表（worldInteraction 层级展示） */
+.subsceneList {
+    margin-top: 4px;
+    padding-left: 12px; /* 子场景整体盒子相对父场景轻微缩进 */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.subsceneHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-left: 12px;
+    margin-bottom: -2px;
+}
+
+.subsceneHeaderText {
+    font-size: 0.78rem;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.subsceneRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: rgba(0, 0, 0, 0.6);
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.01);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.subsceneRow:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.subsceneRowActive {
+    border-color: #E03D4B;
+    background: rgba(224, 61, 75, 0.04);
+    color: #E03D4B;
+}
+
+/* 子场景独立卡片：在父场景下方，整体小一号并稍微缩进 */
+.subsceneRowCard {
+    margin-left: 12px; /* 视觉上与父场景拉开一点层级 */
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.subsceneTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(224, 61, 75, 0.08);
+    color: #E03D4B;
+    font-size: 0.7rem;
+    margin-left: 4px;
+}
+
+.subsceneBullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: #E03D4B;
+    flex-shrink: 0;
+}
+
+.subsceneName {
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.subsceneDesc { 
+    color: rgba(0, 0, 0, 0.5);
 }
 
 .mutedSmall {

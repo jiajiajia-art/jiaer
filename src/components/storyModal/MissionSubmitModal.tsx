@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './MissionSubmitModal.module.css';
-import type { MissionData, Mission, CompletionPathRequirements } from '../../api/game/missionApi.type';
+import type { MissionData, Mission, CompletionPathRequirements } from '../../api/rpgGame/missionApi.type';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface MissionSubmitModalProps {

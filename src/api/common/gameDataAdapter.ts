@@ -129,15 +129,40 @@ function adaptWorldPlayer(p?: WorldInteractionGameData['worldSetting']['Player']
     // 处理 images：如果 images 是空对象或不存在，使用 imagePath 作为 base
     let images: { base: string; [key: string]: string } | undefined = undefined;
     if (p.images && typeof p.images === 'object' && Object.keys(p.images).length > 0) {
-        // images 有内容，直接使用
-        images = p.images as { base: string; [key: string]: string };
-    } else if (p.imagePath) {
+        // images 有内容，直接使用（确保所有值都是有效的字符串路径）
+        const processedImages: { [key: string]: string } = {};
+        for (const [key, value] of Object.entries(p.images)) {
+            // 过滤掉 null、undefined 和 "null" 字符串
+            if (value && typeof value === 'string' && value !== 'null' && !value.startsWith('null')) {
+                processedImages[key] = value;
+            }
+        }
+        // 确保有 base 属性
+        if (Object.keys(processedImages).length > 0) {
+            if (!processedImages.base && processedImages['base']) {
+                processedImages.base = processedImages['base'];
+            } else if (!processedImages.base) {
+                // 如果没有 base，使用第一个值作为 base
+                const firstValue = Object.values(processedImages)[0];
+                if (firstValue) {
+                    processedImages.base = firstValue;
+                }
+            }
+            images = processedImages as { base: string; [key: string]: string };
+        }
+    } else if (p.imagePath && p.imagePath !== 'null' && !p.imagePath.startsWith('null')) {
         // images 为空或不存在，使用 imagePath 作为 base
         images = { base: p.imagePath };
     }
     
     // image 字段：优先使用 imagePath，否则使用 images.base
-    const image = p.imagePath || (images?.base);
+    // 过滤掉 "null" 字符串
+    let image: string | undefined = undefined;
+    if (p.imagePath && p.imagePath !== 'null' && !p.imagePath.startsWith('null')) {
+        image = p.imagePath;
+    } else if (images?.base) {
+        image = images.base;
+    }
     
     return {
         name: p.name || '',
@@ -149,7 +174,7 @@ function adaptWorldPlayer(p?: WorldInteractionGameData['worldSetting']['Player']
         tone: p.tone || '',
         image: image,
         images: images,
-        imagePath: p.imagePath,
+        imagePath: p.imagePath && p.imagePath !== 'null' && !p.imagePath.startsWith('null') ? p.imagePath : undefined,
     };
 }
 
@@ -175,6 +200,31 @@ function adaptVisualNPC(npc: VisualGameData['npcSetting']['npcs'][0]): NPC {
 }
 
 function adaptWorldNPC(npc: WorldInteractionGameData['npcSetting']['npcs'][0]): NPC {
+    // 处理 images：过滤掉 null、undefined 和 "null" 字符串
+    let images: { base: string; [key: string]: string } | undefined = undefined;
+    if (npc.images && typeof npc.images === 'object') {
+        const processedImages: { [key: string]: string } = {};
+        for (const [key, value] of Object.entries(npc.images)) {
+            // 过滤掉 null、undefined 和 "null" 字符串
+            if (value && typeof value === 'string' && value !== 'null' && !value.startsWith('null')) {
+                processedImages[key] = value;
+            }
+        }
+        // 确保有 base 属性
+        if (Object.keys(processedImages).length > 0) {
+            if (!processedImages.base && processedImages['base']) {
+                processedImages.base = processedImages['base'];
+            } else if (!processedImages.base) {
+                // 如果没有 base，使用第一个值作为 base
+                const firstValue = Object.values(processedImages)[0];
+                if (firstValue) {
+                    processedImages.base = firstValue;
+                }
+            }
+            images = processedImages as { base: string; [key: string]: string };
+        }
+    }
+    
     return {
         id: npc.id,
         name: npc.name,
@@ -187,7 +237,7 @@ function adaptWorldNPC(npc: WorldInteractionGameData['npcSetting']['npcs'][0]): 
         personality: npc.personality,
         tone: npc.tone,
         relationship: undefined, // worldInteraction 模式没有 relationship
-        images: npc.images, // worldInteraction 模式 images 是必填的
+        images: images, // 处理后的 images
         abilities: undefined, // worldInteraction 模式没有 abilities
         dialogue: undefined, // worldInteraction 模式没有 dialogue
     };
@@ -213,6 +263,11 @@ function adaptVisualScene(scene: VisualGameData['sceneSetting']['scenes'][0]): S
 }
 
 function adaptWorldScene(scene: WorldInteractionGameData['sceneSetting']['scenes'][0]): Scene {
+    // 处理 image：过滤掉 "null" 字符串
+    const image = scene.image && scene.image !== 'null' && !scene.image.startsWith('null')
+        ? scene.image
+        : undefined;
+    
     return {
         id: scene.id,
         name: scene.name,
@@ -220,7 +275,7 @@ function adaptWorldScene(scene: WorldInteractionGameData['sceneSetting']['scenes
         description: scene.description,
         atmosphere: undefined, // worldInteraction 模式没有 atmosphere
         dangerLevel: undefined, // worldInteraction 模式没有 dangerLevel
-        image: scene.image, // worldInteraction 模式 image 是必填的
+        image: image, // 处理后的 image
         items: undefined, // worldInteraction 模式没有 items
         events: undefined, // worldInteraction 模式没有 events
         soundtrack: scene.soundtrack, // worldInteraction 模式 soundtrack 是必填的
@@ -244,11 +299,16 @@ function adaptVisualSubScene(subscene: VisualGameData['sceneSetting']['scenes'][
 }
 
 function adaptWorldSubScene(subscene: WorldInteractionGameData['sceneSetting']['scenes'][0]['subscenes'][0]): Scene['subscenes'][0] {
+    // 处理 image：过滤掉 "null" 字符串
+    const image = subscene.image && typeof subscene.image === 'string' && subscene.image !== 'null' && !subscene.image.startsWith('null')
+        ? subscene.image
+        : '';
+    
     return {
         id: subscene.id,
         name: subscene.name,
         description: subscene.description,
-        image: subscene.image,
+        image: image, // 处理后的 image
         npcs: subscene.npcs,
         position: subscene.position,
         npcs_slots: subscene.npcs_slots || [], // worldInteraction 模式 npcs_slots 是可选的，转换为空数组

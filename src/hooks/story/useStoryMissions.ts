@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import MissionApi from '../../api/game/missionApi';
-import type { MissionData } from '../../api/game/missionApi.type';
+import MissionApi from '../../api/rpgGame/missionApi';
+import type { MissionData } from '../../api/rpgGame/missionApi.type';
 
 export const useStoryMissions = (sessionId: string | null) => {
     const [missionData, setMissionData] = useState<MissionData | null>(null);

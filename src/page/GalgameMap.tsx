@@ -8,11 +8,12 @@ import StoryIntroModal from "../components/GalgameMap/StoryIntroModal";
 import SceneModal from "../components/GalgameMap/SceneModal";
 import InteractWithNpc from "../components/GalgameMap/interactWithNpc";
 import interactionApi from "../api/worldInteraction/interactionApi";
-import type { GameEvent, NPCInfo, SubsceneInfo } from "../api/worldInteraction/interactionApi.type";
+import type { GameEvent, GetWorldInteractionHistoryResponse, NPCInfo, SubsceneInfo } from "../api/worldInteraction/interactionApi.type";
 import { useMapGalgameStore, MapViewState } from "../store/mapGalgameStore";
 import { adaptWorldGameData } from "../api/common/gameDataAdapter";
 import type { WorldInteractionGameData } from "../api/worldInteraction/worldInteractionApi.type";
 import createWorldSessionApi from "../api/worldInteraction/createWorldSession";
+import { buildEventDataFromEvent } from "../utils/eventUtils";
 
 export interface EventData {
     event: GameEvent;
@@ -27,6 +28,7 @@ const GalgameMap = () => {
     const [isReady, setIsReady] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const { sessionId } = useGameStore();
+    const [worldInteractionHistory, setWorldInteractionHistory] = useState<GetWorldInteractionHistoryResponse>();
     const { 
         eventData, 
         setEventData, 
@@ -34,17 +36,48 @@ const GalgameMap = () => {
         setCurrentView,
         selectedSubscene,
         setSelectedSubscene,
-        clearState
     } = useMapGalgameStore();
     
-    // 组件挂载时，如果有旧的事件数据，清理它并重置到开场白
-    useEffect(() => {
-        if (eventData) {
-            // 如果有旧的事件数据，清理它，确保从开场白开始
-            clearState();
-        }
-    }, []); // 只在组件挂载时执行一次
     const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
+    // 结束回合 / 下一回合加载状态（父组件统一管理）
+    const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (sessionId) {
+            fetchWorldInteractionHistory();
+        }
+    }, [sessionId]);
+
+    // 当历史数据和游戏数据都加载完成后，如果有历史数据就获取之前的旧事件
+    useEffect(() => {
+        const loadActiveEventFromHistory = async () => {
+            if (worldInteractionHistory && worldInteractionHistory.interactions.length > 0 && gameData && sessionId) {
+                try {
+                    const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
+                    if (activeEventsResponse.data.success) {
+                        if (activeEventsResponse.data.events.length > 0) {
+                            const eventData = buildEventDataFromEvent(
+                                activeEventsResponse.data.events[0],
+                                gameData
+                            );
+                            if (eventData) {
+                                setEventData(eventData);
+                            }
+                        }
+
+                        // ✅ 无论当前是否有活跃事件，只要有历史就至少显示世界地图，避免白屏
+                        setCurrentView(MapViewState.WORLD_MAP);
+                    }
+                } catch (error) {
+                    console.error("获取活跃事件失败:", error);
+                    // 请求失败时也回到世界地图，避免卡在开场白但不渲染
+                    setCurrentView(MapViewState.WORLD_MAP);
+                }
+            }
+        };
+        
+        loadActiveEventFromHistory();
+    }, [worldInteractionHistory, gameData, sessionId, setCurrentView, setEventData]);
 
     useEffect(() => {
         getMapWorldData();
@@ -131,6 +164,33 @@ const GalgameMap = () => {
         }
     };
 
+    // 结束当前回合 / 开启下一回合（父组件统一方法）
+    const handleEndRound = async () => {
+        if (!sessionId) {
+            console.error('缺少 sessionId');
+            return;
+        }
+
+        try {
+            setIsEndingRound(true);
+            const response = await interactionApi.nextRound(sessionId);
+            
+            if (response.data.success && response.data.activeEvents?.length > 0) {
+                const nextEventData = buildEventDataFromEvent(response.data.activeEvents[0], gameData);
+                if (nextEventData) {
+                    setEventData(nextEventData);
+                    setCurrentView(MapViewState.WORLD_MAP);
+                }
+            } else {
+                setCurrentView(MapViewState.WORLD_MAP);
+            }
+        } catch (error) {
+            console.error('开始新回合失败:', error);
+        } finally {
+            setIsEndingRound(false);
+        }
+    };
+
     // 处理场景点击 - 打开场景模态框
     const handleSceneClick = (subscene: {
         id: string;
@@ -156,21 +216,54 @@ const GalgameMap = () => {
         }
     };
 
+    const fetchWorldInteractionHistory = async () => {
+        if (!sessionId) {
+            return;
+        }
+        try{
+            const response = await interactionApi.getWorldInteractionHistory(sessionId);
+            if (response.data.success) {
+                setWorldInteractionHistory(response.data);
+                console.log("获取历史记录成功", response.data);
+            }
+        } catch (error) {
+            console.error("获取历史记录失败:", error);
+        }
+    };
+
     return (
         <div className={styles.page} ref={containerRef}>
             <div className={styles.mapContainer}>
                 {/* 世界地图 - 只在非模态框视图时显示 */}
                 {currentView === MapViewState.WORLD_MAP && (isReady || true) && (
-                    <WorldMapRenderer
-                        gameData={gameData}
-                        isLoading={isLoading}
-                        onSceneClick={handleSceneClick}
-                        eventData={eventData}
-                    />
+                    <>
+                        <WorldMapRenderer
+                            gameData={gameData}
+                            isLoading={isLoading}
+                            onSceneClick={handleSceneClick}
+                            eventData={eventData}
+                        />
+
+                        {/* 当存在历史但当前没有活跃任务时，提供“开启下一回合”按钮 */}
+                        {worldInteractionHistory
+                            && worldInteractionHistory.interactions.length > 0
+                            && !eventData
+                            && !isLoading && (
+                                <div className={styles.nextRoundButtonWrapper}>
+                                    <button
+                                        onClick={handleEndRound}
+                                        disabled={isEndingRound}
+                                        className={styles.nextRoundButton}
+                                    >
+                                        {isEndingRound ? '开启下一回合中...' : '开启下一回合'}
+                                    </button>
+                                </div>
+                            )}
+                    </>
                 )}
 
                 {/* 开场白模态框 */}
-                {currentView === MapViewState.STORY_INTRO && (
+                {currentView === MapViewState.STORY_INTRO && worldInteractionHistory && worldInteractionHistory.interactions.length === 0 && (
                     <StoryIntroModal
                         isOpen={true}
                         gameData={gameData}
@@ -191,7 +284,12 @@ const GalgameMap = () => {
 
                 {/* NPC交互界面 */}
                 {currentView === MapViewState.INTERACT_NPC && (
-                    <InteractWithNpc onClose={handleBack} gameData={gameData} />
+                    <InteractWithNpc
+                        onClose={handleBack}
+                        gameData={gameData}
+                        onEndRound={handleEndRound}
+                        isEndingRound={isEndingRound}
+                    />
                 )}
             </div>
         </div>

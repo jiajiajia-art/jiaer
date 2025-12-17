@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
-import gameDataApi from '../api/game/gameData';
-import type { ScenesMap, Scene, PlayerData, Inventory, GameItem } from '../api/game/gameData.type';
-import MissionApi from '../api/game/missionApi';
+import gameDataApi from '../api/rpgGame/gameData';
+import type { ScenesMap, Scene, PlayerData, Inventory, GameItem } from '../api/rpgGame/gameData.type';
+import MissionApi from '../api/rpgGame/missionApi';
 
 export type {
     PlayerState,

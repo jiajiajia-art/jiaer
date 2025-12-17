@@ -1,12 +1,12 @@
 import React from 'react';
 import styles from './MobilePanels.module.css';
-import ChatHistory from '../Mian/ChatHistory';
-import MissionsModal from '../Mian/MissionsModal';
-import PlayerFloatingPanel from '../Mian/PlayerFloatingPanel';
-import InventoryFloatingPanel from '../Mian/InventoryFloatingPanel';
-import type { ChatMessage } from '../Mian/ChatHistory';
-import type { MissionData } from '../../api/game/missionApi.type';
-import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';
+import ChatHistory from '../Rpg/ChatHistory';
+import MissionsModal from '../Rpg/MissionsModal';
+import PlayerFloatingPanel from '../Rpg/PlayerFloatingPanel';
+import InventoryFloatingPanel from '../Rpg/InventoryFloatingPanel';
+import type { ChatMessage } from '../Rpg/ChatHistory';
+import type { MissionData } from '../../api/rpgGame/missionApi.type';
+import type { PlayerData, Inventory, InventoryItem } from '../../api/rpgGame/gameData.type';
 import type { EquipmentSlots } from '../../store/gameStore';
 
 interface MobilePanelsProps {

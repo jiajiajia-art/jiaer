@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, memo } from 'react';
+import React, { useEffect, useRef, memo, useState } from 'react';
 import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
 import styles from '../Galgame/TextModeDisplay.module.css';
@@ -31,6 +31,7 @@ interface MessageItemProps {
     isCurrentStep: boolean;
     currentDisplayText: string;
     isTyping: boolean;
+    isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
 }
@@ -39,27 +40,28 @@ const MessageItem = memo<MessageItemProps>(({
     step, 
     isCurrentStep, 
     currentDisplayText, 
-    isTyping, 
+    isTyping,
+    isWaitingForData,
     onChoiceClick, 
-    // onCustomInputSubmit 
+    onCustomInputSubmit 
 }) => {
-    // const [customInput, setCustomInput] = useState('');
+    const [customInput, setCustomInput] = useState('');
 
     if (!step) return null;
 
-    // const handleCustomSubmit = () => {
-    //     if (customInput.trim() && onCustomInputSubmit && !isTyping) {
-    //         onCustomInputSubmit(customInput.trim());
-    //         setCustomInput('');
-    //     }
-    // };
+    const handleCustomSubmit = () => {
+        if (customInput.trim() && onCustomInputSubmit && !isTyping && !isWaitingForData) {
+            onCustomInputSubmit(customInput.trim());
+            setCustomInput('');
+        }
+    };
 
-    // const handleKeyDown = (e: React.KeyboardEvent) => {
-    //     if (e.key === 'Enter' && !e.shiftKey) {
-    //         e.preventDefault();
-    //         handleCustomSubmit();
-    //     }
-    // };
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleCustomSubmit();
+        }
+    };
 
     // 计算要显示的文本
     const getDisplayText = () => {
@@ -106,6 +108,12 @@ const MessageItem = memo<MessageItemProps>(({
     }
 
     if (step.type === 'choice') {
+        // 只对当前步骤做延迟渲染，历史 choice 不受影响
+        // 避免在打字中或等待流时提前把选项插入列表中间
+        if (isCurrentStep && (isWaitingForData || isTyping)) {
+            return null;
+        }
+
         return (
             <div className={styles.messageWrapper}>
                 <div className={styles.choiceBubble}>
@@ -125,12 +133,12 @@ const MessageItem = memo<MessageItemProps>(({
                                         key={opt.id} 
                                         className={styles.optionItem}
                                         onClick={() => {
-                                            if (onChoiceClick && !isTyping) {
+                                            if (onChoiceClick && !isTyping && !isWaitingForData) {
                                                 onChoiceClick(opt);
                                             }
                                         }}
                                         style={{ 
-                                            cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
+                                            cursor: onChoiceClick && !isTyping && !isWaitingForData ? 'pointer' : 'default' 
                                         }}
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
@@ -140,7 +148,7 @@ const MessageItem = memo<MessageItemProps>(({
                             </div>
                             
                             {/* 自定义输入区域 */}
-                            {/* <div className={styles.customInputSection}>
+                            <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
                                 </div>
@@ -152,17 +160,17 @@ const MessageItem = memo<MessageItemProps>(({
                                         value={customInput}
                                         onChange={(e) => setCustomInput(e.target.value)}
                                         onKeyDown={handleKeyDown}
-                                        disabled={isTyping}
+                                        disabled={isTyping || isWaitingForData}
                                     />
                                     <button 
                                         className={styles.customInputButton}
                                         onClick={handleCustomSubmit}
-                                        disabled={!customInput.trim() || isTyping}
+                                        disabled={!customInput.trim() || isTyping || isWaitingForData}
                                     >
                                         发送
                                     </button>
                                 </div>
-                            </div> */}
+                            </div>
                         </>
                     )}
                 </div>
@@ -217,12 +225,13 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
             ) : (
                 <div className={styles.messagesContainer} ref={messagesContainerRef}>
                     {steps.map((step, index) => {
-                        if (isWaitingForData && step.type === 'choice') {
-                            return null;
-                        }
-                        
                         // 只有当前步骤才传递打字相关状态
                         const isCurrent = index === currentStepIndex && currentStepIndex >= 0;
+
+                        // 避免等待流数据时把"当前正在生成"的 choice 插入中间；历史 choice 正常显示
+                        if (isCurrent && isWaitingForData && step.type === 'choice') {
+                            return null;
+                        }
                         
                         return (
                             <MessageItem
@@ -232,6 +241,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 isCurrentStep={isCurrent}
                                 currentDisplayText={isCurrent ? currentDisplayText : ''}
                                 isTyping={isCurrent ? isTyping : false}
+                                isWaitingForData={isWaitingForData}
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
                             />

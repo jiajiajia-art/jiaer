@@ -1,8 +1,8 @@
 import React from 'react';
 import styles from './RightPanels.module.css';
-import PlayerFloatingPanel from '../Mian/PlayerFloatingPanel';
-import InventoryFloatingPanel from '../Mian/InventoryFloatingPanel';
-import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';
+import PlayerFloatingPanel from '../Rpg/PlayerFloatingPanel';
+import InventoryFloatingPanel from '../Rpg/InventoryFloatingPanel';
+import type { PlayerData, Inventory, InventoryItem } from '../../api/rpgGame/gameData.type';
 import type { EquipmentSlots } from '../../store/gameStore';
 
 interface RightPanelsProps {

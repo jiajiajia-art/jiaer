@@ -1,7 +1,8 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
+import type { NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
+import type { GenerateALLSceneImage, GenerateNpcImage, generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
 import type { WorldInteractionGameData } from "./worldInteractionApi.type";
 
 const worldEditor = {
@@ -16,6 +17,144 @@ const worldEditor = {
                     'Content-Type': 'multipart/form-data',
                 },
                 timeout: 1500000,
+            }
+        );
+    },
+    updateWorldSetting: (fileId: string, data: Partial<WorldSetting>) => {
+        return api.put<ApiResponse<WorldSetting>>(
+            `/world-interaction/edit/${fileId}/world-setting`,
+            data
+        );
+    },
+    updatePlayer: (fileId: string, data: Player) => {
+        return api.put<ApiResponse<Player>>(
+            `/world-interaction/edit/${fileId}/player`,
+            data
+        );
+    },
+    updateNpc: (fileId: string, data: NPC) => {
+        return api.put<ApiResponse<NPC>>(
+            `/world-interaction/edit/${fileId}/npcs/${data.id}`,
+            data
+        );
+    },
+    updateScene: (fileId: string, data: Scene) => {
+        return api.put<ApiResponse<Scene>>(
+            `/world-interaction/edit/${fileId}/scenes/${data.id}`,
+            data
+        );
+    },
+    updateSubScene: (fileId: string, sceneId: string, data: SubScene) => {
+        return api.put<ApiResponse<SubScene>>(
+            `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${data.id}`,
+            data
+        );
+    },
+    deleteNpc: (fileId: string, id: string) => {
+        return api.delete<ApiResponse<NPC>>(
+            `/world-interaction/edit/${fileId}/npcs/${id}`
+        );
+    },
+    deleteScene: (fileId: string, id: string) => {
+        return api.delete<ApiResponse<Scene>>(
+            `/world-interaction/edit/${fileId}/scenes/${id}`
+        );
+    },
+    deleteSubScene: (fileId: string, sceneId: string, id: string) => {
+        return api.delete<ApiResponse<SubScene>>(
+            `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${id}`
+        );
+    },
+    addNpc: (fileId: string, data: NPC) => {
+        return api.post<ApiResponse<NPC>>(
+            `/world-interaction/edit/${fileId}/npcs`,
+            data
+        );
+    },
+    addScene: (fileId: string, data: Scene) => {
+        return api.post<ApiResponse<Scene>>(
+            `/world-interaction/edit/${fileId}/scenes`,
+            data
+        );
+    },
+    addSubScene: (fileId: string, sceneId: string, data: SubScene) => {
+        return api.post<ApiResponse<SubScene>>(
+            `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes`,
+            data
+        );
+    },
+    generateAllNpcImages: (fileId: string) => {
+        return api.post<ApiResponse<GenerateNpcImage>>(
+            `/world-interaction/images/generate-npcs`,
+            {
+                fileId: fileId
+            }
+            ,{
+                timeout: 1500000,
+            }
+        );
+    },
+    generateAllSceneImages: (fileId: string) => {
+        return api.post<ApiResponse<GenerateALLSceneImage>>(
+            `/world-interaction/images/generate-scenes`,
+            {
+                fileId: fileId
+            },
+            {
+                timeout: 1500000,
+            }
+        );
+    },
+    uploadSubSceneImage: (fileId: string, sceneId: string, subsceneId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        return api.post<ApiResponse<SubScene>>(
+            `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${subsceneId}/image`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+    },
+    uploadSceneImage: (fileId: string, sceneId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        return api.post<ApiResponse<Scene>>(
+            `/world-interaction/edit/${fileId}/scenes/${sceneId}/image`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+    },
+    uploadNpcImage: (fileId: string, npcId: string, data: {file: File, variat:string}) => {
+        const formData = new FormData();
+        formData.append('image', data.file);
+        formData.append('variant', data.variat);
+        return api.post<ApiResponse<NPC>>(
+            `/world-interaction/edit/${fileId}/npcs/${npcId}/image`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+    },
+    uploadPlayerImage: (fileId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        return api.post<ApiResponse<Player>>(
+            `/world-interaction/edit/${fileId}/player/image`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
             }
         );
     },

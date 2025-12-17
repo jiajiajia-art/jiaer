@@ -23,6 +23,7 @@ export interface UserGameData {
     total_pv_count?: number;
     paid?: boolean;
     version: string;
+    game_tags: string[];
 }
 
 export interface UserGameResponse {

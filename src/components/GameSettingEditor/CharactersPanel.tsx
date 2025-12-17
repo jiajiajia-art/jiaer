@@ -7,6 +7,7 @@ import EditorApi from '../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { useEditorStore } from '../../store/editorStore';
+import worldEditor from '../../api/worldInteraction/worldEditor';
 
 interface Relationship {
     id: string;
@@ -47,9 +48,32 @@ interface CharactersPanelProps {
     isLoading?: boolean;
     onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
+    mode: string;
 }
 
-const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading = false, onGetData, onDataChange }) => {
+const VARIATION_TYPES = [
+    {
+        value: 'expression',
+        label: '表情',
+    },
+    {
+        value: 'clothing',
+        label: '服装',
+    },
+    {
+        value: 'pose',
+        label: '姿势',
+    },
+];
+
+const CharactersPanel: React.FC<CharactersPanelProps> = ({ 
+    gameData, 
+    isLoading = false, 
+    onGetData, 
+    onDataChange, 
+    mode = 'visual' 
+}) => {
+    
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
@@ -66,6 +90,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
     const { fileId } = useEditorStore();
+    const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
+    const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
 
     // 为图片 URL 添加时间戳，避免缓存导致的旧图显示
     const withCacheBust = (url?: string) => {
@@ -329,21 +355,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         }
     };
 
-    // 差分类型选项
-    const VARIATION_TYPES = [
-        {
-            value: 'expression',
-            label: '表情',
-        },
-        {
-            value: 'clothing',
-            label: '服装',
-        },
-        {
-            value: 'pose',
-            label: '姿势',
-        },
-    ];
 
     // 打开新增差分弹窗
     const openAddVariationModal = () => {
@@ -477,7 +488,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             };
 
             try {
-                const response = await EditorApi.updatePlayer(fileId, playerData as Player);
+                const response = mode === 'worldInteraction'
+                    ? await worldEditor.updatePlayer(fileId, playerData as Player)
+                    : await EditorApi.updatePlayer(fileId, playerData as Player);
                 if (response.data?.success) {
                     toast.success('主角信息更新成功');
                     // 刷新数据
@@ -528,7 +541,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 gender: characterToSave.gender || '',
                 job: job || undefined,
                 race: race || undefined,
-                description: characterToSave.background || '',
+                description: characterToSave.background || '', // Character 接口使用 background 字段，映射到 NPC 的 description
                 appearance: characterToSave.appearance || '',
                 personality: characterToSave.personality && characterToSave.personality.length > 0 ? characterToSave.personality.join(', ') : undefined,
                 tone: characterToSave.speech || '',
@@ -540,10 +553,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 let response;
                 if (isAddingNew) {
                     // 新增模式
-                    response = await EditorApi.addNpc(fileId, npcData);
+                    response = mode === 'worldInteraction'
+                        ? await worldEditor.addNpc(fileId, npcData)
+                        : await EditorApi.addNpc(fileId, npcData);
                 } else {
                     // 更新模式
-                    response = await EditorApi.updateNpc(fileId, npcData);
+                    response = mode === 'worldInteraction'
+                        ? await worldEditor.updateNpc(fileId, npcData)
+                        : await EditorApi.updateNpc(fileId, npcData);
                 }
 
                 if (response.data?.success) {
@@ -564,7 +581,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     toast.error(isAddingNew ? '创建角色失败' : '更新角色失败');
                 }
             } catch (error) {
-                console.error(isAddingNew ? '创建角色时出错:' : '更新角色时出错:', error);
                 toast.error(isAddingNew ? '创建角色失败，请重试' : '更新角色失败，请重试');
             }
         }
@@ -593,7 +609,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         }
 
         try {
-            const response = await EditorApi.deleteNpc(fileId, characterToDelete);
+            const response = mode === 'worldInteraction'
+                ? await worldEditor.deleteNpc(fileId, characterToDelete)
+                : await EditorApi.deleteNpc(fileId, characterToDelete);
             if (response.data?.success) {
                 setCharacterData(prev => {
                     const filtered = prev.filter(char => char.id !== characterToDelete);
@@ -704,7 +722,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         };
 
         try {
-            const createResponse = await EditorApi.addNpc(fileId, newNpc);
+            const createResponse = mode === 'worldInteraction'
+                ? await worldEditor.addNpc(fileId, newNpc)
+                : await EditorApi.addNpc(fileId, newNpc);
             if (!createResponse.data?.success) {
                 toast.error('创建角色失败，无法上传图片');
                 return null;
@@ -737,7 +757,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             successMessage?: string;
         }
     ) => {
-        // 验证文件
         if (!validateFile(file)) {
             return;
         }
@@ -762,21 +781,28 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 targetCharacterId = newId;
             }
 
-            // 根据类型调用不同的API
+            // 根据类型和模式调用不同的API
             if (type === 'player') {
-                response = await EditorApi.uploadPlayerImage(fileId, {
-                    file,
-                    variant,
-                });
+                response = mode === 'worldInteraction'
+                    ? await worldEditor.uploadPlayerImage(fileId, file)
+                    : await EditorApi.uploadPlayerImage(fileId, {
+                        file,
+                        variant,
+                    });
             } else if (type === 'npc' || type === 'variation') {
                 if (!targetCharacterId) {
                     toast.error('缺少角色ID，无法上传');
                     return;
                 }
-                response = await EditorApi.uploadNpcImage(fileId, targetCharacterId, {
-                    file,
-                    variat: variant,
-                });
+                response = mode === 'worldInteraction'
+                    ? await worldEditor.uploadNpcImage(fileId, targetCharacterId, {
+                        file,
+                        variat: variant,
+                    })
+                    : await EditorApi.uploadNpcImage(fileId, targetCharacterId, {
+                        file,
+                        variat: variant,
+                    });
             } else {
                 toast.error('未知的上传类型');
                 return;
@@ -794,11 +820,27 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     setCharacterData(prev =>
                         prev.map(char => {
                             if (char.id === 'player') {
+                                // 根据模式获取玩家数据
+                                let playerImage = '';
+                                let playerImages: { [key: string]: string } | undefined = undefined;
+                                
+                                if (mode === 'worldInteraction') {
+                                    // worldEditor 返回 ApiResponse<Player>
+                                    const player = (response.data as any)?.data;
+                                    playerImage = player?.image || '';
+                                    playerImages = player?.images;
+                                } else {
+                                    // EditorApi 返回包含 worldSetting 的数据
+                                    const worldSetting = (response.data as any)?.worldSetting;
+                                    playerImage = worldSetting?.player?.image || '';
+                                    playerImages = worldSetting?.player?.images;
+                                }
+
                                 // 如果是 base 变体，更新 portrait
                                 if (variant === 'base') {
                                     const newPortrait = withCacheBust(
-                                        response.data?.worldSetting?.player?.images?.base ||
-                                        response.data?.worldSetting?.player?.image ||
+                                        playerImages?.base ||
+                                        playerImage ||
                                         char.portrait
                                     );
                                     return { ...char, portrait: newPortrait };
@@ -810,7 +852,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     const newVariations = [...char.variations];
                                     newVariations[existingVarIndex] = {
                                         ...newVariations[existingVarIndex],
-                                        img: withCacheBust(response.data?.worldSetting?.player?.images?.[variant] || response.data?.worldSetting?.player?.image || ''),
+                                        img: withCacheBust(playerImages?.[variant] || playerImage || ''),
                                     };
                                     return { ...char, variations: newVariations };
                                 } else {
@@ -818,7 +860,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     const newVar: Variation = {
                                         id: `v-${Date.now()}`,
                                         label: variant,
-                                        img: withCacheBust(response.data?.worldSetting?.player?.images?.[variant] || response.data?.worldSetting?.player?.image || ''),
+                                        img: withCacheBust(playerImages?.[variant] || playerImage || ''),
                                         type: variant,
                                     };
                                     return { ...char, variations: [...char.variations, newVar] };
@@ -831,7 +873,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
 
                 // 如果是NPC基础立绘，更新本地portrait
                 if (type === 'npc' && variant === 'base' && targetCharacterId && !isAddingNew) {
-                    const firstImageUrl = response.data?.npcSetting?.npcs.find(npc => npc.id === targetCharacterId)?.images?.base || '';
+                    let firstImageUrl = '';
+                    if (mode === 'worldInteraction') {
+                        // worldEditor 返回 ApiResponse<NPC>
+                        const npc = (response.data as any)?.data;
+                        firstImageUrl = npc?.images?.base || (npc?.images ? (Object.values(npc.images)[0] as string) : '') || '';
+                    } else {
+                        // EditorApi 返回包含 npcSetting 的数据
+                        const npcSetting = (response.data as any)?.npcSetting;
+                        firstImageUrl = npcSetting?.npcs?.find((npc: any) => npc.id === targetCharacterId)?.images?.base || '';
+                    }
                     if (firstImageUrl) {
                         updateField('portrait', withCacheBust(firstImageUrl));
                     }
@@ -843,14 +894,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             console.error('上传图片时出错:', error);
             toast.error('上传图片失败，请重试');
         } finally {
-            // 清空 input 值
             if (inputRef && 'current' in inputRef && inputRef.current) {
                 inputRef.current.value = '';
             }
         }
     };
 
-    // 上传玩家图片
     const handleUploadPlayerImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -863,7 +912,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
         });
     };
 
-    // 上传NPC基础立绘
     const handleUploadNpcImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -884,15 +932,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
             return;
         }
         try {
+            setIsGeneratingSingleNpcImage(true);
             const { id, name, age, gender, job, race, description, appearance } = npc as any;
             const response = await EditorApi.generateNpcImage({
                 fileId,
                 npc: { id, name, age, gender, job, race, description, appearance },
-                removeBg: false
+                removeBg: false,
+                mode: mode
             });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
-                // 刷新数据
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -900,15 +949,15 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 toast.error('重新生成NPC图片失败');
             }
         } catch (error) {
-            console.error('重新生成NPC图片时出错:', error);
             toast.error('重新生成NPC图片失败，请重试');
+        } finally {
+            setIsGeneratingSingleNpcImage(false);
         }
     };
 
     // 必填字段列表（除了描述外的所有字段）
     const requiredFields = ['name', 'gender', 'identity', 'appearance', 'speech'];
 
-    // 上传差分图片
     const handleUploadVariationImage = async (variation: Variation, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -931,19 +980,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
 
     };
 
-    // AI 生成差分图片
     const regenerateVariationImage = async (variation: Variation) => {
         if (!fileId || !variation || !currentCharacter) {
             toast.error('缺少必要数据，无法生成');
             return;
         }
 
-        // 需要基础图片URL，如果没有则提示
         if (!currentCharacter.portrait) {
             toast.error('请先上传角色基础立绘');
             return;
         }
-
         try {
             const response = await EditorApi.generateVariantImage({
                 fileId,
@@ -966,8 +1012,31 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 toast.error('生成差分图片失败');
             }
         } catch (error) {
-            console.error('生成差分图片时出错:', error);
             toast.error('生成差分图片失败，请重试');
+        }
+    };
+
+    const generateAllNpcImages = async () => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+        try {
+            setIsGeneratingNpcImages(true);
+            const response = await worldEditor.generateAllNpcImages(fileId);
+            if (response.data?.success) {
+                toast.success('所有角色立绘生成成功');
+                // 刷新数据
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('生成所有角色立绘失败');
+            }
+        } catch (error) {
+            toast.error('生成所有角色立绘失败，请重试');
+        } finally {
+            setIsGeneratingNpcImages(false);
         }
     };
 
@@ -979,7 +1048,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                     <h2>角色档案 & 立绘差分</h2>
                     <p className={styles.subtitle}>解析出的角色自动列出，可逐项确认姓名、称呼、口癖与立绘</p>
                 </div>
-                <button className={styles.ghost}>导出角色 JSON</button>
+                <button className={styles.ghost} onClick={generateAllNpcImages}>一键生成所有角色立绘</button>
             </div>
 
             <div className={styles.characterLayout}>
@@ -997,9 +1066,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                 key={character.id}
                                 className={`${styles.characterRow} ${character.id === activeCharacterId ? styles.active : ''}`}
                                 onClick={() => {
-                                    if (!isAddingNew) {
-                                        setActiveCharacterId(character.id);
+                                    // 如果正在新增模式，点击侧边栏时取消新增并切换到所选角色
+                                    if (isAddingNew) {
+                                        setIsAddingNew(false);
+                                        setNewCharacterData(null);
                                     }
+                                    setActiveCharacterId(character.id);
                                 }}
                             >
                                 <div
@@ -1082,22 +1154,33 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
+                                    cursor: isGeneratingSingleNpcImage ? 'not-allowed' : 'pointer'
                                 }}
                                 onClick={handlePortraitClick}
                             >
                                 <span className={styles.portraitHint}>
                                     {isAddingNew ? '点击上传角色基础立绘' : '点击替换角色基础立绘'}
                                 </span>
+                                {isGeneratingSingleNpcImage && (
+                                    <div className="loadingOverlay">
+                                        <div className="loadingSpinner"></div>
+                                        <div className="loadingText">正在生成角色立绘...</div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className={styles.portraitImageActions}>
-                                <button className={styles.ghostSmall} onClick={handlePortraitClick}>
+                                <button className={styles.ghostSmall} 
+                                    onClick={handlePortraitClick} 
+                                    disabled={isGeneratingSingleNpcImage}
+                                >
                                     {isAddingNew ? '上传立绘' : '重新上传'}
                                 </button>
                                 {currentCharacter && currentCharacter.id !== 'player' && (
                                     <button
                                         className={styles.ghostSmall}
                                         onClick={() => regenerateNpcImage(currentCharacter)}
+                                        disabled={isGeneratingSingleNpcImage}
                                     >AI 重新生成</button>
                                 )}
                             </div>
@@ -1392,6 +1475,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({ gameData, isLoading =
                 confirmButtonText="确认删除"
                 cancelButtonText="我再想想"
             />
+
+            {isGeneratingNpcImages && (
+                <div className="loadingOverlay">
+                    <div className="loadingSpinner"></div>
+                    <div className="loadingText">正在生成场景立绘...</div>
+                </div>
+            )}
         </div>
     );
 };

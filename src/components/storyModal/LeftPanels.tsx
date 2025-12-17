@@ -1,9 +1,9 @@
 import React from 'react';
 import styles from './LeftPanels.module.css';
-import ChatHistory from '../Mian/ChatHistory';
-import MissionsModal from '../Mian/MissionsModal';
-import type { ChatMessage } from '../Mian/ChatHistory';
-import type { MissionData } from '../../api/game/missionApi.type';
+import ChatHistory from '../Rpg/ChatHistory';
+import MissionsModal from '../Rpg/MissionsModal';
+import type { ChatMessage } from '../Rpg/ChatHistory';
+import type { MissionData } from '../../api/rpgGame/missionApi.type';
 
 interface LeftPanelsProps {
     showHistory: boolean;

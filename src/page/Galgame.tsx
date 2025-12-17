@@ -332,7 +332,7 @@ const Galgame = () => {
                         }
                     });
                 }
-                return; // 处理完毕
+                return;
             }
 
             // 情况2：最后一条是助手消息 -> 检查是否有choice

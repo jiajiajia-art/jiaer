@@ -6,7 +6,7 @@ import { useGameStore } from '../store/gameStore';
 import { useNavigate } from 'react-router-dom';
 import statisticsApi from '../api/statistics/statisticsApi';
 import createSessionApi from '../api/createGame/createSessionApi';
-import GameAction from '../api/game/gameAction';
+import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
 import DeletModal from './goodsModal/DeletModal';
@@ -198,9 +198,9 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return null;
         }   
         try {
-            const response = await createWorldSessionApi.createWorldSession({presetId}); 
+            const response = await createWorldSessionApi.createWorldSession({fileId: presetId}); 
             if (response.data.success) {
-                return response.data.session.sessionId;
+                return response.data.data.session.session_id;
             } else {
                 alert(response.data.message || '创建游戏失败，请重试');
                 return null;
@@ -405,7 +405,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                 {(currentGame.title || '未命名游戏').toUpperCase()}
                             </h3>
                             <div className={styles.detailGameType}>
-                                RPG
+                                {currentGame.game_tags[0]}
                             </div>
                         </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import styles from './StoryModal.module.css';
 import { HOST_ADDRESS, RECORD_CONVERSION } from '../../config';
 import { useGameStore, type EquipmentSlots } from '../../store/gameStore';
-import type { PlayerData, Inventory, InventoryItem } from '../../api/game/gameData.type';
+import type { PlayerData, Inventory, InventoryItem } from '../../api/rpgGame/gameData.type';
 import { authFetch } from '../../api/base';
 import statisticsApi from '../../api/statistics/statisticsApi';
 import { useAuthStore } from '../../store/useAuthStore';

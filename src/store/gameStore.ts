@@ -8,8 +8,8 @@ import type {
     PlayerData,
     Inventory,
     GameItem
-} from '../api/game/gameData.type';
-import type { MissionData } from '../api/game/missionApi.type';
+} from '../api/rpgGame/gameData.type';
+import type { MissionData } from '../api/rpgGame/missionApi.type';
 import type { UserGameData } from '../api/home/getGameData.type';
 
 // 重新导出基础类型（从 gameData 导入）

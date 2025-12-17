@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './PlayerFloatingPanel.module.css';
 import { useGameStore } from '../../store/gameStore';
-import ModeifyPlayer from '../../api/game/modifyPlayer';
+import ModeifyPlayer from '../../api/rpgGame/modifyPlayer';
 import { FaCheckToSlot, FaPenToSquare } from 'react-icons/fa6';
-import type { PlayerData } from '../../api/game/gameData.type';
+import type { PlayerData } from '../../api/rpgGame/gameData.type';
 
 interface PlayerFloatingPanelProps {
     isOpen: boolean;
