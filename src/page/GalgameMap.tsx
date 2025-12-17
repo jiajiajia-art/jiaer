@@ -56,13 +56,20 @@ const GalgameMap = () => {
                     const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
                     if (activeEventsResponse.data.success) {
                         if (activeEventsResponse.data.events.length > 0) {
-                            const eventData = buildEventDataFromEvent(
+                            // 有活跃事件：用后端返回的最新事件覆盖本地 eventData
+                            const newEventData = buildEventDataFromEvent(
                                 activeEventsResponse.data.events[0],
                                 gameData
                             );
-                            if (eventData) {
-                                setEventData(eventData);
+                            if (newEventData) {
+                                setEventData(newEventData);
                             }
+                            console.log('[WorldInteraction] 获取活跃事件成功：', newEventData);
+                            
+                        } else {
+                            // ✅ 没有任何活跃事件：清空本地旧的 eventData，避免残留旧任务
+                            setEventData(null);
+                            console.log('[WorldInteraction] 没有任何活跃事件：');
                         }
 
                         // ✅ 无论当前是否有活跃事件，只要有历史就至少显示世界地图，避免白屏
@@ -78,6 +85,15 @@ const GalgameMap = () => {
         
         loadActiveEventFromHistory();
     }, [worldInteractionHistory, gameData, sessionId, setCurrentView, setEventData]);
+
+    // 当历史数据存在且为空时，进入开场白视图
+    useEffect(() => {
+        if (!sessionId || !gameData) return;
+        if (!worldInteractionHistory) return;
+        if (worldInteractionHistory.interactions.length === 0) {
+            setCurrentView(MapViewState.STORY_INTRO);
+        }
+    }, [worldInteractionHistory, gameData, sessionId, setCurrentView]);
 
     useEffect(() => {
         getMapWorldData();
@@ -176,17 +192,20 @@ const GalgameMap = () => {
             const response = await interactionApi.nextRound(sessionId);
             
             if (response.data.success && response.data.activeEvents?.length > 0) {
+                // 有新事件：更新本地 eventData
                 const nextEventData = buildEventDataFromEvent(response.data.activeEvents[0], gameData);
                 if (nextEventData) {
                     setEventData(nextEventData);
-                    setCurrentView(MapViewState.WORLD_MAP);
                 }
             } else {
-                setCurrentView(MapViewState.WORLD_MAP);
+                // ✅ 没有新事件：清空当前事件，让页面只显示“开启下一回合”按钮
+                setEventData(null);
             }
         } catch (error) {
             console.error('开始新回合失败:', error);
         } finally {
+            // 无论成功与否，都回到世界地图视图；是否有事件由 eventData 是否为空决定
+            setCurrentView(MapViewState.WORLD_MAP);
             setIsEndingRound(false);
         }
     };
@@ -289,6 +308,7 @@ const GalgameMap = () => {
                         gameData={gameData}
                         onEndRound={handleEndRound}
                         isEndingRound={isEndingRound}
+                        worldInteractionHistory={worldInteractionHistory ?? null}
                     />
                 )}
             </div>

@@ -1,19 +1,31 @@
     import { useState, useRef, useEffect, useCallback } from 'react';
     import { authFetch } from '../../api/base';
     import { HOST_ADDRESS } from '../../config';
+    import { useAuthStore } from '../../store/useAuthStore';
+    import { toast } from 'react-hot-toast';
+    import payApi from '../../api/pay/payApi';
+    import { auth } from '../../api/account/authApi';
+    import { useMapGalgameStore } from '../../store/mapGalgameStore';
+
+    // 记录已经触发过初始交互的 session-event 组合，避免开发环境 StrictMode 下重复发送请求
+    const startedEvents = new Set<string>();
+    // 世界交互：前 10 条交互免费，之后开始扣费
+    const FREE_INTERACTIONS_THRESHOLD = 5;
 
     interface UseWorldInteractionStepOptions {
         sessionId: string | null;
         eventId: string | null;
         fileId: string | null;
         onMessagesClear?: () => void;
+        historyLength?: number;
     }
 
     export const useWorldInteractionStep = ({ 
         sessionId, 
         eventId,
         fileId,
-        onMessagesClear 
+        onMessagesClear,
+        historyLength = 0,
     }: UseWorldInteractionStepOptions) => {
         const [currentStep, setCurrentStep] = useState<any>(null);
         const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -27,6 +39,30 @@
         const isProcessingStepRef = useRef(false);
         const currentEventIdRef = useRef<string | null>(null);
         const [newEvent, setNewEvent] = useState<any>(null); // 存储新的事件数据
+
+        const { user, updateUser } = useAuthStore();
+
+        // 获取最新用户信息
+        const getUserInfo = useCallback(async () => {
+            try {
+                const response = await auth.getUserInfo();
+                if (response.data.success && response.data.data) {
+                    updateUser(response.data.data);
+                }
+            } catch (error) {
+                console.error('获取用户信息错误:', error);
+            }
+        }, [updateUser]);
+
+        // 世界交互扣积分：type 为 "option"（2 积分）或 "selfDefined"（3 积分）
+        const reducePoints = useCallback(async (type: 'option' | 'selfDefined') => {
+            const response = await payApi.optionPoints({ type });
+            if (response.data.success) {
+                await getUserInfo();
+                return response.data.data;
+            }
+            return null;
+        }, [getUserInfo]);
 
         // 同步 currentStep 到 ref
         useEffect(() => {
@@ -57,6 +93,11 @@
             setSelectedOptionIndex(null);
             setShowNextButton(step.type !== 'choice');
         }, []);
+
+        // 确保即使跳过 handleInteract（直接使用历史选项）也能拿到最新的 eventId
+        useEffect(() => {
+            currentEventIdRef.current = eventId;
+        }, [eventId]);
 
         // 当队列中有 step 且当前没有显示的 step 时，自动显示第一个
         useEffect(() => {
@@ -94,6 +135,13 @@
             }
 
             try {
+                const key = `${sessionId}-${eventId}`;
+                if (startedEvents.has(key)) {
+                    console.log('[WorldInteraction] 初始交互已触发过，忽略重复请求:', key);
+                    return;
+                }
+                startedEvents.add(key);
+
                 const requestId = ++currentRequestId.current;
                 
                 setCurrentStep(null);
@@ -203,6 +251,18 @@
                 return;
             }
         
+            if (historyLength > FREE_INTERACTIONS_THRESHOLD) {
+                const isCustomInput = optionIndex === -1;
+                const needPoints = isCustomInput ? 3 : 2;
+
+                if (!user?.user.points || user.user.points <= needPoints) {
+                    toast.error('积分不足');
+                    return;
+                }
+
+                await reducePoints(isCustomInput ? 'selfDefined' : 'option');
+            }
+
             setSelectedOptionIndex(optionIndex);
             setIsWaitingForData(true);
             setShowNextButton(false);
@@ -261,6 +321,13 @@
                                 completedEvent: data.completedEvent,
                                 hasNewEvent: false 
                             });
+
+                            try {
+                                const { setEventData } = useMapGalgameStore.getState();
+                                setEventData(null);
+                            } catch (e) {
+                                console.error('[WorldInteraction] 清空地图事件失败:', e);
+                            }
                         }
                         
                         console.log('处理完成'); // 调试
@@ -278,7 +345,7 @@
                 setIsWaitingForData(false);
                 setSelectedOptionIndex(null);
             }
-        }, [sessionId, processNarrativeSteps, showStep]);
+        }, [sessionId, historyLength, user?.user.points, processNarrativeSteps, showStep, reducePoints]);
 
         return {
             currentStep,

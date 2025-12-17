@@ -81,12 +81,20 @@
     gap: 16px;
 }
 
+.uploadWorldMapCard {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
 /* 卡片样式 */
 .card {
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 24px;
-    padding: 24px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -293,6 +301,21 @@
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+}
+
+/* 世界大地图操作区域（悬浮在预览盒子右上角） */
+.worldMapActions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.worldMapActions button {
+    padding: 6px 12px;
+    border-radius: 999px;
 }
 
 /* BGM 列表 */

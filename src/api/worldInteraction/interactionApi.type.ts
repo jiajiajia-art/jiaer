@@ -127,3 +127,13 @@ export interface GetActiveEventsResponse {
   events: GameEvent[];
   count: number;
 }
+
+
+export interface NextRoundResponse {
+  success: boolean;
+  message: string;
+  currentRound: number;
+  currentKeyEventIndex: number;
+  activeEvents: GameEvent[];
+}
+

@@ -27,12 +27,12 @@ interface WorldPanelProps {
     fileId?: string;
 }
 
-const WorldPanel: React.FC<WorldPanelProps> = ({ 
-    gameData, 
-    onGetData, 
-    handleSubmit, 
-    isSubmitting = false, 
-}) => {    
+const WorldPanel: React.FC<WorldPanelProps> = ({
+    gameData,
+    onGetData,
+    handleSubmit,
+    isSubmitting = false,
+}) => {
     // 默认表单字段（不包括文风要求，文风要求单独处理）
     const defaultFields: WorldField[] = [
         { id: 'title', label: '作品标题', type: 'text', value: '' },
@@ -311,7 +311,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                             e.preventDefault();
                             handleSubmit();
                         }}
-                        disabled={ !gameData || isSubmitting}
+                        disabled={!gameData || isSubmitting}
                     >
                         {isSubmitting ? '提交中...' : '确认修改'}
                     </button>
@@ -320,13 +320,13 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
 
             {/* 单栏表单 */}
             <div className={styles.formContainer}>
-                            {worldFields.map((field) => (
+                {worldFields.map((field) => (
                     <div key={field.id} className={styles.formRow}>
                         <div className={styles.fieldHeader}>
                             <span className={styles.fieldLabel}>{field.label}</span>
                             {field.hint && <span className={styles.fieldHint}>{field.hint}</span>}
                         </div>
-                                    {field.type === 'textarea' ? (
+                        {field.type === 'textarea' ? (
                             <textarea
                                 rows={field.rows || 3}
                                 value={field.value}
@@ -359,8 +359,8 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                                 </button>
                             )}
                             <MdArrowDropDown size={30} style={{ transform: isStorylineExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                            </div>
                         </div>
+                    </div>
                     {isStorylineExpanded && (
                         <>
                             <span className={styles.fieldHint} style={{ marginBottom: '16px', display: 'block' }}>用标签 + 内容描述关键剧情走向，方便约束 AI 推演。</span>
@@ -379,7 +379,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                                                         onChange={(e) => handleStorylineChange(line.id, 'tag', e.target.value)}
                                                     />
                                                 </label>
-                    </div>
+                                            </div>
                                             <label className={styles.wide}>
                                                 <span>内容</span>
                                                 <textarea
@@ -394,10 +394,10 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                                             >
                                                 删除
                                             </button>
-                            </div>
+                                        </div>
                                     ))
                                 )}
-                        </div>
+                            </div>
                         </>
                     )}
                 </div>
@@ -407,7 +407,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                     <div className={styles.storylineHeader} style={{ marginBottom: isToneExpanded ? '8px' : '0', cursor: 'pointer' }} onClick={() => setIsToneExpanded(!isToneExpanded)}>
                         <span className={styles.fieldLabel}>文风要求（可选）</span>
                         <MdArrowDropDown size={30} style={{ transform: isToneExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                            </div>
+                    </div>
                     {isToneExpanded && (
                         <>
                             <span className={styles.fieldHint} style={{ marginBottom: '8px', display: 'block' }}>限定语言风格、叙述视角、禁用词汇等，帮助 AI 保持统一语气。</span>

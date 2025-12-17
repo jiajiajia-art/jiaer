@@ -1758,40 +1758,6 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                             ref={mapPreviewRef}
                             className={styles.mapPreview}
                         >
-                            <div className={styles.mapPreviewActions}>
-                                <input
-                                    ref={mapImageInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            handleUploadMap(file);
-                                        }
-                                        // 重置input，允许重复选择同一文件
-                                        if (mapImageInputRef.current) {
-                                            mapImageInputRef.current.value = '';
-                                        }
-                                    }}
-                                />
-                                <button 
-                                    className={styles.mapActionBtn}
-                                    onClick={handleGenerateMap}
-                                    disabled={!fileId || generatingMap}
-                                    title="生成大地图"
-                                >
-                                    生成
-                                </button>
-                                <button 
-                                    className={styles.mapActionBtn}
-                                    onClick={() => mapImageInputRef.current?.click()}
-                                    disabled={!fileId}
-                                    title="上传大地图"
-                                >
-                                    上传
-                                </button>
-                            </div>
                             <img 
                                 ref={mapImageRef}
                                 src={`${currentMapSrc}`} 

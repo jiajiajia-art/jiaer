@@ -54,14 +54,21 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     const [subsceneCollapsed, setSubsceneCollapsed] = useState<Record<string, boolean>>({});
     const sceneFileInputRef = useRef<HTMLInputElement>(null);
     const newSceneFileInputRef = useRef<HTMLInputElement>(null);
+    // 大地图上传/生成 input 与状态（世界交互专用）
+    const worldMapFileInputRef = useRef<HTMLInputElement>(null);
     const [isGeneratingAllSceneImages, setIsGeneratingAllSceneImages] = useState<boolean>(false);
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
+    const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
 
     const [bgmLibrary, _setBgmLibrary] = useState<BgmItem[]>([
         { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
         { id: 'bgm-battle', name: '量子引擎警报', description: '紧张 / 战斗准备' },
         { id: 'bgm-dream', name: '星潮呢喃', description: '浪漫 / 深夜' },
     ]);
+
+    // 已有大地图图片（worldInteraction 模式）
+    const worldMapImage = gameData?.worldSetting?.worldMapImage || null;
+    const worldMapPreviewSrc = worldMapImage ? `${worldMapImage}/dummy` : null;
 
     // 当 gameData 变化时，填充场景数据
     useEffect(() => {
@@ -430,7 +437,6 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     return filtered;
                 });
                 toast.success('场景删除成功');
-                // 刷新数据
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -672,7 +678,62 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             setIsGeneratingSingleSceneImage(false);
         }
     };
-    
+
+    // 生成大地图（世界交互专用）
+    const handleGenerateWorldMap = async () => {
+        if (!fileId) {
+            toast.error('缺少文件 ID，无法生成大地图');
+            return;
+        }
+        try {
+            setIsGeneratingWorldMap(true);
+            const response = await worldEditor.generateWorldMapImage(fileId);
+            if (response.data?.success) {
+                toast.success('大地图生成成功');
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('大地图生成失败，请稍后重试');
+            }
+        } catch (error: any) {
+            console.error('生成大地图失败:', error);
+            toast.error('生成大地图失败：' + (error.message || '请检查网络连接'));
+        } finally {
+            setIsGeneratingWorldMap(false);
+        }
+    };
+
+    // 上传大地图（世界交互专用）
+    const handleUploadWorldMapChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!fileId) {
+            toast.error('缺少文件 ID，无法上传大地图');
+            return;
+        }
+
+        try {
+            const response = await worldEditor.setWorldMapImage(fileId, file);
+            if (response.data?.success) {
+                toast.success('大地图上传成功');
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('大地图上传失败，请稍后重试');
+            }
+        } catch (error: any) {
+            console.error('上传大地图失败:', error);
+            toast.error('上传大地图失败：' + (error.message || '请检查网络连接'));
+        } finally {
+            // 重置 input，允许重复选择同一文件
+            if (worldMapFileInputRef.current) {
+                worldMapFileInputRef.current.value = '';
+            }
+        }
+    };
 
     const generateAllSceneImages = async () => {
         if (!fileId) {
@@ -701,9 +762,62 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
 
     return (
         <div className={styles.panelContent}>
+            {/* 世界大地图：仅世界交互模式下显示 */}
+            {mode === 'worldInteraction' && (
+                <div className={styles.uploadWorldMapCard}>
+                    <div className={styles.cardHead}>
+                        <div>
+                            <p className={styles.eyebrow}>Step 4</p>
+                            <h2>上传或 AI 生成大地图</h2>
+                            <p className={styles.subtitle}>
+                                用于在世界地图模式中展示场景与子场景的位置关系。
+                            </p>
+                        </div>
+                    </div>
+                    {/* 大地图预览 + 右上角操作按钮 */}
+                    <div
+                        className={styles.sceneHero}
+                        style={worldMapPreviewSrc ? { backgroundImage: `url('${worldMapPreviewSrc}')` } : {}}
+                    >
+                        {worldMapPreviewSrc ? (
+                            <span className={styles.heroHint}>当前大地图预览</span>
+                        ) : (
+                            <span>暂无大地图，请先上传或生成</span>
+                        )}
+                        <div className={styles.worldMapActions}>
+                            <input
+                                ref={worldMapFileInputRef}
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={handleUploadWorldMapChange}
+                            />
+                            <button
+                                className={styles.ghostSmall}
+                                onClick={handleGenerateWorldMap}
+                                disabled={!fileId || isGeneratingWorldMap}
+                            >
+                                {isGeneratingWorldMap ? '生成中...' : 'AI 生成'}
+                            </button>
+                            <button
+                                className={styles.ghostSmall}
+                                onClick={() => worldMapFileInputRef.current?.click()}
+                                disabled={!fileId}
+                            >
+                                上传
+                            </button>
+                        </div>
+                        {isGeneratingWorldMap && (
+                                 <div className="loadingOverlay">
+                                 <div className="loadingSpinner"></div>
+                                 <div className="loadingText">正在生成大地图...</div>
+                             </div>
+                            )}
+                    </div>
+                </div>
+            )}
             <div className={styles.panelHeader}>
                 <div>
-                    <p className={styles.eyebrow}>Step 4</p>
                     <h2>场景背景 & BGM 绑定</h2>
                     <p className={styles.subtitle}>AI 生成场景描述，可直接选择上一步上传的 BGM</p>
                 </div>

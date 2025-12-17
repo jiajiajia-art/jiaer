@@ -3,6 +3,13 @@ import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
 import styles from '../Galgame/TextModeDisplay.module.css';
 
+const POINTS_CONFIG = {
+    option: 2,
+    custom: 3,
+};
+
+const FREE_INTERACTIONS_THRESHOLD = 5;
+
 interface TextModalStep {
     id: string;
     type: 'narration' | 'dialogue' | 'choice' | 'transition' | 'scene_change';
@@ -21,6 +28,8 @@ interface TextModeDisplayProps {
     currentDisplayText: string;
     isTyping: boolean;
     isWaitingForData: boolean;
+    // 世界交互历史长度（使用 interactions.length）
+    historyLength: number;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
 }
@@ -31,6 +40,7 @@ interface MessageItemProps {
     isCurrentStep: boolean;
     currentDisplayText: string;
     isTyping: boolean;
+    historyLength: number;
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
@@ -41,6 +51,7 @@ const MessageItem = memo<MessageItemProps>(({
     isCurrentStep, 
     currentDisplayText, 
     isTyping,
+    historyLength,
     isWaitingForData,
     onChoiceClick, 
     onCustomInputSubmit 
@@ -143,6 +154,9 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
+                                        {historyLength > FREE_INTERACTIONS_THRESHOLD && (
+                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -151,6 +165,11 @@ const MessageItem = memo<MessageItemProps>(({
                             <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
+                                    {historyLength > FREE_INTERACTIONS_THRESHOLD && (
+                                        <span className={styles.pointsCostHint}>
+                                            消耗 {POINTS_CONFIG.custom} 积分
+                                        </span>
+                                    )}
                                 </div>
                                 <div className={styles.customInputWrapper}>
                                     <input
@@ -199,6 +218,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     currentDisplayText,
     isTyping,
     isWaitingForData,
+    historyLength,
     onChoiceClick,
     onCustomInputSubmit
 }) => {
@@ -222,6 +242,18 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
         <div className={styles.textModeContainer}>
             {steps.length === 0 && !isWaitingForData ? (
                 <div className={styles.emptyState}>暂无内容</div>
+            ) : showMainLoader ? (
+                // 等待 AI 推演时，全屏仅展示加载状态，不再显示之前的文本
+                <div className={styles.loadingContainer}>
+                    <div className={styles.aiLoader}>
+                        <div className={styles.orbit}></div>
+                        <div className={styles.orbitInner}></div>
+                        <div className={styles.core}></div>
+                    </div>
+                    <div className={styles.statusText}>
+                        AI 推演中<span className={styles.dots}></span>
+                    </div>
+                </div>
             ) : (
                 <div className={styles.messagesContainer} ref={messagesContainerRef}>
                     {steps.map((step, index) => {
@@ -241,26 +273,14 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 isCurrentStep={isCurrent}
                                 currentDisplayText={isCurrent ? currentDisplayText : ''}
                                 isTyping={isCurrent ? isTyping : false}
+                                historyLength={historyLength}
                                 isWaitingForData={isWaitingForData}
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
                             />
                         );
                     })}
-                    
-                    {showMainLoader && (
-                        <div className={styles.loadingContainer}>
-                            <div className={styles.aiLoader}>
-                                <div className={styles.orbit}></div>
-                                <div className={styles.orbitInner}></div>
-                                <div className={styles.core}></div>
-                            </div>
-                            <div className={styles.statusText}>
-                                AI 推演中<span className={styles.dots}></span>
-                            </div>
-                        </div>
-                    )}
-                    
+
                     {/* Step 之间的间隙：三点加载 */}
                     {showDotLoader && (
                         <div className={styles.inlineLoadingWrapper}>

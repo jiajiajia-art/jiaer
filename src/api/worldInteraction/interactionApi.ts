@@ -1,26 +1,5 @@
 import { api } from "../base";
-import type { EventResponse, GetActiveEventsResponse, GetWorldInteractionHistoryResponse } from "./interactionApi.type";
-
-interface NextRoundResponse {
-    success: boolean;
-    message: string;
-    currentRound: number;
-    currentKeyEventIndex: number;
-    activeEvents: Array<{
-        eventId: string;
-        eventTitle: string;
-        eventDescription: string;
-        eventType: string;
-        targetNpcId: string;
-        targetSubsceneId: string;
-        relatedKeyEventIndex: number;
-        estimatedImportance: number;
-        reason: string;
-        status: string;
-        createdAt: string;
-        round: number;
-    }>;
-}
+import type { EventResponse, GetActiveEventsResponse, GetWorldInteractionHistoryResponse, NextRoundResponse } from "./interactionApi.type";
 
 const interactionApi = {
     distributeEvent: ({

@@ -17,7 +17,10 @@ import { useCharacterContainerClassName } from "../../hooks/galgame/useCharacter
 import { useStoryTyping } from "../../hooks/story/useStoryTyping";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
+import HistoryModal from "./historyModal";
 import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
+import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
+import interactionApi from "../../api/worldInteraction/interactionApi";
 
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -50,12 +53,14 @@ const InteractWithNpc = ({
     gameData,
     onEndRound,
     isEndingRound,
+    worldInteractionHistory,
 }: { 
     onClose: () => void;
     gameData: AllGameData | null;
     onEndRound: () => void;
     isEndingRound: boolean;
-}) => {
+    worldInteractionHistory: GetWorldInteractionHistoryResponse | null;
+}) => {    
 
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
@@ -96,6 +101,8 @@ const InteractWithNpc = ({
     const [completedSteps, setCompletedSteps] = useState<any[]>([]); // 已完成的步骤
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
     const hasInitializedRef = useRef(false);
+    const [isHistoryVisible, setIsHistoryVisible] = useState(false);
+    const [latestHistory, setLatestHistory] = useState<GetWorldInteractionHistoryResponse | null>(worldInteractionHistory);
 
     // 当 currentStep 变化且打字机已完成时，将之前的 step 加入已完成列表
     const previousStepRef = useRef<any>(null);
@@ -105,6 +112,7 @@ const InteractWithNpc = ({
         sessionId,
         eventId,
         fileId: pdfFileId,
+        historyLength: latestHistory?.interactions.length ?? 0,
         onMessagesClear: () => {
             // 清空已完成步骤和引用，避免残留数据
             setCompletedSteps([]);
@@ -112,6 +120,40 @@ const InteractWithNpc = ({
             previousIsTypingRef.current = false;
         }
     });
+
+    // 外部传入的历史变化时，同步到本地 latestHistory
+    useEffect(() => {
+        if (worldInteractionHistory) {
+            setLatestHistory(worldInteractionHistory);
+        }
+    }, [worldInteractionHistory]);
+
+    // 打开历史弹窗时，刷新一次历史记录
+    useEffect(() => {
+        if (!isHistoryVisible || !sessionId) return;
+
+        let cancelled = false;
+
+        const fetchHistory = async () => {
+            try {
+                const response = await interactionApi.getWorldInteractionHistory(sessionId);
+                if (!cancelled && response.data?.success) {
+                    setLatestHistory(response.data);
+                    console.log('[WorldInteraction] 历史记录已刷新（弹窗）', response.data);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    console.error('[WorldInteraction] 获取历史记录失败（弹窗）:', error);
+                }
+            }
+        };
+
+        void fetchHistory();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isHistoryVisible, sessionId]);
 
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
@@ -181,8 +223,33 @@ const InteractWithNpc = ({
         return null;
     }, [worldSetting]);
 
+    // 如果历史最后一条是 npc_dialogue，则构造一个基于历史 options 的临时 choice 消息
+    const historyChoiceMessage: Message | null = useMemo(() => {
+        if (!latestHistory || !latestHistory.interactions.length) return null;
+        const last = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
+        if (last.type !== 'npc_dialogue') {
+            return null;
+        }
+
+        const options = last.narrativeSteps[last.narrativeSteps.length - 1].options.map((opt: any, index: number) => ({
+            id: index + 1,
+            text: opt.text,
+            optionId: opt.optionId,
+        }));
+
+        console.log('[WorldInteraction] 历史最后一条 npc_dialogue 选项：', options);
+        return {
+            id: Date.now(),
+            type: 'choice',
+            message: '请选择你的行动',
+            options,
+            characterImage: getPlayerImage(worldSetting?.player?.images),
+            characterPosition: 'right',
+        };
+    }, [latestHistory, worldSetting]);
+
     const currentMessage = useMemo(() => {
-        // 使用 currentStep（如果存在且不是空的）
+        // 1）优先使用当前 step（正常交互流程）
         if (gameStarted && stepHandlers.currentStep && stepHandlers.currentStep.type) {
             const converted = convertStepToMessage(stepHandlers.currentStep);
             if (converted) {
@@ -190,12 +257,18 @@ const InteractWithNpc = ({
             }
         }
 
+        // 2）如果当前事件进行到一半（历史最后一条是 npc_dialogue），直接展示其 options
+        if (historyChoiceMessage) {
+            return historyChoiceMessage;
+        }
+
+        // 3）默认空旁白
         return {
             id: 0,
             type: 'narration' as MessageType,
             message: '',
         };
-    }, [gameStarted, stepHandlers.currentStep, convertStepToMessage]);
+    }, [gameStarted, stepHandlers.currentStep, convertStepToMessage, historyChoiceMessage]);
 
     // 使用封装的 hooks
     const characterAnimation = useCharacterAnimation({
@@ -272,24 +345,59 @@ const InteractWithNpc = ({
             });
     }, [worldSetting]);
 
-    // 初始化游戏：当 gameData 加载完成后自动开始
+    // 初始化游戏：当组件挂载时，先从后端刷新一次历史，再决定是直接展示历史选项还是调用交互接口
     useEffect(() => {
-        // 确保只执行一次
         if (hasInitializedRef.current) return;
-        
-        if (gameData && !gameStarted && sessionId && eventId && pdfFileId) {
-            hasInitializedRef.current = true;
-            setGameStarted(true);
-            
-            // 添加延迟，确保状态更新后再执行
-            setTimeout(() => {
-                stepHandlers.handleInteract({
-                    onError: (error) => {
-                        console.error('❌ 开始交互失败:', error);
+        if (!sessionId) return;
+
+        let cancelled = false;
+
+        const initFromServerHistory = async () => {
+            try {
+                const resp = await interactionApi.getWorldInteractionHistory(sessionId);
+                if (cancelled) return;
+
+                if (resp.data?.success) {
+                    const history = resp.data;
+                    setLatestHistory(history);
+
+                    const lastInteraction = history.interactions?.[history.interactions.length - 1] as any;
+
+                    // 如果历史最后一条是 npc_dialogue（事件进行到带选项但未完成），
+                    // 则不再重新调用交互接口，直接用历史中的 options 渲染选项
+                    if (lastInteraction && lastInteraction.type === 'npc_dialogue') {
+                        hasInitializedRef.current = true;
+                        setGameStarted(true);
+                        console.log('[WorldInteraction] 初始化：检测到未完成的 npc_dialogue，直接使用历史选项');
+                        return;
                     }
-                });
-            }, 100);
-        }
+                }
+
+                // 否则按正常流程发起交互
+                if (gameData && !gameStarted && sessionId && eventId && pdfFileId) {
+                    hasInitializedRef.current = true;
+                    setGameStarted(true);
+
+                    setTimeout(() => {
+                        stepHandlers.handleInteract({
+                            onError: (error) => {
+                                console.error('❌ 开始交互失败:', error);
+                            }
+                        });
+                    }, 100);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    console.error('[WorldInteraction] 初始化时检查历史失败:', error);
+                }
+            }
+        };
+
+        void initFromServerHistory();
+
+        return () => {
+            cancelled = true;
+        };
     }, [gameData, gameStarted, sessionId, eventId, pdfFileId, stepHandlers]);
 
     const handleNextMessage = useCallback(() => {
@@ -343,7 +451,6 @@ const InteractWithNpc = ({
         previousIsTypingRef.current = isTyping;
     }, [stepHandlers.currentStep, isTyping]);
 
-    // 计算文本模式显示的所有步骤：只显示已完成的步骤和当前步骤，choice 类型只保留最后一个
     const allStepsForTextModal = useMemo(() => {
         let validSteps = completedSteps.filter(s => s && s.type);
 
@@ -358,7 +465,16 @@ const InteractWithNpc = ({
             }
         }
 
-        // choice 类型只保留最后一个
+        // 如果当前没有任何步骤，但存在历史最后一条 npc_dialogue，
+        // 文本模式下补上该 npc_dialogue 的完整 narrativeSteps（包括所有旁白+对话+最后的 choice）
+        if (validSteps.length === 0 && latestHistory?.interactions?.length) {
+            const lastInteraction = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
+            if (lastInteraction.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
+                validSteps = [...lastInteraction.narrativeSteps];
+            }
+        }
+
+        // choice 类型只保留最后一个（包括历史补充的）
         const choiceIndices = validSteps
             .map((step, index) => step?.type === 'choice' ? index : -1)
             .filter(idx => idx >= 0);
@@ -370,7 +486,7 @@ const InteractWithNpc = ({
         }
 
         return validSteps;
-    }, [completedSteps, stepHandlers.currentStep]);
+    }, [completedSteps, stepHandlers.currentStep, latestHistory]);
 
     // 当前步骤的索引
     const currentStepIndex = useMemo(() => {
@@ -437,7 +553,6 @@ const InteractWithNpc = ({
     }, [stepHandlers, onEndRound]);
 
     // 获取当前步骤的打字机文本（保留颜色标签，实现丝滑打字效果）
-    // 这个文本只用于当前正在打字的步骤
     const textModalDisplayText = useMemo(() => {
         // 只有在当前步骤存在且不是 choice 类型，且正在打字时才返回打字文本
         if (stepHandlers.currentStep &&
@@ -491,19 +606,14 @@ const InteractWithNpc = ({
     }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, isTextMode]);
 
     const handleChoiceClick = useCallback((option: { text: string; optionId?: string }) => {
-        // 清空已完成步骤和引用，避免残留数据
         setCompletedSteps([]);
         previousStepRef.current = null;
         previousIsTypingRef.current = false;
 
-        // optionId 可以是真实的 optionId（string 类型）或者用户自定义输入的文本（string 类型）
         let optionId: string | undefined = option.optionId;
         let optionIndex = -1;
 
-        // 如果 optionId 存在，说明可能是用户自定义输入（直接使用）或者是真实 optionId
-        // 如果 optionId 不存在，需要从 currentStep 或 currentMessage 中查找
         if (!optionId) {
-            // 从 currentStep 中查找选项
             if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
                 optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
                     if (typeof opt === 'string') {
@@ -532,7 +642,6 @@ const InteractWithNpc = ({
                 }
             }
         } else {
-            // 如果 optionId 存在，尝试找到对应的 optionIndex（用于显示选中状态）
             if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
                 optionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
                     if (typeof opt === 'string') {
@@ -549,13 +658,10 @@ const InteractWithNpc = ({
             }
         }
 
-        // optionId 必须存在（可以是真实 optionId 或用户自定义输入的文本）
         if (!optionId) {
             console.error('❌ 无法找到选项或 optionId:', { option, optionIndex, optionId });
             return;
         }
-
-        // 如果 optionIndex 没找到，使用 -1（表示是用户自定义输入）
         const finalOptionIndex = optionIndex >= 0 ? optionIndex : -1;
 
         stepHandlers.handleChoiceOption(optionId, finalOptionIndex, {
@@ -565,13 +671,11 @@ const InteractWithNpc = ({
         });
     }, [stepHandlers, currentMessage]);
 
-    // 处理用户自定义输入
     const handleCustomInputSubmit = useCallback((customText: string) => {
         if (!customText.trim()) {
             return;
         }
 
-        // 将用户自定义输入的文本作为 optionId 传递
         handleChoiceClick({
             text: customText,
             optionId: customText.trim()
@@ -634,6 +738,7 @@ const InteractWithNpc = ({
                                 currentDisplayText={textModalDisplayText}
                                 isTyping={finalIsTyping}
                                 isWaitingForData={stepHandlers.isWaitingForData}
+                                historyLength={latestHistory?.interactions.length ?? 0}
                                 onChoiceClick={(option) => {
                                     setCompletedSteps([]);
                                     previousStepRef.current = null;
@@ -653,6 +758,7 @@ const InteractWithNpc = ({
                             <div
                                 className={styles.buttonItem}
                                 style={{ cursor: 'pointer' }}
+                                onClick={() => setIsHistoryVisible(true)}
                             >
                                 <div className={styles.buttonInner}>
                                     <BiHistory />
@@ -739,6 +845,11 @@ const InteractWithNpc = ({
                     </div>
                 </div>
             </div>
+            <HistoryModal
+                visible={isHistoryVisible}
+                onClose={() => setIsHistoryVisible(false)}
+                history={latestHistory ?? worldInteractionHistory}
+            />
         </>
     );
 };

@@ -34,6 +34,8 @@ interface NormalModeDisplayProps {
     onCustomInputSubmit: (value: string) => void;
 }
 
+const FREE_ROUNDS_THRESHOLD = 5;
+
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
     finalDisplayText,
@@ -169,6 +171,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
+                            {history.length > FREE_ROUNDS_THRESHOLD && (
+                                <div className={styles.choicePrice}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                    <span>2</span>
+                                </div>
+                            )}
                         </div>
                     ))}
                     {!showCustomInput ? (
@@ -199,6 +207,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
+                                {history.length > FREE_ROUNDS_THRESHOLD && (
+                                    <div className={styles.choicePrice}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                        <span>3</span>
+                                    </div>
+                                )}
                             </button>
                         </div>
                     )}
