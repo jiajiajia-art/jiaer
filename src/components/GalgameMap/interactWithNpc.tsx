@@ -345,15 +345,55 @@ const InteractWithNpc = ({
             });
     }, [worldSetting]);
 
-    // 初始化游戏：当组件挂载时，先从后端刷新一次历史，再决定是直接展示历史选项还是调用交互接口
+    // 初始化游戏：当组件挂载时，优先尝试使用本地缓存的步骤（用户中途退出时保存的 allSteps），
+    // 如果没有缓存，再从后端刷新一次历史，决定是直接展示历史选项还是调用交互接口
     useEffect(() => {
         if (hasInitializedRef.current) return;
         if (!sessionId) return;
 
         let cancelled = false;
 
+        const allStepsStorageKey = sessionId && eventId
+            ? `world-allsteps-${sessionId}-${eventId}`
+            : null;
+        const incompleteKey = sessionId && eventId
+            ? `world-allsteps-incomplete-${sessionId}-${eventId}`
+            : null;
+
         const initFromServerHistory = async () => {
             try {
+                // 1）优先尝试从本地缓存恢复，但只有在“未看完”标记存在时才使用
+                if (allStepsStorageKey && incompleteKey && typeof window !== 'undefined') {
+                    try {
+                        const isIncomplete = window.localStorage.getItem(incompleteKey) === 'true';
+                        const raw = window.localStorage.getItem(allStepsStorageKey);
+                        if (isIncomplete && raw) {
+                            const savedSteps = JSON.parse(raw);
+                            if (Array.isArray(savedSteps) && savedSteps.length > 0) {
+                                const [first, ...rest] = savedSteps;
+                                
+                                hasInitializedRef.current = true;
+                                setGameStarted(true);
+                                // 重置已完成步骤和引用
+                                setCompletedSteps([]);
+                                previousStepRef.current = null;
+                                previousIsTypingRef.current = false;
+
+                                // 直接用缓存的步骤恢复 currentStep 和队列
+                                stepHandlers.setCurrentStep(first || null);
+                                stepHandlers.setStepQueue(rest || []);
+                                stepHandlers.setShowNextButton(first?.type !== 'choice');
+
+                                console.log('[WorldInteraction] 使用本地缓存步骤恢复交互，步骤数:', savedSteps.length);
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[WorldInteraction] 读取本地步骤缓存失败:', e);
+                    }
+                }
+
+                // 2）如果本地没有缓存，再从后端刷新历史，决定是否直接用历史选项
                 const resp = await interactionApi.getWorldInteractionHistory(sessionId);
                 if (cancelled) return;
 
@@ -373,7 +413,7 @@ const InteractWithNpc = ({
                     }
                 }
 
-                // 否则按正常流程发起交互
+                // 3）否则按正常流程发起交互
                 if (gameData && !gameStarted && sessionId && eventId && pdfFileId) {
                     hasInitializedRef.current = true;
                     setGameStarted(true);
@@ -432,6 +472,37 @@ const InteractWithNpc = ({
         : (gameStarted ? displayedText : (currentMessage && currentMessage.type !== 'choice' ? currentMessage.message : ''));
 
     const finalIsTyping = (stepHandlers.isWaitingForData && !stepHandlers.currentStep) ? false : isTyping;
+
+    // 当步骤播放完毕（无 currentStep、队列空、未等待流、未打字、未显示下一步按钮）时，清除本地缓存标记
+    useEffect(() => {
+        const storageKey = sessionId && eventId ? `world-allsteps-${sessionId}-${eventId}` : null;
+        const incompleteKey = sessionId && eventId ? `world-allsteps-incomplete-${sessionId}-${eventId}` : null;
+        if (!storageKey || !incompleteKey || typeof window === 'undefined') return;
+
+        const noCurrent = !stepHandlers.currentStep;
+        const noQueue = !stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0;
+        const notWaiting = !stepHandlers.isWaitingForData;
+        const notTyping = !finalIsTyping;
+        const noNext = !stepHandlers.showNextButton;
+
+        if (gameStarted && noCurrent && noQueue && notWaiting && notTyping && noNext) {
+            try {
+                window.localStorage.removeItem(storageKey);
+                window.localStorage.removeItem(incompleteKey);
+            } catch (e) {
+                console.warn('[WorldInteraction] 清理本地步骤缓存失败:', e);
+            }
+        }
+    }, [
+        gameStarted,
+        stepHandlers.currentStep,
+        stepHandlers.stepQueue,
+        stepHandlers.isWaitingForData,
+        stepHandlers.showNextButton,
+        finalIsTyping,
+        sessionId,
+        eventId
+    ]);
 
     // 步骤管理：当步骤变化且打字完成时，添加到已完成列表
     useEffect(() => {

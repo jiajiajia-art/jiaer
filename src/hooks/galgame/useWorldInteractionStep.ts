@@ -190,6 +190,19 @@
                             };
                             steps.push(choiceStep);
                         }
+
+                        // 将本次交互的完整步骤缓存到本地，用于用户中途退出后重新进入时从头播放
+                        try {
+                            const storageKey = `world-allsteps-${sessionId}-${currentEventIdRef.current}`;
+                            const incompleteKey = `world-allsteps-incomplete-${sessionId}-${currentEventIdRef.current}`;
+                            if (typeof window !== 'undefined' && storageKey && steps.length > 0) {
+                                window.localStorage.setItem(storageKey, JSON.stringify(steps));
+                                // 标记未看完，只有存在该标记时才会用本地缓存恢复
+                                window.localStorage.setItem(incompleteKey, 'true');
+                            }
+                        } catch (e) {
+                            console.warn('[WorldInteraction] 缓存交互步骤失败:', e);
+                        }
                         
                         processNarrativeSteps(steps, requestId);
                         
@@ -313,6 +326,23 @@
                             setShowNextButton(false);
                         }
         
+                        // 更新/清理本地缓存的步骤，保证中途退出再进入可以从当前段落开头重播
+                        try {
+                            const storageKey = `world-allsteps-${sessionId}-${currentEventIdRef.current}`;
+                            const incompleteKey = `world-allsteps-incomplete-${sessionId}-${currentEventIdRef.current}`;
+                            if (typeof window !== 'undefined' && storageKey) {
+                                if (narrativeSteps.length > 0) {
+                                    window.localStorage.setItem(storageKey, JSON.stringify(narrativeSteps));
+                                    window.localStorage.setItem(incompleteKey, 'true');
+                                } else {
+                                    window.localStorage.removeItem(storageKey);
+                                    window.localStorage.removeItem(incompleteKey);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('[WorldInteraction] 更新交互步骤缓存失败:', e);
+                        }
+
                         if (data.newEvent) {
                             setNewEvent(data.newEvent);
                         } else if (data.completedEvent) {
