@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest } from "./EditorData.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest, GeneratePlayerImageRequest } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -62,17 +62,22 @@ const EditorApi = {
             },
         });
     },
+    generatePlayerImage: (data:GeneratePlayerImageRequest) => {
+        return api.post<AllGameData>(`/visual/images/generate-player`, data, {
+            timeout: 150000,
+        });
+    },
     generateNpcImage: (data: GenerateNpcImageRequest) =>
         api.post<AllGameData>(`/visual/images/generate-npc`, data, {
-            timeout: 0,
+            timeout: 150000,
         }),
     generateSceneImage: (data: GenerateSceneImageRequest) =>
         api.post<AllGameData>(`/visual/images/generate-scene`, data, {
-            timeout: 0,
+            timeout: 150000,
         }),
     generateVariantImage: (data: GenerateVariantImageRequest) =>
         api.post<AllGameData>(`/visual/images/generate-npc-variant`, data, {
-            timeout: 0,
+            timeout: 150000,
         }),
 }
 

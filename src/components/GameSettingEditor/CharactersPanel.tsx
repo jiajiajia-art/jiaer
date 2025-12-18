@@ -1,6 +1,33 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './CharactersPanel.module.css';
-import type { UnifiedGameData, NPCSetting, NPC, Player } from '../../api/common/gameData.type';
+import type { AllGameData } from '../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
+import type { NPCSetting, NPC, Player } from '../../api/galgame/EditorData.type';
+import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../api/worldInteraction/worldInteractionApi.type';
+
+// 辅助函数：获取 player（兼容两种模式）
+function getPlayer(data: AllGameData | WorldInteractionGameData | null | undefined) {
+    if (!data?.worldSetting) return undefined;
+    const ws = data.worldSetting;
+    
+    // worldInteraction 模式使用 Player（大写）
+    if ('Player' in ws && ws.Player) {
+        return ws.Player;
+    }
+    
+    // visual 模式使用 player（小写）
+    if ('player' in ws && ws.player) {
+        return ws.player;
+    }
+    
+    return undefined;
+}
+
+// 辅助函数：获取 npcs（兼容两种模式）
+function getNpcs(data: AllGameData | WorldInteractionGameData | null | undefined) {
+    if (!data?.npcSetting) return [];
+    return data.npcSetting.npcs || [];
+}
 import { MdArrowDropDown } from 'react-icons/md';
 import DeletModal from '../goodsModal/DeletModal';
 import EditorApi from '../../api/galgame/EditorData';
@@ -44,12 +71,14 @@ interface Character {
 }
 
 interface CharactersPanelProps {
-    gameData?: UnifiedGameData | null;
+    gameData?: AllGameData | WorldInteractionGameData | null;
     isLoading?: boolean;
-    onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
+    onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
     mode: string;
 }
+
+const DEFAULT_NPC_PORTRAIT = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
 
 const VARIATION_TYPES = [
     {
@@ -92,86 +121,114 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const { fileId } = useEditorStore();
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
+    const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null); // 避免切换角色时全局 loading 误闪
 
     // 为图片 URL 添加时间戳，避免缓存导致的旧图显示
-    const withCacheBust = (url?: string) => {
-        if (!url) return '';
+    const withCacheBust = (url?: string | null) => {
+        // 过滤掉空值、"null"、"undefined" 等无效字符串
+        if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
         const separator = url.includes('?') ? '&' : '?';
         return `${url}${separator}cb=${Date.now()}`;
     };
 
+    const baseCharacter = useCallback((): Omit<Character, 'id' | 'name' | 'callName' | 'gender' | 'role' | 'identity' | 'personality' | 'speech' | 'appearance' | 'portrait' | 'background' | 'relationships' | 'variations'> => {
+        return {
+            growth: '',
+            goalShort: '',
+            goalLong: '',
+            secret: '',
+        };
+    }, []);
+
+    const imagesToVariations = useCallback((images?: Record<string, string>): Variation[] => {
+        if (!images) return [];
+        return Object.entries(images).map(([label, img], idx) => ({
+            id: `v${idx}`,
+            label,
+            img: withCacheBust(img),
+            type: label,
+        }));
+    }, []);
+
+    const pickBaseImage = useCallback((images?: Record<string, string>, fallback?: string) => {
+        // 辅助函数：检查值是否有效
+        const isValidUrl = (url?: string | null): url is string => {
+            return !!url && url !== 'null' && url !== 'undefined' && url.trim() !== '';
+        };
+        
+        if (isValidUrl(images?.base)) return images!.base;
+        const first = images ? Object.values(images).find(v => isValidUrl(v)) : undefined;
+        return first || (isValidUrl(fallback) ? fallback : undefined);
+    }, []);
+
+    const npcToCharacter = useCallback((npc: NPC | WorldNPC, indexFallback: number): Character => {
+        const npcJob = 'job' in npc ? npc.job : undefined;
+        const npcRace = 'race' in npc ? npc.race : undefined;
+        const npcRelationship = 'relationship' in npc ? npc.relationship : undefined;
+
+        const images = (npc.images || undefined) as Record<string, string> | undefined;
+        const portrait = pickBaseImage(images, DEFAULT_NPC_PORTRAIT);
+
+        return {
+            ...baseCharacter(),
+            id: npc.id || `npc-${indexFallback}`,
+            name: npc.name || '',
+            callName: npc.name || '',
+            gender: npc.gender || '',
+            role: npcJob || 'NPC',
+            identity: npcRace ? `${npcRace} · ${npcJob || ''}` : (npcJob || ''),
+            personality: npc.personality ? [npc.personality] : [],
+            speech: npc.tone || '',
+            appearance: npc.appearance || '',
+            portrait: portrait ? withCacheBust(portrait) : '',
+            background: npc.description || '',
+            relationships: npcRelationship ? [{
+                id: 'r1',
+                name: '玩家',
+                description: npcRelationship,
+            }] : [],
+            variations: imagesToVariations(images),
+        };
+    }, [baseCharacter, imagesToVariations, pickBaseImage]);
+
+    const playerToCharacter = useCallback((player: any): Character => {
+        const playerImages = ('images' in player ? player.images : undefined) as Record<string, string> | undefined;
+        // 获取 image 或 imagePath，并过滤无效值
+        const rawImage = ('image' in player ? player.image : ('imagePath' in player ? player.imagePath : undefined)) as string | undefined;
+        const playerImage = (rawImage && rawImage !== 'null' && rawImage !== 'undefined') ? rawImage : undefined;
+        const portrait = pickBaseImage(playerImages, playerImage) || DEFAULT_NPC_PORTRAIT;        
+        const playerRace = ('race' in player ? player.race : undefined) as string | undefined;
+
+        return {
+            ...baseCharacter(),
+            id: 'player',
+            name: player?.name || '玩家',
+            callName: player?.name || '玩家',
+            gender: player?.gender || '',
+            role: '主角',
+            identity: playerRace || '',
+            personality: player?.personality ? [player.personality] : [],
+            speech: player?.tone || '',
+            appearance: player?.appearance || '',
+            portrait: portrait ? withCacheBust(portrait) : '',
+            background: '',
+            relationships: [],
+            variations: imagesToVariations(playerImages),
+        };
+    }, [baseCharacter, imagesToVariations, pickBaseImage]);
+
     // 当 gameData 变化时，填充角色数据
     useEffect(() => {
-        if (gameData?.npcSetting?.npcs) {
-            const npcs = gameData.npcSetting.npcs;
-            const convertedCharacters: Character[] = npcs.map((npc, index) => {
-                // 转换 images 对象为 variations 数组
-                const variations: Variation[] = npc.images
-                    ? Object.entries(npc.images).map(([label, img], idx) => ({
-                        id: `v${idx}`,
-                        label,
-                        img: withCacheBust(img),
-                        type: label, // 使用 label 作为 type
-                    }))
-                    : [];
+        if (!gameData) return;
+        
+        const npcs = getNpcs(gameData);
+        if (npcs && npcs.length > 0) {
+            const convertedCharacters: Character[] = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
 
-                return {
-                    id: npc.id || `npc-${index}`,
-                    name: npc.name || '',
-                    callName: npc.name || '',
-                    gender: npc.gender || '',
-                    role: npc.job || 'NPC',
-                    identity: npc.race ? `${npc.race} · ${npc.job || ''}` : (npc.job || ''),
-                    personality: npc.personality ? [npc.personality] : [],
-                    speech: npc.tone || '',
-                    appearance: npc.appearance || '',
-                    portrait: npc.images?.base ? withCacheBust(npc.images.base) : (npc.images ? withCacheBust(Object.values(npc.images)[0]) : ''),
-                    background: npc.description || '',
-                    growth: '',
-                    goalShort: '',
-                    goalLong: '',
-                    secret: '',
-                    relationships: npc.relationship ? [{
-                        id: 'r1',
-                        name: '玩家',
-                        description: npc.relationship,
-                    }] : [],
-                    variations,
-                };
-            });
-
-            // 添加玩家角色
-            if (gameData.worldSetting?.player) {
-                const player = gameData.worldSetting.player;
-                // 玩家仅当有 images 对象时才转换为 variations
-                const playerVariations: Variation[] = player.images
-                    ? Object.entries(player.images).map(([label, img], idx) => ({
-                        id: `v${idx}`,
-                        label,
-                        img: withCacheBust(img),
-                        type: label,
-                    }))
-                    : [];
-
-                convertedCharacters.unshift({
-                    id: 'player',
-                    name: player.name || '玩家',
-                    callName: player.name || '玩家',
-                    gender: player.gender || '',
-                    role: '主角',
-                    identity: player.race || '',
-                    personality: player.personality ? [player.personality] : [],
-                    speech: player.tone || '',
-                    appearance: player.appearance || '',
-                    portrait: withCacheBust(player.image || player.images?.base || ''), // 使用 image 字段作为主要上传的肚像
-                    background: '',
-                    growth: '',
-                    goalShort: '',
-                    goalLong: '',
-                    secret: '',
-                    relationships: [],
-                    variations: playerVariations, // 仅有 images 对象时才有差分
-                });
+            // 添加玩家角色（使用辅助函数兼容两种模式）
+            const player = getPlayer(gameData);
+            if (player) {
+                convertedCharacters.unshift(playerToCharacter(player));
             }
 
             setCharacterData(convertedCharacters);
@@ -179,10 +236,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 setActiveCharacterId(convertedCharacters[0].id);
             }
         }
-    }, [gameData, isAddingNew]);
+    }, [gameData, isAddingNew, npcToCharacter, playerToCharacter]);
 
     // 将 characterData 转换为 npcSetting 格式
-    const getNpcSettingData = useCallback((): NPCSetting | null => {
+    const getNpcSettingData = useCallback((): NPCSetting | WorldNPCSetting | null => {
         if (!gameData?.npcSetting) return null;
 
         // 过滤掉玩家角色，只处理 NPC
@@ -493,9 +550,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     : await EditorApi.updatePlayer(fileId, playerData as Player);
                 if (response.data?.success) {
                     toast.success('主角信息更新成功');
-                    // 刷新数据
-                    if (onDataChange) {
-                        onDataChange();
+                    // 使用返回的数据更新本地状态
+                    if (mode === 'worldInteraction') {
+                        const p = (response.data as any)?.data;
+                        if (p) setCharacterData(prev => prev.map(char => char.id === 'player' ? playerToCharacter(p) : char));
+                    } else {
+                        const ws = (response.data as any)?.worldSetting;
+                        const p = ws?.player;
+                        if (p) setCharacterData(prev => prev.map(char => char.id === 'player' ? playerToCharacter(p) : char));
                     }
                 } else {
                     toast.error('更新主角信息失败');
@@ -565,16 +627,35 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
 
                 if (response.data?.success) {
                     toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
-                    // 刷新数据
-                    if (onDataChange) {
-                        onDataChange();
-                    }
-                    // 如果是新增模式，关闭新增面板
-                    if (isAddingNew) {
-                        setIsAddingNew(false);
-                        setNewCharacterData(null);
-                        if (characterData.length > 0) {
-                            setActiveCharacterId(characterData[0].id);
+                    // 使用返回的数据更新本地状态
+                    const finalNpcId = npcData.id;
+                    if (mode === 'worldInteraction') {
+                        const npc = (response.data as any)?.data;
+                        if (npc) {
+                            const newCharacter = npcToCharacter(npc, 0);
+                            if (isAddingNew) {
+                                setCharacterData(prev => [newCharacter, ...prev]);
+                                setActiveCharacterId(newCharacter.id);
+                                setIsAddingNew(false);
+                                setNewCharacterData(null);
+                            } else {
+                                setCharacterData(prev => prev.map(char => char.id === finalNpcId ? newCharacter : char));
+                            }
+                        }
+                    } else {
+                        updateCharacterFromResponse(response.data, finalNpcId);
+                        if (isAddingNew) {
+                            const npcSetting = (response.data as any)?.npcSetting;
+                            if (npcSetting?.npcs) {
+                                const npc = npcSetting.npcs.find((n: any) => n.id === finalNpcId);
+                                if (npc) {
+                                    const newCharacter = npcToCharacter(npc, 0);
+                                    setCharacterData(prev => [newCharacter, ...prev]);
+                                    setActiveCharacterId(newCharacter.id);
+                                    setIsAddingNew(false);
+                                    setNewCharacterData(null);
+                                }
+                            }
                         }
                     }
                 } else {
@@ -810,10 +891,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
 
             if (response.data?.success) {
                 toast.success(successMessage || '图片上传成功');
-                // 刷新数据
-                if (onDataChange) {
-                    onDataChange();
-                }
+                // 使用返回的数据更新本地状态，不再调用 onDataChange
 
                 // 如果是玩家图片，更新 portrait 或 variations
                 if (type === 'player' && !isAddingNew) {
@@ -823,44 +901,52 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 // 根据模式获取玩家数据
                                 let playerImage = '';
                                 let playerImages: { [key: string]: string } | undefined = undefined;
+                                const responseAny = response.data as any;
                                 
                                 if (mode === 'worldInteraction') {
-                                    // worldEditor 返回 ApiResponse<Player>
-                                    const player = (response.data as any)?.data;
-                                    playerImage = player?.image || '';
+                                    // worldEditor 返回 ApiResponse<Player>，可能在 data 或直接在响应中
+                                    const player = responseAny?.data;
+                                    playerImage = player?.image || player?.imagePath || responseAny?.imagePath || '';
                                     playerImages = player?.images;
                                 } else {
                                     // EditorApi 返回包含 worldSetting 的数据
-                                    const worldSetting = (response.data as any)?.worldSetting;
-                                    playerImage = worldSetting?.player?.image || '';
+                                    const worldSetting = responseAny?.worldSetting;
+                                    playerImage = worldSetting?.player?.image || worldSetting?.player?.imagePath || '';
                                     playerImages = worldSetting?.player?.images;
                                 }
 
                                 // 如果是 base 变体，更新 portrait
                                 if (variant === 'base') {
-                                    const newPortrait = withCacheBust(
-                                        playerImages?.base ||
-                                        playerImage ||
-                                        char.portrait
-                                    );
-                                    return { ...char, portrait: newPortrait };
+                                    // 优先用返回的图片URL，没有则用现有图片加新时间戳
+                                    let newPortrait = playerImages?.base || playerImage;
+                                    if (!newPortrait && char.portrait) {
+                                        // 去掉旧时间戳，加新时间戳
+                                        const baseUrl = char.portrait.split('?')[0];
+                                        newPortrait = baseUrl;
+                                    }
+                                    return { ...char, portrait: newPortrait ? withCacheBust(newPortrait) : char.portrait };
                                 }
                                 // 否则检查是否已存在该variant的variation
                                 const existingVarIndex = char.variations.findIndex(v => v.label === variant);
+                                const variantImg = playerImages?.[variant] || playerImage;
                                 if (existingVarIndex >= 0) {
                                     // 更新现有的
                                     const newVariations = [...char.variations];
+                                    let imgUrl = variantImg;
+                                    if (!imgUrl && newVariations[existingVarIndex].img) {
+                                        imgUrl = newVariations[existingVarIndex].img.split('?')[0];
+                                    }
                                     newVariations[existingVarIndex] = {
                                         ...newVariations[existingVarIndex],
-                                        img: withCacheBust(playerImages?.[variant] || playerImage || ''),
+                                        img: imgUrl ? withCacheBust(imgUrl) : newVariations[existingVarIndex].img,
                                     };
                                     return { ...char, variations: newVariations };
-                                } else {
-                                    // 添加新的
+                                } else if (variantImg) {
+                                    // 添加新的（只有有图片时才添加）
                                     const newVar: Variation = {
                                         id: `v-${Date.now()}`,
                                         label: variant,
-                                        img: withCacheBust(playerImages?.[variant] || playerImage || ''),
+                                        img: withCacheBust(variantImg),
                                         type: variant,
                                     };
                                     return { ...char, variations: [...char.variations, newVar] };
@@ -871,20 +957,48 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     );
                 }
 
-                // 如果是NPC基础立绘，更新本地portrait
-                if (type === 'npc' && variant === 'base' && targetCharacterId && !isAddingNew) {
-                    let firstImageUrl = '';
+                // 如果是NPC图片（基础立绘或差分），使用返回的数据更新本地状态
+                if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
                     if (mode === 'worldInteraction') {
-                        // worldEditor 返回 ApiResponse<NPC>
-                        const npc = (response.data as any)?.data;
-                        firstImageUrl = npc?.images?.base || (npc?.images ? (Object.values(npc.images)[0] as string) : '') || '';
+                        // worldInteraction 模式返回简单格式：{ success, imagePath, variant, npcId }
+                        const responseData = response.data as any;
+                        const imagePath = responseData?.imagePath || responseData?.data?.imagePath;
+                        const variantName = responseData?.variant || responseData?.data?.variant || variant;
+                        const npcId = responseData?.npcId || responseData?.data?.npcId || targetCharacterId;
+                        
+                        if (imagePath && npcId) {
+                            const imageUrl = withCacheBust(imagePath);
+                            setCharacterData(prev => prev.map(char => {
+                                if (char.id === npcId) {
+                                    if (variantName === 'base') {
+                                        // 更新基础立绘
+                                        return { ...char, portrait: imageUrl };
+                                    } else {
+                                        // 更新或添加差分
+                                        const varIndex = char.variations.findIndex(v => v.label === variantName);
+                                        if (varIndex >= 0) {
+                                            // 更新现有的差分
+                                            const newVariations = [...char.variations];
+                                            newVariations[varIndex] = { ...newVariations[varIndex], img: imageUrl };
+                                            return { ...char, variations: newVariations };
+                                        } else {
+                                            // 添加新的差分
+                                            const newVar: Variation = {
+                                                id: `v-${Date.now()}`,
+                                                label: variantName,
+                                                img: imageUrl,
+                                                type: variantName,
+                                            };
+                                            return { ...char, variations: [...char.variations, newVar] };
+                                        }
+                                    }
+                                }
+                                return char;
+                            }));
+                        }
                     } else {
-                        // EditorApi 返回包含 npcSetting 的数据
-                        const npcSetting = (response.data as any)?.npcSetting;
-                        firstImageUrl = npcSetting?.npcs?.find((npc: any) => npc.id === targetCharacterId)?.images?.base || '';
-                    }
-                    if (firstImageUrl) {
-                        updateField('portrait', withCacheBust(firstImageUrl));
+                        // EditorApi 模式返回完整的 AllGameData
+                        updateCharacterFromResponse(response.data, targetCharacterId);
                     }
                 }
             } else {
@@ -927,23 +1041,65 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         });
     };
 
+    // 从 API 响应中更新角色数据的辅助函数
+    const updateCharacterFromResponse = (responseData: any, characterId: string) => {
+        if (mode === 'worldInteraction') {
+            // worldEditor 返回 ApiResponse<NPC>
+            const npc = responseData?.data;
+            if (npc) {
+                const updatedCharacter = npcToCharacter(npc, 0);
+                setCharacterData(prev => prev.map(char => char.id === characterId ? updatedCharacter : char));
+            }
+        } else {
+            // EditorApi 返回 AllGameData
+            const npcSetting = responseData?.npcSetting;
+            if (npcSetting?.npcs) {
+                const npc = npcSetting.npcs.find((n: any) => n.id === characterId);
+                if (npc) {
+                    const updatedCharacter = npcToCharacter(npc, 0);
+                    setCharacterData(prev => prev.map(char => char.id === characterId ? updatedCharacter : char));
+                }
+            }
+        }
+    };
+
     const regenerateNpcImage = async (npc: Character) => {
         if (!fileId || !npc) {
             return;
         }
         try {
             setIsGeneratingSingleNpcImage(true);
+            setGeneratingCharacterId(npc.id);
             const { id, name, age, gender, job, race, description, appearance } = npc as any;
             const response = await EditorApi.generateNpcImage({
                 fileId,
                 npc: { id, name, age, gender, job, race, description, appearance },
                 removeBg: false,
-                mode: mode
+                pluginType: mode
             });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
-                if (onDataChange) {
-                    onDataChange();
+                // 直接从响应中获取图片URL，支持多种可能的字段名
+                const responseAny = response.data as any;
+                const newImageUrl = responseAny?.imagePath || 
+                                   responseAny?.data?.images?.base ||
+                                   responseAny?.data?.image ||
+                                   responseAny?.npcSetting?.npcs?.find((n: any) => n.id === npc.id)?.images?.base;
+                
+                if (newImageUrl) {
+                    setCharacterData(prev => prev.map(char => 
+                        char.id === npc.id 
+                            ? { ...char, portrait: withCacheBust(newImageUrl) } 
+                            : char
+                    ));
+                } else if (npc.portrait) {
+                    // 没有返回图片URL，用现有图片加新时间戳刷新
+                    const baseUrl = npc.portrait.split('?')[0];
+                    setCharacterData(prev => prev.map(char => 
+                        char.id === npc.id 
+                            ? { ...char, portrait: withCacheBust(baseUrl) } 
+                            : char
+                    ));
                 }
             } else {
                 toast.error('重新生成NPC图片失败');
@@ -952,6 +1108,65 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             toast.error('重新生成NPC图片失败，请重试');
         } finally {
             setIsGeneratingSingleNpcImage(false);
+            setGeneratingCharacterId(null);
+        }
+    };
+
+    const regeneratePlayerImage = async (playerChar: Character) => {
+        if (!fileId || !playerChar) return;
+        try {
+            setIsGeneratingSingleNpcImage(true);
+            setGeneratingCharacterId(playerChar.id);
+            // 从 identity 解析 race
+            const identityParts = (playerChar.identity || '').split(' · ');
+            const race = identityParts.length > 1 ? identityParts[0] : playerChar.identity || undefined;
+            const payloadPlayer: any = {
+                name: playerChar.name,
+                gender: playerChar.gender,
+                race,
+                appearance: playerChar.appearance,
+                personality: playerChar.personality?.length ? playerChar.personality.join(', ') : undefined,
+                tone: playerChar.speech || '',
+            };
+            const response = await EditorApi.generatePlayerImage({
+                fileId,
+                player: payloadPlayer,
+                removeBg: false,
+                pluginType: mode,
+            });
+            if (response.data?.success) {
+                toast.success('主角图片重新生成成功');
+                // 直接从响应中获取图片URL，支持多种可能的字段名
+                const responseAny = response.data as any;
+                const newImageUrl = responseAny?.imagePath || 
+                                   responseAny?.data?.image || 
+                                   responseAny?.data?.imagePath ||
+                                   responseAny?.worldSetting?.player?.image ||
+                                   responseAny?.worldSetting?.Player?.image;
+                
+                if (newImageUrl) {
+                    setCharacterData(prev => prev.map(char => 
+                        char.id === 'player' 
+                            ? { ...char, portrait: withCacheBust(newImageUrl) } 
+                            : char
+                    ));
+                } else if (playerChar.portrait) {
+                    // 没有返回图片URL，用现有图片加新时间戳刷新
+                    const baseUrl = playerChar.portrait.split('?')[0];
+                    setCharacterData(prev => prev.map(char => 
+                        char.id === 'player' 
+                            ? { ...char, portrait: withCacheBust(baseUrl) } 
+                            : char
+                    ));
+                }
+            } else {
+                toast.error('重新生成主角图片失败');
+            }
+        } catch (error) {
+            toast.error('重新生成主角图片失败，请重试');
+        } finally {
+            setIsGeneratingSingleNpcImage(false);
+            setGeneratingCharacterId(null);
         }
     };
 
@@ -1161,7 +1376,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 <span className={styles.portraitHint}>
                                     {isAddingNew ? '点击上传角色基础立绘' : '点击替换角色基础立绘'}
                                 </span>
-                                {isGeneratingSingleNpcImage && (
+                                {isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id && (
                                     <div className="loadingOverlay">
                                         <div className="loadingSpinner"></div>
                                         <div className="loadingText">正在生成角色立绘...</div>
@@ -1176,10 +1391,18 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 >
                                     {isAddingNew ? '上传立绘' : '重新上传'}
                                 </button>
-                                {currentCharacter && currentCharacter.id !== 'player' && (
+                                {currentCharacter && (
                                     <button
                                         className={styles.ghostSmall}
-                                        onClick={() => regenerateNpcImage(currentCharacter)}
+                                        onClick={() => {
+                                            if (currentCharacter.name === (gameData?.worldSetting?.player?.name)) {
+                                                regeneratePlayerImage(currentCharacter);
+                                                console.log('player生成');
+                                                
+                                            } else {
+                                                regenerateNpcImage(currentCharacter);
+                                            }
+                                        }}
                                         disabled={isGeneratingSingleNpcImage}
                                     >AI 重新生成</button>
                                 )}

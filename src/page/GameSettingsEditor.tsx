@@ -7,11 +7,22 @@ import ScenesPanel from '../components/GameSettingEditor/ScenesPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
 import { authFetch } from '../api/base';
 import EditorApi from '../api/galgame/EditorData';
-import type { UnifiedGameData } from '../api/common/gameData.type';
-import type { Scene as ApiScene } from '../api/galgame/getGalgamePreset.type';
-import { adaptVisualGameData, adaptWorldGameData } from '../api/common/gameDataAdapter';
-import type { AllGameData as VisualGameData } from '../api/galgame/EditorData.type';
+import type { AllGameData } from '../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
+import type { Scene as ApiScene } from '../api/galgame/getGalgamePreset.type';
+
+// 类型守卫：判断是否为 visual 模式
+function isVisualMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is AllGameData {
+    if (!data) return false;
+    return 'metadata' in data && data.metadata !== undefined;
+}
+
+// 类型守卫：判断是否为 worldInteraction 模式
+function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is WorldInteractionGameData {
+    if (!data) return false;
+    return !isVisualMode(data);
+}
+// 不再需要适配器，直接使用 API 返回的数据
 import { toast, Toaster } from 'react-hot-toast';
 import { useEditorStore } from '../store/editorStore';
 import GameAction from '../api/rpgGame/gameAction';
@@ -33,7 +44,7 @@ const GameSettingsEditor = () => {
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'    
     const [isParsing, setIsParsing] = useState<boolean>(false);
-    const [gameData, setGameData] = useState<UnifiedGameData | null>(null);
+    const [gameData, setGameData] = useState<AllGameData | WorldInteractionGameData | null>(null);
     const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
@@ -42,9 +53,9 @@ const GameSettingsEditor = () => {
     const hasLoadedMapRef = useRef<boolean>(false); // 跟踪是否已为地图面板加载过最新数据
 
     // 各个面板的数据获取函数引用
-    const worldPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
-    const charactersPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
-    const scenesPanelGetDataRef = useRef<() => Partial<UnifiedGameData> | null>(null);
+    const worldPanelGetDataRef = useRef<() => Partial<AllGameData | WorldInteractionGameData> | null>(null);
+    const charactersPanelGetDataRef = useRef<() => Partial<AllGameData | WorldInteractionGameData> | null>(null);
+    const scenesPanelGetDataRef = useRef<() => Partial<AllGameData | WorldInteractionGameData> | null>(null);
 
     const handlePanelChange = (panelId: string) => {
         if (isParsing && panelId !== 'documents') {
@@ -141,18 +152,21 @@ const GameSettingsEditor = () => {
             }
             
             if (response.data?.success && response.data) {
-                // 根据模式转换数据为统一格式
-                let unifiedData: UnifiedGameData;
-                if (currentMode === 'worldInteraction') {
-                    unifiedData = adaptWorldGameData(response.data as WorldInteractionGameData);
-                } else {
-                    unifiedData = adaptVisualGameData(response.data as VisualGameData);
+                // 直接使用 API 返回的数据，无需适配器转换
+                // 统一处理 player/Player 字段（worldInteraction 可能使用大写 Player）
+                const rawData = response.data as any;
+                if (rawData.worldSetting) {
+                    // 统一 player 字段为小写
+                    if (rawData.worldSetting.Player && !rawData.worldSetting.player) {
+                        rawData.worldSetting.player = rawData.worldSetting.Player;
+                    }
                 }
                 
+                const unifiedData = rawData as AllGameData | WorldInteractionGameData;
                 setGameData(unifiedData);
                 // 注意：不要更新 fileId，避免触发 useEffect 无限循环
                 // 如果需要更新 fileId，应该在调用 fetchEditorData 之前更新
-                console.log('Editor data fetched and adapted successfully:', unifiedData);
+                console.log('Editor data fetched successfully:', unifiedData);
             } else {
                 console.error('Failed to fetch editor data');
                 // 请求失败时，清除 hasFetchedRef，允许重试
@@ -291,14 +305,14 @@ const GameSettingsEditor = () => {
                                 // 批量更新所有场景
                                 const updatePromises = scenes.map(scene => {
                                     if (mode === 'worldInteraction') {
-                                        // worldInteraction 模式：直接使用 UnifiedScene（包含 subscenes）
-                                        return worldEditor.updateScene(fileId, scene);
+                                        // worldInteraction 模式：直接使用 scene（包含 subscenes 和 position）
+                                        return worldEditor.updateScene(fileId, scene as any);
                                     } else {
                                         // visual 模式：转换为 ApiScene（不包含 subscenes）
                                         const sceneData: ApiScene = {
                                             id: scene.id,
                                             name: scene.name,
-                                            type: scene.type || '',
+                                            type: 'type' in scene ? (scene.type || '') : '',
                                             description: scene.description || '',
                                             images: scene.image,
                                             soundtrack: scene.soundtrack,
@@ -525,7 +539,11 @@ const GameSettingsEditor = () => {
                     <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
                         <MapPanel 
                             sceneSetting={gameData?.sceneSetting}
-                            worldMapImage={gameData?.worldSetting?.worldMapImage || null}
+                            worldMapImage={
+                                gameData && isWorldInteractionMode(gameData) && gameData.worldSetting?.worldMapImage
+                                    ? gameData.worldSetting.worldMapImage
+                                    : null
+                            }
                             fileId={fileId || ''} 
                             isActive={activePanel === 'mapEdit'}
                             onDataChange={() => {

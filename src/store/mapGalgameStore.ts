@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { EventData } from '../page/GalgameMap';
+import interactionApi from '../api/worldInteraction/interactionApi';
+import { buildEventDataFromEvent } from '../utils/eventUtils';
 
 // 视图状态类型
 export type MapViewState = 
@@ -21,6 +23,9 @@ interface useMapGalgameState {
     // 事件数据
     eventData: EventData | null;
     setEventData: (eventData: EventData | null) => void;
+    
+    // 刷新事件状态（从后端获取最新事件）
+    refreshEventData: (sessionId: string, gameData: any) => Promise<void>;
     
     // 视图状态管理
     currentView: MapViewState;
@@ -44,6 +49,32 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
         (set) => ({
             eventData: null,
             setEventData: (eventData: EventData | null) => set({ eventData }),
+            
+            // 刷新事件状态：从后端获取最新活跃事件
+            refreshEventData: async (sessionId: string, gameData: any) => {
+                try {
+                    const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
+                    if (activeEventsResponse.data.success) {
+                        if (activeEventsResponse.data.events.length > 0) {
+                            // 有活跃事件：更新 eventData
+                            const newEventData = buildEventDataFromEvent(
+                                activeEventsResponse.data.events[0],
+                                gameData
+                            );
+                            if (newEventData) {
+                                set({ eventData: newEventData });
+                                console.log('[WorldInteraction] 刷新事件状态成功：', newEventData);
+                            }
+                        } else {
+                            // 没有活跃事件：清空 eventData
+                            set({ eventData: null });
+                            console.log('[WorldInteraction] 刷新事件状态：没有活跃事件');
+                        }
+                    }
+                } catch (error) {
+                    console.error('[WorldInteraction] 刷新事件状态失败:', error);
+                }
+            },
             
             // 初始视图总是开场白，不持久化视图状态
             currentView: MapViewState.STORY_INTRO,

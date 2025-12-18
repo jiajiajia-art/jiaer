@@ -241,7 +241,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             
             if (sessionId) {
                 setSessionId(sessionId);
-                navigate('/newmain');
+                navigate('/rpgGame');
             }
         } else if(currentGame.version == 'map-plugin-version') {
             // 使用地图世界接口

@@ -1,7 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './ScenesPanel.module.css';
-import type { UnifiedGameData, SceneSetting } from '../../api/common/gameData.type';
+import type { AllGameData } from '../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
 import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
+import type { SceneSetting as VisualSceneSetting } from '../../api/galgame/EditorData.type';
+import type { SceneSetting as WorldSceneSetting } from '../../api/worldInteraction/worldInteractionApi.type';
+import { 
+    getScenes, 
+    getSceneById, 
+    getSubSceneById, 
+    isWorldInteractionMode, 
+    isWorldScene, 
+    isWorldSubScene,
+    type WorldSubScene,
+    type SceneLike
+} from './editorCompat';
+
 import EditorApi from '../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
 import DeletModal from '../goodsModal/DeletModal';
@@ -23,11 +37,21 @@ interface LocalScene {
     bgmId: string;
 }
 
+const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
+const DEFAULT_WORLD_MAP_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
+
+// 给图片URL添加时间戳，防止浏览器缓存
+const addImageTimestamp = (url: string | undefined): string => {
+    if (!url) return '';
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${Date.now()}`;
+};
+
 interface ScenesPanelProps {
-    gameData?: UnifiedGameData | null;
+    gameData?: AllGameData | WorldInteractionGameData | null;
     isLoading?: boolean;
     fileId?: string | null;
-    onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
+    onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
     onDataChange?: () => void; // 数据变化回调，用于刷新数据
     mode?: string;
 }
@@ -58,7 +82,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     const worldMapFileInputRef = useRef<HTMLInputElement>(null);
     const [isGeneratingAllSceneImages, setIsGeneratingAllSceneImages] = useState<boolean>(false);
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
+    const [generatingSceneId, setGeneratingSceneId] = useState<string | null>(null); // 避免切换场景时全局 loading 误闪
     const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
+    // 立即预览：生成/上传大地图后，优先使用接口返回的 imagePath（避免等 onDataChange 重新拉取）
+    const [worldMapImageOverride, setWorldMapImageOverride] = useState<string | null>(null);
 
     const [bgmLibrary, _setBgmLibrary] = useState<BgmItem[]>([
         { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
@@ -67,21 +94,40 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     ]);
 
     // 已有大地图图片（worldInteraction 模式）
-    const worldMapImage = gameData?.worldSetting?.worldMapImage || null;
-    const worldMapPreviewSrc = worldMapImage ? `${worldMapImage}/dummy` : null;
+    const worldMapImage = worldMapImageOverride
+        ? worldMapImageOverride
+        : (gameData && isWorldInteractionMode(gameData) && gameData.worldSetting?.worldMapImage 
+            ? gameData.worldSetting.worldMapImage 
+            : null);
+
+    // 大地图预览：后端地址走 /dummy，本地默认图直接用原始路径
+    const worldMapPreviewSrc = (() => {
+        if (!worldMapImage) return DEFAULT_WORLD_MAP_IMAGE;
+        const isLocalStatic = worldMapImage.startsWith(import.meta.env.BASE_URL);
+        return isLocalStatic ? worldMapImage : `${worldMapImage}/dummy`;
+    })();
 
     // 当 gameData 变化时，填充场景数据
     useEffect(() => {
-        if (gameData?.sceneSetting?.scenes) {
-            const scenes = gameData.sceneSetting.scenes;
-            const convertedScenes: LocalScene[] = scenes.map((scene) => ({
-                id: scene.id || '',
-                name: scene.name || '',
-                type: scene.type || '',
-                desc: scene.description || '',
-                image: scene.image || '',
-                bgmId: scene.soundtrack || '',
-            }));
+        if (!gameData) return;
+        const scenes = getScenes(gameData);
+        if (scenes && scenes.length > 0) {
+            const convertedScenes: LocalScene[] = scenes.map((scene) => {
+                // 处理两种模式的差异
+                const sceneType = 'type' in scene ? (scene.type || '') : '';
+                const sceneImage = scene.image || '';
+                const sceneSoundtrack = scene.soundtrack || '';
+                
+                return {
+                    id: scene.id || '',
+                    name: scene.name || '',
+                    type: sceneType,
+                    desc: scene.description || '',
+                    // 加时间戳防止浏览器缓存
+                    image: addImageTimestamp(sceneImage) || DEFAULT_SCENE_IMAGE,
+                    bgmId: sceneSoundtrack,
+                };
+            });
 
             setSceneData(convertedScenes);
             if (convertedScenes.length > 0) {
@@ -91,14 +137,18 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     }, [gameData]);
 
     // 将 sceneData 转换为 sceneSetting 格式
-    const getSceneSettingData = useCallback((): SceneSetting | null => {
+    const getSceneSettingData = useCallback((): VisualSceneSetting | WorldSceneSetting | null => {
         if (!gameData?.sceneSetting) return null;
 
         const scenes = sceneData
             .filter(scene => !scene.id.startsWith('temp-')) // 过滤掉临时场景
             .map(scene => {
                 // 从原始数据中获取 subscenes，如果不存在则使用空数组
-                const originalScene = gameData?.sceneSetting?.scenes?.find(s => s.id === scene.id);
+                const originalScene = getSceneById(gameData, scene.id);
+                const originalSubscenes =
+                    originalScene && 'subscenes' in originalScene
+                        ? (originalScene.subscenes || [])
+                        : [];
                 return {
                     id: scene.id,
                     name: scene.name,
@@ -110,7 +160,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     items: undefined,
                     events: [],
                     soundtrack: scene.bgmId || undefined,
-                    subscenes: originalScene?.subscenes || [], // 添加 subscenes 字段
+                    subscenes: originalSubscenes, // 添加 subscenes 字段（visual 可能为空，worldInteraction 有）
                 };
             });
 
@@ -193,6 +243,42 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
     };
 
+    // 从 API 响应中更新场景数据的辅助函数
+    const updateSceneFromResponse = (responseData: any, sceneId: string) => {
+        if (mode === 'worldInteraction') {
+            // worldEditor 返回 ApiResponse<Scene>
+            const scene = responseData?.data;
+            if (scene) {
+                const updatedScene: LocalScene = {
+                    id: scene.id,
+                    name: scene.name || '',
+                    type: scene.type || '',
+                    desc: scene.description || '',
+                    image: addImageTimestamp(scene.image),
+                    bgmId: scene.soundtrack || '',
+                };
+                setSceneData(prev => prev.map(s => s.id === sceneId ? updatedScene : s));
+            }
+        } else {
+            // EditorApi 返回 AllGameData
+            const sceneSetting = responseData?.sceneSetting;
+            if (sceneSetting?.scenes) {
+                const scene = (sceneSetting.scenes as SceneLike[]).find((s: SceneLike) => s.id === sceneId);
+                if (scene) {
+                    const updatedScene: LocalScene = {
+                        id: scene.id,
+                        name: scene.name || '',
+                        type: 'type' in scene ? (scene.type || '') : '',
+                        desc: scene.description || '',
+                        image: addImageTimestamp(scene.image),
+                        bgmId: scene.soundtrack || '',
+                    };
+                    setSceneData(prev => prev.map(s => s.id === sceneId ? updatedScene : s));
+                }
+            }
+        }
+    };
+
     // 确认新增场景
     const confirmAddNew = async () => {
         if (!fileId || !newSceneData) {
@@ -221,21 +307,39 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 ? await worldEditor.addScene(fileId, sceneDataForApi as any)
                 : await EditorApi.addScene(fileId, sceneDataForApi);
             if (response.data?.success) {
-                // 创建本地 LocalScene 对象
-                const createdScene: LocalScene = {
-                    ...newSceneData,
-                    id: newSceneId,
-                };
+                // 使用返回的数据创建本地 LocalScene 对象
+                let createdScene: LocalScene;
+                if (mode === 'worldInteraction') {
+                    const scene = (response.data as any)?.data;
+                    createdScene = {
+                        id: scene.id,
+                        name: scene.name || '',
+                        type: scene.type || '',
+                        desc: scene.description || '',
+                        image: scene.image || '',
+                        bgmId: scene.soundtrack || '',
+                    };
+                } else {
+                    const sceneSetting = (response.data as any)?.sceneSetting;
+                    const scene = sceneSetting?.scenes?.find((s: any) => s.id === newSceneId);
+                    createdScene = scene ? {
+                        id: scene.id,
+                        name: scene.name || '',
+                        type: scene.type || '',
+                        desc: scene.description || '',
+                        image: scene.image || '',
+                        bgmId: scene.soundtrack || '',
+                    } : {
+                        ...newSceneData,
+                        id: newSceneId,
+                    };
+                }
                 // 新增场景放在最上面
                 setSceneData(prev => [createdScene, ...prev]);
                 setActiveSceneId(createdScene.id);
                 setIsAddingNew(false);
                 setNewSceneData(null);
                 toast.success('场景创建成功');
-                // 刷新数据
-                if (onDataChange) {
-                    onDataChange();
-                }
             } else {
                 toast.error('创建场景失败');
             }
@@ -271,10 +375,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 : await EditorApi.updateScene(fileId, sceneDataForApi);
             if (response.data?.success) {
                 toast.success('场景更新成功');
-                // 刷新数据
-                if (onDataChange) {
-                    onDataChange();
-                }
+                // 使用返回的数据更新本地状态
+                updateSceneFromResponse(response.data, sceneToSave.id);
             } else {
                 toast.error('更新场景失败');
             }
@@ -340,12 +442,14 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
 
         // 如果是编辑模式，从原始数据中获取完整信息（保留 position, npcs 等字段）
         if (!isAddingNewSubscene) {
-            const originalScene = gameData?.sceneSetting?.scenes?.find(s => s.id === activeSceneId);
-            const originalSubscene = originalScene?.subscenes?.find(sub => sub.id === activeSubsceneDraft.id);
+            const originalScene = getSceneById(gameData, activeSceneId);
+            const originalSubscene = getSubSceneById(originalScene, activeSubsceneDraft.id);
             if (originalSubscene) {
-                subsceneData.npcs = originalSubscene.npcs || [];
-                subsceneData.position = originalSubscene.position || [0, 0];
-                subsceneData.npcs_slots = originalSubscene.npcs_slots || [];
+                if (isWorldSubScene(originalSubscene)) {
+                    subsceneData.npcs = originalSubscene.npcs || [];
+                    subsceneData.position = originalSubscene.position || [0, 0];
+                    subsceneData.npcs_slots = originalSubscene.npcs_slots || [];
+                }
             }
         }
 
@@ -361,7 +465,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             
             if (response.data?.success) {
                 toast.success(isAddingNewSubscene ? '子场景创建成功' : '子场景更新成功');
-                // 刷新数据
+                // 使用返回的数据更新本地状态（子场景数据在 gameData 中，需要刷新）
+                // 由于子场景数据嵌套在场景中，直接更新比较复杂，这里保留刷新
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -591,9 +696,21 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 const response = await worldEditor.uploadSubSceneImage(fileId, activeSceneId, activeSubsceneId, file);
                 if (response.data?.success) {
                     toast.success('子场景图片上传成功');
-                    // 刷新数据以获取最新的图片URL
-                    if (onDataChange) {
-                        onDataChange();
+                    // 直接使用返回数据更新本地状态，添加时间戳防止缓存
+                    const responseAny = response.data as any;
+                    const newImageUrl = responseAny?.data?.image || responseAny?.imagePath;
+                    if (newImageUrl) {
+                        setActiveSubsceneDraft(prev => prev ? {
+                            ...prev,
+                            image: addImageTimestamp(newImageUrl),
+                        } : null);
+                    } else if (activeSubsceneDraft?.image) {
+                        // 如果没有返回图片URL，用当前时间戳刷新现有图片
+                        const baseUrl = activeSubsceneDraft.image.split('?')[0];
+                        setActiveSubsceneDraft(prev => prev ? {
+                            ...prev,
+                            image: addImageTimestamp(baseUrl),
+                        } : null);
                     }
                 } else {
                     toast.error('上传子场景图片失败');
@@ -625,9 +742,25 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 : await EditorApi.uploadSceneImage(fileId, targetSceneId, file);
             if (response.data?.success) {
                 toast.success('场景图片上传成功');
-                // 刷新数据以获取最新的图片URL
-                if (onDataChange) {
-                    onDataChange();
+                // 直接使用返回的数据更新本地状态，添加时间戳防止缓存
+                const responseAny = response.data as any;
+                const newImageUrl = responseAny?.data?.image || responseAny?.imagePath;
+                if (newImageUrl) {
+                    // 使用返回的图片URL
+                    setSceneData(prev => prev.map(s => 
+                        s.id === targetSceneId 
+                            ? { ...s, image: addImageTimestamp(newImageUrl) } 
+                            : s
+                    ));
+                } else {
+                    // 如果没有返回图片URL，用当前时间戳刷新现有图片
+                    setSceneData(prev => prev.map(s => {
+                        if (s.id === targetSceneId && s.image) {
+                            const baseUrl = s.image.split('?')[0];
+                            return { ...s, image: addImageTimestamp(baseUrl) };
+                        }
+                        return s;
+                    }));
                 }
             } else {
                 toast.error('上传场景图片失败');
@@ -650,8 +783,12 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         if (!fileId || !scene) {
             return;
         }
+        // 判断是否是子场景（通过检查 activeSubsceneId）
+        const isSubscene = activeSubsceneId && activeSubsceneDraft && scene.id === activeSubsceneDraft.id;
+        
         try {
             setIsGeneratingSingleSceneImage(true);
+            setGeneratingSceneId(scene.id);
             const response = await EditorApi.generateSceneImage({ 
                 fileId, 
                 scene: { 
@@ -659,14 +796,47 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     name: scene.name, 
                     description: scene.desc 
                 },
-                mode: mode
+                pluginType: mode
             });
             if (response.data?.success) {
                 console.log(response.data);
                 toast.success('场景图片重新生成成功');
-                // 刷新数据
-                if (onDataChange) {
-                    onDataChange();
+                // 直接使用返回的数据更新本地状态，添加时间戳防止缓存
+                const responseAny = response.data as any;
+                const imageUrl = responseAny?.imagePath || responseAny?.data?.image || responseAny?.sceneSetting?.scenes?.find((s: any) => s.id === scene.id)?.image;
+                
+                if (isSubscene) {
+                    // 子场景：更新 activeSubsceneDraft
+                    if (imageUrl) {
+                        setActiveSubsceneDraft(prev => prev ? {
+                            ...prev,
+                            image: addImageTimestamp(imageUrl),
+                        } : null);
+                    } else if (activeSubsceneDraft?.image) {
+                        const baseUrl = activeSubsceneDraft.image.split('?')[0];
+                        setActiveSubsceneDraft(prev => prev ? {
+                            ...prev,
+                            image: addImageTimestamp(baseUrl),
+                        } : null);
+                    }
+                } else {
+                    // 主场景：更新 sceneData
+                    if (imageUrl) {
+                        setSceneData(prev => prev.map(s => 
+                            s.id === scene.id 
+                                ? { ...s, image: addImageTimestamp(imageUrl) } 
+                                : s
+                        ));
+                    } else {
+                        // 用当前时间戳刷新现有图片
+                        setSceneData(prev => prev.map(s => {
+                            if (s.id === scene.id && s.image) {
+                                const baseUrl = s.image.split('?')[0];
+                                return { ...s, image: addImageTimestamp(baseUrl) };
+                            }
+                            return s;
+                        }));
+                    }
                 }
             } else {
                 toast.error('重新生成场景图片失败');
@@ -676,6 +846,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             toast.error('重新生成场景图片失败，请重试');
         } finally {
             setIsGeneratingSingleSceneImage(false);
+            setGeneratingSceneId(null);
         }
     };
 
@@ -690,6 +861,11 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             const response = await worldEditor.generateWorldMapImage(fileId);
             if (response.data?.success) {
                 toast.success('大地图生成成功');
+                // 直接使用接口返回的 imagePath 更新本地预览（更快）
+                if (response.data.imagePath) {
+                    setWorldMapImageOverride(response.data.imagePath);
+                }
+                // generateWorldMapImage 返回 generateWorldMapImageResponse，不包含完整数据，仍可选择刷新一次以同步
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -718,6 +894,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             const response = await worldEditor.setWorldMapImage(fileId, file);
             if (response.data?.success) {
                 toast.success('大地图上传成功');
+                // 直接使用接口返回的 imagePath 更新本地预览（更快）
+                if (response.data.imagePath) {
+                    setWorldMapImageOverride(response.data.imagePath);
+                }
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -745,7 +925,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             const response = await worldEditor.generateAllSceneImages(fileId);
             if (response.data?.success) {
                 toast.success('所有场景立绘生成成功');
-                // 刷新数据
+                // generateAllSceneImages 返回 GenerateALLSceneImage，不包含完整数据
+                // 这里需要刷新数据以获取最新的图片URL
                 if (onDataChange) {
                     onDataChange();
                 }
@@ -840,9 +1021,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                         <div className={styles.sceneList}>
                             {sceneData.map((scene) => {
                                 const originalScene = mode === 'worldInteraction'
-                                    ? gameData?.sceneSetting?.scenes?.find((s: any) => s.id === scene.id)
+                                    ? getSceneById(gameData, scene.id)
                                     : null;
-                                const subscenes: any[] = (originalScene?.subscenes || []) as any[];
+                                const subscenes: WorldSubScene[] = isWorldScene(originalScene) ? originalScene.subscenes : [];
 
                                 return (
                                     <React.Fragment key={scene.id}>
@@ -858,7 +1039,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                         >
                                             <div
                                                 className={`${styles.sceneThumb} ${!scene.image ? styles.empty : ''}`}
-                                                style={scene.image ? { backgroundImage: `url('${scene.image}')` } : {}}
+                                                style={{ backgroundImage: `url('${scene.image || DEFAULT_SCENE_IMAGE}')` }}
                                             >
                                                 {!scene.image && <span>待上传</span>}
                                             </div>
@@ -919,16 +1100,19 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                                                 setActiveSubsceneDraft({
                                                                     id: subId,
                                                                     name: sub.name || '未命名子场景',
-                                                                    type: sub.type || '',
+                                                                    // worldInteraction 子场景没有 type，这里保持 UI 字段为空
+                                                                    type: '',
                                                                     desc: sub.description || '',
-                                                                    image: sub.image || '',
-                                                                    bgmId: sub.soundtrack || scene.bgmId || '',
+                                                                    // 加时间戳防止浏览器缓存
+                                                                    image: addImageTimestamp(sub.image) || '',
+                                                                    // 子场景自身也没有 soundtrack，沿用父场景 bgm 作为默认显示
+                                                                    bgmId: scene.bgmId || '',
                                                                 });
                                                             }}
                                                         >
                                                             <div
                                                                 className={`${styles.sceneThumb} ${!sub.image ? styles.empty : ''}`}
-                                                                style={sub.image ? { backgroundImage: `url('${sub.image}')` } : {}}
+                                                                style={{ backgroundImage: `url('${sub.image ? addImageTimestamp(sub.image) : DEFAULT_WORLD_MAP_IMAGE}')` }}
                                                             >
                                                                 {!sub.image && <span>待生成或上传</span>}
                                                             </div>
@@ -1007,14 +1191,17 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             <div
                                 className={`${styles.sceneHero} ${!newSceneData.image ? styles.empty : ''}`}
                                 onClick={handleSceneImageClick}
-                                style={{ cursor: 'pointer', ...(newSceneData.image ? { backgroundImage: `url('${newSceneData.image}')` } : {}) }}
+                                style={{
+                                    cursor: 'pointer',
+                                    backgroundImage: `url('${newSceneData.image || DEFAULT_SCENE_IMAGE}')`,
+                                }}
                             >
                                 {newSceneData.image ? (
                                     <span className={styles.heroHint}>点击替换背景</span>
                                 ) : (
                                     <span>点击上传背景图</span>
                                 )}
-                                {isGeneratingSingleSceneImage && (
+                                {isGeneratingSingleSceneImage && generatingSceneId === newSceneData.id && (
                                     <div className="loadingOverlay">
                                         <div className="loadingSpinner"></div>
                                         <div className="loadingText">正在生成场景图片...</div>
@@ -1023,14 +1210,23 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             </div>
 
                             <div className={styles.sceneImageActions}>
-                                <button className={styles.ghostSmall} onClick={handleSceneImageClick}>上传背景</button>
+                                <button 
+                                    className={styles.ghostSmall} 
+                                    onClick={handleSceneImageClick}
+                                    disabled={isGeneratingSingleSceneImage}
+                                    style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                >
+                                    上传背景
+                                </button>
                                 {newSceneData && (
                                     <button 
                                         className={styles.ghostSmall} 
                                         onClick={() => regenerateSceneImage(newSceneData)}
                                         disabled={isGeneratingSingleSceneImage}
                                         style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
-                                    >AI 重新生成</button>
+                                    >
+                                        AI 重新生成
+                                    </button>
                                 )}
                             </div>
                             
@@ -1086,14 +1282,18 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     <div
                                         className={`${styles.sceneHero} ${!activeSubsceneDraft.image ? styles.empty : ''}`}
                                         onClick={handleSceneImageClick}
-                                        style={{ cursor: 'pointer', ...(activeSubsceneDraft.image ? { backgroundImage: `url('${activeSubsceneDraft.image}')` } : {}) }}
+                                        style={{
+                                            cursor: 'pointer',
+                                            // 子场景默认背景使用与大地图相同的图片
+                                            backgroundImage: `url('${activeSubsceneDraft.image || DEFAULT_WORLD_MAP_IMAGE}')`,
+                                        }}
                                     >
                                         {activeSubsceneDraft.image ? (
                                             <span className={styles.heroHint}>点击替换背景</span>
                                         ) : (
                                             <span>点击上传背景图</span>
                                         )}
-                                        {isGeneratingSingleSceneImage && (
+                                        {isGeneratingSingleSceneImage && generatingSceneId === activeSubsceneDraft.id && (
                                             <div className="loadingOverlay">
                                                 <div className="loadingSpinner"></div>
                                                 <div className="loadingText">正在生成场景图片...</div>
@@ -1102,14 +1302,23 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     </div>
 
                                     <div className={styles.sceneImageActions}>
-                                        <button className={styles.ghostSmall} onClick={handleSceneImageClick}>上传背景</button>
+                                        <button 
+                                            className={styles.ghostSmall} 
+                                            onClick={handleSceneImageClick}
+                                            disabled={isGeneratingSingleSceneImage}
+                                            style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                        >
+                                            上传背景
+                                        </button>
                                         {activeSubsceneDraft && (
                                             <button 
                                                 className={styles.ghostSmall} 
                                                 onClick={() => regenerateSceneImage(activeSubsceneDraft)}
                                                 disabled={isGeneratingSingleSceneImage}
                                                 style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
-                                            >AI 重新生成</button>
+                                            >
+                                                AI 重新生成
+                                            </button>
                                         )}
                                     </div>
                                     
@@ -1162,19 +1371,42 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     <div
                                         className={`${styles.sceneHero} ${!activeScene.image ? styles.empty : ''}`}
                                         onClick={handleSceneImageClick}
-                                        style={{ cursor: 'pointer', ...(activeScene.image ? { backgroundImage: `url('${activeScene.image}')` } : {}) }}
+                                        style={{
+                                            cursor: 'pointer',
+                                            backgroundImage: `url('${activeScene.image || DEFAULT_SCENE_IMAGE}')`,
+                                        }}
                                     >
                                         {activeScene.image ? (
                                             <span className={styles.heroHint}>点击替换背景</span>
                                         ) : (
                                             <span>点击上传背景图</span>
                                         )}
+                                        {isGeneratingSingleSceneImage && generatingSceneId === activeScene.id && (
+                                            <div className="loadingOverlay">
+                                                <div className="loadingSpinner"></div>
+                                                <div className="loadingText">正在生成场景图片...</div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className={styles.sceneImageActions}>
-                                        <button className={styles.ghostSmall} onClick={handleSceneImageClick}>重新上传</button>
+                                        <button 
+                                            className={styles.ghostSmall} 
+                                            onClick={handleSceneImageClick}
+                                            disabled={isGeneratingSingleSceneImage}
+                                            style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                        >
+                                            重新上传
+                                        </button>
                                         {activeScene && (
-                                            <button className={styles.ghostSmall} onClick={() => regenerateSceneImage(activeScene)}>AI 重新生成</button>
+                                            <button 
+                                                className={styles.ghostSmall} 
+                                                onClick={() => regenerateSceneImage(activeScene)}
+                                                disabled={isGeneratingSingleSceneImage}
+                                                style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                            >
+                                                AI 重新生成
+                                            </button>
                                         )}
                                     </div>
                                     

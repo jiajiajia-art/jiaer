@@ -152,11 +152,10 @@
 }
 
 .sceneImage {
-    max-width: 414px;
-    max-height: 896px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
+    width: 414px;
+    height: 740px;
+    max-width: 100%;
+    object-fit: cover;
     display: block;
     pointer-events: none;
 }

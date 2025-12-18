@@ -2,9 +2,12 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styles from './SceneModal.module.css';
-import { MdOutlineArrowCircleLeft } from 'react-icons/md';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
+import NextRoundButton from './NextRoundButton';
 import type { AllGameData, NPC } from '../../api/worldInteraction/mapWorldData.type';
+import type { GetWorldInteractionHistoryResponse } from '../../api/worldInteraction/interactionApi.type';
+
+const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 
 interface SceneModalProps {
     subsceneData?: {
@@ -16,13 +19,19 @@ interface SceneModalProps {
     onBack?: () => void;
     gameData?: AllGameData;
     onNpcInteract?: () => void;
+    onEndRound?: () => void;
+    isEndingRound?: boolean;
+    worldInteractionHistory?: GetWorldInteractionHistoryResponse | null;
 }
 
 const SceneModal: React.FC<SceneModalProps> = ({
     subsceneData,
     onBack,
     gameData,
-    onNpcInteract
+    onNpcInteract,
+    onEndRound,
+    isEndingRound = false,
+    worldInteractionHistory
 }) => {
     const navigate = useNavigate();
     const { subsceneId } = useParams<{ sceneId: string; subsceneId: string }>();
@@ -95,7 +104,7 @@ const SceneModal: React.FC<SceneModalProps> = ({
             <div 
                 className={styles.backgroundLayer}
                 style={{
-                    backgroundImage: displayData.image ? `url("${displayData.image}")` : undefined,
+                    backgroundImage: displayData.image ? `url("${displayData.image}")` : DEFAULT_SCENE_IMAGE,
                 }}
             />
             
@@ -130,6 +139,18 @@ const SceneModal: React.FC<SceneModalProps> = ({
                 )}
 
             </div>
+            
+            {/* 当没有活跃事件时，显示"开始下一回合"按钮 */}
+            {!eventData && 
+             worldInteractionHistory && 
+             worldInteractionHistory.interactions.length > 0 &&
+             onEndRound && (
+                <NextRoundButton
+                    onClick={onEndRound}
+                    disabled={isEndingRound}
+                    isLoading={isEndingRound}
+                />
+            )}
         </div>
     );
 };

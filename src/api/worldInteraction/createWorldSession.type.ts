@@ -133,7 +133,7 @@ export interface WorldInfo {
   initialPlot: string;
   literary: string;
   keyEvents: KeyEvent[];
-  Player: PlayerCharacter; // 注意：大写 P
+  player: PlayerCharacter; // 注意：大写 P
   worldMapImage: string;
 }
 

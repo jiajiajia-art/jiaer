@@ -1,4 +1,7 @@
-import type { UnifiedGameData } from "../common/gameData.type";
+/**
+ * 编辑器 API 类型定义
+ * 编辑器使用 UnifiedGameData 联合类型，可以处理两种模式
+ */
 
 export interface NpcSlot {
   position: [number, number];
@@ -11,9 +14,7 @@ export interface generateWorldMapImageResponse {
   success: boolean;
 }
 
-// 为了向后兼容，保留原有类型定义
-// 但实际使用 UnifiedGameData
-export type GameWorldResponse = UnifiedGameData;
+// 编辑器 API 返回的数据使用 UnifiedGameData（联合类型）
 
 
 export interface GenerateNpcImage {

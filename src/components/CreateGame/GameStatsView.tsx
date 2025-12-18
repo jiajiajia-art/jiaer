@@ -76,7 +76,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 if (response.data.success) {
                     const data = response.data.data;
                     const sessionId = data?.session.session_id || null;
-                    return { sessionId, redirectUrl: '/newmain' };
+                    return { sessionId, redirectUrl: '/rpgGame' };
                 } else {
                     alert(response.data.message || '创建游戏失败，请重试');
                     return { sessionId: null, redirectUrl: '' };

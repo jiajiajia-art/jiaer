@@ -142,16 +142,15 @@ const Create: React.FC = () => {
         }
     };
 
-    const handleSelectGameType = (type: 'roleplay' | 'text' | 'visual') => {
+    const handleSelectGameType = (type: 'avg' | 'rpg' | 'txt') => {
         // 根据选择的类型跳转到不同的创作流程
-        if (type === 'text') {
-            // 文字游戏：原来的 /createGame
+        if (type === 'rpg') {
             navigate('/createGame');
-        } else if (type === 'visual') {
+        } else if (type === 'txt') {
             // 视觉小说：使用编辑器进行视觉设定
             clearState();
             navigate('/gameSettingsEditor');
-        } else if (type === 'roleplay') {
+        } else if (type === 'avg') {
             // 角色扮演：使用世界交互 / 地图模式
             clearState();
             navigate('/gameSettingsEditor?mode=worldInteraction');
@@ -294,8 +293,8 @@ const Create: React.FC = () => {
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 更多
-                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" /> 
-                           </button>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
+                            </button>
                         </div>
 
                         {publishedGames.length == 0 ? (
@@ -371,21 +370,22 @@ const Create: React.FC = () => {
                         <div className={styles.createTypeOptions}>
                             <button
                                 className={`${styles.createTypeOption}`}
-                                onClick={() => handleSelectGameType('roleplay')}
+                                onClick={() => handleSelectGameType('txt')}
                             >
-                                <span>角色扮演</span>
+                                <span>TXT</span>
+                                <span className={styles.createTypeOptionRecommend}>推荐</span>
                             </button>
                             <button
                                 className={`${styles.createTypeOption}`}
-                                onClick={() => handleSelectGameType('text')}
+                                onClick={() => handleSelectGameType('avg')}
                             >
-                                <span>文字游戏</span>
+                                <span>AVG</span>
                             </button>
                             <button
                                 className={`${styles.createTypeOption}`}
-                                onClick={() => handleSelectGameType('visual')}
+                                onClick={() => handleSelectGameType('rpg')}
                             >
-                                <span>视觉小说</span>
+                                <span>RPG</span>
                             </button>
                         </div>
                         <div className={styles.createTypeModalFooter}>

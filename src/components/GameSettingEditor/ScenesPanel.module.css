@@ -68,6 +68,12 @@
     color: #E03D4B;
 }
 
+.ghostSmall:disabled:hover,
+.sceneImageActions .ghostSmall:disabled:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1a1a1a;
+}
+
 /* 布局 */
 .sceneLayout {
     display: grid;

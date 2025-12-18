@@ -2,7 +2,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import styles from './WorldMapRenderer.module.css';
 import type { AllGameData, Scene, SubScene } from '../../api/worldInteraction/mapWorldData.type';
-import { MdOutlineArrowCircleLeft } from 'react-icons/md';
 import type { EventData } from '../../page/GalgameMap';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
 import { IoMdCloseCircle } from 'react-icons/io';
@@ -40,7 +39,12 @@ const buildInitialViewStack = (): ViewStackItem[] => {
 const buildMainBackground = (gameData: AllGameData | null | undefined) => {
     const worldMapImage = gameData?.worldSetting?.worldMapImage;
     const firstSceneImage = gameData?.sceneSetting?.scenes?.[0]?.image;
-    if (worldMapImage) return `${worldMapImage}/dummy`;
+
+    if (worldMapImage) {
+        const isLocalStatic = worldMapImage.startsWith(import.meta.env.BASE_URL);
+        // 本地静态资源：直接用原始路径；后端接口路径：追加 /dummy 走缩略图
+        return isLocalStatic ? worldMapImage : `${worldMapImage}/dummy`;
+    }
     if (firstSceneImage) return firstSceneImage;
     return '';
 };
@@ -58,8 +62,28 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [isReady, setIsReady] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
-    const { eventData } = useMapGalgameStore();
+    const { eventData, currentView: mapCurrentView } = useMapGalgameStore();
     const navigator = useNavigate();
+    
+    // 当 mapCurrentView 变为 WORLD_MAP 时，检查是否需要重置视图栈到最外层
+    // 如果 sessionStorage 中的视图栈已被重置为最外层，则同步更新组件状态
+    useEffect(() => {
+        if (mapCurrentView === 'world_map') {
+            const cached = sessionStorage.getItem('worldMapViewStack');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached) as ViewStackItem[];
+                    // 如果视图栈只有一个主场景项，说明已被重置，同步更新
+                    if (Array.isArray(parsed) && parsed.length === 1 && parsed[0].mode === 'mainScenes') {
+                        setViewStack(parsed);
+                        initialStackRef.current = parsed;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+        }
+    }, [mapCurrentView]);
 
     // 延迟加载和尺寸重试机制
     useEffect(() => {
@@ -246,14 +270,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         );
     }
 
-    if (scenes.length === 0) {
-        return (
-            <div className={styles.mapContainer}>
-                <div className={styles.emptyState}>暂无场景数据</div>
-            </div>
-        );
-    }
-
     // 确保容器有合理的默认尺寸
     const canvasWidth = containerSize.width > 0 ? containerSize.width : 800;
     const canvasHeight = containerSize.height > 0 ? containerSize.height : 600;
@@ -316,66 +332,72 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                         }}
                     >
                         {/* 主场景视图 */}
-                        {viewMode === 'mainScenes' && isReady && scenes.map(scene => {
-                            const position = calculatePixelPosition({ x: scene.x, y: scene.y });
-                            const hasEventInSubscene = scene.subscenes.some(subscene =>
-                                subscene.id === eventData?.subscene?.id
-                            );
+                        {viewMode === 'mainScenes' && isReady && (
+                            scenes.length === 0 ? (
+                                <div className={styles.emptyState}>暂无场景数据</div>
+                            ) : (
+                                scenes.map(scene => {
+                                    const position = calculatePixelPosition({ x: scene.x, y: scene.y });
+                                    const hasEventInSubscene = scene.subscenes.some(subscene =>
+                                        subscene.id === eventData?.subscene?.id
+                                    );
 
-                            return (
-                                <div
-                                    key={scene.id}
-                                    className={styles.sceneNode}
-                                    style={{
-                                        position: 'absolute',
-                                        left: position.x - 30,
-                                        top: position.y - 30,
-                                        width: 60,
-                                        height: 60,
-                                    }}
-                                    onClick={() => handleMainSceneClick(scene)}
-                                >
-                                    {/* 场景图片 */}
-                                    <div className={styles.nodeImageContainer}>
-                                        {scene.image ? (
-                                            <>
-                                                <img
-                                                    src={scene.image}
-                                                    alt={scene.name}
-                                                    className={styles.nodeImage}
-                                                    onError={(e) => {
-                                                        const target = e.target as HTMLImageElement;
-                                                        target.style.display = 'none';
-                                                        const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
-                                                        if (fallback) {
-                                                            fallback.style.display = 'flex';
-                                                        }
-                                                    }}
-                                                />
-                                                {hasEventInSubscene && (
-                                                    <div className={styles.eventLocation}>
-                                                        <img src={`${import.meta.env.BASE_URL}data/assets/任务.png`} alt="" />
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : null}
+                                    return (
                                         <div
-                                            className={styles.nodeText}
+                                            key={scene.id}
+                                            className={styles.sceneNode}
                                             style={{
-                                                display: scene.image ? 'none' : 'flex'
+                                                position: 'absolute',
+                                                left: position.x - 30,
+                                                top: position.y - 30,
+                                                width: 60,
+                                                height: 60,
                                             }}
+                                            onClick={() => handleMainSceneClick(scene)}
                                         >
-                                            {scene.name.charAt(0)}
-                                        </div>
-                                    </div>
+                                            {/* 场景图片 */}
+                                            <div className={styles.nodeImageContainer}>
+                                                {scene.image ? (
+                                                    <>
+                                                        <img
+                                                            src={scene.image}
+                                                            alt={scene.name}
+                                                            className={styles.nodeImage}
+                                                            onError={(e) => {
+                                                                const target = e.target as HTMLImageElement;
+                                                                target.style.display = 'none';
+                                                                const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
+                                                                if (fallback) {
+                                                                    fallback.style.display = 'flex';
+                                                                }
+                                                            }}
+                                                        />
+                                                        {hasEventInSubscene && (
+                                                            <div className={styles.eventLocation}>
+                                                                <img src={`${import.meta.env.BASE_URL}data/assets/任务.png`} alt="" />
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : null}
+                                                <div
+                                                    className={styles.nodeText}
+                                                    style={{
+                                                        display: scene.image ? 'none' : 'flex'
+                                                    }}
+                                                >
+                                                    {scene.name.charAt(0)}
+                                                </div>
+                                            </div>
 
-                                    {/* 场景名称 */}
-                                    <div className={styles.nodeName}>
-                                        {scene.name}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                            {/* 场景名称 */}
+                                            <div className={styles.nodeName}>
+                                                {scene.name}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )
+                        )}
 
                         {/* 子场景视图 */}
                         {viewMode === 'subScenes' && selectedScene && isReady && selectedScene.subscenes.map(subscene => {

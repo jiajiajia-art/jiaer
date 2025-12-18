@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './WorldPanel.module.css';
-import type { UnifiedGameData, WorldSetting } from '../../api/common/gameData.type';
+import type { AllGameData } from '../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
+import type { WorldSetting as VisualWorldSetting } from '../../api/galgame/EditorData.type';
+import type { WorldSetting as WorldWorldSetting } from '../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 
 interface WorldField {
@@ -19,12 +22,31 @@ interface StoryLine {
 }
 
 interface WorldPanelProps {
-    gameData?: UnifiedGameData | null;
+    gameData?: AllGameData | WorldInteractionGameData | null;
     isLoading?: boolean;
-    onGetData?: (getDataFn: () => Partial<UnifiedGameData> | null) => void;
+    onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
     handleSubmit?: () => void;
     isSubmitting?: boolean;
     fileId?: string;
+}
+
+// 类型守卫：判断是否为 visual 模式
+function isVisualMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is AllGameData {
+    if (!data) return false;
+    return 'metadata' in data && data.metadata !== undefined;
+}
+
+// 辅助函数：获取 player（统一使用小写）
+function getPlayer(data: AllGameData | WorldInteractionGameData | null | undefined) {
+    if (!data?.worldSetting) return undefined;
+    const ws = data.worldSetting;
+    
+    // 统一使用小写 player
+    if ('player' in ws && ws.player) {
+        return ws.player;
+    }
+    
+    return undefined;
 }
 
 const WorldPanel: React.FC<WorldPanelProps> = ({
@@ -60,7 +82,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     // 使用 ref 跟踪 fileId，避免重复填充
     const lastFileIdRef = useRef<string | null>(null);
     // 保存原始数据，用于 diff 比较
-    const originalDataRef = useRef<WorldSetting | null>(null);
+    const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
 
     // 当 gameData 变化时，填充表单数据
     useEffect(() => {
@@ -75,11 +97,14 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 // 保存原始数据（深拷贝）
                 originalDataRef.current = JSON.parse(JSON.stringify(ws));
 
-                const worldRulesText = ws.WorldRules
+                // 处理两种模式的差异
+                const worldRulesText = isVisualMode(gameData) && ws && 'WorldRules' in ws && ws.WorldRules
                     ? Object.entries(ws.WorldRules).map(([key, value]) => `${key}: ${value}`).join('\n')
                     : '';
-                const playerRoleText = ws.player
-                    ? `${ws.player.name} (${ws.player.gender}${ws.player.age ? `, ${ws.player.age}岁` : ''}${ws.player.race ? `, ${ws.player.race}` : ''})`
+                const player = getPlayer(gameData);
+                const playerRace = player && 'race' in player ? player.race : undefined;
+                const playerRoleText = player
+                    ? `${player.name} (${player.gender}${player.age ? `, ${player.age}岁` : ''}${playerRace ? `, ${playerRace}` : ''})`
                     : '';
 
                 // 更新表单字段
@@ -106,7 +131,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
 
                 // 填充故事线（从 keyEvents）
                 if (ws.keyEvents && ws.keyEvents.length > 0) {
-                    setStorylines(ws.keyEvents.map((event, index) => ({
+                    setStorylines(ws.keyEvents.map((event: { title?: string; description?: string }, index: number) => ({
                         id: `${index}`,
                         tag: event.title || `事件 ${index + 1}`,
                         content: event.description || '',
@@ -146,7 +171,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     };
 
     // 将表单数据转换为 WorldSetting 格式（完整数据）
-    const getFullWorldSettingData = useCallback((): WorldSetting | null => {
+    const getFullWorldSettingData = useCallback((): VisualWorldSetting | WorldWorldSetting | null => {
         if (!gameData?.worldSetting) return null;
 
         const titleField = worldFields.find(f => f.id === 'title');
@@ -176,11 +201,13 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
         }
 
         // 解析玩家信息（从文本格式解析）
+        // 使用辅助函数兼容两种模式
+        const player = getPlayer(gameData);
         const playerInfo = playerRoleField?.value || '';
-        let playerName = gameData.worldSetting.player?.name || '';
-        let playerGender = gameData.worldSetting.player?.gender || '';
-        let playerAge = gameData.worldSetting.player?.age;
-        let playerRace = gameData.worldSetting.player?.race;
+        let playerName = player?.name || '';
+        let playerGender = player?.gender || '';
+        let playerAge = player?.age;
+        let playerRace = player && 'race' in player ? player.race : undefined;
 
         if (playerInfo) {
             const playerMatch = playerInfo.match(/^(.+?)\s*\((.+?)\)/);
@@ -208,80 +235,114 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             }))
             : gameData.worldSetting.keyEvents;
 
-        return {
-            ...gameData.worldSetting,
-            title: titleField?.value || gameData.worldSetting.title,
-            summary: taglineField?.value || gameData.worldSetting.summary,
-            background: eraField?.value || gameData.worldSetting.background,
-            preamble: openingField?.value || gameData.worldSetting.preamble,
-            initialPlot: openingPlotField?.value || gameData.worldSetting.initialPlot,
-            literary: toneValue || gameData.worldSetting.literary,
-            WorldRules: Object.keys(worldRules).length > 0 ? worldRules : gameData.worldSetting.WorldRules,
-            keyEvents: keyEvents,
-            player: {
-                ...gameData.worldSetting.player,
-                name: playerName,
-                gender: playerGender,
-                age: playerAge,
-                race: playerRace,
-            },
-        };
+        // 根据模式构建返回数据
+        if (isVisualMode(gameData)) {
+            const currentPlayer = player || { name: '', gender: '', appearance: '' };
+            return {
+                ...gameData.worldSetting,
+                title: titleField?.value || gameData.worldSetting.title,
+                summary: taglineField?.value || gameData.worldSetting.summary,
+                background: eraField?.value || gameData.worldSetting.background,
+                preamble: openingField?.value || gameData.worldSetting.preamble,
+                initialPlot: openingPlotField?.value || gameData.worldSetting.initialPlot,
+                literary: toneValue || gameData.worldSetting.literary,
+                WorldRules: Object.keys(worldRules).length > 0 ? worldRules : (gameData.worldSetting as VisualWorldSetting).WorldRules,
+                keyEvents: keyEvents,
+                player: {
+                    ...currentPlayer,
+                    name: playerName,
+                    gender: playerGender,
+                    age: playerAge,
+                    race: playerRace,
+                },
+            } as VisualWorldSetting;
+        } else {
+            // worldInteraction 模式
+            return {
+                ...gameData.worldSetting,
+                title: titleField?.value || gameData.worldSetting.title,
+                summary: taglineField?.value || gameData.worldSetting.summary,
+                background: eraField?.value || gameData.worldSetting.background,
+                preamble: openingField?.value || gameData.worldSetting.preamble,
+                initialPlot: openingPlotField?.value || gameData.worldSetting.initialPlot,
+                literary: toneValue || gameData.worldSetting.literary,
+                keyEvents: keyEvents,
+                player: {
+                    name: playerName,
+                    gender: playerGender,
+                    age: playerAge || 0,
+                    personality: (player && 'personality' in player) ? player.personality : '',
+                    appearance: player?.appearance || '',
+                    tone: player?.tone || '',
+                    imagePath: (player && 'imagePath' in player) ? player.imagePath : (player?.images?.base || ''),
+                },
+            } as WorldWorldSetting;
+        }
     }, [worldFields, storylines, toneValue, gameData]);
 
     // 获取修改过的字段（Diff 策略）
-    const getWorldSettingData = useCallback((): Partial<WorldSetting> | null => {
+    const getWorldSettingData = useCallback((): Partial<VisualWorldSetting> | Partial<WorldWorldSetting> | null => {
         if (!gameData?.worldSetting || !originalDataRef.current) return null;
 
         const fullData = getFullWorldSettingData();
         if (!fullData) return null;
 
         const original = originalDataRef.current;
-        const diff: Partial<WorldSetting> = {};
+        
+        if (isVisualMode(gameData)) {
+            const diff: Partial<VisualWorldSetting> = {};
+            const orig = original as VisualWorldSetting;
+            const full = fullData as VisualWorldSetting;
 
-        // 比较各个字段
-        if (fullData.title !== original.title) {
-            diff.title = fullData.title;
-        }
-        if (fullData.summary !== original.summary) {
-            diff.summary = fullData.summary;
-        }
-        if (fullData.background !== original.background) {
-            diff.background = fullData.background;
-        }
-        if (fullData.preamble !== original.preamble) {
-            diff.preamble = fullData.preamble;
-        }
-        if (fullData.initialPlot !== original.initialPlot) {
-            diff.initialPlot = fullData.initialPlot;
-        }
-        if (fullData.literary !== original.literary) {
-            diff.literary = fullData.literary;
-        }
+            // 比较各个字段
+            if (full.title !== orig.title) diff.title = full.title;
+            if (full.summary !== orig.summary) diff.summary = full.summary;
+            if (full.background !== orig.background) diff.background = full.background;
+            if (full.preamble !== orig.preamble) diff.preamble = full.preamble;
+            if (full.initialPlot !== orig.initialPlot) diff.initialPlot = full.initialPlot;
+            if (full.literary !== orig.literary) diff.literary = full.literary;
 
-        // 比较 WorldRules（对象比较）
-        const worldRulesChanged = JSON.stringify(fullData.WorldRules) !== JSON.stringify(original.WorldRules);
-        if (worldRulesChanged) {
-            diff.WorldRules = fullData.WorldRules;
-        }
+            // 比较 WorldRules（对象比较）
+            if (JSON.stringify(full.WorldRules) !== JSON.stringify(orig.WorldRules)) {
+                diff.WorldRules = full.WorldRules;
+            }
 
-        // 比较 keyEvents（数组比较）
-        const keyEventsChanged = JSON.stringify(fullData.keyEvents) !== JSON.stringify(original.keyEvents);
-        if (keyEventsChanged) {
-            diff.keyEvents = fullData.keyEvents;
-        }
+            // 比较 keyEvents（数组比较）
+            if (JSON.stringify(full.keyEvents) !== JSON.stringify(orig.keyEvents)) {
+                diff.keyEvents = full.keyEvents;
+            }
 
-        // 比较 player（对象比较）
-        const playerChanged = JSON.stringify(fullData.player) !== JSON.stringify(original.player);
-        if (playerChanged) {
-            diff.player = fullData.player;
-        }
+            // 比较 player（对象比较）
+            if (JSON.stringify(full.player) !== JSON.stringify(orig.player)) {
+                diff.player = full.player;
+            }
 
-        // 如果没有任何修改，返回 null
-        if (Object.keys(diff).length === 0) {
-            return null;
-        }
+            return Object.keys(diff).length > 0 ? diff : null;
+        } else {
+            const diff: Partial<WorldWorldSetting> = {};
+            const orig = original as WorldWorldSetting;
+            const full = fullData as WorldWorldSetting;
 
-        return diff;
+            // 比较各个字段
+            if (full.title !== orig.title) diff.title = full.title;
+            if (full.summary !== orig.summary) diff.summary = full.summary;
+            if (full.background !== orig.background) diff.background = full.background;
+            if (full.preamble !== orig.preamble) diff.preamble = full.preamble;
+            if (full.initialPlot !== orig.initialPlot) diff.initialPlot = full.initialPlot;
+            if (full.literary !== orig.literary) diff.literary = full.literary;
+
+            // 比较 keyEvents（数组比较）
+            if (JSON.stringify(full.keyEvents) !== JSON.stringify(orig.keyEvents)) {
+                diff.keyEvents = full.keyEvents;
+            }
+
+            // 比较 player（对象比较）
+            if (JSON.stringify(full.player) !== JSON.stringify(orig.player)) {
+                diff.player = full.player;
+            }
+
+            return Object.keys(diff).length > 0 ? diff : null;
+        }
     }, [getFullWorldSettingData]);
 
     // 提供给父组件的数据获取函数（只返回修改过的字段）
@@ -290,8 +351,8 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             onGetData(() => {
                 const worldSettingDiff = getWorldSettingData();
                 if (!worldSettingDiff) return null;
-                // 类型断言：Partial<WorldSetting> 可以安全地作为 Partial<UnifiedGameData> 的一部分
-                return { worldSetting: worldSettingDiff } as Partial<UnifiedGameData>;
+                // 返回修改过的 worldSetting
+                return { worldSetting: worldSettingDiff } as Partial<AllGameData | WorldInteractionGameData>;
             });
         }
     }, [onGetData, getWorldSettingData]);

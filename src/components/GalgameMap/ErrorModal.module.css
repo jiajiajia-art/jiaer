@@ -1,0 +1,89 @@
+
+/* 通用全屏弹窗遮罩 */
+.globalModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+
+/* 通用弹窗容器 */
+.globalModal {
+    width: 100%;
+    max-width: 420px;
+    background: radial-gradient(circle at top, #222 0%, #111 45%, #050508 100%);
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px 20px 16px;
+    color: #f8f9ff;
+}
+
+.globalModalTitle {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+.globalModalContent {
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(248, 249, 255, 0.86);
+    margin-bottom: 16px;
+}
+
+.globalModalContent p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.globalModalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.globalModalPrimaryButton,
+.globalModalSecondaryButton {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.globalModalPrimaryButton {
+    background: linear-gradient(135deg, #e03d4b 0%, #fb4655 100%);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.55);
+}
+
+.globalModalPrimaryButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(224, 61, 75, 0.7);
+}
+
+.globalModalPrimaryButton:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 10px rgba(224, 61, 75, 0.5);
+}
+
+.globalModalSecondaryButton {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(248, 249, 255, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.globalModalSecondaryButton:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.globalModalSecondaryButton:active {
+    background: rgba(255, 255, 255, 0.08);
+}

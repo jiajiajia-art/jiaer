@@ -323,7 +323,7 @@ const CreateGame: React.FC = () => {
                 setCreateProgressText('创建成功！正在跳转...');
 
                 setTimeout(() => {
-                    navigate('/newmain');
+                    navigate('/rpgGame');
                 }, 500);
             } else {
                 stopFakeProgress();

@@ -1,6 +1,6 @@
 /**
- * worldInteraction 模式的原始 API 响应类型
- * 准确反映后端返回的数据结构
+ * WorldInteraction 模式的游戏数据类型定义
+ * 独立管理 worldInteraction 模式的数据结构
  */
 
 export interface KeyEvent {
@@ -65,7 +65,7 @@ export interface WorldSetting {
     initialPlot: string;
     literary: string;
     keyEvents: KeyEvent[];
-    Player: PlayerCharacter;  // 注意：大写 P
+    player: PlayerCharacter;  // 注意：大写 P
     worldMapImage: string;
 }
 
