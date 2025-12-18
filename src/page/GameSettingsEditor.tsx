@@ -85,8 +85,8 @@ const GameSettingsEditor = () => {
             let uploadedFileId: string | undefined;
             
             // 根据模式选择不同的上传接口
-            if (mode === 'worldInteraction') {
-                // 使用世界交互模式的上传接口
+            if (mode === '') {
+                // 使用世界交互模式的上传接worldInteraction口
                 const response = await worldEditor.uploadWorldFile(file);
 
                 const fileIdFromResp = response.data.fileId;
@@ -134,10 +134,17 @@ const GameSettingsEditor = () => {
     };
 
     // 获取编辑器数据
+    // 仅用于首页进入时的首屏加载状态控制
+    const initialLoadDoneRef = useRef<boolean>(false);
+
     const fetchEditorData = useCallback(async (id: string, dataMode?: string) => {
         if (!id || isLoadingData) return; // 如果正在加载，避免重复请求
 
-        setIsLoadingData(true);
+        // 只有在首次进入页面时才显示全局加载效果
+        const shouldShowGlobalLoading = !initialLoadDoneRef.current;
+        if (shouldShowGlobalLoading) {
+            setIsLoadingData(true);
+        }
         try {
             // 根据模式选择不同的 API
             const currentMode = dataMode || mode;
@@ -164,11 +171,12 @@ const GameSettingsEditor = () => {
                 
                 const unifiedData = rawData as AllGameData | WorldInteractionGameData;
                 setGameData(unifiedData);
-                // 注意：不要更新 fileId，避免触发 useEffect 无限循环
-                // 如果需要更新 fileId，应该在调用 fetchEditorData 之前更新
+                // 首次加载成功后标记完成，后续不再显示全局加载遮罩
+                initialLoadDoneRef.current = true;
                 console.log('Editor data fetched successfully:', unifiedData);
             } else {
                 console.error('Failed to fetch editor data');
+                toast.error('获取游戏数据失败，请稍后重试');
                 // 请求失败时，清除 hasFetchedRef，允许重试
                 if (hasFetchedRef.current === id) {
                     hasFetchedRef.current = null;
@@ -176,12 +184,15 @@ const GameSettingsEditor = () => {
             }
         } catch (error) {
             console.error('Error fetching editor data:', error);
+            toast.error('获取游戏数据失败，请稍后重试');
             // 请求失败时，清除 hasFetchedRef，允许重试
             if (hasFetchedRef.current === id) {
                 hasFetchedRef.current = null;
             }
         } finally {
-            setIsLoadingData(false);
+            if (shouldShowGlobalLoading) {
+                setIsLoadingData(false);
+            }
         }
     }, [mode, isLoadingData]);
 
@@ -553,6 +564,14 @@ const GameSettingsEditor = () => {
                             }}
                         />
                     </section>
+                )}
+
+                {/* 编辑器全局加载遮罩（获取游戏文件 / 刷新数据时） */}
+                {isLoadingData && (
+                    <div className="loadingOverlay">
+                        <div className="loadingSpinner"></div>
+                        <div className="loadingText">正在加载游戏数据...</div>
+                    </div>
                 )}
             </main>
             {showPublishModal && (
