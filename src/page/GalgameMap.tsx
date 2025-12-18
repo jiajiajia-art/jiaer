@@ -28,12 +28,11 @@ const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面�
 const DEFAULT_WORLD_MAP_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
 
 const GalgameMap = () => {
-    const { pdfFileId } = useGameStore();
+    const { pdfFileId, sessionId, clearAll: clearGameStore } = useGameStore();
     const [gameData, setGameData] = useState<AllGameData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isReady, setIsReady] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
-    const { sessionId } = useGameStore();
     const [worldInteractionHistory, setWorldInteractionHistory] = useState<GetWorldInteractionHistoryResponse>();
     const { 
         eventData, 
@@ -43,12 +42,26 @@ const GalgameMap = () => {
         selectedSubscene,
         setSelectedSubscene,
         refreshEventData,
+        clearState: clearMapGalgameStore,
     } = useMapGalgameStore();
     const { user } = useAuthStore();
     
     const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
     // 结束回合 / 下一回合加载状态（父组件统一管理）
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
+
+    // 组件卸载时清理存储，避免下次进入时出现脏数据
+    useEffect(() => {
+        return () => {
+            // 清理 gameStore（pdfFileId, sessionId 等）
+            clearGameStore();
+            // 清理 mapGalgameStore（eventData, currentView, selectedSubscene 等）
+            clearMapGalgameStore();
+            // 清理 sessionStorage 中的视图栈
+            sessionStorage.removeItem('worldMapViewStack');
+            console.log('[GalgameMap] 组件卸载，已清理存储');
+        };
+    }, [clearGameStore, clearMapGalgameStore]);
 
     useEffect(() => {
         if (sessionId) {
