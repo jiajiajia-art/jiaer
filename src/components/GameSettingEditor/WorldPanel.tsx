@@ -5,6 +5,7 @@ import type { WorldInteractionGameData } from '../../api/worldInteraction/worldI
 import type { WorldSetting as VisualWorldSetting } from '../../api/galgame/EditorData.type';
 import type { WorldSetting as WorldWorldSetting } from '../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
+import { toast } from 'react-hot-toast';
 
 interface WorldField {
     id: string;
@@ -169,6 +170,9 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     const removeStoryline = (id: string) => {
         setStorylines(prev => prev.filter(s => s.id !== id));
     };
+
+    // 是否为世界交互模式（worldInteraction）
+    const isWorldInteractionMode = !!gameData && !isVisualMode(gameData);
 
     // 将表单数据转换为 WorldSetting 格式（完整数据）
     const getFullWorldSettingData = useCallback((): VisualWorldSetting | WorldWorldSetting | null => {
@@ -370,6 +374,11 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                         className={styles.primary}
                         onClick={(e) => {
                             e.preventDefault();
+                            // worldInteraction 模式下，故事线为必填
+                            if (isWorldInteractionMode && storylines.length === 0) {
+                                toast.error('请至少添加一条故事线（世界交互模式下为必填）');
+                                return;
+                            }
                             handleSubmit();
                         }}
                         disabled={!gameData || isSubmitting}
@@ -406,7 +415,9 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 {/* 故事线（可选，可折叠） */}
                 <div className={styles.storylineSection}>
                     <div className={styles.storylineHeader} style={{ cursor: 'pointer' }} onClick={() => setIsStorylineExpanded(!isStorylineExpanded)}>
-                        <span className={styles.fieldLabel}>故事线（可选）</span>
+                        <span className={styles.fieldLabel}>
+                            {isWorldInteractionMode ? '故事线（必填 · 用于约束世界交互节奏）' : '故事线（可选）'}
+                        </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {isStorylineExpanded && (
                                 <button

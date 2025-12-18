@@ -23,6 +23,7 @@ import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import useGalgameHistory from "../hooks/galgame/useGalgameHistory";
 import statisticsApi from "../api/statistics/statisticsApi";
+import ErrorModal from "../components/GalgameMap/ErrorModal";
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -69,6 +70,10 @@ const Galgame = () => {
 
     const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
+    // 请求超时 & 提示相关状态（不自动重试，只给用户一个刷新入口）
+    const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
+    const requestTimeoutRef = useRef<number | null>(null);
+
     // 当 currentStep 变化且打字机已完成时，将之前的 step 加入已完成列表
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
@@ -105,6 +110,33 @@ const Galgame = () => {
             }
         }
     });
+
+    // 统一监听是否在等待后端数据，如果超过 60s 仍未返回则弹出超时提示
+    useEffect(() => {
+        if (stepHandlers.isWaitingForData) {
+            if (requestTimeoutRef.current) {
+                window.clearTimeout(requestTimeoutRef.current);
+            }
+            requestTimeoutRef.current = window.setTimeout(() => {
+                // 再次确认仍在等待数据，避免误报
+                if (stepHandlers.isWaitingForData) {
+                    setRequestTimeoutVisible(true);
+                }
+            }, 60000); // 60 秒超时
+        } else {
+            if (requestTimeoutRef.current) {
+                window.clearTimeout(requestTimeoutRef.current);
+                requestTimeoutRef.current = null;
+            }
+        }
+
+        return () => {
+            if (requestTimeoutRef.current) {
+                window.clearTimeout(requestTimeoutRef.current);
+                requestTimeoutRef.current = null;
+            }
+        };
+    }, [stepHandlers.isWaitingForData]);
 
     // 当新请求开始时，清空已完成的步骤
     useEffect(() => {
@@ -824,6 +856,18 @@ const Galgame = () => {
         stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex);
     }, [stepHandlers, currentMessage, resetDisplayedSteps]);
 
+    // 统一封装自定义输入发送
+    const handleCustomInputSubmit = useCallback((value: string) => {
+        if (!value.trim()) return;
+        stepHandlers.handleChoiceSend(value);
+    }, [stepHandlers]);
+
+    // 超时弹窗「重试」逻辑：这里不自动重发请求，仅刷新页面，交给用户重新点击
+    const handleRetryLastRequest = useCallback(() => {
+        setRequestTimeoutVisible(false);
+        window.location.reload();
+    }, []);
+
     if (isLoading) {
         return (
             <div className={styles.pageRoot}>
@@ -887,7 +931,8 @@ const Galgame = () => {
                                     isAutoPlay={isAutoPlay}
                                     onNextMessage={handleNextMessage}
                                     onChoiceClick={handleChoiceClick}
-                                    onCustomInputSubmit={(value) => stepHandlers.handleChoiceSend(value)}
+                                    // 统一封装，便于记录最近一次请求
+                                    onCustomInputSubmit={(value) => handleCustomInputSubmit(value)}
                                 />
                             </>
                         )}
@@ -904,7 +949,7 @@ const Galgame = () => {
                                 }}
                                 onCustomInputSubmit={(value) => {
                                     resetDisplayedSteps();
-                                    stepHandlers.handleChoiceSend(value);
+                                    handleCustomInputSubmit(value);
                                 }}
                             />
                         )}
@@ -990,6 +1035,17 @@ const Galgame = () => {
                             });
                         }}
                         onEditSave={editHistory}
+                    />
+
+                    <ErrorModal
+                        visible={requestTimeoutVisible}
+                        title="请求超时"
+                        message="网络波动或服务器繁忙，请刷新重试或稍后再试。"
+                        confirmText="刷新"
+                        cancelText="取消"
+                        primaryType="confirm"
+                        onConfirm={handleRetryLastRequest}
+                        onCancel={() => setRequestTimeoutVisible(false)}
                     />
 
                 </div>

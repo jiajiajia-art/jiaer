@@ -98,8 +98,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const [isMapContentReady, setIsMapContentReady] = useState(false);
     const [forceUpdate, setForceUpdate] = useState(0); // 强制重新计算位置的触发器
     
-    // 地图tab状态
-    const [placedScenes, setPlacedScenes] = useState<Array<{ id: string; name: string; x: number; y: number }>>([]);
+    // 地图tab状态（增加 image 字段，用于使用真实场景图标）
+    const [placedScenes, setPlacedScenes] = useState<Array<{ id: string; name: string; x: number; y: number; image?: string }>>([]);
     const [draggingSceneId, setDraggingSceneId] = useState<string | null>(null);
     const [selectedSceneIdInMap, setSelectedSceneIdInMap] = useState<string | null>(null);
     const [sceneDragOffset, setSceneDragOffset] = useState<{ x: number; y: number } | null>(null);
@@ -374,7 +374,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
             return;
         }
 
-        const loadedScenes: Array<{ id: string; name: string; x: number; y: number }> = [];
+        const loadedScenes: Array<{ id: string; name: string; x: number; y: number; image?: string }> = [];
         sceneSetting.scenes.forEach(scene => {
             let x: number | undefined;
             let y: number | undefined;
@@ -410,7 +410,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                     id: scene.id,
                     name: scene.name,
                     x: clampedX,
-                    y: clampedY
+                    y: clampedY,
+                    image: scene.image, // 保留场景图片用于图标展示
                 });
             }
         });
@@ -1581,7 +1582,15 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                         onClick={() => handleSubSceneClick(subScene)}
                                     >
                                         <img 
-                                            src={DEFAULT_SUBSCENE_ICON} 
+                                            src={
+                                                // 优先使用子场景自己的图片，小图标跟实际预览一致
+                                                sceneSetting?.scenes
+                                                    ?.find(s => s.id === subScene.parentSceneId)
+                                                    ?.subscenes
+                                                    ?.find(ss => ss.id === subScene.id)
+                                                    ?.image
+                                                || DEFAULT_SUBSCENE_ICON
+                                            } 
                                             alt="子场景"
                                             draggable={false}
                                             className={styles.subSceneIcon}
@@ -1819,7 +1828,10 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                         onClick={() => setSelectedSceneIdInMap(scene.id)}
                                     >
                                         <img 
-                                            src={DEFAULT_SCENE_IMAGE} 
+                                            src={
+                                                // 优先使用场景自己的图片，只有缺失时才使用默认场景图标
+                                                scene.image || DEFAULT_SCENE_IMAGE
+                                            } 
                                             alt="场景"
                                             draggable={false}
                                             className={styles.subSceneIcon}

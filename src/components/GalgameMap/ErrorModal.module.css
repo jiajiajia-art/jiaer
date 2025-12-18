@@ -9,6 +9,8 @@
     justify-content: center;
     z-index: 9999;
     padding: 16px;
+    max-width: 420px;
+    max-height: 896px;
 }
 
 /* 通用弹窗容器 */
@@ -86,4 +88,11 @@
 
 .globalModalSecondaryButton:active {
     background: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 768px) {
+    .globalModalOverlay {
+        width: 100vw;
+        height: 100vh;
+    }
 }
