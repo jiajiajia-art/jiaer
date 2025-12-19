@@ -108,7 +108,6 @@ const GalgameMap = () => {
                 }
             } catch (error) {
                 console.error('检查活跃事件失败:', error);
-                // 出错时回到大地图
                 if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
                     setCurrentView(MapViewState.WORLD_MAP);
                 }
@@ -357,21 +356,7 @@ const GalgameMap = () => {
                 {/* 音乐控制按钮 - 在非 NPC 交互视图中显示 */}
                 {gameData && currentView !== MapViewState.INTERACT_NPC && (
                     <div
-                        style={{
-                            position: 'absolute',
-                            top: '10px',
-                            right: '20px',
-                            zIndex: 1000,
-                            cursor: 'pointer',
-                            padding: '10px',
-                            borderRadius: '8px',
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            color: '#fff',
-                            transition: 'background-color 0.3s',
-                        }}
+                        className={styles.musicToggleBtn}
                         onClick={handleMusicToggle}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';

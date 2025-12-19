@@ -24,6 +24,7 @@ export interface UserGameData {
     paid?: boolean;
     version: string;
     game_tags: string[];
+    is_preset: number;
 }
 
 export interface UserGameResponse {

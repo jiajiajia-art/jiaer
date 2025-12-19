@@ -32,7 +32,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     onUnpublish,
 }) => {
     const { user } = useAuthStore();
-    const { setFileId, setSessionId } = useGameStore();
+    const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [gameStats, setGameStats] = useState<GameStatsResponse>();
@@ -121,6 +121,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
         // 更新 store
         setFileId(fileId);
+        setIsPreset(gameDetail?.is_preset == 1);
 
         // 创建会话
         const { sessionId, redirectUrl } = await createSession(fileId);

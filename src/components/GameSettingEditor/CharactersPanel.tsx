@@ -9,17 +9,17 @@ import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../api/w
 function getPlayer(data: AllGameData | WorldInteractionGameData | null | undefined) {
     if (!data?.worldSetting) return undefined;
     const ws = data.worldSetting;
-    
+
     // worldInteraction 模式使用 Player（大写）
     if ('Player' in ws && ws.Player) {
         return ws.Player;
     }
-    
+
     // visual 模式使用 player（小写）
     if ('player' in ws && ws.player) {
         return ws.player;
     }
-    
+
     return undefined;
 }
 
@@ -95,14 +95,14 @@ const VARIATION_TYPES = [
     },
 ];
 
-const CharactersPanel: React.FC<CharactersPanelProps> = ({ 
-    gameData, 
-    isLoading = false, 
-    onGetData, 
-    onDataChange, 
-    mode = 'visual' 
+const CharactersPanel: React.FC<CharactersPanelProps> = ({
+    gameData,
+    isLoading = false,
+    onGetData,
+    onDataChange,
+    mode = 'visual'
 }) => {
-    
+    const { fileId } = useGameStore();
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
@@ -118,7 +118,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const playerFileInputRef = useRef<HTMLInputElement>(null);
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-    const { fileId } = useGameStore();
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null); // 避免切换角色时全局 loading 误闪
@@ -162,7 +161,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const isValidUrl = (url?: string | null): url is string => {
             return !!url && url !== 'null' && url !== 'undefined' && url.trim() !== '';
         };
-        
+
         if (isValidUrl(images?.base)) return images!.base;
         const first = images ? Object.values(images).find(v => isValidUrl(v)) : undefined;
         return first || (isValidUrl(fallback) ? fallback : undefined);
@@ -203,7 +202,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         // 获取 image 或 imagePath，并过滤无效值
         const rawImage = ('image' in player ? player.image : ('imagePath' in player ? player.imagePath : undefined)) as string | undefined;
         const playerImage = (rawImage && rawImage !== 'null' && rawImage !== 'undefined') ? rawImage : undefined;
-        const portrait = pickBaseImage(playerImages, playerImage) || DEFAULT_NPC_PORTRAIT;        
+        const portrait = pickBaseImage(playerImages, playerImage) || DEFAULT_NPC_PORTRAIT;
         const playerRace = ('race' in player ? player.race : undefined) as string | undefined;
 
         return {
@@ -227,7 +226,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     // 当 gameData 变化时，填充角色数据
     useEffect(() => {
         if (!gameData) return;
-        
+
         const npcs = getNpcs(gameData);
         if (npcs && npcs.length > 0) {
             const convertedCharacters: Character[] = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
@@ -269,14 +268,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 });
 
                 // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
-                let finalImages: { base: string; [key: string]: string } | undefined = undefined;
+                let finalImages: { base: string;[key: string]: string } | undefined = undefined;
                 if (Object.keys(images).length > 0) {
                     if (!images.base) {
                         // 优先使用 portrait，否则使用第一个 variation 的图片
                         images.base = char.portrait || Object.values(images)[0] || '';
                     }
                     // 类型断言：确保 base 属性存在
-                    finalImages = images as { base: string; [key: string]: string };
+                    finalImages = images as { base: string;[key: string]: string };
                 }
 
                 // 获取与玩家的关系（从 relationships 中查找）
@@ -591,14 +590,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             });
 
             // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
-            let finalImages: { base: string; [key: string]: string } | undefined = undefined;
+            let finalImages: { base: string;[key: string]: string } | undefined = undefined;
             if (Object.keys(images).length > 0) {
                 if (!images.base) {
                     // 优先使用 portrait，否则使用第一个 variation 的图片
                     images.base = characterToSave.portrait || Object.values(images)[0] || '';
                 }
                 // 类型断言：确保 base 属性存在
-                finalImages = images as { base: string; [key: string]: string };
+                finalImages = images as { base: string;[key: string]: string };
             }
 
             // 获取与玩家的关系
@@ -784,13 +783,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         });
 
         // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
-        let finalImages: { base: string; [key: string]: string } | undefined = undefined;
+        let finalImages: { base: string;[key: string]: string } | undefined = undefined;
         if (Object.keys(images).length > 0) {
             if (!images.base) {
                 images.base = newCharacterData.portrait || Object.values(images)[0] || '';
             }
             // 类型断言：确保 base 属性存在
-            finalImages = images as { base: string; [key: string]: string };
+            finalImages = images as { base: string;[key: string]: string };
         }
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
@@ -909,7 +908,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 let playerImage = '';
                                 let playerImages: { [key: string]: string } | undefined = undefined;
                                 const responseAny = response.data as any;
-                                
+
                                 if (mode === 'worldInteraction') {
                                     // worldEditor 返回 ApiResponse<Player>，可能在 data 或直接在响应中
                                     const player = responseAny?.data;
@@ -972,7 +971,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                         const imagePath = responseData?.imagePath || responseData?.data?.imagePath;
                         const variantName = responseData?.variant || responseData?.data?.variant || variant;
                         const npcId = responseData?.npcId || responseData?.data?.npcId || targetCharacterId;
-                        
+
                         if (imagePath && npcId) {
                             const imageUrl = withCacheBust(imagePath);
                             setCharacterData(prev => prev.map(char => {
@@ -1082,29 +1081,29 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 fileId,
                 npc: { id, name, age, gender, job, race, description, appearance },
                 removeBg: false,
-                pluginType: mode =='worldInteraction' ? 'world-interaction' : 'visual'
+                pluginType: mode == 'worldInteraction' ? 'world-interaction' : 'visual'
             });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
                 // 直接从响应中获取图片URL，支持多种可能的字段名
                 const responseAny = response.data as any;
-                const newImageUrl = responseAny?.imagePath || 
-                                   responseAny?.data?.images?.base ||
-                                   responseAny?.data?.image ||
-                                   responseAny?.npcSetting?.npcs?.find((n: any) => n.id === npc.id)?.images?.base;
-                
+                const newImageUrl = responseAny?.imagePath ||
+                    responseAny?.data?.images?.base ||
+                    responseAny?.data?.image ||
+                    responseAny?.npcSetting?.npcs?.find((n: any) => n.id === npc.id)?.images?.base;
+
                 if (newImageUrl) {
-                    setCharacterData(prev => prev.map(char => 
-                        char.id === npc.id 
-                            ? { ...char, portrait: withCacheBust(newImageUrl) } 
+                    setCharacterData(prev => prev.map(char =>
+                        char.id === npc.id
+                            ? { ...char, portrait: withCacheBust(newImageUrl) }
                             : char
                     ));
                 } else if (npc.portrait) {
                     // 没有返回图片URL，用现有图片加新时间戳刷新
                     const baseUrl = npc.portrait.split('?')[0];
-                    setCharacterData(prev => prev.map(char => 
-                        char.id === npc.id 
-                            ? { ...char, portrait: withCacheBust(baseUrl) } 
+                    setCharacterData(prev => prev.map(char =>
+                        char.id === npc.id
+                            ? { ...char, portrait: withCacheBust(baseUrl) }
                             : char
                     ));
                 }
@@ -1139,30 +1138,30 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 fileId,
                 player: payloadPlayer,
                 removeBg: false,
-                pluginType: mode =='worldInteraction' ? 'world-interaction' : 'visual',
+                pluginType: mode == 'worldInteraction' ? 'world-interaction' : 'visual',
             });
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 // 直接从响应中获取图片URL，支持多种可能的字段名
                 const responseAny = response.data as any;
-                const newImageUrl = responseAny?.imagePath || 
-                                   responseAny?.data?.image || 
-                                   responseAny?.data?.imagePath ||
-                                   responseAny?.worldSetting?.player?.image ||
-                                   responseAny?.worldSetting?.Player?.image;
-                
+                const newImageUrl = responseAny?.imagePath ||
+                    responseAny?.data?.image ||
+                    responseAny?.data?.imagePath ||
+                    responseAny?.worldSetting?.player?.image ||
+                    responseAny?.worldSetting?.Player?.image;
+
                 if (newImageUrl) {
-                    setCharacterData(prev => prev.map(char => 
-                        char.id === 'player' 
-                            ? { ...char, portrait: withCacheBust(newImageUrl) } 
+                    setCharacterData(prev => prev.map(char =>
+                        char.id === 'player'
+                            ? { ...char, portrait: withCacheBust(newImageUrl) }
                             : char
                     ));
                 } else if (playerChar.portrait) {
                     // 没有返回图片URL，用现有图片加新时间戳刷新
                     const baseUrl = playerChar.portrait.split('?')[0];
-                    setCharacterData(prev => prev.map(char => 
-                        char.id === 'player' 
-                            ? { ...char, portrait: withCacheBust(baseUrl) } 
+                    setCharacterData(prev => prev.map(char =>
+                        char.id === 'player'
+                            ? { ...char, portrait: withCacheBust(baseUrl) }
                             : char
                     ));
                 }
@@ -1254,8 +1253,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     generateNPCs: true,
                     generateScenes: false,
                     generateVariants: false,
-                    generatePlayer: true,
-                    removeBg: false,
+                    generatePlayer: false,
+                    removeBg: true,
                 });
             }
             if (response.data?.success) {
@@ -1476,8 +1475,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                             {/* 立绘 */}
                             <div
                                 className={styles.portraitLarge}
-                                style={{ 
-                                    backgroundImage: currentCharacter.portrait ? `url('${currentCharacter.portrait}')` : 'none', 
+                                style={{
+                                    backgroundImage: currentCharacter.portrait ? `url('${currentCharacter.portrait}')` : 'none',
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
@@ -1497,8 +1496,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                             </div>
 
                             <div className={styles.portraitImageActions}>
-                                <button className={styles.ghostSmall} 
-                                    onClick={handlePortraitClick} 
+                                <button className={styles.ghostSmall}
+                                    onClick={handlePortraitClick}
                                     disabled={isGeneratingSingleNpcImage}
                                 >
                                     {isAddingNew ? '上传立绘' : '重新上传'}
@@ -1830,9 +1829,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             />
 
             {isGeneratingNpcImages && (
-                <div className="loadingOverlay">
-                    <div className="loadingSpinner"></div>
-                    <div className="loadingText">正在生成角色立绘...</div>
+                <div className={styles.plusLoadingOverlay}>
+                    <div className={styles.plusLoadingSpinner}></div>
+                    <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
                 </div>
             )}
         </div>

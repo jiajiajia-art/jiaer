@@ -73,7 +73,7 @@ const CreateGame: React.FC = () => {
     const defaultHeroCover = `${import.meta.env.BASE_URL}data/events/welcome.png`;
     const heroBackground = gameDetail?.cover_url || formData?.coverImage || defaultHeroCover;
 
-    const { setFileId, setSessionId } = useGameStore();
+    const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
 
@@ -304,6 +304,7 @@ const CreateGame: React.FC = () => {
             }
 
             setFileId(fileId);
+            setIsPreset(gameDetail?.is_preset == 1);
             setCreateProgressText('游戏创建成功，正在初始化会话...');
 
             // 创建session
@@ -421,6 +422,7 @@ const CreateGame: React.FC = () => {
             navigate(`/gameSettingsEditor?mode=worldInteraction`);
         } else {
             setFileId(gameId);
+            setIsPreset(gameDetail?.is_preset == 1);
             navigate(`/gameSettingsEditor`);
         }
     }

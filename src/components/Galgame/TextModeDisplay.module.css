@@ -265,6 +265,23 @@
     margin-left: auto;
 }
 
+.choicePrice {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.choicePrice img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+}
+
 .freeBadge {
     color: rgba(74, 222, 128, 0.9);
     font-size: 12px;

@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./ErrorModal.module.css";
+import styles from "./WorldModal.module.css";
 
 interface WorldModalProps {
     visible: boolean;

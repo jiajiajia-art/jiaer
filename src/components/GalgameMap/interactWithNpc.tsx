@@ -20,7 +20,7 @@ import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
 import HistoryModal from "./historyModal";
 import NextRoundButton from "./NextRoundButton";
-import WorldModal from "./ErrorModal";
+import WorldModal from "./WorldModal";
 import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 import interactionApi from "../../api/worldInteraction/interactionApi";
@@ -98,7 +98,6 @@ const InteractWithNpc = ({
                 }
             }
             
-            // 设置背景图片并标记已初始化
             if (bgImage) {
                 setDisplayBackgroundImage(bgImage);
                 backgroundInitializedRef.current = true;
@@ -166,6 +165,22 @@ const InteractWithNpc = ({
             setLatestHistory(worldInteractionHistory);
         }
     }, [worldInteractionHistory]);
+
+    // 获取并更新最新历史记录的公共函数
+    const refreshHistory = useCallback(async (logMessage?: string) => {
+        if (!sessionId) return;
+        try {
+            const response = await interactionApi.getWorldInteractionHistory(sessionId);
+            if (response.data?.success) {
+                setLatestHistory(response.data);
+                if (logMessage) {
+                    console.log(logMessage, response.data.interactions?.length);
+                }
+            }
+        } catch (error) {
+            console.warn('[WorldInteraction] 获取最新历史记录失败:', error);
+        }
+    }, [sessionId]);
 
     // 组件卸载时清理超时定时器
     useEffect(() => {
@@ -469,7 +484,7 @@ const InteractWithNpc = ({
                     setTimeout(() => {
                         console.log("[WorldInteraction] 发送 /interact 请求 (handleInteract)...");
                         stepHandlers.handleInteract({
-                            onSuccess: () => {
+                            onSuccess: async () => {
                                 console.log(
                                     "[WorldInteraction] /interact 请求成功，清理 pending 状态"
                                 );
@@ -489,6 +504,8 @@ const InteractWithNpc = ({
                                         console.warn('[WorldInteraction] 清除请求状态失败:', e);
                                     }
                                 }
+
+                                // 轮询会负责更新历史记录，这里不需要手动获取
                             },
                             onError: (error) => {
                                 console.error(
@@ -533,14 +550,12 @@ const InteractWithNpc = ({
             // 标记本次 effect 的轮询已取消
             cancelled = true;
         };
-    // 注意：
-    // 1）这里故意不把 stepHandlers 放到依赖里，否则每次渲染都会销毁旧的轮询（将 cancelled 设为 true），导致只请求一次历史。
-    // 2）也不把 gameStarted 放进去，因为我们在 effect 里调用 setGameStarted(true)，否则会触发二次执行并打断轮询。
+    
     }, [gameData, sessionId, eventId, fileId]);
 
     // ==================== 轮询 Hook（独立逻辑，不受其他状态影响） ====================
     // 轮询成功时的回调
-    const handlePollMatchFound = useCallback((matchedSteps: any[]) => {
+    const handlePollMatchFound = useCallback(async (matchedSteps: any[]) => {
         if (!matchedSteps.length) return;
         const [first, ...rest] = matchedSteps;
 
@@ -563,6 +578,8 @@ const InteractWithNpc = ({
                 console.warn("[Poll] 清除请求状态失败:", e);
             }
         }
+
+        // 轮询过程中已经通过 onHistoryUpdate 更新了历史记录，这里不需要再次获取
     }, [sessionId, eventId, stepHandlers]);
 
     const handlePollTimeout = useCallback(() => {
@@ -573,9 +590,11 @@ const InteractWithNpc = ({
         });
     }, []);
 
-    const handlePollEnd = useCallback(() => {
+    const handlePollEnd = useCallback(async () => {
         setPendingRequestForPoll(null);
-    }, []);
+        // 轮询结束后再次确认历史记录是最新的（轮询过程中已经通过 onHistoryUpdate 更新了）
+        await refreshHistory('[WorldInteraction] 轮询结束后确认历史记录');
+    }, [refreshHistory]);
 
     // 使用独立的轮询 Hook
     useHistoryPolling({
@@ -978,22 +997,14 @@ const InteractWithNpc = ({
             clearTimeout(choiceTimeoutRef.current);
         }
         choiceTimeoutRef.current = window.setTimeout(() => {
-            console.warn(
-                '[WorldInteraction] /select-option 超过 60 秒未返回，弹出超时提示'
-            );
             setTimeoutModal({
                 visible: true,
                 message: 'AI 回应本次选择已超过 60 秒仍未返回，是否刷新页面重试？',
             });
         }, 60_000);
 
-        console.log('[WorldInteraction] 发送 /select-option 请求 (handleChoiceOption)...', {
-            optionId,
-            finalOptionIndex,
-        });
-
         stepHandlers.handleChoiceOption(optionId, finalOptionIndex, {
-            onSuccess: () => {
+            onSuccess: async () => {
                 // 请求成功，清除请求状态和超时提示
                 if (choiceTimeoutRef.current) {
                     clearTimeout(choiceTimeoutRef.current);
@@ -1010,6 +1021,8 @@ const InteractWithNpc = ({
                         console.warn('[WorldInteraction] 清除请求状态失败:', e);
                     }
                 }
+
+                // 轮询会负责更新历史记录，这里不需要手动获取
             },
             onError: (error) => {
                 console.error('❌ 选择选项失败:', error);
@@ -1093,6 +1106,7 @@ const InteractWithNpc = ({
                                         selectedOptionIndex: stepHandlers.selectedOptionIndex,
                                     }}
                                     isAutoPlay={isAutoPlay}
+                                    historyLength={latestHistory?.interactions.length ?? 0}
                                     onNextMessage={handleNextMessage}
                                     onChoiceClick={handleChoiceClick}
                                     onCustomInputSubmit={handleCustomInputSubmit}

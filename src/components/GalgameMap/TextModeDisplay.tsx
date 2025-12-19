@@ -28,7 +28,6 @@ interface TextModeDisplayProps {
     currentDisplayText: string;
     isTyping: boolean;
     isWaitingForData: boolean;
-    // 世界交互历史长度（使用 interactions.length）
     historyLength: number;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
@@ -155,7 +154,10 @@ const MessageItem = memo<MessageItemProps>(({
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
                                         {historyLength > FREE_INTERACTIONS_THRESHOLD && (
-                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                            <div className={styles.choicePrice}>
+                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                                <span>{POINTS_CONFIG.option}</span>
+                                            </div>
                                         )}
                                     </div>
                                 ))}
@@ -166,9 +168,10 @@ const MessageItem = memo<MessageItemProps>(({
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
                                     {historyLength > FREE_INTERACTIONS_THRESHOLD && (
-                                        <span className={styles.pointsCostHint}>
-                                            消耗 {POINTS_CONFIG.custom} 积分
-                                        </span>
+                                        <div className={styles.choicePrice}>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                            <span>{POINTS_CONFIG.custom}</span>
+                                        </div>
                                     )}
                                 </div>
                                 <div className={styles.customInputWrapper}>
@@ -243,7 +246,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
             {steps.length === 0 && !isWaitingForData ? (
                 <div className={styles.emptyState}>暂无内容</div>
             ) : showMainLoader ? (
-                // 等待 AI 推演时，全屏仅展示加载状态，不再显示之前的文本
                 <div className={styles.loadingContainer}>
                     <div className={styles.aiLoader}>
                         <div className={styles.orbit}></div>

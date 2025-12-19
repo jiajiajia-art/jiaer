@@ -1,7 +1,7 @@
 
 /* 通用全屏弹窗遮罩 */
 .globalModalOverlay {
-    position: fixed;
+    position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
     display: flex;
@@ -9,8 +9,6 @@
     justify-content: center;
     z-index: 9999;
     padding: 16px;
-    max-width: 420px;
-    max-height: 896px;
 }
 
 /* 通用弹窗容器 */
@@ -92,7 +90,7 @@
 
 @media (max-width: 768px) {
     .globalModalOverlay {
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
     }
 }

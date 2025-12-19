@@ -29,12 +29,18 @@ interface NormalModeDisplayProps {
     finalIsTyping: boolean;
     stepHandlers: StepHandlers;
     isAutoPlay: boolean;
+    historyLength: number;
     onNextMessage: () => void;
     onChoiceClick: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit: (value: string) => void;
 }
 
-const FREE_ROUNDS_THRESHOLD = 5;
+const POINTS_CONFIG = {
+    option: 2,
+    custom: 3,
+};
+
+const FREE_INTERACTIONS_THRESHOLD = 5;
 
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
@@ -42,6 +48,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     finalIsTyping,
     stepHandlers,
     isAutoPlay,
+    historyLength,
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
@@ -171,10 +178,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
-                            {history.length > FREE_ROUNDS_THRESHOLD && (
+                            {historyLength > FREE_INTERACTIONS_THRESHOLD && (
                                 <div className={styles.choicePrice}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>2</span>
+                                    <span>{POINTS_CONFIG.option}</span>
                                 </div>
                             )}
                         </div>
@@ -207,10 +214,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                {history.length > FREE_ROUNDS_THRESHOLD && (
+                                {historyLength > FREE_INTERACTIONS_THRESHOLD && (
                                     <div className={styles.choicePrice}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                        <span>3</span>
+                                        <span>{POINTS_CONFIG.custom}</span>
                                     </div>
                                 )}
                             </button>

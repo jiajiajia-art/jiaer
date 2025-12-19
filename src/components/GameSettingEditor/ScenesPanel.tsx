@@ -1677,9 +1677,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             />
 
             {isGeneratingAllSceneImages && (
-                <div className="loadingOverlay">
-                    <div className="loadingSpinner"></div>
-                    <div className="loadingText">正在生成场景立绘...</div>
+                <div className={styles.plusLoadingOverlay}>
+                    <div className={styles.plusLoadingSpinner}></div>
+                    <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
                 </div>
             )}
         </div>

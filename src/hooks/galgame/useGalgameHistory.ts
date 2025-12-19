@@ -14,6 +14,7 @@ const useGalgameHistory = () => {
     const [history, setHistory] = useState<History[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [lastVisitedSceneId, setLastVisitedSceneId] = useState<string | null>(null);
 
     const { sessionId } = useGameStore();
 
@@ -29,6 +30,15 @@ const useGalgameHistory = () => {
             const response = await getGalgamePresetApi.getGalgameHistory(sessionId);
             if (response.data?.success && response.data.history) {
                 setHistory(response.data.history);
+
+                // 从返回的 visitedScenes 中解析当前所在场景 ID（最后一个）
+                const visitedScenes = (response.data as any).visitedScenes;
+                if (Array.isArray(visitedScenes) && visitedScenes.length > 0) {
+                    const lastId = visitedScenes[visitedScenes.length - 1];
+                    setLastVisitedSceneId(typeof lastId === 'string' && lastId ? lastId : null);
+                } else {
+                    setLastVisitedSceneId(null);
+                }
             }
         } catch (error) {
             setError(error instanceof Error ? error.message : '获取历史记录失败');
@@ -86,7 +96,8 @@ const useGalgameHistory = () => {
         loading, 
         error, 
         refreshHistory: fetchHistory,
-        editHistory 
+        editHistory,
+        lastVisitedSceneId,
     };
 };
 

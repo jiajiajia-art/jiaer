@@ -40,7 +40,7 @@ const GameSettingsEditor = () => {
     // 从 Zustand store 获取状态和方法
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { user} = useAuthStore();
-    const { fileId, setFileId, setSessionId } = useGameStore();
+    const { fileId, setFileId, setSessionId, setIsPreset } = useGameStore();
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'    
     const [isParsing, setIsParsing] = useState<boolean>(false);
@@ -122,6 +122,7 @@ const GameSettingsEditor = () => {
                 // 使用 Zustand store 更新 fileId（自动保存到 sessionStorage）
                 setFileId(uploadedFileId);
                 setIsParsed(false);
+                setIsPreset(false);// 上传文件后，认为是非预设模式
                 return true;
             } else {
                 console.error('No fileId returned from upload');
@@ -420,6 +421,7 @@ const GameSettingsEditor = () => {
                     const sessionId = sessionResponse.data.data.session.session_id;
                     setFileId(fileId);
                     setSessionId(sessionId);
+                    setIsPreset(false);
                     navigate(`/galgame`);
                     return sessionId;
                 } else {

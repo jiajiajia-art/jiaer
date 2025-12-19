@@ -64,6 +64,9 @@ interface GameState {
   setSessionId: (id: string | null) => void;
   clearSessionId: () => void;
 
+  isPreset: boolean | null;
+  setIsPreset: (isPreset: boolean | null) => void;
+
   // 场景数据（频繁变化，多组件使用）
   scenes: ScenesMap;
   setScenes: (scenes: ScenesMap) => void;
@@ -116,6 +119,9 @@ export const useGameStore = create<GameState>()(
       sessionId: '',
       setSessionId: (id) => set({ sessionId: id }),
       clearSessionId: () => set({ sessionId: null }),
+
+      isPreset: false,
+      setIsPreset: (isPreset) => set({ isPreset }),
 
       // 场景数据
       scenes: {},
@@ -172,6 +178,7 @@ export const useGameStore = create<GameState>()(
       clearAll: () => set({ 
         fileId: null, 
         sessionId: null,
+        isPreset: null,
         scenes: {},
         currentSceneId: '',
         player: null,

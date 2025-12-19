@@ -23,7 +23,7 @@ import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import useGalgameHistory from "../hooks/galgame/useGalgameHistory";
 import statisticsApi from "../api/statistics/statisticsApi";
-import ErrorModal from "../components/GalgameMap/ErrorModal";
+import ErrorModal from "../components/GalgameMap/WorldModal";
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -39,9 +39,7 @@ interface Message {
 
 const Galgame = () => {
     const { user } = useAuthStore();
-    const sessionId = useGameStore((state) => state.sessionId);
-
-    const { fileId } = useGameStore();
+    const { fileId, sessionId, isPreset } = useGameStore();
 
     // 存储完整 allSteps 的 key（按 sessionId 隔离）
     const allStepsStorageKey = useMemo(() => {
@@ -68,7 +66,7 @@ const Galgame = () => {
     const currentRequestIdRef = useRef<number>(0); // 当前请求ID，用于清空已完成步骤
     const historyProcessedRef = useRef<boolean>(false); // 避免历史重复解析导致状态抖动
 
-    const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
+    const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
     // 请求超时 & 提示相关状态（不自动重试，只给用户一个刷新入口）
     const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
@@ -686,7 +684,7 @@ const Galgame = () => {
 
             try {
                 setIsLoading(true);
-                const response = await getGalgamePresetApi.getGalgamePreset(fileId);
+                const response = isPreset ? await getGalgamePresetApi.getGalgamePreset(fileId) : await getGalgamePresetApi.getGalgameFileId(fileId);
 
                 if (response.data.success) {
                     const data = response.data;
@@ -701,13 +699,23 @@ const Galgame = () => {
 
                     let sceneImage = '';
                     if (data.sceneSetting?.scenes && data.sceneSetting.scenes.length > 0) {
-                        const firstScene = data.sceneSetting.scenes[0];
-                        if (firstScene) {
-                            setCurrentScene(firstScene);
+                        const scenes = data.sceneSetting.scenes;
+                        // 如果有历史记录中的 visitedScenes，则优先使用最后一个场景 ID 对应的场景
+                        let initialScene = scenes[0];
+                        if (lastVisitedSceneId) {
+                            const matched = scenes.find((scene) => scene.id === lastVisitedSceneId);
+                            if (matched) {
+                                initialScene = matched;
+                            }
                         }
+
+                        if (initialScene) {
+                            setCurrentScene(initialScene);
+                        }
+
                         // 场景图片可能是 image 或 images 字段
-                        const sceneImageUrl = (firstScene as any).image || firstScene.images;
-                        console.log('场景图片URL:', sceneImageUrl, 'firstScene:', firstScene);
+                        const sceneImageUrl = (initialScene as any).image || initialScene.images;
+                        console.log('场景图片URL:', sceneImageUrl, 'initialScene:', initialScene);
                         if (sceneImageUrl) {
                             sceneImage = sceneImageUrl.startsWith('http')
                                 ? sceneImageUrl
@@ -715,7 +723,7 @@ const Galgame = () => {
                             console.log('设置背景图片:', sceneImage);
                             setBackgroundImage(sceneImage);
                         } else {
-                            console.warn('场景图片URL为空，firstScene:', firstScene);
+                            console.warn('场景图片URL为空，initialScene:', initialScene);
                         }
                     }
 
@@ -733,7 +741,7 @@ const Galgame = () => {
         };
 
         fetchPresetData();
-    }, [fileId, history.length]);
+    }, [fileId, history.length, lastVisitedSceneId]);
 
     const addConversion = useCallback(async () => {
         if (!fileId || !user?.user.id) {
@@ -852,7 +860,6 @@ const Galgame = () => {
             }
         }
 
-        // 历史消息或无 currentStep 时也走 handleChoiceOption，避免被当成自定义输入扣 3 分
         stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex);
     }, [stepHandlers, currentMessage, resetDisplayedSteps]);
 
@@ -862,7 +869,6 @@ const Galgame = () => {
         stepHandlers.handleChoiceSend(value);
     }, [stepHandlers]);
 
-    // 超时弹窗「重试」逻辑：这里不自动重发请求，仅刷新页面，交给用户重新点击
     const handleRetryLastRequest = useCallback(() => {
         setRequestTimeoutVisible(false);
         window.location.reload();
@@ -980,8 +986,6 @@ const Galgame = () => {
                                     if (newTextMode && !isAutoPlay) {
                                         setIsAutoPlay(true);
                                     }
-                                    // 切换模式时，如果当前步骤正在打字，确保已完成步骤显示完整内容
-                                    // 通过清空 textModalDisplayText 的依赖来触发重新计算
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >

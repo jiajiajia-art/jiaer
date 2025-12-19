@@ -89,7 +89,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     useEffect(() => {
         const initContainerSize = () => {
             if (!containerRef.current) {
-                // 如果容器不存在，延迟重试
                 if (retryCount < 5) {
                     setTimeout(() => {
                         setRetryCount(prev => prev + 1);

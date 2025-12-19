@@ -48,7 +48,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 }) => {
     // Hooks
     const { user } = useAuthStore();
-    const { setFileId, setSessionId, setGameDetail: setGameDetailToStore } = useGameStore();
+    const { setFileId, setSessionId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
     const navigate = useNavigate();
 
     // 状态
@@ -226,6 +226,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         if (currentGame.version == 'new') {
             // 使用 Galgame 接口
             setFileId(fileId);
+            setIsPreset(currentGame.is_preset == 1);
             // 使用 fileId 作为 presetId
             const sessionId = await createGalgameSession(fileId);
             
@@ -237,6 +238,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         } else if(currentGame.version == 'old') {
             // 使用普通游戏接口
             setFileId(fileId);
+            setIsPreset(currentGame.is_preset == 1);
             const sessionId = await createSession(fileId);
             
             if (sessionId) {

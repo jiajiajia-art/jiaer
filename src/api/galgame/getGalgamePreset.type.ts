@@ -122,9 +122,11 @@ export interface GetGalgamePresetResponse {
   export interface GetGalgameHistoryResponse {
     success: boolean
     history: History[]
+    // 后端返回的已访问场景 ID 列表，最后一个元素为当前所在场景
+    visitedScenes?: string[]
     [key: string]: unknown
   }
-
+  
   export interface History {
     role: string
     content: string
