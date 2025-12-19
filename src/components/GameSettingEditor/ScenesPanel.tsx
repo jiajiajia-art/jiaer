@@ -805,21 +805,36 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         try {
             setIsGeneratingSingleSceneImage(true);
             setGeneratingSceneId(scene.id);
-            const response = await EditorApi.generateSceneImage({ 
-                fileId, 
-                scene: { 
-                    id: scene.id, 
-                    name: scene.name, 
-                    description: scene.desc 
-                },
-                pluginType: mode =='worldInteraction' ? 'world-interaction' : 'visual',
-            });
+            
+            let response: any;
+            let imageUrl: string | undefined;
+            
+            // 如果是子场景且是 worldInteraction 模式，调用子场景专用接口
+            if (isSubscene && mode === 'worldInteraction' && activeSceneId) {
+                response = await worldEditor.generateSubSceneImage(fileId, activeSceneId, scene.id);
+                if (response.data?.success) {
+                    imageUrl = response.data.imagePath;
+                }
+            } else {
+                // 主场景或 visual 模式，使用通用接口
+                response = await EditorApi.generateSceneImage({ 
+                    fileId, 
+                    scene: { 
+                        id: scene.id, 
+                        name: scene.name, 
+                        description: scene.desc 
+                    },
+                    pluginType: mode === 'worldInteraction' ? 'world-interaction' : 'visual',
+                });
+                if (response.data?.success) {
+                    const responseAny = response.data as any;
+                    imageUrl = responseAny?.imagePath || responseAny?.data?.image || responseAny?.sceneSetting?.scenes?.find((s: any) => s.id === scene.id)?.image;
+                }
+            }
+            
             if (response.data?.success) {
                 console.log(response.data);
                 toast.success('场景图片重新生成成功');
-                // 直接使用返回的数据更新本地状态，添加时间戳防止缓存
-                const responseAny = response.data as any;
-                const imageUrl = responseAny?.imagePath || responseAny?.data?.image || responseAny?.sceneSetting?.scenes?.find((s: any) => s.id === scene.id)?.image;
                 
                 if (isSubscene) {
                     // 子场景：更新 activeSubsceneDraft
@@ -866,7 +881,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             toast.error('重新生成场景图片失败，请重试');
         } finally {
             setIsGeneratingSingleSceneImage(false);
-            setGeneratingSceneId(null);
+            setGeneratingSceneId(null)
         }
     };
 

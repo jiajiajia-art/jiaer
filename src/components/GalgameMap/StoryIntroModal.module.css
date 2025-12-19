@@ -45,6 +45,7 @@
 
 .modalBody {
     min-height: 300px;
+    overflow-y: auto;
     display: flex;
     align-items: start;
     justify-content: center;
@@ -70,6 +71,8 @@
     word-break: break-word;
     max-width: 700px;
     min-height: 80px;
+    max-height: 392px;
+    overflow-y: auto;
 }
 
 .modalFooter {

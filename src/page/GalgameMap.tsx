@@ -48,39 +48,10 @@ const GalgameMap = () => {
     const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
     // 结束回合 / 下一回合加载状态（父组件统一管理）
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
-
-    // 当 sessionId 改变时，立即清空旧数据，避免显示上一个游戏的内容
+    
     useEffect(() => {
-        if (sessionId) {
-            // 清空旧游戏数据，避免切换游戏时显示上一个游戏的内容
-            setGameData(null);
-            setWorldInteractionHistory(undefined);
-            setEventData(null);
-            setSelectedSubscene(null);
-            setIsLoading(true);
-            // 重置视图到首页（世界地图），不保存上次的场景信息
-            setCurrentView(MapViewState.WORLD_MAP);
-            // 清理 sessionStorage 中的视图栈，确保从首页开始
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
-            }
-            // 获取新游戏的数据
-            fetchWorldInteractionHistory();
-        } else {
-            // 如果没有 sessionId，清空所有数据
-            setGameData(null);
-            setWorldInteractionHistory(undefined);
-            setEventData(null);
-            setSelectedSubscene(null);
-            setIsLoading(false);
-            // 重置视图到首页
-            setCurrentView(MapViewState.WORLD_MAP);
-            // 清理 sessionStorage
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
-            }
-        }
-    }, [sessionId, setEventData, setSelectedSubscene, setCurrentView]);
+        fetchWorldInteractionHistory();
+    }, [sessionId]);
 
     // 当历史数据和游戏数据都加载完成后，如果有历史数据就获取之前的旧事件
     useEffect(() => {
@@ -94,14 +65,37 @@ const GalgameMap = () => {
         loadActiveEventFromHistory();
     }, [worldInteractionHistory, gameData, sessionId, setCurrentView, refreshEventData]);
 
-    // 当历史数据存在且为空时，进入开场白视图
+    // 当历史数据存在且为空时，检查是否有活跃事件，如果没有才进入开场白视图
     useEffect(() => {
-        if (!sessionId || !gameData) return;
-        if (!worldInteractionHistory) return;
-        if (worldInteractionHistory.interactions.length === 0) {
-            setCurrentView(MapViewState.STORY_INTRO);
-        }
-    }, [worldInteractionHistory, gameData, sessionId, setCurrentView]);
+        const checkAndSetStoryIntro = async () => {
+            if (!sessionId || !gameData) return;
+            if (!worldInteractionHistory) return;
+            if (eventData) return;
+            
+            if (worldInteractionHistory.interactions.length === 0) {
+                try {
+                    // 检查是否有活跃事件
+                    const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
+                    if (activeEventsResponse.data.success && activeEventsResponse.data.events.length > 0) {
+                        const nextEventData = buildEventDataFromEvent(activeEventsResponse.data.events[0], gameData);
+                        if (nextEventData) {
+                            setEventData(nextEventData);
+                        }
+                        setCurrentView(MapViewState.WORLD_MAP);
+                    } else {
+                        // 没有活跃事件且历史为空：显示开场白
+                        setCurrentView(MapViewState.STORY_INTRO);
+                    }
+                } catch (error) {
+                    console.error('检查活跃事件失败:', error);
+                    // 出错时，如果历史为空，仍然显示开场白
+                    setCurrentView(MapViewState.STORY_INTRO);
+                }
+            }
+        };
+        
+        checkAndSetStoryIntro();
+    }, [worldInteractionHistory, gameData, sessionId, setCurrentView, eventData, setEventData]);
 
     useEffect(() => {
         getMapWorldData();
@@ -364,7 +358,7 @@ const GalgameMap = () => {
                 )}
 
                 {/* 开场白模态框 */}
-                {currentView === MapViewState.STORY_INTRO && worldInteractionHistory && worldInteractionHistory.interactions.length === 0 && (
+                {currentView === MapViewState.STORY_INTRO && worldInteractionHistory && worldInteractionHistory.interactions.length === 0 && !eventData && (
                     <StoryIntroModal
                         isOpen={true}
                         gameData={gameData}

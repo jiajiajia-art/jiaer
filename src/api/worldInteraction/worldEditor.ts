@@ -214,6 +214,21 @@ const worldEditor = {
                 timeout: 100000,
             }
         );
+    },
+    generateSubSceneImage: (fileId: string, sceneId: string, subsceneId: string) => {
+        return api.post<{
+            success: boolean,
+            message: string,
+            subsceneId: string,
+            imagePath: string
+        }>(
+            `/world-interaction/images/generate-subscene`,
+            {
+                fileId: fileId,
+                sceneId: sceneId,
+                subsceneId: subsceneId
+            }
+        );
     }
 };
 
