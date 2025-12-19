@@ -158,3 +158,12 @@ export interface GenerateVariantImageRequest {
     fileId: string,              
     removeBg?: boolean;
 }
+
+export interface GenerateAllImageRequest {
+    fileId: string;
+    generateNPCs: boolean;
+    generateScenes: boolean;
+    generateVariants: boolean;
+    generatePlayer: boolean;
+    removeBg: boolean;
+}

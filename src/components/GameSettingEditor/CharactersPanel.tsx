@@ -122,6 +122,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null); // 避免切换角色时全局 loading 误闪
+    // 一键生成积分提示
+    const [npcCostModalOpen, setNpcCostModalOpen] = useState<boolean>(false);
+    const [npcCostPoints, setNpcCostPoints] = useState<number | null>(null);
+    const [isLoadingNpcCost, setIsLoadingNpcCost] = useState<boolean>(false);
+    // 单个角色立绘生成积分确认
+    const [singleNpcCostModalOpen, setSingleNpcCostModalOpen] = useState<boolean>(false);
+    const [pendingCharacterForGenerate, setPendingCharacterForGenerate] = useState<Character | null>(null);
 
     // 为图片 URL 添加时间戳，避免缓存导致的旧图显示
     const withCacheBust = (url?: string | null) => {
@@ -1238,9 +1245,45 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         }
         try {
             setIsGeneratingNpcImages(true);
-            const response = await worldEditor.generateAllNpcImages(fileId);
+            let response;
+            if (mode === 'worldInteraction') {
+                response = await worldEditor.generateAllNpcImages(fileId);
+            } else {
+                response = await EditorApi.generateAllImages({
+                    fileId,
+                    generateNPCs: true,
+                    generateScenes: false,
+                    generateVariants: false,
+                    generatePlayer: false,
+                    removeBg: true,
+                });
+            }
             if (response.data?.success) {
-                toast.success('所有角色立绘生成成功');
+                // 解析 results 信息，兼容两种模式
+                const respAny: any = response.data;
+                const payload = respAny.data || respAny;
+                const results = payload?.results;
+                const npcsGenerated: number | undefined = results?.npcsGenerated ?? results?.generated;
+                const npcsTotal: number | undefined = results?.npcsTotal ?? results?.total;
+                const errors: number | undefined = typeof results?.errors === 'number' ? results.errors : undefined;
+
+                const usedPoints =
+                    npcCostPoints ??
+                    (typeof npcsGenerated === 'number' ? npcsGenerated * 10 : undefined);
+
+                if (typeof npcsGenerated === 'number' && typeof npcsTotal === 'number') {
+                    toast.success(
+                        `所有角色立绘生成完成：成功 ${npcsGenerated}/${npcsTotal} 个` +
+                        (typeof errors === 'number' ? `，失败 ${errors} 个` : '') +
+                        (typeof usedPoints === 'number' ? `，本次预计扣除 ${usedPoints} 积分` : '')
+                    );
+                } else {
+                    toast.success(
+                        typeof usedPoints === 'number'
+                            ? `所有角色立绘生成成功，本次预计扣除 ${usedPoints} 积分`
+                            : '所有角色立绘生成成功'
+                    );
+                }
                 // 刷新数据
                 if (onDataChange) {
                     onDataChange();
@@ -1255,6 +1298,70 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         }
     };
 
+    const openNpcCostModal = async () => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+        try {
+            setIsLoadingNpcCost(true);
+            const response: any = mode === 'worldInteraction'
+                ? await worldEditor.calculateNpcPoints(fileId)
+                : await EditorApi.calculateNpcPoints(fileId);
+            const points = response?.data?.points ?? response?.data?.data?.points ?? response?.data?.cost ?? null;
+            setNpcCostPoints(points);
+            setNpcCostModalOpen(true);
+        } catch (error) {
+            console.error('获取角色生图积分消耗失败:', error);
+            toast.error('获取积分消耗失败，请稍后重试');
+        } finally {
+            setIsLoadingNpcCost(false);
+        }
+    };
+
+    const confirmGenerateAllNpcImages = async () => {
+        setNpcCostModalOpen(false);
+        await generateAllNpcImages();
+    };
+
+    const regenerateSingleNpcImage = async (character: Character) => {
+        if (!fileId || !character) {
+            return;
+        }
+        try {
+            if (character.name === (gameData?.worldSetting?.player?.name)) {
+                await regeneratePlayerImage(character);
+            } else {
+                await regenerateNpcImage(character);
+            }
+        } catch (error) {
+            toast.error('重新生成角色立绘失败，请重试');
+        }
+    };
+
+    // 点击单个 AI 生成前，先弹出积分确认
+    const handleRequestSingleNpcGenerate = (character: Character) => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+        setPendingCharacterForGenerate(character);
+        setSingleNpcCostModalOpen(true);
+    };
+
+    const confirmSingleNpcGenerate = async () => {
+        const target = pendingCharacterForGenerate;
+        setSingleNpcCostModalOpen(false);
+        if (!target) return;
+        await regenerateSingleNpcImage(target);
+        setPendingCharacterForGenerate(null);
+    };
+
+    const cancelSingleNpcGenerate = () => {
+        setSingleNpcCostModalOpen(false);
+        setPendingCharacterForGenerate(null);
+    };
+
     return (
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
@@ -1263,7 +1370,13 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     <h2>角色档案 & 立绘差分</h2>
                     <p className={styles.subtitle}>解析出的角色自动列出，可逐项确认姓名、称呼、口癖与立绘</p>
                 </div>
-                <button className={styles.ghost} onClick={generateAllNpcImages}>一键生成所有角色立绘</button>
+                <button
+                    className={styles.ghost}
+                    onClick={openNpcCostModal}
+                    disabled={isGeneratingNpcImages || isLoadingNpcCost}
+                >
+                    {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
+                </button>
             </div>
 
             <div className={styles.characterLayout}>
@@ -1359,7 +1472,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                             </div>
                         )}
 
-                        {/* 统一表单 */}
                         <>
                             {/* 立绘 */}
                             <div
@@ -1394,15 +1506,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 {currentCharacter && (
                                     <button
                                         className={styles.ghostSmall}
-                                        onClick={() => {
-                                            if (currentCharacter.name === (gameData?.worldSetting?.player?.name)) {
-                                                regeneratePlayerImage(currentCharacter);
-                                                console.log('player生成');
-                                                
-                                            } else {
-                                                regenerateNpcImage(currentCharacter);
-                                            }
-                                        }}
+                                        onClick={() => handleRequestSingleNpcGenerate(currentCharacter)}
                                         disabled={isGeneratingSingleNpcImage}
                                     >AI 重新生成</button>
                                 )}
@@ -1699,10 +1803,36 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 cancelButtonText="我再想想"
             />
 
+            {/* 一键生成角色立绘积分提示 */}
+            <DeletModal
+                isOpen={npcCostModalOpen}
+                onDelete={confirmGenerateAllNpcImages}
+                onCancel={() => setNpcCostModalOpen(false)}
+                title="积分扣除确认"
+                message={
+                    npcCostPoints != null
+                        ? `本次一键生成角色立绘将扣除 ${npcCostPoints} 积分，是否继续？`
+                        : '将扣除一定积分，是否继续？'
+                }
+                confirmButtonText="确认生成"
+                cancelButtonText="取消"
+            />
+
+            {/* 单个角色立绘生成积分提示 */}
+            <DeletModal
+                isOpen={singleNpcCostModalOpen}
+                onDelete={confirmSingleNpcGenerate}
+                onCancel={cancelSingleNpcGenerate}
+                title="积分扣除确认"
+                message={`本次生成角色立绘将扣除 10 积分，是否继续？`}
+                confirmButtonText="确认生成"
+                cancelButtonText="取消"
+            />
+
             {isGeneratingNpcImages && (
                 <div className="loadingOverlay">
                     <div className="loadingSpinner"></div>
-                    <div className="loadingText">正在生成场景立绘...</div>
+                    <div className="loadingText">正在生成角色立绘...</div>
                 </div>
             )}
         </div>

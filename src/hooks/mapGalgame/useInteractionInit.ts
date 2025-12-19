@@ -3,8 +3,8 @@
  * 处理：缓存恢复、未完成请求检测、历史获取、初始交互发起
  */
 import { useEffect, useRef } from "react";
-import interactionApi from "../../../api/worldInteraction/interactionApi";
-import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
+import interactionApi from "../../api/worldInteraction/interactionApi";
+import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 import type { PendingRequest } from "./useHistoryPolling";
 import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from "./interactionUtils";
 

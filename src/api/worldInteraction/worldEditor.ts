@@ -2,7 +2,7 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { GenerateALLSceneImage, GenerateNpcImage, generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
+import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
 import type { WorldInteractionGameData } from "./worldInteractionApi.type";
 
 const worldEditor = {
@@ -229,7 +229,23 @@ const worldEditor = {
                 subsceneId: subsceneId
             }
         );
-    }
+    },
+    calculateScenePoints: (fileId: string) => {
+        return api.post<CalculatePointsResponse>(
+            `/world-interaction/images/generate-scenes/calculate-points`,
+            {
+                fileId: fileId,
+            }
+        );
+    },
+    calculateNpcPoints: (fileId: string) => {
+        return api.post<CalculatePointsResponse>(
+            `/world-interaction/images/generate-npcs/calculate-points`,
+            {
+                fileId: fileId,
+            }
+        );
+    },
 };
 
 export default worldEditor;

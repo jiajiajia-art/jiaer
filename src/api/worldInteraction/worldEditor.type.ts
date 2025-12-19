@@ -45,3 +45,9 @@ export interface GenerateALLSceneImage {
         errors: number;
     };
 }
+
+export interface CalculatePointsResponse {
+    success: boolean;
+    message: string;
+    points: number;
+}

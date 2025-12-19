@@ -1,7 +1,7 @@
 /**
  * InteractWithNpc 组件的工具函数和类型定义
  */
-import { HOST_ADDRESS } from "../../../config";
+import { HOST_ADDRESS } from "../../config";
 
 
 export type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';

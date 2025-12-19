@@ -84,8 +84,13 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
     const [generatingSceneId, setGeneratingSceneId] = useState<string | null>(null); // 避免切换场景时全局 loading 误闪
     const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
-    // 立即预览：生成/上传大地图后，优先使用接口返回的 imagePath（避免等 onDataChange 重新拉取）
     const [worldMapImageOverride, setWorldMapImageOverride] = useState<string | null>(null);
+    const [sceneCostModalOpen, setSceneCostModalOpen] = useState<boolean>(false);
+    const [sceneCostPoints, setSceneCostPoints] = useState<number | null>(null);
+    const [isLoadingSceneCost, setIsLoadingSceneCost] = useState<boolean>(false);
+    const [singleSceneCostModalOpen, setSingleSceneCostModalOpen] = useState<boolean>(false);
+    const [pendingSceneForGenerate, setPendingSceneForGenerate] = useState<LocalScene | null>(null);
+    const [worldMapCostModalOpen, setWorldMapCostModalOpen] = useState<boolean>(false);
 
     const [bgmLibrary, _setBgmLibrary] = useState<BgmItem[]>([
         { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
@@ -782,7 +787,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
     };
 
-    const regenerateSceneImage = async (scene: LocalScene) => {
+    const doRegenerateSceneImage = async (scene: LocalScene) => {
         if (!fileId || !scene) {
             return;
         }
@@ -885,8 +890,32 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
     };
 
-    // 生成大地图（世界交互专用）
-    const handleGenerateWorldMap = async () => {
+    // 点击 AI 重新生成前，先弹出积分确认
+    const handleRequestRegenerateSceneImage = (scene: LocalScene) => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+        setPendingSceneForGenerate(scene);
+        setSingleSceneCostModalOpen(true);
+    };
+
+    // 确认单个场景生图
+    const confirmSingleSceneGenerate = async () => {
+        const target = pendingSceneForGenerate;
+        setSingleSceneCostModalOpen(false);
+        if (!target) return;
+        await doRegenerateSceneImage(target);
+        setPendingSceneForGenerate(null);
+    };
+
+    const cancelSingleSceneGenerate = () => {
+        setSingleSceneCostModalOpen(false);
+        setPendingSceneForGenerate(null);
+    };
+
+    // 实际生成大地图（世界交互专用）
+    const doGenerateWorldMap = async () => {
         if (!fileId) {
             toast.error('缺少文件 ID，无法生成大地图');
             return;
@@ -913,6 +942,24 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         } finally {
             setIsGeneratingWorldMap(false);
         }
+    };
+
+    // 点击 AI 生成大地图前先弹出积分确认
+    const handleRequestGenerateWorldMap = () => {
+        if (!fileId) {
+            toast.error('缺少文件 ID，无法生成大地图');
+            return;
+        }
+        setWorldMapCostModalOpen(true);
+    };
+
+    const confirmGenerateWorldMap = async () => {
+        setWorldMapCostModalOpen(false);
+        await doGenerateWorldMap();
+    };
+
+    const cancelGenerateWorldMap = () => {
+        setWorldMapCostModalOpen(false);
     };
 
     // 上传大地图（世界交互专用）
@@ -957,9 +1004,46 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
         try {
             setIsGeneratingAllSceneImages(true);
-            const response = await worldEditor.generateAllSceneImages(fileId);
+            let response;
+            if (mode === 'worldInteraction') {
+                response = await worldEditor.generateAllSceneImages(fileId);
+            } else {
+                response = await EditorApi.generateAllImages({
+                    fileId,
+                    generateNPCs: false,
+                    generateScenes: true,
+                    generateVariants: false,
+                    generatePlayer: false,
+                    removeBg: false,
+                });
+            }
             if (response.data?.success) {
-                toast.success('所有场景立绘生成成功');
+                // 解析 results 信息（世界交互和 visual 均做兼容）
+                const respAny: any = response.data;
+                const payload = respAny.data || respAny;
+                const results = payload?.results;
+                const scenesGenerated: number | undefined = results?.scenesGenerated ?? results?.generated;
+                const scenesTotal: number | undefined = results?.scenesTotal ?? results?.total;
+                const errors: number | undefined = typeof results?.errors === 'number' ? results.errors : undefined;
+
+                // 计算本次预计扣除的积分：优先使用预估积分，其次按成功数量 * 10
+                const usedPoints =
+                    sceneCostPoints ??
+                    (typeof scenesGenerated === 'number' ? scenesGenerated * 10 : undefined);
+
+                if (typeof scenesGenerated === 'number' && typeof scenesTotal === 'number') {
+                    toast.success(
+                        `所有场景立绘生成完成：成功 ${scenesGenerated}/${scenesTotal} 个` +
+                        (typeof errors === 'number' ? `，失败 ${errors} 个` : '') +
+                        (typeof usedPoints === 'number' ? `，本次预计扣除 ${usedPoints} 积分` : '')
+                    );
+                } else {
+                    toast.success(
+                        typeof usedPoints === 'number'
+                            ? `所有场景立绘生成成功，本次预计扣除 ${usedPoints} 积分`
+                            : '所有场景立绘生成成功'
+                    );
+                }
                 // generateAllSceneImages 返回 GenerateALLSceneImage，不包含完整数据
                 // 这里需要刷新数据以获取最新的图片URL
                 if (onDataChange) {
@@ -974,6 +1058,32 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         } finally {
             setIsGeneratingAllSceneImages(false);
         }
+    };
+
+    const openSceneCostModal = async () => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+        try {
+            setIsLoadingSceneCost(true);
+            const response: any = mode === 'worldInteraction'
+                ? await worldEditor.calculateScenePoints(fileId)
+                : await EditorApi.calculateScenePoints(fileId);
+            const points = response?.data?.points ?? response?.data?.data?.points ?? response?.data?.cost ?? null;
+            setSceneCostPoints(points);
+            setSceneCostModalOpen(true);
+        } catch (error) {
+            console.error('获取场景生图积分消耗失败:', error);
+            toast.error('获取积分消耗失败，请稍后重试');
+        } finally {
+            setIsLoadingSceneCost(false);
+        }
+    };
+
+    const confirmGenerateAllSceneImages = async () => {
+        setSceneCostModalOpen(false);
+        await generateAllSceneImages();
     };
 
     return (
@@ -1010,7 +1120,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             />
                             <button
                                 className={styles.ghostSmall}
-                                onClick={handleGenerateWorldMap}
+                                onClick={handleRequestGenerateWorldMap}
                                 disabled={!fileId || isGeneratingWorldMap}
                             >
                                 {isGeneratingWorldMap ? '生成中...' : 'AI 生成'}
@@ -1037,7 +1147,11 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     <h2>场景背景 & BGM 绑定</h2>
                     <p className={styles.subtitle}>AI 生成场景描述，可直接选择上一步上传的 BGM</p>
                 </div>
-                <button className={styles.ghost} onClick={generateAllSceneImages} disabled={isGeneratingAllSceneImages}>
+                <button
+                    className={styles.ghost}
+                    onClick={openSceneCostModal}
+                    disabled={isGeneratingAllSceneImages || isLoadingSceneCost}
+                >
                     {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
                 </button>
             </div>
@@ -1358,7 +1472,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                         {activeSubsceneDraft && (
                                             <button 
                                                 className={styles.ghostSmall} 
-                                                onClick={() => regenerateSceneImage(activeSubsceneDraft)}
+                                                onClick={() => handleRequestRegenerateSceneImage(activeSubsceneDraft)}
                                                 disabled={isGeneratingSingleSceneImage || isAddingNewSubscene}
                                                 style={{ opacity: (isGeneratingSingleSceneImage || isAddingNewSubscene) ? 0.5 : 1 }}
                                             >
@@ -1446,7 +1560,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                         {activeScene && (
                                             <button 
                                                 className={styles.ghostSmall} 
-                                                onClick={() => regenerateSceneImage(activeScene)}
+                                                onClick={() => handleRequestRegenerateSceneImage(activeScene)}
                                                 disabled={isGeneratingSingleSceneImage}
                                                 style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
                                             >
@@ -1523,6 +1637,43 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 message="删除后子场景数据不可恢复，请谨慎操作！"
                 confirmButtonText="确认删除"
                 cancelButtonText="我再想想"
+            />
+
+            {/* 一键生成场景立绘积分提示 */}
+            <DeletModal
+                isOpen={sceneCostModalOpen}
+                onDelete={confirmGenerateAllSceneImages}
+                onCancel={() => setSceneCostModalOpen(false)}
+                title="积分扣除确认"
+                message={
+                    sceneCostPoints != null
+                        ? `本次一键生成场景立绘将扣除 ${sceneCostPoints} 积分，是否继续？`
+                        : '将扣除一定积分，是否继续？'
+                }
+                confirmButtonText="确认生成"
+                cancelButtonText="取消"
+            />
+
+            {/* 单个场景立绘生成积分确认 */}
+            <DeletModal
+                isOpen={singleSceneCostModalOpen}
+                onDelete={confirmSingleSceneGenerate}
+                onCancel={cancelSingleSceneGenerate}
+                title="积分扣除确认"
+                message={`本次生成场景立绘将扣除 10 积分，是否继续？`}
+                confirmButtonText="确认生成"
+                cancelButtonText="取消"
+            />
+
+            {/* 大地图生成积分确认 */}
+            <DeletModal
+                isOpen={worldMapCostModalOpen}
+                onDelete={confirmGenerateWorldMap}
+                onCancel={cancelGenerateWorldMap}
+                title="积分扣除确认"
+                message={`本次生成大地图将扣除 10 积分，是否继续？`}
+                confirmButtonText="确认生成"
+                cancelButtonText="取消"
             />
 
             {isGeneratingAllSceneImages && (

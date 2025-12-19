@@ -10,11 +10,12 @@ import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
 import { useMapGalgameStore, MapViewState } from "../../store/mapGalgameStore";
-import { useWorldInteractionStep } from "../../hooks/galgame/useWorldInteractionStep";
-import { useHistoryPolling, type PendingRequest } from "./hook/useHistoryPolling";
+import { useWorldInteractionStep } from "../../hooks/mapGalgame/useWorldInteractionStep";
+import { useHistoryPolling, type PendingRequest } from "../../hooks/mapGalgame/useHistoryPolling";
 import { useCharacterAnimation } from "../../hooks/galgame/useCharacterAnimation";
 import { useCharacterContainerClassName } from "../../hooks/galgame/useCharacterContainerClassName";
 import { useStoryTyping } from "../../hooks/story/useStoryTyping";
+import { useMapMusicPlayer } from "../../hooks/mapGalgame/useMapMusicPlayer";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
 import HistoryModal from "./historyModal";
@@ -30,7 +31,7 @@ import {
     convertStepToMessage,
     convertStepsToTextModalFormat,
 
-} from "./hook/interactionUtils";
+} from "../../hooks/mapGalgame/interactionUtils";
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 
@@ -51,13 +52,22 @@ const InteractWithNpc = ({
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
     const { pdfFileId } = useGameStore();
-    const { eventData, setEventData, setCurrentView, refreshEventData } = useMapGalgameStore();
+    const { eventData, setEventData, setCurrentView, refreshEventData, selectedSubscene } = useMapGalgameStore();
 
     // ==================== 派生数据 ====================
     const eventId = eventData?.event?.eventId || null;
     const worldSetting = gameData?.worldSetting || null;
     const sceneSetting = gameData?.sceneSetting || null;
     const currentSubscene = eventData?.subscene || null;
+    
+    // ==================== 音乐播放控制 ====================
+    const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
+        fileId: pdfFileId || null,
+        gameData,
+        currentView: MapViewState.INTERACT_NPC,
+        selectedSubscene,
+        eventData,
+    });
     
     // ==================== UI 状态 ====================
     const [displayBackgroundImage, setDisplayBackgroundImage] = useState<string>('');
@@ -1151,8 +1161,9 @@ const InteractWithNpc = ({
                                 </div>
                             </div>
                             <div
-                                className={styles.buttonItem}
+                                className={`${styles.buttonItem} ${isMusicPlaying ? styles.buttonItemActive : ''}`}
                                 style={{ cursor: 'pointer' }}
+                                onClick={handleMusicToggle}
                             >
                                 <div className={styles.buttonInner}>
                                     <PiMusicNoteDuotone />

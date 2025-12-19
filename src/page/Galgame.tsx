@@ -17,7 +17,7 @@ import { useStoryTyping } from "../hooks/story/useStoryTyping";
 import { extractChoiceFromHistory, extractPlainText, truncateTextWithTags, parseHistoryToSteps } from "../utils/textUtils";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
 import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterContainerClassName";
-import { useMusicPlayer } from "../hooks/galgame/useMusicPlayer";
+import { useMusicPlayer } from "../hooks/mapGalgame/useMusicPlayer";
 import toast from "react-hot-toast";
 import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";

@@ -20,12 +20,9 @@ export const MapViewState = {
 };
 
 interface useMapGalgameState {
-    // 事件数据
     eventData: EventData | null;
     setEventData: (eventData: EventData | null) => void;
-    
-    // 刷新事件状态（从后端获取最新事件）
-    refreshEventData: (sessionId: string, gameData: any) => Promise<void>;
+        refreshEventData: (sessionId: string, gameData: any) => Promise<void>;
     
     // 视图状态管理
     currentView: MapViewState;
@@ -39,6 +36,10 @@ interface useMapGalgameState {
         parentSceneName: string;
     } | null;
     setSelectedSubscene: (subscene: useMapGalgameState['selectedSubscene']) => void;
+    
+    // 音乐播放状态（全局共享）
+    isMusicPlaying: boolean;
+    setMusicPlaying: (playing: boolean) => void;
     
     // 清空状态
     clearState: () => void;
@@ -76,25 +77,33 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
                 }
             },
             
-            // 初始视图总是开场白，不持久化视图状态
-            currentView: MapViewState.STORY_INTRO,
+            // 初始视图保持大地图，避免开场白闪烁
+            currentView: MapViewState.WORLD_MAP,
             setCurrentView: (view: MapViewState) => set({ currentView: view }),
             
             selectedSubscene: null,
             setSelectedSubscene: (subscene) => set({ selectedSubscene: subscene }),
             
+            // 音乐播放状态（全局共享）
+            isMusicPlaying: false,
+            setMusicPlaying: (playing: boolean) => set({ isMusicPlaying: playing }),
+            
             clearState: () => set({
                 eventData: null,
-                currentView: MapViewState.STORY_INTRO,
+                currentView: MapViewState.WORLD_MAP,
                 selectedSubscene: null,
+                isMusicPlaying: false,
             }),
         }),
         {
             name: 'map-galgame-storage',
             // 使用 sessionStorage，页面关闭后自动清除
             storage: createJSONStorage(() => sessionStorage),
-            // 不持久化任何状态，每次刷新都从开场白开始
-            partialize: () => ({}),
+            // 持久化视图与子场景，刷新后可恢复上次打开的模块
+            partialize: (state) => ({
+                currentView: state.currentView,
+                selectedSubscene: state.selectedSubscene,
+            }),
         }
     )
 );

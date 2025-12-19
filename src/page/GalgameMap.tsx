@@ -15,6 +15,8 @@ import { buildEventDataFromEvent } from "../utils/eventUtils";
 import statisticsApi from "../api/statistics/statisticsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import NextRoundButton from "../components/GalgameMap/NextRoundButton";
+import { useMapMusicPlayer } from "../hooks/mapGalgame/useMapMusicPlayer";
+import { PiMusicNoteDuotone } from "react-icons/pi";
 
 export interface EventData {
     event: GameEvent;
@@ -46,8 +48,15 @@ const GalgameMap = () => {
     const { user } = useAuthStore();
     
     const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
-    // 结束回合 / 下一回合加载状态（父组件统一管理）
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
+
+    const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
+        fileId: pdfFileId || null,
+        gameData,
+        currentView,
+        selectedSubscene,
+        eventData,
+    });
     
     useEffect(() => {
         fetchWorldInteractionHistory();
@@ -56,14 +65,15 @@ const GalgameMap = () => {
     // 当历史数据和游戏数据都加载完成后，如果有历史数据就获取之前的旧事件
     useEffect(() => {
         const loadActiveEventFromHistory = async () => {
-            if (worldInteractionHistory && worldInteractionHistory.interactions.length > 0 && gameData && sessionId) {
-                await refreshEventData(sessionId, gameData);
-                setCurrentView(MapViewState.WORLD_MAP);
-            }
+            if (!worldInteractionHistory || !gameData || !sessionId) return;
+            if (worldInteractionHistory.interactions.length === 0) return;
+            if (currentView !== MapViewState.WORLD_MAP && currentView !== MapViewState.STORY_INTRO) return;
+            await refreshEventData(sessionId, gameData);
+            setCurrentView(MapViewState.WORLD_MAP);
         };
         
         loadActiveEventFromHistory();
-    }, [worldInteractionHistory, gameData, sessionId, setCurrentView, refreshEventData]);
+    }, [worldInteractionHistory, gameData, sessionId, currentView, setCurrentView, refreshEventData]);
 
     // 当历史数据存在且为空时，检查是否有活跃事件，如果没有才进入开场白视图
     useEffect(() => {
@@ -72,30 +82,41 @@ const GalgameMap = () => {
             if (!worldInteractionHistory) return;
             if (eventData) return;
             
-            if (worldInteractionHistory.interactions.length === 0) {
-                try {
-                    // 检查是否有活跃事件
-                    const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
-                    if (activeEventsResponse.data.success && activeEventsResponse.data.events.length > 0) {
-                        const nextEventData = buildEventDataFromEvent(activeEventsResponse.data.events[0], gameData);
+            // 只有“无历史”且“无活跃事件”时才显示开场白
+            const hasHistory = worldInteractionHistory.interactions.length > 0;
+            try {
+                const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
+                const activeEvents = activeEventsResponse.data.success ? activeEventsResponse.data.events : [];
+                const hasActiveEvent = Array.isArray(activeEvents) && activeEvents.length > 0;
+
+                if (!hasHistory && !hasActiveEvent) {
+                    // 仅在当前视图为地图/开场白时才切换，避免覆盖用户刷新前的视图
+                    if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                        setCurrentView(MapViewState.STORY_INTRO);
+                    }
+                } else {
+                    // 有历史或有活跃事件，直接进入大地图；若有活跃事件则预先填充
+                    if (hasActiveEvent) {
+                        const nextEventData = buildEventDataFromEvent(activeEvents[0], gameData);
                         if (nextEventData) {
                             setEventData(nextEventData);
                         }
-                        setCurrentView(MapViewState.WORLD_MAP);
-                    } else {
-                        // 没有活跃事件且历史为空：显示开场白
-                        setCurrentView(MapViewState.STORY_INTRO);
                     }
-                } catch (error) {
-                    console.error('检查活跃事件失败:', error);
-                    // 出错时，如果历史为空，仍然显示开场白
-                    setCurrentView(MapViewState.STORY_INTRO);
+                    if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                        setCurrentView(MapViewState.WORLD_MAP);
+                    }
+                }
+            } catch (error) {
+                console.error('检查活跃事件失败:', error);
+                // 出错时回到大地图
+                if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                    setCurrentView(MapViewState.WORLD_MAP);
                 }
             }
         };
         
         checkAndSetStoryIntro();
-    }, [worldInteractionHistory, gameData, sessionId, setCurrentView, eventData, setEventData]);
+    }, [worldInteractionHistory, gameData, sessionId, currentView, setCurrentView, eventData, setEventData]);
 
     useEffect(() => {
         getMapWorldData();
@@ -333,6 +354,43 @@ const GalgameMap = () => {
     return (
         <div className={styles.page} ref={containerRef}>
             <div className={styles.mapContainer}>
+                {/* 音乐控制按钮 - 在非 NPC 交互视图中显示 */}
+                {gameData && currentView !== MapViewState.INTERACT_NPC && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '10px',
+                            right: '20px',
+                            zIndex: 1000,
+                            cursor: 'pointer',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            color: '#fff',
+                            transition: 'background-color 0.3s',
+                        }}
+                        onClick={handleMusicToggle}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                        }}
+                    >
+                        <PiMusicNoteDuotone 
+                            size={20} 
+                            style={{ 
+                                color: isMusicPlaying ? '#4CAF50' : '#fff',
+                                transition: 'color 0.3s',
+                            }} 
+                        />
+                        <span style={{ fontSize: '14px' }}>音乐</span>
+                    </div>
+                )}
+
                 {/* 世界地图 - 只在非模态框视图时显示 */}
                 {currentView === MapViewState.WORLD_MAP && (isReady || true) && (
                     <>
@@ -343,7 +401,7 @@ const GalgameMap = () => {
                         eventData={eventData}
                     />
 
-                        {/* 当存在历史但当前没有活跃任务时，提供“开启下一回合”按钮 */}
+                        {/* 当存在历史但当前没有活跃任务时，提供"开启下一回合"按钮 */}
                         {worldInteractionHistory
                             && worldInteractionHistory.interactions.length > 0
                             && !eventData

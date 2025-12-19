@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
-import interactionApi from "../../../api/worldInteraction/interactionApi";
-import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
+import interactionApi from "../../api/worldInteraction/interactionApi";
+import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 
 export interface PendingRequest {
     type: "interact" | "select-option";
