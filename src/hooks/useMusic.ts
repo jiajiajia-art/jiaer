@@ -10,7 +10,7 @@ interface MusicTrack {
 }
 
 export const useMusic = () => {
-    const { pdfFileId, isPlaying, setIsPlaying, volume, setVolume } = useGameStore();
+    const { fileId, isPlaying, setIsPlaying, volume, setVolume } = useGameStore();
     
     // 音乐状态（本地状态）
     const [tracks, setTracks] = useState<MusicTrack[]>([]);
@@ -22,11 +22,11 @@ export const useMusic = () => {
     const tracksLoadedRef = useRef<boolean>(false);
 
     const loadMusicTracks = useCallback(async () => {
-        if (tracksLoadedRef.current || !pdfFileId) return;
+        if (tracksLoadedRef.current || !fileId) return;
         
         setIsLoading(true);
         try {
-            const response = await authFetch(`${HOST_ADDRESS}/api/backend/music/${pdfFileId}`);
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/music/${fileId}`);
             if (!response.ok) return;
             
             const data = await response.json();
@@ -47,14 +47,14 @@ export const useMusic = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [pdfFileId]);
+    }, [fileId]);
 
     // 初始化音乐（首次加载）
     useEffect(() => {
-        if (pdfFileId && !tracksLoadedRef.current) {
+        if (fileId && !tracksLoadedRef.current) {
             loadMusicTracks();
         }
-    }, [pdfFileId, loadMusicTracks]);
+    }, [fileId, loadMusicTracks]);
 
     useEffect(() => {
         if (tracks.length === 0) return;

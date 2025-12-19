@@ -56,8 +56,8 @@ export interface InventoryState {
 export type SceneNode = Scene;
 
 interface GameState {
-  pdfFileId: string | null;
-  setPdfFileId: (id: string | null) => void;
+  fileId: string | null;
+  setFileId: (id: string | null) => void;
   clearPdfFile: () => void;
 
   sessionId: string | null;
@@ -109,9 +109,9 @@ interface GameState {
 export const useGameStore = create<GameState>()(
   persist(
     (set) => ({
-      pdfFileId: '',
-      setPdfFileId: (id) => set({ pdfFileId: id }),
-      clearPdfFile: () => set({ pdfFileId: null }),
+      fileId: '',
+      setFileId: (id) => set({ fileId: id }),
+      clearPdfFile: () => set({ fileId: null }),
 
       sessionId: '',
       setSessionId: (id) => set({ sessionId: id }),
@@ -170,7 +170,7 @@ export const useGameStore = create<GameState>()(
       setVolume: (volume) => set({ volume }),
 
       clearAll: () => set({ 
-        pdfFileId: null, 
+        fileId: null, 
         sessionId: null,
         scenes: {},
         currentSceneId: '',
@@ -187,7 +187,7 @@ export const useGameStore = create<GameState>()(
       name: 'game-storage',
       // 只持久化关键数据，游戏运行时数据不持久化（每次从后端获取）
       partialize: (state) => ({
-        pdfFileId: state.pdfFileId,
+        fileId: state.fileId,
         sessionId: state.sessionId,
         // scenes, player, inventory 不持久化，每次从后端加载
       }),

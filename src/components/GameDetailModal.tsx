@@ -48,7 +48,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
 }) => {
     // Hooks
     const { user } = useAuthStore();
-    const { setPdfFileId, setSessionId, setGameDetail: setGameDetailToStore } = useGameStore();
+    const { setFileId, setSessionId, setGameDetail: setGameDetailToStore } = useGameStore();
     const navigate = useNavigate();
 
     // 状态
@@ -225,7 +225,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         
         if (currentGame.version == 'new') {
             // 使用 Galgame 接口
-            setPdfFileId(fileId);
+            setFileId(fileId);
             // 使用 fileId 作为 presetId
             const sessionId = await createGalgameSession(fileId);
             
@@ -236,7 +236,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             }
         } else if(currentGame.version == 'old') {
             // 使用普通游戏接口
-            setPdfFileId(fileId);
+            setFileId(fileId);
             const sessionId = await createSession(fileId);
             
             if (sessionId) {
@@ -245,14 +245,14 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             }
         } else if(currentGame.version == 'map-plugin-version') {
             // 使用地图世界接口
-            setPdfFileId(fileId);
+            setFileId(fileId);
             const sessionId = await createMapWorldSession(fileId);
             if (sessionId) {    
                 setSessionId(sessionId);
                 navigate('/galgameMap');
             }
         } 
-    }, [checkAuth, fileId, createSession, createGalgameSession, setPdfFileId, setSessionId, navigate]);
+    }, [checkAuth, fileId, createSession, createGalgameSession, setFileId, setSessionId, navigate]);
 
     // 处理点赞
     const handleLike = useCallback(() => {

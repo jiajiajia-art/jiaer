@@ -33,8 +33,8 @@ import DeletModal from '../goodsModal/DeletModal';
 import EditorApi from '../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
-import { useEditorStore } from '../../store/editorStore';
 import worldEditor from '../../api/worldInteraction/worldEditor';
+import { useGameStore } from '../../store/gameStore';
 
 interface Relationship {
     id: string;
@@ -118,7 +118,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const playerFileInputRef = useRef<HTMLInputElement>(null);
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
-    const { fileId } = useEditorStore();
+    const { fileId } = useGameStore();
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null); // 避免切换角色时全局 loading 误闪
@@ -1254,8 +1254,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     generateNPCs: true,
                     generateScenes: false,
                     generateVariants: false,
-                    generatePlayer: false,
-                    removeBg: true,
+                    generatePlayer: true,
+                    removeBg: false,
                 });
             }
             if (response.data?.success) {

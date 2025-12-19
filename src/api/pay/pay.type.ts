@@ -23,4 +23,5 @@ export interface PurchasePointsRequest {
 
 export interface OptionPointsRequest {
     type: "option" | "selfDefined";
+    fileId: string;
 }

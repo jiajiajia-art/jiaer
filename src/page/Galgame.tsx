@@ -41,7 +41,7 @@ const Galgame = () => {
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
 
-    const { pdfFileId } = useGameStore();
+    const { fileId } = useGameStore();
 
     // 存储完整 allSteps 的 key（按 sessionId 隔离）
     const allStepsStorageKey = useMemo(() => {
@@ -91,7 +91,7 @@ const Galgame = () => {
         setInitialMessages([]);
         setGameStarted(false);
         setShowStoryIntro(false);
-    }, [pdfFileId, resetDisplayedSteps]);
+    }, [fileId, resetDisplayedSteps]);
 
     const stepHandlers = useGalgameStep({
         sessionId,
@@ -297,7 +297,7 @@ const Galgame = () => {
     });
 
     const { isMusicPlaying, handleMusicToggle } = useMusicPlayer({
-        presetId: pdfFileId || '',
+        presetId: fileId || '',
         currentScene,
         gameStarted,
         isLoading,
@@ -678,15 +678,15 @@ const Galgame = () => {
 
     useEffect(() => {
         const fetchPresetData = async () => {
-            console.log(pdfFileId);
-            if (!pdfFileId) {
+            console.log(fileId);
+            if (!fileId) {
                 setIsLoading(false);
                 return;
             }
 
             try {
                 setIsLoading(true);
-                const response = await getGalgamePresetApi.getGalgamePreset(pdfFileId);
+                const response = await getGalgamePresetApi.getGalgamePreset(fileId);
 
                 if (response.data.success) {
                     const data = response.data;
@@ -733,21 +733,21 @@ const Galgame = () => {
         };
 
         fetchPresetData();
-    }, [pdfFileId, history.length]);
+    }, [fileId, history.length]);
 
     const addConversion = useCallback(async () => {
-        if (!pdfFileId || !user?.user.id) {
+        if (!fileId || !user?.user.id) {
             return;
         }
         try {
             await statisticsApi.addConversion({
-                fileId: pdfFileId,
+                fileId: fileId,
                 userId: String(user?.user.id)
             });
         } catch (error) {
             console.error('记录游戏统计失败:', error);
         }
-    }, [pdfFileId, user?.user.id]);
+    }, [fileId, user?.user.id]);
 
     const handleStartGame = useCallback(async () => {
         if (!sessionId) {

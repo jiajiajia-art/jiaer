@@ -6,6 +6,7 @@ import payApi from '../../api/pay/payApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { toast } from 'react-hot-toast';
 import { auth } from '../../api/account/authApi';
+import { useGameStore } from '../../store/gameStore';
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
@@ -35,6 +36,7 @@ export const useGalgameStep = ({
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
     const { user, updateUser } = useAuthStore();
+    const { fileId } = useGameStore();
 
     // 同步 currentStep 到 ref
     useEffect(() => {
@@ -278,7 +280,11 @@ export const useGalgameStep = ({
     }, [sessionId, processStreamResponse, onMessagesClear]);
 
     const reducePoints = useCallback(async (type: "option" | "selfDefined") => {
-        const response = await payApi.optionPoints({ type });
+        if (!fileId) return;
+        const response = await payApi.optionPoints({ 
+            type,
+            fileId: fileId
+         });
         if (response.data.success) {
             getUserInfo();
             

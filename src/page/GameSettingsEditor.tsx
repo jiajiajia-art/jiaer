@@ -38,9 +38,9 @@ import worldEditor from '../api/worldInteraction/worldEditor';
 
 const GameSettingsEditor = () => {
     // 从 Zustand store 获取状态和方法
-    const { fileId, activePanel, isParsed, setFileId, setActivePanel, setIsParsed } = useEditorStore();
+    const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { user} = useAuthStore();
-    const { setPdfFileId, setSessionId } = useGameStore();
+    const { fileId, setFileId, setSessionId } = useGameStore();
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'    
     const [isParsing, setIsParsing] = useState<boolean>(false);
@@ -406,7 +406,7 @@ const GameSettingsEditor = () => {
                 const sessionResponse = await createWorldSessionApi.createWorldSession({ fileId });
                 if (sessionResponse.data.success) {
                     const sessionId = sessionResponse.data.data.session.session_id;
-                    setPdfFileId(fileId);
+                    setFileId(fileId);
                     setSessionId(sessionId);
                     navigate(`/galgameMap`);
                     return sessionId;
@@ -418,7 +418,7 @@ const GameSettingsEditor = () => {
                 const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId: fileId });
                 if (sessionResponse.data.success) {
                     const sessionId = sessionResponse.data.data.session.session_id;
-                    setPdfFileId(fileId);
+                    setFileId(fileId);
                     setSessionId(sessionId);
                     navigate(`/galgame`);
                     return sessionId;
@@ -433,7 +433,7 @@ const GameSettingsEditor = () => {
             toast.error(errorMessage);
             return null;
         }
-    }, [user?.user?.id, fileId, navigate, setPdfFileId, setSessionId, mode]);
+    }, [user?.user?.id, fileId, navigate, setFileId, setSessionId, mode]);
 
     return (
         <div className={styles.appShell}>

@@ -12,7 +12,7 @@ interface InitOptions {
     sessionId: string | null;
     eventId: string | null;
     gameData: any | null;
-    pdfFileId: string | null;
+    fileId: string | null;
     gameStarted: boolean;
     // Setters
     setGameStarted: (value: boolean) => void;
@@ -42,7 +42,7 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
         sessionId,
         eventId,
         gameData,
-        pdfFileId,
+        fileId,
         gameStarted,
         setGameStarted,
         setLatestHistory,
@@ -166,7 +166,7 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                 }
 
                 // 4）发起初始交互
-                if (gameData && sessionId && eventId && pdfFileId) {
+                if (gameData && sessionId && eventId && fileId) {
                     console.log("[Init] 发起初始交互 /interact");
                     hasInitializedRef.current = true;
                     
@@ -231,7 +231,7 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
         return () => {
             cancelled = true;
         };
-    }, [gameData, sessionId, eventId, pdfFileId]);
+    }, [gameData, sessionId, eventId, fileId]);
 
     return { interactTimeoutRef };
 }

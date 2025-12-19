@@ -17,7 +17,6 @@ import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import FooterArea from '../components/Layout/FooterArea';
 import toast, { Toaster } from 'react-hot-toast';
-import { useEditorStore } from '../store/editorStore';
 
 const CreateGame: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -50,7 +49,6 @@ const CreateGame: React.FC = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const { setFileId } = useEditorStore();
 
     const convertUrlToFile = async (url: string, filename: string) => {
         const response = await fetch(url);
@@ -75,7 +73,7 @@ const CreateGame: React.FC = () => {
     const defaultHeroCover = `${import.meta.env.BASE_URL}data/events/welcome.png`;
     const heroBackground = gameDetail?.cover_url || formData?.coverImage || defaultHeroCover;
 
-    const { setPdfFileId, setSessionId } = useGameStore();
+    const { setFileId, setSessionId } = useGameStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
 
@@ -305,7 +303,7 @@ const CreateGame: React.FC = () => {
                 return;
             }
 
-            setPdfFileId(fileId);
+            setFileId(fileId);
             setCreateProgressText('游戏创建成功，正在初始化会话...');
 
             // 创建session

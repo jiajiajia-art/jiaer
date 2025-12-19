@@ -30,7 +30,7 @@ const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面�
 const DEFAULT_WORLD_MAP_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
 
 const GalgameMap = () => {
-    const { pdfFileId, sessionId } = useGameStore();
+    const { fileId, sessionId } = useGameStore();
     const [gameData, setGameData] = useState<AllGameData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isReady, setIsReady] = useState(false);
@@ -51,7 +51,7 @@ const GalgameMap = () => {
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
 
     const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
-        fileId: pdfFileId || null,
+        fileId: fileId || null,
         gameData,
         currentView,
         selectedSubscene,
@@ -229,7 +229,7 @@ const GalgameMap = () => {
     };
 
     const handleStartGame = async () => {
-        if (!pdfFileId || !sessionId) {
+        if (!fileId || !sessionId) {
             console.log('缺少 fileId 或 sessionId');
             return;
         }
@@ -259,18 +259,18 @@ const GalgameMap = () => {
     };
 
     const addConversion = useCallback(async () => {
-        if (!pdfFileId || !user?.user.id) {
+        if (!fileId || !user?.user.id) {
             return;
         }
         try {
             await statisticsApi.addConversion({
-                fileId: pdfFileId,
+                fileId: fileId,
                 userId: String(user?.user.id)
             });
         } catch (error) {
             console.error('记录游戏统计失败:', error);
         }
-    }, [pdfFileId, user?.user.id]);
+    }, [fileId, user?.user.id]);
 
     // 结束当前回合 / 开启下一回合
     const handleEndRound = async () => {

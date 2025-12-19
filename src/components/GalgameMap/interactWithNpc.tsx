@@ -51,7 +51,7 @@ const InteractWithNpc = ({
     // ==================== Store & Context ====================
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
-    const { pdfFileId } = useGameStore();
+    const { fileId } = useGameStore();
     const { eventData, setEventData, setCurrentView, refreshEventData, selectedSubscene } = useMapGalgameStore();
 
     // ==================== 派生数据 ====================
@@ -62,7 +62,7 @@ const InteractWithNpc = ({
     
     // ==================== 音乐播放控制 ====================
     const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
-        fileId: pdfFileId || null,
+        fileId: fileId || null,
         gameData,
         currentView: MapViewState.INTERACT_NPC,
         selectedSubscene,
@@ -150,7 +150,7 @@ const InteractWithNpc = ({
     const stepHandlers = useWorldInteractionStep({
         sessionId,
         eventId,
-        fileId: pdfFileId,
+        fileId: fileId,
         historyLength: latestHistory?.interactions.length ?? 0,
         onMessagesClear: () => {
             // 清空已完成步骤和引用，避免残留数据
@@ -425,11 +425,11 @@ const InteractWithNpc = ({
                 }
 
                 // 5）否则按正常流程发起交互
-                if (gameData && sessionId && eventId && pdfFileId) {
+                if (gameData && sessionId && eventId && fileId) {
                     console.log("[WorldInteraction] 初始化：准备发起初始交互 /interact", {
                         sessionId,
                         eventId,
-                        fileId: pdfFileId,
+                        fileId: fileId,
                     });
                     hasInitializedRef.current = true;
                     
@@ -536,7 +536,7 @@ const InteractWithNpc = ({
     // 注意：
     // 1）这里故意不把 stepHandlers 放到依赖里，否则每次渲染都会销毁旧的轮询（将 cancelled 设为 true），导致只请求一次历史。
     // 2）也不把 gameStarted 放进去，因为我们在 effect 里调用 setGameStarted(true)，否则会触发二次执行并打断轮询。
-    }, [gameData, sessionId, eventId, pdfFileId]);
+    }, [gameData, sessionId, eventId, fileId]);
 
     // ==================== 轮询 Hook（独立逻辑，不受其他状态影响） ====================
     // 轮询成功时的回调

@@ -58,7 +58,11 @@ export const useWorldInteractionStep = ({
   // 世界交互扣积分：type 为 "option"（2 积分）或 "selfDefined"（3 积分）
   const reducePoints = useCallback(
     async (type: "option" | "selfDefined") => {
-      const response = await payApi.optionPoints({ type });
+      if (!fileId) return;
+      const response = await payApi.optionPoints({ 
+        type,
+        fileId: fileId
+      });
       if (response.data.success) {
         await getUserInfo();
         return response.data.data;

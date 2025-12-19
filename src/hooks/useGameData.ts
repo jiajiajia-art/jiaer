@@ -35,7 +35,7 @@ export const useGameData = () => {
     const [backendEvents, setBackendEvents] = useState<Record<string, any>>({});
     const [worldMapImageUrl, setWorldMapImageUrl] = useState<string | null>(null);
     const {sessionId} = useGameStore();
-    const pdfFileId = useGameStore((s) => s.pdfFileId);
+    const fileId = useGameStore((s) => s.fileId);
 
     // 应用后端数据到各个状态（直接使用后端数据结构，不做映射）
     const applyBackendData = useCallback((root: any) => {
@@ -103,12 +103,12 @@ export const useGameData = () => {
 
     // 加载后端数据
     useEffect(() => {
-        if (backendDataLoaded || !sessionId || !pdfFileId) return;
+        if (backendDataLoaded || !sessionId || !fileId) return;
         (async () => {
             const results = await Promise.allSettled([
                 gameDataApi.getGameFiles(sessionId),
-                gameDataApi.getPlayerAvatar(pdfFileId),
-                gameDataApi.getWorldMap(pdfFileId),
+                gameDataApi.getPlayerAvatar(fileId),
+                gameDataApi.getWorldMap(fileId),
             ]);
 
             const [filesResult, avatarResult, worldResult] = results;
@@ -161,7 +161,7 @@ export const useGameData = () => {
                 console.warn('获取世界地图失败，使用默认地图', worldResult.reason);
             }
         })();
-    }, [sessionId, pdfFileId, backendDataLoaded, applyBackendData, updatePlayer, extractImageUrl]);
+    }, [sessionId, fileId, backendDataLoaded, applyBackendData, updatePlayer, extractImageUrl]);
 
     // 通用的文件获取方法
     const getGameFile = useCallback(async (fileType: 'scenes' | 'player'| 'items' | 'lore') => {
@@ -216,9 +216,9 @@ export const useGameData = () => {
         await getGameFile('player');
         
         // 重新获取用户头像并更新
-        if (pdfFileId) {
+        if (fileId) {
             try {
-                const avatarResponse = await gameDataApi.getPlayerAvatar(pdfFileId);
+                const avatarResponse = await gameDataApi.getPlayerAvatar(fileId);
                 const avatarUrl = await extractImageUrl(avatarResponse.data || avatarResponse);
                 if (avatarUrl) {
                     updatePlayer((prevPlayer) => {
@@ -236,7 +236,7 @@ export const useGameData = () => {
                 console.warn('获取玩家头像失败，使用默认头像', err);
             }
         }
-    }, [getGameFile, pdfFileId, extractImageUrl, updatePlayer]);
+    }, [getGameFile, fileId, extractImageUrl, updatePlayer]);
 
     const loadMissions = useCallback(async () => {
         console.log("loadMissions正在开发");

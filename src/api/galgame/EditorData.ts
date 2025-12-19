@@ -22,7 +22,6 @@ const EditorApi = {
         api.delete<AllGameData>(`/visual/edit/${fileId}/scenes/${id}`),
     updateScene: (fileId:string, data:Scene) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/scenes/${data.id}`, data),
-
     uploadGameCover: (fileId:string, file:File) => {
         const formData = new FormData();
         formData.append('cover', file);
