@@ -311,14 +311,23 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 let createdScene: LocalScene;
                 if (mode === 'worldInteraction') {
                     const scene = (response.data as any)?.data;
-                    createdScene = {
-                        id: scene.id,
-                        name: scene.name || '',
-                        type: scene.type || '',
-                        desc: scene.description || '',
-                        image: scene.image || '',
-                        bgmId: scene.soundtrack || '',
-                    };
+                    // 如果返回的数据中没有 scene，使用 fallback
+                    if (scene && scene.id) {
+                        createdScene = {
+                            id: scene.id,
+                            name: scene.name || '',
+                            type: scene.type || '',
+                            desc: scene.description || '',
+                            image: scene.image || '',
+                            bgmId: scene.soundtrack || '',
+                        };
+                    } else {
+                        // 使用本地数据作为 fallback
+                        createdScene = {
+                            ...newSceneData,
+                            id: newSceneId,
+                        };
+                    }
                 } else {
                     const sceneSetting = (response.data as any)?.sceneSetting;
                     const scene = sceneSetting?.scenes?.find((s: any) => s.id === newSceneId);
@@ -609,9 +618,18 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
 
     // 处理场景图片点击（触发文件选择）
     const handleSceneImageClick = () => {
-        if (isAddingNew && newSceneFileInputRef.current) {
-            newSceneFileInputRef.current.click();
-        } else if (sceneFileInputRef.current) {
+        // 如果是新建场景，不允许上传图片
+        if (isAddingNew) {
+            toast.error('请先确认新增场景，然后再上传图片');
+            return;
+        }
+        // 如果是新建子场景，不允许上传图片
+        if (isAddingNewSubscene && activeSubsceneId && activeSubsceneId.startsWith('temp-')) {
+            toast.error('请先确认新增子场景，然后再上传图片');
+            return;
+        }
+        // 正常模式：触发文件选择
+        if (sceneFileInputRef.current) {
             sceneFileInputRef.current.click();
         }
     };
@@ -644,44 +662,16 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         let targetSceneId = '';
 
         if (isAddingNew && newSceneData) {
-            // 新增模式：需要先创建场景
-            const newSceneId = `scene_${Date.now()}`;
-            
-            const sceneDataForApi: ApiScene = {
-                id: newSceneId,
-                name: newSceneData.name || '未命名场景',
-                type: newSceneData.type || '',
-                description: newSceneData.desc || '暂无描述',
-                image: undefined, // 先不上传图片，等创建成功后再上传
-                soundtrack: newSceneData.bgmId || undefined,
-                npcs: [],
-                events: [],
-            };
-
-            try {
-                const createResponse = mode === 'worldInteraction'
-                    ? await worldEditor.addScene(fileId, sceneDataForApi as any)
-                    : await EditorApi.addScene(fileId, sceneDataForApi);
-                if (!createResponse.data?.success) {
-                    toast.error('创建场景失败，无法上传图片');
-                    return;
-                }
-                
-                // 创建成功后，更新本地数据
-                const createdScene: LocalScene = {
-                    ...newSceneData,
-                    id: newSceneId,
-                };
-                setSceneData(prev => [createdScene, ...prev]);
-                setActiveSceneId(newSceneId);
-                setIsAddingNew(false);
-                setNewSceneData(null);
-                targetSceneId = newSceneId;
-            } catch (error) {
-                console.error('创建场景时出错:', error);
-                toast.error('创建场景失败，请重试');
-                return;
+            // 新增模式：提示用户先确认新增
+            toast.error('请先确认新增场景，然后再上传图片');
+            // 清空文件输入
+            if (newSceneFileInputRef.current) {
+                newSceneFileInputRef.current.value = '';
             }
+            if (sceneFileInputRef.current) {
+                sceneFileInputRef.current.value = '';
+            }
+            return;
         } else if (activeSubsceneId && activeSubsceneDraft) {
             // 子场景模式：上传子场景图片
             if (mode !== 'worldInteraction') {
@@ -690,6 +680,15 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             }
             if (!activeSubsceneId) {
                 toast.error('缺少子场景ID，无法上传');
+                return;
+            }
+            // 如果是新增子场景，需要先确认创建
+            if (isAddingNewSubscene && activeSubsceneId.startsWith('temp-')) {
+                toast.error('请先确认新增子场景，然后再上传图片');
+                // 清空文件输入
+                if (sceneFileInputRef.current) {
+                    sceneFileInputRef.current.value = '';
+                }
                 return;
             }
             try {
@@ -711,6 +710,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             ...prev,
                             image: addImageTimestamp(baseUrl),
                         } : null);
+                    }
+                    // 刷新数据以更新侧边栏小图
+                    if (onDataChange) {
+                        onDataChange();
                     }
                 } else {
                     toast.error('上传子场景图片失败');
@@ -783,8 +786,21 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         if (!fileId || !scene) {
             return;
         }
+        
         // 判断是否是子场景（通过检查 activeSubsceneId）
         const isSubscene = activeSubsceneId && activeSubsceneDraft && scene.id === activeSubsceneDraft.id;
+        
+        // 检查是否是新建场景，如果是则不允许生成图片
+        if (isAddingNew && newSceneData && scene.id === newSceneData.id) {
+            toast.error('请先确认新增场景，然后再生成图片');
+            return;
+        }
+        
+        // 检查是否是新建子场景，如果是则不允许生成图片
+        if (isAddingNewSubscene && scene.id.startsWith('temp-')) {
+            toast.error('请先确认新增子场景，然后再生成图片');
+            return;
+        }
         
         try {
             setIsGeneratingSingleSceneImage(true);
@@ -796,7 +812,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     name: scene.name, 
                     description: scene.desc 
                 },
-                pluginType: mode
+                pluginType: mode =='worldInteraction' ? 'world-interaction' : 'visual',
             });
             if (response.data?.success) {
                 console.log(response.data);
@@ -818,6 +834,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             ...prev,
                             image: addImageTimestamp(baseUrl),
                         } : null);
+                    }
+                    // 刷新数据以更新侧边栏小图（子场景需要从 gameData 重新获取）
+                    if (onDataChange) {
+                        onDataChange();
                     }
                 } else {
                     // 主场景：更新 sceneData
@@ -1192,14 +1212,15 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                 className={`${styles.sceneHero} ${!newSceneData.image ? styles.empty : ''}`}
                                 onClick={handleSceneImageClick}
                                 style={{
-                                    cursor: 'pointer',
+                                    cursor: 'not-allowed',
                                     backgroundImage: `url('${newSceneData.image || DEFAULT_SCENE_IMAGE}')`,
+                                    opacity: 0.7,
                                 }}
                             >
                                 {newSceneData.image ? (
-                                    <span className={styles.heroHint}>点击替换背景</span>
+                                    <span className={styles.heroHint}>请先确认新增场景，然后再上传图片</span>
                                 ) : (
-                                    <span>点击上传背景图</span>
+                                    <span>请先确认新增场景，然后再上传图片</span>
                                 )}
                                 {isGeneratingSingleSceneImage && generatingSceneId === newSceneData.id && (
                                     <div className="loadingOverlay">
@@ -1212,18 +1233,24 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             <div className={styles.sceneImageActions}>
                                 <button 
                                     className={styles.ghostSmall} 
-                                    onClick={handleSceneImageClick}
-                                    disabled={isGeneratingSingleSceneImage}
-                                    style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                    onClick={() => {
+                                        toast.error('请先确认新增场景，然后再上传图片');
+                                    }}
+                                    disabled={true}
+                                    style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                                    title="请先确认新增场景"
                                 >
                                     上传背景
                                 </button>
                                 {newSceneData && (
                                     <button 
                                         className={styles.ghostSmall} 
-                                        onClick={() => regenerateSceneImage(newSceneData)}
-                                        disabled={isGeneratingSingleSceneImage}
-                                        style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                        onClick={() => {
+                                            toast.error('请先确认新增场景，然后再生成图片');
+                                        }}
+                                        disabled={true}
+                                        style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                                        title="请先确认新增场景"
                                     >
                                         AI 重新生成
                                     </button>
@@ -1283,12 +1310,15 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                         className={`${styles.sceneHero} ${!activeSubsceneDraft.image ? styles.empty : ''}`}
                                         onClick={handleSceneImageClick}
                                         style={{
-                                            cursor: 'pointer',
+                                            cursor: isAddingNewSubscene && activeSubsceneId && activeSubsceneId.startsWith('temp-') ? 'not-allowed' : 'pointer',
+                                            opacity: isAddingNewSubscene && activeSubsceneId && activeSubsceneId.startsWith('temp-') ? 0.7 : 1,
                                             // 子场景默认背景使用与大地图相同的图片
                                             backgroundImage: `url('${activeSubsceneDraft.image || DEFAULT_WORLD_MAP_IMAGE}')`,
                                         }}
                                     >
-                                        {activeSubsceneDraft.image ? (
+                                        {isAddingNewSubscene && activeSubsceneId && activeSubsceneId.startsWith('temp-') ? (
+                                            <span className={styles.heroHint}>请先确认新增子场景，然后再上传图片</span>
+                                        ) : activeSubsceneDraft.image ? (
                                             <span className={styles.heroHint}>点击替换背景</span>
                                         ) : (
                                             <span>点击上传背景图</span>
@@ -1305,8 +1335,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                         <button 
                                             className={styles.ghostSmall} 
                                             onClick={handleSceneImageClick}
-                                            disabled={isGeneratingSingleSceneImage}
-                                            style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                            disabled={isGeneratingSingleSceneImage || isAddingNewSubscene}
+                                            style={{ opacity: (isGeneratingSingleSceneImage || isAddingNewSubscene) ? 0.5 : 1 }}
                                         >
                                             上传背景
                                         </button>
@@ -1314,8 +1344,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                             <button 
                                                 className={styles.ghostSmall} 
                                                 onClick={() => regenerateSceneImage(activeSubsceneDraft)}
-                                                disabled={isGeneratingSingleSceneImage}
-                                                style={{ opacity: isGeneratingSingleSceneImage ? 0.5 : 1 }}
+                                                disabled={isGeneratingSingleSceneImage || isAddingNewSubscene}
+                                                style={{ opacity: (isGeneratingSingleSceneImage || isAddingNewSubscene) ? 0.5 : 1 }}
                                             >
                                                 AI 重新生成
                                             </button>

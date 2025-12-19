@@ -221,28 +221,21 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         return sceneSetting.scenes[0];
     }, [sceneSetting?.scenes, selectedSceneId]);
 
-    // 根据当前 tab 选择显示的底图：子场景优先 subScene.image，其次其父场景图，再默认；场景 tab 用场景图
+    // 根据当前 tab 选择显示的底图：子场景只使用自己的图片或默认图，不使用父场景图；场景 tab 用场景图
     const sceneImageUrl = useMemo(() => {
         if (mapTab === 'subScene') {
-            // 优先使用子场景自己的图片
-            if (currentSubScene?.image) {
+            // 只使用子场景自己的图片，如果没有则使用默认图，不使用父场景的图片
+            if (currentSubScene?.image && currentSubScene.image.trim() !== '') {
                 return currentSubScene.image;
             }
-            // 其次使用子场景所属父场景的图片
-            if (currentSubScene?.parentId && sceneSetting?.scenes) {
-                const parentScene = sceneSetting.scenes.find(s => s.id === currentSubScene.parentId);
-                if (parentScene?.image) {
-                    return parentScene.image;
-                }
-            }
-            // 最后使用默认图
+            // 子场景没有图片时直接使用默认图
             return DEFAULT_MAP_IMAGE;
         }
         if (mapTab === 'scene') {
             return currentScene?.image || DEFAULT_SCENE_IMAGE;
         }
         return DEFAULT_SCENE_IMAGE;
-    }, [mapTab, currentSubScene?.image, currentSubScene?.parentId, currentScene?.image, sceneSetting?.scenes]);
+    }, [mapTab, currentSubScene?.image, currentScene?.image]);
 
     // 地图 tab 使用的图片地址（优先上传/生成后的 url，其次后端返回的 worldMapImage + '/dummy'，最后默认图）
     const mapImageSources = useMemo(() => {
@@ -1432,7 +1425,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             onClick={() => setSelectedSubSceneId(sub.id)}
                                         >
                                             <div className={styles.subSceneThumbWrapper}>
-                                                {sub.image ? (
+                                                {/* 只使用子场景自己的图片，不使用父场景的图片 */}
+                                                {sub.image && sub.image.trim() !== '' ? (
                                                     <img
                                                         src={sub.image}
                                                         alt={sub.name}
@@ -1449,9 +1443,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                                 <div
                                                     className={styles.subSceneThumb}
                                                     style={{
-                                                        display: sub.image ? 'none' : 'block',
-                                                        // 子场景侧边列表默认使用大地图默认图，保持风格统一
-                                                        backgroundImage: !sub.image ? `url('${DEFAULT_MAP_IMAGE}')` : undefined,
+                                                        display: (sub.image && sub.image.trim() !== '') ? 'none' : 'block',
+                                                        backgroundImage: (!sub.image || sub.image.trim() === '') ? `url('${DEFAULT_MAP_IMAGE}')` : undefined,
                                                         backgroundSize: 'cover',
                                                         backgroundPosition: 'center',
                                                     }}

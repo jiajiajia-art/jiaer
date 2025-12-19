@@ -28,7 +28,7 @@ const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面�
 const DEFAULT_WORLD_MAP_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
 
 const GalgameMap = () => {
-    const { pdfFileId, sessionId, clearAll: clearGameStore } = useGameStore();
+    const { pdfFileId, sessionId } = useGameStore();
     const [gameData, setGameData] = useState<AllGameData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isReady, setIsReady] = useState(false);
@@ -42,7 +42,6 @@ const GalgameMap = () => {
         selectedSubscene,
         setSelectedSubscene,
         refreshEventData,
-        clearState: clearMapGalgameStore,
     } = useMapGalgameStore();
     const { user } = useAuthStore();
     
@@ -50,32 +49,44 @@ const GalgameMap = () => {
     // 结束回合 / 下一回合加载状态（父组件统一管理）
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
 
-    // 组件卸载时清理存储，避免下次进入时出现脏数据
-    useEffect(() => {
-        return () => {
-            // 清理 gameStore（pdfFileId, sessionId 等）
-            clearGameStore();
-            // 清理 mapGalgameStore（eventData, currentView, selectedSubscene 等）
-            clearMapGalgameStore();
-            // 清理 sessionStorage 中的视图栈
-            sessionStorage.removeItem('worldMapViewStack');
-            console.log('[GalgameMap] 组件卸载，已清理存储');
-        };
-    }, [clearGameStore, clearMapGalgameStore]);
-
+    // 当 sessionId 改变时，立即清空旧数据，避免显示上一个游戏的内容
     useEffect(() => {
         if (sessionId) {
+            // 清空旧游戏数据，避免切换游戏时显示上一个游戏的内容
+            setGameData(null);
+            setWorldInteractionHistory(undefined);
+            setEventData(null);
+            setSelectedSubscene(null);
+            setIsLoading(true);
+            // 重置视图到首页（世界地图），不保存上次的场景信息
+            setCurrentView(MapViewState.WORLD_MAP);
+            // 清理 sessionStorage 中的视图栈，确保从首页开始
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
+            }
+            // 获取新游戏的数据
             fetchWorldInteractionHistory();
+        } else {
+            // 如果没有 sessionId，清空所有数据
+            setGameData(null);
+            setWorldInteractionHistory(undefined);
+            setEventData(null);
+            setSelectedSubscene(null);
+            setIsLoading(false);
+            // 重置视图到首页
+            setCurrentView(MapViewState.WORLD_MAP);
+            // 清理 sessionStorage
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
+            }
         }
-    }, [sessionId]);
+    }, [sessionId, setEventData, setSelectedSubscene, setCurrentView]);
 
     // 当历史数据和游戏数据都加载完成后，如果有历史数据就获取之前的旧事件
     useEffect(() => {
         const loadActiveEventFromHistory = async () => {
             if (worldInteractionHistory && worldInteractionHistory.interactions.length > 0 && gameData && sessionId) {
-                // 使用统一的刷新方法
                 await refreshEventData(sessionId, gameData);
-                // ✅ 无论当前是否有活跃事件，只要有历史就至少显示世界地图，避免白屏
                 setCurrentView(MapViewState.WORLD_MAP);
             }
         };
@@ -99,7 +110,6 @@ const GalgameMap = () => {
     // 确保组件在显示前已经准备好
     useEffect(() => {
         if (currentView !== MapViewState.STORY_INTRO) {
-            // 给DOM一个渲染周期的时间
             const timer = setTimeout(() => {
                 setIsReady(true);
                 // 强制重绘，修复尺寸计算问题
@@ -247,7 +257,7 @@ const GalgameMap = () => {
         }
     }, [pdfFileId, user?.user.id]);
 
-    // 结束当前回合 / 开启下一回合（父组件统一方法）
+    // 结束当前回合 / 开启下一回合
     const handleEndRound = async () => {
         if (!sessionId) {
             console.error('缺少 sessionId');

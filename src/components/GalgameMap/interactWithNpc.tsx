@@ -32,6 +32,8 @@ import {
 
 } from "./hook/interactionUtils";
 
+const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
+
 const InteractWithNpc = ({ 
     onClose, 
     gameData,
@@ -748,10 +750,18 @@ const InteractWithNpc = ({
         }
 
         const queueEmpty = !stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0;
-
-        // 不在等待数据、不在打字、队列已空，即认为本段剧情播放完毕，可以显示按钮
-        return !stepHandlers.isWaitingForData && queueEmpty && !finalIsTyping;
-    }, [stepHandlers.newEvent, stepHandlers.stepQueue, stepHandlers.isWaitingForData, finalIsTyping]);
+        const isChoiceStep = stepHandlers.currentStep?.type === 'choice';
+        
+        // 不在等待数据、不在打字，且满足以下条件之一：
+        // 1. 队列为空且没有下一步按钮（所有步骤播放完毕）
+        // 2. 当前是 choice 步骤且没有下一步按钮（选择已完成）
+        const canShow = !stepHandlers.isWaitingForData 
+            && !finalIsTyping 
+            && !hasPendingRequest
+            && ((queueEmpty && !stepHandlers.showNextButton) || (isChoiceStep && !stepHandlers.showNextButton));
+        
+        return canShow;
+    }, [stepHandlers.newEvent, stepHandlers.stepQueue, stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, finalIsTyping, hasPendingRequest]);
 
     // ==================== 事件处理函数 ====================
     // 处理"继续游戏"按钮点击
@@ -1036,7 +1046,7 @@ const InteractWithNpc = ({
                 <div
                     className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}`}
                     style={{
-                        backgroundImage: isTextMode ? 'none' : backgroundImage ? `url(${backgroundImage})` : 'none',
+                        backgroundImage: isTextMode ? 'none' : backgroundImage ? `url(${backgroundImage})` : DEFAULT_SCENE_IMAGE,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundRepeat: 'no-repeat',
@@ -1172,8 +1182,9 @@ const InteractWithNpc = ({
                 history={latestHistory ?? worldInteractionHistory}
             />
             
-            {/* 当没有活跃事件时，显示"开始下一回合"按钮 */}
+            {/* 当没有活跃事件且没有继续游戏按钮时，显示"开始下一回合"按钮 */}
             {!eventData && 
+             !shouldShowContinueButton &&
              worldInteractionHistory && 
              worldInteractionHistory.interactions.length > 0 && (
                 <NextRoundButton

@@ -1075,7 +1075,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 fileId,
                 npc: { id, name, age, gender, job, race, description, appearance },
                 removeBg: false,
-                pluginType: mode
+                pluginType: mode =='worldInteraction' ? 'world-interaction' : 'visual'
             });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
@@ -1132,7 +1132,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 fileId,
                 player: payloadPlayer,
                 removeBg: false,
-                pluginType: mode,
+                pluginType: mode =='worldInteraction' ? 'world-interaction' : 'visual',
             });
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');

@@ -10,6 +10,8 @@ interface StoryIntroModalProps {
     isDistributingEvent: boolean;
 }
 
+const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
+
 const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     isOpen,
     gameData,
@@ -20,7 +22,12 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
 
     const title = gameData?.worldSetting?.title || '故事';
     const preamble = gameData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
-    const backgroundImage = gameData?.worldSetting.worldMapImage+'/dummy' || null;
+    // 修改：只有当 worldMapImage 存在且不是默认图片时才添加 '/dummy'
+    const worldMapImage = gameData?.worldSetting?.worldMapImage;
+    
+    const backgroundImage = worldMapImage 
+        ? (worldMapImage.includes('defaultScene.png') ? worldMapImage : `${worldMapImage}/dummy`)
+        : DEFAULT_SCENE_IMAGE;
 
     const { displayedText, isTyping } = useStoryTyping({
         text: preamble,
@@ -30,7 +37,12 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
 
     const backgroundImageUrl = useMemo(() => {
         if (!backgroundImage) return null;
-        return backgroundImage.startsWith('http') ? backgroundImage : `${backgroundImage}`;
+        // 修改：如果已经是完整URL或默认图片，直接返回
+        if (backgroundImage.startsWith('http') || backgroundImage.includes('defaultScene.png')) {
+            return backgroundImage;
+        }
+        // 其他情况（相对路径）加上base路径
+        return `${backgroundImage}`;
     }, [backgroundImage]);
 
     return (
@@ -77,4 +89,3 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
 };
 
 export default StoryIntroModal;
-

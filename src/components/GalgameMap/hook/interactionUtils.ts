@@ -26,7 +26,9 @@ export interface ModalState {
 /** 处理图片 URL，添加 HOST 前缀 */
 export const getImageUrl = (image: string | undefined): string | undefined => {
     if (!image) return undefined;
-    return image.startsWith('http') ? image : `${HOST_ADDRESS}${image}`;
+    if (image.startsWith('http')) return image;
+    if (image.startsWith('/') || image.includes('data/assets')) return image;
+    return `${HOST_ADDRESS}${image}`;
 };
 
 /** 获取玩家图片（支持字符串或对象格式） */
@@ -63,6 +65,8 @@ export const convertStepToMessage = (
         const characterImage = isPlayer 
             ? getPlayerImage(worldSetting?.player?.imagePath)
             : getImageUrl(step.activeImage || step.npcImages?.base);
+        console.log(characterImage);
+        
         return {
             id: Date.now(),
             type: 'dialogue',

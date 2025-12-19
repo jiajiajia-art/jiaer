@@ -151,19 +151,14 @@ const GameSettingsEditor = () => {
             let response;
             
             if (currentMode === 'worldInteraction') {
-                // 使用世界交互 API
                 response = await MapWorldData.getMapWorldData(id);
             } else {
-                // 默认使用视觉编辑 API
                 response = await EditorApi.getEditorData(id);
             }
             
             if (response.data?.success && response.data) {
-                // 直接使用 API 返回的数据，无需适配器转换
-                // 统一处理 player/Player 字段（worldInteraction 可能使用大写 Player）
                 const rawData = response.data as any;
                 if (rawData.worldSetting) {
-                    // 统一 player 字段为小写
                     if (rawData.worldSetting.Player && !rawData.worldSetting.player) {
                         rawData.worldSetting.player = rawData.worldSetting.Player;
                     }
@@ -208,13 +203,11 @@ const GameSettingsEditor = () => {
 
     const handleParsingStart = useCallback(() => {
         setIsParsing(true);
-        // 使用 Zustand store 更新解析状态（自动保存到 sessionStorage）
         setIsParsed(false);
     }, [setIsParsed]);
 
     const handleParsingComplete = useCallback(() => {
         setIsParsing(false);
-        // 使用 Zustand store 更新解析完成状态（自动保存到 sessionStorage）
         setIsParsed(true);
         // 延迟1秒后自动跳转到下一步
         setTimeout(() => {
