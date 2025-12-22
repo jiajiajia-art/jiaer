@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { EventData } from '../page/GalgameMap';
+import type { Scene } from '../api/worldInteraction/mapWorldData.type';
 import interactionApi from '../api/worldInteraction/interactionApi';
 import { buildEventDataFromEvent } from '../utils/eventUtils';
 
@@ -8,14 +9,16 @@ import { buildEventDataFromEvent } from '../utils/eventUtils';
 export type MapViewState = 
     | 'story_intro'        // 开场白
     | 'world_map'          // 世界地图
-    | 'scene_modal'        // 场景详情
+    | 'scene_view'         // 场景视图（显示某个场景的子场景列表）
+    | 'subScene_modal'        // 场景详情
     | 'interact_npc';      // NPC交互
 
 // 视图状态常量
 export const MapViewState = {
     STORY_INTRO: 'story_intro' as const,
     WORLD_MAP: 'world_map' as const,
-    SCENE_MODAL: 'scene_modal' as const,
+    SCENE_VIEW: 'scene_view' as const,
+    SUBSCENE_MODAL: 'subScene_modal' as const,
     INTERACT_NPC: 'interact_npc' as const,
 };
 
@@ -36,6 +39,10 @@ interface useMapGalgameState {
         parentSceneName: string;
     } | null;
     setSelectedSubscene: (subscene: useMapGalgameState['selectedSubscene']) => void;
+    
+    // 场景视图数据（用于显示某个场景的子场景列表）
+    selectedScene: Scene | null;
+    setSelectedScene: (scene: Scene | null) => void;
     
     // 音乐播放状态（全局共享）
     isMusicPlaying: boolean;
@@ -84,15 +91,22 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             selectedSubscene: null,
             setSelectedSubscene: (subscene) => set({ selectedSubscene: subscene }),
             
+            // 场景视图数据
+            selectedScene: null,
+            setSelectedScene: (scene) => set({ selectedScene: scene }),
+            
             // 音乐播放状态（全局共享）
-            isMusicPlaying: false,
+            // 默认开启，让地图在加载到音乐资源后尝试自动播放
+            isMusicPlaying: true,
             setMusicPlaying: (playing: boolean) => set({ isMusicPlaying: playing }),
             
             clearState: () => set({
                 eventData: null,
                 currentView: MapViewState.WORLD_MAP,
                 selectedSubscene: null,
-                isMusicPlaying: false,
+                selectedScene: null,
+                // 回到默认开启，让重新进入地图时也会尝试自动播放
+                isMusicPlaying: true,
             }),
         }),
         {
@@ -103,6 +117,7 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             partialize: (state) => ({
                 currentView: state.currentView,
                 selectedSubscene: state.selectedSubscene,
+                selectedScene: state.selectedScene,
             }),
         }
     )

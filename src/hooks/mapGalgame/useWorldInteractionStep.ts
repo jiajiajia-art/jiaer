@@ -5,6 +5,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import { toast } from "react-hot-toast";
 import payApi from "../../api/pay/payApi";
 import { auth } from "../../api/account/authApi";
+import { useStepStreamResponse } from "../story/useStepStreamResponse";
 
 // 记录已经触发过初始交互的 session-event 组合，避免开发环境 StrictMode 下重复发送请求
 const startedEvents = new Set<string>();
@@ -76,6 +77,16 @@ export const useWorldInteractionStep = ({
   useEffect(() => {
     currentStepRef.current = currentStep;
   }, [currentStep]);
+
+  // 复用通用的流式 step 解析器
+  const { processStreamResponse } = useStepStreamResponse({
+    setStepQueue,
+    setSelectedOptionIndex,
+    setIsWaitingForData,
+    currentRequestId,
+    // 世界交互暂不需要 mission flag
+    onMissionFlag: undefined,
+  });
 
   // 处理 narrativeSteps 数组，逐个添加到队列
   const processNarrativeSteps = useCallback(
@@ -179,7 +190,7 @@ export const useWorldInteractionStep = ({
         options?.onBeforeRequest?.();
 
         const response = await authFetch(
-          `${HOST_ADDRESS}/api/world-interaction/session/${sessionId}/interact/${eventId}`,
+          `${HOST_ADDRESS}/api/world-interaction/session/${sessionId}/interact/${eventId}/stream`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -188,63 +199,72 @@ export const useWorldInteractionStep = ({
         );
 
         if (response.ok) {
-          const data = await response.json();
-
-          if (currentRequestId.current !== requestId) {
-            return; // 忽略旧请求的响应
-          }
-
-          if (data.success && data.interaction?.narrativeSteps) {
-            // 保存当前 eventId
-            currentEventIdRef.current = data.interaction.eventId;
-
-            // 处理 narrativeSteps，逐个添加到队列
-            const steps = [...data.interaction.narrativeSteps];
-
-            // 如果有选项，创建一个 choice 步骤并添加到队列末尾
-            if (
-              data.interaction.options &&
-              data.interaction.options.length > 0
-            ) {
-              const choiceStep = {
-                type: "choice",
-                title: "请选择你的行动",
-                description: "",
-                options: data.interaction.options.map((opt: any) => ({
-                  optionId: opt.optionId,
-                  text: opt.text,
-                })),
-              };
-              steps.push(choiceStep);
-            }
-
-            // 将本次交互的完整步骤缓存到本地，用于用户中途退出后重新进入时从头播放
-            try {
-              const storageKey = `world-allsteps-${sessionId}-${currentEventIdRef.current}`;
-              const incompleteKey = `world-allsteps-incomplete-${sessionId}-${currentEventIdRef.current}`;
-              if (
-                typeof window !== "undefined" &&
-                storageKey &&
-                steps.length > 0
-              ) {
-                window.localStorage.setItem(storageKey, JSON.stringify(steps));
-                // 标记未看完，只有存在该标记时才会用本地缓存恢复
-                window.localStorage.setItem(incompleteKey, "true");
+          await processStreamResponse(response, requestId, {
+            onData: (jsonData) => {
+              // 记录 eventId（兼容 interaction / completedEvent / result.completedEvent）
+              const evtId =
+                jsonData?.interaction?.eventId ||
+                jsonData?.completedEvent?.eventId ||
+                jsonData?.result?.completedEvent?.eventId;
+              if (evtId) {
+                currentEventIdRef.current = evtId;
               }
-            } catch (e) {
-              console.warn("[WorldInteraction] 缓存交互步骤失败:", e);
-            }
 
-            processNarrativeSteps(steps, requestId);
+              // 缓存 steps/allSteps（兼容 optionResponse/narrativeSteps、result 内的步骤）
+              const stepsForCache =
+                (jsonData?.allSteps as any[]) ||
+                (jsonData?.narrativeSteps as any[]) ||
+                jsonData?.interaction?.narrativeSteps ||
+                jsonData?.result?.optionResponse?.narrativeSteps;
 
-            setLoading(false);
-            options?.onSuccess?.(data);
-          } else {
-            const errorMsg = "响应数据格式错误";
-            setLoading(false);
-            setIsWaitingForData(false);
-            options?.onError?.(errorMsg);
-          }
+              if (
+                stepsForCache &&
+                Array.isArray(stepsForCache) &&
+                stepsForCache.length > 0 &&
+                sessionId &&
+                currentEventIdRef.current
+              ) {
+                try {
+                  const storageKey = `world-allsteps-${sessionId}-${currentEventIdRef.current}`;
+                  const incompleteKey = `world-allsteps-incomplete-${sessionId}-${currentEventIdRef.current}`;
+                  window.localStorage.setItem(
+                    storageKey,
+                    JSON.stringify(stepsForCache)
+                  );
+                  window.localStorage.setItem(incompleteKey, "true");
+                } catch (e) {
+                  console.warn("[WorldInteraction] 缓存交互步骤失败:", e);
+                }
+              }
+
+              // 如果流里返回了 newEvent / completedEvent（含 result 内），则记录
+              const completed =
+                jsonData?.completedEvent || jsonData?.result?.completedEvent;
+              const newEvt = jsonData?.newEvent || jsonData?.result?.newEvent;
+              if (newEvt || completed) {
+                setNewEvent(
+                  newEvt || {
+                    completed: true,
+                    completedEvent: completed,
+                    hasNewEvent: false,
+                  }
+                );
+              }
+            },
+            onSuccess: () => {
+              setLoading(false);
+              options?.onSuccess?.(null);
+            },
+            onError: (err) => {
+              setLoading(false);
+              setIsWaitingForData(false);
+              options?.onError?.(err);
+            },
+            onFirstStep: () => {
+              // 收到首个 step，表示有增量输出，关闭等待态
+              setIsWaitingForData(false);
+            },
+          });
         } else {
           const errorMsg = `请求失败: ${response.statusText}`;
           setLoading(false);
@@ -293,6 +313,7 @@ export const useWorldInteractionStep = ({
       options?: {
         onSuccess?: (data: any) => void;
         onError?: (error: string) => void;
+        onFirstStep?: () => void; // 收到首个 step 时的回调，便于上层清 pending
       }
     ) => {
       if (!sessionId || !currentEventIdRef.current) {
@@ -323,7 +344,7 @@ export const useWorldInteractionStep = ({
         setStepQueue([]);
 
         const response = await authFetch(
-          `${HOST_ADDRESS}/api/world-interaction/session/${sessionId}/select-option`,
+          `${HOST_ADDRESS}/api/world-interaction/session/${sessionId}/select-option/stream`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -335,67 +356,71 @@ export const useWorldInteractionStep = ({
         );
 
         if (response.ok) {
-          const data = await response.json();
-          if (currentRequestId.current !== requestId) {
-            console.log("请求已过期，忽略响应");
-            return;
-          }
-
-          if (data.success) {
-            const narrativeSteps =
-              data.completedEvent.optionResponse?.narrativeSteps || [];
-
-            setCurrentStep(null);
-            setShowNextButton(false);
-
-            if (narrativeSteps.length > 0) {
-              const [first, ...rest] = narrativeSteps;
-
-              isProcessingStepRef.current = true;
-              await showStep(first);
-              isProcessingStepRef.current = false;
-
-              if (rest.length > 0) {
-                processNarrativeSteps(rest, requestId);
+          await processStreamResponse(response, requestId, {
+            onData: (jsonData) => {
+              // 记录 eventId
+              const evtId =
+                jsonData?.interaction?.eventId ||
+                jsonData?.completedEvent?.eventId ||
+                jsonData?.result?.completedEvent?.eventId;
+              if (evtId) {
+                currentEventIdRef.current = evtId;
               }
-            } else {
-              setIsWaitingForData(false);
-              setShowNextButton(false);
-            }
 
-            // 更新/清理本地缓存的步骤，保证中途退出再进入可以从当前段落开头重播
-            try {
-              const storageKey = `world-allsteps-${sessionId}-${currentEventIdRef.current}`;
-              const incompleteKey = `world-allsteps-incomplete-${sessionId}-${currentEventIdRef.current}`;
-              if (typeof window !== "undefined" && storageKey) {
-                if (narrativeSteps.length > 0) {
+              // 缓存 steps/allSteps
+              const stepsForCache =
+                (jsonData?.allSteps as any[]) ||
+                (jsonData?.narrativeSteps as any[]) ||
+                jsonData?.interaction?.narrativeSteps ||
+                jsonData?.result?.optionResponse?.narrativeSteps;
+
+              if (
+                stepsForCache &&
+                Array.isArray(stepsForCache) &&
+                stepsForCache.length > 0 &&
+                sessionId &&
+                currentEventIdRef.current
+              ) {
+                try {
+                  const storageKey = `world-allsteps-${sessionId}-${currentEventIdRef.current}`;
+                  const incompleteKey = `world-allsteps-incomplete-${sessionId}-${currentEventIdRef.current}`;
                   window.localStorage.setItem(
                     storageKey,
-                    JSON.stringify(narrativeSteps)
+                    JSON.stringify(stepsForCache)
                   );
                   window.localStorage.setItem(incompleteKey, "true");
-                } else {
-                  window.localStorage.removeItem(storageKey);
-                  window.localStorage.removeItem(incompleteKey);
+                } catch (e) {
+                  console.warn("[WorldInteraction] 更新交互步骤缓存失败:", e);
                 }
               }
-            } catch (e) {
-              console.warn("[WorldInteraction] 更新交互步骤缓存失败:", e);
-            }
 
-            if (data.newEvent) {
-              setNewEvent(data.newEvent);
-            } else if (data.completedEvent) {
-              setNewEvent({
-                completed: true,
-                completedEvent: data.completedEvent,
-                hasNewEvent: false,
-              });
-            }
-
-            console.log("处理完成"); // 调试
-            options?.onSuccess?.(data);
-          }
+              // newEvent/完成事件（含 result 内）
+              const completed =
+                jsonData?.completedEvent || jsonData?.result?.completedEvent;
+              const newEvt = jsonData?.newEvent || jsonData?.result?.newEvent;
+              if (newEvt || completed) {
+                setNewEvent(
+                  newEvt || {
+                    completed: true,
+                    completedEvent: completed,
+                    hasNewEvent: false,
+                  }
+                );
+              }
+            },
+            onSuccess: () => {
+              setLoading(false);
+              options?.onSuccess?.(null);
+            },
+            onError: (err) => {
+              options?.onError?.(err);
+            },
+            onFirstStep: () => {
+              // 流一旦有输出，通知上层可以清除 pending 状态
+              options?.onFirstStep?.();
+              setIsWaitingForData(false);
+            },
+          });
         } else {
           const errorMsg = `请求失败: ${response.statusText}`;
           options?.onError?.(errorMsg);

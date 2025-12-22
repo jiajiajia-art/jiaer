@@ -3,9 +3,10 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import styles from "./GalgameMap.module.css";
 import { useGameStore } from "../store/gameStore";
 import WorldMapRenderer from "../components/GalgameMap/WorldMapRenderer";
-import type { AllGameData } from "../api/worldInteraction/mapWorldData.type";
+import SceneView from "../components/GalgameMap/SceneView";
+import type { AllGameData, Scene } from "../api/worldInteraction/mapWorldData.type";
 import StoryIntroModal from "../components/GalgameMap/StoryIntroModal";
-import SceneModal from "../components/GalgameMap/SceneModal";
+import SubSceneModal from "../components/GalgameMap/SubSceneModal";
 import InteractWithNpc from "../components/GalgameMap/interactWithNpc";
 import interactionApi from "../api/worldInteraction/interactionApi";
 import type { GameEvent, GetWorldInteractionHistoryResponse, NPCInfo, SubsceneInfo } from "../api/worldInteraction/interactionApi.type";
@@ -16,6 +17,7 @@ import statisticsApi from "../api/statistics/statisticsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import NextRoundButton from "../components/GalgameMap/NextRoundButton";
 import { useMapMusicPlayer } from "../hooks/mapGalgame/useMapMusicPlayer";
+import { mapMusicManager } from "../utils/mapMusicManager";
 import { PiMusicNoteDuotone } from "react-icons/pi";
 
 export interface EventData {
@@ -33,7 +35,6 @@ const GalgameMap = () => {
     const { fileId, sessionId } = useGameStore();
     const [gameData, setGameData] = useState<AllGameData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isReady, setIsReady] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const [worldInteractionHistory, setWorldInteractionHistory] = useState<GetWorldInteractionHistoryResponse>();
     const { 
@@ -43,46 +44,93 @@ const GalgameMap = () => {
         setCurrentView,
         selectedSubscene,
         setSelectedSubscene,
+        selectedScene,
+        setSelectedScene,
         refreshEventData,
     } = useMapGalgameStore();
     const { user } = useAuthStore();
     
     const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
+    const hasTriedRestoreEventDataRef = useRef(false); // 标记是否已尝试恢复 eventData，避免重复请求
 
     const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
         fileId: fileId || null,
         gameData,
         currentView,
+        selectedScene,
         selectedSubscene,
         eventData,
     });
     
     useEffect(() => {
         fetchWorldInteractionHistory();
+        // 重置恢复标记，因为 sessionId 变化意味着新的会话
+        hasTriedRestoreEventDataRef.current = false;
     }, [sessionId]);
+
+    // 组件卸载时清理音乐播放
+    useEffect(() => {
+        return () => {
+            const audio = mapMusicManager.getAudio();
+            if (audio) {
+                audio.pause();
+                audio.src = '';
+            }
+            mapMusicManager.setAudio(null);
+            mapMusicManager.setCurrentMusicUrl(null);
+            mapMusicManager.setCurrentMusicId(null);
+            mapMusicManager.setIsLoading(false);
+            // 重置 Store 中的音乐播放状态
+            useMapGalgameStore.getState().setMusicPlaying(false);
+        };
+    }, []);
 
     // 当历史数据和游戏数据都加载完成后，如果有历史数据就获取之前的旧事件
     useEffect(() => {
         const loadActiveEventFromHistory = async () => {
             if (!worldInteractionHistory || !gameData || !sessionId) return;
             if (worldInteractionHistory.interactions.length === 0) return;
-            if (currentView !== MapViewState.WORLD_MAP && currentView !== MapViewState.STORY_INTRO) return;
+            
+            // 如果是 WORLD_MAP 或 STORY_INTRO 视图，恢复事件数据并切换到 WORLD_MAP
+            if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                if (!hasTriedRestoreEventDataRef.current) {
+                    hasTriedRestoreEventDataRef.current = true;
             await refreshEventData(sessionId, gameData);
             setCurrentView(MapViewState.WORLD_MAP);
+                }
+            }
+
+            else if ((currentView === MapViewState.INTERACT_NPC || 
+                     currentView === MapViewState.SUBSCENE_MODAL || 
+                     currentView === MapViewState.SCENE_VIEW) && 
+                     !eventData && 
+                     !hasTriedRestoreEventDataRef.current) {
+                hasTriedRestoreEventDataRef.current = true;
+                await refreshEventData(sessionId, gameData);
+            }
         };
         
         loadActiveEventFromHistory();
     }, [worldInteractionHistory, gameData, sessionId, currentView, setCurrentView, refreshEventData]);
 
     // 当历史数据存在且为空时，检查是否有活跃事件，如果没有才进入开场白视图
+    // 注意：如果当前视图是 INTERACT_NPC 或 SUBSCENE_MODAL，说明是从历史恢复的，不执行此逻辑
     useEffect(() => {
         const checkAndSetStoryIntro = async () => {
             if (!sessionId || !gameData) return;
             if (!worldInteractionHistory) return;
             if (eventData) return;
             
-            // 只有“无历史”且“无活跃事件”时才显示开场白
+            // 如果当前视图是 INTERACT_NPC、SUBSCENE_MODAL 或 SCENE_VIEW，说明是从 sessionStorage 恢复的
+            // 此时应该由 loadActiveEventFromHistory 来处理 eventData 的恢复，不执行开场白逻辑
+            if (currentView === MapViewState.INTERACT_NPC || 
+                currentView === MapViewState.SUBSCENE_MODAL || 
+                currentView === MapViewState.SCENE_VIEW) {
+                return;
+            }
+            
+            // 只有"无历史"且"无活跃事件"时才显示开场白
             const hasHistory = worldInteractionHistory.interactions.length > 0;
             try {
                 const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
@@ -121,16 +169,13 @@ const GalgameMap = () => {
         getMapWorldData();
     }, [sessionId]);
 
-    // 确保组件在显示前已经准备好
+    // 确保组件在显示前已经准备好，强制重绘修复尺寸计算问题
     useEffect(() => {
-        if (currentView !== MapViewState.STORY_INTRO) {
+        if (currentView !== MapViewState.STORY_INTRO && containerRef.current) {
             const timer = setTimeout(() => {
-                setIsReady(true);
                 // 强制重绘，修复尺寸计算问题
-                if (containerRef.current) {
-                    const event = new Event('resize');
-                    window.dispatchEvent(event);
-                }
+                const event = new Event('resize');
+                window.dispatchEvent(event);
             }, 50);
 
             return () => clearTimeout(timer);
@@ -283,13 +328,11 @@ const GalgameMap = () => {
             const response = await interactionApi.nextRound(sessionId);
             
             if (response.data.success && response.data.activeEvents?.length > 0) {
-                // 有新事件：更新本地 eventData
                 const nextEventData = buildEventDataFromEvent(response.data.activeEvents[0], gameData);
                 if (nextEventData) {
                     setEventData(nextEventData);
                 }
             } else {
-                // ✅ 没有新事件：清空当前事件，让页面只显示"开启下一回合"按钮
                 setEventData(null);
             }
             
@@ -300,25 +343,43 @@ const GalgameMap = () => {
         } finally {
             // 清理场景状态，重置到最外层
             setSelectedSubscene(null);
-            // 重置 WorldMapRenderer 的视图栈到最外层
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
-            }
+            setSelectedScene(null);
             // 无论成功与否，都回到世界地图视图；是否有事件由 eventData 是否为空决定
             setCurrentView(MapViewState.WORLD_MAP);
             setIsEndingRound(false);
         }
     };
 
-    // 处理场景点击 - 打开场景模态框
-    const handleSceneClick = (subscene: {
+    // 处理世界地图上的场景点击 - 如果有子场景则显示场景视图，否则直接打开场景模态框
+    const handleWorldMapSceneClick = (scene: Scene) => {
+        if (scene.subscenes && scene.subscenes.length > 0) {
+            // 有子场景，显示场景视图
+            setSelectedScene(scene);
+            setCurrentView(MapViewState.SCENE_VIEW);
+        } else {
+            // 没有子场景，直接打开场景模态框（使用第一个子场景或创建虚拟子场景）
+            // 这种情况应该不会发生，因为通常场景都有子场景
+            console.warn('场景没有子场景，无法打开场景视图');
+        }
+    };
+
+    // 处理场景视图中的子场景点击 - 打开场景模态框
+    const handleSceneViewSubsceneClick = (subscene: {
         id: string;
         name: string;
         image: string;
         parentSceneName: string;
     }) => {
         setSelectedSubscene(subscene);
-        setCurrentView(MapViewState.SCENE_MODAL);
+        setCurrentView(MapViewState.SUBSCENE_MODAL);
+        // 关闭场景视图，回到世界地图
+        setSelectedScene(null);
+    };
+
+    // 从场景视图返回世界地图
+    const handleSceneViewBack = () => {
+        setSelectedScene(null);
+        setCurrentView(MapViewState.WORLD_MAP);
     };
 
     // 处理NPC交互 - 打开NPC交互界面
@@ -329,8 +390,8 @@ const GalgameMap = () => {
     // 处理返回
     const handleBack = () => {
         if (currentView === MapViewState.INTERACT_NPC) {
-            setCurrentView(MapViewState.SCENE_MODAL);
-        } else if (currentView === MapViewState.SCENE_MODAL) {
+            setCurrentView(MapViewState.SUBSCENE_MODAL);
+        } else if (currentView === MapViewState.SUBSCENE_MODAL) {
             setCurrentView(MapViewState.WORLD_MAP);
         }
     };
@@ -376,15 +437,15 @@ const GalgameMap = () => {
                     </div>
                 )}
 
-                {/* 世界地图 - 只在非模态框视图时显示 */}
-                {currentView === MapViewState.WORLD_MAP && (isReady || true) && (
+                {/* 世界地图 - 只在世界地图视图时显示 */}
+                {currentView === MapViewState.WORLD_MAP && gameData && (
                     <>
-                    <WorldMapRenderer
-                        gameData={gameData}
-                        isLoading={isLoading}
-                        onSceneClick={handleSceneClick}
-                        eventData={eventData}
-                    />
+                        <WorldMapRenderer
+                            gameData={gameData}
+                            isLoading={isLoading}
+                            onSceneClick={handleWorldMapSceneClick}
+                            eventData={eventData}
+                        />
 
                         {/* 当存在历史但当前没有活跃任务时，提供"开启下一回合"按钮 */}
                         {worldInteractionHistory
@@ -400,6 +461,16 @@ const GalgameMap = () => {
                     </>
                 )}
 
+                {/* 场景视图 - 显示选中场景的子场景列表 */}
+                {currentView === MapViewState.SCENE_VIEW && selectedScene && (
+                    <SceneView
+                        selectedScene={selectedScene}
+                        eventData={eventData}
+                        onSubsceneClick={handleSceneViewSubsceneClick}
+                        onBack={handleSceneViewBack}
+                    />
+                )}
+
                 {/* 开场白模态框 */}
                 {currentView === MapViewState.STORY_INTRO && worldInteractionHistory && worldInteractionHistory.interactions.length === 0 && !eventData && (
                     <StoryIntroModal
@@ -411,8 +482,8 @@ const GalgameMap = () => {
                 )}
 
                 {/* 场景详情模态框 */}
-                {currentView === MapViewState.SCENE_MODAL && selectedSubscene && gameData && (
-                    <SceneModal
+                {currentView === MapViewState.SUBSCENE_MODAL && selectedSubscene && gameData && (
+                    <SubSceneModal
                         subsceneData={selectedSubscene}
                         gameData={gameData}
                         onBack={handleBack}
@@ -424,7 +495,8 @@ const GalgameMap = () => {
                 )}
 
                 {/* NPC交互界面 */}
-                {currentView === MapViewState.INTERACT_NPC && (
+                {/* 只有当 eventData 存在时才渲染，确保组件初始化时有正确的 eventId 来恢复未完成的步骤 */}
+                {currentView === MapViewState.INTERACT_NPC && eventData && (
                     <InteractWithNpc
                         onClose={handleBack}
                         gameData={gameData}

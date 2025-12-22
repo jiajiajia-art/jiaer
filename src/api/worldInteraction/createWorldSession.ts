@@ -15,10 +15,6 @@ const createWorldSessionApi = {
         if (response.data?.success) {
             const { clearState } = useMapGalgameStore.getState();
             clearState();
-            // 清理 sessionStorage 中的视图栈
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
-            }
             console.log('[WorldInteraction] 创建新 session，已清理状态');
         }
         

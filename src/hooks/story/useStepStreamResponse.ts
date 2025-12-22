@@ -14,6 +14,7 @@ interface ProcessStepStreamResponseOptions {
     onSuccess?: () => void;
     onError?: (error: string) => void;
     onFirstStep?: () => void; // 收到第一个 step 时的回调
+    onData?: (data: any) => void; // 任意数据回调（含 type=data/complete 等），便于业务层拿到附加字段
 }
 
 /**
@@ -71,8 +72,8 @@ export const useStepStreamResponse = ({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let hasReceivedStep = false;
-        let firstStepReceived = false;
+            let hasReceivedStep = false;
+            let firstStepReceived = false;
 
         try {
             let missionFlagged = false;
@@ -111,6 +112,12 @@ export const useStepStreamResponse = ({
                             console.log('⚠️ 忽略旧请求的数据');
                             continue;
                         }
+
+                        // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
+                        options?.onData?.(jsonData);
+
+                        // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
+                        options?.onData?.(jsonData);
 
                         if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
                             missionFlagged = true;
@@ -162,6 +169,9 @@ export const useStepStreamResponse = ({
                                 const newQueue = [...prev, step];
                                 return newQueue;
                             });
+
+                            // 首个 step 收到时，立即关闭等待态，避免等 complete 才渲染
+                            setIsWaitingForData(false);
                         }
 
                         // 处理完整数据（包含 narrativeSteps）
@@ -209,6 +219,9 @@ export const useStepStreamResponse = ({
                 }
                 try {
                     const jsonData = JSON.parse(dataStr);
+
+                    // 透传给上层
+                    options?.onData?.(jsonData);
 
                     if (currentRequestId.current !== requestId) {
                         return;

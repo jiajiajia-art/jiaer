@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './Sidebar.module.css';
+import { getImageUrl } from '../../config';
 
 interface SidebarProps {
     activePanel: string;
@@ -76,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
         <aside className={styles.sidebar}>
             <div className={styles.brand}>
                 <div>
-                    <img src="https://kurangames.com/images/interactive-fction-game-avatar/1/1763447440878_dfe11825de25f8a0c21c32a9f90086cd.jpg" alt="" />
+                    <img src={getImageUrl('interactive-fction-game-avatar/1/1763447440878_dfe11825de25f8a0c21c32a9f90086cd.jpg')} alt="" />
                 </div>
                 <div>
                     <p className={styles.brandLabel}>Kuran Studio</p>

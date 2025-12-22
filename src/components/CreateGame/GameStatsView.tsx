@@ -11,6 +11,7 @@ import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/rpgGame/gameAction';
 import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
+import { getImageUrl } from '../../config';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -146,7 +147,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         <div className={styles.statsModeWrapper}>
             <div
                 className={styles.heroBanner}
-                style={{ backgroundImage: `url(https://kurangames.com/images/${heroBackground})` }}
+                style={{ backgroundImage: `url(${getImageUrl(heroBackground)})` }}
             >
                 <div className={styles.heroOverlay}>
                     <div className={styles.heroContent}>
@@ -185,7 +186,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                         下架
                                     </button>
                             }
-
                         </div>
                     </div>
                 </div>

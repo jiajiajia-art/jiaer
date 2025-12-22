@@ -5,7 +5,11 @@ import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
     getEditorData: (fileId:string) =>
-        api.get<AllGameData>(`/visual/edit/${fileId}/complete`),
+        api.get<AllGameData>(`/visual/edit/${fileId}/complete`,
+            {
+                timeout: 150000,
+            }
+        ),
     updateWorldSetting: (fileId:string, data:Partial<WorldSetting>) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/world`, data),
     addNpc: (fileId:string, data:NPC) =>
@@ -64,25 +68,25 @@ const EditorApi = {
     },
     generateAllImages: (data: GenerateAllImageRequest) => {
         return api.post<AllGameData>(`/visual/images/generate-all`, data, {
-            timeout: 150000,
+            timeout: 180000,
         });
     },
     generatePlayerImage: (data:GeneratePlayerImageRequest) => {
         return api.post<AllGameData>(`/visual/images/generate-player`, data, {
-            timeout: 150000,
+            timeout: 180000,
         });
     },
     generateNpcImage: (data: GenerateNpcImageRequest) =>
         api.post<AllGameData>(`/visual/images/generate-npc`, data, {
-            timeout: 150000,
+            timeout: 180000,
         }),
     generateSceneImage: (data: GenerateSceneImageRequest) =>
         api.post<AllGameData>(`/visual/images/generate-scene`, data, {
-            timeout: 150000,
+            timeout: 180000,
         }),
     generateVariantImage: (data: GenerateVariantImageRequest) =>
         api.post<AllGameData>(`/visual/images/generate-npc-variant`, data, {
-            timeout: 150000,
+            timeout: 180000,
         }),
     calculateScenePoints: (fileId: string) =>
         api.post<CalculatePointsResponse>(`/visual/images/generate-scenes/calculate-points`, {

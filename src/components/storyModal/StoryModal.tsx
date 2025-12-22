@@ -54,7 +54,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
     const savedChoiceStepRef = useRef<any>(null);
 
     const sessionId = useGameStore((state) => state.sessionId);
-    const pdfFileId = useGameStore((state) => state.pdfFileId);
+    const fileId = useGameStore((state) => state.fileId);
     const scenes = useGameStore((state) => state.scenes);
     const { user } = useAuthStore();
 
@@ -320,9 +320,9 @@ const StoryModal: React.FC<StoryModalProps> = ({
     }, [sessionId, handleMissionStreamResponse]);
 
     const handleStartGame = useCallback(async () => {
-        if (pdfFileId && RECORD_CONVERSION) {
+        if (fileId && RECORD_CONVERSION) {
             statisticsApi.addConversion({
-                fileId: pdfFileId,
+                fileId: fileId,
                 userId: String(user?.user.id)
             }).catch((error) => {
                 console.error('记录游戏统计失败:', error);
@@ -343,7 +343,7 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 ]);
             }
         });
-    }, [pdfFileId, user?.user.id, stepHandlers]);
+    }, [fileId, user?.user.id, stepHandlers]);
 
     // 自动开始游戏（当从简介遮罩进入时）
     useEffect(() => {

@@ -19,6 +19,9 @@ export const auth = {
   getUserInfo: () =>
     api.get<ApiResponse<User>>('/auth/user/info'),
 
+  updateUserInfo: (newUserName: string) =>
+    api.post<ApiResponse<User>>('/auth/update/username', { newUserName: newUserName }),
+
   checkIn: () =>
     api.post<ApiResponse<null>>('/auth/user/signin'),
 

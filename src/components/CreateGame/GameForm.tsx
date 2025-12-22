@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { FaFileAlt, FaImage } from 'react-icons/fa';
 import styles from './GameForm.module.css';
 import type { UserGameData } from '../../api/home/getGameData.type';
+import { getImageUrl } from '../../config';
 
 export interface GameFormData {
     gameName: string;
@@ -57,7 +58,7 @@ const GameForm: React.FC<GameFormProps> = ({
             setGameName(initialGameData.title || '');
             setGameSubtitle(initialGameData.subtitle || '');
             setGameDescription(initialGameData.description || '');
-            setCoverImage(`https://kurangames.com/images/${initialGameData.cover_url}` || null);
+            setCoverImage(getImageUrl(initialGameData.cover_url) || null);
         }
         if (initialFiles) {
             if (initialFiles.existingDocFile !== undefined) setExistingDocFile(initialFiles.existingDocFile);
@@ -315,7 +316,7 @@ const GameForm: React.FC<GameFormProps> = ({
 
                     {initialGameData?.doc_url && (
                         <a
-                            href={`https://kurangames.com/images/${initialGameData.doc_url}`}
+                            href={getImageUrl(initialGameData.doc_url)}
                             download
                             className={styles.downloadFileBtn}
                             onClick={(e) => e.stopPropagation()}

@@ -4,6 +4,7 @@ import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { IoSearch } from 'react-icons/io5';
+import { getImageUrl } from '../../config';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -114,7 +115,7 @@ const Navbar: React.FC = () => {
                                 className={styles.avatar}
                                 onClick={() => setShowUserMenu(!showUserMenu)}
                             >
-                                <img src={`https://kurangames.com/images/${user?.user.avatarUrl}` || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`} alt="" />
+                                <img src={getImageUrl(user?.user.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`} alt="" />
                             </div>
                             {showUserMenu && (
                                 <div className={styles.userMenu}>

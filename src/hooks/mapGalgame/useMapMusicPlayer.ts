@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import MapWorldData from '../../api/worldInteraction/mapWorldData';
-import type { AllGameData } from '../../api/worldInteraction/mapWorldData.type';
+import type { AllGameData, Scene } from '../../api/worldInteraction/mapWorldData.type';
 import type { MapViewState } from '../../store/mapGalgameStore';
 import type { EventData } from '../../page/GalgameMap';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
@@ -10,6 +10,7 @@ interface UseMapMusicPlayerOptions {
     fileId: string | null;
     gameData: AllGameData | null;
     currentView: MapViewState;
+    selectedScene?: Scene | null;
     selectedSubscene: {
         id: string;
         name: string;
@@ -23,6 +24,7 @@ export const useMapMusicPlayer = ({
     fileId,
     gameData,
     currentView,
+    selectedScene = null,
     selectedSubscene,
     eventData,
 }: UseMapMusicPlayerOptions) => {
@@ -81,8 +83,13 @@ export const useMapMusicPlayer = ({
     const getCurrentMusicScene = useCallback(() => {
         if (!gameData) return null;
 
-        // 如果是在场景模态框视图，使用选中子场景的父场景音乐
-        if (currentView === 'scene_modal' && selectedSubscene) {
+    // 场景视图：直接使用当前选中的场景音乐
+    if (currentView === 'scene_view' && selectedScene) {
+      return selectedScene;
+    }
+
+    // 场景模态框视图：使用选中子场景的父场景音乐
+        if (currentView === 'subScene_modal' && selectedSubscene) {
             const parentScene = gameData.sceneSetting.scenes.find(
                 scene => scene.name === selectedSubscene.parentSceneName
             );
@@ -228,16 +235,21 @@ export const useMapMusicPlayer = ({
                         }
                         resolve();
                     };
-                    const handleError = () => {
-                        console.error('音频加载错误:', {
-                            error: audio.error,
-                            errorCode: audio.error?.code,
-                            errorMessage: audio.error?.message,
-                            networkState: audio.networkState,
-                            readyState: audio.readyState,
-                            src: audio.src,
-                        });
-                        reject(new Error(`音乐加载失败: ${audio.error?.message || '未知错误'}`));
+                const handleError = () => {
+                    if (!audio.src) {
+                        console.warn('音频加载错误: src 为空，忽略（将继续尝试播放）');
+                        resolve();
+                        return;
+                    }
+                    console.error('音频加载错误:', {
+                        error: audio.error,
+                        errorCode: audio.error?.code,
+                        errorMessage: audio.error?.message,
+                        networkState: audio.networkState,
+                        readyState: audio.readyState,
+                        src: audio.src,
+                    });
+                    reject(new Error(`音乐加载失败: ${audio.error?.message || '未知错误'}`));
                     };
                     audio.addEventListener('canplay', handleCanPlay, { once: true });
                     audio.addEventListener('error', handleError, { once: true });

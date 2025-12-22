@@ -1034,7 +1034,7 @@ const Galgame = () => {
                             resetDisplayedSteps();
                             stepHandlers.handleRegenerate(messageIndex, {
                                 onError: (error) => {
-                                    toast.error(error || '重新生成失败');
+                                    toast.error(error || '重新生成失败，请检查网络连接');
                                 }
                             });
                         }}

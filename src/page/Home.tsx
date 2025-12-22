@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
+import { getImageUrl } from '../config';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);
@@ -198,7 +199,7 @@ const Home: React.FC = () => {
                                                     <div key={imageId} className={styles.carouselSlide}>
                                                         <div className={styles.carouselImage}>
                                                             <img
-                                                                src={`https://kurangames.com/images/${item.cover}`}
+                                                                src={getImageUrl(item.cover)}
                                                                 alt={item.title}
                                                             />
                                                         </div>

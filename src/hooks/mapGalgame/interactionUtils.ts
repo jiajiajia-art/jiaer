@@ -47,17 +47,20 @@ export const convertStepToMessage = (
 ): Message | null => {
     if (!step) return null;
 
+    // 统一取文案的兜底字段，避免后端有时用 text/message
+    const stepText = step.content || step.text || step.message || '';
+
     if (step.type === 'narration') {
         return {
             id: Date.now(),
             type: 'narration',
-            message: step.content || '',
+            message: stepText,
         };
     } else if (step.type === 'transition') {
         return {
             id: Date.now(),
             type: 'transition',
-            message: step.content || '',
+            message: stepText,
         };
     } else if (step.type === 'dialogue') {
         const isPlayer = step.npcId === worldSetting?.player?.name;
@@ -70,7 +73,7 @@ export const convertStepToMessage = (
         return {
             id: Date.now(),
             type: 'dialogue',
-            message: step.content || '',
+            message: stepText,
             characterName,
             characterImage,
             characterPosition: isPlayer ? 'right' : 'left',

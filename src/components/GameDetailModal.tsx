@@ -8,7 +8,7 @@ import statisticsApi from '../api/statistics/statisticsApi';
 import createSessionApi from '../api/createGame/createSessionApi';
 import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
-import { RECORD_CONVERSION } from '../config';
+import { RECORD_CONVERSION, getImageUrl } from '../config';
 import DeletModal from './goodsModal/DeletModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
@@ -301,7 +301,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const modalStyle = useMemo(() => {
         if (!currentGame.cover_url) return {};
         return {
-            backgroundImage: `url(https://kurangames.com/images/${currentGame.cover_url})`,
+            backgroundImage: `url(${getImageUrl(currentGame.cover_url)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
@@ -449,7 +449,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                         </span>
                                         <img
                                             className={styles.authorAvatar}
-                                            src={`https://kurangames.com/images/${currentGame.avatarUrl}` || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
+                                            src={getImageUrl(currentGame.avatarUrl) || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
                                             alt="作者头像"
                                         />
                                         <span className={styles.authorName}>

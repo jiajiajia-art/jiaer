@@ -1,7 +1,7 @@
 // SubSceneDetailPage.tsx
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import styles from './SceneModal.module.css';
+import styles from './SubSceneModal.module.css';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
 import NextRoundButton from './NextRoundButton';
 import type { AllGameData, NPC } from '../../api/worldInteraction/mapWorldData.type';
@@ -9,7 +9,7 @@ import type { GetWorldInteractionHistoryResponse } from '../../api/worldInteract
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 
-interface SceneModalProps {
+interface SubSceneModalProps {
     subsceneData?: {
         id: string;
         name: string;
@@ -24,7 +24,7 @@ interface SceneModalProps {
     worldInteractionHistory?: GetWorldInteractionHistoryResponse | null;
 }
 
-const SceneModal: React.FC<SceneModalProps> = ({
+const SubSceneModal: React.FC<SubSceneModalProps> = ({
     subsceneData,
     onBack,
     gameData,
@@ -155,4 +155,4 @@ const SceneModal: React.FC<SceneModalProps> = ({
     );
 };
 
-export default SceneModal;
+export default SubSceneModal;

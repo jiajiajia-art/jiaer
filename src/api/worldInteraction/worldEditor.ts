@@ -211,7 +211,7 @@ const worldEditor = {
                 fileId: fileId
             },
             {
-                timeout: 100000,
+                timeout: 180000,
             }
         );
     },
@@ -227,6 +227,9 @@ const worldEditor = {
                 fileId: fileId,
                 sceneId: sceneId,
                 subsceneId: subsceneId
+            },
+            {
+                timeout: 180000,
             }
         );
     },

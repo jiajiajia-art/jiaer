@@ -9,6 +9,7 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import { IoEye, IoStatsChartSharp, IoWallet } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
+import { MdEdit } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
@@ -17,10 +18,13 @@ import toast from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
+import { useGameStore } from '../store/gameStore';
+import { getImageUrl } from '../config';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
     const { clearState } = useEditorStore();
+    const { clearAll } = useGameStore();
     const navigate = useNavigate();
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [stats, setStats] = useState({
@@ -31,6 +35,9 @@ const Create: React.FC = () => {
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
+    const [isEditingName, setIsEditingName] = useState(false); // 控制修改昵称弹窗
+    const [editName, setEditName] = useState('');
+    const [isUpdatingName, setIsUpdatingName] = useState(false);
 
     // 将游戏数据分类为已发布和未发布
     const { publishedGames, draftGames } = useMemo(() => {
@@ -123,8 +130,51 @@ const Create: React.FC = () => {
         );
     };
 
-    const userAvatar = `https://kurangames.com/images/${user?.user?.avatarUrl}` || `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
+    const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
+
+    const handleStartEditName = () => {
+        if (!user) {
+            toast.error('请先登录');
+            return;
+        }
+        setEditName(userName === '未设置' ? '' : userName);
+        setIsEditingName(true);
+    };
+
+    const handleCancelEditName = () => {
+        setIsEditingName(false);
+        setEditName('');
+    };
+
+    const handleConfirmEditName = async () => {
+        const newName = editName.trim();
+        if (!newName) {
+            toast.error('昵称不能为空');
+            return;
+        }
+        if (newName === userName) {
+            setIsEditingName(false);
+            return;
+        }
+
+        try {
+            setIsUpdatingName(true);
+            const response = await auth.updateUserInfo(newName);
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+                toast.success('昵称修改成功');
+                setIsEditingName(false);
+            } else {
+                toast.error(response.data.message || '昵称修改失败');
+            }
+        } catch (error) {
+            console.error('修改昵称失败:', error);
+            toast.error('昵称修改失败，请稍后重试');
+        } finally {
+            setIsUpdatingName(false);
+        }
+    };
 
     const handleRecharge = async (amount: number) => {
         const response = await payApi.getPayQrCode({
@@ -143,15 +193,13 @@ const Create: React.FC = () => {
     };
 
     const handleSelectGameType = (type: 'avg' | 'rpg' | 'txt') => {
-        // 根据选择的类型跳转到不同的创作流程
+        clearAll();
         if (type === 'rpg') {
             navigate('/createGame');
         } else if (type === 'txt') {
-            // 视觉小说：使用编辑器进行视觉设定
             clearState();
             navigate('/gameSettingsEditor');
         } else if (type === 'avg') {
-            // 角色扮演：使用世界交互 / 地图模式
             clearState();
             navigate('/gameSettingsEditor?mode=worldInteraction');
         }
@@ -198,7 +246,17 @@ const Create: React.FC = () => {
                                     src={userAvatar}
                                     alt="用户头像"
                                 />
-                                <div className={styles.userName}>{userName}</div>
+                                <div className={styles.userNameRow}>
+                                    <div className={styles.userName}>{userName}</div>
+                                    <button
+                                        type="button"
+                                        className={styles.editNameButton}
+                                        onClick={handleStartEditName}
+                                        title="修改昵称"
+                                    >
+                                        <MdEdit />
+                                    </button>
+                                </div>
                                 <div className={styles.userCredit}>
                                     <span className={styles.userPoints}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
@@ -212,7 +270,6 @@ const Create: React.FC = () => {
                                         <span>充值</span>
                                     </button>
                                 </div>
-
                             </div>
                         </div>
                     </div>
@@ -349,6 +406,54 @@ const Create: React.FC = () => {
 
             <FooterArea />
 
+            {/* 修改昵称弹窗 */}
+            {isEditingName && (
+                <div
+                    className={styles.editNameModalOverlay}
+                    onClick={handleCancelEditName}
+                >
+                    <div
+                        className={styles.editNameModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.editNameModalHeader}>
+                            <div className={styles.editNameModalTitle}>修改昵称</div>
+                        </div>
+                        <div className={styles.editNameModalBody}>
+                            <input
+                                className={styles.editNameInput}
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                placeholder="请输入新的昵称"
+                                maxLength={20}
+                                autoFocus
+                            />
+                            <div className={styles.editNameTips}>
+                                昵称长度建议 1-20 个字符，避免包含敏感或违规内容。
+                            </div>
+                        </div>
+                        <div className={styles.editNameModalActions}>
+                            <button
+                                type="button"
+                                className={styles.editNameCancelButton}
+                                onClick={handleCancelEditName}
+                                disabled={isUpdatingName}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.editNameConfirmButton}
+                                onClick={handleConfirmEditName}
+                                disabled={isUpdatingName}
+                            >
+                                {isUpdatingName ? '保存中...' : '确认'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 创作类型选择弹窗 */}
             {isCreateTypeModalOpen && (
                 <div
@@ -382,10 +487,12 @@ const Create: React.FC = () => {
                                 <span>AVG</span>
                             </button>
                             <button
-                                className={`${styles.createTypeOption}`}
+                                className={`${styles.createTypeOption} ${styles.createTypeOptionDisabled}`}
                                 onClick={() => handleSelectGameType('rpg')}
+                                disabled={true}
                             >
                                 <span>RPG</span>
+                                <span className={styles.createTypeOptionLocked}>待解锁</span>
                             </button>
                         </div>
                         <div className={styles.createTypeModalFooter}>

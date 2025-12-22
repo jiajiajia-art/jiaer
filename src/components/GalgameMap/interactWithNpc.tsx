@@ -329,6 +329,14 @@ const InteractWithNpc = ({
                     try {
                         const isIncomplete = window.localStorage.getItem(incompleteKey) === 'true';
                         const raw = window.localStorage.getItem(allStepsStorageKey);
+                        
+                        console.log('[WorldInteraction] 检查本地缓存步骤:', {
+                            incompleteKey,
+                            isIncomplete,
+                            hasRaw: !!raw,
+                            rawLength: raw?.length,
+                        });
+                        
                         if (isIncomplete && raw) {
                             const savedSteps = JSON.parse(raw);
                             if (Array.isArray(savedSteps) && savedSteps.length > 0) {
@@ -354,6 +362,15 @@ const InteractWithNpc = ({
                                 }, 1000);
                                 
                                 return;
+                            } else {
+                                console.warn('[WorldInteraction] 本地缓存步骤为空或格式错误，继续从服务器获取');
+                            }
+                        } else {
+                            if (!isIncomplete) {
+                                console.log('[WorldInteraction] 未完成标记不存在或已清除，继续正常流程');
+                            }
+                            if (!raw) {
+                                console.log('[WorldInteraction] 本地缓存步骤数据不存在，继续正常流程');
                             }
                         }
                     } catch (e) {
@@ -429,13 +446,29 @@ const InteractWithNpc = ({
                     );
 
                     const lastInteraction = history.interactions?.[history.interactions.length - 1] as any;
+                    console.log('[WorldInteraction] 历史最后一条交互:', {
+                        type: lastInteraction?.type,
+                        hasOptions: !!lastInteraction?.options,
+                        optionsLength: lastInteraction?.options?.length,
+                    });
 
                     // 如果历史最后一条是 npc_dialogue（事件进行到带选项但未完成），
                     // 则不再重新调用交互接口，直接用历史中的 options 渲染选项
                     if (lastInteraction && lastInteraction.type === 'npc_dialogue') {
                         hasInitializedRef.current = true;
-                        console.log('[WorldInteraction] 初始化：检测到未完成的 npc_dialogue，直接使用历史选项');
+                        console.log('[WorldInteraction] 初始化：检测到未完成的 npc_dialogue，直接使用历史选项，不发起新请求');
                         return;
+                    }
+                    
+                    // 如果历史记录的最后一条不是 npc_dialogue，但存在未完成的步骤缓存标记
+                    // 说明步骤可能还在播放中，不应该发起新请求
+                    if (allStepsStorageKey && incompleteKey && typeof window !== 'undefined') {
+                        const isIncomplete = window.localStorage.getItem(incompleteKey) === 'true';
+                        if (isIncomplete) {
+                            console.log('[WorldInteraction] 检测到未完成标记但历史最后一条不是 npc_dialogue，可能是步骤还在播放中，不发起新请求');
+                            hasInitializedRef.current = true;
+                            return;
+                        }
                     }
                 }
 
@@ -833,23 +866,19 @@ const InteractWithNpc = ({
             stepHandlers.clearNewEvent?.();
             
             // 清理场景状态，重置到最外层
-            const { setSelectedSubscene } = useMapGalgameStore.getState();
+            const { setSelectedSubscene, setSelectedScene } = useMapGalgameStore.getState();
             setSelectedSubscene(null);
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
-            }
+            setSelectedScene(null);
             
             setCurrentView(MapViewState.WORLD_MAP);
             return;
         }
 
-        // 仅有 completedEvent（没有新事件）：回到地图并刷新事件数据，让“开始下一回合”出现
+        // 仅有 completedEvent（没有新事件）：回到地图并刷新事件数据，让"开始下一回合"出现
         if (newEvent?.completedEvent) {
-            const { setSelectedSubscene } = useMapGalgameStore.getState();
+            const { setSelectedSubscene, setSelectedScene } = useMapGalgameStore.getState();
             setSelectedSubscene(null);
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('worldMapViewStack', JSON.stringify([{ mode: 'mainScenes', scene: null }]));
-            }
+            setSelectedScene(null);
             if (sessionId && gameData) {
                 refreshEventData(sessionId, gameData);
             }
@@ -1023,6 +1052,25 @@ const InteractWithNpc = ({
                 }
 
                 // 轮询会负责更新历史记录，这里不需要手动获取
+            },
+            onFirstStep: () => {
+                // 收到首个 step 就认为有返回，提前清除 pending 状态
+                if (choiceTimeoutRef.current) {
+                    clearTimeout(choiceTimeoutRef.current);
+                    choiceTimeoutRef.current = null;
+                }
+                setTimeoutModal({ visible: false, message: '' });
+                if (typeof window !== 'undefined' && sessionId && eventId) {
+                    try {
+                        const pendingRequestKey = `world-pending-request-${sessionId}-${eventId}`;
+                        window.localStorage.removeItem(pendingRequestKey);
+                        setHasPendingRequest(false);
+                    } catch (e) {
+                        console.warn('[WorldInteraction] 清除请求状态失败:', e);
+                    }
+                } else {
+                    setHasPendingRequest(false);
+                }
             },
             onError: (error) => {
                 console.error('❌ 选择选项失败:', error);
@@ -1225,7 +1273,12 @@ const InteractWithNpc = ({
                 title="请求失败"
                 message={errorModal.message}
                 confirmText="知道了"
-                onConfirm={() => setErrorModal({ visible: false, message: "" })}
+                onConfirm={() => {
+                    setErrorModal({ visible: false, message: "" })
+                    if (typeof window !== "undefined") {
+                        window.location.reload();
+                    }
+                }}
             />
 
             {/* 请求超时弹窗 */}

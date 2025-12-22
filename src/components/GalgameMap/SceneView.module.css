@@ -1,0 +1,170 @@
+/* SceneView.module.css - 场景视图样式 */
+
+.sceneViewContainer {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* 标题栏 */
+.titleBar {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+    flex-shrink: 0;
+}
+
+.titleText {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+    background: #0000002f;
+    width: 160px;
+    border-radius: 999px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.titleText:hover {
+    background: #0000004f;
+    transform: scale(1.05);
+}
+
+/* 场景内容区域 */
+.sceneContent {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.sceneCanvas {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 子场景节点 */
+.subsceneNode {
+    position: absolute;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.subsceneNode:hover {
+    transform: scale(1.1);
+}
+
+/* 节点图片容器 */
+.nodeImageContainer {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    /* 允许角标溢出显示，图片自身用圆角裁剪 */
+    overflow: visible;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    position: relative;
+}
+
+/* 节点图片 */
+.nodeImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    
+}
+
+.eventLocation {
+    position: absolute;
+    top: -16px;
+    right: -10px;
+    font-size: 32px;
+    font-weight: bold;
+    z-index: 10;
+}
+
+.eventLocation img {
+    width: 30px;
+    height: 30px;
+    object-fit: cover;
+}
+
+/* 节点文字 */
+.nodeText {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* 节点名称 */
+.nodeName {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 6px;
+    padding: 2px 8px;
+    color: white;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+/* 加载状态 */
+.initOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    color: white;
+    font-size: 16px;
+}
+
+.initSpinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.emptyState {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+}
+

@@ -98,10 +98,20 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 // 保存原始数据（深拷贝）
                 originalDataRef.current = JSON.parse(JSON.stringify(ws));
 
-                // 处理两种模式的差异
-                const worldRulesText = isVisualMode(gameData) && ws && 'WorldRules' in ws && ws.WorldRules
-                    ? Object.entries(ws.WorldRules).map(([key, value]) => `${key}: ${value}`).join('\n')
-                    : '';
+                let worldRulesText = '';
+                if (isVisualMode(gameData) && ws && 'WorldRules' in ws && ws.WorldRules) {
+                    worldRulesText = Object.entries(ws.WorldRules)
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join('\n');
+                } else if (!isVisualMode(gameData) && ws) {
+                    if ('WorldRules' in (ws as any) && (ws as any).WorldRules) {
+                        const wr = (ws as any).WorldRules as Record<string, string>;
+                        worldRulesText = Object.entries(wr)
+                            .map(([key, value]) => key === value ? value : `${key}: ${value}`)
+                            .join('\n');
+                    }
+                }
+
                 const player = getPlayer(gameData);
                 const playerRace = player && 'race' in player ? player.race : undefined;
                 const playerRoleText = player
@@ -148,7 +158,15 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     }, [gameData]);
 
     const handleFieldChange = (fieldId: string, value: string) => {
-        setWorldFields(prev => prev.map(f => f.id === fieldId ? { ...f, value } : f));
+        setWorldFields(prev => {
+            const next = prev.map(f => f.id === fieldId ? { ...f, value } : f);
+            // 调试输出：实时查看表单字段变化，主要关注 worldRules
+            if (fieldId === 'worldRules') {
+                // eslint-disable-next-line no-console
+                console.log('[WorldPanel] worldRules changed:', value);
+            }
+            return next;
+        });
     };
 
     const handleToneChange = (value: string) => {
@@ -178,28 +196,36 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     const getFullWorldSettingData = useCallback((): VisualWorldSetting | WorldWorldSetting | null => {
         if (!gameData?.worldSetting) return null;
 
-        const titleField = worldFields.find(f => f.id === 'title');
-        const taglineField = worldFields.find(f => f.id === 'tagline');
-        const eraField = worldFields.find(f => f.id === 'era');
-        const worldRulesField = worldFields.find(f => f.id === 'worldRules');
-        const playerRoleField = worldFields.find(f => f.id === 'playerRole');
-        const openingField = worldFields.find(f => f.id === 'opening');
-        const openingPlotField = worldFields.find(f => f.id === 'openingPlot');
+        const getFieldValue = (id: string) => worldFields.find(f => f.id === id)?.value ?? '';
+        const titleVal = getFieldValue('title');
+        const taglineVal = getFieldValue('tagline');
+        const eraVal = getFieldValue('era');
+        const worldRulesVal = getFieldValue('worldRules');
+        const playerRoleVal = getFieldValue('playerRole');
+        const openingVal = getFieldValue('opening');
+        const openingPlotVal = getFieldValue('openingPlot');
 
-        // 解析世界规则（从文本格式转换回对象）
+        // 解析世界规则
+        // 可同时支持“key: value”形式（视觉模式）和“每行一条规则”形式（worldInteraction 模式）
         const worldRules: { [key: string]: string } = {};
-        if (worldRulesField?.value) {
-            worldRulesField.value.split('\n').forEach(line => {
+        const worldRulesLines: string[] = [];
+        if (worldRulesVal !== undefined) {
+            worldRulesVal.split('\n').forEach(line => {
                 const trimmedLine = line.trim();
-                if (trimmedLine) {
-                    const colonIndex = trimmedLine.indexOf(':');
-                    if (colonIndex > 0) {
-                        const key = trimmedLine.substring(0, colonIndex).trim();
-                        const value = trimmedLine.substring(colonIndex + 1).trim();
-                        if (key && value) {
-                            worldRules[key] = value;
-                        }
+                if (!trimmedLine) return;
+                const colonIndex = trimmedLine.indexOf(':');
+                if (colonIndex > 0) {
+                    const key = trimmedLine.substring(0, colonIndex).trim();
+                    const value = trimmedLine.substring(colonIndex + 1).trim();
+                    if (key && value) {
+                        worldRules[key] = value;
+                        worldRulesLines.push(`${key}: ${value}`);
                     }
+                } else {
+                    // 对于 worldInteraction 模式，后端期望使用 worldRules 字段接收规则
+                    // 因此前端也将无冒号的整行作为 key 和 value 写入 WorldRules
+                    worldRules[trimmedLine] = trimmedLine;
+                    worldRulesLines.push(trimmedLine);
                 }
             });
         }
@@ -207,11 +233,11 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
         // 解析玩家信息（从文本格式解析）
         // 使用辅助函数兼容两种模式
         const player = getPlayer(gameData);
-        const playerInfo = playerRoleField?.value || '';
-        let playerName = player?.name || '';
-        let playerGender = player?.gender || '';
-        let playerAge = player?.age;
-        let playerRace = player && 'race' in player ? player.race : undefined;
+        const playerInfo = playerRoleVal || '';
+        let playerName = playerInfo ? '' : (player?.name || '');
+        let playerGender = playerInfo ? '' : (player?.gender || '');
+        let playerAge = playerInfo ? undefined : player?.age;
+        let playerRace = playerInfo ? undefined : (player && 'race' in player ? player.race : undefined);
 
         if (playerInfo) {
             const playerMatch = playerInfo.match(/^(.+?)\s*\((.+?)\)/);
@@ -232,26 +258,24 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
         }
 
         // 转换故事线为 keyEvents
-        const keyEvents = storylines.length > 0
-            ? storylines.map(line => ({
-                title: line.tag,
-                description: line.content,
-            }))
-            : gameData.worldSetting.keyEvents;
+        const keyEvents = storylines.map(line => ({
+            title: line.tag,
+            description: line.content,
+        }));
 
         // 根据模式构建返回数据
         if (isVisualMode(gameData)) {
             const currentPlayer = player || { name: '', gender: '', appearance: '' };
             return {
                 ...gameData.worldSetting,
-                title: titleField?.value || gameData.worldSetting.title,
-                summary: taglineField?.value || gameData.worldSetting.summary,
-                background: eraField?.value || gameData.worldSetting.background,
-                preamble: openingField?.value || gameData.worldSetting.preamble,
-                initialPlot: openingPlotField?.value || gameData.worldSetting.initialPlot,
-                literary: toneValue || gameData.worldSetting.literary,
-                WorldRules: Object.keys(worldRules).length > 0 ? worldRules : (gameData.worldSetting as VisualWorldSetting).WorldRules,
-                keyEvents: keyEvents,
+                title: titleVal,
+                summary: taglineVal,
+                background: eraVal,
+                preamble: openingVal,
+                initialPlot: openingPlotVal,
+                literary: toneValue ?? '',
+                WorldRules: worldRules, // 可为空对象，表示清空
+                keyEvents: keyEvents,   // 可为空数组，表示清空
                 player: {
                     ...currentPlayer,
                     name: playerName,
@@ -261,16 +285,23 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 },
             } as VisualWorldSetting;
         } else {
-            // worldInteraction 模式
+            // worldInteraction 模式：将世界规则行映射到 Theme（string[]）
+            // 允许用户清空规则：如果没有输入，则 Theme 为空数组
+            const themeLines = worldRulesLines;
+
             return {
                 ...gameData.worldSetting,
-                title: titleField?.value || gameData.worldSetting.title,
-                summary: taglineField?.value || gameData.worldSetting.summary,
-                background: eraField?.value || gameData.worldSetting.background,
-                preamble: openingField?.value || gameData.worldSetting.preamble,
-                initialPlot: openingPlotField?.value || gameData.worldSetting.initialPlot,
-                literary: toneValue || gameData.worldSetting.literary,
-                keyEvents: keyEvents,
+                title: titleVal,
+                summary: taglineVal,
+                background: eraVal,
+                preamble: openingVal,
+                initialPlot: openingPlotVal,
+                literary: toneValue ?? '',
+                keyEvents: keyEvents, // 可为空数组
+                Theme: themeLines,
+                // worldInteraction 模式下：如果用户在表单中填写了世界规则（key: value 形式），也通过 WorldRules 传给后端
+                // 后端初始没有该字段时，本次提交会新增 WorldRules；清空后则传空对象表示清空
+                WorldRules: worldRules,
                 player: {
                     name: playerName,
                     gender: playerGender,
@@ -316,6 +347,12 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 diff.keyEvents = full.keyEvents;
             }
 
+            // 比较 Theme（数组比较）
+            const origTheme = Array.isArray(orig.Theme) ? orig.Theme : [];
+            if (JSON.stringify(full.Theme) !== JSON.stringify(origTheme)) {
+                diff.Theme = full.Theme;
+            }
+
             // 比较 player（对象比较）
             if (JSON.stringify(full.player) !== JSON.stringify(orig.player)) {
                 diff.player = full.player;
@@ -338,6 +375,19 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             // 比较 keyEvents（数组比较）
             if (JSON.stringify(full.keyEvents) !== JSON.stringify(orig.keyEvents)) {
                 diff.keyEvents = full.keyEvents;
+            }
+
+            // 比较 Theme（数组比较，用于 worldInteraction 下的世界规则行）
+            const origTheme = Array.isArray(orig.Theme) ? orig.Theme : [];
+            if (JSON.stringify(full.Theme) !== JSON.stringify(origTheme)) {
+                diff.Theme = full.Theme;
+            }
+
+            // 比较 WorldRules（可选字段）
+            const fullWorldRules = (full as any).WorldRules ?? {};
+            const origWorldRules = (orig as any).WorldRules ?? {};
+            if (JSON.stringify(fullWorldRules) !== JSON.stringify(origWorldRules)) {
+                (diff as any).WorldRules = fullWorldRules;
             }
 
             // 比较 player（对象比较）

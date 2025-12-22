@@ -8,6 +8,7 @@ import Navbar from '../components/Layout/Navbar';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup } from 'react-icons/md';
 import toast, { Toaster } from 'react-hot-toast';
+import { getImageUrl } from '../config';
 
 const Profile: React.FC = () => {
     const { user, logout, updateUser } = useAuthStore();
@@ -43,7 +44,7 @@ const Profile: React.FC = () => {
         getUserInfo();
     }, []);
 
-    const userAvatar = `https://kurangames.com/images/${user?.user?.avatarUrl}` || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
+    const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
 
     const handleWatchAd = () => {

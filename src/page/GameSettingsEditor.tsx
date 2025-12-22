@@ -84,11 +84,8 @@ const GameSettingsEditor = () => {
         try {
             let uploadedFileId: string | undefined;
             
-            // 根据模式选择不同的上传接口
             if (mode === '') {
-                // 使用世界交互模式的上传接worldInteraction口
                 const response = await worldEditor.uploadWorldFile(file);
-
                 const fileIdFromResp = response.data.fileId;
                 if (fileIdFromResp) {
                     uploadedFileId = fileIdFromResp;
@@ -233,7 +230,6 @@ const GameSettingsEditor = () => {
                     if (worldPanelGetDataRef.current) {
                         const worldData = worldPanelGetDataRef.current();
                         if (worldData?.worldSetting) {
-                            // worldSetting 现在只包含修改过的字段，直接传递 worldSetting 对象（不包裹）
                             const worldSettingDiff = worldData.worldSetting;
                             if (!fileId) {
                                 toast.error('缺少文件ID，无法保存');
@@ -313,7 +309,6 @@ const GameSettingsEditor = () => {
                                         // worldInteraction 模式：直接使用 scene（包含 subscenes 和 position）
                                         return worldEditor.updateScene(fileId, scene as any);
                                     } else {
-                                        // visual 模式：转换为 ApiScene（不包含 subscenes）
                                         const sceneData: ApiScene = {
                                             id: scene.id,
                                             name: scene.name,
