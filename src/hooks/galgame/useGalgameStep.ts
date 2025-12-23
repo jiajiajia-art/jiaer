@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { toast } from 'react-hot-toast';
 import { auth } from '../../api/account/authApi';
 import { useGameStore } from '../../store/gameStore';
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
@@ -16,8 +17,8 @@ interface UseGalgameStepOptions {
     onCompleteAllSteps?: (steps: any[]) => void;
 }
 
-// 前5回免费（每回2条消息，共10条）
-const FREE_ROUNDS_THRESHOLD = 10;
+// 前5条历史消息免费（每回2条消息，共10条）
+const FREE_ROUNDS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD * 2;
 
 export const useGalgameStep = ({ 
     sessionId, 
@@ -170,7 +171,7 @@ export const useGalgameStep = ({
 
         // 前5回免费，之后需要扣除积分
         if (historyLength > FREE_ROUNDS_THRESHOLD) {
-            if (user?.user.points && user.user.points > 2) {
+            if (user?.user.points && user.user.points > OPTION_COST) {
                 await reducePoints("option");
             } else {
                 toast.error("积分不足");
@@ -200,7 +201,7 @@ export const useGalgameStep = ({
         
         // 前5回免费，之后需要扣除积分
         if (historyLength > FREE_ROUNDS_THRESHOLD) {
-            if (user?.user.points && user.user.points > 3) {
+            if (user?.user.points && user.user.points > INPUT_COST) {
                 await reducePoints("selfDefined");
             } else {
                 toast.error("积分不足");

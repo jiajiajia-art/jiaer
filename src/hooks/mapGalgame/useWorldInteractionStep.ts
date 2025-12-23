@@ -6,11 +6,12 @@ import { toast } from "react-hot-toast";
 import payApi from "../../api/pay/payApi";
 import { auth } from "../../api/account/authApi";
 import { useStepStreamResponse } from "../story/useStepStreamResponse";
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from "../../utils/constants";
 
 // 记录已经触发过初始交互的 session-event 组合，避免开发环境 StrictMode 下重复发送请求
 const startedEvents = new Set<string>();
-// 世界交互：前 10 条交互免费，之后开始扣费
-const FREE_INTERACTIONS_THRESHOLD = 5;
+// 前5条历史消息免费
+const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
 
 interface UseWorldInteractionStepOptions {
   sessionId: string | null;
@@ -56,7 +57,7 @@ export const useWorldInteractionStep = ({
     }
   }, [updateUser]);
 
-  // 世界交互扣积分：type 为 "option"（2 积分）或 "selfDefined"（3 积分）
+  // 世界交互扣积分：type 为 "option" 或 "selfDefined"
   const reducePoints = useCallback(
     async (type: "option" | "selfDefined") => {
       if (!fileId) return;
@@ -242,13 +243,41 @@ export const useWorldInteractionStep = ({
                 jsonData?.completedEvent || jsonData?.result?.completedEvent;
               const newEvt = jsonData?.newEvent || jsonData?.result?.newEvent;
               if (newEvt || completed) {
-                setNewEvent(
-                  newEvt || {
+                setNewEvent((prev: any) => {
+                  // 如果同时返回了新事件和完成事件，优先保留新事件信息，并补全 completed 字段
+                  if (newEvt && completed) {
+                    return {
+                      ...prev,
+                      ...newEvt,
+                      completed: true,
+                      completedEvent: completed,
+                    };
+                  }
+
+                  // 仅有新事件时，直接覆盖为最新的新事件（保留 completedEvent，如果之前已有）
+                  if (newEvt) {
+                    return {
+                      ...prev,
+                      ...newEvt,
+                    };
+                  }
+
+                  // 仅有完成事件时，如果之前已拿到新事件数据，避免覆盖掉 event/npc/subscene
+                  if (prev?.event && prev?.npc && prev?.subscene) {
+                    return {
+                      ...prev,
+                      completed: true,
+                      completedEvent: completed,
+                    };
+                  }
+
+                  // 只有完成事件且没有新事件数据时，保持旧逻辑
+                  return {
                     completed: true,
                     completedEvent: completed,
                     hasNewEvent: false,
-                  }
-                );
+                  };
+                });
               }
             },
             onSuccess: () => {
@@ -323,7 +352,7 @@ export const useWorldInteractionStep = ({
 
       if (historyLength > FREE_INTERACTIONS_THRESHOLD) {
         const isCustomInput = optionIndex === -1;
-        const needPoints = isCustomInput ? 3 : 2;
+        const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
 
         if (!user?.user.points || user.user.points <= needPoints) {
           toast.error("积分不足");
@@ -399,13 +428,41 @@ export const useWorldInteractionStep = ({
                 jsonData?.completedEvent || jsonData?.result?.completedEvent;
               const newEvt = jsonData?.newEvent || jsonData?.result?.newEvent;
               if (newEvt || completed) {
-                setNewEvent(
-                  newEvt || {
+                setNewEvent((prev: any) => {
+                  // 新事件与完成事件同时返回时，保留新事件并补全完成信息
+                  if (newEvt && completed) {
+                    return {
+                      ...prev,
+                      ...newEvt,
+                      completed: true,
+                      completedEvent: completed,
+                    };
+                  }
+
+                  // 仅有新事件：覆盖为最新的新事件（保留已有的 completedEvent）
+                  if (newEvt) {
+                    return {
+                      ...prev,
+                      ...newEvt,
+                    };
+                  }
+
+                  // 仅有完成事件：如果已经有新事件数据，避免覆盖 event/npc/subscene
+                  if (prev?.event && prev?.npc && prev?.subscene) {
+                    return {
+                      ...prev,
+                      completed: true,
+                      completedEvent: completed,
+                    };
+                  }
+
+                  // 只有完成事件且没有新事件数据
+                  return {
                     completed: true,
                     completedEvent: completed,
                     hasNewEvent: false,
-                  }
-                );
+                  };
+                });
               }
             },
             onSuccess: () => {

@@ -26,14 +26,16 @@ interface TextModeDisplayProps {
     onCustomInputSubmit?: (value: string) => void;
 }
 
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
+
 // 积分消耗配置
 const POINTS_CONFIG = {
-    option: 2,      // 选择选项消耗2积分
-    custom: 3,      // 自定义输入消耗3积分
+    option: OPTION_COST,
+    custom: INPUT_COST,
 };
 
-// 前5回免费（每回2条消息，共10条）
-const FREE_ROUNDS_THRESHOLD = 10;
+// 前5条历史消息免费
+const FREE_ROUNDS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD * 2; // 每回2条消息
 
 interface MessageItemProps {
     step: TextModalStep;

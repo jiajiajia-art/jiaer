@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styles from './ScenesPanel.module.css';
+import { IMAGE_GENERATION_COST } from '../../utils/constants';
 import type { AllGameData } from '../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
 import type { SceneSetting as VisualSceneSetting } from '../../api/galgame/EditorData.type';
@@ -351,7 +352,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                 disabled={!fileId || isGeneratingWorldMap}
                             >
                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
-                                {isGeneratingWorldMap ? '生成中...' : '10 AI 生成'}
+                                {isGeneratingWorldMap ? '生成中...' : `${IMAGE_GENERATION_COST} AI 生成`}
                             </button>
                             <button
                                 className={styles.ghostSmall}
@@ -389,7 +390,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                         <span className={styles.buttonMainText}>
                             {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
                         </span>
-                        <span className={styles.buttonSubText}>星星10/张</span>
+                        <span className={styles.buttonSubText}>{IMAGE_GENERATION_COST}积分/张</span>
                     </div>
                 </button>
             </div>
@@ -487,12 +488,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                                                 setActiveSubsceneDraft({
                                                                     id: subId,
                                                                     name: sub.name || '未命名子场景',
-                                                                    // worldInteraction 子场景没有 type，这里保持 UI 字段为空
                                                                     type: '',
                                                                     desc: sub.description || '',
-                                                                    // 加时间戳防止浏览器缓存
                                                                     image: addImageTimestamp(sub.image) || '',
-                                                                    // 子场景自身也没有 soundtrack，沿用父场景 bgm 作为默认显示
                                                                     bgmId: scene.bgmId || '',
                                                                 });
                                                             }}
@@ -540,7 +538,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                 className={styles.ghostSmall}
                                 onClick={async () => {
                                     await handlers.confirmAddNew();
-                                    onDataChange?.(); // 新增后刷新数据
+                                    onDataChange?.();
                                 }}
                             >
                                 确认增加
@@ -560,7 +558,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                         className={styles.ghostSmall}
                                         onClick={async () => {
                                             await handlers.confirmSubsceneEdit();
-                                            onDataChange?.(); // 新增/修改子场景后刷新数据
+                                            onDataChange?.();
                                         }}
                                     >
                                         {isAddingNewSubscene ? '确认增加' : '确认修改'}
@@ -576,7 +574,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     className={styles.ghostSmall}
                                     onClick={async () => {
                                         await handlers.confirmEdit(activeScene);
-                                        onDataChange?.(); // 修改场景后刷新数据
+                                        onDataChange?.();
                                     }}
                                 >
                                     确认修改
@@ -687,7 +685,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 onDelete={handleConfirmSingleSceneGenerate}
                 onCancel={handleCancelSingleSceneGenerate}
                 title="积分扣除确认"
-                message={`本次生成场景立绘将扣除 10 积分，是否继续？`}
+                message={`本次生成场景立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />
@@ -698,7 +696,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 onDelete={handleConfirmGenerateWorldMap}
                 onCancel={handleCancelGenerateWorldMap}
                 title="积分扣除确认"
-                message={`本次生成大地图将扣除 10 积分，是否继续？`}
+                message={`本次生成大地图将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

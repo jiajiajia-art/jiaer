@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './CheckInModal.module.css';
 import { toast, Toaster } from 'react-hot-toast';
 import { auth } from '../api/account/authApi';
+import { CHECK_IN_REWARD_POINTS } from '../utils/constants';
 
 interface CheckInModalProps {
     isOpen: boolean;
@@ -14,7 +15,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
     const handleCheckIn = async () => {
         const response = await auth.checkIn();
         if (response.data.success) {
-            toast.success('签到成功，获得9积分');
+            toast.success(`签到成功，获得${CHECK_IN_REWARD_POINTS}积分`);
             setTimeout(() => {
                 onClose();
             }, 1000);
@@ -51,7 +52,7 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
                 <div className={styles.checkInModalText}>
                     <div className={styles.checkInModalTitle}>每日签到</div>
                     <div className={styles.checkInModalDesc}>
-                        签到即可获得 <span className={styles.checkInPoints}>9积分</span>
+                        签到即可获得 <span className={styles.checkInPoints}>{CHECK_IN_REWARD_POINTS}积分</span>
                     </div>
                 </div>
 

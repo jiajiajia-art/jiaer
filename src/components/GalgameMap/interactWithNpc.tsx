@@ -136,6 +136,8 @@ const InteractWithNpc = ({
     // 记录当前进行中的请求超时计时器
     const interactTimeoutRef = useRef<number | null>(null);
     const choiceTimeoutRef = useRef<number | null>(null);
+    // 防抖：选择处理中时屏蔽重复点击
+    const choiceInFlightRef = useRef(false);
 
     // 当 currentStep 变化且打字机已完成时，将之前的 step 加入已完成列表
     const previousStepRef = useRef<any>(null);
@@ -970,6 +972,11 @@ const InteractWithNpc = ({
     }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, isTextMode]);
 
     const handleChoiceClick = useCallback((option: { text: string; optionId?: string }) => {
+        // 防抖：选择处理中或有未完成请求时直接忽略
+        if (choiceInFlightRef.current || hasPendingRequest || stepHandlers.isWaitingForData) {
+            return;
+        }
+        choiceInFlightRef.current = true;
         setCompletedSteps([]);
         previousStepRef.current = null;
         previousIsTypingRef.current = false;
@@ -1024,6 +1031,7 @@ const InteractWithNpc = ({
 
         if (!optionId) {
             console.error('❌ 无法找到选项或 optionId:', { option, optionIndex, optionId });
+            choiceInFlightRef.current = false;
             return;
         }
         const finalOptionIndex = optionIndex >= 0 ? optionIndex : -1;
@@ -1068,6 +1076,7 @@ const InteractWithNpc = ({
                     choiceTimeoutRef.current = null;
                 }
                 setTimeoutModal({ visible: false, message: '' });
+                choiceInFlightRef.current = false;
 
                 if (typeof window !== 'undefined' && sessionId && eventId) {
                     try {
@@ -1088,6 +1097,7 @@ const InteractWithNpc = ({
                     choiceTimeoutRef.current = null;
                 }
                 setTimeoutModal({ visible: false, message: '' });
+                choiceInFlightRef.current = false;
                 if (typeof window !== 'undefined' && sessionId && eventId) {
                     try {
                         const pendingRequestKey = `world-pending-request-${sessionId}-${eventId}`;
@@ -1109,6 +1119,7 @@ const InteractWithNpc = ({
                     choiceTimeoutRef.current = null;
                 }
                 setTimeoutModal({ visible: false, message: '' });
+                choiceInFlightRef.current = false;
 
                 setErrorModal({
                     visible: true,
@@ -1125,6 +1136,9 @@ const InteractWithNpc = ({
                     }
                 }
             }
+        }).finally(() => {
+            // 兜底释放防抖锁，防止异常分支未回调
+            choiceInFlightRef.current = false;
         });
     }, [stepHandlers, currentMessage, sessionId, eventId]);
 

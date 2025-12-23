@@ -12,7 +12,6 @@ export const buildEventDataFromEvent = (
 ): EventData | null => {
     if (!gameData || !event) return null;
 
-    // 如果事件已经包含 npc 和 subscene，直接使用
     if (event.npc && event.subscene) {
         return {
             event: event as GameEvent,

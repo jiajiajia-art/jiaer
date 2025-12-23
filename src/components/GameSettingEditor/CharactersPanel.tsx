@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styles from './CharactersPanel.module.css';
+import { IMAGE_GENERATION_COST } from '../../utils/constants';
 import type { AllGameData } from '../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../api/galgame/EditorData.type';
@@ -614,7 +615,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                         <span className={styles.buttonMainText}>
                             {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
                         </span>
-                        <span className={styles.buttonSubText}>星星10/张</span>
+                        <span className={styles.buttonSubText}>{IMAGE_GENERATION_COST}积分/张</span>
                     </div>
                 </button>
             </div>
@@ -772,7 +773,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                             alt=""
                                             className={styles.priceIcon}
                                         />
-                                        <span>10 AI生成</span>
+                                        <span>{IMAGE_GENERATION_COST} AI生成</span>
                                     </button>
                                 )}
                             </div>
@@ -1018,7 +1019,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                                             alt=""
                                                             className={styles.priceIcon}
                                                         />
-                                                        <span>10 AI生成</span>
+                                                        <span>{IMAGE_GENERATION_COST} AI生成</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -1108,7 +1109,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 onDelete={confirmSingleNpcGenerate}
                 onCancel={cancelSingleNpcGenerate}
                 title="积分扣除确认"
-                message={`本次生成角色立绘将扣除 10 积分，是否继续？`}
+                message={`本次生成角色立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />
@@ -1119,7 +1120,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 onDelete={confirmVariationGenerate}
                 onCancel={cancelVariationGenerate}
                 title="积分扣除确认"
-                message={`本次生成差分图片将扣除 10 积分，是否继续？`}
+                message={`本次生成差分图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

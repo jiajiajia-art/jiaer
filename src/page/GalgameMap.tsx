@@ -89,72 +89,56 @@ const GalgameMap = () => {
         };
     }, []);
 
-    // 当历史数据和游戏数据都加载完成后，如果有历史数据就获取之前的旧事件
+    /**
+     * 恢复/初始化事件状态
+     * 合并原先的两个 useEffect，避免重复调用 getActiveEvents
+     */
     useEffect(() => {
-        const loadActiveEventFromHistory = async () => {
-            if (!worldInteractionHistory || !gameData || !sessionId) return;
-            if (worldInteractionHistory.interactions.length === 0) return;
-            
-            // 如果是 WORLD_MAP 或 STORY_INTRO 视图，恢复事件数据并切换到 WORLD_MAP
-            if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+        const syncEventState = async () => {
+            if (!sessionId || !gameData || !worldInteractionHistory) return;
+
+            const hasHistory = worldInteractionHistory.interactions.length > 0;
+
+            // 1) 有历史记录时：尝试恢复事件
+            if (hasHistory) {
                 if (!hasTriedRestoreEventDataRef.current) {
                     hasTriedRestoreEventDataRef.current = true;
-            await refreshEventData(sessionId, gameData);
-            setCurrentView(MapViewState.WORLD_MAP);
+                    await refreshEventData(sessionId, gameData);
+
+                    // 仅在地图/开场白视图时切回地图，避免覆盖交互中的视图
+                    if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                        setCurrentView(MapViewState.WORLD_MAP);
+                    }
                 }
+                return;
             }
 
-            else if ((currentView === MapViewState.INTERACT_NPC || 
-                     currentView === MapViewState.SUBSCENE_MODAL || 
-                     currentView === MapViewState.SCENE_VIEW) && 
-                     !eventData && 
-                     !hasTriedRestoreEventDataRef.current) {
-                hasTriedRestoreEventDataRef.current = true;
-                await refreshEventData(sessionId, gameData);
-            }
-        };
-        
-        loadActiveEventFromHistory();
-    }, [worldInteractionHistory, gameData, sessionId, currentView, setCurrentView, refreshEventData]);
-
-    // 当历史数据存在且为空时，检查是否有活跃事件，如果没有才进入开场白视图
-    // 注意：如果当前视图是 INTERACT_NPC 或 SUBSCENE_MODAL，说明是从历史恢复的，不执行此逻辑
-    useEffect(() => {
-        const checkAndSetStoryIntro = async () => {
-            if (!sessionId || !gameData) return;
-            if (!worldInteractionHistory) return;
+            // 2) 无历史且尚未有 eventData，检查活跃事件或进入开场白
             if (eventData) return;
-            
-            // 如果当前视图是 INTERACT_NPC、SUBSCENE_MODAL 或 SCENE_VIEW，说明是从 sessionStorage 恢复的
-            // 此时应该由 loadActiveEventFromHistory 来处理 eventData 的恢复，不执行开场白逻辑
+
+            // 交互/场景内视图说明是 sessionStorage 恢复，不强制重置
             if (currentView === MapViewState.INTERACT_NPC || 
                 currentView === MapViewState.SUBSCENE_MODAL || 
                 currentView === MapViewState.SCENE_VIEW) {
                 return;
             }
-            
-            // 只有"无历史"且"无活跃事件"时才显示开场白
-            const hasHistory = worldInteractionHistory.interactions.length > 0;
+
             try {
                 const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
                 const activeEvents = activeEventsResponse.data.success ? activeEventsResponse.data.events : [];
                 const hasActiveEvent = Array.isArray(activeEvents) && activeEvents.length > 0;
 
-                if (!hasHistory && !hasActiveEvent) {
-                    // 仅在当前视图为地图/开场白时才切换，避免覆盖用户刷新前的视图
-                    if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
-                        setCurrentView(MapViewState.STORY_INTRO);
-                    }
-                } else {
-                    // 有历史或有活跃事件，直接进入大地图；若有活跃事件则预先填充
-                    if (hasActiveEvent) {
-                        const nextEventData = buildEventDataFromEvent(activeEvents[0], gameData);
-                        if (nextEventData) {
-                            setEventData(nextEventData);
-                        }
+                if (hasActiveEvent) {
+                    const nextEventData = buildEventDataFromEvent(activeEvents[0], gameData);
+                    if (nextEventData) {
+                        setEventData(nextEventData);
                     }
                     if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
                         setCurrentView(MapViewState.WORLD_MAP);
+                    }
+                } else {
+                    if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                        setCurrentView(MapViewState.STORY_INTRO);
                     }
                 }
             } catch (error) {
@@ -164,9 +148,9 @@ const GalgameMap = () => {
                 }
             }
         };
-        
-        checkAndSetStoryIntro();
-    }, [worldInteractionHistory, gameData, sessionId, currentView, setCurrentView, eventData, setEventData]);
+
+        syncEventState();
+    }, [worldInteractionHistory, gameData, sessionId, currentView, eventData, refreshEventData, setCurrentView, setEventData]);
 
     useEffect(() => {
         getMapWorldData();
@@ -319,7 +303,6 @@ const GalgameMap = () => {
         }
     }, [fileId, user?.user.id]);
 
-    // 结束当前回合 / 开启下一回合
     const handleEndRound = async () => {
         if (!sessionId || !gameData) {
             console.error('缺少 sessionId 或 gameData');
@@ -516,29 +499,12 @@ const GalgameMap = () => {
                         />
                 )}
 
-                {/* 统一管理"开启下一回合"按钮 - 在所有视图中根据条件显示 */}
                 {(() => {
                     // 基础条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
                     const baseCondition = (!eventData || eventCompleted) && !isLoading;
                     
-                    // 对于 INTERACT_NPC 视图，需要额外检查：
-                    // 1. eventCompleted 标志为 true（事件已完成）
-                    // 2. 打字机已完成（isTypingInInteractNpc 为 false）
                     const shouldShow = baseCondition && 
                         (currentView !== MapViewState.INTERACT_NPC || (eventCompleted && !isTypingInInteractNpc));
-                    
-                    // 调试信息（开发环境）
-                    if (import.meta.env.DEV && (baseCondition || eventCompleted)) {
-                        console.log('[GalgameMap] NextRoundButton 统一显示检查:', {
-                            currentView,
-                            hasEventData: !!eventData,
-                            eventCompleted,
-                            isTypingInInteractNpc,
-                            isLoading,
-                            shouldShow,
-                        });
-                    }
-                    
                     return shouldShow;
                 })() && (
                     <NextRoundButton

@@ -2,6 +2,7 @@ import React from 'react';
 import styles from '../ScenesPanel.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
+import { IMAGE_GENERATION_COST } from '../../../utils/constants';
 
 interface BgmItem {
     id: string;
@@ -106,7 +107,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             alt=""
                             className={styles.priceIcon}
                         />
-                        <span>10 AI生成</span>
+                        <span>{IMAGE_GENERATION_COST} AI生成</span>
                     </button>
                 )}
             </div>
