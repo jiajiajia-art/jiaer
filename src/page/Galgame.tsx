@@ -48,10 +48,10 @@ const Galgame = () => {
 
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [gameTitle, setGameTitle] = useState<string>('Galgame');
-    const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null>(null);
-    const [worldSetting, setWorldSetting] = useState<GetGalgamePresetResponse['worldSetting'] | null>(null);
-    const [npcSetting, setNpcSetting] = useState<GetGalgamePresetResponse['npcSetting'] | null>(null);
-    const [sceneSetting, setSceneSetting] = useState<GetGalgamePresetResponse['sceneSetting'] | null>(null);
+    const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['scenes']['scenes'][0] | null>(null);
+    const [worldSetting, setWorldSetting] = useState<GetGalgamePresetResponse['world'] | null>(null);
+    const [npcSetting, setNpcSetting] = useState<GetGalgamePresetResponse['npcs'] | null>(null);
+    const [sceneSetting, setSceneSetting] = useState<GetGalgamePresetResponse['scenes'] | null>(null);
 
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [initialMessages, setInitialMessages] = useState<Message[]>([]);
@@ -164,7 +164,7 @@ const Galgame = () => {
                 message: step.content || '',
             };
         } else if (step.type === 'dialogue') {
-            const characterName = step.speakerName || step.npcId || '未知角色';
+            const characterName = step.isPlayer ? worldSetting?.player?.name : step.speakerName || step.npcId || '未知角色';
             let characterImage: string | undefined;
 
             if (step.activeImage) {
@@ -229,7 +229,7 @@ const Galgame = () => {
                 characterPosition: 'right',
             };
         } else if (step.type === 'scene_change') {
-            const newScene: GetGalgamePresetResponse['sceneSetting']['scenes'][0] = {
+            const newScene: GetGalgamePresetResponse['scenes']['scenes'][0] = {
                 id: step.sceneId || '',
                 name: step.sceneName || '',
                 type: '',
@@ -687,23 +687,28 @@ const Galgame = () => {
                 const response = isPreset ? await getGalgamePresetApi.getGalgamePreset(fileId) : await getGalgamePresetApi.getGalgameFileId(fileId);
 
                 if (response.data.success) {
-                    const data = response.data;
-                    setPresetData(data);
-                    setWorldSetting(data.worldSetting);
-                    setNpcSetting(data.npcSetting || null);
-                    setSceneSetting(data.sceneSetting);
+                    // 后端实际返回 { success, data: { world, npcs, scenes, ... } }
+                    const presetDataResp = response.data.data as GetGalgamePresetResponse;
+                    if (import.meta.env.DEV) {
+                        console.log('[Galgame] 预设数据返回:', presetDataResp);
+                        console.log('[Galgame] scenes 概览:', presetDataResp?.scenes);
+                    }
+                    setPresetData(presetDataResp);
+                    setWorldSetting(presetDataResp.world);
+                    setNpcSetting(presetDataResp.npcs || null);
+                    setSceneSetting(presetDataResp.scenes);
 
-                    if (data.worldSetting?.title) {
-                        setGameTitle(data.worldSetting.title);
+                    if (presetDataResp.world?.title) {
+                        setGameTitle(presetDataResp.world.title);
                     }
 
                     let sceneImage = '';
-                    if (data.sceneSetting?.scenes && data.sceneSetting.scenes.length > 0) {
-                        const scenes = data.sceneSetting.scenes;
+                    if (presetDataResp.scenes?.scenes && presetDataResp.scenes.scenes.length > 0) {
+                        const scenes = presetDataResp.scenes.scenes;
                         // 如果有历史记录中的 visitedScenes，则优先使用最后一个场景 ID 对应的场景
                         let initialScene = scenes[0];
                         if (lastVisitedSceneId) {
-                            const matched = scenes.find((scene) => scene.id === lastVisitedSceneId);
+                            const matched = scenes.find((scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => scene.id === lastVisitedSceneId);
                             if (matched) {
                                 initialScene = matched;
                             }

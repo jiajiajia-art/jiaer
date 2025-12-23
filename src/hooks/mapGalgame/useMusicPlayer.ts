@@ -4,7 +4,7 @@ import type { GetGalgamePresetResponse } from '../../api/galgame/getGalgamePrese
 
 interface UseMusicPlayerOptions {
     presetId: string | null;
-    currentScene: GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null;
+    currentScene: GetGalgamePresetResponse['scenes']['scenes'][0] | null;
     gameStarted: boolean;
     isLoading: boolean;
 }
@@ -22,7 +22,7 @@ export const useMusicPlayer = ({
     const isLoadingMusicRef = useRef<boolean>(false);
 
     const loadAndPlaySceneMusic = useCallback(
-        async (scene?: GetGalgamePresetResponse['sceneSetting']['scenes'][0] | null, autoPlay: boolean = true) => {
+        async (scene?: GetGalgamePresetResponse['scenes']['scenes'][0] | null, autoPlay: boolean = true) => {
             if (!presetId) return;
 
             const targetScene = scene ?? currentScene;

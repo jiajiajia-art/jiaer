@@ -1,9 +1,9 @@
 export interface GetGalgamePresetResponse {
     success: boolean
     presetId: string
-    worldSetting: WorldSetting
-    npcSetting: NpcSetting
-    sceneSetting: SceneSetting
+    world: WorldSetting
+    npcs: NpcSetting
+    scenes: SceneSetting
     [key: string]: unknown
   }
   
