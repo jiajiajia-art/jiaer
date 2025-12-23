@@ -5,6 +5,7 @@ import type { WorldInteractionGameData } from '../../api/worldInteraction/worldI
 import type { NPCSetting, NPC } from '../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
+import { MdDownload } from 'react-icons/md';
 import DeletModal from '../goodsModal/DeletModal';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
@@ -565,6 +566,32 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         setPendingCharacterForGenerate(null);
     };
 
+    // 下载图片
+    const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string) => {
+        if (!fileId || !api) {
+            toast.error('缺少必要数据，无法下载');
+            return;
+        }
+
+        try {
+            const response = await api.downloadImage(fileId, type, id, variant);
+            // 创建下载链接
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const fileName = variant ? `${id}_${variant}.png` : `${id}.png`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('图片下载成功');
+        } catch (error) {
+            console.error('下载图片失败:', error);
+            toast.error('下载图片失败，请稍后重试');
+        }
+    };
+
     return (
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
@@ -574,11 +601,21 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     <p className={styles.subtitle}>解析出的角色自动列出，可逐项确认姓名、称呼、口癖与立绘</p>
                 </div>
                 <button
-                    className={styles.ghost}
+                    className={`${styles.ghost} ${styles.generateButton}`}
                     onClick={openNpcCostModal}
                     disabled={isGeneratingNpcImages || isLoadingNpcCost}
                 >
-                    {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
+                    <img
+                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                        alt=""
+                        className={styles.priceIcon}
+                    />
+                    <div className={styles.buttonTextContainer}>
+                        <span className={styles.buttonMainText}>
+                            {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
+                        </span>
+                        <span className={styles.buttonSubText}>星星10/张</span>
+                    </div>
                 </button>
             </div>
 
@@ -688,6 +725,24 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 }}
                                 onClick={handlePortraitClick}
                             >
+                                {/* 下载按钮 */}
+                                {currentCharacter.portrait && (
+                                    <button
+                                        className={styles.downloadButton}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (currentCharacter.id === 'player') {
+                                                // player 的 URL 格式：/players/base.png，不需要 id
+                                                handleDownloadImage('players', '', 'base');
+                                            } else {
+                                                handleDownloadImage('npcs', currentCharacter.id, 'base');
+                                            }
+                                        }}
+                                        title="下载图片"
+                                    >
+                                        <MdDownload size={18} />
+                                    </button>
+                                )}
                                 <span className={styles.portraitHint}>
                                     {isAddingNew ? '点击上传角色基础立绘' : '点击替换角色基础立绘'}
                                 </span>
@@ -704,14 +759,21 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                     onClick={handlePortraitClick}
                                     disabled={isGeneratingSingleNpcImage}
                                 >
-                                    {isAddingNew ? '上传立绘' : '重新上传'}
+                                    上传图片
                                 </button>
                                 {currentCharacter && (
                                     <button
-                                        className={styles.ghostSmall}
+                                        className={`${styles.ghostSmall} ${styles.generateButton}`}
                                         onClick={() => handleRequestSingleNpcGenerate(currentCharacter)}
                                         disabled={isGeneratingSingleNpcImage}
-                                    >AI 重新生成</button>
+                                    >
+                                        <img
+                                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                                            alt=""
+                                            className={styles.priceIcon}
+                                        />
+                                        <span>10 AI生成</span>
+                                    </button>
                                 )}
                             </div>
 
@@ -907,6 +969,20 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                                     className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
                                                     style={variation.img ? { backgroundImage: `url('${variation.img}')` } : {}}
                                                 >
+                                                    {/* 下载按钮 */}
+                                                    {variation.img && currentCharacter.id !== 'player' && (
+                                                        <button
+                                                            className={styles.downloadButton}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const variantType = variation.label;
+                                                                handleDownloadImage('npcs', currentCharacter.id, variantType);
+                                                            }}
+                                                            title="下载图片"
+                                                        >
+                                                            <MdDownload size={16} />
+                                                        </button>
+                                                    )}
                                                     {!variation.img && <span className={styles.mutedSmall}>等待图片</span>}
                                                 </div>
                                                 <p>{variation.label}</p>
@@ -934,10 +1010,15 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                                         上传图片
                                                     </button>
                                                     <button
-                                                        className={styles.ghostTiny}
+                                                        className={`${styles.ghostTiny} ${styles.generateButton}`}
                                                         onClick={() => handleRequestVariationGenerate(variation)}
                                                     >
-                                                        AI 生成
+                                                        <img
+                                                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                                                            alt=""
+                                                            className={styles.priceIcon}
+                                                        />
+                                                        <span>10 AI生成</span>
                                                     </button>
                                                 </div>
                                             </div>

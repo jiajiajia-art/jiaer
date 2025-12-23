@@ -27,6 +27,14 @@ interface useMapGalgameState {
     setEventData: (eventData: EventData | null) => void;
         refreshEventData: (sessionId: string, gameData: any) => Promise<void>;
     
+    // 事件完成标志（用于同步显示"开启下一回合"按钮）
+    eventCompleted: boolean;
+    setEventCompleted: (completed: boolean) => void;
+    
+    // NPC 交互页面中的打字机状态（用于判断是否可以在 INTERACT_NPC 视图显示按钮）
+    isTypingInInteractNpc: boolean;
+    setIsTypingInInteractNpc: (typing: boolean) => void;
+    
     // 视图状态管理
     currentView: MapViewState;
     setCurrentView: (view: MapViewState) => void;
@@ -54,29 +62,49 @@ interface useMapGalgameState {
 
 export const useMapGalgameStore = create<useMapGalgameState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             eventData: null,
             setEventData: (eventData: EventData | null) => set({ eventData }),
+            
+            // 事件完成标志
+            eventCompleted: false,
+            setEventCompleted: (completed: boolean) => set({ eventCompleted: completed }),
+            
+            // NPC 交互页面中的打字机状态
+            isTypingInInteractNpc: false,
+            setIsTypingInInteractNpc: (typing: boolean) => set({ isTypingInInteractNpc: typing }),
             
             // 刷新事件状态：从后端获取最新活跃事件
             refreshEventData: async (sessionId: string, gameData: any) => {
                 try {
+                    const state = get();
+                    const currentView = state.currentView;
+                    const currentEventData = state.eventData;
+                    
                     const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
                     if (activeEventsResponse.data.success) {
                         if (activeEventsResponse.data.events.length > 0) {
-                            // 有活跃事件：更新 eventData
+                            // 有活跃事件：更新 eventData，清除完成标志
                             const newEventData = buildEventDataFromEvent(
                                 activeEventsResponse.data.events[0],
                                 gameData
                             );
                             if (newEventData) {
-                                set({ eventData: newEventData });
+                                set({ eventData: newEventData, eventCompleted: false });
                                 console.log('[WorldInteraction] 刷新事件状态成功：', newEventData);
                             }
                         } else {
-                            // 没有活跃事件：清空 eventData
-                            set({ eventData: null });
-                            console.log('[WorldInteraction] 刷新事件状态：没有活跃事件');
+                            // 没有活跃事件
+                            // 如果当前在 NPC 交互页面，保留当前的 eventData，避免白屏
+                            // 但记录日志，表示事件已完成，等待用户操作
+                            if (currentView === MapViewState.INTERACT_NPC && currentEventData) {
+                                console.log('[WorldInteraction] 刷新事件状态：没有活跃事件，但保留当前 eventData 以避免白屏（等待用户点击"开始下一回合"）');
+                                // 不更新 eventData，不设置 eventCompleted（由 interactWithNpc 组件在打字机完成后设置）
+                            } else {
+                                // 其他视图：清空 eventData，设置完成标志
+                                set({ eventData: null, eventCompleted: true });
+                                console.log('[WorldInteraction] 刷新事件状态：没有活跃事件，设置完成标志');
+                            }
                         }
                     }
                 } catch (error) {
@@ -102,10 +130,11 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             
             clearState: () => set({
                 eventData: null,
+                eventCompleted: false,
+                isTypingInInteractNpc: false,
                 currentView: MapViewState.WORLD_MAP,
                 selectedSubscene: null,
                 selectedScene: null,
-                // 回到默认开启，让重新进入地图时也会尝试自动播放
                 isMusicPlaying: true,
             }),
         }),
@@ -113,8 +142,9 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             name: 'map-galgame-storage',
             // 使用 sessionStorage，页面关闭后自动清除
             storage: createJSONStorage(() => sessionStorage),
-            // 持久化视图与子场景，刷新后可恢复上次打开的模块
+            // 持久化视图、选中场景 & 事件数据，刷新后可恢复上次进度
             partialize: (state) => ({
+                eventData: state.eventData,
                 currentView: state.currentView,
                 selectedSubscene: state.selectedSubscene,
                 selectedScene: state.selectedScene,

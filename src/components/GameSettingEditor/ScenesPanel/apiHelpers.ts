@@ -99,6 +99,13 @@ export const createSceneApiHelpers = (mode: string) => {
                 ? worldEditor.calculateScenePoints(fileId)
                 : EditorApi.calculateScenePoints(fileId);
         },
+
+        // 下载图片
+        downloadImage: async (fileId: string, type: 'npcs' | 'scenes' | 'subscenes' | 'worldMap', name: string, variant?: string) => {
+            const pluginType = isWorldInteraction ? 'world-interaction' : 'visual';
+            // 对于 NPC，需要传递 variant（如 base），场景不需要
+            return EditorApi.downloadImage(pluginType, fileId, type, name, variant);
+        },
     };
 };
 

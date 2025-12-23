@@ -47,6 +47,9 @@ const GalgameMap = () => {
         selectedScene,
         setSelectedScene,
         refreshEventData,
+        eventCompleted,
+        setEventCompleted,
+        isTypingInInteractNpc,
     } = useMapGalgameStore();
     const { user } = useAuthStore();
     
@@ -318,34 +321,35 @@ const GalgameMap = () => {
 
     // 结束当前回合 / 开启下一回合
     const handleEndRound = async () => {
-        if (!sessionId) {
-            console.error('缺少 sessionId');
+        if (!sessionId || !gameData) {
+            console.error('缺少 sessionId 或 gameData');
             return;
         }
 
         try {
             setIsEndingRound(true);
+            // 清除事件完成标志
+            setEventCompleted(false);
             const response = await interactionApi.nextRound(sessionId);
             
+            // 刷新历史记录，确保数据同步
+            await fetchWorldInteractionHistory();
+            
+            // 只有成功分发新事件时，才更新状态并切换视图
             if (response.data.success && response.data.activeEvents?.length > 0) {
                 const nextEventData = buildEventDataFromEvent(response.data.activeEvents[0], gameData);
                 if (nextEventData) {
                     setEventData(nextEventData);
+                    // 清理场景状态，切换到世界地图视图
+                    setSelectedSubscene(null);
+                    setSelectedScene(null);
+                    setCurrentView(MapViewState.WORLD_MAP);
                 }
-            } else {
-                setEventData(null);
             }
-            
-            // 刷新历史记录，确保数据同步
-            await fetchWorldInteractionHistory();
+            // 如果没有新事件（activeEvents 为空），保持当前视图和状态，不强制切换，避免白屏
         } catch (error) {
             console.error('开始新回合失败:', error);
         } finally {
-            // 清理场景状态，重置到最外层
-            setSelectedSubscene(null);
-            setSelectedScene(null);
-            // 无论成功与否，都回到世界地图视图；是否有事件由 eventData 是否为空决定
-            setCurrentView(MapViewState.WORLD_MAP);
             setIsEndingRound(false);
         }
     };
@@ -447,11 +451,23 @@ const GalgameMap = () => {
                             eventData={eventData}
                         />
 
-                        {/* 当存在历史但当前没有活跃任务时，提供"开启下一回合"按钮 */}
-                        {worldInteractionHistory
-                            && worldInteractionHistory.interactions.length > 0
-                            && !eventData
-                            && !isLoading && (
+                        {/* 当事件已完成（没有活跃事件或 eventCompleted 标志为 true）时，提供"开启下一回合"按钮 */}
+                        {(() => {
+                            // 统一条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
+                            const shouldShow = (!eventData || eventCompleted) && !isLoading;
+                            
+                            // 调试信息（开发环境）
+                            if (import.meta.env.DEV) {
+                                console.log('[GalgameMap] NextRoundButton 显示检查 (WORLD_MAP):', {
+                                    hasEventData: !!eventData,
+                                    eventCompleted,
+                                    isLoading,
+                                    shouldShow,
+                                });
+                            }
+                            
+                            return shouldShow;
+                        })() && (
                                 <NextRoundButton
                                     onClick={handleEndRound}
                                     disabled={isEndingRound}
@@ -488,21 +504,47 @@ const GalgameMap = () => {
                         gameData={gameData}
                         onBack={handleBack}
                         onNpcInteract={handleNpcInteract}
-                        onEndRound={handleEndRound}
-                        isEndingRound={isEndingRound}
-                        worldInteractionHistory={worldInteractionHistory ?? null}
                     />
                 )}
 
-                {/* NPC交互界面 */}
-                {/* 只有当 eventData 存在时才渲染，确保组件初始化时有正确的 eventId 来恢复未完成的步骤 */}
-                {currentView === MapViewState.INTERACT_NPC && eventData && (
-                    <InteractWithNpc
-                        onClose={handleBack}
-                        gameData={gameData}
-                        onEndRound={handleEndRound}
-                        isEndingRound={isEndingRound}
-                        worldInteractionHistory={worldInteractionHistory ?? null}
+                {currentView === MapViewState.INTERACT_NPC && (
+                    eventData && gameData  &&
+                        <InteractWithNpc
+                            onClose={handleBack}
+                            gameData={gameData}
+                            worldInteractionHistory={worldInteractionHistory ?? null}
+                        />
+                )}
+
+                {/* 统一管理"开启下一回合"按钮 - 在所有视图中根据条件显示 */}
+                {(() => {
+                    // 基础条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
+                    const baseCondition = (!eventData || eventCompleted) && !isLoading;
+                    
+                    // 对于 INTERACT_NPC 视图，需要额外检查：
+                    // 1. eventCompleted 标志为 true（事件已完成）
+                    // 2. 打字机已完成（isTypingInInteractNpc 为 false）
+                    const shouldShow = baseCondition && 
+                        (currentView !== MapViewState.INTERACT_NPC || (eventCompleted && !isTypingInInteractNpc));
+                    
+                    // 调试信息（开发环境）
+                    if (import.meta.env.DEV && (baseCondition || eventCompleted)) {
+                        console.log('[GalgameMap] NextRoundButton 统一显示检查:', {
+                            currentView,
+                            hasEventData: !!eventData,
+                            eventCompleted,
+                            isTypingInInteractNpc,
+                            isLoading,
+                            shouldShow,
+                        });
+                    }
+                    
+                    return shouldShow;
+                })() && (
+                    <NextRoundButton
+                        onClick={handleEndRound}
+                        disabled={isEndingRound}
+                        isLoading={isEndingRound}
                     />
                 )}
             </div>

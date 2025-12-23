@@ -1,6 +1,5 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-// import CreateCharacter from './page/CreateCharacter';
 import Home from './page/Home';
 import Create from './page/Create';
 import WareHouse from './page/WareHouse';
@@ -12,7 +11,6 @@ import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
 import RpgGame from './page/RpgGame';
-// import Activity from './page/Activity';
 
 function App() {
   return (
@@ -20,7 +18,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
-        {/* <Route path="/createCharacter" element={<CreateCharacter />} /> */}
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route element={<ProtectedRoute />}>
@@ -29,7 +26,6 @@ function App() {
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
-          {/* <Route path="/activity" element={<Activity />} /> */}
           <Route path="/profile" element={<Profile />} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />

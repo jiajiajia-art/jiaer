@@ -19,7 +19,6 @@ import { useMapMusicPlayer } from "../../hooks/mapGalgame/useMapMusicPlayer";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
 import HistoryModal from "./historyModal";
-import NextRoundButton from "./NextRoundButton";
 import WorldModal from "./WorldModal";
 import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
@@ -38,21 +37,17 @@ const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面
 const InteractWithNpc = ({ 
     onClose, 
     gameData,
-    onEndRound,
-    isEndingRound,
     worldInteractionHistory,
 }: { 
     onClose: () => void;
     gameData: AllGameData | null;
-    onEndRound: () => void;
-    isEndingRound: boolean;
     worldInteractionHistory: GetWorldInteractionHistoryResponse | null;
 }) => {
     // ==================== Store & Context ====================
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
     const { fileId } = useGameStore();
-    const { eventData, setEventData, setCurrentView, refreshEventData, selectedSubscene } = useMapGalgameStore();
+    const { eventData, setEventData, setCurrentView, refreshEventData, selectedSubscene, eventCompleted, setEventCompleted, setIsTypingInInteractNpc } = useMapGalgameStore();
 
     // ==================== 派生数据 ====================
     const eventId = eventData?.event?.eventId || null;
@@ -152,7 +147,6 @@ const InteractWithNpc = ({
         fileId: fileId,
         historyLength: latestHistory?.interactions.length ?? 0,
         onMessagesClear: () => {
-            // 清空已完成步骤和引用，避免残留数据
             setCompletedSteps([]);
             previousStepRef.current = null;
             previousIsTypingRef.current = false;
@@ -672,6 +666,43 @@ const InteractWithNpc = ({
         : (gameStarted ? displayedText : (currentMessage && currentMessage.type !== 'choice' ? currentMessage.message : ''));
 
     const finalIsTyping = ((stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep) ? false : isTyping;
+    
+    // 同步打字机状态到 store，供 GalgameMap.tsx 判断是否显示按钮
+    useEffect(() => {
+        setIsTypingInInteractNpc(finalIsTyping);
+    }, [finalIsTyping, setIsTypingInInteractNpc]);
+
+    // ==================== 事件完成标志设置 ====================
+    // 当事件完成且打字机完成后，设置 eventCompleted 标志
+    // 使用 useEffect 确保在打字机真正完成后才设置，而不是在检测到 completedEvent 时立即设置
+    useEffect(() => {
+        const hasCompletedEvent = stepHandlers.newEvent?.completedEvent && !stepHandlers.newEvent?.event;
+        const stepsFinished = !stepHandlers.isWaitingForData && 
+                             !finalIsTyping && 
+                             (!stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0);
+        
+        // 只有当事件完成、步骤播放完毕、打字机完成，且还没有设置标志时，才设置 eventCompleted
+        if (hasCompletedEvent && stepsFinished && !eventCompleted && !finalIsTyping) {
+            setEventCompleted(true);
+            if (import.meta.env.DEV) {
+                console.log('[InteractWithNpc] 事件完成且打字机完成，设置 eventCompleted 标志为 true', {
+                    hasCompletedEvent,
+                    stepsFinished,
+                    finalIsTyping,
+                    stepQueueLength: stepHandlers.stepQueue?.length || 0,
+                    isWaitingForData: stepHandlers.isWaitingForData,
+                });
+            }
+        }
+    }, [
+        stepHandlers.newEvent?.completedEvent,
+        stepHandlers.newEvent?.event,
+        stepHandlers.isWaitingForData,
+        finalIsTyping,
+        stepHandlers.stepQueue,
+        eventCompleted,
+        setEventCompleted,
+    ]);
 
     // ==================== 缓存清理 & 事件刷新 ====================
     // 当步骤播放完毕时，清除本地缓存标记，并刷新事件状态
@@ -702,12 +733,14 @@ const InteractWithNpc = ({
                 window.localStorage.removeItem(incompleteKey);
                 console.log('[WorldInteraction] 步骤播放完毕，已清除缓存和不完整标记');
                 
-                // 延迟刷新事件状态，确保打字机动画完成
-                setTimeout(() => {
+                // 延迟刷新事件状态，确保数据同步，同时给用户时间看到"开始下一回合"按钮
+                // 延迟 3 秒后刷新，这样既能获取最新状态，又不会立即导致白屏
+                setTimeout(async () => {
                     if (sessionId && gameData) {
-                        refreshEventData(sessionId, gameData);
+                        console.log('[WorldInteraction] 步骤播放完毕，延迟刷新事件状态');
+                        await refreshEventData(sessionId, gameData);
                     }
-                }, 500);
+                }, 3000);
             } catch (e) {
                 console.warn('[WorldInteraction] 清理本地步骤缓存失败:', e);
             }
@@ -800,14 +833,15 @@ const InteractWithNpc = ({
     }, [allStepsForTextModal, stepHandlers.currentStep]);
 
     // ==================== 按钮显示逻辑 ====================
-    // "继续游戏"按钮：当有新事件 (newEvent) 或仅有 completedEvent 时显示
+    // "继续游戏"按钮：只有当有完整新事件时才显示（keyEventCompleted=false）
     const shouldShowContinueButton = useMemo(() => {
         const newEvent = stepHandlers.newEvent;
         if (!newEvent) return false;
 
+        // 只显示有完整新事件的情况（keyEventCompleted=false）
         const hasFullNewEvent = !!(newEvent.event && newEvent.npc && newEvent.subscene);
-        const hasCompletedOnly = !!newEvent.completedEvent;
-        if (!hasFullNewEvent && !hasCompletedOnly) {
+        if (!hasFullNewEvent) {
+            // 只有 completedEvent（关键事件结束，没有新事件）时，不显示"继续游戏"
             return false;
         }
 
@@ -858,7 +892,6 @@ const InteractWithNpc = ({
                 }
             }
             
-            // 只有在找到新背景图片时才更新
             if (newBgImage) {
                 setDisplayBackgroundImage(newBgImage);
             }
@@ -874,16 +907,11 @@ const InteractWithNpc = ({
             return;
         }
 
-        // 仅有 completedEvent（没有新事件）：回到地图并刷新事件数据，让"开始下一回合"出现
-        if (newEvent?.completedEvent) {
-            const { setSelectedSubscene, setSelectedScene } = useMapGalgameStore.getState();
-            setSelectedSubscene(null);
-            setSelectedScene(null);
-            if (sessionId && gameData) {
-                refreshEventData(sessionId, gameData);
-            }
+        // 仅有 completedEvent（没有新事件）：只清理 newEvent 标记，不自动跳转页面
+        // 让用户保持在当前页面，显示"开始下一回合"按钮
+        if (newEvent?.completedEvent && !newEvent.event) {
             stepHandlers.clearNewEvent?.();
-            setCurrentView(MapViewState.WORLD_MAP);
+            // 不调用 refreshEventData，不切换视图，避免白屏
         }
     }, [stepHandlers, setEventData, setCurrentView, sceneSetting, sessionId, gameData, refreshEventData]);
 
@@ -1235,7 +1263,7 @@ const InteractWithNpc = ({
                         </div>
                         
                         {/* 继续游戏按钮 - 有 newEvent 时显示 */}
-                        {shouldShowContinueButton && !isEndingRound && (
+                        {shouldShowContinueButton && (
                             <div 
                                 className={styles.continueButton} 
                                 onClick={handleContinue}
@@ -1255,17 +1283,13 @@ const InteractWithNpc = ({
                 history={latestHistory ?? worldInteractionHistory}
             />
             
-            {/* 当没有活跃事件且没有继续游戏按钮时，显示"开始下一回合"按钮 */}
-            {!eventData && 
-             !shouldShowContinueButton &&
-             worldInteractionHistory && 
-             worldInteractionHistory.interactions.length > 0 && (
-                <NextRoundButton
-                    onClick={onEndRound}
-                    disabled={isEndingRound}
-                    isLoading={isEndingRound}
-                />
-            )}
+            {/* 当事件真正完成（有 completedEvent 标志）且没有新事件时，设置全局完成标志 */}
+            {/* 按钮的显示由 GalgameMap.tsx 统一管理 */}
+            {/* 使用 useEffect 确保在打字机完成后才设置 eventCompleted */}
+            {(() => {
+                // 这个函数只用于渲染，不设置状态
+                return null;
+            })()}
 
             {/* 请求错误弹窗 */}
             <WorldModal

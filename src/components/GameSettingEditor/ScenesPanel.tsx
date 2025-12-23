@@ -270,6 +270,32 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         handlers.cancelGenerateWorldMap();
     };
 
+    // 下载图片
+    const handleDownloadImage = async (type: 'npcs' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string) => {
+        if (!fileId || !sceneApi) {
+            toast.error('缺少必要数据，无法下载');
+            return;
+        }
+
+        try {
+            const response = await sceneApi.downloadImage(fileId, type, id, variant);
+            // 创建下载链接
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const fileName = variant ? `${id}_${variant}.png` : `${id}.png`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('图片下载成功');
+        } catch (error) {
+            console.error('下载图片失败:', error);
+            toast.error('下载图片失败，请稍后重试');
+        }
+    };
+
     // 如果没有场景数据，显示空状态
     if (sceneData.length === 0 || !activeScene) {
         return (
@@ -320,11 +346,12 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                 onChange={handlers.handleUploadWorldMapChange}
                             />
                             <button
-                                className={styles.ghostSmall}
+                                className={`${styles.ghostSmall} ${styles.generateButton}`}
                                 onClick={handlers.handleRequestGenerateWorldMap}
                                 disabled={!fileId || isGeneratingWorldMap}
                             >
-                                {isGeneratingWorldMap ? '生成中...' : 'AI 生成'}
+                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
+                                {isGeneratingWorldMap ? '生成中...' : '10 AI 生成'}
                             </button>
                             <button
                                 className={styles.ghostSmall}
@@ -349,11 +376,21 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     <p className={styles.subtitle}>AI 生成场景描述，可直接选择上一步上传的 BGM</p>
                 </div>
                 <button
-                    className={styles.ghost}
+                    className={`${styles.ghost} ${styles.generateButton}`}
                     onClick={() => handlers.openSceneCostModal()}
                     disabled={isGeneratingAllSceneImages || isLoadingSceneCost}
                 >
-                    {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
+                    <img
+                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                        alt=""
+                        className={styles.priceIcon}
+                    />
+                    <div className={styles.buttonTextContainer}>
+                        <span className={styles.buttonMainText}>
+                            {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
+                        </span>
+                        <span className={styles.buttonSubText}>星星10/张</span>
+                    </div>
                 </button>
             </div>
 
@@ -582,6 +619,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
                                     onFieldChange={handlers.updateSubsceneField}
+                                    onDownloadImage={handleDownloadImage}
+                                    sceneType="subscenes"
                                 />
                             ) : (
                                 /* 主场景编辑盒子 */
@@ -596,6 +635,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
                                     onFieldChange={handlers.updateSceneField}
+                                    onDownloadImage={handleDownloadImage}
+                                    sceneType="scenes"
                                 />
                             )}
                         </>

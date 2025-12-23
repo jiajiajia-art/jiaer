@@ -51,6 +51,40 @@
     color: #E03D4B;
 }
 
+/* AI生成按钮样式优化 */
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.buttonTextContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.2;
+}
+
+.buttonMainText {
+    line-height: 1.2;
+}
+
+.buttonSubText {
+    font-size: 0.7rem;
+    color: rgba(0, 0, 0, 0.5);
+    line-height: 1;
+    font-weight: 400;
+}
+
 .ghostSmall {
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.12);
@@ -391,6 +425,35 @@
     opacity: 1;
 }
 
+/* 下载按钮 */
+.downloadButton {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+.downloadButton:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.downloadButton:active {
+    transform: scale(0.95);
+}
+
 .sceneImageActions {
     display: flex;
     gap: 10px;
@@ -399,6 +462,25 @@
 
 .sceneImageActions button {
     flex: 1 1 140px;
+}
+
+/* AI生成按钮样式优化 */
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.generateButton span {
+    line-height: 1;
 }
 
 /* 表单布局 */

@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from '../ScenesPanel.module.css';
+import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
 
 interface BgmItem {
@@ -21,6 +22,8 @@ interface SceneDetailFormProps {
     onUploadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRequestRegenerate: (scene: LocalScene) => void;
     onFieldChange: (field: keyof LocalScene, value: string) => void;
+    onDownloadImage?: (type: 'scenes' | 'subscenes', id: string) => void;
+    sceneType?: 'scenes' | 'subscenes';
 }
 
 const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
@@ -36,6 +39,8 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     onUploadChange,
     onRequestRegenerate,
     onFieldChange,
+    onDownloadImage,
+    sceneType = 'scenes',
 }) => {
     const showDisabledMessage = disabled && disabledMessage;
     const isDisabled = disabled || isGeneratingForThisScene;
@@ -52,6 +57,19 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                     backgroundImage: `url('${scene.image || defaultImage}')`,
                 }}
             >
+                {/* 下载按钮 */}
+                {scene.image && onDownloadImage && (
+                    <button
+                        className={styles.downloadButton}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDownloadImage(sceneType, scene.id);
+                        }}
+                        title="下载图片"
+                    >
+                        <MdDownload size={18} />
+                    </button>
+                )}
                 {showDisabledMessage ? (
                     <span className={styles.heroHint}>{disabledMessage}</span>
                 ) : scene.image ? (
@@ -78,12 +96,17 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 </button>
                 {scene && (
                     <button
-                        className={styles.ghostSmall}
+                        className={`${styles.ghostSmall} ${styles.generateButton}`}
                         onClick={() => onRequestRegenerate(scene)}
                         disabled={isDisabled}
                         style={{ opacity: isDisabled ? 0.5 : 1 }}
                     >
-                        AI 重新生成
+                        <img
+                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                            alt=""
+                            className={styles.priceIcon}
+                        />
+                        <span>10 AI生成</span>
                     </button>
                 )}
             </div>
