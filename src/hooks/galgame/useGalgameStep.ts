@@ -96,9 +96,8 @@ export const useGalgameStep = ({
         try {
             const requestId = ++currentRequestId.current;
             
-            if (currentStepRef.current?.type !== 'choice') {
-                setCurrentStep(null);
-            }
+            // 新请求开始，无论当前是否为 choice 都清空当前 step，避免阻塞后续队列消费
+            setCurrentStep(null);
             setStepQueue([]);
             setShowNextButton(false);
             setIsWaitingForData(true);

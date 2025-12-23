@@ -105,7 +105,11 @@ export const useStepStreamResponse = ({
                     }
 
                     try {
-                        const jsonData = JSON.parse(dataStr);
+                        const raw = JSON.parse(dataStr);
+                        // 兼容后端包了一层 data 的响应结构
+                        const jsonData = (raw && typeof raw === 'object' && raw.data && raw.data.type)
+                            ? raw.data
+                            : raw;
 
                         // 检查是否是当前请求的数据
                         if (currentRequestId.current !== requestId) {
@@ -151,7 +155,7 @@ export const useStepStreamResponse = ({
                         }
 
                         // 处理 step 类型的数据（增量 step）
-                        if (jsonData.type === 'step' && jsonData.step) {
+                    if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
                             console.log('📝 收到新的 step:', step.type);
                             hasReceivedStep = true;
@@ -175,7 +179,7 @@ export const useStepStreamResponse = ({
                         }
 
                         // 处理完整数据（包含 narrativeSteps）
-                        if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
+                    if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
                             console.log('📚 收到完整数据，包含', jsonData.narrativeSteps.length, '个 steps');
                             if (jsonData.narrativeSteps.length > 0) {
                                 hasReceivedStep = true;
