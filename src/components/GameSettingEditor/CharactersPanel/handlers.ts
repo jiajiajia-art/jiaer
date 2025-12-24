@@ -445,7 +445,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(npc.id);
             const { id, name, age, gender, job, race, description, appearance } = npc as any;
-            const response = await api.generateNpcImage(fileId, { id, name, age, gender, job, race, description, appearance }, false);
+            const response = await api.generateNpcImage(fileId, { id, name, age, gender, job, race, description, appearance });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
                 const responseAny = response.data as any;
@@ -495,7 +495,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 personality: playerChar.personality?.length ? playerChar.personality.join(', ') : undefined,
                 tone: playerChar.speech || '',
             };
-            const response = await api.generatePlayerImage(fileId, payloadPlayer, false);
+            const response = await api.generatePlayerImage(fileId, payloadPlayer);
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
@@ -545,8 +545,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                     type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
                     value: variation.label,
                     description: variation.description,
-                },
-                false
+                }
             );
             if (response.data?.success) {
                 toast.success('差分图片生成成功');

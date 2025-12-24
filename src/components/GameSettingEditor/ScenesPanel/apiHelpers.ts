@@ -90,7 +90,7 @@ export const createSceneApiHelpers = (mode: string) => {
                 generateScenes: true,
                 generateVariants: false,
                 generatePlayer: false,
-                removeBg: false,
+                removeBg: true,
             });
         },
 
