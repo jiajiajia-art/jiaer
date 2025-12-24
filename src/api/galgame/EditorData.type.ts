@@ -5,165 +5,171 @@
 
 // 关键事件类型
 export interface KeyEvent {
-    title: string;
-    description: string;
+  title: string;
+  description: string;
 }
 
 // 玩家角色类型（visual 模式）
 export interface Player {
-    name: string;
-    age?: number;
-    gender: string;
-    race?: string;
-    appearance: string;
-    personality?: string;
-    tone?: string;
-    image?: string;
-    images?: {
-        [variant: string]: string;
-    };
+  name: string;
+  age?: number;
+  gender: string;
+  race?: string;
+  appearance: string;
+  personality?: string;
+  tone?: string;
+  image?: string;
+  images?: {
+    [variant: string]: string;
+  };
 }
 
 // NPC 类型（visual 模式）
 export interface NPC {
-    id: string;
-    name: string;
-    age?: number;
-    gender: string;
-    job?: string;
-    race?: string;
-    description: string;
-    appearance: string;
-    personality?: string;
-    tone: string;
-    relationship?: string;
-    images?: {
-        [key: string]: string;
-    };
-    abilities?: string[];
-    dialogue?: string[];
+  id: string;
+  name: string;
+  age?: number;
+  gender: string;
+  job?: string;
+  race?: string;
+  description: string;
+  appearance: string;
+  personality?: string;
+  tone?: string;
+  relationship?: string;
+  images?: {
+    [key: string]: string;
+  };
+  abilities?: string[];
+  dialogue?: string[];
 }
 
 // 子场景类型（visual 模式）
 export interface SubScene {
-    id: string;
-    name: string;
-    description: string;
-    image: string;
-    npcs: string[];
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  npcs: string[];
+  position: [number, number];
+  npcs_slots?: {
     position: [number, number];
-    npcs_slots?: {
-        position: [number, number];
-        zoom: number;
-    }[];
+    zoom: number;
+  }[];
 }
 
 // 场景类型（visual 模式）
 export interface Scene {
-    id: string;
-    name: string;
-    type?: string;
-    description: string;
-    atmosphere?: string;
-    dangerLevel?: number;
-    image?: string;
-    items?: string[];
-    events?: string[];
-    soundtrack?: string;
-    subscenes?: SubScene[];
+  id: string;
+  name: string;
+  type?: string;
+  description: string;
+  atmosphere?: string;
+  dangerLevel?: number;
+  image?: string;
+  items?: string[];
+  events?: string[];
+  soundtrack?: string;
+  subscenes?: SubScene[];
 }
 
 // 世界设定类型（visual 模式）
 export interface WorldSetting {
-    title: string;
-    summary?: string;
-    background: string;
-    Theme?: string[];
-    preamble: string;
-    initialPlot: string;
-    literary: string;
-    keyEvents?: KeyEvent[];
-    WorldRules?: {
-        [key: string]: string;
-    };
-    player: Player;  // visual 模式使用小写 player
+  title: string;
+  summary?: string;
+  background: string;
+  Theme?: string[];
+  preamble: string;
+  initialPlot: string;
+  literary: string;
+  keyEvents?: KeyEvent[];
+  WorldRules?: {
+    [key: string]: string;
+  };
+  player: Player; // visual 模式使用小写 player
 }
 
 // NPC 设定类型
 export interface NPCSetting {
-    npcs?: NPC[];
+  npcs?: NPC[];
 }
 
 // 场景设定类型
 export interface SceneSetting {
-    scenes?: Scene[];
+  scenes?: Scene[];
 }
 
 // Metadata 类型
 export interface Metadata {
-    [key: string]: any;
+  [key: string]: any;
 }
 
 // Visual 模式的完整游戏数据类型
 export interface AllGameData {
-    success: boolean;
-    fileId: string;
-    worldSetting: WorldSetting;
-    npcSetting: NPCSetting;
-    sceneSetting: SceneSetting;
-    metadata: Metadata | null;
+  success: boolean;
+  fileId: string;
+  worldSetting: WorldSetting;
+  npcSetting: NPCSetting;
+  sceneSetting: SceneSetting;
+  metadata: Metadata | null;
 }
 
 export interface GeneratePlayerImageRequest {
-    player: Player;
-    fileId: string;
-    removeBg: boolean;
-    pluginType: string;
+  player: Player;
+  fileId: string;
+  removeBg: boolean;
+  pluginType: string;
 }
 
 export interface GenerateNpcImageRequest {
-    npc: {
-        id: string;
-        name: string;
-        age: number;
-        gender: string;
-        job: string;
-        race: string;
-        description: string;
-        appearance: string;
-    };
-    fileId: string;
-    removeBg: boolean;
-    pluginType: string;
+  npc: {
+    id: string;
+    name: string;
+    age: number;
+    gender: string;
+    job: string;
+    race: string;
+    description: string;
+    appearance: string;
+  };
+  fileId: string;
+  removeBg: boolean;
+  pluginType: string;
 }
 
 export interface GenerateSceneImageRequest {
-    scene: {
-        id: string;
-        name: string;
-        description: string;
-    };
-    fileId: string;
-    pluginType: string;
+  scene: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  fileId: string;
+  pluginType: string;
 }
 
 export interface GenerateVariantImageRequest {
-    npcId: string,              
-    baseImagePath: string,       
-    variant: {
-        type: 'expression' | 'clothing' | 'pose',  
-        value: string,             
-        description?: string       
-    },
-    fileId: string,              
-    removeBg?: boolean;
+  npcId: string;
+  baseImagePath: string;
+  variant: {
+    type: "expression" | "clothing" | "pose";
+    value: string;
+    description?: string;
+  };
+  fileId: string;
+  removeBg?: boolean;
 }
 
 export interface GenerateAllImageRequest {
-    fileId: string;
-    generateNPCs: boolean;
-    generateScenes: boolean;
-    generateVariants: boolean;
-    generatePlayer: boolean;
-    removeBg: boolean;
+  fileId: string;
+  generateNPCs: boolean;
+  generateScenes: boolean;
+  generateVariants: boolean;
+  generatePlayer: boolean;
+  removeBg: boolean;
+}
+
+export interface GenerateImgeResponse {
+  success: boolean;
+  message: string;
+  imagePath: string;
 }

@@ -445,22 +445,23 @@ export const createHandlers = (ctx: HandlersContext) => {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(npc.id);
             const { id, name, age, gender, job, race, description, appearance } = npc as any;
-            const response = await api.generateNpcImage(fileId, { id, name, age, gender, job, race, description, appearance }, false);
+            const response = await api.generateNpcImage(fileId, {
+                id, name, age, gender, job, race, description, appearance,
+            });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
-                const responseAny = response.data as any;
-                const newImageUrl = responseAny?.imagePath ||
-                    responseAny?.data?.images?.base ||
-                    responseAny?.data?.image ||
-                    responseAny?.npcSetting?.npcs?.find((n: any) => n.id === npc.id)?.images?.base;
-
-                if (newImageUrl) {
+                
+                // 使用后端返回的数据更新本地状态
+                const imageData = parseResponse.extractNpcImage(response.data, mode);
+                if (imageData?.imagePath) {
+                    const imageUrl = withCacheBust(imageData.imagePath);
                     setCharacterData(prev => prev.map(char =>
                         char.id === npc.id
-                            ? { ...char, portrait: withCacheBust(newImageUrl) }
+                            ? { ...char, portrait: imageUrl }
                             : char
                     ));
                 } else if (npc.portrait) {
+                    // 如果无法提取图片数据，使用原有图片并添加缓存破坏
                     const baseUrl = npc.portrait.split('?')[0];
                     setCharacterData(prev => prev.map(char =>
                         char.id === npc.id
@@ -495,7 +496,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 personality: playerChar.personality?.length ? playerChar.personality.join(', ') : undefined,
                 tone: playerChar.speech || '',
             };
-            const response = await api.generatePlayerImage(fileId, payloadPlayer, false);
+            const response = await api.generatePlayerImage(fileId, payloadPlayer);
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
@@ -545,13 +546,44 @@ export const createHandlers = (ctx: HandlersContext) => {
                     type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
                     value: variation.label,
                     description: variation.description,
-                },
-                false
+                }
             );
             if (response.data?.success) {
                 toast.success('差分图片生成成功');
-                if (onDataChange) {
-                    onDataChange();
+                
+                // 使用后端返回的数据更新本地状态
+                const imageData = parseResponse.extractNpcImage(response.data, mode, variation.label);
+                if (imageData?.imagePath) {
+                    const imageUrl = withCacheBust(imageData.imagePath);
+                    const variantName = variation.label;
+                    
+                    setCharacterData(prev => prev.map(char => {
+                        if (char.id === currentCharacter.id) {
+                            const varIndex = char.variations.findIndex(v => v.label === variantName);
+                            if (varIndex >= 0) {
+                                // 更新已存在的差分
+                                const newVariations = [...char.variations];
+                                newVariations[varIndex] = { ...newVariations[varIndex], img: imageUrl };
+                                return { ...char, variations: newVariations };
+                            } else {
+                                // 添加新的差分
+                                const newVar: Variation = {
+                                    id: `v-${Date.now()}`,
+                                    label: variantName,
+                                    img: imageUrl,
+                                    type: variation.type || 'expression',
+                                    description: variation.description,
+                                };
+                                return { ...char, variations: [...char.variations, newVar] };
+                            }
+                        }
+                        return char;
+                    }));
+                } else {
+                    // 如果无法提取图片数据，回退到刷新整个数据
+                    if (onDataChange) {
+                        onDataChange();
+                    }
                 }
             } else {
                 toast.error('当前使用人数过多，请稍后再试');

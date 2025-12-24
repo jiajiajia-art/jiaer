@@ -1,6 +1,6 @@
 import { api } from "../base";
-import type { CalculatePointsResponse } from "../worldInteraction/worldEditor.type";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest, GeneratePlayerImageRequest, GenerateAllImageRequest } from "./EditorData.type";
+import type { CalculatePointsResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest, GeneratePlayerImageRequest, GenerateAllImageRequest, GenerateImgeResponse } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -41,7 +41,7 @@ const EditorApi = {
         const formData = new FormData();
         formData.append('image', data.file);
         formData.append('variat', data.variant);
-        return api.post<AllGameData>(`/visual/edit/${fileId}/player/image`, formData, {
+        return api.post<UploadPlayerImageResponse>(`/visual/edit/${fileId}/player/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -50,7 +50,7 @@ const EditorApi = {
     uploadSceneImage: (fileId:string, sceneId:string, file:File) => {
         const formData = new FormData();
         formData.append('image', file);
-        return api.post<AllGameData>(`/visual/edit/${fileId}/scenes/${sceneId}/image`, formData, {
+        return api.post<UploadSceneImageResponse>(`/visual/edit/${fileId}/scenes/${sceneId}/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -60,7 +60,7 @@ const EditorApi = {
         const formData = new FormData();
         formData.append('image', data.file);
         formData.append('variant', data.variat);
-        return api.post<AllGameData>(`/visual/edit/${fileId}/npcs/${npcId}/image`, formData, {
+        return api.post<UploadNpcImageResponse>(`/visual/edit/${fileId}/npcs/${npcId}/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -72,20 +72,20 @@ const EditorApi = {
         });
     },
     generatePlayerImage: (data:GeneratePlayerImageRequest) => {
-        return api.post<AllGameData>(`/visual/images/generate-player`, data, {
+        return api.post<GenerateImgeResponse>(`/visual/images/generate-player`, data, {
             timeout: 180000,
         });
     },
     generateNpcImage: (data: GenerateNpcImageRequest) =>
-        api.post<AllGameData>(`/visual/images/generate-npc`, data, {
+        api.post<GenerateImgeResponse>(`/visual/images/generate-npc`, data, {
             timeout: 180000,
         }),
     generateSceneImage: (data: GenerateSceneImageRequest) =>
-        api.post<AllGameData>(`/visual/images/generate-scene`, data, {
+        api.post<GenerateImgeResponse>(`/visual/images/generate-scene`, data, {
             timeout: 180000,
         }),
     generateVariantImage: (data: GenerateVariantImageRequest) =>
-        api.post<AllGameData>(`/visual/images/generate-npc-variant`, data, {
+        api.post<GenerateImgeResponse>(`/visual/images/generate-npc-variant`, data, {
             timeout: 180000,
         }),
     calculateScenePoints: (fileId: string) =>

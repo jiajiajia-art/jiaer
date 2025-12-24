@@ -5,6 +5,8 @@
 import EditorApi from '../../../api/galgame/EditorData';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import type { Scene as ApiScene } from '../../../api/galgame/getGalgamePreset.type';
+import type { GenerateImgeResponse } from '../../../api/galgame/EditorData.type';
+import type { UploadSceneImageResponse, UploadSubSceneImageResponse } from '../../../api/worldInteraction/worldEditor.type';
 
 export type SceneApiHelpers = ReturnType<typeof createSceneApiHelpers>;
 
@@ -90,7 +92,7 @@ export const createSceneApiHelpers = (mode: string) => {
                 generateScenes: true,
                 generateVariants: false,
                 generatePlayer: false,
-                removeBg: false,
+                removeBg: true,
             });
         },
 
@@ -107,6 +109,38 @@ export const createSceneApiHelpers = (mode: string) => {
             return EditorApi.downloadImage(pluginType, fileId, type, name, variant);
         },
     };
+};
+
+/**
+ * 响应数据解析辅助函数
+ * 根据后端实际返回的数据结构进行解析
+ * - 上传/生成图片接口：返回扁平结构 { success, message, imagePath, sceneId, ... }
+ */
+export const parseSceneResponse = {
+    extractSceneImage: (
+        response: UploadSceneImageResponse | GenerateImgeResponse,
+        _mode: string,
+        sceneId?: string
+    ): { imagePath?: string; sceneId?: string } | null => {
+        return {
+            imagePath: response.imagePath,
+            sceneId: 'sceneId' in response ? response.sceneId : sceneId,
+        };
+    },
+
+    extractSubSceneImage: (
+        response: UploadSubSceneImageResponse | GenerateImgeResponse
+    ): { imagePath?: string; sceneId?: string; subsceneId?: string } | null => {
+        if ('imagePath' in response) {
+            return {
+                imagePath: response.imagePath,
+                sceneId: 'sceneId' in response ? response.sceneId : undefined,
+                subsceneId: 'subsceneId' in response ? response.subsceneId : undefined,
+            };
+        }
+
+        return null;
+    },
 };
 
 

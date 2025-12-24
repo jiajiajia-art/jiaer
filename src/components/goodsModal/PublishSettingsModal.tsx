@@ -40,7 +40,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
                     <div className={styles.formContent}>
                         <div className={styles.formGroup}>
-                            <label htmlFor="price" className={styles.label}>价格（元）</label>
+                            <label htmlFor="price" className={styles.label}>价格（积分）</label>
                             <input
                                 type="number"
                                 id="price"
