@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import type { Scene as ApiScene } from '../../../api/galgame/getGalgamePreset.type';
 import { getSceneById, getSubSceneById, isWorldSubScene, type SceneLike } from '../editorCompat';
 import type { SceneApiHelpers } from './apiHelpers';
+import { parseSceneResponse } from './apiHelpers';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 
@@ -590,15 +591,17 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             const response = await api.uploadSceneImage(fileId, targetSceneId, file);
             if (response.data?.success) {
                 toast.success('场景图片上传成功');
-                const responseAny = response.data as any;
-                const newImageUrl = responseAny?.data?.image || responseAny?.imagePath;
-                if (newImageUrl) {
+                
+                // 使用后端返回的数据更新本地状态
+                const imageData = parseSceneResponse.extractSceneImage(response.data, mode, targetSceneId);
+                if (imageData?.imagePath) {
                     setSceneData(prev => prev.map(s =>
                         s.id === targetSceneId
-                            ? { ...s, image: addImageTimestamp(newImageUrl) }
+                            ? { ...s, image: addImageTimestamp(imageData.imagePath!) }
                             : s
                     ));
                 } else {
+                    // 如果无法提取图片数据，使用原有图片并添加缓存破坏
                     setSceneData(prev => prev.map(s => {
                         if (s.id === targetSceneId && s.image) {
                             const baseUrl = s.image.split('?')[0];
@@ -656,11 +659,9 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     },
                 });
                 if (response.data?.success) {
-                    const responseAny = response.data as any;
-                    imageUrl =
-                        responseAny?.imagePath ||
-                        responseAny?.data?.image ||
-                        responseAny?.sceneSetting?.scenes?.find((s: any) => s.id === scene.id)?.image;
+                    // 使用后端返回的数据更新本地状态
+                    const imageData = parseSceneResponse.extractSceneImage(response.data, mode, scene.id);
+                    imageUrl = imageData?.imagePath;
                 }
             }
 

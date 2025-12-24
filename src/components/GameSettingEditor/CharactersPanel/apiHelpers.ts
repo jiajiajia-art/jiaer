@@ -175,28 +175,16 @@ export const parseResponse = {
     // 从上传玩家图片的响应中提取图片数据
     // 后端返回扁平结构：UploadPlayerImageResponse { success, message, imagePath, variant }
     // 或 GenerateImgeResponse { success, message, imagePath }
+    // 注意：visual 模式下单个图片上传/生成接口也返回扁平结构，只有批量生成全部图片才返回 AllGameData
     extractPlayerImage: (
-        response: UploadPlayerImageResponse | GenerateImgeResponse | AllGameData,
-        mode: string
+        response: UploadPlayerImageResponse | GenerateImgeResponse,
+        _mode: string
     ): { image: string; images?: { [key: string]: string } } => {
         // 上传/生成接口返回扁平结构，直接访问 imagePath
-        if ('imagePath' in response) {
-            return {
-                image: response.imagePath || '',
-                images: 'variant' in response && response.variant ? { [response.variant]: response.imagePath } : undefined,
-            };
-        }
-
-        if (mode !== 'worldInteraction' && 'worldSetting' in response) {
-            const allGameData = response as AllGameData;
-            const player = allGameData?.worldSetting?.player;
-            return {
-                image: player?.image || '',
-                images: player?.images,
-            };
-        }
-
-        return { image: '' };
+        return {
+            image: response.imagePath || '',
+            images: 'variant' in response && response.variant ? { [response.variant]: response.imagePath } : undefined,
+        };
     },
 
     // 从上传NPC图片的响应中提取图片数据
