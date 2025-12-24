@@ -210,7 +210,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 newSceneFileInputRef,
                 worldMapFileInputRef,
                 onDeleteModalOpen: () => setDeleteModalOpen(true),
+                onDeleteModalClose: () => setDeleteModalOpen(false),
                 onSubsceneDeleteModalOpen: () => setSubsceneDeleteModalOpen(true),
+                onSubsceneDeleteModalClose: () => setSubsceneDeleteModalOpen(false),
                 onSceneCostModalOpen: (points: number | null) => {
                     setSceneCostPoints(points);
                     setSceneCostModalOpen(true);

@@ -624,8 +624,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 {/* 左栏 - 角色列表 */}
                 <div 
                     className={styles.card}
-                    style={{ maxHeight: '72vh', overflowY: 'auto' }}
-                >
+                    style={{maxHeight: '75vh', overflowY: 'auto'}}
+                    >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3>解析出的角色</h3>
                         <button className={styles.ghostSmall} onClick={openAddNewPanel}>
