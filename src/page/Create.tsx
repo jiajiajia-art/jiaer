@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import styles from './Create.module.css';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
@@ -38,6 +38,8 @@ const Create: React.FC = () => {
     const [isEditingName, setIsEditingName] = useState(false); // 控制修改昵称弹窗
     const [editName, setEditName] = useState('');
     const [isUpdatingName, setIsUpdatingName] = useState(false);
+    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 将游戏数据分类为已发布和未发布
     const { publishedGames, draftGames } = useMemo(() => {
@@ -176,6 +178,45 @@ const Create: React.FC = () => {
         }
     };
 
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // 验证文件类型
+        if (!file.type.startsWith('image/')) {
+            toast.error('请选择图片文件');
+            return;
+        }
+
+        // 验证文件大小（例如限制为 5MB）
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            toast.error('图片大小不能超过 5MB');
+            return;
+        }
+
+        try {
+            setIsUpdatingAvatar(true);
+            const response = await auth.updateUserAvatar(file);
+            if (response.data.success && response.data.data) {
+                // 更新用户信息
+                await getUserInfo();
+                toast.success('头像更新成功');
+            } else {
+                toast.error(response.data.message || '头像更新失败');
+            }
+        } catch (error) {
+            console.error('更新头像失败:', error);
+            toast.error('头像更新失败，请稍后重试');
+        } finally {
+            setIsUpdatingAvatar(false);
+            // 清空 input，以便可以重复选择同一文件
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
     const handleRecharge = async (amount: number) => {
         const response = await payApi.getPayQrCode({
             amount: amount,
@@ -241,10 +282,21 @@ const Create: React.FC = () => {
                                 }}
                             />
                             <div className={styles.userProfileContent}>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={handleAvatarChange}
+                                    disabled={isUpdatingAvatar}
+                                />
                                 <img
                                     className={styles.userAvatar}
                                     src={userAvatar}
                                     alt="用户头像"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{ cursor: isUpdatingAvatar ? 'wait' : 'pointer' }}
+                                    title={isUpdatingAvatar ? '上传中...' : '点击更换头像'}
                                 />
                                 <div className={styles.userNameRow}>
                                     <div className={styles.userName}>{userName}</div>

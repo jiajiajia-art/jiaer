@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import styles from './CreateGame.module.css';
@@ -17,6 +17,7 @@ import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import FooterArea from '../components/Layout/FooterArea';
 import toast, { Toaster } from 'react-hot-toast';
+import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 
 const CreateGame: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -49,6 +50,7 @@ const CreateGame: React.FC = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showPriceModal, setShowPriceModal] = useState(false);
 
     const convertUrlToFile = async (url: string, filename: string) => {
         const response = await fetch(url);
@@ -85,6 +87,24 @@ const CreateGame: React.FC = () => {
             }
         };
     }, []);
+
+    // 重新获取游戏详情（用于更新价格等数据）
+    const refreshGameDetail = useCallback(async () => {
+        if (!gameId) return;
+
+        try {
+            const response = await getGameDataApi.getGameDetail({
+                fileId: gameId,
+            });
+
+            if (response.data && response.data.data) {
+                const data = response.data.data;
+                setGameDetail(data);
+            }
+        } catch (error) {
+            console.error('刷新游戏详情失败:', error);
+        }
+    }, [gameId]);
 
     // 根据模式加载游戏详情
     useEffect(() => {
@@ -427,6 +447,33 @@ const CreateGame: React.FC = () => {
         }
     }
 
+    const handlePriceAdjust = async (price: number | null, specialPrice: number | null) => {
+        try {
+            const fileId = gameDetail?.file_id || gameDetail?.id;
+            if (!fileId) {
+                toast.error('游戏信息错误，请重试');
+                return;
+            }
+
+            const response = await GameAction.updatePrice({
+                fileId,
+                price_amount: price,
+                special_price_amount: specialPrice,
+            });
+
+            if (response.data.success) {
+                toast.success('价格更新成功');
+                setShowPriceModal(false);
+                await refreshGameDetail();
+            } else {
+                toast.error(response.data.message || '价格更新失败');
+            }
+        } catch (error) {
+            console.error('价格更新失败:', error);
+            toast.error('价格更新失败，请稍后重试');
+        }
+    };
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -453,6 +500,7 @@ const CreateGame: React.FC = () => {
                             isDeleting={isDeleting}
                             onPublish={() => setShowPublishModal(true)}
                             onUnpublish={handleUnpublishGame}
+                            onPriceAdjust={() => setShowPriceModal(true)}
                         />
                     ) : (
                         <div className={styles.detailError}>未找到游戏信息</div>
@@ -503,6 +551,16 @@ const CreateGame: React.FC = () => {
                 onDelete={handleConfirmDelete}
                 onCancel={() => setShowDeleteModal(false)}
             />
+
+            {gameDetail && (
+                <PriceAdjustmentModal
+                    isOpen={showPriceModal}
+                    onClose={() => setShowPriceModal(false)}
+                    currentPrice={gameDetail.price_amount}
+                    currentSpecialPrice={gameDetail.special_price_amount}
+                    onSave={handlePriceAdjust}
+                />
+            )}
 
             <FooterArea />
             <MobileBottomNav />

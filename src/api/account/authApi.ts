@@ -27,4 +27,16 @@ export const auth = {
 
   useInviteCode: (data: { inviteCode: string }) =>
     api.post<ApiResponse<null>>('/auth/invite/use-code', data),
+
+  updateUserAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return api.post<ApiResponse<{
+      avatarUrl: string;
+    }>>('/auth/upload/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };
