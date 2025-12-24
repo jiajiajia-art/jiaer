@@ -30,13 +30,32 @@
     position: relative;
     z-index: 100;
     width: fit-content;
-    margin: 0 auto;
+    margin: 16px auto 12px;
     border-radius: 20px;
-    margin-top: 16px;
-    margin-bottom: 12px;
     min-width: 180px;
     transition: all 0.3s ease;
     flex-shrink: 0;
+}
+
+.exitButton {
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.2s ease;
+    position: absolute;
+    top: 20px;
+    left: 16px;
+    z-index: 101;
+    background: none;
+    color: #0000003e;
+}
+
+.exitButton:hover {
+    transform: scale(1.1);
+}
+
+.exitButton:active {
+    transform: scale(0.95);
 }
 
 .topHeader svg {

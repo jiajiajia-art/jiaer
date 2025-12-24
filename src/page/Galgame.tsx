@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { CiLocationOn } from "react-icons/ci";
+import { IoClose } from "react-icons/io5";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
@@ -24,6 +26,7 @@ import TextModeDisplay from "../components/Galgame/TextModeDisplay";
 import useGalgameHistory from "../hooks/galgame/useGalgameHistory";
 import statisticsApi from "../api/statistics/statisticsApi";
 import ErrorModal from "../components/GalgameMap/WorldModal";
+import { IoMdCloseCircle } from "react-icons/io";
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -40,6 +43,7 @@ interface Message {
 const Galgame = () => {
     const { user } = useAuthStore();
     const { fileId, sessionId, isPreset } = useGameStore();
+    const navigate = useNavigate();
 
     // 存储完整 allSteps 的 key（按 sessionId 隔离）
     const allStepsStorageKey = useMemo(() => {
@@ -879,6 +883,17 @@ const Galgame = () => {
         window.location.reload();
     }, []);
 
+    // 退出游戏
+    const handleExitGame = useCallback(() => {
+        try {
+            localStorage.removeItem(allStepsStorageKey);
+            console.log('[Galgame] 已清理临时状态数据');
+        } catch (e) {
+            console.warn('[Galgame] 清理临时状态失败:', e);
+        }
+        navigate('/');
+    }, [allStepsStorageKey, navigate]);
+
     if (isLoading) {
         return (
             <div className={styles.pageRoot}>
@@ -913,6 +928,13 @@ const Galgame = () => {
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
+                    <button
+                        className={styles.exitButton}
+                        onClick={handleExitGame}
+                        title="退出游戏"
+                    >
+                        <IoMdCloseCircle size={24} />
+                    </button>
                     <div className={`${styles.topHeader} ${isTextMode ? styles.topHeaderTextMode : ''}`}>
                         <CiLocationOn />
                         <span>{currentScene?.name}</span>
