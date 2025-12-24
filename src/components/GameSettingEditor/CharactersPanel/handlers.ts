@@ -445,7 +445,9 @@ export const createHandlers = (ctx: HandlersContext) => {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(npc.id);
             const { id, name, age, gender, job, race, description, appearance } = npc as any;
-            const response = await api.generateNpcImage(fileId, { id, name, age, gender, job, race, description, appearance });
+            const response = await api.generateNpcImage(fileId, {
+                id, name, age, gender, job, race, description, appearance,
+            });
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
                 const responseAny = response.data as any;

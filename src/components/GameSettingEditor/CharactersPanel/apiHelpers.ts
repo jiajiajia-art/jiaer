@@ -4,7 +4,10 @@
  */
 import EditorApi from '../../../api/galgame/EditorData';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
-import type { NPC, Player } from '../../../api/galgame/EditorData.type';
+import type { NPC, Player, AllGameData, GenerateVariantImageRequest } from '../../../api/galgame/EditorData.type';
+import type { ApiResponse } from '../../../api/api.types';
+import type { UploadPlayerImageResponse, UploadNpcImageResponse } from '../../../api/worldInteraction/worldEditor.type';
+import type { GenerateImgeResponse } from '../../../api/galgame/EditorData.type';
 
 export type ApiHelpers = ReturnType<typeof createApiHelpers>;
 
@@ -27,7 +30,7 @@ export const createApiHelpers = (mode: string) => {
                 : EditorApi.uploadPlayerImage(fileId, { file, variant: variant || 'base' });
         },
 
-        generatePlayerImage: async (fileId: string, player: any) => {
+        generatePlayerImage: async (fileId: string, player: Player) => {
             return EditorApi.generatePlayerImage({
                 fileId,
                 player,
@@ -61,10 +64,19 @@ export const createApiHelpers = (mode: string) => {
                 : EditorApi.uploadNpcImage(fileId, npcId, { file, variat: variant || 'base' });
         },
 
-        generateNpcImage: async (fileId: string, npc: any) => {
+        generateNpcImage: async (fileId: string, npc: NPC) => {
             return EditorApi.generateNpcImage({
                 fileId,
-                npc,
+                npc: {
+                    id: npc.id,
+                    name: npc.name,
+                    age: npc.age || 0,
+                    gender: npc.gender,
+                    job: npc.job || '',
+                    race: npc.race || '',
+                    description: npc.description,
+                    appearance: npc.appearance,
+                },
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
@@ -91,7 +103,12 @@ export const createApiHelpers = (mode: string) => {
         },
 
         // 差分相关
-        generateVariantImage: async (fileId: string, npcId: string, baseImagePath: string, variant: any) => {
+        generateVariantImage: async (
+            fileId: string,
+            npcId: string,
+            baseImagePath: string,
+            variant: GenerateVariantImageRequest['variant']
+        ) => {
             return EditorApi.generateVariantImage({
                 fileId,
                 npcId: npcId === 'player' ? 'player' : npcId,
@@ -112,60 +129,92 @@ export const createApiHelpers = (mode: string) => {
 
 /**
  * 响应数据解析辅助函数
+ * 根据后端实际返回的数据结构进行解析
+ * - 上传/生成图片接口：返回扁平结构 { success, message, imagePath, variant, npcId, ... }
+ * - 更新操作接口：返回 ApiResponse<T> { success, message, data: T }
+ * - Visual 模式更新操作：返回 AllGameData { success, worldSetting, npcSetting, ... }
  */
 export const parseResponse = {
     // 从API响应中提取玩家数据（兼容两种模式）
-    extractPlayer: (response: any, mode: string): any => {
+    // worldInteraction: ApiResponse<Player> -> response.data
+    // visual: AllGameData -> response.worldSetting.player
+    extractPlayer: (
+        response: ApiResponse<Player> | AllGameData,
+        mode: string
+    ): Player | null => {
         if (mode === 'worldInteraction') {
-            return response?.data;
+            const apiResponse = response as ApiResponse<Player>;
+            return apiResponse?.data || null;
         } else {
-            return response?.worldSetting?.player;
+            const allGameData = response as AllGameData;
+            return allGameData?.worldSetting?.player || null;
         }
     },
 
     // 从API响应中提取NPC数据（兼容两种模式）
-    extractNpc: (response: any, mode: string, npcId?: string): any => {
+    // worldInteraction: ApiResponse<NPC> -> response.data
+    // visual: AllGameData -> response.npcSetting.npcs
+    extractNpc: (
+        response: ApiResponse<NPC> | AllGameData,
+        mode: string,
+        npcId?: string
+    ): NPC | null => {
         if (mode === 'worldInteraction') {
-            return response?.data;
+            const apiResponse = response as ApiResponse<NPC>;
+            return apiResponse?.data || null;
         } else {
-            const npcSetting = response?.npcSetting;
+            const allGameData = response as AllGameData;
+            const npcSetting = allGameData?.npcSetting;
             if (npcId && npcSetting?.npcs) {
-                return npcSetting.npcs.find((n: any) => n.id === npcId);
+                return npcSetting.npcs.find((n: NPC) => n.id === npcId) || null;
             }
-            return npcSetting?.npcs?.[0];
+            return npcSetting?.npcs?.[0] || null;
         }
     },
 
     // 从上传玩家图片的响应中提取图片数据
-    extractPlayerImage: (response: any, mode: string): { image: string; images?: { [key: string]: string } } => {
-        const responseAny = response as any;
-        
-        if (mode === 'worldInteraction') {
-            const player = responseAny?.data;
+    // 后端返回扁平结构：UploadPlayerImageResponse { success, message, imagePath, variant }
+    // 或 GenerateImgeResponse { success, message, imagePath }
+    extractPlayerImage: (
+        response: UploadPlayerImageResponse | GenerateImgeResponse | AllGameData,
+        mode: string
+    ): { image: string; images?: { [key: string]: string } } => {
+        // 上传/生成接口返回扁平结构，直接访问 imagePath
+        if ('imagePath' in response) {
             return {
-                image: player?.image || player?.imagePath || responseAny?.imagePath || '',
+                image: response.imagePath || '',
+                images: 'variant' in response && response.variant ? { [response.variant]: response.imagePath } : undefined,
+            };
+        }
+
+        if (mode !== 'worldInteraction' && 'worldSetting' in response) {
+            const allGameData = response as AllGameData;
+            const player = allGameData?.worldSetting?.player;
+            return {
+                image: player?.image || '',
                 images: player?.images,
             };
-        } else {
-            const worldSetting = responseAny?.worldSetting;
-            return {
-                image: worldSetting?.player?.image || worldSetting?.player?.imagePath || '',
-                images: worldSetting?.player?.images,
-            };
         }
+
+        return { image: '' };
     },
 
-    // 从上传NPC图片的响应中提取图片数据（worldInteraction模式）
-    extractNpcImage: (response: any, mode: string, variant?: string): { imagePath?: string; variant?: string; npcId?: string } | null => {
-        if (mode === 'worldInteraction') {
-            const responseData = response as any;
+    // 从上传NPC图片的响应中提取图片数据
+    // 后端返回扁平结构：UploadNpcImageResponse { success, message, imagePath, variant, npcId }
+    // 或 GenerateImgeResponse { success, message, imagePath }
+    extractNpcImage: (
+        response: UploadNpcImageResponse | GenerateImgeResponse,
+        _mode: string,
+        variant?: string
+    ): { imagePath?: string; variant?: string; npcId?: string } | null => {
+        if ('imagePath' in response) {
             return {
-                imagePath: responseData?.imagePath || responseData?.data?.imagePath,
-                variant: responseData?.variant || responseData?.data?.variant || variant,
-                npcId: responseData?.npcId || responseData?.data?.npcId,
+                imagePath: response.imagePath,
+                variant: ('variant' in response ? response.variant : variant) || variant,
+                npcId: 'npcId' in response ? response.npcId : undefined,
             };
         }
-        return null; // visual模式返回完整数据，不需要单独提取
+
+        return null;
     },
 };
-

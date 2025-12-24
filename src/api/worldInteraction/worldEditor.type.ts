@@ -8,12 +8,6 @@ export interface NpcSlot {
   zoom: number;
 }
 
-export interface generateWorldMapImageResponse {
-  imagePath: string;
-  message: string;
-  success: boolean;
-}
-
 // 编辑器 API 返回的数据使用 UnifiedGameData（联合类型）
 
 
@@ -50,4 +44,34 @@ export interface CalculatePointsResponse {
     success: boolean;
     message: string;
     points: number;
+}
+
+export interface UploadSceneImageResponse {
+    success: boolean;
+    message: string;
+    imagePath: string;
+    sceneId: string;
+}
+
+export interface UploadNpcImageResponse {
+    success: boolean;
+    message: string;
+    imagePath: string;
+    variant: string;
+    npcId: string;
+}
+
+export interface UploadPlayerImageResponse {
+    success: boolean;
+    message: string;
+    imagePath: string;
+    variant: string;
+}
+
+export interface UploadSubSceneImageResponse {
+    success: boolean;
+    message: string;
+    imagePath: string;
+    sceneId: string;
+    subsceneId: string;
 }

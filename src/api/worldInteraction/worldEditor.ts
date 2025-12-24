@@ -1,8 +1,8 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
-import type { NPC, Player, WorldSetting } from "../galgame/EditorData.type";
+import type { GenerateImgeResponse, NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, generateWorldMapImageResponse, NpcSlot } from "./worldEditor.type";
+import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, NpcSlot, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
 import type { WorldInteractionGameData } from "./worldInteractionApi.type";
 
 const worldEditor = {
@@ -108,7 +108,7 @@ const worldEditor = {
     uploadSubSceneImage: (fileId: string, sceneId: string, subsceneId: string, file: File) => {
         const formData = new FormData();
         formData.append('image', file);
-        return api.post<ApiResponse<SubScene>>(
+        return api.post<UploadSubSceneImageResponse>(
             `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${subsceneId}/image`,
             formData,
             {
@@ -121,7 +121,7 @@ const worldEditor = {
     uploadSceneImage: (fileId: string, sceneId: string, file: File) => {
         const formData = new FormData();
         formData.append('image', file);
-        return api.post<ApiResponse<Scene>>(
+        return api.post<UploadSceneImageResponse>(
             `/world-interaction/edit/${fileId}/scenes/${sceneId}/image`,
             formData,
             {
@@ -135,7 +135,7 @@ const worldEditor = {
         const formData = new FormData();
         formData.append('image', data.file);
         formData.append('variant', data.variat);
-        return api.post<ApiResponse<NPC>>(
+        return api.post<UploadNpcImageResponse>(
             `/world-interaction/edit/${fileId}/npcs/${npcId}/image`,
             formData,
             {
@@ -148,7 +148,7 @@ const worldEditor = {
     uploadPlayerImage: (fileId: string, file: File) => {
         const formData = new FormData();
         formData.append('image', file);
-        return api.post<ApiResponse<Player>>(
+        return api.post<UploadPlayerImageResponse>(
             `/world-interaction/edit/${fileId}/player/image`,
             formData,
             {
@@ -194,7 +194,7 @@ const worldEditor = {
     setWorldMapImage: (fileId: string, file: File) => {
         const formData = new FormData();
         formData.append('image', file);
-        return api.post<generateWorldMapImageResponse>(
+        return api.post<GenerateImgeResponse>(
             `/world-interaction/edit/${fileId}/world-map/image`,
             formData,
             {
@@ -205,7 +205,7 @@ const worldEditor = {
         );
     },
     generateWorldMapImage: (fileId: string) => {
-        return api.post<generateWorldMapImageResponse>(
+        return api.post<GenerateImgeResponse>(
             `/world-interaction/images/generate-world-map`,
             {
                 fileId: fileId
