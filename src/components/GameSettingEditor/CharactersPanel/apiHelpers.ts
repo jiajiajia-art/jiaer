@@ -12,9 +12,7 @@ import type { GenerateImgeResponse } from '../../../api/galgame/EditorData.type'
 export type ApiHelpers = ReturnType<typeof createApiHelpers>;
 
 export const createApiHelpers = (mode: string) => {
-    const isWorldInteraction = mode === 'worldInteraction';
-    console.log(isWorldInteraction);
-    
+    const isWorldInteraction = mode === 'worldInteraction';    
 
     return {
         // 玩家相关

@@ -15,6 +15,7 @@ interface UseGalgameStepOptions {
     onMessagesClear?: () => void;
     // 后端流式返回 complete 时携带的 allSteps
     onCompleteAllSteps?: (steps: any[]) => void;
+    onStreamComplete?: () => void;
 }
 
 // 前5条历史消息免费（每回2条消息，共10条）
@@ -25,6 +26,7 @@ export const useGalgameStep = ({
     historyLength = 0,
     onMessagesClear,
     onCompleteAllSteps,
+    onStreamComplete,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -121,6 +123,14 @@ export const useGalgameStep = ({
                     onSuccess: async () => {
                         if (options?.onSuccess) {
                             await options.onSuccess();
+                        }
+                        // 流式结束后回调，用于刷新历史记录等
+                        if (onStreamComplete) {
+                            try {
+                                await onStreamComplete();
+                            } catch (e) {
+                                console.error('流式结束回调执行失败:', e);
+                            }
                         }
                     },
                     onError: options?.onError
@@ -258,6 +268,14 @@ export const useGalgameStep = ({
                     onSuccess: async () => {
                         if (options?.onSuccess) {
                             await options.onSuccess();
+                        }
+                        // 流式结束后回调，用于刷新历史记录等
+                        if (onStreamComplete) {
+                            try {
+                                await onStreamComplete();
+                            } catch (e) {
+                                console.error('流式结束回调执行失败:', e);
+                            }
                         }
                     },
                     onError: options?.onError

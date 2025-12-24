@@ -106,7 +106,11 @@ const Galgame = () => {
             } catch (e) {
                 console.warn('[Galgame] 存储 allSteps 失败:', e);
             }
-        }
+        },
+        // 每次一轮流式对话结束后，主动刷新一次历史记录
+        onStreamComplete: async () => {
+            await refreshHistory();
+        },
     });
 
     // 统一监听是否在等待后端数据，如果超过 60s 仍未返回则弹出超时提示
@@ -746,7 +750,8 @@ const Galgame = () => {
         };
 
         fetchPresetData();
-    }, [fileId, history.length, lastVisitedSceneId]);
+    // 避免历史刷新触发重新加载全局文件
+    }, [fileId, lastVisitedSceneId]);
 
     const addConversion = useCallback(async () => {
         if (!fileId || !user?.user.id) {
