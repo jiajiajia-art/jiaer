@@ -173,3 +173,21 @@ export interface GenerateImgeResponse {
   message: string;
   imagePath: string;
 }
+
+export interface UploadFileResponse {
+  fileId: string;
+  jobId: string;
+  status: string;
+  success: boolean;
+}
+
+export interface CheckUploadStatusResponse {
+  success: boolean;
+  jobId: string;
+  fileId: string;
+  stage: string;
+  progress: number;
+  status: string;
+  error: string;
+  updatedAt: string;
+}

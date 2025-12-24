@@ -1,9 +1,21 @@
 import { api } from "../base";
 import type { CalculatePointsResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest, GeneratePlayerImageRequest, GenerateAllImageRequest, GenerateImgeResponse } from "./EditorData.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest, GeneratePlayerImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
+    uploadGameFile: (file:File) => {
+        const formData = new FormData();
+        formData.append('document', file);
+        return api.post<UploadFileResponse>(`/optical/games/upload`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    },
+    checkUploadStatus: (jobId:string) => {
+        return api.get<CheckUploadStatusResponse>(`/visual/document/jobs/${jobId}/status`);
+    },
     getEditorData: (fileId:string) =>
         api.get<AllGameData>(`/visual/edit/${fileId}/complete`,
             {

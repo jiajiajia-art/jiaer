@@ -11,6 +11,7 @@ import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
 import RpgGame from './page/RpgGame';
+import UploadProgressModal from './components/GameSettingEditor/UploadProgressModal';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/galgameMap" element={<GalgameMap />} />
         </Route>
       </Routes>
+      <UploadProgressModal />
     </BrowserRouter>
   )
 }

@@ -222,8 +222,6 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                         worldRulesLines.push(`${key}: ${value}`);
                     }
                 } else {
-                    // 对于 worldInteraction 模式，后端期望使用 worldRules 字段接收规则
-                    // 因此前端也将无冒号的整行作为 key 和 value 写入 WorldRules
                     worldRules[trimmedLine] = trimmedLine;
                     worldRulesLines.push(trimmedLine);
                 }
@@ -297,10 +295,8 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 preamble: openingVal,
                 initialPlot: openingPlotVal,
                 literary: toneValue ?? '',
-                keyEvents: keyEvents, // 可为空数组
+                keyEvents: keyEvents,
                 Theme: themeLines,
-                // worldInteraction 模式下：如果用户在表单中填写了世界规则（key: value 形式），也通过 WorldRules 传给后端
-                // 后端初始没有该字段时，本次提交会新增 WorldRules；清空后则传空对象表示清空
                 WorldRules: worldRules,
                 player: {
                     name: playerName,

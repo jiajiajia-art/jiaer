@@ -3,6 +3,7 @@ import styles from './DocumentsPanel.module.css';
 import { BsUpload } from 'react-icons/bs';
 import EditorApi from '../../api/galgame/EditorData';
 import toast from 'react-hot-toast';
+import { useUploadStore } from '../../store/uploadStore';
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<boolean>;
     isParsing: boolean;
@@ -42,6 +43,8 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const [isCompleted, setIsCompleted] = useState<boolean>(false);
     const progressIntervalRef = useRef<number | null>(null);
     const apiCompletedRef = useRef<boolean>(false);
+    const { jobs } = useUploadStore();
+    const currentJobRef = useRef<string | null>(null);
 
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -56,11 +59,13 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
             try {
                 const success = await onFileUpload(file);
-                apiCompletedRef.current = true;
-                setApiCompleted(true);
+                // 不立即设置完成，等待轮询状态更新
                 if (!success) {
                     setApiError('文件上传或解析失败，请重试');
+                    apiCompletedRef.current = true;
+                    setApiCompleted(true);
                 }
+                // 如果成功，等待轮询状态为 completed 后再设置完成
             } catch (error) {
                 apiCompletedRef.current = true;
                 setApiCompleted(true);
@@ -208,6 +213,56 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             }
         }, interval);
     }, [onParsingStart, finishProgress]);
+
+    // 监听 uploadStore 中的任务状态，根据实际轮询状态更新进度
+    useEffect(() => {
+        const jobList = Object.values(jobs);
+        if (jobList.length === 0) {
+            // 如果没有任务，但之前有任务，说明已完成
+            if (currentJobRef.current) {
+                apiCompletedRef.current = true;
+                setApiCompleted(true);
+                currentJobRef.current = null;
+            }
+            return;
+        }
+
+        // 找到当前文件对应的任务（通过文件名匹配，或使用最新的任务）
+        const currentJob = jobList.find(job => 
+            job.fileName === uploadedFile?.name
+        ) || jobList[jobList.length - 1];
+
+        if (currentJob) {
+            currentJobRef.current = currentJob.jobId;
+
+            // 根据实际状态更新进度
+            if (currentJob.status === 'completed') {
+                // 完成
+                apiCompletedRef.current = true;
+                setApiCompleted(true);
+                setProgress(100);
+                if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current);
+                    progressIntervalRef.current = null;
+                }
+                finishProgress();
+            } else if (currentJob.status === 'failed') {
+                // 失败
+                apiCompletedRef.current = true;
+                setApiCompleted(true);
+                setApiError(currentJob.error || '文件上传或解析失败，请重试');
+                if (progressIntervalRef.current) {
+                    clearInterval(progressIntervalRef.current);
+                    progressIntervalRef.current = null;
+                }
+            } else {
+                // 进行中：使用实际进度，但至少显示一些进度
+                const actualProgress = currentJob.progress || 0;
+                // 如果实际进度大于模拟进度，使用实际进度；否则继续模拟
+                setProgress(prev => Math.max(prev, Math.min(actualProgress, MAX_FAKE_PROGRESS)));
+            }
+        }
+    }, [jobs, uploadedFile, finishProgress]);
 
     // 当 API 提前完成时，立即跳到 100%
     useEffect(() => {

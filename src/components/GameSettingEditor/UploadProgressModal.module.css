@@ -1,0 +1,225 @@
+.modalOverlay {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.modalContent {
+    background: #fff;
+    border-radius: 8px;
+    width: 380px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    border: 1px solid #e8e8e8;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+    border-radius: 8px 8px 0 0;
+    cursor: move;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.minimizeButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.minimizeButton:hover {
+    color: #333;
+}
+
+.title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.closeButton img {
+    width: 20px;
+    height: 20px;
+}
+
+.modalBody {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+    max-height: 400px;
+}
+
+.jobItem {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    border: 1px solid #e8e8e8;
+}
+
+.jobItem:last-child {
+    margin-bottom: 0;
+}
+
+.jobHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.jobInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.fileName {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.removeButton {
+    background: #ff4d4f;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.removeButton:hover {
+    background: #ff7875;
+}
+
+.progressContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.progressBar {
+    flex: 1;
+    height: 8px;
+    background: #e8e8e8;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: #1890ff;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progressText {
+    font-size: 12px;
+    color: #666;
+    min-width: 40px;
+    text-align: right;
+}
+
+.jobDetails {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #999;
+    margin-top: 8px;
+}
+
+.stage {
+    color: #666;
+}
+
+.time {
+    color: #999;
+}
+
+.errorMessage {
+    margin-top: 8px;
+    padding: 8px;
+    background: #fff2f0;
+    border: 1px solid #ffccc7;
+    border-radius: 4px;
+    color: #ff4d4f;
+    font-size: 12px;
+}
+
+.successMessage {
+    margin-top: 8px;
+    padding: 8px;
+    background: #f6ffed;
+    border: 1px solid #b7eb8f;
+    border-radius: 4px;
+    color: #52c41a;
+    font-size: 12px;
+}
+
+.modalFooter {
+    padding: 8px 16px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    background: #fafafa;
+    border-radius: 0 0 8px 8px;
+}
+
+.closeBtn {
+    background: #1890ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.closeBtn:hover {
+    background: #40a9ff;
+}
+
