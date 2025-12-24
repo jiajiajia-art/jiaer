@@ -60,7 +60,9 @@ export interface HandlersContext {
 
     // 弹窗控制回调（简化：只传开关函数，内部状态用闭包管理）
     onDeleteModalOpen: () => void;
+    onDeleteModalClose: () => void;
     onSubsceneDeleteModalOpen: () => void;
+    onSubsceneDeleteModalClose: () => void;
     onSceneCostModalOpen: (points: number | null) => void;
     onSingleSceneCostModalOpen: () => void;
     onWorldMapCostModalOpen: () => void;
@@ -105,7 +107,9 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         worldMapFileInputRef,
         // 弹窗控制
         onDeleteModalOpen,
+        onDeleteModalClose,
         onSubsceneDeleteModalOpen,
+        onSubsceneDeleteModalClose,
         onSceneCostModalOpen,
         onSingleSceneCostModalOpen,
         onWorldMapCostModalOpen,
@@ -418,6 +422,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     const handleConfirmDelete = async () => {
         if (!fileId || !sceneToDelete) {
             sceneToDelete = null;
+            onDeleteModalClose();
             return;
         }
 
@@ -442,11 +447,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         } catch (error) {
             console.error('删除场景时出错:', error);
             toast.error('删除场景失败，请重试');
+        } finally {
+            onDeleteModalClose();
         }
     };
 
     const handleCancelDelete = () => {
         sceneToDelete = null;
+        onDeleteModalClose();
     };
 
     // 删除子场景
@@ -459,12 +467,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     const handleConfirmSubsceneDelete = async () => {
         if (!fileId || !subsceneToDelete) {
             subsceneToDelete = null;
+            onSubsceneDeleteModalClose();
             return;
         }
 
         if (mode !== 'worldInteraction') {
             toast.error('子场景功能仅在世界交互模式下可用');
             subsceneToDelete = null;
+            onSubsceneDeleteModalClose();
             return;
         }
 
@@ -486,11 +496,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         } catch (error) {
             console.error('删除子场景时出错:', error);
             toast.error('删除子场景失败，请重试');
+        } finally {
+            onSubsceneDeleteModalClose();
         }
     };
 
     const handleCancelSubsceneDelete = () => {
         subsceneToDelete = null;
+        onSubsceneDeleteModalClose();
     };
 
     // 处理场景/子场景图片点击
