@@ -21,6 +21,7 @@ interface GameStatsViewProps {
     isDeleting: boolean;
     onPublish: () => void;
     onUnpublish: (fileId: string) => void;
+    onPriceAdjust?: () => void;
 }
 
 const GameStatsView: React.FC<GameStatsViewProps> = ({
@@ -31,6 +32,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     isDeleting,
     onPublish,
     onUnpublish,
+    onPriceAdjust,
 }) => {
     const { user } = useAuthStore();
     const { setFileId, setSessionId, setIsPreset } = useGameStore();
@@ -186,6 +188,15 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                         下架
                                     </button>
                             }
+
+                            {gameDetail.is_public == 1 && onPriceAdjust && (
+                                <button 
+                                    className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`} 
+                                    onClick={onPriceAdjust}
+                                >
+                                    价格调整
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

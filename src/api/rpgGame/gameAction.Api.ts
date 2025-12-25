@@ -1,3 +1,5 @@
+import type { UserGameData } from "../home/getGameData.type";
+
 export interface PublishGameRequest {
     fileId: string;
     priceAmount: number;
@@ -43,4 +45,16 @@ export interface GameLikeResponse {
 
 export interface DeletSessionRequest{
     fileId: string;
+}
+
+export interface UpdatePriceRequest {
+    fileId: string;
+    price_amount: number | null;
+    special_price_amount: number | null;
+}
+
+export interface UpdatePriceResponse {
+    success: boolean;
+    message: string;
+    data?: UserGameData;
 }

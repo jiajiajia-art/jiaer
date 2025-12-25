@@ -436,19 +436,7 @@ const GalgameMap = () => {
 
                         {/* 当事件已完成（没有活跃事件或 eventCompleted 标志为 true）时，提供"开启下一回合"按钮 */}
                         {(() => {
-                            // 统一条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
                             const shouldShow = (!eventData || eventCompleted) && !isLoading;
-                            
-                            // 调试信息（开发环境）
-                            if (import.meta.env.DEV) {
-                                console.log('[GalgameMap] NextRoundButton 显示检查 (WORLD_MAP):', {
-                                    hasEventData: !!eventData,
-                                    eventCompleted,
-                                    isLoading,
-                                    shouldShow,
-                                });
-                            }
-                            
                             return shouldShow;
                         })() && (
                                 <NextRoundButton
