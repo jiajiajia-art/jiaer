@@ -22,15 +22,15 @@ const REFRESH_URL = '/auth/refresh';
  */
 const isTokenNearExpiry = (token?: string, bufferSeconds = 120): boolean => {
   if (!token) {
-    return true; // 没 token 就当作要刷新
+    return true;
   }
   try {
-    const decoded = jwtDecode(token) as { exp: number }; // exp 是秒级时间戳
+    const decoded = jwtDecode(token) as { exp: number };
     const now = Date.now() / 1000;
     const timeLeft = decoded.exp - now;
-    return timeLeft < bufferSeconds; // 剩余时间小于 bufferSeconds 则需要刷新
+    return timeLeft < bufferSeconds;
   } catch {
-    return true; // 解析失败也当作无效
+    return true;
   }
 };
 
@@ -57,10 +57,8 @@ const refreshAccessToken = async (): Promise<string> => {
       throw new Error('Invalid refresh response data');
     }
     
-    // 更新 token 和 refreshToken
     updateToken(data.token, data.refreshToken);
 
-    // 更新用户信息
     if (data.user) {
       updateUser(data.user);
     }
@@ -110,7 +108,7 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
               refreshPromise = null;
             });
         }
-        token = await refreshPromise; // 等待刷新完成
+        token = await refreshPromise;
       }
 
       // 将最新 token 加到请求头
@@ -214,14 +212,10 @@ export const authFetch = async (
   url: string | URL,
   init?: RequestInit
 ): Promise<Response> => {
-  // 获取有效的 token
   const token = await getValidToken();
 
-  // 准备请求头
-  // Headers 构造函数可以接受 Headers 对象、普通对象或数组
   const headers = init?.headers ? new Headers(init.headers) : new Headers();
 
-  // 如果有 token，添加 Authorization header
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
     console.log('[Fetch] Added Authorization header to request.');
@@ -230,17 +224,14 @@ export const authFetch = async (
     console.log('[Fetch] No token available, skipping Authorization header.');
   }
 
-  // 合并请求配置
   const requestInit: RequestInit = {
     ...init,
     headers,
   };
 
   try {
-    // 发送请求
     const response = await fetch(url, requestInit);
 
-    // 处理认证错误
     if (response.status === 401) {
       console.warn('[Fetch] Received 401, token invalid, logging out.');
       useAuthStore.getState().logout();

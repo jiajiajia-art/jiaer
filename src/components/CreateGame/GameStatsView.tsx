@@ -12,6 +12,7 @@ import GameAction from '../../api/rpgGame/gameAction';
 import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../../config';
+import MobileTipModal from './MobileTipModal';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -39,6 +40,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [gameStats, setGameStats] = useState<GameStatsResponse>();
+    const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
 
     /**
      * 创建会话
@@ -233,10 +235,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                         </div>
                         <div className={styles.statBox}>
                             <div className={styles.statLabel}>
-                                <IoWallet />
+                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
                                 <span>收益</span>
                             </div>
-                            <div className={styles.statValue}>0</div>
+                            <div className={styles.statValue}>{gameStats?.amount || 0}</div>
                         </div>
                     </div>
                 </div>
@@ -244,7 +246,15 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 <div className={styles.heroActionGroup}>
                     <button
                         className={styles.editGameBtn}
-                        onClick={onEdit}
+                        onClick={() => {
+                            // 检测是否为移动端（断点与 CSS 保持一致：768px）
+                            const isMobile = window.innerWidth <= 768;
+                            if (isMobile) {
+                                setIsMobileTipModalOpen(true);
+                                return;
+                            }
+                            onEdit();
+                        }}
                     >
                         编辑游戏
                     </button>
@@ -258,6 +268,13 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     </button>
                 </div>
             </div>
+
+            {/* 移动端提示弹窗 */}
+            <MobileTipModal
+                isOpen={isMobileTipModalOpen}
+                onClose={() => setIsMobileTipModalOpen(false)}
+                message="编辑功能暂不支持移动端，请在电脑上访问以获得更好的体验"
+            />
         </div>
     );
 };

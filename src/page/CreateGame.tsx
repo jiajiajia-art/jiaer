@@ -426,10 +426,8 @@ const CreateGame: React.FC = () => {
                 navigate('/create');
             } else {
                 toast.error(response.data.message || '下架游戏失败');
-                console.error('下架游戏失败:', response.data);
             }
         } catch (error) {
-            console.error('下架游戏失败:', error);
             alert('下架游戏失败');
         }
     };
@@ -563,7 +561,6 @@ const CreateGame: React.FC = () => {
             )}
 
             <FooterArea />
-            <MobileBottomNav />
         </div>
     );
 };

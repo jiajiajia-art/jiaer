@@ -204,6 +204,13 @@
     gap: 8px;
 }
 
+.statLabel img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: inline-block;
+}
+
 .heroActionGroup {
     margin-top: 24px;
     display: flex;
@@ -380,6 +387,7 @@
     .heroPrimaryActions {
         margin-top: 16px;
         gap: 12px;
+        flex-wrap: wrap;
     }
 
     .heroRating {
@@ -459,10 +467,11 @@
 
     .primaryActionBtn {
         min-width: 140px;
-        height: 44px;
-        font-size: 16px;
+        height: 40px;
+        font-size: 14px;
         border-radius: 10px;
         padding: 0 20px;
+        flex: 0 1 auto;
     }
 }
 

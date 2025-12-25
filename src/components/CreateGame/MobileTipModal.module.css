@@ -1,0 +1,77 @@
+.mobileTipModalOverlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.mobileTipModal {
+    background-color: #ffffff;
+    border-radius: 18px;
+    padding: 24px 28px 20px;
+    min-width: 280px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.18);
+}
+
+.mobileTipModalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.mobileTipModalTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.mobileTipModalContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.mobileTipIcon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.mobileTipText {
+    font-size: 14px;
+    color: #6B7280;
+    line-height: 1.6;
+}
+
+.mobileTipModalFooter {
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.mobileTipConfirmButton {
+    font-size: 14px;
+    color: #ffffff;
+    padding: 10px 32px;
+    border-radius: 10px;
+    border: none;
+    background-color: #FB4655;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mobileTipConfirmButton:hover {
+    background-color: #e63946;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.3);
+}
+
