@@ -163,3 +163,22 @@ export interface GetWorldFilesBySessionResponse {
   success: boolean;
   state: GameState;
 }
+
+
+export interface CreateWorldEditSessionRequest {
+  success: boolean;
+  message: string;
+  session: {
+    sessionId: string;
+    fileId: string;
+    presetId: string | null;
+    currentRound: number;
+    worldInfo: {
+      title: string;
+      summary: string;
+      themes: string[];
+      image: string;
+    };
+    player: Player;
+  };
+}

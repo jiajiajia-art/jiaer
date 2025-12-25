@@ -399,9 +399,9 @@ const GameSettingsEditor = () => {
         try {
             // 根据模式选择不同的会话创建接口
             if (mode === 'worldInteraction') {
-                const sessionResponse = await createWorldSessionApi.createWorldSession({ fileId });
+                const sessionResponse = await createWorldSessionApi.createWorldEditSession({ fileId });
                 if (sessionResponse.data.success) {
-                    const sessionId = sessionResponse.data.data.session.session_id;
+                    const sessionId = sessionResponse.data.session.sessionId;
                     setFileId(fileId);
                     setSessionId(sessionId);
                     navigate(`/galgameMap`);
@@ -411,9 +411,9 @@ const GameSettingsEditor = () => {
                     return null;
                 }
             } else {
-                const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId: fileId });
+                const sessionResponse = await createGalgameSessionApi.createGalgameEditSession({ fileId: fileId });
                 if (sessionResponse.data.success) {
-                    const sessionId = sessionResponse.data.data.session.session_id;
+                    const sessionId = sessionResponse.data.session.sessionId;
                     setFileId(fileId);
                     setSessionId(sessionId);
                     setIsPreset(false);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IoEye, IoWallet } from 'react-icons/io5';
+import { IoEye } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
@@ -61,12 +61,12 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             // 根据游戏版本判断进入的模式
             if (gameDetail.version == 'new') {
                 // Galgame 模式
-                const response = await createGalgameSessionApi.createGalgameSession({
-                    presetId: fileId,
+                const response = await createGalgameSessionApi.createGalgameEditSession({
+                    fileId: fileId,
                 });
 
                 if (response.data.success) {
-                    const sessionId = response.data.data.session.session_id;
+                    const sessionId = response.data.session.sessionId;
                     return { sessionId, redirectUrl: `/galgame` };
                 } else {
                     alert(response.data.message || '创建游戏失败，请重试');
@@ -87,9 +87,9 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     return { sessionId: null, redirectUrl: '' };
                 }
             } else if(gameDetail.version == 'map-plugin-version'){
-                const response = await createWorldSessionApi.createWorldSession({fileId}); 
+                const response = await createWorldSessionApi.createWorldEditSession({fileId}); 
                 if (response.data.success) {
-                    const sessionId = response.data.data.session.session_id;
+                    const sessionId = response.data.session.sessionId;
                     return { sessionId, redirectUrl: '/galgameMap'};
                 } else {
                     alert(response.data.message || '创建游戏失败，请重试');

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
@@ -12,6 +13,8 @@ interface GameGridProps {
 }
 
 const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }) => {
+    const location = useLocation();
+    const isCreatePage = location.pathname === '/create';
     if (games.length === 0) {
         return (
             <div className={styles.emptyState}>
@@ -46,6 +49,11 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                             src={getImageUrl(meta.cover_url) || `${import.meta.env.BASE_URL}data/events/welcome.png`}
                             alt={meta.title || `剧情${idx + 1}`}
                         />
+                        {isCreatePage && meta.game_tags && meta.game_tags[0] && (
+                            <div className={styles.gameTag}>
+                                {meta.game_tags[0]}
+                            </div>
+                        )}
                         <div className={styles.goodsInfo}>
                             <div className={styles.goodsInfoItem}>
                                 <IoGameControllerOutline />

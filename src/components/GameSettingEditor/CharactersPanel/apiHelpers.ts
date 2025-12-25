@@ -113,6 +113,7 @@ export const createApiHelpers = (mode: string) => {
                 baseImagePath,
                 variant,
                 removeBg: true,
+                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
         },
 

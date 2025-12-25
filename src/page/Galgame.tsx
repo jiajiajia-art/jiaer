@@ -692,7 +692,8 @@ const Galgame = () => {
 
             try {
                 setIsLoading(true);
-                const response = isPreset ? await getGalgamePresetApi.getGalgamePreset(fileId) : await getGalgamePresetApi.getGalgameFileId(fileId);
+                const response = isPreset ? await getGalgamePresetApi.getGalgamePreset(fileId) 
+                : await getGalgamePresetApi.getGalgameFileId(fileId);
 
                 if (response.data.success) {
                     const data = response.data;

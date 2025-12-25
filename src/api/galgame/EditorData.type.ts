@@ -157,6 +157,7 @@ export interface GenerateVariantImageRequest {
   };
   fileId: string;
   removeBg?: boolean;
+  pluginType: string;
 }
 
 export interface GenerateAllImageRequest {

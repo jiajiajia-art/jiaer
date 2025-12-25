@@ -176,7 +176,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         setIsLoading(true);
         try {
             // 创建 galgame 会话
-            const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId });
+            const sessionResponse = await createGalgameSessionApi.createGalgamePlaySession({ presetId });
             if (sessionResponse.data.success) {
                 return sessionResponse.data.data.session.session_id;
             } else {
@@ -198,7 +198,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return null;
         }   
         try {
-            const response = await createWorldSessionApi.createWorldSession({fileId: presetId}); 
+            const response = await createWorldSessionApi.createWorldPlaySession({fileId: presetId}); 
             if (response.data.success) {
                 return response.data.data.session.session_id;
             } else {
