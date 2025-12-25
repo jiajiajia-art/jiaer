@@ -150,7 +150,7 @@
 
 .progressFill {
     height: 100%;
-    background: #1890ff;
+    background: #FB4655;
     border-radius: 4px;
     transition: width 0.3s ease;
 }
@@ -192,34 +192,9 @@
 .successMessage {
     margin-top: 8px;
     padding: 8px;
-    background: #f6ffed;
-    border: 1px solid #b7eb8f;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
     border-radius: 4px;
-    color: #52c41a;
+    color: #22C55E;
     font-size: 12px;
 }
-
-.modalFooter {
-    padding: 8px 16px;
-    border-top: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: flex-end;
-    background: #fafafa;
-    border-radius: 0 0 8px 8px;
-}
-
-.closeBtn {
-    background: #1890ff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 16px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.closeBtn:hover {
-    background: #40a9ff;
-}
-

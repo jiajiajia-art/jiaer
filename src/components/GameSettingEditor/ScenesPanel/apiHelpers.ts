@@ -45,9 +45,8 @@ export const createSceneApiHelpers = (mode: string) => {
             scene: { id: string; name: string; description: string };
         }) => {
             const { fileId, scene } = params;
-            return EditorApi.generateSceneImage({
-                fileId,
-                scene,
+            return EditorApi.generateSceneImage(scene.id, fileId, {
+                removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
         },
@@ -86,8 +85,7 @@ export const createSceneApiHelpers = (mode: string) => {
             if (isWorldInteraction) {
                 return worldEditor.generateAllSceneImages(fileId);
             }
-            return EditorApi.generateAllImages({
-                fileId,
+            return EditorApi.generateAllImages(fileId, {
                 generateNPCs: false,
                 generateScenes: true,
                 generateVariants: false,

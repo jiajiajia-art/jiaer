@@ -444,10 +444,17 @@ export const createHandlers = (ctx: HandlersContext) => {
         try {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(npc.id);
-            const { id, name, age, gender, job, race, description, appearance } = npc as any;
-            const response = await api.generateNpcImage(fileId, {
-                id, name, age, gender, job, race, description, appearance,
-            });
+            const npcData: NPC = {
+                id: npc.id,
+                name: npc.name,
+                age: (npc as any).age || 0,
+                gender: npc.gender,
+                job: (npc as any).job || '',
+                race: (npc as any).race || '',
+                description: (npc as any).description || '',
+                appearance: npc.appearance || '',
+            };
+            const response = await api.generateNpcImage(fileId, npcData);
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
                 
@@ -486,17 +493,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         try {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(playerChar.id);
-            const identityParts = (playerChar.identity || '').split(' · ');
-            const race = identityParts.length > 1 ? identityParts[0] : playerChar.identity || undefined;
-            const payloadPlayer: any = {
-                name: playerChar.name,
-                gender: playerChar.gender,
-                race,
-                appearance: playerChar.appearance,
-                personality: playerChar.personality?.length ? playerChar.personality.join(', ') : undefined,
-                tone: playerChar.speech || '',
-            };
-            const response = await api.generatePlayerImage(fileId, payloadPlayer);
+            const response = await api.generatePlayerImage(fileId);
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
@@ -541,7 +538,6 @@ export const createHandlers = (ctx: HandlersContext) => {
             const response = await api.generateVariantImage(
                 fileId,
                 currentCharacter.id === 'player' ? 'player' : currentCharacter.id,
-                currentCharacter.portrait,
                 {
                     type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
                     value: variation.label,
@@ -646,10 +642,12 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
         try {
             setIsLoadingNpcCost(true);
-            const response: any = await api.calculateNpcPoints(fileId);
-            const points = response?.data?.points ?? response?.data?.data?.points ?? response?.data?.cost ?? null;
-            setNpcCostPoints(points);
-            setNpcCostModalOpen(true);
+            const response = await api.calculateNpcPoints(fileId);
+            if(response.data){
+                const points = response.data.points;
+                setNpcCostPoints(points);
+                setNpcCostModalOpen(true);
+            }
         } catch (error) {
             console.error('获取角色生图积分消耗失败:', error);
             toast.error('获取积分消耗失败，请稍后重试');

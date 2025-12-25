@@ -37,13 +37,13 @@ const UploadProgressModal: React.FC = () => {
         switch (status) {
             case 'uploading':
             case 'processing':
-                return '#1890ff';
+                return '#FB4655';
             case 'completed':
-                return '#52c41a';
+                return '#22C55E';
             case 'failed':
                 return '#ff4d4f';
             default:
-                return '#1890ff';
+                return '#FB4655';
         }
     };
     
@@ -144,17 +144,6 @@ const UploadProgressModal: React.FC = () => {
                             )}
                         </div>
                     ))}
-                    </div>
-                )}
-                
-                {!isMinimized && jobList.length > 0 && (
-                    <div className={styles.modalFooter}>
-                        <button 
-                            className={styles.closeBtn}
-                            onClick={() => setShowProgressModal(false)}
-                        >
-                            收起
-                        </button>
                     </div>
                 )}
             </div>

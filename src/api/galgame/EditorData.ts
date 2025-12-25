@@ -1,6 +1,6 @@
 import { api } from "../base";
 import type { CalculatePointsResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateNpcImageRequest, GenerateSceneImageRequest, GenerateVariantImageRequest, GeneratePlayerImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse } from "./EditorData.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateVariantImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse, GenerateImageRequest } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -78,26 +78,26 @@ const EditorApi = {
             },
         });
     },
-    generateAllImages: (data: GenerateAllImageRequest) => {
-        return api.post<AllGameData>(`/visual/images/generate-all`, data, {
+    generateAllImages: (fileId: string, data: GenerateAllImageRequest) => {
+        return api.post<AllGameData>(`/visual/generate-images/${fileId}/all`, data, {
             timeout: 180000,
         });
     },
-    generatePlayerImage: (data:GeneratePlayerImageRequest) => {
-        return api.post<GenerateImgeResponse>(`/visual/images/generate-player`, data, {
+    generatePlayerImage: (fileId: string, data: GenerateImageRequest) => {
+        return api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/player`, data, {
             timeout: 180000,
         });
     },
-    generateNpcImage: (data: GenerateNpcImageRequest) =>
-        api.post<GenerateImgeResponse>(`/visual/images/generate-npc`, data, {
+    generateNpcImage: (npacId: string, fileId: string, data: GenerateImageRequest) =>
+        api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npacId}`, data, {
             timeout: 180000,
         }),
-    generateSceneImage: (data: GenerateSceneImageRequest) =>
-        api.post<GenerateImgeResponse>(`/visual/images/generate-scene`, data, {
+    generateSceneImage: (sceneId: string, fileId: string, data: GenerateImageRequest) =>
+        api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/scenes/${sceneId}`, data, {
             timeout: 180000,
         }),
-    generateVariantImage: (data: GenerateVariantImageRequest) =>
-        api.post<GenerateImgeResponse>(`/visual/images/generate-npc-variant`, data, {
+    generateVariantImage: (fileId: string, npcId: string, data: GenerateVariantImageRequest) =>
+        api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npcId}/variant`, data, {
             timeout: 180000,
         }),
     calculateScenePoints: (fileId: string) =>

@@ -139,23 +139,20 @@ const GameSettingsEditor = () => {
                 const formData = new FormData();
                 formData.append('document', file);
                 
-                const response = await authFetch('/api/visual/document/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
+                const response = await EditorApi.uploadGameFile(file);
                 
                 // 容错：若后端临时返回 200 + fileId，也尝试兼容
-                if (response.status === 200 && response.ok) {
-                    const legacy = await response.json().catch(() => ({} as any));
-                    const legacyFileId = legacy.fileId || legacy.data?.fileId || legacy.file_id;
-                    if (legacyFileId) {
-                        setFileId(legacyFileId);
+                if (response.status === 200) {
+                    const legacy = response.data;
+                    if (legacy.success) {
+                        setFileId(legacy.fileId);
                         setIsParsed(false);
                         setIsPreset(false);
                         return true;
+                    } else {
+                        console.error('Unexpected upload response: 200 but no fileId in body');
+                        return false;
                     }
-                    console.error('Unexpected upload response: 200 but no fileId in body');
-                    return false;
                 }
                 
                 // 期望返回 202 Accepted
@@ -165,8 +162,8 @@ const GameSettingsEditor = () => {
                     return false;
                 }
                 
-                const accepted = (await response.json()) as UploadAcceptedResponse;
-                if (!accepted?.success || !accepted?.jobId) {
+                const accepted = response.data;
+                if (!accepted.success || !accepted.jobId) {
                     console.error('Invalid 202 Accepted payload', accepted);
                     toast.error('上传失败，请重试');
                     return false;

@@ -28,10 +28,8 @@ export const createApiHelpers = (mode: string) => {
                 : EditorApi.uploadPlayerImage(fileId, { file, variant: variant || 'base' });
         },
 
-        generatePlayerImage: async (fileId: string, player: Player) => {
-            return EditorApi.generatePlayerImage({
-                fileId,
-                player,
+        generatePlayerImage: async (fileId: string) => {
+            return EditorApi.generatePlayerImage(fileId, {
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
@@ -63,18 +61,7 @@ export const createApiHelpers = (mode: string) => {
         },
 
         generateNpcImage: async (fileId: string, npc: NPC) => {
-            return EditorApi.generateNpcImage({
-                fileId,
-                npc: {
-                    id: npc.id,
-                    name: npc.name,
-                    age: npc.age || 0,
-                    gender: npc.gender,
-                    job: npc.job || '',
-                    race: npc.race || '',
-                    description: npc.description,
-                    appearance: npc.appearance,
-                },
+            return EditorApi.generateNpcImage(npc.id, fileId, {
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
@@ -84,8 +71,7 @@ export const createApiHelpers = (mode: string) => {
         generateAllNpcImages: async (fileId: string) => {
             return isWorldInteraction
                 ? worldEditor.generateAllNpcImages(fileId)
-                : EditorApi.generateAllImages({
-                    fileId,
+                : EditorApi.generateAllImages(fileId, {
                     generateNPCs: true,
                     generateScenes: false,
                     generateVariants: false,
@@ -104,15 +90,12 @@ export const createApiHelpers = (mode: string) => {
         generateVariantImage: async (
             fileId: string,
             npcId: string,
-            baseImagePath: string,
             variant: GenerateVariantImageRequest['variant']
         ) => {
-            return EditorApi.generateVariantImage({
-                fileId,
-                npcId: npcId === 'player' ? 'player' : npcId,
-                baseImagePath,
+            return EditorApi.generateVariantImage(fileId, npcId === 'player' ? 'player' : npcId, {
                 variant,
                 removeBg: true,
+                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
         },
 

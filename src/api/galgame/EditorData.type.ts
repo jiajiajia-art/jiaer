@@ -121,46 +121,22 @@ export interface GeneratePlayerImageRequest {
   pluginType: string;
 }
 
-export interface GenerateNpcImageRequest {
-  npc: {
-    id: string;
-    name: string;
-    age: number;
-    gender: string;
-    job: string;
-    race: string;
-    description: string;
-    appearance: string;
-  };
-  fileId: string;
+export interface GenerateImageRequest {
   removeBg: boolean;
   pluginType: string;
 }
 
-export interface GenerateSceneImageRequest {
-  scene: {
-    id: string;
-    name: string;
-    description: string;
-  };
-  fileId: string;
-  pluginType: string;
-}
-
 export interface GenerateVariantImageRequest {
-  npcId: string;
-  baseImagePath: string;
   variant: {
     type: "expression" | "clothing" | "pose";
     value: string;
     description?: string;
   };
-  fileId: string;
   removeBg?: boolean;
+  pluginType: string;
 }
 
 export interface GenerateAllImageRequest {
-  fileId: string;
   generateNPCs: boolean;
   generateScenes: boolean;
   generateVariants: boolean;
