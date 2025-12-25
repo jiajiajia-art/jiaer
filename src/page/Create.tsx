@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
 import RechargeModal from '../components/Purchase/RechargeModal';
+import CreateGameModals from '../components/CreateGame/CreateGameModals';
 import toast from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import { auth } from '../api/account/authApi';
@@ -35,6 +36,7 @@ const Create: React.FC = () => {
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
+    const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false); // 控制移动端提示弹窗
     const [isEditingName, setIsEditingName] = useState(false); // 控制修改昵称弹窗
     const [editName, setEditName] = useState('');
     const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -258,6 +260,12 @@ const Create: React.FC = () => {
                         <button
                             className={styles.createGameButtonItem}
                             onClick={() => {
+                                // 检测是否为移动端（断点与 CSS 保持一致：768px）
+                                const isMobile = window.innerWidth <= 768;
+                                if (isMobile) {
+                                    setIsMobileTipModalOpen(true);
+                                    return;
+                                }
                                 setIsCreateTypeModalOpen(true);
                             }}
                         >
@@ -373,7 +381,7 @@ const Create: React.FC = () => {
                             </div>
                             <div className={styles.statBox}>
                                 <div className={styles.statLabel}>
-                                    <IoWallet />
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
                                     <span>总收益</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalAmount}</div>
@@ -506,59 +514,14 @@ const Create: React.FC = () => {
                 </div>
             )}
 
-            {/* 创作类型选择弹窗 */}
-            {isCreateTypeModalOpen && (
-                <div
-                    className={styles.createTypeModalOverlay}
-                    onClick={() => setIsCreateTypeModalOpen(false)}
-                >
-                    <div
-                        className={styles.createTypeModal}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className={styles.createTypeModalHeader}>
-                            <div className={styles.createTypeModalTitle}>
-                                选择需创建游戏类型
-                            </div>
-                        </div>
-                        <div className={styles.createTypeModalDesc}>
-                            请选择你要创作的游戏形态，我们会为你匹配合适的创作流程。
-                        </div>
-                        <div className={styles.createTypeOptions}>
-                            <button
-                                className={`${styles.createTypeOption}`}
-                                onClick={() => handleSelectGameType('txt')}
-                            >
-                                <span>TXT</span>
-                                <span className={styles.createTypeOptionRecommend}>推荐</span>
-                            </button>
-                            <button
-                                className={`${styles.createTypeOption}`}
-                                onClick={() => handleSelectGameType('avg')}
-                            >
-                                <span>AVG</span>
-                            </button>
-                            <button
-                                className={`${styles.createTypeOption} ${styles.createTypeOptionDisabled}`}
-                                onClick={() => handleSelectGameType('rpg')}
-                                disabled={true}
-                            >
-                                <span>RPG</span>
-                                <span className={styles.createTypeOptionLocked}>待解锁</span>
-                            </button>
-                        </div>
-                        <div className={styles.createTypeModalFooter}>
-                            <button
-                                type="button"
-                                onClick={() => setIsCreateTypeModalOpen(false)}
-                                className={styles.createTypeCancelButton}
-                            >
-                                取消
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* 创作游戏相关弹窗 */}
+            <CreateGameModals
+                isCreateTypeModalOpen={isCreateTypeModalOpen}
+                isMobileTipModalOpen={isMobileTipModalOpen}
+                onCloseCreateTypeModal={() => setIsCreateTypeModalOpen(false)}
+                onCloseMobileTipModal={() => setIsMobileTipModalOpen(false)}
+                onSelectGameType={handleSelectGameType}
+            />
 
             {/* 充值弹窗 */}
             <RechargeModal
