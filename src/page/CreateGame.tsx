@@ -410,11 +410,13 @@ const CreateGame: React.FC = () => {
                 navigate('/create');
             } else {
                 console.error('发布游戏失败:', response.data);
-                alert('发布游戏失败');
+                const errorMessage = response.data.message || '发布游戏失败';
+                alert(errorMessage);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('发布游戏失败:', error);
-            alert('发布游戏失败');
+            const errorMessage = error.response.data.message || error.message || '发布游戏失败';
+            alert(errorMessage);
         }
     };
     // 下架游戏
