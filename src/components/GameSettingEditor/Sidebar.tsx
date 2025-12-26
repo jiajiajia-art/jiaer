@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './Sidebar.module.css';
 import { getImageUrl } from '../../config';
+import PDFTemplateModal from './PDFTemplateModal';
 
 interface SidebarProps {
     activePanel: string;
@@ -11,6 +12,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed, mode = 'visual' }) => {
+    const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
     const baseNavItems = [
         {
             id: 'documents',
@@ -103,12 +105,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                     );
                 })}
             </nav>
+            
+            {/* 问号帮助按钮 */}
+            <div className={styles.helpButtonContainer}>
+                <button
+                    className={styles.helpButton}
+                    onClick={() => setIsPDFModalOpen(true)}
+                    title="PDF模板指引"
+                >
+                    <span className={styles.helpIcon}>?</span>
+                </button>
+            </div>
 
-            {/* <div className={styles.sidebarFooter}>
-                <p className={styles.footerLabel}>当前账号</p>
-                <p className={styles.footerValue}>柚子 · 创作者</p>
-                <button className={styles.ghostSmall}>切换作品</button>
-            </div> */}
+            {/* PDF模板指引弹窗 */}
+            <PDFTemplateModal
+                isOpen={isPDFModalOpen}
+                onClose={() => setIsPDFModalOpen(false)}
+            />
         </aside>
     );
 };
