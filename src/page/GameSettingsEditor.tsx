@@ -569,7 +569,7 @@ const GameSettingsEditor = () => {
             } else {
                 const sessionResponse = await createGalgameSessionApi.createGalgameEditSession({ fileId: fileId });
                 if (sessionResponse.data.success) {
-                    const sessionId = sessionResponse.data.session.sessionId;
+                    const sessionId = sessionResponse.data.sessionId;
                     setFileId(fileId);
                     setSessionId(sessionId);
                     setIsPreset(false);
