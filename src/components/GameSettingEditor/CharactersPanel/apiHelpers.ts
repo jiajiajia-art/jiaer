@@ -30,8 +30,8 @@ export const createApiHelpers = (mode: string) => {
 
         generatePlayerImage: async (fileId: string, player: Player) => {
             return EditorApi.generatePlayerImage({
-                fileId,
                 player,
+                fileId,
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
@@ -64,7 +64,6 @@ export const createApiHelpers = (mode: string) => {
 
         generateNpcImage: async (fileId: string, npc: NPC) => {
             return EditorApi.generateNpcImage({
-                fileId,
                 npc: {
                     id: npc.id,
                     name: npc.name,
@@ -75,6 +74,7 @@ export const createApiHelpers = (mode: string) => {
                     description: npc.description,
                     appearance: npc.appearance,
                 },
+                fileId,
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });

@@ -52,3 +52,11 @@ export interface ResetPasswordRequest {
   newPassword: string;
   confirmNewPassword: string;
 }
+
+export interface SettlePointsResponse {
+  userId: string;
+  settlementAmount: number;
+  settlementTime: string;
+  lastSettlementTime: string | null;
+  gameCount: number;
+}

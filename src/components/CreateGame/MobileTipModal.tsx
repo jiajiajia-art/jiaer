@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './MobileTipModal.module.css';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface MobileTipModalProps {
     isOpen: boolean;
@@ -17,14 +18,15 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
     message,
     icon = '💻',
 }) => {
-    const [copied, setCopied] = useState(false);
     const url = 'https://kurangames.com/funloom/';
 
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(url);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            toast.success('链接已复制到剪贴板');
+            setTimeout(() => {
+                onClose();
+            }, 1000);
         } catch (err) {
             // 降级方案：使用传统方法
             const textArea = document.createElement('textarea');
@@ -35,10 +37,13 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
             textArea.select();
             try {
                 document.execCommand('copy');
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                toast.success('链接已复制到剪贴板');
+                setTimeout(() => {
+                    onClose();
+                }, 1000);
             } catch (e) {
                 console.error('复制失败:', e);
+                toast.error('复制失败，请重试');
             }
             document.body.removeChild(textArea);
         }
@@ -84,6 +89,15 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
             aria-modal="true"
             aria-labelledby="mobile-tip-modal-title"
         >
+            <Toaster
+                position="top-center"
+                containerStyle={{
+                    position: 'fixed',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                }}
+            />
             <div
                 className={styles.mobileTipModal}
                 onClick={(e) => e.stopPropagation()}
@@ -120,7 +134,7 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
                             onClick={handleCopy}
                             type="button"
                         >
-                            {copied ? '已复制' : '复制'}
+                            复制
                         </button>
                     </div>
                 </div>

@@ -475,10 +475,25 @@ export const createHandlers = (ctx: HandlersContext) => {
         try {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(npc.id);
-            const { id, name, age, gender, job, race, description, appearance } = npc as any;
-            const response = await api.generateNpcImage(fileId, {
-                id, name, age, gender, job, race, description, appearance,
-            });
+            // 从 Character 转换为 NPC
+            const identityParts = npc.identity.split(' · ');
+            const race = identityParts.length > 1 ? identityParts[0] : undefined;
+            const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || npc.role);
+            
+            const npcData: NPC = {
+                id: npc.id,
+                name: npc.name || '',
+                age: (npc as any).age || 0,
+                gender: npc.gender || '',
+                job: job || undefined,
+                race: race || undefined,
+                description: npc.background || '',
+                appearance: npc.appearance || '',
+                personality: npc.personality && npc.personality.length > 0 ? npc.personality.join(', ') : undefined,
+                tone: npc.speech || '',
+            };
+            
+            const response = await api.generateNpcImage(fileId, npcData);
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
                 
@@ -510,17 +525,19 @@ export const createHandlers = (ctx: HandlersContext) => {
         try {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(playerChar.id);
+            // 从 Character 转换为 Player
             const identityParts = (playerChar.identity || '').split(' · ');
             const race = identityParts.length > 1 ? identityParts[0] : playerChar.identity || undefined;
-            const payloadPlayer: any = {
-                name: playerChar.name,
-                gender: playerChar.gender,
-                race,
-                appearance: playerChar.appearance,
+            const playerData: Player = {
+                name: playerChar.name || '',
+                gender: playerChar.gender || '',
+                race: race || undefined,
+                appearance: playerChar.appearance || '',
                 personality: playerChar.personality?.length ? playerChar.personality.join(', ') : undefined,
-                tone: playerChar.speech || '',
+                tone: playerChar.speech || undefined,
+                image: playerChar.portrait || undefined,
             };
-            const response = await api.generatePlayerImage(fileId, payloadPlayer);
+            const response = await api.generatePlayerImage(fileId, playerData);
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);

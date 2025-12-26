@@ -50,6 +50,9 @@ const GalgameMap = () => {
         eventCompleted,
         setEventCompleted,
         isTypingInInteractNpc,
+        storedSessionId,
+        setStoredSessionId,
+        clearState,
     } = useMapGalgameStore();
     const { user } = useAuthStore();
     
@@ -66,6 +69,22 @@ const GalgameMap = () => {
         eventData,
     });
     
+    // 当 sessionId 变化时，检查存储的 sessionId 是否匹配
+    useEffect(() => {
+        if (sessionId) {
+            // 如果存储的 sessionId 与当前 sessionId 不匹配，清除旧数据
+            if (storedSessionId && storedSessionId !== sessionId) {
+                console.log('[WorldInteraction] sessionId 不匹配，清除旧存储数据', { stored: storedSessionId, current: sessionId });
+                clearState();
+            }
+            // 更新存储的 sessionId
+            setStoredSessionId(sessionId);
+        } else {
+            // sessionId 为空时清除状态
+            clearState();
+        }
+    }, [sessionId, storedSessionId, setStoredSessionId, clearState]);
+
     useEffect(() => {
         fetchWorldInteractionHistory();
         // 重置恢复标记，因为 sessionId 变化意味着新的会话
@@ -99,6 +118,13 @@ const GalgameMap = () => {
 
             const hasHistory = worldInteractionHistory.interactions.length > 0;
 
+            // 检查存储的 sessionId 是否匹配当前 sessionId，不匹配则清除状态
+            if (storedSessionId && storedSessionId !== sessionId) {
+                console.log('[WorldInteraction] 存储的 sessionId 与当前 sessionId 不匹配，清除状态', { stored: storedSessionId, current: sessionId });
+                clearState();
+                return;
+            }
+
             // 1) 有历史记录时：尝试恢复事件
             if (hasHistory) {
                 if (!hasTriedRestoreEventDataRef.current) {
@@ -115,6 +141,12 @@ const GalgameMap = () => {
 
             // 2) 无历史且尚未有 eventData，检查活跃事件或进入开场白
             if (eventData) return;
+
+            // 检查存储的 sessionId 是否匹配当前 sessionId，不匹配则不恢复
+            if (storedSessionId !== sessionId) {
+                console.log('[WorldInteraction] 存储的 sessionId 与当前 sessionId 不匹配，不恢复数据', { stored: storedSessionId, current: sessionId });
+                return;
+            }
 
             // 交互/场景内视图说明是 sessionStorage 恢复，不强制重置
             if (currentView === MapViewState.INTERACT_NPC || 
@@ -150,7 +182,7 @@ const GalgameMap = () => {
         };
 
         syncEventState();
-    }, [worldInteractionHistory, gameData, sessionId, currentView, eventData, refreshEventData, setCurrentView, setEventData]);
+    }, [worldInteractionHistory, gameData, sessionId, currentView, eventData, refreshEventData, setCurrentView, setEventData, storedSessionId]);
 
     useEffect(() => {
         getMapWorldData();

@@ -6,7 +6,7 @@ import GameGrid from '../components/GameGrid';
 import { useAuthStore } from '../store/useAuthStore';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
-import { IoEye, IoStatsChartSharp, IoWallet } from 'react-icons/io5';
+import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { MdEdit } from 'react-icons/md';
@@ -21,6 +21,7 @@ import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../config';
+import DeletModal from '../components/goodsModal/DeletModal';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
@@ -41,6 +42,8 @@ const Create: React.FC = () => {
     const [editName, setEditName] = useState('');
     const [isUpdatingName, setIsUpdatingName] = useState(false);
     const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false); // 控制结算弹窗
+    const [isSettling, setIsSettling] = useState(false); // 控制结算中状态
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 将游戏数据分类为已发布和未发布
@@ -235,6 +238,29 @@ const Create: React.FC = () => {
         }
     };
 
+    const handleSettle = async () => {
+        if (isSettling) return;
+        
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints();
+            if (response.data.success && response.data.data) {
+                const settlementAmount = response.data.data.settlementAmount || 0;
+                toast.success(`结算成功！已结算 ${settlementAmount} 积分`);
+                await getGameTotalStats();
+                await getUserInfo();
+                setIsSettleModalOpen(false);
+            } else {
+                toast.error(response.data.message || '结算失败，请重试');
+            }
+        } catch (error: any) {
+            const errorMessage = error?.response?.data?.message || error?.message || '结算失败，请重试';
+            toast.error(errorMessage);
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
     const handleSelectGameType = (type: 'avg' | 'rpg' | 'txt') => {
         clearAll();
         if (type === 'rpg') {
@@ -380,9 +406,29 @@ const Create: React.FC = () => {
                                 <div className={styles.statValue}>{stats.totalClicks}</div>
                             </div>
                             <div className={styles.statBox}>
-                                <div className={styles.statLabel}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                    <span>总收益</span>
+                                <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                        <span>总收益</span>
+                                    </div>
+                                    {stats.totalAmount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsSettleModalOpen(true)}
+                                            style={{
+                                                padding: '6px 12px',
+                                                backgroundColor: '#FB4655',
+                                                color: '#fff',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                fontSize: '14px',
+                                                cursor: 'pointer',
+                                                fontWeight: 500,
+                                            }}
+                                        >
+                                            结算
+                                        </button>
+                                    )}
                                 </div>
                                 <div className={styles.statValue}>{stats.totalAmount}</div>
                             </div>
@@ -528,6 +574,17 @@ const Create: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
+            />
+
+            {/* 结算确认弹窗 */}
+            <DeletModal
+                isOpen={isSettleModalOpen}
+                onDelete={handleSettle}
+                onCancel={() => setIsSettleModalOpen(false)}
+                title="确认结算"
+                message={`确定要结算当前总收益 ${stats.totalAmount} 积分吗？结算后积分将转入账户余额。`}
+                confirmButtonText={isSettling ? "结算中..." : "确认结算"}
+                cancelButtonText="取消"
             />
         </div>
     );
