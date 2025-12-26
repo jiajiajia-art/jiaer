@@ -66,7 +66,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 });
 
                 if (response.data.success) {
-                    const sessionId = response.data.session.sessionId;
+                    const sessionId = response.data.sessionId;
                     return { sessionId, redirectUrl: `/galgame` };
                 } else {
                     alert(response.data.message || '创建游戏失败，请重试');
