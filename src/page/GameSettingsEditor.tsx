@@ -9,7 +9,6 @@ import EditorApi from '../api/galgame/EditorData';
 import type { AllGameData } from '../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
 import type { Scene as ApiScene } from '../api/galgame/getGalgamePreset.type';
-import { authFetch } from '../api/base';
 
 // 类型守卫：判断是否为 visual 模式
 function isVisualMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is AllGameData {
@@ -26,12 +25,6 @@ function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | n
 // ---- Async upload job types/helpers ----
 type JobStage = 'uploaded' | 'parsing' | 'generating' | 'validating' | 'writing' | 'done';
 
-interface UploadAcceptedResponse {
-    success: boolean;
-    jobId: string;
-    fileId?: string;
-    status: 'queued';
-}
 
 interface JobStatusResponseRunning {
     success?: boolean;
@@ -48,10 +41,6 @@ interface JobStatusResponseCompleted {
     jobId: string;
     fileId: string;
     status: 'completed';
-}
-
-interface JobStatusResponseUnknown {
-    status: 'unknown';
 }
 
 interface JobStatusResponseFailed {
