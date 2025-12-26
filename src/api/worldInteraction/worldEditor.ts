@@ -2,7 +2,7 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { CheckUploadStatusResponse, GenerateImgeResponse, NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, NpcSlot, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
+import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, NpcSlot, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
 import type { UploadWorldFileResponse } from "./worldInteractionApi.type";
 
 const worldEditor = {
@@ -86,20 +86,9 @@ const worldEditor = {
             data
         );
     },
-    generateAllNpcImages: (fileId: string) => {
-        return api.post<ApiResponse<GenerateNpcImage>>(
-            `/world-interaction/images/generate-npcs`,
-            {
-                fileId: fileId
-            }
-            ,{
-                timeout: 1500000,
-            }
-        );
-    },
     generateAllSceneImages: (fileId: string) => {
         return api.post<ApiResponse<GenerateALLSceneImage>>(
-            `/world-interaction/images/generate-scenes`,
+            `/world-interaction/images/generate-scenes-subscenes`,
             {
                 fileId: fileId
             },
@@ -250,6 +239,15 @@ const worldEditor = {
             {
                 fileId: fileId,
             }
+        );
+    },
+
+    uploadMusic: (fileId: string, file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<UploadMusicResponse>(
+            `/world-interaction/edit/${fileId}/music`,
+            formData,
         );
     },
 };

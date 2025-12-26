@@ -73,3 +73,10 @@ export interface UploadSubSceneImageResponse {
     sceneId: string;
     subsceneId: string;
 }
+
+export interface UploadMusicResponse {
+    success: boolean;
+    message: string;
+    musicPath: string;
+    filename: string;
+}

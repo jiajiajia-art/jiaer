@@ -142,6 +142,7 @@ export interface GenerateAllImageRequest {
   generateVariants: boolean;
   generatePlayer: boolean;
   removeBg: boolean;
+  pluginType: string;
 }
 
 export interface GenerateImgeResponse {

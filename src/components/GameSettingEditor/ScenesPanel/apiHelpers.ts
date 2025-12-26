@@ -91,6 +91,7 @@ export const createSceneApiHelpers = (mode: string) => {
                 generateVariants: false,
                 generatePlayer: false,
                 removeBg: true,
+                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
         },
 

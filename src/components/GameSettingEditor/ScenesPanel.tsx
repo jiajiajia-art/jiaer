@@ -21,6 +21,7 @@ import SceneDetailActions from './ScenesPanel/SceneDetailActions';
 import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './ScenesPanel/utils';
 import DeletModal from '../goodsModal/DeletModal';
 
+// ==================== 类型定义 ====================
 interface BgmItem {
     id: string;
     name: string;
@@ -89,7 +90,6 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         { id: 'bgm-dream', name: '星潮呢喃', description: '浪漫 / 深夜' },
     ]);
 
-    // ==================== 计算值和派生状态 ====================
     // 大地图图片
     const worldMapImage = worldMapImageOverride
         ? worldMapImageOverride
@@ -188,6 +188,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         ]
     );
 
+    // ==================== 副作用 ====================
     // 当 gameData 变化时，填充场景数据
     useEffect(() => {
         if (!gameData) return;

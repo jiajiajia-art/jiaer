@@ -69,14 +69,13 @@ export const createApiHelpers = (mode: string) => {
 
         // 批量操作
         generateAllNpcImages: async (fileId: string) => {
-            return isWorldInteraction
-                ? worldEditor.generateAllNpcImages(fileId)
-                : EditorApi.generateAllImages(fileId, {
+            return EditorApi.generateAllImages(fileId, {
                     generateNPCs: true,
                     generateScenes: false,
                     generateVariants: false,
-                    generatePlayer: false,
+                    generatePlayer: true,
                     removeBg: true,
+                    pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
                 });
         },
 
@@ -179,13 +178,18 @@ export const parseResponse = {
         expectedType?: string,
         expectedValue?: string
     ): { imagePath?: string; variant?: string; variantKey?: string; npcId?: string } | null => {
-        // 如果响应包含 images 对象（格式：{ "clothing_happy": "imagePath" }）
+        // 如果响应包含 images 对象（格式：{ "base": "imagePath" 或 "clothing_happy": "imagePath" }）
         if (response.images && typeof response.images === 'object') {
             let variantKey: string | null = null;
             let imagePath: string | undefined = undefined;
 
+            // 如果 variant 是 'base'，直接查找 base 键
+            if (variant === 'base' && response.images.base) {
+                variantKey = 'base';
+                imagePath = response.images.base;
+            }
             // 如果提供了期望的 type 和 value，尝试精确匹配
-            if (expectedType && expectedValue) {
+            else if (expectedType && expectedValue) {
                 const expectedKey = `${expectedType}_${expectedValue}`;
                 if (response.images[expectedKey]) {
                     variantKey = expectedKey;
@@ -201,10 +205,15 @@ export const parseResponse = {
                     }
                 }
             } else {
-                // 如果没有提供期望值，返回第一个非 base 的键
-                variantKey = Object.keys(response.images).find(key => key !== 'base') || null;
-                if (variantKey) {
-                    imagePath = response.images[variantKey];
+                // 如果没有提供期望值，优先查找 base，否则返回第一个非 base 的键
+                if (response.images.base) {
+                    variantKey = 'base';
+                    imagePath = response.images.base;
+                } else {
+                    variantKey = Object.keys(response.images).find(key => key !== 'base') || null;
+                    if (variantKey) {
+                        imagePath = response.images[variantKey];
+                    }
                 }
             }
 
