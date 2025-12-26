@@ -54,6 +54,30 @@ export const removeCacheBust = (url?: string | null): string => {
     return params.length > 0 ? `${baseUrl}?${params.join('&')}` : baseUrl;
 };
 
+// 拆分 variant 键名（格式：type_value）为 type 和 value
+export const parseVariantKey = (key: string): { type: string; value: string } | null => {
+    if (!key || typeof key !== 'string') return null;
+    const parts = key.split('_');
+    if (parts.length < 2) return null;
+    // 第一个部分是 type，剩余部分用 _ 连接作为 value
+    const type = parts[0];
+    const value = parts.slice(1).join('_');
+    return { type, value };
+};
+
+// 从 images 对象中查找匹配的 variant 键（根据 type 和 value）
+export const findVariantKey = (images: Record<string, string> | undefined, type: string, value: string): string | null => {
+    if (!images) return null;
+    // 尝试精确匹配 type_value
+    const exactKey = `${type}_${value}`;
+    if (images[exactKey]) return exactKey;
+    const matchingKey = Object.keys(images).find(key => {
+        const parsed = parseVariantKey(key);
+        return parsed && parsed.type === type && parsed.value === value;
+    });
+    return matchingKey || null;
+};
+
 // 基础角色数据模板
 export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'gender' | 'role' | 'identity' | 'personality' | 'speech' | 'appearance' | 'portrait' | 'background' | 'relationships' | 'variations'> => {
     return {
@@ -68,13 +92,26 @@ export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'g
 export const imagesToVariations = (images?: Record<string, string>): Variation[] => {
     if (!images) return [];
     return Object.entries(images)
-        .filter(([label]) => label !== 'base') // 过滤掉 base，base 图片已存储在 portrait 中
-        .map(([label, img], idx) => ({
-            id: `v${idx}`,
-            label,
-            img: withCacheBust(img),
-            type: label,
-        }));
+        .filter(([key]) => key !== 'base') // 过滤掉 base，base 图片已存储在 portrait 中
+        .map(([key, img], idx) => {
+            // 尝试解析 type_value 格式
+            const parsed = parseVariantKey(key);
+            if (parsed) {
+                return {
+                    id: `v${idx}`,
+                    label: parsed.value, // value 作为 label
+                    img: withCacheBust(img),
+                    type: parsed.type,   // type 作为 type
+                };
+            }
+            // 如果不是 type_value 格式，使用 key 作为 label 和 type
+            return {
+                id: `v${idx}`,
+                label: key,
+                img: withCacheBust(img),
+                type: key,
+            };
+        });
 };
 
 // 从images对象中选取base图片

@@ -6,7 +6,7 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Character, Variation } from './types';
 import type { NPC, Player } from '../../../api/galgame/EditorData.type';
-import { npcToCharacter, playerToCharacter, withCacheBust } from './utils';
+import { npcToCharacter, playerToCharacter, withCacheBust, parseVariantKey } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
 
@@ -112,10 +112,13 @@ export const createHandlers = (ctx: HandlersContext) => {
             characterToSave.variations
                 .filter(v => v.label !== 'base') // 确保不包含 base
                 .forEach(variation => {
-                    if (variation.type && variation.img) {
-                        images[variation.type] = variation.img;
-                    } else if (variation.label && variation.img) {
-                        images[variation.label] = variation.img;
+                    if (variation.img) {
+                        const key = variation.type && variation.label 
+                            ? `${variation.type}_${variation.label}` 
+                            : variation.label || variation.type || '';
+                        if (key) {
+                            images[key] = variation.img;
+                        }
                     }
                 });
 
@@ -152,16 +155,21 @@ export const createHandlers = (ctx: HandlersContext) => {
             const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || characterToSave.role);
 
             // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+            // 键名格式：type_value（如 "clothing_happy"）
             const images: { base: string; [key: string]: string } = {
                 base: characterToSave.portrait || '', // base 图片来自 portrait
             };
             characterToSave.variations
                 .filter(v => v.label !== 'base') // 确保不包含 base
                 .forEach(variation => {
-                    if (variation.type && variation.img) {
-                        images[variation.type] = variation.img;
-                    } else if (variation.label && variation.img) {
-                        images[variation.label] = variation.img;
+                    if (variation.img) {
+                        // 键名格式：type_value
+                        const key = variation.type && variation.label 
+                            ? `${variation.type}_${variation.label}` 
+                            : variation.label || variation.type || '';
+                        if (key) {
+                            images[key] = variation.img;
+                        }
                     }
                 });
 
@@ -266,16 +274,21 @@ export const createHandlers = (ctx: HandlersContext) => {
         const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || newCharacterData.role);
 
         // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+        // 键名格式：type_value（如 "clothing_happy"）
         const images: { base: string; [key: string]: string } = {
             base: newCharacterData.portrait || '', // base 图片来自 portrait
         };
         newCharacterData.variations
             .filter(v => v.label !== 'base') // 确保不包含 base
             .forEach(variation => {
-                if (variation.type && variation.img) {
-                    images[variation.type] = variation.img;
-                } else if (variation.label && variation.img) {
-                    images[variation.label] = variation.img;
+                if (variation.img) {
+                    // 键名格式：type_value
+                    const key = variation.type && variation.label 
+                        ? `${variation.type}_${variation.label}` 
+                        : variation.label || variation.type || '';
+                    if (key) {
+                        images[key] = variation.img;
+                    }
                 }
             });
 
@@ -432,19 +445,31 @@ export const createHandlers = (ctx: HandlersContext) => {
                 // 如果是NPC图片（基础立绘或差分），使用返回的数据更新本地状态
                 if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
                     const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
+                    
                     if (imageData?.imagePath && imageData.npcId) {
                         const imageUrl = withCacheBust(imageData.imagePath);
-                        // 确保 variantName 是字符串
-                        let variantName: string = variant || 'base';
-                        if (imageData.variant) {
-                            if (typeof imageData.variant === 'string') {
-                                variantName = imageData.variant;
-                            } else {
-                                // 如果 variant 是对象，提取 value 字段或使用默认值
-                                variantName = (imageData.variant as any)?.value || variant || 'base';
-                            }
+                        
+                        if (variant === 'base') {
+                            // base 图片只更新 portrait
+                            updateCharacterImage(imageData.npcId, imageUrl, 'base');
+                        } else {
+                            // 上传图片时，直接使用原有的 variant（不拆分）
+                            // 从当前状态中获取 type 信息用于更新本地状态
+                            let finalType = 'expression';
+                            let finalValue = variant || '';
+                            
+                            setCharacterData(prev => {
+                                const currentChar = prev.find(c => c.id === targetCharacterId);
+                                const currentVariation = currentChar?.variations.find(v => v.label === variant);
+                                if (currentVariation?.type) {
+                                    finalType = currentVariation.type;
+                                    finalValue = currentVariation.label;
+                                }
+                                return prev; // 不修改状态，只是读取
+                            });
+                            
+                            updateCharacterImage(imageData.npcId, imageUrl, finalValue, finalType);
                         }
-                        updateCharacterImage(imageData.npcId, imageUrl, variantName);
                     } else {
                         updateCharacterFromResponse(response.data, targetCharacterId);
                     }
@@ -543,6 +568,11 @@ export const createHandlers = (ctx: HandlersContext) => {
             toast.error('请先上传角色基础立绘');
             return;
         }
+        
+        // 保存原始 variation 信息，用于更新时匹配
+        const originalVariationId = variation.id;
+        const originalVariationLabel = variation.label;
+        
         try {
             // 清理 portrait URL 中的 cb 参数，确保传递给后端的是干净的 URL
             const variantRequest = {
@@ -560,26 +590,74 @@ export const createHandlers = (ctx: HandlersContext) => {
                 toast.success('差分图片生成成功');
                 
                 // 使用后端返回的数据更新本地状态
-                const imageData = parseResponse.extractNpcImage(response.data, mode, variation.label);
+                // 传递期望的 type 和 value，用于从 images 对象中查找对应的键
+                const imageData = parseResponse.extractNpcImage(
+                    response.data, 
+                    mode, 
+                    variation.label,
+                    variation.type || 'expression',
+                    variation.label
+                );
+                
                 if (imageData?.imagePath) {
                     const imageUrl = withCacheBust(imageData.imagePath);
-                    // 确保 variantName 是字符串，如果 variant 是对象则使用 variation.label
-                    let variantName: string = variation.label;
-                    if (imageData.variant) {
-                        if (typeof imageData.variant === 'string') {
-                            variantName = imageData.variant;
+                    
+                    // 从 variantKey（格式：type_value）中解析 type 和 value
+                    let finalType = variation.type || 'expression';
+                    let finalValue = variation.label;
+                    
+                    if (imageData.variantKey) {
+                        const parsed = parseVariantKey(imageData.variantKey);
+                        if (parsed) {
+                            finalType = parsed.type;
+                            finalValue = parsed.value;
+                        }
+                    } else if (imageData.variant && typeof imageData.variant === 'string') {
+                        // 兼容旧格式
+                        const parsed = parseVariantKey(imageData.variant);
+                        if (parsed) {
+                            finalType = parsed.type;
+                            finalValue = parsed.value;
                         } else {
-                            // 如果 variant 是对象，提取 value 字段或使用 variation.label
-                            variantName = (imageData.variant as any)?.value || variation.label;
+                            finalValue = imageData.variant;
                         }
                     }
-                    updateCharacterImage(
-                        currentCharacter.id,
-                        imageUrl,
-                        variantName,
-                        variation.type || 'expression',
-                        variation.description
-                    );
+                    
+                    // 使用解析出的 type 和 value 更新 variation
+                    // 通过原始 variation.id 来匹配，确保加载效果能正确消失
+                    setCharacterData(prev => prev.map(char => {
+                        if (char.id !== currentCharacter.id) return char;
+                        
+                        // 优先通过 id 查找，如果找不到再通过 label 查找
+                        const varIndexById = char.variations.findIndex(v => v.id === originalVariationId);
+                        const varIndexByLabel = varIndexById < 0 
+                            ? char.variations.findIndex(v => v.label === originalVariationLabel)
+                            : -1;
+                        const varIndex = varIndexById >= 0 ? varIndexById : varIndexByLabel;
+                        
+                        if (varIndex >= 0) {
+                            // 更新已存在的差分，保持 id 不变
+                            const newVariations = [...char.variations];
+                            newVariations[varIndex] = {
+                                ...newVariations[varIndex],
+                                img: imageUrl,
+                                label: finalValue,  // 更新 label
+                                type: finalType,    // 更新 type
+                                description: variation.description,
+                            };
+                            return { ...char, variations: newVariations };
+                        } else {
+                            // 如果找不到，添加新的差分（保持原始 id）
+                            const newVar: Variation = {
+                                id: originalVariationId, // 保持原始 id，确保加载效果能正确匹配
+                                label: finalValue,
+                                img: imageUrl,
+                                type: finalType,
+                                description: variation.description,
+                            };
+                            return { ...char, variations: [...char.variations, newVar] };
+                        }
+                    }));
                 } else {
                     // 如果无法提取图片数据，回退到刷新整个数据
                     if (onDataChange) {

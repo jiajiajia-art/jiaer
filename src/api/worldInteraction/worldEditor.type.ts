@@ -8,8 +8,6 @@ export interface NpcSlot {
   zoom: number;
 }
 
-// 编辑器 API 返回的数据使用 UnifiedGameData（联合类型）
-
 
 export interface GenerateNpcImage {
     success: boolean;

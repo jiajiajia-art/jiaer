@@ -110,7 +110,7 @@ const worldEditor = {
     },
     uploadSubSceneImage: (fileId: string, sceneId: string, subsceneId: string, file: File) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
         return api.post<UploadSubSceneImageResponse>(
             `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${subsceneId}/image`,
             formData,
@@ -123,7 +123,7 @@ const worldEditor = {
     },
     uploadSceneImage: (fileId: string, sceneId: string, file: File) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
         return api.post<UploadSceneImageResponse>(
             `/world-interaction/edit/${fileId}/scenes/${sceneId}/image`,
             formData,
@@ -136,7 +136,7 @@ const worldEditor = {
     },
     uploadNpcImage: (fileId: string, npcId: string, data: {file: File, variat:string}) => {
         const formData = new FormData();
-        formData.append('image', data.file);
+        formData.append('file', data.file);
         formData.append('variant', data.variat);
         return api.post<UploadNpcImageResponse>(
             `/world-interaction/edit/${fileId}/npcs/${npcId}/image`,
@@ -150,7 +150,7 @@ const worldEditor = {
     },
     uploadPlayerImage: (fileId: string, file: File) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
         return api.post<UploadPlayerImageResponse>(
             `/world-interaction/edit/${fileId}/player/image`,
             formData,
@@ -196,7 +196,7 @@ const worldEditor = {
     },
     setWorldMapImage: (fileId: string, file: File) => {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append('file', file);
         return api.post<GenerateImgeResponse>(
             `/world-interaction/edit/${fileId}/world-map/image`,
             formData,

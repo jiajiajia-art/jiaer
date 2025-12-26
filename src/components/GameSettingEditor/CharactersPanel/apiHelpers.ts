@@ -171,11 +171,54 @@ export const parseResponse = {
     // 从上传NPC图片的响应中提取图片数据
     // 后端返回扁平结构：UploadNpcImageResponse { success, message, imagePath, variant, npcId }
     // 或 GenerateImgeResponse { success, message, imagePath }
+    // 或包含 images 对象：{ success, message, images: { "type_value": "imagePath" } }
     extractNpcImage: (
-        response: UploadNpcImageResponse | GenerateImgeResponse,
+        response: UploadNpcImageResponse | GenerateImgeResponse | any,
         _mode: string,
-        variant?: string
-    ): { imagePath?: string; variant?: string; npcId?: string } | null => {
+        variant?: string,
+        expectedType?: string,
+        expectedValue?: string
+    ): { imagePath?: string; variant?: string; variantKey?: string; npcId?: string } | null => {
+        // 如果响应包含 images 对象（格式：{ "clothing_happy": "imagePath" }）
+        if (response.images && typeof response.images === 'object') {
+            let variantKey: string | null = null;
+            let imagePath: string | undefined = undefined;
+
+            // 如果提供了期望的 type 和 value，尝试精确匹配
+            if (expectedType && expectedValue) {
+                const expectedKey = `${expectedType}_${expectedValue}`;
+                if (response.images[expectedKey]) {
+                    variantKey = expectedKey;
+                    imagePath = response.images[expectedKey];
+                } else {
+                    // 尝试查找匹配的键
+                    variantKey = Object.keys(response.images).find(key => {
+                        const parts = key.split('_');
+                        return parts.length >= 2 && parts[0] === expectedType && parts.slice(1).join('_') === expectedValue;
+                    }) || null;
+                    if (variantKey) {
+                        imagePath = response.images[variantKey];
+                    }
+                }
+            } else {
+                // 如果没有提供期望值，返回第一个非 base 的键
+                variantKey = Object.keys(response.images).find(key => key !== 'base') || null;
+                if (variantKey) {
+                    imagePath = response.images[variantKey];
+                }
+            }
+
+            if (variantKey && imagePath) {
+                return {
+                    imagePath,
+                    variant: variantKey,
+                    variantKey,
+                    npcId: 'npcId' in response ? response.npcId : undefined,
+                };
+            }
+        }
+
+        // 兼容旧的扁平结构
         if ('imagePath' in response) {
             return {
                 imagePath: response.imagePath,

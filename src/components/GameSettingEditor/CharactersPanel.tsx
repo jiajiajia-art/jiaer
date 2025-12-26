@@ -101,16 +101,21 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || char.role);
 
                 // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+                // 键名格式：type_value（如 "clothing_happy"）
                 const images: { base: string; [key: string]: string } = {
                     base: char.portrait || '', // base 图片来自 portrait
                 };
                 char.variations
                     .filter(v => v.label !== 'base') // 确保不包含 base
                     .forEach(variation => {
-                        if (variation.type && variation.img) {
-                            images[variation.type] = variation.img;
-                        } else if (variation.label && variation.img) {
-                            images[variation.label] = variation.img;
+                        if (variation.img) {
+                            // 键名格式：type_value
+                            const key = variation.type && variation.label 
+                                ? `${variation.type}_${variation.label}` 
+                                : variation.label || variation.type || '';
+                            if (key) {
+                                images[key] = variation.img;
+                            }
                         }
                     });
 
@@ -734,14 +739,12 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 }}
                                 onClick={handlePortraitClick}
                             >
-                                {/* 下载按钮 */}
                                 {currentCharacter.portrait && (
                                     <button
                                         className={styles.downloadButton}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (currentCharacter.id === 'player') {
-                                                // player 的 URL 格式：/players/base.png，不需要 id
                                                 handleDownloadImage('players', '', 'base');
                                             } else {
                                                 handleDownloadImage('npcs', currentCharacter.id, 'base');

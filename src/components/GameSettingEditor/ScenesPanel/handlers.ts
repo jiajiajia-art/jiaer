@@ -753,10 +753,10 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         try {
             setIsGeneratingWorldMap(true);
             const response = await api.generateWorldMapImage(fileId);
-            if (response.data?.success) {
+            if (response.data.success) {
                 toast.success('大地图生成成功');
                 if (response.data.imagePath) {
-                    setWorldMapImageOverride(response.data.imagePath);
+                    setWorldMapImageOverride(addImageTimestamp(response.data.imagePath));
                 }
                 if (onDataChange) onDataChange();
             } else {
