@@ -1,8 +1,9 @@
-import React from 'react';
-import styles from '../ScenesPanel.module.css';
+import React, { useMemo } from 'react';
+import styles from './SceneDetailForm.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
 import { IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './utils';
 
 interface BgmItem {
     id: string;
@@ -13,12 +14,9 @@ interface BgmItem {
 interface SceneDetailFormProps {
     scene: LocalScene;
     bgmLibrary: BgmItem[];
-    defaultImage: string;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     isGeneratingForThisScene: boolean;
-    disabled?: boolean;
-    disabledMessage?: string;
-    uploadButtonText?: string;
+    isAddingNewSubscene?: boolean;
     onImageClick: () => void;
     onUploadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRequestRegenerate: (scene: LocalScene) => void;
@@ -30,12 +28,9 @@ interface SceneDetailFormProps {
 const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     scene,
     bgmLibrary,
-    defaultImage,
     fileInputRef,
     isGeneratingForThisScene,
-    disabled = false,
-    disabledMessage,
-    uploadButtonText = '上传背景',
+    isAddingNewSubscene = false,
     onImageClick,
     onUploadChange,
     onRequestRegenerate,
@@ -43,6 +38,27 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     onDownloadImage,
     sceneType = 'scenes',
 }) => {
+    // 根据场景类型自动计算默认图片和上传按钮文本
+    const defaultImage = useMemo(() => 
+        sceneType === 'subscenes' ? DEFAULT_WORLD_MAP_IMAGE : DEFAULT_SCENE_IMAGE,
+        [sceneType]
+    );
+
+    const uploadButtonText = useMemo(() => 
+        scene.image ? '重新上传' : '上传背景',
+        [scene.image]
+    );
+
+    // 根据场景ID判断是否为临时场景（新增状态）
+    const isTempScene = scene.id.startsWith('temp-');
+    // 新增场景或新增子场景时都应该禁用
+    const disabled = isTempScene;
+    const disabledMessage = disabled 
+        ? (isAddingNewSubscene 
+            ? '请先确认新增子场景，然后再上传图片' 
+            : '请先确认新增场景，然后再上传图片')
+        : undefined;
+    
     const showDisabledMessage = disabled && disabledMessage;
     const isDisabled = disabled || isGeneratingForThisScene;
 

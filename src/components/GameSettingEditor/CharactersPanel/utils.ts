@@ -8,27 +8,9 @@ import type { NPC as WorldNPC } from '../../../api/worldInteraction/worldInterac
 import type { Character, Variation } from './types';
 import { DEFAULT_NPC_PORTRAIT } from './types';
 
-// 辅助函数：获取 player（兼容两种模式）
-export function getPlayer(data: AllGameData | WorldInteractionGameData | null | undefined) {
-    if (!data?.worldSetting) return undefined;
-    const ws = data.worldSetting;
-
-    // worldInteraction 模式使用 Player（大写）
-    if ('Player' in ws && ws.Player) {
-        return ws.Player;
-    }
-
-    // visual 模式使用 player（小写）
-    if ('player' in ws && ws.player) {
-        return ws.player;
-    }
-
-    return undefined;
-}
-
 // 辅助函数：获取 npcs（兼容两种模式）
-export function getNpcs(data: AllGameData | WorldInteractionGameData | null | undefined) {
-    if (!data?.npcSetting) return [];
+export function getNpcs(data: AllGameData | WorldInteractionGameData) {
+    if (!data.npcSetting) return [];
     return data.npcSetting.npcs || [];
 }
 
@@ -59,7 +41,6 @@ export const parseVariantKey = (key: string): { type: string; value: string } | 
     if (!key || typeof key !== 'string') return null;
     const parts = key.split('_');
     if (parts.length < 2) return null;
-    // 第一个部分是 type，剩余部分用 _ 连接作为 value
     const type = parts[0];
     const value = parts.slice(1).join('_');
     return { type, value };
@@ -68,7 +49,6 @@ export const parseVariantKey = (key: string): { type: string; value: string } | 
 // 从 images 对象中查找匹配的 variant 键（根据 type 和 value）
 export const findVariantKey = (images: Record<string, string> | undefined, type: string, value: string): string | null => {
     if (!images) return null;
-    // 尝试精确匹配 type_value
     const exactKey = `${type}_${value}`;
     if (images[exactKey]) return exactKey;
     const matchingKey = Object.keys(images).find(key => {

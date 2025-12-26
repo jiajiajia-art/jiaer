@@ -13,7 +13,7 @@ import { RiDeleteBin5Line } from 'react-icons/ri';
 import { useGameStore } from '../../store/gameStore';
 import type { Character, Variation, Relationship } from './CharactersPanel/types';
 import { VARIATION_TYPES } from './CharactersPanel/types';
-import { getPlayer, getNpcs, npcToCharacter, playerToCharacter } from './CharactersPanel/utils';
+import { getNpcs, npcToCharacter, playerToCharacter } from './CharactersPanel/utils';
 import { createApiHelpers } from './CharactersPanel/apiHelpers';
 import { createHandlers } from './CharactersPanel/handlers';
 
@@ -75,10 +75,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         if (npcs && npcs.length > 0) {
             const convertedCharacters: Character[] = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
 
-            // 添加玩家角色（使用辅助函数兼容两种模式）
-            const player = getPlayer(gameData);
-            if (player) {
-                convertedCharacters.unshift(playerToCharacter(player));
+            if (gameData.worldSetting.player) {
+                convertedCharacters.unshift(playerToCharacter(gameData.worldSetting.player));
             }
 
             setCharacterData(convertedCharacters);

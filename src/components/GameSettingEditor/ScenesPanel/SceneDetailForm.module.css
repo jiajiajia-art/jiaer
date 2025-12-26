@@ -1,0 +1,176 @@
+/* 场景大图 */
+.sceneHero {
+    width: 100%;
+    height: 280px;
+    border-radius: 20px;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sceneHero.empty {
+    border-style: dashed;
+    background: rgba(0, 0, 0, 0.02);
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.heroHint {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: 0.2s ease;
+    pointer-events: none;
+}
+
+.sceneHero:hover .heroHint {
+    opacity: 1;
+}
+
+/* 下载按钮 */
+.downloadButton {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+.downloadButton:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+}
+
+.downloadButton:active {
+    transform: scale(0.95);
+}
+
+.sceneImageActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.sceneImageActions button {
+    flex: 1 1 140px;
+}
+
+/* 按钮样式 */
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.ghostSmall:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+.ghostSmall:disabled:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1a1a1a;
+}
+
+/* AI生成按钮样式优化 */
+.generateButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.priceIcon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.generateButton span {
+    line-height: 1;
+}
+
+/* 表单布局 */
+.formGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.wide {
+    width: 100%;
+}
+
+.formGrid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.formGrid label span {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+}
+
+.formGrid input,
+.formGrid textarea,
+.formGrid select {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 11px 14px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formGrid input:focus,
+.formGrid textarea:focus,
+.formGrid select:focus {
+    outline: none;
+    border-color: #E03D4B;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.formGrid textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+}
+

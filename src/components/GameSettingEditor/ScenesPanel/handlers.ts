@@ -44,7 +44,6 @@ export interface HandlersContext {
     setIsAddingNew: React.Dispatch<React.SetStateAction<boolean>>;
     setNewSceneData: React.Dispatch<React.SetStateAction<LocalScene | null>>;
     setIsAddingNewSubscene: React.Dispatch<React.SetStateAction<boolean>>;
-    setSubsceneCollapsed: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
     setIsGeneratingSingleSceneImage: React.Dispatch<React.SetStateAction<boolean>>;
     setGeneratingSceneId: React.Dispatch<React.SetStateAction<string | null>>;
     setIsGeneratingWorldMap: React.Dispatch<React.SetStateAction<boolean>>;
@@ -93,7 +92,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setIsAddingNew,
         setNewSceneData,
         setIsAddingNewSubscene,
-        setSubsceneCollapsed,
         setIsGeneratingSingleSceneImage,
         setGeneratingSceneId,
         setIsGeneratingWorldMap,
@@ -388,12 +386,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    const toggleSubsceneCollapse = (sceneId: string) => {
-        setSubsceneCollapsed(prev => ({
-            ...prev,
-            [sceneId]: !prev[sceneId],
-        }));
-    };
 
     // 统一退出新增模式
     const exitCreateModes = () => {
@@ -906,8 +898,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         handleConfirmSubsceneDelete,
         handleCancelSubsceneDelete,
 
-        // 列表展开/模式切换
-        toggleSubsceneCollapse,
+        // 模式切换
         exitCreateModes,
 
         // 图片上传 / 生图

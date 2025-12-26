@@ -1,0 +1,191 @@
+/* 卡片样式 */
+.card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+/* 场景列表头部 */
+.boardHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+/* 按钮样式 */
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.ghostSmall:hover {
+    border-color: #E03D4B;
+    color: #E03D4B;
+}
+
+.ghostSmall:disabled:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1a1a1a;
+}
+
+/* 场景列表 */
+.sceneList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sceneRow {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 12px;
+    align-items: stretch;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.01);
+    transition: 0.2s ease;
+    padding: 10px;
+    height: 200px;
+    overflow: hidden;
+}
+
+.sceneRow:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.sceneRow.active {
+    border-color: #E03D4B;
+    background: rgba(224, 61, 75, 0.04);
+}
+
+.sceneThumb {
+    width: 120px;
+    height: 100%;
+    min-height: 0;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.sceneThumb.empty {
+    border: 1px dashed rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.02);
+    display: grid;
+    place-items: center;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.75rem;
+}
+
+.sceneMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.sceneMeta strong {
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.deleteButton {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+    background: none;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.deleteButton:hover {
+    color: #E03D4B;
+}
+
+.sceneMeta p {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.5);
+    font-size: 0.82rem;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    flex: 1;
+}
+
+.mutedSmall {
+    color: rgba(0, 0, 0, 0.5);
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* 子场景列表（worldInteraction 层级展示） */
+.subsceneList {
+    margin-top: 4px;
+    padding-left: 12px; /* 子场景整体盒子相对父场景轻微缩进 */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.subsceneHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-left: 12px;
+    margin-bottom: -2px;
+}
+
+.subsceneHeaderText {
+    font-size: 0.78rem;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* 子场景独立卡片：在父场景下方，整体小一号并稍微缩进 */
+.subsceneRowCard {
+    margin-left: 12px; /* 视觉上与父场景拉开一点层级 */
+    background: rgba(0, 0, 0, 0.015);
+}
+
+.subsceneTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(224, 61, 75, 0.08);
+    color: #E03D4B;
+    font-size: 0.7rem;
+    margin-left: 4px;
+}
+
