@@ -12,17 +12,6 @@ interface DocumentsPanelProps {
     fileId: string;
 }
 
-// 解析步骤配置（时间单位：秒）
-const PARSING_STEPS = [
-    { label: '上传完成', duration: 3 },
-    { label: '解析世界观', duration: 60 },
-    { label: '提取角色 / 场景', duration: 35 },
-    { label: '生成剧情节点', duration: 22 },
-];
-
-const TOTAL_DURATION = PARSING_STEPS.reduce((sum, step) => sum + step.duration, 0); // 总共 120 秒（2 分钟）
-const MAX_FAKE_PROGRESS = 95;
-
 const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     onFileUpload,
     isParsing,
@@ -36,13 +25,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const [coverPreview, setCoverPreview] = useState<string | null>(null);
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
     const [coverError, setCoverError] = useState<string | null>(null);
-    const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
-    const [progress, setProgress] = useState<number>(0);
-    const [apiCompleted, setApiCompleted] = useState<boolean>(false);
-    const [apiError, setApiError] = useState<string | null>(null);
-    const [isCompleted, setIsCompleted] = useState<boolean>(false);
-    const progressIntervalRef = useRef<number | null>(null);
-    const apiCompletedRef = useRef<boolean>(false);
     const { jobs } = useUploadStore();
     const currentJobRef = useRef<string | null>(null);
 
@@ -50,26 +32,15 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         const file = event.target.files?.[0];
         if (file) {
             setUploadedFile(file);
-            setApiError(null);
-            setApiCompleted(false);
-            apiCompletedRef.current = false;
-            setIsCompleted(false);
-
-            startParsing();
+            onParsingStart();
 
             try {
                 const success = await onFileUpload(file);
-                // 不立即设置完成，等待轮询状态更新
                 if (!success) {
-                    setApiError('文件上传或解析失败，请重试');
-                    apiCompletedRef.current = true;
-                    setApiCompleted(true);
+                    // 上传失败会在轮询状态中处理
                 }
-                // 如果成功，等待轮询状态为 completed 后再设置完成
             } catch (error) {
-                apiCompletedRef.current = true;
-                setApiCompleted(true);
-                setApiError('文件上传或解析失败，请重试');
+                // 错误会在轮询状态中处理
             }
         }
     };
@@ -137,93 +108,10 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         }
     }, [fileId]);
 
-    const finishProgress = useCallback(() => {
-        if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-        }
-
-        let currentProgress = progress;
-        const finishInterval = setInterval(() => {
-            currentProgress += 2;
-            if (currentProgress >= 100) {
-                clearInterval(finishInterval);
-                setProgress(100);
-                setCurrentStepIndex(PARSING_STEPS.length);
-                setIsCompleted(true);
-                onParsingComplete();
-            } else {
-                setProgress(currentProgress);
-                let accumulatedPercent = 0;
-                for (let i = 0; i < PARSING_STEPS.length; i++) {
-                    const stepPercent = (PARSING_STEPS[i].duration / TOTAL_DURATION) * 100;
-                    if (currentProgress >= accumulatedPercent + stepPercent) {
-                        accumulatedPercent += stepPercent;
-                    } else {
-                        setCurrentStepIndex(i);
-                        break;
-                    }
-                }
-            }
-        }, 50);
-    }, [progress, onParsingComplete]);
-
-    const startParsing = useCallback(() => {
-        onParsingStart();
-        setCurrentStepIndex(0);
-        setProgress(0);
-
-        let elapsedTime = 0;
-        const interval = 100;
-        let hasReachedMaxProgress = false;
-
-        progressIntervalRef.current = window.setInterval(() => {
-            // 如果 API 已经完成，立即跳到 100%
-            if (apiCompletedRef.current) {
-                if (progressIntervalRef.current) {
-                    clearInterval(progressIntervalRef.current);
-                    progressIntervalRef.current = null;
-                }
-                finishProgress();
-                return;
-            }
-
-            elapsedTime += interval / 1000;
-
-            const rawProgress = (elapsedTime / TOTAL_DURATION) * 100;
-            const cappedProgress = Math.min(rawProgress, MAX_FAKE_PROGRESS);
-            setProgress(cappedProgress);
-
-            let accumulatedTime = 0;
-            let stepIndex = 0;
-            for (let i = 0; i < PARSING_STEPS.length; i++) {
-                if (elapsedTime >= accumulatedTime + PARSING_STEPS[i].duration) {
-                    accumulatedTime += PARSING_STEPS[i].duration;
-                    stepIndex = i + 1;
-                } else {
-                    break;
-                }
-            }
-            setCurrentStepIndex(Math.min(stepIndex, PARSING_STEPS.length - 1));
-
-            // 如果到达最大进度但 API 还没完成，继续等待（延迟）
-            if (rawProgress >= MAX_FAKE_PROGRESS && !hasReachedMaxProgress) {
-                hasReachedMaxProgress = true;
-                // 继续等待 API 完成，进度条保持在 95%
-            }
-        }, interval);
-    }, [onParsingStart, finishProgress]);
-
-    // 监听 uploadStore 中的任务状态，根据实际轮询状态更新进度
+    // 监听 uploadStore 中的任务状态，使用后端返回的真实状态
     useEffect(() => {
         const jobList = Object.values(jobs);
         if (jobList.length === 0) {
-            // 如果没有任务，但之前有任务，说明已完成
-            if (currentJobRef.current) {
-                apiCompletedRef.current = true;
-                setApiCompleted(true);
-                currentJobRef.current = null;
-            }
             return;
         }
 
@@ -235,67 +123,19 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         if (currentJob) {
             currentJobRef.current = currentJob.jobId;
 
-            // 根据实际状态更新进度
+            // 根据实际状态处理
             if (currentJob.status === 'completed') {
                 // 完成
-                apiCompletedRef.current = true;
-                setApiCompleted(true);
-                setProgress(100);
-                if (progressIntervalRef.current) {
-                    clearInterval(progressIntervalRef.current);
-                    progressIntervalRef.current = null;
-                }
-                finishProgress();
+                onParsingComplete();
             } else if (currentJob.status === 'failed') {
-                // 失败
-                apiCompletedRef.current = true;
-                setApiCompleted(true);
-                setApiError(currentJob.error || '文件上传或解析失败，请重试');
-                if (progressIntervalRef.current) {
-                    clearInterval(progressIntervalRef.current);
-                    progressIntervalRef.current = null;
-                }
-            } else {
-                // 进行中：使用实际进度，但至少显示一些进度
-                const actualProgress = currentJob.progress || 0;
-                // 如果实际进度大于模拟进度，使用实际进度；否则继续模拟
-                setProgress(prev => Math.max(prev, Math.min(actualProgress, MAX_FAKE_PROGRESS)));
+                // 失败状态已在下方处理
             }
         }
-    }, [jobs, uploadedFile, finishProgress]);
-
-    // 当 API 提前完成时，立即跳到 100%
-    useEffect(() => {
-        if (apiCompleted && !isCompleted && !apiError) {
-            // 如果进度条还在运行，停止它并立即完成
-            if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-                progressIntervalRef.current = null;
-            }
-            finishProgress();
-        }
-    }, [apiCompleted, isCompleted, apiError, finishProgress]);
-
-    useEffect(() => {
-        return () => {
-            if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-            }
-        };
-    }, []);
+    }, [jobs, uploadedFile, onParsingComplete]);
 
     const handleRetry = () => {
         setUploadedFile(null);
-        setApiError(null);
-        setApiCompleted(false);
-        apiCompletedRef.current = false;
-        setProgress(0);
-        setCurrentStepIndex(-1);
-        setIsCompleted(false);
-        if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-        }
+        currentJobRef.current = null;
     };
 
     const formatFileSize = (bytes: number) => {
@@ -304,12 +144,19 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
-    const getStepState = (index: number) => {
-        if (apiError) return index === currentStepIndex ? 'error' : (index < currentStepIndex ? 'done' : '');
-        if (currentStepIndex > index) return 'done';
-        if (currentStepIndex === index) return 'active';
-        return '';
+    // 获取当前任务的状态信息
+    const getCurrentJob = () => {
+        const jobList = Object.values(jobs);
+        if (jobList.length === 0) return null;
+        return jobList.find(job => 
+            job.fileName === uploadedFile?.name
+        ) || jobList[jobList.length - 1];
     };
+
+    const currentJob = getCurrentJob();
+    const progress = currentJob?.progress || 0;
+    const stage = currentJob?.stage || '';
+    const apiError = currentJob?.status === 'failed' ? (currentJob.error || '文件上传或解析失败，请重试') : null;
 
     return (
         <div className={styles.panelContent}>
@@ -359,28 +206,30 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         <p className={styles.errorText}>{apiError}</p>
                     )}
 
-                    {isParsing && !apiError && (
+                    {isParsing && !apiError && currentJob && (
                         <div className={styles.progressText}>
-                            解析进度：{Math.round(progress)}%
+                            {stage ? `${stage}：` : '解析进度：'}{Math.round(progress)}%
                         </div>
                     )}
 
-                    <ul className={styles.statusList}>
-                        {PARSING_STEPS.map((step, index) => (
-                            <li key={index} data-state={getStepState(index)}>
-                                {step.label}
-                            </li>
-                        ))}
-                    </ul>
+                    {/* {isParsing && !apiError && currentJob && (
+                        <div className={styles.statusInfo}>
+                            <p className={styles.statusText}>
+                                {currentJob.status === 'uploading' && '正在上传文件...'}
+                                {currentJob.status === 'processing' && (stage || '正在处理中...')}
+                                {currentJob.status === 'completed' && '解析完成！'}
+                            </p>
+                        </div>
+                    )} */}
 
                     <p className={styles.mutedSmall}>
                         {apiError
                             ? '解析失败，请点击重试。'
                             : isParsing
-                                ? '正在解析中，请耐心等待...'
-                                : isCompleted
+                                ? currentJob?.status === 'completed'
                                     ? '解析完成！即将跳转到 Step 2...'
-                                    : '解析完成后系统将自动为你打开 Step 2 继续校对。'
+                                    : '正在解析中，请耐心等待...'
+                                : '解析完成后系统将自动为你打开 Step 2 继续校对。'
                         }
                     </p>
                 </div>

@@ -53,6 +53,40 @@ export const createHandlers = (ctx: HandlersContext) => {
         onDataChange,
     } = ctx;
 
+    /**
+     * 更新角色图片的辅助函数
+     */
+    const updateCharacterImage = (
+        characterId: string,
+        imageUrl: string,
+        variantName: string,
+        variationType?: string,
+        variationDescription?: string
+    ) => {
+        setCharacterData(prev => prev.map(char => {
+            if (char.id !== characterId) return char;
+
+                const varIndex = char.variations.findIndex(v => v.label === variantName);
+                if (varIndex >= 0) {
+                    // 更新已存在的差分
+                    const newVariations = [...char.variations];
+                    newVariations[varIndex] = { ...newVariations[varIndex], img: imageUrl };
+                    return { ...char, variations: newVariations };
+                } else {
+                    // 添加新的差分
+                    const newVar: Variation = {
+                        id: `v-${Date.now()}`,
+                        label: variantName,
+                        img: imageUrl,
+                        type: variationType || variantName,
+                        description: variationDescription,
+                    };
+                    return { ...char, variations: [...char.variations, newVar] };
+                }
+            
+        }));
+    };
+
     // 从 API 响应中更新角色数据
     const updateCharacterFromResponse = (responseData: any, characterId: string) => {
         const npc = parseResponse.extractNpc(responseData, mode, characterId);
@@ -71,14 +105,19 @@ export const createHandlers = (ctx: HandlersContext) => {
 
         // 如果是主角，使用 updatePlayer API
         if (characterToSave.id === 'player') {
-            const images: { [key: string]: string } = {};
-            characterToSave.variations.forEach(variation => {
-                if (variation.type && variation.img) {
-                    images[variation.type] = variation.img;
-                } else if (variation.label && variation.img) {
-                    images[variation.label] = variation.img;
-                }
-            });
+            // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+            const images: { base: string; [key: string]: string } = {
+                base: characterToSave.portrait || '', // base 图片来自 portrait
+            };
+            characterToSave.variations
+                .filter(v => v.label !== 'base') // 确保不包含 base
+                .forEach(variation => {
+                    if (variation.type && variation.img) {
+                        images[variation.type] = variation.img;
+                    } else if (variation.label && variation.img) {
+                        images[variation.label] = variation.img;
+                    }
+                });
 
             const playerData = {
                 name: characterToSave.name || '',
@@ -88,7 +127,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 personality: characterToSave.personality && characterToSave.personality.length > 0 ? characterToSave.personality.join(', ') : undefined,
                 tone: characterToSave.speech || undefined,
                 image: characterToSave.portrait || '',
-                images: Object.keys(images).length > 0 ? images : undefined,
+                images: characterToSave.portrait || Object.keys(images).length > 1 ? images : undefined,
             };
 
             try {
@@ -112,22 +151,22 @@ export const createHandlers = (ctx: HandlersContext) => {
             const race = identityParts.length > 1 ? identityParts[0] : undefined;
             const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || characterToSave.role);
 
-            const images: { [key: string]: string } = {};
-            characterToSave.variations.forEach(variation => {
-                if (variation.type && variation.img) {
-                    images[variation.type] = variation.img;
-                } else if (variation.label && variation.img) {
-                    images[variation.label] = variation.img;
-                }
-            });
+            // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+            const images: { base: string; [key: string]: string } = {
+                base: characterToSave.portrait || '', // base 图片来自 portrait
+            };
+            characterToSave.variations
+                .filter(v => v.label !== 'base') // 确保不包含 base
+                .forEach(variation => {
+                    if (variation.type && variation.img) {
+                        images[variation.type] = variation.img;
+                    } else if (variation.label && variation.img) {
+                        images[variation.label] = variation.img;
+                    }
+                });
 
-            let finalImages: { base: string;[key: string]: string } | undefined = undefined;
-            if (Object.keys(images).length > 0) {
-                if (!images.base) {
-                    images.base = characterToSave.portrait || Object.values(images)[0] || '';
-                }
-                finalImages = images as { base: string;[key: string]: string };
-            }
+            const finalImages: { base: string; [key: string]: string } | undefined = 
+                characterToSave.portrait || Object.keys(images).length > 1 ? images : undefined;
 
             const playerRelationship = characterToSave.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
@@ -226,22 +265,22 @@ export const createHandlers = (ctx: HandlersContext) => {
         const race = identityParts.length > 1 ? identityParts[0] : undefined;
         const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || newCharacterData.role);
 
-        const images: { [key: string]: string } = {};
-        newCharacterData.variations.forEach(variation => {
-            if (variation.type && variation.img) {
-                images[variation.type] = variation.img;
-            } else if (variation.label && variation.img) {
-                images[variation.label] = variation.img;
-            }
-        });
+        // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+        const images: { base: string; [key: string]: string } = {
+            base: newCharacterData.portrait || '', // base 图片来自 portrait
+        };
+        newCharacterData.variations
+            .filter(v => v.label !== 'base') // 确保不包含 base
+            .forEach(variation => {
+                if (variation.type && variation.img) {
+                    images[variation.type] = variation.img;
+                } else if (variation.label && variation.img) {
+                    images[variation.label] = variation.img;
+                }
+            });
 
-        let finalImages: { base: string;[key: string]: string } | undefined = undefined;
-        if (Object.keys(images).length > 0) {
-            if (!images.base) {
-                images.base = newCharacterData.portrait || Object.values(images)[0] || '';
-            }
-            finalImages = images as { base: string;[key: string]: string };
-        }
+        const finalImages: { base: string; [key: string]: string } | undefined = 
+            newCharacterData.portrait || Object.keys(images).length > 1 ? images : undefined;
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
@@ -395,30 +434,17 @@ export const createHandlers = (ctx: HandlersContext) => {
                     const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
                     if (imageData?.imagePath && imageData.npcId) {
                         const imageUrl = withCacheBust(imageData.imagePath);
-                        const variantName = imageData.variant || variant;
-                        setCharacterData(prev => prev.map(char => {
-                            if (char.id === imageData.npcId) {
-                                if (variantName === 'base') {
-                                    return { ...char, portrait: imageUrl };
-                                } else {
-                                    const varIndex = char.variations.findIndex(v => v.label === variantName);
-                                    if (varIndex >= 0) {
-                                        const newVariations = [...char.variations];
-                                        newVariations[varIndex] = { ...newVariations[varIndex], img: imageUrl };
-                                        return { ...char, variations: newVariations };
-                                    } else {
-                                        const newVar: Variation = {
-                                            id: `v-${Date.now()}`,
-                                            label: variantName,
-                                            img: imageUrl,
-                                            type: variantName,
-                                        };
-                                        return { ...char, variations: [...char.variations, newVar] };
-                                    }
-                                }
+                        // 确保 variantName 是字符串
+                        let variantName: string = variant || 'base';
+                        if (imageData.variant) {
+                            if (typeof imageData.variant === 'string') {
+                                variantName = imageData.variant;
+                            } else {
+                                // 如果 variant 是对象，提取 value 字段或使用默认值
+                                variantName = (imageData.variant as any)?.value || variant || 'base';
                             }
-                            return char;
-                        }));
+                        }
+                        updateCharacterImage(imageData.npcId, imageUrl, variantName);
                     } else {
                         updateCharacterFromResponse(response.data, targetCharacterId);
                     }
@@ -444,17 +470,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         try {
             setIsGeneratingSingleNpcImage(true);
             setGeneratingCharacterId(npc.id);
-            const npcData: NPC = {
-                id: npc.id,
-                name: npc.name,
-                age: (npc as any).age || 0,
-                gender: npc.gender,
-                job: (npc as any).job || '',
-                race: (npc as any).race || '',
-                description: (npc as any).description || '',
-                appearance: npc.appearance || '',
-            };
-            const response = await api.generateNpcImage(fileId, npcData);
+            const response = await api.generateNpcImage(fileId, npc.id);
             if (response.data?.success) {
                 toast.success('NPC图片重新生成成功');
                 
@@ -462,19 +478,12 @@ export const createHandlers = (ctx: HandlersContext) => {
                 const imageData = parseResponse.extractNpcImage(response.data, mode);
                 if (imageData?.imagePath) {
                     const imageUrl = withCacheBust(imageData.imagePath);
-                    setCharacterData(prev => prev.map(char =>
-                        char.id === npc.id
-                            ? { ...char, portrait: imageUrl }
-                            : char
-                    ));
+                    updateCharacterImage(npc.id, imageUrl, 'base');
                 } else if (npc.portrait) {
                     // 如果无法提取图片数据，使用原有图片并添加缓存破坏
                     const baseUrl = npc.portrait.split('?')[0];
-                    setCharacterData(prev => prev.map(char =>
-                        char.id === npc.id
-                            ? { ...char, portrait: withCacheBust(baseUrl) }
-                            : char
-                    ));
+                    const imageUrl = withCacheBust(baseUrl);
+                    updateCharacterImage(npc.id, imageUrl, 'base');
                 }
             } else {
                 toast.error('当前使用人数过多，请稍后再试');
@@ -535,15 +544,18 @@ export const createHandlers = (ctx: HandlersContext) => {
             return;
         }
         try {
+            // 清理 portrait URL 中的 cb 参数，确保传递给后端的是干净的 URL
+            const variantRequest = {
+                type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
+                value: variation.label,
+                description: variation.description,
+            };
             const response = await api.generateVariantImage(
                 fileId,
                 currentCharacter.id === 'player' ? 'player' : currentCharacter.id,
-                {
-                    type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
-                    value: variation.label,
-                    description: variation.description,
-                }
+                variantRequest
             );
+
             if (response.data?.success) {
                 toast.success('差分图片生成成功');
                 
@@ -551,30 +563,23 @@ export const createHandlers = (ctx: HandlersContext) => {
                 const imageData = parseResponse.extractNpcImage(response.data, mode, variation.label);
                 if (imageData?.imagePath) {
                     const imageUrl = withCacheBust(imageData.imagePath);
-                    const variantName = variation.label;
-                    
-                    setCharacterData(prev => prev.map(char => {
-                        if (char.id === currentCharacter.id) {
-                            const varIndex = char.variations.findIndex(v => v.label === variantName);
-                            if (varIndex >= 0) {
-                                // 更新已存在的差分
-                                const newVariations = [...char.variations];
-                                newVariations[varIndex] = { ...newVariations[varIndex], img: imageUrl };
-                                return { ...char, variations: newVariations };
-                            } else {
-                                // 添加新的差分
-                                const newVar: Variation = {
-                                    id: `v-${Date.now()}`,
-                                    label: variantName,
-                                    img: imageUrl,
-                                    type: variation.type || 'expression',
-                                    description: variation.description,
-                                };
-                                return { ...char, variations: [...char.variations, newVar] };
-                            }
+                    // 确保 variantName 是字符串，如果 variant 是对象则使用 variation.label
+                    let variantName: string = variation.label;
+                    if (imageData.variant) {
+                        if (typeof imageData.variant === 'string') {
+                            variantName = imageData.variant;
+                        } else {
+                            // 如果 variant 是对象，提取 value 字段或使用 variation.label
+                            variantName = (imageData.variant as any)?.value || variation.label;
                         }
-                        return char;
-                    }));
+                    }
+                    updateCharacterImage(
+                        currentCharacter.id,
+                        imageUrl,
+                        variantName,
+                        variation.type || 'expression',
+                        variation.description
+                    );
                 } else {
                     // 如果无法提取图片数据，回退到刷新整个数据
                     if (onDataChange) {

@@ -60,8 +60,8 @@ export const createApiHelpers = (mode: string) => {
                 : EditorApi.uploadNpcImage(fileId, npcId, { file, variat: variant || 'base' });
         },
 
-        generateNpcImage: async (fileId: string, npc: NPC) => {
-            return EditorApi.generateNpcImage(npc.id, fileId, {
+        generateNpcImage: async (fileId: string, npcId: string) => {
+            return EditorApi.generateNpcImage(fileId, npcId, {
                 removeBg: true,
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });

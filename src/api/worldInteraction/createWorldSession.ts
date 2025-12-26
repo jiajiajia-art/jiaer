@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { CreateWorldSessionResponse, GetWorldFilesBySessionResponse } from "./createWorldSession.type";
+import type { CreateWorldEditSessionRequest, CreateWorldSessionResponse, GetWorldFilesBySessionResponse } from "./createWorldSession.type";
 import { useMapGalgameStore } from "../../store/mapGalgameStore";
 
 export interface CreateWorldSessionRequest {
@@ -8,7 +8,7 @@ export interface CreateWorldSessionRequest {
 }
 
 const createWorldSessionApi = {
-    createWorldSession: async (data: CreateWorldSessionRequest) => {
+    createWorldPlaySession: async (data: CreateWorldSessionRequest) => {
         const response = await api.post<CreateWorldSessionResponse>(`/worldInteraction/session/create`, data);
         
         // 创建 session 成功后，清理状态
@@ -22,6 +22,8 @@ const createWorldSessionApi = {
     },
     getWorldFilesBySession: (sessionId: string) =>
         api.get<GetWorldFilesBySessionResponse>(`/world-interaction/session/${sessionId}`),
+    createWorldEditSession: ({fileId}: {fileId: string}) =>
+        api.post<CreateWorldEditSessionRequest>(`/world-interaction/session/create`, {fileId}),
 }
 
 export default createWorldSessionApi;

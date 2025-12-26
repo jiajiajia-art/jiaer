@@ -1,7 +1,7 @@
 // src/api/auth.ts
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
-import type { AuthResponse, LoginRequest, SignupRequest, User, SendCodeRequest, ResetPasswordRequest } from "./auth.type";
+import type { AuthResponse, LoginRequest, SignupRequest, User, SendCodeRequest, ResetPasswordRequest, SettlePointsResponse } from "./auth.type";
 
 export const auth = {
   signup: (data: SignupRequest) =>
@@ -39,4 +39,6 @@ export const auth = {
       },
     });
   },
+  settlePoints: () =>
+    api.post<ApiResponse<SettlePointsResponse>>('/auth/games/points/settle'),
 };

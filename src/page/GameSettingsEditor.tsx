@@ -25,7 +25,6 @@ function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | n
 // ---- Async upload job types/helpers ----
 type JobStage = 'uploaded' | 'parsing' | 'generating' | 'validating' | 'writing' | 'done';
 
-
 interface JobStatusResponseRunning {
     success?: boolean;
     jobId: string;
@@ -109,201 +108,178 @@ const GameSettingsEditor = () => {
         setActivePanel(panelId);
     };
 
-    const handleFileUpload = async (file: File): Promise<boolean> => {
-        try {
-            let uploadedFileId: string | undefined;
-            
-            if (mode === 'worldInteraction') {
-                const response = await worldEditor.uploadWorldFile(file);
-                const fileIdFromResp = response.data.fileId;
-                if (fileIdFromResp) {
-                    uploadedFileId = fileIdFromResp;
-                    console.log('World file uploaded successfully:', response.data);
-                } else {
-                    console.error('Error uploading world file: missing fileId', response.data);
-                    return false;
+    // 轮询上传状态的通用函数（两种模式共用）
+    const startPollingUploadStatus = (jobId: string, fileName: string, dataMode: string) => {
+        addJob(jobId, fileName);
+        
+        let delay = 1000; // 初始延迟1秒
+        const maxDelay = 5000;
+        const timeoutMs = 30 * 60 * 1000; // 30分钟超时
+        const started = Date.now();
+        
+        const pollStatus = async () => {
+            try {
+                // 检查超时
+                if (Date.now() - started > timeoutMs) {
+                    updateJob(jobId, {
+                        status: 'failed',
+                        error: '上传超时，请重试',
+                    });
+                    setTimeout(() => {
+                        removeJob(jobId);
+                    }, 3000);
+                    toast.error('上传超时，请重试');
+                    return;
                 }
-            } else {
-                // Visual 模式：上传文件并轮询状态
-                const formData = new FormData();
-                formData.append('document', file);
                 
-                const response = await EditorApi.uploadGameFile(file);
+                const statusResponse = await mode === 'worldInteraction' ? worldEditor.checkUploadStatus(jobId) : EditorApi.checkUploadStatus(jobId);
+                const statusData = (await statusResponse).data; // 后端返回的数据结构
                 
-                // 容错：若后端临时返回 200 + fileId，也尝试兼容
-                if (response.status === 200) {
-                    const legacy = response.data;
-                    if (legacy.success) {
-                        setFileId(legacy.fileId);
+                if (statusData.status === 'running' || statusData.status === 'queued') {
+                    // 更新进度
+                    const runningData = statusData as JobStatusResponseRunning;
+                    updateJob(jobId, {
+                        fileId: runningData.fileId || null,
+                        status: runningData.status === 'queued' ? 'uploading' : 'processing',
+                        progress: runningData.progress || 0,
+                        stage: runningData.stage || (runningData.status === 'queued' ? '上传中' : '处理中'),
+                        error: null,
+                    });
+                    
+                    // 继续轮询，使用指数退避
+                    setTimeout(() => {
+                        pollStatus();
+                    }, delay);
+                    delay = Math.min(Math.round(delay * 1.3), maxDelay);
+                    
+                } else if (statusData.status === 'completed') {
+                    // 完成：设置 fileId 并读取文件数据
+                    const completedData = statusData as JobStatusResponseCompleted;
+                    if (completedData.fileId) {
+                        setFileId(completedData.fileId);
                         setIsParsed(false);
                         setIsPreset(false);
-                        return true;
+                        
+                        updateJob(jobId, {
+                            fileId: completedData.fileId,
+                            status: 'completed',
+                            progress: 100,
+                            stage: '完成',
+                        });
+                        
+                        // 读取文件数据
+                        fetchEditorData(completedData.fileId, dataMode).catch((error) => {
+                            console.error('Error fetching editor data after upload:', error);
+                            toast.error('文件解析完成，但加载数据失败，请刷新页面');
+                        });
+                        
+                        // 延迟移除任务
+                        setTimeout(() => {
+                            removeJob(jobId);
+                        }, 2000);
                     } else {
-                        console.error('Unexpected upload response: 200 but no fileId in body');
-                        return false;
-                    }
-                }
-                
-                // 期望返回 202 Accepted
-                if (response.status !== 202) {
-                    console.error('Unexpected upload response status:', response.status);
-                    toast.error('上传失败，请重试');
-                    return false;
-                }
-                
-                const accepted = response.data;
-                if (!accepted.success || !accepted.jobId) {
-                    console.error('Invalid 202 Accepted payload', accepted);
-                    toast.error('上传失败，请重试');
-                    return false;
-                }
-                
-                const { jobId, fileId: initialFileId } = accepted;
-                
-                // 添加到上传任务列表
-                addJob(jobId, file.name);
-                
-                // 如果有初始 fileId，先保存到任务中（但不设置到全局，等completed后再设置）
-                if (initialFileId) {
-                    updateJob(jobId, {
-                        fileId: initialFileId,
-                    });
-                }
-                
-                // 轮询任务状态
-                let delay = 1000; // 初始延迟1秒
-                const maxDelay = 5000;
-                const timeoutMs = 30 * 60 * 1000; // 30分钟超时
-                const started = Date.now();
-                
-                const pollStatus = async () => {
-                    try {
-                        // 检查超时
-                        if (Date.now() - started > timeoutMs) {
-                            updateJob(jobId, {
-                                status: 'failed',
-                                error: '上传超时，请重试',
-                            });
-                            setTimeout(() => {
-                                removeJob(jobId);
-                            }, 3000);
-                            toast.error('上传超时，请重试');
-                            return;
-                        }
-                        
-                        const statusResponse = await EditorApi.checkUploadStatus(jobId);
-                        const statusData = statusResponse.data as any; // 后端返回的数据结构
-                        
-                        // 根据 status 判断，不依赖 success
-                        if (statusData.status === 'running' || statusData.status === 'queued') {
-                            // 更新进度
-                            const runningData = statusData as JobStatusResponseRunning;
-                            updateJob(jobId, {
-                                fileId: runningData.fileId || null,
-                                status: runningData.status === 'queued' ? 'uploading' : 'processing',
-                                progress: runningData.progress || 0,
-                                stage: runningData.stage || (runningData.status === 'queued' ? '上传中' : '处理中'),
-                                error: null,
-                            });
-                            
-                            // 继续轮询，使用指数退避
-                            setTimeout(() => {
-                                pollStatus();
-                            }, delay);
-                            delay = Math.min(Math.round(delay * 1.3), maxDelay);
-                            
-                        } else if (statusData.status === 'completed') {
-                            // 完成：设置 fileId 并读取文件数据
-                            const completedData = statusData as JobStatusResponseCompleted;
-                            if (completedData.fileId) {
-                                uploadedFileId = completedData.fileId;
-                                setFileId(completedData.fileId);
-                                setIsParsed(false);
-                                setIsPreset(false);
-                                
-                                updateJob(jobId, {
-                                    fileId: completedData.fileId,
-                                    status: 'completed',
-                                    progress: 100,
-                                    stage: '完成',
-                                });
-                                
-                                // 读取文件数据
-                                fetchEditorData(completedData.fileId, mode || 'visual').catch((error) => {
-                                    console.error('Error fetching editor data after upload:', error);
-                                    toast.error('文件解析完成，但加载数据失败，请刷新页面');
-                                });
-                                
-                                // 延迟移除任务
-                                setTimeout(() => {
-                                    removeJob(jobId);
-                                }, 2000);
-                            } else {
-                                updateJob(jobId, {
-                                    status: 'failed',
-                                    error: '完成但缺少 fileId',
-                                });
-                                setTimeout(() => {
-                                    removeJob(jobId);
-                                }, 3000);
-                            }
-                            
-                        } else if (statusData.status === 'failed') {
-                            // 失败
-                            const failedData = statusData as JobStatusResponseFailed;
-                            const errMsg = failedData.error || '解析失败，请重试';
-                            updateJob(jobId, {
-                                status: 'failed',
-                                error: errMsg,
-                            });
-                            toast.error(errMsg);
-                            setTimeout(() => {
-                                removeJob(jobId);
-                            }, 3000);
-                            
-                        } else if (statusData.status === 'unknown') {
-                            // 未知状态
-                            updateJob(jobId, {
-                                status: 'failed',
-                                error: '任务不存在或已回收',
-                            });
-                            toast.error('任务不存在或已回收，请重试上传');
-                            setTimeout(() => {
-                                removeJob(jobId);
-                            }, 3000);
-                        }
-                        
-                    } catch (error) {
-                        console.error('Error polling upload status:', error);
                         updateJob(jobId, {
                             status: 'failed',
-                            error: error instanceof Error ? error.message : '轮询状态失败',
+                            error: '完成但缺少 fileId',
                         });
-                        toast.error('轮询状态失败，请重试');
                         setTimeout(() => {
                             removeJob(jobId);
                         }, 3000);
                     }
-                };
+                    
+                } else if (statusData.status === 'failed') {
+                    // 失败
+                    const failedData = statusData as JobStatusResponseFailed;
+                    const errMsg = failedData.error || '解析失败，请重试';
+                    updateJob(jobId, {
+                        status: 'failed',
+                        error: errMsg,
+                    });
+                    toast.error(errMsg);
+                    setTimeout(() => {
+                        removeJob(jobId);
+                    }, 3000);
+                    
+                } else if (statusData.status === 'unknown') {
+                    // 未知状态
+                    updateJob(jobId, {
+                        status: 'failed',
+                        error: '任务不存在或已回收',
+                    });
+                    toast.error('任务不存在或已回收，请重试上传');
+                    setTimeout(() => {
+                        removeJob(jobId);
+                    }, 3000);
+                }
                 
-                // 开始轮询
-                pollStatus();
-                
-                // 返回 true 表示上传请求已提交，但fileId会在轮询完成后设置
-                return true;
+            } catch (error) {
+                console.error('Error polling upload status:', error);
+                updateJob(jobId, {
+                    status: 'failed',
+                    error: error instanceof Error ? error.message : '轮询状态失败',
+                });
+                toast.error('轮询状态失败，请重试');
+                setTimeout(() => {
+                    removeJob(jobId);
+                }, 3000);
+            }
+        };
+        
+        // 开始轮询
+        pollStatus();
+    };
+
+    const handleFileUpload = async (file: File): Promise<boolean> => {
+        try {
+            let uploadResponse;
+            
+            if (mode === 'worldInteraction') {
+                uploadResponse = await worldEditor.uploadWorldFile(file);
+            } else {
+                uploadResponse = await EditorApi.uploadGameFile(file);
             }
             
-            if (uploadedFileId) {
-                console.log("Uploaded File ID:", uploadedFileId);
-                // 使用 Zustand store 更新 fileId（自动保存到 sessionStorage）
-                setFileId(uploadedFileId);
-                setIsParsed(false);
-                setIsPreset(false);// 上传文件后，认为是非预设模式
-                return true;
-            } else {
-                console.error('No fileId returned from upload');
+            // 容错：若后端临时返回 200 + fileId，也尝试兼容
+            if (uploadResponse.status === 200) {
+                const legacy = uploadResponse.data;
+                if (legacy.success && legacy.fileId) {
+                    setFileId(legacy.fileId);
+                    setIsParsed(false);
+                    setIsPreset(false);
+                    return true;
+                } else {
+                    console.error('Unexpected upload response: 200 but no fileId in body');
+                    return false;
+                }
+            }
+            
+            // 期望返回 202 Accepted
+            if (uploadResponse.status !== 202) {
+                console.error('Unexpected upload response status:', uploadResponse.status);
+                toast.error('上传失败，请重试');
                 return false;
             }
+            
+            const accepted = uploadResponse.data;
+            if (!accepted.success || !accepted.jobId) {
+                console.error('Invalid 202 Accepted payload', accepted);
+                toast.error('上传失败，请重试');
+                return false;
+            }
+            
+            const { jobId, fileId: initialFileId } = accepted;
+            
+            // 如果有初始 fileId，先保存到任务中（但不设置到全局，等completed后再设置）
+            if (initialFileId) {
+                updateJob(jobId, {
+                    fileId: initialFileId,
+                });
+            }
+            
+            startPollingUploadStatus(jobId, file.name, mode || 'visual');
+            
+            // 返回 true 表示上传请求已提交，但fileId会在轮询完成后设置
+            return true;
         } catch (error) {
             console.error('Error uploading file:', error);
             return false;
@@ -315,9 +291,8 @@ const GameSettingsEditor = () => {
     const initialLoadDoneRef = useRef<boolean>(false);
 
     const fetchEditorData = useCallback(async (id: string, dataMode?: string) => {
-        if (!id || isLoadingData) return; // 如果正在加载，避免重复请求
+        if (!id || isLoadingData) return;
 
-        // 只有在首次进入页面时才显示全局加载效果
         const shouldShowGlobalLoading = !initialLoadDoneRef.current;
         if (shouldShowGlobalLoading) {
             setIsLoadingData(true);
@@ -578,9 +553,9 @@ const GameSettingsEditor = () => {
         try {
             // 根据模式选择不同的会话创建接口
             if (mode === 'worldInteraction') {
-                const sessionResponse = await createWorldSessionApi.createWorldSession({ fileId });
+                const sessionResponse = await createWorldSessionApi.createWorldEditSession({ fileId });
                 if (sessionResponse.data.success) {
-                    const sessionId = sessionResponse.data.data.session.session_id;
+                    const sessionId = sessionResponse.data.session.sessionId;
                     setFileId(fileId);
                     setSessionId(sessionId);
                     navigate(`/galgameMap`);
@@ -590,9 +565,9 @@ const GameSettingsEditor = () => {
                     return null;
                 }
             } else {
-                const sessionResponse = await createGalgameSessionApi.createGalgameSession({ presetId: fileId });
+                const sessionResponse = await createGalgameSessionApi.createGalgameEditSession({ fileId: fileId });
                 if (sessionResponse.data.success) {
-                    const sessionId = sessionResponse.data.data.session.session_id;
+                    const sessionId = sessionResponse.data.session.sessionId;
                     setFileId(fileId);
                     setSessionId(sessionId);
                     setIsPreset(false);

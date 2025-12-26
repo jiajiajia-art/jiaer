@@ -39,6 +39,21 @@ export const withCacheBust = (url?: string | null) => {
     return `${url}${separator}cb=${Date.now()}`;
 };
 
+// 清理 URL 中的 cb 参数，用于传递给后端 API
+export const removeCacheBust = (url?: string | null): string => {
+    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
+    const urlStr = url.toString();
+    if (!urlStr.includes('cb=')) {
+        return urlStr;
+    }
+    const [baseUrl, queryString] = urlStr.split('?');
+    if (!queryString) {
+        return urlStr;
+    }
+    const params = queryString.split('&').filter(param => !param.startsWith('cb='));
+    return params.length > 0 ? `${baseUrl}?${params.join('&')}` : baseUrl;
+};
+
 // 基础角色数据模板
 export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'gender' | 'role' | 'identity' | 'personality' | 'speech' | 'appearance' | 'portrait' | 'background' | 'relationships' | 'variations'> => {
     return {
@@ -49,15 +64,17 @@ export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'g
     };
 };
 
-// 将images对象转换为variations数组
+// 将images对象转换为variations数组（过滤掉base，因为base已经存储在portrait中）
 export const imagesToVariations = (images?: Record<string, string>): Variation[] => {
     if (!images) return [];
-    return Object.entries(images).map(([label, img], idx) => ({
-        id: `v${idx}`,
-        label,
-        img: withCacheBust(img),
-        type: label,
-    }));
+    return Object.entries(images)
+        .filter(([label]) => label !== 'base') // 过滤掉 base，base 图片已存储在 portrait 中
+        .map(([label, img], idx) => ({
+            id: `v${idx}`,
+            label,
+            img: withCacheBust(img),
+            type: label,
+        }));
 };
 
 // 从images对象中选取base图片

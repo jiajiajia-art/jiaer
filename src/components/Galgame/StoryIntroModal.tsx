@@ -4,6 +4,8 @@ import type { GetGalgamePresetResponse } from '../../api/galgame/getGalgamePrese
 import { useStoryTyping } from '../../hooks/story/useStoryTyping';
 import { HOST_ADDRESS } from '../../config';
 
+const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
+
 interface StoryIntroModalProps {
     isOpen: boolean;
     presetData: GetGalgamePresetResponse | null;
@@ -30,7 +32,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     });
 
     const playerImageUrl = useMemo(() => {
-        if (!playerImage) return null;
+        if (!playerImage) return DEFAULT_SCENE_IMAGE;
         return playerImage.startsWith('http') ? playerImage : `${HOST_ADDRESS}${playerImage}`;
     }, [playerImage]);
 
@@ -39,12 +41,12 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
             className={styles.modalOverlay}
         >
             <div className={styles.modalContent}
-                style={playerImageUrl ? {
+                style={{
                     backgroundImage: `url(${playerImageUrl})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat'
-                } : undefined}
+                }}
             >
                 <div className={styles.modalHeader}>
                     <h1 className={styles.modalTitle}>{title}</h1>

@@ -27,6 +27,10 @@ interface useMapGalgameState {
     setEventData: (eventData: EventData | null) => void;
         refreshEventData: (sessionId: string, gameData: any) => Promise<void>;
     
+    // 存储的 sessionId（用于比对，确保恢复的数据属于当前会话）
+    storedSessionId: string | null;
+    setStoredSessionId: (sessionId: string | null) => void;
+    
     // 事件完成标志（用于同步显示"开启下一回合"按钮）
     eventCompleted: boolean;
     setEventCompleted: (completed: boolean) => void;
@@ -52,11 +56,9 @@ interface useMapGalgameState {
     selectedScene: Scene | null;
     setSelectedScene: (scene: Scene | null) => void;
     
-    // 音乐播放状态（全局共享）
     isMusicPlaying: boolean;
     setMusicPlaying: (playing: boolean) => void;
     
-    // 清空状态
     clearState: () => void;
 }
 
@@ -65,6 +67,10 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
         (set, get) => ({
             eventData: null,
             setEventData: (eventData: EventData | null) => set({ eventData }),
+            
+            // 存储的 sessionId（用于比对）
+            storedSessionId: null,
+            setStoredSessionId: (sessionId: string | null) => set({ storedSessionId: sessionId }),
             
             // 事件完成标志
             eventCompleted: false,
@@ -130,6 +136,7 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             
             clearState: () => set({
                 eventData: null,
+                storedSessionId: null,
                 eventCompleted: false,
                 isTypingInInteractNpc: false,
                 currentView: MapViewState.WORLD_MAP,
@@ -143,11 +150,13 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             // 使用 sessionStorage，页面关闭后自动清除
             storage: createJSONStorage(() => sessionStorage),
             // 持久化视图、选中场景 & 事件数据，刷新后可恢复上次进度
+            // 同时存储 sessionId 用于比对，确保恢复的数据属于当前会话
             partialize: (state) => ({
                 eventData: state.eventData,
                 currentView: state.currentView,
                 selectedSubscene: state.selectedSubscene,
                 selectedScene: state.selectedScene,
+                storedSessionId: state.storedSessionId,
             }),
         }
     )

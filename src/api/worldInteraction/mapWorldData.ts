@@ -3,7 +3,7 @@ import type { WorldInteractionGameData } from "./worldInteractionApi.type";
 
 const MapWorldData = {
   getMapWorldData: (fileId: string) =>
-    api.get<WorldInteractionGameData>(`/world-interaction/files/${fileId}`,{
+    api.get<WorldInteractionGameData>(`/world-interaction/document/${fileId}`,{
         timeout: 1500000
     }),
   getMapGalgameMusic: (fileId: string, musicId: string) => {

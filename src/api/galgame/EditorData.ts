@@ -88,8 +88,8 @@ const EditorApi = {
             timeout: 180000,
         });
     },
-    generateNpcImage: (npacId: string, fileId: string, data: GenerateImageRequest) =>
-        api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npacId}`, data, {
+    generateNpcImage: ( fileId: string, npcId: string, data: GenerateImageRequest) =>
+        api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npcId}`, data, {
             timeout: 180000,
         }),
     generateSceneImage: (sceneId: string, fileId: string, data: GenerateImageRequest) =>

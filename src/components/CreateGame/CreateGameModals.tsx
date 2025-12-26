@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
+import { toast } from 'react-hot-toast';
 
 interface CreateGameModalsProps {
     isCreateTypeModalOpen: boolean;
@@ -10,6 +11,8 @@ interface CreateGameModalsProps {
     onSelectGameType: (type: 'avg' | 'rpg' | 'txt') => void;
 }
 
+const AVG_INVITE_CODE = 'AVG2025DEV';
+
 const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     isCreateTypeModalOpen,
     isMobileTipModalOpen,
@@ -17,9 +20,54 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     onCloseMobileTipModal,
     onSelectGameType,
 }) => {
+    const [isInviteCodeModalOpen, setIsInviteCodeModalOpen] = useState(false);
+    const [inviteCodeInput, setInviteCodeInput] = useState('');
+    const [inviteCodeError, setInviteCodeError] = useState('');
+
+    const handleAvgClick = () => {
+        setIsInviteCodeModalOpen(true);
+        setInviteCodeError('');
+    };
+
+    const handleInviteCodeConfirm = () => {
+        if (!inviteCodeInput.trim()) {
+            setInviteCodeError('请输入邀请码');
+            return;
+        }
+        
+        if (inviteCodeInput.trim() === AVG_INVITE_CODE) {
+            setIsInviteCodeModalOpen(false);
+            setInviteCodeInput('');
+            setInviteCodeError('');
+            onSelectGameType('avg');
+            toast.success('验证成功');
+        } else {
+            setInviteCodeError('邀请码错误，请重新输入');
+            setInviteCodeInput('');
+        }
+    };
+
+    const handleInviteCodeCancel = () => {
+        setIsInviteCodeModalOpen(false);
+        setInviteCodeInput('');
+        setInviteCodeError('');
+    };
+
+    const handleInviteCodeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInviteCodeInput(e.target.value);
+        // 输入时清除错误提示
+        if (inviteCodeError) {
+            setInviteCodeError('');
+        }
+    };
+
+    const handleInviteCodeKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleInviteCodeConfirm();
+        }
+    };
     return (
         <>
-            {/* 创作类型选择弹窗 */}
             {isCreateTypeModalOpen && (
                 <div
                     className={styles.createTypeModalOverlay}
@@ -46,10 +94,11 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 <span className={styles.createTypeOptionRecommend}>推荐</span>
                             </button>
                             <button
-                                className={styles.createTypeOption}
-                                onClick={() => onSelectGameType('avg')}
+                                className={`${styles.createTypeOption} ${styles.createTypeOptionRequiresCode}`}
+                                onClick={handleAvgClick}
                             >
                                 <span>AVG</span>
+                                <span className={styles.createTypeOptionLockedTag}>需邀请码</span>
                             </button>
                             <button
                                 className={`${styles.createTypeOption} ${styles.createTypeOptionDisabled}`}
@@ -79,6 +128,68 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 onClose={onCloseMobileTipModal}
                 message="创作功能暂不支持移动端，请在电脑上访问以获得更好的体验"
             />
+
+            {/* 邀请码输入弹窗 */}
+            {isInviteCodeModalOpen && (
+                <div
+                    className={styles.createTypeModalOverlay}
+                    onClick={handleInviteCodeCancel}
+                >
+                    <div
+                        className={styles.createTypeModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.createTypeModalHeader}>
+                            <div className={styles.createTypeModalTitle}>
+                                输入邀请码
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleInviteCodeCancel}
+                                className={styles.inviteCodeCloseButton}
+                                aria-label="关闭"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className={styles.createTypeModalDesc}>
+                            该功能需要邀请码才能使用，请输入正确的邀请码。
+                        </div>
+                        <div className={styles.inviteCodeInputContainer}>
+                            <input
+                                type="text"
+                                className={`${styles.inviteCodeInput} ${inviteCodeError ? styles.inviteCodeInputError : ''}`}
+                                value={inviteCodeInput}
+                                onChange={handleInviteCodeInputChange}
+                                onKeyPress={handleInviteCodeKeyPress}
+                                placeholder="请输入邀请码"
+                                autoFocus
+                            />
+                            {inviteCodeError && (
+                                <div className={styles.inviteCodeErrorText}>
+                                    {inviteCodeError}
+                                </div>
+                            )}
+                        </div>
+                        <div className={styles.createTypeModalFooter}>
+                            <button
+                                type="button"
+                                onClick={handleInviteCodeCancel}
+                                className={styles.createTypeCancelButton}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleInviteCodeConfirm}
+                                className={styles.inviteCodeConfirmButton}
+                            >
+                                确认
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

@@ -1,15 +1,15 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
-import type { GenerateImgeResponse, NPC, Player, WorldSetting } from "../galgame/EditorData.type";
+import type { CheckUploadStatusResponse, GenerateImgeResponse, NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
 import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, NpcSlot, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
-import type { WorldInteractionGameData } from "./worldInteractionApi.type";
+import type { UploadWorldFileResponse } from "./worldInteractionApi.type";
 
 const worldEditor = {
     uploadWorldFile: (file: File) => {
         const formData = new FormData();
-        formData.append('document', file);
-        return api.post<WorldInteractionGameData>(
+        formData.append('file', file);
+        return api.post<UploadWorldFileResponse>(
             `/worldInteraction/document/upload`,
             formData,
             {
@@ -19,6 +19,9 @@ const worldEditor = {
                 timeout: 1500000,
             }
         );
+    },
+    checkUploadStatus: (jobId: string) => {
+        return api.get<CheckUploadStatusResponse>(`/world-interaction/document/jobs/${jobId}/status`);
     },
     updateWorldSetting: (fileId: string, data: Partial<WorldSetting>) => {
         return api.put<ApiResponse<WorldSetting>>(

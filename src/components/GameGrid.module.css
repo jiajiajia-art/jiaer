@@ -34,6 +34,21 @@
     border-radius: 10px;
 }
 
+.gameTag {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(251, 70, 85, 0.9);
+    color: #ffffff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 2;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
 .goodsInfo {
     width: 100%;
     padding: 3px;

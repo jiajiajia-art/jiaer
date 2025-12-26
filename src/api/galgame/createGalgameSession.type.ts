@@ -22,4 +22,24 @@ export interface CreateGalgameSessionResponse {
     };
 }
 
-
+export interface CreateGalgameEditSessionRequest {
+    success: boolean;
+    message: string;
+    session: {
+        sessionId: string;
+        fileId: string;
+        presetId: string | null;
+        player: {
+            currentLocation: string;
+        };
+        currentScene: {
+            id: string;
+            name: string;
+        };
+        worldInfo: {
+            title: string;
+            summary: string;
+            theme: string[];
+        };
+    }
+}

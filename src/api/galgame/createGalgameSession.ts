@@ -1,19 +1,13 @@
 import { api } from "../base";
-import type { CreateGalgameSessionResponse } from "./createGalgameSession.type";
+import type { CreateGalgameEditSessionRequest, CreateGalgameSessionResponse } from "./createGalgameSession.type";
 
 const createGalgameSessionApi = {
-    createGalgameSession: ({presetId}: {presetId: string}) =>
+    // 玩家游玩会话（有存档）
+    createGalgamePlaySession: ({presetId}: {presetId: string}) =>
         api.post<CreateGalgameSessionResponse>(`/optical/games/session/create`, {presetId}),
+    // 创作编辑会话（不需要存档）
+    createGalgameEditSession: ({fileId}: {fileId: string}) =>
+        api.post<CreateGalgameEditSessionRequest>(`/visual/session/create`, {fileId}),
 }
 
 export default createGalgameSessionApi;
-
-// import { api } from "../base";
-// import type { CreateGalgameSessionResponse } from "./createGalgameSession.type";
-
-// const createGalgameSessionApi = {
-//     createGalgameSession: ({presetId}: {presetId: string}) =>
-//         api.post<CreateGalgameSessionResponse>(`/visual/session/create`, {presetId}),
-// }
-
-// export default createGalgameSessionApi;

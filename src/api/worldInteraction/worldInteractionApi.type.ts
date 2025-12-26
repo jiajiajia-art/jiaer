@@ -85,3 +85,10 @@ export interface WorldInteractionGameData {
     sceneSetting: SceneSetting;
 }
 
+export interface UploadWorldFileResponse {
+    success: boolean;
+    jobId: string;
+    fileId: string;
+    status: string;
+    message: string;
+}

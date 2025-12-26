@@ -26,12 +26,14 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 12px;
+    position: relative;
 }
 
 .createTypeModalTitle {
     font-size: 18px;
     font-weight: 600;
     color: #111827;
+    flex: 1;
 }
 
 .createTypeModalDesc {
@@ -86,6 +88,29 @@
     margin-left: 10px;
 }
 
+.createTypeOptionRequiresCode {
+    position: relative;
+}
+
+.createTypeOptionRequiresCode:before {
+    content: '🔒';
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+.createTypeOptionRequiresCode:hover {
+    box-shadow: 0 6px 14px rgba(248, 113, 113, 0.18);
+}
+
+.createTypeOptionLockedTag {
+    font-size: 12px;
+    color: #FB4655;
+    background-color: #FB46551A;
+    padding: 2px 4px;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+
 .createTypeOptionLocked {
     font-size: 12px;
     color: #999999;
@@ -99,6 +124,7 @@
     display: flex;
     justify-content: flex-end;
     margin-top: 4px;
+    gap: 8px;
 }
 
 .createTypeCancelButton {
@@ -115,5 +141,108 @@
 .createTypeCancelButton:hover {
     background-color: #F3F4F6;
     color: #4B5563;
+}
+
+/* 邀请码输入相关样式 */
+.inviteCodeCloseButton {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background-color: #F3F4F6;
+    color: #6B7280;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.inviteCodeCloseButton:hover {
+    background-color: #E5E7EB;
+    color: #374151;
+    transform: scale(1.1);
+}
+
+.inviteCodeCloseButton:active {
+    transform: scale(0.95);
+}
+
+.inviteCodeInputContainer {
+    margin-bottom: 18px;
+}
+
+.inviteCodeInput {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+    font-size: 14px;
+    outline: none;
+    background-color: #ffffff;
+    color: #111827;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.inviteCodeInput:focus {
+    border-color: #FB4655;
+    box-shadow: 0 0 0 3px rgba(251, 70, 85, 0.1);
+}
+
+.inviteCodeInput::placeholder {
+    color: #9CA3AF;
+}
+
+.inviteCodeInputError {
+    border-color: #EF4444;
+    background-color: #FEF2F2;
+}
+
+.inviteCodeInputError:focus {
+    border-color: #EF4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.inviteCodeErrorText {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #EF4444;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.inviteCodeErrorText:before {
+    content: '⚠';
+    font-size: 14px;
+}
+
+.inviteCodeConfirmButton {
+    font-size: 13px;
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background-color: #FB4655;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.inviteCodeConfirmButton:hover {
+    background-color: #e63946;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.3);
+}
+
+.inviteCodeConfirmButton:active {
+    transform: translateY(0);
 }
 

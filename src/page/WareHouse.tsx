@@ -10,7 +10,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 
-const PAGE_SIZE = 4;
+const PAGE_SIZE = 40;
 
 const WareHouse: React.FC = () => {
     const [games, setGames] = useState<UserGameData[]>([]);

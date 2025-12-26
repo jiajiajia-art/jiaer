@@ -53,6 +53,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
+    // 差分生成加载状态
+    const [isGeneratingVariation, setIsGeneratingVariation] = useState<boolean>(false);
+    const [generatingVariationId, setGeneratingVariationId] = useState<string | null>(null);
     // 一键生成积分提示
     const [npcCostModalOpen, setNpcCostModalOpen] = useState<boolean>(false);
     const [npcCostPoints, setNpcCostPoints] = useState<number | null>(null);
@@ -93,31 +96,26 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const npcs = characterData
             .filter(char => char.id !== 'player')
             .map(char => {
-                // 从 identity 中解析 race 和 job
                 const identityParts = char.identity.split(' · ');
                 const race = identityParts.length > 1 ? identityParts[0] : undefined;
                 const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || char.role);
 
-                // 将 variations 转换回 images 对象
-                const images: { [key: string]: string } = {};
-                char.variations.forEach(variation => {
-                    if (variation.type && variation.img) {
-                        images[variation.type] = variation.img;
-                    } else if (variation.label && variation.img) {
-                        images[variation.label] = variation.img;
-                    }
-                });
+                // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
+                const images: { base: string; [key: string]: string } = {
+                    base: char.portrait || '', // base 图片来自 portrait
+                };
+                char.variations
+                    .filter(v => v.label !== 'base') // 确保不包含 base
+                    .forEach(variation => {
+                        if (variation.type && variation.img) {
+                            images[variation.type] = variation.img;
+                        } else if (variation.label && variation.img) {
+                            images[variation.label] = variation.img;
+                        }
+                    });
 
-                // 确保 images 对象包含 base 属性（如果没有，使用 portrait 或第一个 variation）
-                let finalImages: { base: string;[key: string]: string } | undefined = undefined;
-                if (Object.keys(images).length > 0) {
-                    if (!images.base) {
-                        // 优先使用 portrait，否则使用第一个 variation 的图片
-                        images.base = char.portrait || Object.values(images)[0] || '';
-                    }
-                    // 类型断言：确保 base 属性存在
-                    finalImages = images as { base: string;[key: string]: string };
-                }
+                const finalImages: { base: string; [key: string]: string } | undefined = 
+                    char.portrait || Object.keys(images).length > 1 ? images : undefined;
 
                 // 获取与玩家的关系（从 relationships 中查找）
                 const playerRelationship = char.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
@@ -465,7 +463,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         await handleUploadImage(file, {
             type: 'npc',
             characterId,
-            variant: currentCharacter?.id == 'player' ? 'base' : currentCharacter?.variations.find(v => v.label === 'base')?.label || 'base',
+            variant: 'base',
             inputRef: npcFileInputRef,
             successMessage: '角色图片上传成功',
         });
@@ -510,7 +508,14 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const target = pendingVariationForGenerate;
         setVariationCostModalOpen(false);
         if (!target || !handlers) return;
-        await handlers.regenerateVariationImage(target.variation, target.character);
+        setIsGeneratingVariation(true);
+        setGeneratingVariationId(target.variation.id);
+        try {
+            await handlers.regenerateVariationImage(target.variation, target.character);
+        } finally {
+            setIsGeneratingVariation(false);
+            setGeneratingVariationId(null);
+        }
         setPendingVariationForGenerate(null);
     };
 
@@ -751,9 +756,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                     {isAddingNew ? '点击上传角色基础立绘' : '点击替换角色基础立绘'}
                                 </span>
                                 {isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id && (
-                                    <div className="loadingOverlay">
-                                        <div className="loadingSpinner"></div>
-                                        <div className="loadingText">正在生成角色立绘...</div>
+                                    <div className={styles.loadingOverlay}>
+                                        <div className={styles.loadingSpinner}></div>
+                                        <div className={styles.loadingText}>正在生成角色立绘...</div>
                                     </div>
                                 )}
                             </div>
@@ -964,15 +969,24 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 <div className={styles.detailBlock}>
                                     <div className={styles.cardHead}>
                                         <strong>立绘差分</strong>
-                                        <span className={styles.mutedSmall}>默认 + {currentCharacter.variations.length} 个差分</span>
+                                        <span className={styles.mutedSmall}>
+                                            {currentCharacter.variations.filter(v => v.label !== 'base').length} 个差分
+                                        </span>
                                     </div>
                                     <div className={styles.variationGrid}>
-                                        {currentCharacter.variations.map((variation) => (
+                                        {currentCharacter.variations.filter(v => v.label !== 'base').map((variation) => (
                                             <div key={variation.id} className={styles.variationCard}>
                                                 <div
                                                     className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
                                                     style={variation.img ? { backgroundImage: `url('${variation.img}')` } : {}}
                                                 >
+                                                    {/* 加载效果 */}
+                                                    {isGeneratingVariation && generatingVariationId === variation.id && (
+                                                        <div className={styles.loadingOverlay}>
+                                                            <div className={styles.loadingSpinner}></div>
+                                                            <div className={styles.loadingText}>正在生成...</div>
+                                                        </div>
+                                                    )}
                                                     {/* 下载按钮 */}
                                                     {variation.img && currentCharacter.id !== 'player' && (
                                                         <button
@@ -987,7 +1001,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                                             <MdDownload size={16} />
                                                         </button>
                                                     )}
-                                                    {!variation.img && <span className={styles.mutedSmall}>等待图片</span>}
+                                                    {!variation.img && !isGeneratingVariation && <span className={styles.mutedSmall}>等待图片</span>}
                                                 </div>
                                                 <p>{variation.label}</p>
                                                 {variation.description && (
@@ -1010,19 +1024,21 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                                     <button
                                                         className={styles.ghostTiny}
                                                         onClick={() => variationFileInputRefs.current[variation.id]?.click()}
+                                                        disabled={isGeneratingVariation && generatingVariationId === variation.id}
                                                     >
                                                         上传图片
                                                     </button>
                                                     <button
                                                         className={`${styles.ghostTiny} ${styles.generateButton}`}
                                                         onClick={() => handleRequestVariationGenerate(variation)}
+                                                        disabled={isGeneratingVariation && generatingVariationId === variation.id}
                                                     >
                                                         <img
                                                             src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
                                                             alt=""
                                                             className={styles.priceIcon}
                                                         />
-                                                        <span>{IMAGE_GENERATION_COST} AI生成</span>
+                                                        <span>{isGeneratingVariation && generatingVariationId === variation.id ? '生成中...' : `${IMAGE_GENERATION_COST} AI生成`}</span>
                                                     </button>
                                                 </div>
                                             </div>
