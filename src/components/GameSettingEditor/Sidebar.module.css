@@ -10,6 +10,7 @@
     box-sizing: border-box;
     flex-shrink: 0;
     box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
+    position: relative;
 }
 
 /* 品牌区域 */
@@ -172,6 +173,46 @@
     color: #E03D4B;
 }
 
+/* 帮助按钮 */
+.helpButtonContainer {
+    position: absolute;
+    left: 24px;
+    bottom: 24px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.helpButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(224, 61, 75, 0.3);
+    background: rgba(224, 61, 75, 0.06);
+    color: #E03D4B;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.helpButton:hover {
+    background: rgba(224, 61, 75, 0.12);
+    border-color: rgba(224, 61, 75, 0.5);
+    transform: scale(1.05);
+}
+
+.helpButton:active {
+    transform: scale(0.95);
+}
+
+.helpIcon {
+    line-height: 1;
+    user-select: none;
+}
+
 /* 响应式布局 */
 @media (max-width: 1080px) {
     .sidebar {
@@ -224,6 +265,10 @@
     }
 
     .sidebarFooter {
+        display: none;
+    }
+
+    .helpButtonContainer {
         display: none;
     }
 }
