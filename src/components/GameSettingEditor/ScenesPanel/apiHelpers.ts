@@ -107,6 +107,31 @@ export const createSceneApiHelpers = (mode: string) => {
             // 对于 NPC，需要传递 variant（如 base），场景不需要
             return EditorApi.downloadImage(pluginType, fileId, type, name, variant);
         },
+
+        // 音乐相关
+        uploadMusic: async (fileId: string, file: File, name: string, description: string) => {
+            return isWorldInteraction
+                ? worldEditor.uploadWorldInteractionMusic(fileId, file, name, description)
+                : EditorApi.uploadVisualMusic(fileId, file, name, description);
+        },
+
+        getMusicList: async (fileId: string) => {
+            return isWorldInteraction
+                ? worldEditor.getWorldInteractionMusicList(fileId)
+                : EditorApi.getVisualMusicList(fileId);
+        },
+
+        getMusic: async (fileId: string, musicId: string) => {
+            return isWorldInteraction
+                ? worldEditor.getWorldInteractionMusic(fileId, musicId)
+                : EditorApi.getVisualMusic(fileId, musicId);
+        },
+
+        deleteMusic: async (fileId: string, filename: string) => {
+            return isWorldInteraction
+                ? worldEditor.deleteWorldInteractionMusic(fileId, filename)
+                : EditorApi.deleteVisualMusic(fileId, filename);
+        },
     };
 };
 

@@ -2,7 +2,7 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { CheckUploadStatusResponse, GenerateImgeResponse, NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, NpcSlot, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
+import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, GetMusicListResponse, NpcSlot, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
 import type { UploadWorldFileResponse } from "./worldInteractionApi.type";
 
 const worldEditor = {
@@ -242,12 +242,40 @@ const worldEditor = {
         );
     },
 
-    uploadMusic: (fileId: string, file: File) => {
+    uploadWorldInteractionMusic: (fileId: string, file: File, name: string, description: string) => {
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('name', name);
+        formData.append('description', description);
         return api.post<UploadMusicResponse>(
             `/world-interaction/edit/${fileId}/music`,
             formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+    },
+    getWorldInteractionMusicList: (fileId: string) => {
+        return api.get<GetMusicListResponse>(
+            `/world-interaction/edit/${fileId}/music`,
+        );
+    },
+    getWorldInteractionMusic: (fileId: string, musicId: string) => {
+        return api.get<Blob>(
+            `/world-interaction/${fileId}/music/${musicId}`,
+            {
+                responseType: 'blob',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                },
+            }
+        );
+    },
+    deleteWorldInteractionMusic: (fileId: string, filename: string) => {
+        return api.delete<ApiResponse<null>>(
+            `/world-interaction/edit/${fileId}/music/${filename}`
         );
     },
 };

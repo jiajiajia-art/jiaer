@@ -7,7 +7,7 @@ const getGalgamePresetApi = {
     getGalgameFileId: (fileId: string) =>
         api.get<GetGalgamePresetResponse>(`/visual/document/${fileId}`),
     getGalgameMusic: (presetId: string, musicId: string) => {
-        return api.get(`/visual/presets/${presetId}/musics/${musicId}`, {
+        return api.get(`/visual/${presetId}/music/${musicId}`, {
             responseType: 'blob'
         });
     },

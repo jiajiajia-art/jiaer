@@ -20,6 +20,8 @@ import WorldMapCard from './ScenesPanel/WorldMapCard';
 import SceneDetailActions from './ScenesPanel/SceneDetailActions';
 import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './ScenesPanel/utils';
 import DeletModal from '../goodsModal/DeletModal';
+import MusicList, { type MusicItem } from './UploadMusic/MusicList';
+import UploadMusicModal from './UploadMusic/UploadMusicModal';
 
 // ==================== 类型定义 ====================
 interface BgmItem {
@@ -78,17 +80,23 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     const [worldMapImageOverride, setWorldMapImageOverride] = useState<string | null>(null);
     const [sceneCostPoints, setSceneCostPoints] = useState<number | null>(null);
     
+    // 音乐相关状态
+    const [musicList, setMusicList] = useState<MusicItem[]>([]);
+    const [uploadMusicModalOpen, setUploadMusicModalOpen] = useState<boolean>(false);
+    
     // Refs
     const sceneFileInputRef = useRef<HTMLInputElement>(null);
     const newSceneFileInputRef = useRef<HTMLInputElement>(null);
     const worldMapFileInputRef = useRef<HTMLInputElement>(null);
     
-    // 常量数据
-    const [bgmLibrary] = useState<BgmItem[]>([
-        { id: 'bgm-morning', name: '晨光序曲', description: '校园 / 日常' },
-        { id: 'bgm-battle', name: '量子引擎警报', description: '紧张 / 战斗准备' },
-        { id: 'bgm-dream', name: '星潮呢喃', description: '浪漫 / 深夜' },
-    ]);
+    // 将音乐列表转换为 BGM 库格式
+    const bgmLibrary = useMemo<BgmItem[]>(() => {
+        return musicList.map(music => ({
+            id: music.filename,
+            name: music.name,
+            description: music.description,
+        }));
+    }, [musicList]);
 
     // 大地图图片
     const worldMapImage = worldMapImageOverride
@@ -188,6 +196,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         ]
     );
 
+
     // ==================== 副作用 ====================
     // 当 gameData 变化时，填充场景数据
     useEffect(() => {
@@ -197,7 +206,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             const convertedScenes: LocalScene[] = scenes.map((scene) => {
                 const sceneType = 'type' in scene ? (scene.type || '') : '';
                 const sceneImage = scene.image || '';
+                // 从 soundtrack 中提取文件名（可能包含路径）
                 const sceneSoundtrack = scene.soundtrack || '';
+                const soundtrackFilename = sceneSoundtrack ? (sceneSoundtrack) : '';
                 
                 return {
                     id: scene.id || '',
@@ -205,7 +216,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     type: sceneType,
                     desc: scene.description || '',
                     image: addImageTimestamp(sceneImage) || DEFAULT_SCENE_IMAGE,
-                    bgmId: sceneSoundtrack,
+                    bgmId: soundtrackFilename, // 保存文件名，用于匹配音乐列表
                 };
             });
 
@@ -215,6 +226,33 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             }
         }
     }, [gameData]);
+
+    useEffect(() => {
+        const loadMusicList = async () => {
+            if (!fileId || (mode !== 'worldInteraction' && mode !== 'visual') || !sceneApi) return;
+            
+            try {
+                const response = await sceneApi.getMusicList(fileId);
+                if (response.data?.success && response.data.files) {
+                    // 将文件列表转换为 MusicItem 格式
+                    const musicItems: MusicItem[] = response.data.files.map((music, index) => {
+                        return {
+                            id: `music-${index}`,
+                            name: music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename,
+                            description: music.description || music.originalFilename || music.filename,
+                            filename: music.filename,
+                            musicPath: music.url,
+                        };
+                    });
+                    setMusicList(musicItems);
+                }
+            } catch (error) {
+                console.error('加载音乐列表失败:', error);
+            }
+        };
+
+        loadMusicList();
+    }, [fileId, mode, sceneApi]);
 
     // 将 sceneData 转换为 sceneSetting 格式
     const getSceneSettingData = useCallback((): VisualSceneSetting | WorldSceneSetting | null => {
@@ -353,7 +391,53 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
     }, [fileId, sceneApi]);
 
-    // ==================== 早期返回 ====================
+    // 上传音乐
+    const handleUploadMusic = useCallback(async (file: File, name: string, description: string) => {
+        if (!fileId || !sceneApi) {
+            toast.error('缺少必要数据，无法上传');
+            return;
+        }
+
+        try {
+            const response = await sceneApi.uploadMusic(fileId, file, name, description);
+            if (response.data.success) {
+                toast.success('音乐上传成功');
+                const listResponse = await sceneApi.getMusicList(fileId);
+                if (listResponse.data.success && listResponse.data.files) {
+                    // 后端返回的数据结构：{ filename, originalFilename, name, description, uploadedAt, path, url }
+                    const uploadedFilename = response.data.filename || file.name;
+                    const musicItems: MusicItem[] = listResponse.data.files.map((music, index) => {
+                        // 检查是否是刚上传的文件（通过 filename 匹配）
+                        const isUploadedFile = music.filename === uploadedFilename || 
+                                               music.originalFilename === file.name ||
+                                               music.filename.includes(file.name);
+                        return {
+                            id: `music-${index}`,
+                            name: isUploadedFile 
+                                ? (name || music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename)
+                                : (music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename),
+                            description: isUploadedFile
+                                ? (description || music.description || music.originalFilename || music.filename)
+                                : (music.description || music.originalFilename || music.filename),
+                            filename: music.filename, // 使用 filename 用于 API 调用
+                            musicPath: music.url, // 如果有 URL，可以用于直接播放
+                        };
+                    });
+                    setMusicList(musicItems);
+                }
+                if (onDataChange) {
+                    onDataChange();
+                }
+            } else {
+                toast.error('音乐上传失败');
+            }
+        } catch (error) {
+            console.error('上传音乐失败:', error);
+            toast.error('上传音乐失败，请稍后重试');
+            throw error;
+        }
+    }, [fileId, sceneApi, onDataChange]);
+
     if (sceneData.length === 0 || !activeScene) {
         return (
             <div className={styles.panelContent}>
@@ -370,7 +454,6 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         );
     }
 
-    // ==================== 渲染 ====================
     return (
         <div className={styles.panelContent}>
             {/* 世界大地图：仅世界交互模式下显示 */}
@@ -410,6 +493,39 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     </div>
                 </button>
             </div>
+
+            {/* 音乐列表模块 */}
+            {(mode === 'worldInteraction' || mode === 'visual') && (
+                <MusicList
+                    musicList={musicList}
+                    onUploadClick={() => setUploadMusicModalOpen(true)}
+                    fileId={fileId}
+                    mode={mode}
+                    sceneApi={sceneApi}
+                    onMusicDeleted={async () => {
+                        // 删除成功后刷新音乐列表
+                        if (fileId && sceneApi) {
+                            try {
+                                const response = await sceneApi.getMusicList(fileId);
+                                if (response.data?.success && response.data.files) {
+                                    const musicItems: MusicItem[] = response.data.files.map((music, index) => {
+                                        return {
+                                            id: `music-${index}`,
+                                            name: music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename,
+                                            description: music.description || music.originalFilename || music.filename,
+                                            filename: music.filename,
+                                            musicPath: music.url,
+                                        };
+                                    });
+                                    setMusicList(musicItems);
+                                }
+                            } catch (error) {
+                                console.error('刷新音乐列表失败:', error);
+                            }
+                        }
+                    }}
+                />
+            )}
 
             {/* 主要内容区域 */}
             <div className={styles.sceneLayout}>
@@ -555,6 +671,13 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 message={`本次生成大地图将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
+            />
+
+            {/* 上传音乐弹窗 */}
+            <UploadMusicModal
+                isOpen={uploadMusicModalOpen}
+                onClose={() => setUploadMusicModalOpen(false)}
+                onConfirm={handleUploadMusic}
             />
 
             {/* 加载遮罩 */}

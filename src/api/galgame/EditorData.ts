@@ -1,5 +1,6 @@
+import type { ApiResponse } from "../api.types";
 import { api } from "../base";
-import type { CalculatePointsResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
+import type { CalculatePointsResponse, GetMusicListResponse, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
 import type { AllGameData, NPC, WorldSetting, Player, GenerateVariantImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse, GenerateImageRequest } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
@@ -123,7 +124,43 @@ const EditorApi = {
         return api.get<Blob>(url, {
             responseType: 'blob',
         });
-    }
+    },
+    uploadVisualMusic: (fileId: string, file: File, name: string, description: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('name', name);
+        formData.append('description', description);
+        return api.post<UploadMusicResponse>(
+            `/visual/edit/${fileId}/music`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+    },
+    getVisualMusicList: (fileId: string) => {
+        return api.get<GetMusicListResponse>(
+            `/visual/edit/${fileId}/music`,
+        );
+    },
+    getVisualMusic: (fileId: string, musicId: string) => {
+        return api.get<Blob>(
+            `/visual/${fileId}/music/${musicId}`,
+            {
+                responseType: 'blob',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                },
+            }
+        );
+    },
+    deleteVisualMusic: (fileId: string, filename: string) => {
+        return api.delete<ApiResponse<null>>(
+            `/visual/edit/${fileId}/music/${filename}`
+        );
+    },
 }
 
 export default EditorApi;

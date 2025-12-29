@@ -11,5 +11,5 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
-  return `https://kurangames.com/${imagePath}`;
+  return `${HOST_ADDRESS}${imagePath}`;
 };
