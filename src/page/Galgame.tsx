@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { CiLocationOn } from "react-icons/ci";
-import { IoClose } from "react-icons/io5";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
