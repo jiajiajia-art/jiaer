@@ -1,4 +1,5 @@
 import { authFetch } from '../../api/base';
+import { HOST_ADDRESS } from '../../config';
 import styles from './adventureModal.module.css';
 import { useGameStore } from '../../store/gameStore';
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -47,7 +48,7 @@ const AdventureModal: React.FC<AdventureModalProps> = ({ isOpen, onClose }) => {
         setError(null);
 
         try {
-            const response = await authFetch(`/api/backend/novel/generate`, {
+            const response = await authFetch(`${HOST_ADDRESS}/api/backend/novel/generate`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styles from './CharactersPanel.module.css';
-import { IMAGE_GENERATION_COST } from '../../utils/constants';
-import type { AllGameData } from '../../api/galgame/EditorData.type';
-import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
-import type { NPCSetting, NPC } from '../../api/galgame/EditorData.type';
-import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../api/worldInteraction/worldInteractionApi.type';
+import { IMAGE_GENERATION_COST } from '../../../utils/constants';
+import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
+import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
+import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
-import DeletModal from '../goodsModal/DeletModal';
+import DeletModal from '../../goodsModal/DeletModal';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
-import { useGameStore } from '../../store/gameStore';
-import type { Character, Variation, Relationship } from './CharactersPanel/types';
-import { VARIATION_TYPES } from './CharactersPanel/types';
-import { getNpcs, npcToCharacter, playerToCharacter } from './CharactersPanel/utils';
-import { createApiHelpers } from './CharactersPanel/apiHelpers';
-import { createHandlers } from './CharactersPanel/handlers';
+import { useGameStore } from '../../../store/gameStore';
+import type { Character, Variation, Relationship } from './types';
+import { VARIATION_TYPES } from './types';
+import { getNpcs, npcToCharacter, playerToCharacter } from './utils';
+import { createApiHelpers } from './apiHelpers';
+import { createHandlers } from './handlers';
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;

@@ -18,7 +18,7 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
     message,
     icon = '💻',
 }) => {
-    const url = 'https://kurangames.com/funloom/';
+    const url = new URL(import.meta.env.BASE_URL, window.location.origin).href;
 
     const handleCopy = async () => {
         try {

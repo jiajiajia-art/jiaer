@@ -1,2 +1,9 @@
-/funloom/* /funloom/index.html 200
+# Serve static assets referenced with BASE_URL prefix
+/funloom/assets/*  /assets/:splat  200
+/funloom/data/*    /data/:splat    200
+/funloom/pdf/*     /pdf/:splat     200
+/funloom/font/*    /font/:splat    200
+/funloom/vite.svg  /vite.svg       200
 
+# SPA fallback for all other app routes under /funloom
+/funloom/*         /index.html     200

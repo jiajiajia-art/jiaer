@@ -1,27 +1,27 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
-import { IMAGE_GENERATION_COST } from '../../utils/constants';
-import type { AllGameData } from '../../api/galgame/EditorData.type';
-import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
-import type { SceneSetting as VisualSceneSetting } from '../../api/galgame/EditorData.type';
-import type { SceneSetting as WorldSceneSetting } from '../../api/worldInteraction/worldInteractionApi.type';
+import { IMAGE_GENERATION_COST } from '../../../utils/constants';
+import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
+import type { SceneSetting as VisualSceneSetting } from '../../../api/galgame/EditorData.type';
+import type { SceneSetting as WorldSceneSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { 
     getScenes, 
     getSceneById, 
     isWorldInteractionMode, 
     type WorldSubScene
-} from './editorCompat';
-import { createSceneApiHelpers } from './ScenesPanel/apiHelpers';
-import { createSceneHandlers, type LocalScene as HandlerLocalScene } from './ScenesPanel/handlers';
-import SceneDetailForm from './ScenesPanel/SceneDetailForm';
-import SceneList from './ScenesPanel/SceneList';
-import WorldMapCard from './ScenesPanel/WorldMapCard';
-import SceneDetailActions from './ScenesPanel/SceneDetailActions';
-import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './ScenesPanel/utils';
-import DeletModal from '../goodsModal/DeletModal';
-import MusicList, { type MusicItem } from './UploadMusic/MusicList';
-import UploadMusicModal from './UploadMusic/UploadMusicModal';
+} from '../editorCompat';
+import { createSceneApiHelpers } from './apiHelpers';
+import { createSceneHandlers, type LocalScene as HandlerLocalScene } from './handlers';
+import SceneDetailForm from './SceneDetailForm';
+import SceneList from './SceneList';
+import WorldMapCard from './WorldMapCard';
+import SceneDetailActions from './SceneDetailActions';
+import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './utils';
+import DeletModal from '../../goodsModal/DeletModal';
+import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
+import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 
 // ==================== 类型定义 ====================
 interface BgmItem {
