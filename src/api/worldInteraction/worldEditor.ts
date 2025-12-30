@@ -248,7 +248,7 @@ const worldEditor = {
         formData.append('name', name);
         formData.append('description', description);
         return api.post<UploadMusicResponse>(
-            `/world-interaction/edit/${fileId}/music`,
+            `/world-interaction/musics/${fileId}`,
             formData,
             {
                 headers: {
@@ -264,7 +264,7 @@ const worldEditor = {
     },
     getWorldInteractionMusic: (fileId: string, musicId: string) => {
         return api.get<Blob>(
-            `/world-interaction/${fileId}/music/${musicId}`,
+            `/world-interaction/musics/${fileId}/${musicId}`,
             {
                 responseType: 'blob',
                 headers: {

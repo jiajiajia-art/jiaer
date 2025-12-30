@@ -8,7 +8,7 @@ const MapWorldData = {
     }),
   getMapGalgameMusic: (fileId: string, musicId: string) => {
     return api.get(
-      `/world-interaction/${fileId}/music/${encodeURIComponent(musicId)}`,
+      `/world-interaction/musics/${fileId}/${encodeURIComponent(musicId)}`,
       {
         responseType: "blob",
         headers: {

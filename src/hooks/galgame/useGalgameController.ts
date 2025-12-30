@@ -8,7 +8,7 @@ import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { HOST_ADDRESS } from "../../config";
+import { HOST_ADDRESS, getImageUrl } from "../../config";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
@@ -50,7 +50,9 @@ export const useGalgameController = () => {
     const requestTimeoutRef = useRef<number | null>(null);
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
-    const pendingHistoryRefreshRef = useRef<boolean>(false);
+    const presetDataLoadedRef = useRef<boolean>(false); // 标记预设数据是否已加载，避免重复加载
+    const lastRefreshRequestIdRef = useRef<number>(0); // 记录最后一次刷新的请求ID，避免重复刷新
+    const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null); // 保存刷新函数
 
     const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
@@ -69,62 +71,58 @@ export const useGalgameController = () => {
         setShowStoryIntro(false);
     }, [fileId, resetDisplayedSteps]);
 
-    // 加载预设数据
-    useEffect(() => {
-        const fetchPresetData = async () => {
-            if (!fileId) {
-                setIsLoading(false);
-                return;
-            }
+    // 加载预设数据 - 只在初始化时加载一次
+    const loadPresetData = useCallback(async () => {
+        if (!fileId || presetDataLoadedRef.current) {
+            return;
+        }
 
-            try {
-                setIsLoading(true);
-                const response = isPreset ? await getGalgamePresetApi.getGalgamePreset(fileId) 
-                    : await getGalgamePresetApi.getGalgameFileId(fileId);
+        try {
+            setIsLoading(true);
+            presetDataLoadedRef.current = true;
+            
+            const response =await getGalgamePresetApi.getGalgameFileId(fileId);
 
-                if (response.data.success) {
-                    const presetDataResp = response.data.data as GetGalgamePresetResponse;
-                    setPresetData(presetDataResp);
-                    setWorldSetting(presetDataResp.world);
-
-                    let sceneImage = '';
-                    if (presetDataResp.scenes?.scenes && presetDataResp.scenes.scenes.length > 0) {
-                        const scenes = presetDataResp.scenes.scenes;
-                        let initialScene = scenes[0];
-                        if (lastVisitedSceneId) {
-                            const matched = scenes.find((scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => scene.id === lastVisitedSceneId);
-                            if (matched) {
-                                initialScene = matched;
-                            }
-                        }
-
-                        if (initialScene) {
-                            setCurrentScene(initialScene);
-                        }
-
-                        const sceneImageUrl = (initialScene as any).image || initialScene.images;
-                        if (sceneImageUrl) {
-                            sceneImage = sceneImageUrl.startsWith('http')
-                                ? sceneImageUrl
-                                : `${HOST_ADDRESS}${sceneImageUrl}`;
-                            setBackgroundImage(sceneImage);
+            if (response.data.success) {
+                setPresetData(response.data);
+                setWorldSetting(response.data.world);
+                const scenes = response.data.scenes.scenes;
+                if (scenes && scenes.length > 0) {
+                    let initialScene = scenes[0];
+                    if (lastVisitedSceneId) {
+                        const matched = scenes.find(
+                            (scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => 
+                                scene.id === lastVisitedSceneId
+                        );
+                        if (matched) {
+                            initialScene = matched;
                         }
                     }
 
-                    if (!sceneImage) {
+                    // 设置当前场景状态
+                    setCurrentScene(initialScene);
+
+                    const sceneImagePath = (initialScene as any).image || initialScene.images;
+                    const sceneImageUrl = getImageUrl(sceneImagePath);
+                    if (sceneImageUrl) {
+                        setBackgroundImage(sceneImageUrl);
+                    } else {
                         setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
                     }
-                    setShowStoryIntro(history.length === 0);
                 }
-            } catch (error) {
-                console.error('获取游戏数据失败:', error);
-            } finally {
-                setIsLoading(false);
             }
-        };
+        } catch (error) {
+            console.error('获取游戏数据失败:', error);
+            presetDataLoadedRef.current = false; // 失败时重置标记，允许重试
+        } finally {
+            setIsLoading(false);
+        }
+    }, [fileId, lastVisitedSceneId, isPreset]);
 
-        fetchPresetData();
-    }, [fileId, lastVisitedSceneId, isPreset, history.length]);
+    useEffect(() => {
+        presetDataLoadedRef.current = false;
+        loadPresetData();
+    }, [fileId]);
 
     // 步骤处理器 - 关键修复：不在流式响应完成后立即刷新历史，而是标记待刷新
     const stepHandlers = useGalgameStep({
@@ -143,9 +141,11 @@ export const useGalgameController = () => {
             }
         },
         onStreamComplete: async () => {
-            // 流式响应完成时，标记需要刷新历史，但不立即刷新
-            // 等待打字机输出完成后再刷新
-            pendingHistoryRefreshRef.current = true;
+            // 流式响应完成时，直接调用刷新函数
+            // 函数内部会检查打字机状态，如果完成就立即刷新，如果没完成就等待
+            if (refreshHistoryAfterTypingRef.current) {
+                refreshHistoryAfterTypingRef.current();
+            }
         },
     });
 
@@ -216,21 +216,51 @@ export const useGalgameController = () => {
         stepHandlers.currentStep
     );
 
-    // 当打字机输出完成且流式响应已完成时，刷新历史数据
+    // 更新打字机状态 ref（用于其他逻辑判断）
     useEffect(() => {
-        const wasTyping = previousIsTypingRef.current;
-        const isNowTyping = isTyping;
-
-        // 打字机从输出中变为完成，且流式响应已完成（不再等待数据），且有 pending 标记时刷新
-        if (wasTyping && !isNowTyping && !stepHandlers.isWaitingForData && pendingHistoryRefreshRef.current) {
-            pendingHistoryRefreshRef.current = false;
-            refreshHistory().catch((error) => {
-                console.error('[Galgame] 刷新历史数据失败:', error);
-            });
-        }
-
         previousIsTypingRef.current = isTyping;
-    }, [isTyping, stepHandlers.isWaitingForData, refreshHistory]);
+    }, [isTyping]);
+
+    const refreshHistoryAfterTyping = useCallback(async () => {
+        const currentRequestId = stepHandlers.currentRequestId?.current || 0;
+        if (lastRefreshRequestIdRef.current === currentRequestId) {
+            return;
+        }
+        
+        if (isTyping) {
+            let attempts = 0;
+            const maxAttempts = 100;
+            
+            const checkTyping = setInterval(() => {
+                attempts++;
+                const currentIsTyping = previousIsTypingRef.current;
+                
+                if (!currentIsTyping || attempts >= maxAttempts) {
+                    clearInterval(checkTyping);
+                    const finalRequestId = stepHandlers.currentRequestId?.current || 0;
+                    if (!currentIsTyping && lastRefreshRequestIdRef.current !== finalRequestId) {
+                        lastRefreshRequestIdRef.current = finalRequestId;
+                        refreshHistory().catch((error) => {
+                            console.error('[Galgame] 刷新历史数据失败:', error);
+                        });
+                    }
+                }
+            }, 100);
+            
+            return;
+        }
+        
+        // 打字机已完成，直接刷新
+        lastRefreshRequestIdRef.current = currentRequestId;
+        refreshHistory().catch((error) => {
+            console.error('[Galgame] 刷新历史数据失败:', error);
+        });
+    }, [isTyping, refreshHistory, stepHandlers]);
+
+    // 保存刷新函数到 ref，供 onStreamComplete 调用
+    useEffect(() => {
+        refreshHistoryAfterTypingRef.current = refreshHistoryAfterTyping;
+    }, [refreshHistoryAfterTyping]);
 
     // 处理场景切换
     useEffect(() => {
