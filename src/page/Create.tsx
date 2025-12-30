@@ -20,7 +20,7 @@ import payApi from '../api/pay/payApi';
 import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
-import { getImageUrl } from '../config';
+import { getImageUrl } from '../utils/constants';
 import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 
 const Create: React.FC = () => {

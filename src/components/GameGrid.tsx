@@ -4,7 +4,7 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
-import { getImageUrl } from '../config';
+import { getImageUrl } from '../utils/constants';
 
 interface GameGridProps {
     games: UserGameData[];

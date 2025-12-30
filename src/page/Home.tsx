@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
-import { getImageUrl } from '../config';
+import { getImageUrl } from '../utils/constants';
 
 const Home: React.FC = () => {
     const [showGameModal, setShowGameModal] = useState(false);

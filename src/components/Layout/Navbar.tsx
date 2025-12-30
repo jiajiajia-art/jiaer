@@ -4,7 +4,7 @@ import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { IoSearch } from 'react-icons/io5';
-import { getImageUrl } from '../../config';
+import { getImageUrl } from '../../utils/constants';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { FaFileAlt, FaImage } from 'react-icons/fa';
 import styles from './GameForm.module.css';
 import type { UserGameData } from '../../api/home/getGameData.type';
-import { getImageUrl } from '../../config';
+import { getImageUrl } from '../../utils/constants';
 
 export interface GameFormData {
     gameName: string;

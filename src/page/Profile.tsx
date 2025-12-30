@@ -8,7 +8,7 @@ import Navbar from '../components/Layout/Navbar';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup } from 'react-icons/md';
 import toast, { Toaster } from 'react-hot-toast';
-import { getImageUrl } from '../config';
+import { getImageUrl } from '../utils/constants';
 
 const Profile: React.FC = () => {
     const { user, logout, updateUser } = useAuthStore();

@@ -8,12 +8,13 @@ import statisticsApi from '../api/statistics/statisticsApi';
 import createSessionApi from '../api/createGame/createSessionApi';
 import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
-import { RECORD_CONVERSION, getImageUrl } from '../config';
+import { RECORD_CONVERSION } from '../config';
 import ConfirmModal from './GoodsModal/ConfirmModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
+import { getImageUrl } from '../utils/constants';
 
 interface GameDetailModalProps {
     isOpen: boolean;
@@ -216,27 +217,21 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     // 处理开始游戏
     const handleStartGame = useCallback(async () => {
         if (!checkAuth()) return;
-
         if (!fileId) {
             alert('游戏信息错误，请重试');
             return;
         }
-        console.log(currentGame.version);
         
         if (currentGame.version == 'new') {
-            // 使用 Galgame 接口
             setFileId(fileId);
             setIsPreset(currentGame.is_preset == 1);
-            // 使用 fileId 作为 presetId
             const sessionId = await createGalgameSession(fileId);
             
             if (sessionId) {
                 setSessionId(sessionId);
-                // 通过 URL 参数传递 presetId
                 navigate(`/galgame`);
             }
         } else if(currentGame.version == 'old') {
-            // 使用普通游戏接口
             setFileId(fileId);
             setIsPreset(currentGame.is_preset == 1);
             const sessionId = await createSession(fileId);
@@ -246,7 +241,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 navigate('/rpgGame');
             }
         } else if(currentGame.version == 'map-plugin-version') {
-            // 使用地图世界接口
             setFileId(fileId);
             const sessionId = await createMapWorldSession(fileId);
             if (sessionId) {    
@@ -362,7 +356,6 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 }
                 setIsPurchaseModalOpen(false);
                 await fetchGameDetail();
-                // 通知父组件刷新游戏列表
                 onGameUpdated?.();
             } else {
                 toast.error(response.data.message || '购买失败');

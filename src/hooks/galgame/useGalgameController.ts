@@ -8,7 +8,8 @@ import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { HOST_ADDRESS, getImageUrl } from "../../config";
+import { HOST_ADDRESS } from "../../config";
+import { getImageUrlWithHost } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
@@ -83,10 +84,12 @@ export const useGalgameController = () => {
             
             const response =await getGalgamePresetApi.getGalgameFileId(fileId);
 
-            if (response.data.success) {
-                setPresetData(response.data);
-                setWorldSetting(response.data.world);
-                const scenes = response.data.scenes.scenes;
+            if (response.data.data) {
+                setPresetData(response.data.data);
+                setWorldSetting(response.data.data.world);
+                
+                const scenes = response.data.data.scenes.scenes;
+                console.log(scenes);
                 if (scenes && scenes.length > 0) {
                     let initialScene = scenes[0];
                     if (lastVisitedSceneId) {
@@ -102,8 +105,10 @@ export const useGalgameController = () => {
                     // 设置当前场景状态
                     setCurrentScene(initialScene);
 
-                    const sceneImagePath = (initialScene as any).image || initialScene.images;
-                    const sceneImageUrl = getImageUrl(sceneImagePath);
+                    const sceneImagePath = (initialScene as any).images || initialScene.images;
+                    console.log(sceneImagePath);
+                    const sceneImageUrl = getImageUrlWithHost(sceneImagePath);
+                    console.log(sceneImageUrl);
                     if (sceneImageUrl) {
                         setBackgroundImage(sceneImageUrl);
                     } else {

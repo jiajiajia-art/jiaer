@@ -11,7 +11,7 @@ import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/rpgGame/gameAction';
 import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
-import { getImageUrl } from '../../config';
+import { getImageUrl } from '../../utils/constants';
 import MobileTipModal from './MobileTipModal';
 
 interface GameStatsViewProps {

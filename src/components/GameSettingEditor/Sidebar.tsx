@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styles from './Sidebar.module.css';
-import { getImageUrl } from '../../config';
+import { getImageUrl } from '../../utils/constants';
 import PDFTemplateModal from './PDFTemplateModal';
 
 interface SidebarProps {
