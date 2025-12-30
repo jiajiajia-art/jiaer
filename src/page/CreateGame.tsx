@@ -11,7 +11,7 @@ import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import GameAction from '../api/rpgGame/gameAction';
 import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
-import DeletModal from '../components/goodsModal/DeletModal';
+import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import GameForm, { type GameFormData } from '../components/CreateGame/GameForm';
 import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
@@ -546,9 +546,9 @@ const CreateGame: React.FC = () => {
                 />
             )}
 
-            <DeletModal
+            <ConfirmModal
                 isOpen={showDeleteModal}
-                onDelete={handleConfirmDelete}
+                onConfirm={handleConfirmDelete}
                 onCancel={() => setShowDeleteModal(false)}
             />
 

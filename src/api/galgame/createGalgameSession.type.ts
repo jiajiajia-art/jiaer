@@ -27,17 +27,9 @@ export interface CreateGalgameSessionResponse {
 export interface CreateGalgameEditSessionRequest {
   success: boolean;
   message: string;
-  sessionId: string;
-  fileId: string;
-  presetId: string | null;
-  player: Player;
-  currentScene: {
-    id: string;
-    name: string;
-  };
-  worldInfo: {
-    title: string;
-    summary: string;
-    theme: string[];
+  data: {
+    session: string;
+    initFilesPath: string | null;
+    sessionDataSync: any | null;
   };
 }

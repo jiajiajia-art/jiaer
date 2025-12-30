@@ -19,7 +19,7 @@ import SceneList from './SceneList';
 import WorldMapCard from './WorldMapCard';
 import SceneDetailActions from './SceneDetailActions';
 import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './utils';
-import DeletModal from '../../goodsModal/DeletModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 
@@ -619,9 +619,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             </div>
 
             {/* 模态框 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={deleteModalOpen}
-                onDelete={handlers.handleConfirmDelete}
+                onConfirm={handlers.handleConfirmDelete}
                 onCancel={handlers.handleCancelDelete}
                 title="删除场景"
                 message="删除后场景数据不可恢复，请谨慎操作！"
@@ -629,9 +629,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 cancelButtonText="我再想想"
             />
 
-            <DeletModal
+            <ConfirmModal
                 isOpen={subsceneDeleteModalOpen}
-                onDelete={handlers.handleConfirmSubsceneDelete}
+                onConfirm={handlers.handleConfirmSubsceneDelete}
                 onCancel={handlers.handleCancelSubsceneDelete}
                 title="删除子场景"
                 message="删除后子场景数据不可恢复，请谨慎操作！"
@@ -639,9 +639,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 cancelButtonText="我再想想"
             />
 
-            <DeletModal
+            <ConfirmModal
                 isOpen={sceneCostModalOpen}
-                onDelete={handleConfirmGenerateAllSceneImages}
+                onConfirm={handleConfirmGenerateAllSceneImages}
                 onCancel={handleCancelGenerateAllSceneImages}
                 title="积分扣除确认"
                 message={
@@ -653,9 +653,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 cancelButtonText="取消"
             />
 
-            <DeletModal
+            <ConfirmModal
                 isOpen={singleSceneCostModalOpen}
-                onDelete={handleConfirmSingleSceneGenerate}
+                onConfirm={handleConfirmSingleSceneGenerate}
                 onCancel={handleCancelSingleSceneGenerate}
                 title="积分扣除确认"
                 message={`本次生成场景立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
@@ -663,9 +663,9 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 cancelButtonText="取消"
             />
 
-            <DeletModal
+            <ConfirmModal
                 isOpen={worldMapCostModalOpen}
-                onDelete={handleConfirmGenerateWorldMap}
+                onConfirm={handleConfirmGenerateWorldMap}
                 onCancel={handleCancelGenerateWorldMap}
                 title="积分扣除确认"
                 message={`本次生成大地图将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}

@@ -1,0 +1,92 @@
+import { useCallback } from 'react';
+import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import GameAction from '../../api/rpgGame/gameAction';
+import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
+import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
+import { useAuthStore } from '../../store/useAuthStore';
+import { useGameStore } from '../../store/gameStore';
+
+interface UseEditorSessionOptions {
+    fileId: string | null;
+    mode: string | null;
+}
+
+interface UseEditorSessionReturn {
+    createGalgameSession: () => Promise<string | null>;
+    handlePublishGame: (price: number | null, isFree: boolean) => Promise<void>;
+}
+
+export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): UseEditorSessionReturn => {
+    const { user } = useAuthStore();
+    const { setFileId, setSessionId, setIsPreset } = useGameStore();
+    const navigate = useNavigate();
+
+    const createGalgameSession = useCallback(async (): Promise<string | null> => {
+        if (!fileId || !user?.user?.id) return null;
+
+        try {
+            if (mode === 'worldInteraction') {
+                const sessionResponse = await createWorldSessionApi.createWorldEditSession({ fileId });
+                if (sessionResponse.data.success) {
+                    const sessionId = sessionResponse.data.session.sessionId;
+                    setFileId(fileId);
+                    setSessionId(sessionId);
+                    navigate(`/galgameMap`);
+                    return sessionId;
+                } else {
+                    toast.error((sessionResponse.data as any)?.message || '创建世界交互游戏失败，请重试');
+                    return null;
+                }
+            } else {
+                const sessionResponse = await createGalgameSessionApi.createGalgameEditSession({ fileId: fileId });
+                if (sessionResponse.data.success) {
+                    const sessionId = sessionResponse.data.data.session;
+                    setFileId(fileId);
+                    setSessionId(sessionId);
+                    setIsPreset(false);
+                    navigate(`/galgame`);
+                    return sessionId;
+                } else {
+                    toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
+                    return null;
+                }
+            }
+        } catch (error: any) {
+            console.error('❌ Session 创建错误:', error);
+            const errorMessage = error?.response?.data?.message || error?.response?.data?.error || error.message || '创建游戏失败，请稍后重试';
+            toast.error(errorMessage);
+            return null;
+        }
+    }, [user?.user?.id, fileId, navigate, setFileId, setSessionId, setIsPreset, mode]);
+
+    const handlePublishGame = useCallback(async (price: number | null, isFree: boolean): Promise<void> => {
+        if (!fileId) return;
+
+        try {
+            const priceAmount = isFree ? 0 : (price || 0);
+            const response = await GameAction.publishGame({
+                fileId: fileId,
+                priceAmount: priceAmount,
+            });
+
+            if (response.data.success) {
+                navigate('/create');
+            } else {
+                console.error('发布游戏失败:', response.data);
+                const errorMessage = response.data.message || '发布游戏失败';
+                alert(errorMessage);
+            }
+        } catch (error: any) {
+            console.error('发布游戏失败:', error);
+            const errorMessage = error.response?.data?.message || error.message || '发布游戏失败';
+            alert(errorMessage);
+        }
+    }, [fileId, navigate]);
+
+    return {
+        createGalgameSession,
+        handlePublishGame,
+    };
+};
+

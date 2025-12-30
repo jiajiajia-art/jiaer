@@ -41,6 +41,7 @@ interface PlacedNPC {
     x: number;
     y: number;
     scale: number;
+    zIndex?: number; // 层级设置，用于控制显示顺序
 }
 
 interface PlacedSubScene {
@@ -64,8 +65,10 @@ const SCENE_ICON_SIZE = 40; // 场景图标大小
 const DEFAULT_SCALE = 1.0;
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 2.0;
-const SCALE_STEP = 0.1;
 const MAX_NPCS = 3;
+const DEFAULT_Z_INDEX = 1; // 默认层级
+const MIN_Z_INDEX = 0;
+const MAX_Z_INDEX = 999;
 
 const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId, onDataChange, isActive }) => {
     // 子场景tab状态
@@ -75,6 +78,16 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     const [draggingNPCId, setDraggingNPCId] = useState<string | null>(null);
     const [selectedNPCId, setSelectedNPCId] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+    const [resizingNPCId, setResizingNPCId] = useState<string | null>(null);
+    const [resizeHandle, setResizeHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
+    const [resizeStart, setResizeStart] = useState<{ 
+        mouseX: number; 
+        mouseY: number; 
+        npcCenterX: number; 
+        npcCenterY: number; 
+        initialDistance: number;
+        scale: number 
+    } | null>(null);
     
     // 场景tab状态
     const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
@@ -268,7 +281,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         }
     }, [sceneImageUrl, mapTab, currentScene?.id]);
 
-    // 初始化子场景tab
+    // 初始化子场景tab（添加sceneSetting依赖，确保数据刷新后重新加载NPC）
     useEffect(() => {
         if (subScenes.length === 0) {
             setSelectedSubSceneId(null);
@@ -294,13 +307,14 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                 id: `slot_${targetSubScene.id}_${index}`,
                 x: slot.position?.[0] ?? 0.5,
                 y: slot.position?.[1] ?? 0.5,
-                scale: slot.zoom ?? DEFAULT_SCALE
+                scale: DEFAULT_SCALE, // 缩放比例使用默认值，因为zoom字段现在存储层级
+                zIndex: slot.zoom ?? DEFAULT_Z_INDEX // zoom字段存储层级（zIndex）
             }));
             setPlacedNPCs(loadedNPCs);
         } else {
             setPlacedNPCs([]);
         }
-    }, [subScenes, selectedSubSceneId, currentSubScene]);
+    }, [subScenes, selectedSubSceneId, currentSubScene, sceneSetting]);
 
     // 初始化场景tab
     useEffect(() => {
@@ -591,9 +605,47 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         setDraggingNPCId('new');
     }, [placedNPCs.length]);
 
-    // 实时鼠标移动处理（用于拖拽NPC），确保 NPC 不会被拖出图片可见区域
+    // 实时鼠标移动处理（用于拖拽NPC和调整大小）
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
+            // 处理调整大小
+            if (resizingNPCId && resizeHandle && resizeStart) {
+                const image = imageRef.current;
+                const preview = previewRef.current;
+                if (!image || !preview) return;
+                
+                const bounds = getImageDisplayBounds(image, preview);
+                const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+                
+                if (displayWidth <= 0 || displayHeight <= 0) return;
+                
+                const previewRect = preview.getBoundingClientRect();
+                const mouseX = e.clientX - previewRect.left;
+                const mouseY = e.clientY - previewRect.top;
+                
+                // 转换为相对于图片内容的坐标
+                const mouseXInImage = mouseX - offsetX;
+                const mouseYInImage = mouseY - offsetY;
+                
+                // 计算鼠标到NPC中心的当前距离
+                const currentDistance = Math.sqrt(
+                    Math.pow(mouseXInImage - resizeStart.npcCenterX, 2) + 
+                    Math.pow(mouseYInImage - resizeStart.npcCenterY, 2)
+                );
+                
+                // 计算新的缩放比例（基于距离比例）
+                const newScale = (currentDistance / resizeStart.initialDistance) * resizeStart.scale;
+                const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+                
+                setPlacedNPCs(prev => prev.map(n => 
+                    n.id === resizingNPCId 
+                        ? { ...n, scale: clampedScale }
+                        : n
+                ));
+                return;
+            }
+            
+            // 处理拖拽NPC
             if (!draggingNPCId || !dragOffset) return;
             
             const image = imageRef.current;
@@ -649,9 +701,12 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         const handleMouseUp = () => {
             setDraggingNPCId(null);
             setDragOffset(null);
+            setResizingNPCId(null);
+            setResizeHandle(null);
+            setResizeStart(null);
         };
 
-        if (draggingNPCId) {
+        if (draggingNPCId || resizingNPCId) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -660,7 +715,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [draggingNPCId, dragOffset, getImageDisplayBounds, placedNPCs]);
+    }, [draggingNPCId, dragOffset, resizingNPCId, resizeHandle, resizeStart, getImageDisplayBounds, placedNPCs]);
 
     // 处理从侧边栏拖拽新NPC
     const handleDrop = useCallback((e: React.DragEvent) => {
@@ -700,7 +755,8 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
             id: `npc_${Date.now()}`,
             x: relativeX,
             y: relativeY,
-            scale: DEFAULT_SCALE
+            scale: DEFAULT_SCALE,
+            zIndex: DEFAULT_Z_INDEX
         };
         
         setPlacedNPCs(prev => [...prev, newNPC]);
@@ -740,33 +796,100 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
         setSelectedNPCId(npcId);
     }, [placedNPCs, getImageDisplayBounds]);
 
-    const handleWheel = useCallback((e: React.WheelEvent, npcId: string) => {
+    // 处理调整大小开始
+    const handleResizeStart = useCallback((e: React.MouseEvent, npcId: string, handle: 'nw' | 'ne' | 'sw' | 'se') => {
         e.preventDefault();
         e.stopPropagation();
         
-        const delta = e.deltaY > 0 ? -SCALE_STEP : SCALE_STEP;
-        setPlacedNPCs(prev => prev.map(npc => {
-            if (npc.id === npcId) {
-                const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, npc.scale + delta));
-                return { ...npc, scale: newScale };
-            }
-            return npc;
-        }));
-    }, []);
+        const npc = placedNPCs.find(n => n.id === npcId);
+        if (!npc) return;
+        
+        const image = imageRef.current;
+        const preview = previewRef.current;
+        if (!image || !preview) return;
+        
+        const bounds = getImageDisplayBounds(image, preview);
+        const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+        
+        if (displayWidth <= 0 || displayHeight <= 0) return;
+        
+        // 计算NPC中心点在图片中的位置
+        const npcCenterX = npc.x * displayWidth;
+        const npcCenterY = npc.y * displayHeight;
+        
+        // 计算手柄位置（相对于图片内容）
+        let handleX = 0;
+        let handleY = 0;
+        const halfWidth = (BASE_NPC_WIDTH * npc.scale) / 2;
+        const halfHeight = (BASE_NPC_HEIGHT * npc.scale) / 2;
+        
+        switch (handle) {
+            case 'nw':
+                handleX = npcCenterX - halfWidth;
+                handleY = npcCenterY - halfHeight;
+                break;
+            case 'ne':
+                handleX = npcCenterX + halfWidth;
+                handleY = npcCenterY - halfHeight;
+                break;
+            case 'sw':
+                handleX = npcCenterX - halfWidth;
+                handleY = npcCenterY + halfHeight;
+                break;
+            case 'se':
+                handleX = npcCenterX + halfWidth;
+                handleY = npcCenterY + halfHeight;
+                break;
+        }
+        
+        // 计算初始距离（从NPC中心到手柄）
+        const initialDistance = Math.sqrt(
+            Math.pow(handleX - npcCenterX, 2) + 
+            Math.pow(handleY - npcCenterY, 2)
+        );
+        
+        const previewRect = preview.getBoundingClientRect();
+        const mouseX = e.clientX - previewRect.left;
+        const mouseY = e.clientY - previewRect.top;
+        const mouseXInImage = mouseX - offsetX;
+        const mouseYInImage = mouseY - offsetY;
+        
+        setResizingNPCId(npcId);
+        setResizeHandle(handle);
+        setResizeStart({
+            mouseX: mouseXInImage,
+            mouseY: mouseYInImage,
+            npcCenterX,
+            npcCenterY,
+            initialDistance,
+            scale: npc.scale
+        });
+    }, [placedNPCs, getImageDisplayBounds]);
 
-    const handleScaleChange = useCallback((npcId: string, delta: number) => {
-        setPlacedNPCs(prev => prev.map(npc => {
-            if (npc.id === npcId) {
-                const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, npc.scale + delta));
-                return { ...npc, scale: newScale };
-            }
-            return npc;
-        }));
-    }, []);
 
     const handleRemoveNPC = useCallback((npcId: string) => {
         setPlacedNPCs(prev => prev.filter(npc => npc.id !== npcId));
         setSelectedNPCId(null);
+    }, []);
+
+    // 修改NPC层级
+    const handleChangeZIndex = useCallback((npcId: string, delta: number) => {
+        setPlacedNPCs(prev => prev.map(npc => {
+            if (npc.id === npcId) {
+                const currentZIndex = npc.zIndex ?? DEFAULT_Z_INDEX;
+                const newZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, currentZIndex + delta));
+                return { ...npc, zIndex: newZIndex };
+            }
+            return npc;
+        }));
+    }, []);
+
+    // 直接设置NPC层级
+    const handleSetZIndex = useCallback((npcId: string, zIndex: number) => {
+        const clampedZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, zIndex));
+        setPlacedNPCs(prev => prev.map(npc => 
+            npc.id === npcId ? { ...npc, zIndex: clampedZIndex } : npc
+        ));
     }, []);
 
     const handleConfirm = useCallback(async () => {
@@ -782,7 +905,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
 
         const npcSlots: NpcSlot[] = placedNPCs.map(npc => ({
             position: [npc.x, npc.y] as [number, number],
-            zoom: npc.scale
+            zoom: npc.zIndex ?? DEFAULT_Z_INDEX, // zoom字段存储层级（zIndex）
         }));
 
         try {
@@ -794,7 +917,11 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
             );
             
             if (response.data.success) {
-                toast.success('NPC位置已保存');
+                toast.success('NPC位置和层级已保存');
+                // 保存成功后刷新数据，确保切换场景后能正确显示
+                if (onDataChange) {
+                    onDataChange();
+                }
             }
         } catch (error: any) {
             console.error('保存失败:', error);
@@ -1332,8 +1459,10 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 </div>
                             )}
                             
-                            {/* 只在内容准备好时才渲染NPC */}
-                            {isSubSceneContentReady && placedNPCs.map(npc => {
+                            {/* 只在内容准备好时才渲染NPC（按层级排序） */}
+                            {isSubSceneContentReady && [...placedNPCs]
+                                .sort((a, b) => (a.zIndex ?? DEFAULT_Z_INDEX) - (b.zIndex ?? DEFAULT_Z_INDEX))
+                                .map(npc => {
                                 const pos = getNPCPosition(npc);
                                 const isSelected = selectedNPCId === npc.id;
                                 const isDragging = draggingNPCId === npc.id;
@@ -1352,9 +1481,9 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             height: `${pos.height}px`,
                                             opacity: pos.visible ? 1 : 0,
                                             transition: 'opacity 0.3s ease',
+                                            zIndex: npc.zIndex ?? DEFAULT_Z_INDEX, // 使用层级控制显示顺序
                                         }}
                                         onMouseDown={(e) => handleNPCMouseDown(e, npc.id)}
-                                        onWheel={(e) => handleWheel(e, npc.id)}
                                         onClick={() => setSelectedNPCId(npc.id)}
                                     >
                                         <img 
@@ -1364,38 +1493,78 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                             className={styles.npcImage}
                                         />
                                         {isSelected && (
-                                            <div className={styles.npcControls}>
-                                                <button 
-                                                    className={styles.scaleBtn}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleScaleChange(npc.id, -SCALE_STEP);
-                                                    }}
-                                                >
-                                                    −
-                                                </button>
-                                                <span className={styles.scaleText}>
-                                                    {(npc.scale * 100).toFixed(0)}%
-                                                </span>
-                                                <button 
-                                                    className={styles.scaleBtn}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleScaleChange(npc.id, SCALE_STEP);
-                                                    }}
-                                                >
-                                                    +
-                                                </button>
-                                                <button 
-                                                    className={styles.removeBtn}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRemoveNPC(npc.id);
-                                                    }}
-                                                >
-                                                    移除
-                                                </button>
-                                            </div>
+                                            <>
+                                                {/* 四个角的调整手柄 */}
+                                                <div 
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleNW}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'nw')}
+                                                />
+                                                <div 
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleNE}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'ne')}
+                                                />
+                                                <div 
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleSW}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'sw')}
+                                                />
+                                                <div 
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleSE}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'se')}
+                                                />
+                                                {/* 控制按钮 */}
+                                                <div className={styles.npcControls}>
+                                                    {/* 层级控制 */}
+                                                    <div className={styles.zIndexControl}>
+                                                        <span className={styles.zIndexLabel}>层级:</span>
+                                                        <button
+                                                            className={styles.zIndexBtnSmall}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleChangeZIndex(npc.id, -1);
+                                                            }}
+                                                            disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) <= MIN_Z_INDEX}
+                                                            title="降低层级"
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <input
+                                                            type="number"
+                                                            className={styles.zIndexInputSmall}
+                                                            value={npc.zIndex ?? DEFAULT_Z_INDEX}
+                                                            min={MIN_Z_INDEX}
+                                                            max={MAX_Z_INDEX}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={(e) => {
+                                                                const value = parseInt(e.target.value, 10);
+                                                                if (!isNaN(value)) {
+                                                                    handleSetZIndex(npc.id, value);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            className={styles.zIndexBtnSmall}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleChangeZIndex(npc.id, 1);
+                                                            }}
+                                                            disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) >= MAX_Z_INDEX}
+                                                            title="提高层级"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                    {/* 移除按钮 */}
+                                                    <button 
+                                                        className={styles.removeBtn}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRemoveNPC(npc.id);
+                                                        }}
+                                                    >
+                                                        移除
+                                                    </button>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 );
@@ -1405,7 +1574,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 拖拽 NPC 到场景，支持缩放（已放置: {placedNPCs.length}/{MAX_NPCS}）
                                 {selectedNPCId && (
                                     <span className={styles.hintSelected}>
-                                        {' '}• 滚轮调整大小
+                                        {' '}• 拖拽四个角调整大小
                                     </span>
                                 )}
                             </div>
@@ -1504,7 +1673,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                 <div className={styles.confirmHint}>
                                     {placedNPCs.length === 0 
                                         ? '请先放置NPC到场景中'
-                                        : `将保存 ${placedNPCs.length} 个NPC的位置和缩放信息`
+                                        : `将保存 ${placedNPCs.length} 个NPC的位置和层级信息`
                                     }
                                 </div>
                             </div>

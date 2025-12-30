@@ -147,7 +147,7 @@ const EditorApi = {
     },
     getVisualMusic: (fileId: string, musicId: string) => {
         return api.get<Blob>(
-            `/visual/${fileId}/music/${musicId}`,
+            `/visual/music/${fileId}/${musicId}`,
             {
                 responseType: 'blob',
                 headers: {

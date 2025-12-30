@@ -72,15 +72,12 @@ const GalgameMap = () => {
     // 当 sessionId 变化时，检查存储的 sessionId 是否匹配
     useEffect(() => {
         if (sessionId) {
-            // 如果存储的 sessionId 与当前 sessionId 不匹配，清除旧数据
             if (storedSessionId && storedSessionId !== sessionId) {
                 console.log('[WorldInteraction] sessionId 不匹配，清除旧存储数据', { stored: storedSessionId, current: sessionId });
                 clearState();
             }
-            // 更新存储的 sessionId
             setStoredSessionId(sessionId);
         } else {
-            // sessionId 为空时清除状态
             clearState();
         }
     }, [sessionId, storedSessionId, setStoredSessionId, clearState]);
@@ -103,7 +100,6 @@ const GalgameMap = () => {
             mapMusicManager.setCurrentMusicUrl(null);
             mapMusicManager.setCurrentMusicId(null);
             mapMusicManager.setIsLoading(false);
-            // 重置 Store 中的音乐播放状态
             useMapGalgameStore.getState().setMusicPlaying(false);
         };
     }, []);

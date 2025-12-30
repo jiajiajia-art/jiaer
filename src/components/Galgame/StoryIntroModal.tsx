@@ -23,7 +23,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
 
     const title = presetData?.world?.title || '故事';
     const preamble = presetData?.world?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
-    const playerImage = presetData?.scenes?.scenes[0]?.image;
+    const playerImage = presetData?.scenes?.scenes[0]?.images;
 
     const { displayedText, isTyping } = useStoryTyping({
         text: preamble,

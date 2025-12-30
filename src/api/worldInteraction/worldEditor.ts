@@ -278,6 +278,45 @@ const worldEditor = {
             `/world-interaction/edit/${fileId}/music/${filename}`
         );
     },
+    // 功能性NPC相关接口
+    getFunctionalNPCs: (fileId: string) => {
+        return api.get<ApiResponse<any>>(
+            `/world-interaction/edit/${fileId}/functional-npcs`
+        );
+    },
+    createFunctionalNPC: (fileId: string, data: any) => {
+        return api.post<ApiResponse<any>>(
+            `/world-interaction/edit/${fileId}/functional-npcs`,
+            data
+        );
+    },
+    updateFunctionalNPC: (fileId: string, npcId: string, data: any) => {
+        return api.put<ApiResponse<any>>(
+            `/world-interaction/edit/${fileId}/functional-npcs/${npcId}`,
+            data
+        );
+    },
+    deleteFunctionalNPC: (fileId: string, npcId: string) => {
+        return api.delete<ApiResponse<null>>(
+            `/world-interaction/edit/${fileId}/functional-npcs/${npcId}`
+        );
+    },
+    uploadFunctionalNPCImage: (fileId: string, npcId: string, file: File, buttonText?: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        if (buttonText) {
+            formData.append('buttonText', buttonText);
+        }
+        return api.post<ApiResponse<any>>(
+            `/world-interaction/edit/${fileId}/functional-npcs/${npcId}/image`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+    },
 };
 
 export default worldEditor;

@@ -7,7 +7,7 @@ import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
-import DeletModal from '../../goodsModal/DeletModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { useGameStore } from '../../../store/gameStore';
@@ -1098,9 +1098,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             )}
 
             {/* 删除确认弹窗 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={deleteModalOpen}
-                onDelete={handleConfirmDelete}
+                onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
                 title="删除角色"
                 message="删除后角色数据不可恢复，请谨慎操作！"
@@ -1109,9 +1109,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             />
 
             {/* 一键生成角色立绘积分提示 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={npcCostModalOpen}
-                onDelete={confirmGenerateAllNpcImages}
+                onConfirm={confirmGenerateAllNpcImages}
                 onCancel={() => setNpcCostModalOpen(false)}
                 title="积分扣除确认"
                 message={
@@ -1124,9 +1124,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             />
 
             {/* 单个角色立绘生成积分提示 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={singleNpcCostModalOpen}
-                onDelete={confirmSingleNpcGenerate}
+                onConfirm={confirmSingleNpcGenerate}
                 onCancel={cancelSingleNpcGenerate}
                 title="积分扣除确认"
                 message={`本次生成角色立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
@@ -1135,9 +1135,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             />
 
             {/* 差分图片生成积分提示 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={variationCostModalOpen}
-                onDelete={confirmVariationGenerate}
+                onConfirm={confirmVariationGenerate}
                 onCancel={cancelVariationGenerate}
                 title="积分扣除确认"
                 message={`本次生成差分图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}

@@ -4,7 +4,7 @@ import styles from './MusicList.module.css';
 import type { SceneApiHelpers } from '../ScenesPanel/apiHelpers';
 import { IoPauseCircleOutline, IoPlaySkipForwardCircleOutline } from 'react-icons/io5';
 import { MdDeleteOutline } from 'react-icons/md';
-import DeletModal from '../../goodsModal/DeletModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 
 export interface MusicItem {
     id: string;
@@ -514,9 +514,9 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
             )}
 
             {/* 删除确认弹窗 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={deleteModalOpen}
-                onDelete={handleConfirmDelete}
+                onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
                 title="删除音乐"
                 message={`确定要删除音乐"${musicToDelete?.name || ''}"吗？删除后不可恢复。`}

@@ -21,7 +21,7 @@ import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../config';
-import DeletModal from '../components/goodsModal/DeletModal';
+import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
@@ -577,9 +577,9 @@ const Create: React.FC = () => {
             />
 
             {/* 结算确认弹窗 */}
-            <DeletModal
+            <ConfirmModal
                 isOpen={isSettleModalOpen}
-                onDelete={handleSettle}
+                onConfirm={handleSettle}
                 onCancel={() => setIsSettleModalOpen(false)}
                 title="确认结算"
                 message={`确定要结算当前总收益 ${stats.totalAmount} 积分吗？结算后积分将转入账户余额。`}

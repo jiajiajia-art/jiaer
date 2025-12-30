@@ -1,9 +1,9 @@
 import React from 'react';
-import styles from './DeleteModal.module.css';
+import styles from './ConfirmModal.module.css';
 
-interface DeletModalProps {
+interface ConfirmModalProps {
     isOpen: boolean;
-    onDelete: () => void;
+    onConfirm: () => void;
     onCancel: () => void;
     title?: string;
     message?: string;
@@ -11,14 +11,14 @@ interface DeletModalProps {
     cancelButtonText?: string;
 }
 
-const DeletModal: React.FC<DeletModalProps> = ({
+const ConfirmModal: React.FC<ConfirmModalProps> = ({
     isOpen,
-    onDelete,
+    onConfirm,
     onCancel,
-    title = "删除作品",
-    message = "删除后作品不可恢复，请谨慎操作！",
-    confirmButtonText = "确认删除",
-    cancelButtonText = "我再想想",
+    title = "确认操作",
+    message = "请确认是否继续此操作？",
+    confirmButtonText = "确认",
+    cancelButtonText = "取消",
 }) => {
     if (!isOpen) return null;
 
@@ -32,7 +32,7 @@ const DeletModal: React.FC<DeletModalProps> = ({
                             <div className={styles.titleIcon}>
                                 <img 
                                     src={`${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png`} 
-                                    alt="删除图标"
+                                    alt="确认图标"
                                     className={styles.icon}
                                 />
                             </div>
@@ -53,7 +53,7 @@ const DeletModal: React.FC<DeletModalProps> = ({
                         </div>
                         
                         <div className={styles.buttonGroup}>
-                            <button className={styles.confirmButton} onClick={onDelete}>
+                            <button className={styles.confirmButton} onClick={onConfirm}>
                                 {confirmButtonText}
                             </button>
                             <button className={styles.cancelButton} onClick={onCancel}>
@@ -67,4 +67,5 @@ const DeletModal: React.FC<DeletModalProps> = ({
     );
 };
 
-export default DeletModal;
+export default ConfirmModal;
+

@@ -40,10 +40,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
         },
     ];
 
-    // 只在 worldInteraction 模式下添加地图编辑模块
+    // 只在 worldInteraction 模式下添加地图编辑和功能性NPC模块
     const navItems = mode === 'worldInteraction' 
         ? [
             ...baseNavItems,
+            // {
+            //     id: 'functionalNPCs',
+            //     number: '5',
+            //     title: '剧情事件插件',
+            //     subtitle: '功能性NPC管理',
+            // },
             {
                 id: 'mapEdit',
                 number: '5',

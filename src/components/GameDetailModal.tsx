@@ -9,7 +9,7 @@ import createSessionApi from '../api/createGame/createSessionApi';
 import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION, getImageUrl } from '../config';
-import DeletModal from './goodsModal/DeletModal';
+import ConfirmModal from './GoodsModal/ConfirmModal';
 import toast, { Toaster } from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
@@ -67,7 +67,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
     const fileId = useMemo(() => currentGame?.file_id || currentGame?.id, [currentGame]);
 
-    const [isDeletModalOpen, setIsDeletModalOpen] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
     // 检查用户是否登录
@@ -325,7 +325,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         } catch (error) {
             console.error('删除存档失败:', error);
         } finally {
-            setIsDeletModalOpen(false);
+            setIsConfirmModalOpen(false);
         }
     }, [checkAuth, fileId, userId]);
 
@@ -396,7 +396,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     <img src={`${import.meta.env.BASE_URL}${CLOSE_BUTTON_PATH}`} alt="关闭" />
                 </button>
                 {currentGame.is_public && (
-                    <button className={styles.handleDeleteSession} onClick={() => setIsDeletModalOpen(true)}>
+                    <button className={styles.handleDeleteSession} onClick={() => setIsConfirmModalOpen(true)}>
                         删除存档
                     </button>
                 )}
@@ -529,10 +529,10 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     </div>
                 </div>
             </div>
-            <DeletModal isOpen={isDeletModalOpen} onDelete={handleDeleteSession} onCancel={() => setIsDeletModalOpen(false)} />
-            <DeletModal
+            <ConfirmModal isOpen={isConfirmModalOpen} onConfirm={handleDeleteSession} onCancel={() => setIsConfirmModalOpen(false)} />
+            <ConfirmModal
                 isOpen={isPurchaseModalOpen}
-                onDelete={purchaseGame}
+                onConfirm={purchaseGame}
                 onCancel={() => setIsPurchaseModalOpen(false)}
                 title="购买游戏"
                 message={`确认花费 ${currentGame.special_price_amount > 0 ? currentGame.special_price_amount : currentGame.price_amount} 积分购买该游戏吗？`}
