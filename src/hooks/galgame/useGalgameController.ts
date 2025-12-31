@@ -8,7 +8,6 @@ import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { HOST_ADDRESS } from "../../config";
 import { getImageUrlWithHost } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
@@ -19,7 +18,7 @@ export type { Message } from "./useGalgameMessage";
 
 export const useGalgameController = () => {
     const { user } = useAuthStore();
-    const { fileId, sessionId, isPreset } = useGameStore();
+    const { fileId, sessionId } = useGameStore();
     const navigate = useNavigate();
 
     // 存储完整 allSteps 的 key（按 sessionId 隔离）
@@ -57,6 +56,39 @@ export const useGalgameController = () => {
 
     const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
+    // 获取玩家图片URL的工具函数
+    const getPlayerImageUrl = useCallback((): string | undefined => {
+        const images = worldSetting?.player?.images as any;
+        if (images) {
+            const playerImage = typeof images === 'string'
+                ? images
+                : (images?.base || images);
+            if (playerImage && typeof playerImage === 'string') {
+                return getImageUrlWithHost(playerImage);
+            }
+        }
+        return undefined;
+    }, [worldSetting]);
+
+    // 创建选择消息的工具函数
+    const createChoiceMessage = useCallback((choiceData: ReturnType<typeof extractChoiceFromHistory>) => {
+        if (!choiceData) return null;
+        
+        return {
+            id: Date.now(),
+            type: 'choice' as const,
+            message: choiceData.title
+                ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
+                : (choiceData.text || '请选择你的行动'),
+            options: choiceData.options.map((opt, index) => ({
+                id: index + 1,
+                text: extractPlainText(opt),
+            })),
+            characterImage: getPlayerImageUrl(),
+            characterPosition: 'right' as const,
+        };
+    }, [getPlayerImageUrl]);
+
     const resetDisplayedSteps = useCallback(() => {
         setCompletedSteps([]);
         previousStepRef.current = null;
@@ -72,7 +104,6 @@ export const useGalgameController = () => {
         setShowStoryIntro(false);
     }, [fileId, resetDisplayedSteps]);
 
-    // 加载预设数据 - 只在初始化时加载一次
     const loadPresetData = useCallback(async () => {
         if (!fileId || presetDataLoadedRef.current) {
             return;
@@ -81,7 +112,6 @@ export const useGalgameController = () => {
         try {
             setIsLoading(true);
             presetDataLoadedRef.current = true;
-            
             const response =await getGalgamePresetApi.getGalgameFileId(fileId);
 
             if (response.data.data) {
@@ -89,7 +119,6 @@ export const useGalgameController = () => {
                 setWorldSetting(response.data.data.world);
                 
                 const scenes = response.data.data.scenes.scenes;
-                console.log(scenes);
                 if (scenes && scenes.length > 0) {
                     let initialScene = scenes[0];
                     if (lastVisitedSceneId) {
@@ -105,9 +134,8 @@ export const useGalgameController = () => {
                     // 设置当前场景状态
                     setCurrentScene(initialScene);
 
-                    const sceneImagePath = (initialScene as any).images || initialScene.images;
-                    console.log(sceneImagePath);
-                    const sceneImageUrl = getImageUrlWithHost(sceneImagePath);
+                    const sceneImagePath = initialScene.image || initialScene.images;
+                    const sceneImageUrl = getImageUrlWithHost(sceneImagePath as string);
                     console.log(sceneImageUrl);
                     if (sceneImageUrl) {
                         setBackgroundImage(sceneImageUrl);
@@ -122,14 +150,14 @@ export const useGalgameController = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, lastVisitedSceneId, isPreset]);
+    }, [fileId, lastVisitedSceneId]);
 
     useEffect(() => {
         presetDataLoadedRef.current = false;
         loadPresetData();
     }, [fileId]);
 
-    // 步骤处理器 - 关键修复：不在流式响应完成后立即刷新历史，而是标记待刷新
+    // 步骤处理器
     const stepHandlers = useGalgameStep({
         sessionId,
         historyLength: history.length,
@@ -278,10 +306,10 @@ export const useGalgameController = () => {
                     setCurrentScene(sceneData as GetGalgamePresetResponse['scenes']['scenes'][0]);
                 }
                 if (step.sceneImage) {
-                    const sceneImage = step.sceneImage.startsWith('http')
-                        ? step.sceneImage
-                        : `${HOST_ADDRESS}${step.sceneImage}`;
-                    setBackgroundImage(sceneImage);
+                    const sceneImageUrl = getImageUrlWithHost(step.sceneImage);
+                    if (sceneImageUrl) {
+                        setBackgroundImage(sceneImageUrl);
+                    }
                 }
             }
         }
@@ -344,33 +372,8 @@ export const useGalgameController = () => {
                     const choiceStep = historySteps.find(s => s.type === 'choice');
                     if (choiceStep && choiceStep.options && choiceStep.options.length > 0) {
                         const choiceData = extractChoiceFromHistory(content);
-                        if (choiceData) {
-                            const choiceMessage = {
-                                id: Date.now(),
-                                type: 'choice',
-                                message: choiceData.title
-                                    ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
-                                    : (choiceData.text || '请选择你的行动'),
-                                options: choiceData.options.map((opt, index) => ({
-                                    id: index + 1,
-                                    text: extractPlainText(opt),
-                                })),
-                                characterImage: (() => {
-                                    const images = worldSetting?.player?.images as any;
-                                    if (images) {
-                                        const playerImage = typeof images === 'string'
-                                            ? images
-                                            : (images?.base || images);
-                                        if (playerImage && typeof playerImage === 'string') {
-                                            return playerImage.startsWith('http')
-                                                ? playerImage
-                                                : `${HOST_ADDRESS}${playerImage}`;
-                                        }
-                                    }
-                                    return undefined;
-                                })(),
-                                characterPosition: 'right' as const,
-                            };
+                        const choiceMessage = createChoiceMessage(choiceData);
+                        if (choiceMessage) {
                             setInitialMessages([choiceMessage]);
                         }
                     }
@@ -390,33 +393,10 @@ export const useGalgameController = () => {
                         };
                         setCompletedSteps([choiceStep]);
 
-                        const choiceMessage = {
-                            id: Date.now(),
-                            type: 'choice',
-                            message: choiceData.title
-                                ? (choiceData.text ? `${choiceData.title}\n${choiceData.text}` : choiceData.title)
-                                : (choiceData.text || '请选择你的行动'),
-                            options: choiceData.options.map((opt, index) => ({
-                                id: index + 1,
-                                text: extractPlainText(opt),
-                            })),
-                            characterImage: (() => {
-                                const images = worldSetting?.player?.images as any;
-                                if (images) {
-                                    const playerImage = typeof images === 'string'
-                                        ? images
-                                        : (images?.base || images);
-                                    if (playerImage && typeof playerImage === 'string') {
-                                        return playerImage.startsWith('http')
-                                            ? playerImage
-                                            : `${HOST_ADDRESS}${playerImage}`;
-                                    }
-                                }
-                                return undefined;
-                            })(),
-                            characterPosition: 'right' as const,
-                        };
-                        setInitialMessages([choiceMessage]);
+                        const choiceMessage = createChoiceMessage(choiceData);
+                        if (choiceMessage) {
+                            setInitialMessages([choiceMessage]);
+                        }
                     }
                 }
 
@@ -437,7 +417,7 @@ export const useGalgameController = () => {
                 }
             }
         }
-    }, [historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps]);
+    }, [historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrl, createChoiceMessage]);
 
     useEffect(() => {
         if (historyLoading || !presetData) return;

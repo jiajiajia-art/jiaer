@@ -10,7 +10,7 @@ import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
 import ConfirmModal from './GoodsModal/ConfirmModal';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
@@ -366,24 +366,8 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     }, [checkAuth, fileId, userId, currentGame.special_price_amount, currentGame.price_amount, user?.user.points, fetchGameDetail, onGameUpdated]);
 
     return (
+        <>
         <div className={`${styles.modal} ${styles.modalShow}`}>
-            <Toaster
-                position="top-center"
-                containerStyle={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-                toastOptions={{
-                    duration: 3000,
-                    style: {
-                        minWidth: '250px',
-                        textAlign: 'center',
-                        borderRadius: '8px',
-                    },
-                }}
-            />
             <div className={styles.gameDetailModal} style={modalStyle}>
                 <button className={styles.detailModalClose} onClick={onClose}>
                     <img src={`${import.meta.env.BASE_URL}${CLOSE_BUTTON_PATH}`} alt="关闭" />
@@ -522,17 +506,18 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     </div>
                 </div>
             </div>
-            <ConfirmModal isOpen={isConfirmModalOpen} onConfirm={handleDeleteSession} onCancel={() => setIsConfirmModalOpen(false)} />
-            <ConfirmModal
-                isOpen={isPurchaseModalOpen}
-                onConfirm={purchaseGame}
-                onCancel={() => setIsPurchaseModalOpen(false)}
-                title="购买游戏"
-                message={`确认花费 ${currentGame.special_price_amount > 0 ? currentGame.special_price_amount : currentGame.price_amount} 积分购买该游戏吗？`}
-                confirmButtonText="确认购买"
-                cancelButtonText="取消"
-            />
         </div>
+        <ConfirmModal isOpen={isConfirmModalOpen} onConfirm={handleDeleteSession} onCancel={() => setIsConfirmModalOpen(false)} />
+        <ConfirmModal
+            isOpen={isPurchaseModalOpen}
+            onConfirm={purchaseGame}
+            onCancel={() => setIsPurchaseModalOpen(false)}
+            title="购买游戏"
+            message={`确认花费 ${currentGame.special_price_amount > 0 ? currentGame.special_price_amount : currentGame.price_amount} 积分购买该游戏吗？`}
+            confirmButtonText="确认购买"
+            cancelButtonText="取消"
+        />
+        </>
     );
 };
 

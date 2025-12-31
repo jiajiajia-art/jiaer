@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './CheckInModal.module.css';
-import { toast, Toaster } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import { auth } from '../api/account/authApi';
 import { CHECK_IN_REWARD_POINTS } from '../utils/constants';
 
@@ -27,15 +27,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
 
     return (
         <div className={styles.checkInModalOverlay} onClick={onClose}>
-            <Toaster
-                position="top-center"
-                containerStyle={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-            />
             <div className={styles.checkInModalContent} onClick={(e) => e.stopPropagation()}>
                 {/* 图片 */}
                 <div className={styles.checkInModalImage}>

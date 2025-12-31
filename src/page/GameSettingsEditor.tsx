@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
 import styles from './GameSettingsEditor.module.css';
-import DocumentsPanel from '../components/GameSettingEditor/DocumentsPanel';
+import DocumentsPanel from '../components/GameSettingEditor/DocumentUpload/DocumentsPanel';
 import WorldPanel from '../components/GameSettingEditor/WorldPanel';
 import CharactersPanel from '../components/GameSettingEditor/CharactersPanel/CharactersPanel';
 import ScenesPanel from '../components/GameSettingEditor/ScenesPanel/ScenesPanel';
@@ -18,6 +17,7 @@ import { useEditorSubmit } from '../hooks/editor/useEditorSubmit';
 import { useEditorSession } from '../hooks/editor/useEditorSession';
 import type { AllGameData } from '../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
+import FullPageLoading from '../components/Skeleton/FullPageLoading';
 
 // 类型守卫：判断是否为 worldInteraction 模式
 function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is WorldInteractionGameData {
@@ -122,15 +122,6 @@ const GameSettingsEditor = () => {
 
     return (
         <div className={styles.appShell}>
-            <Toaster
-                position="top-center"
-                containerStyle={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-            />
             <Sidebar
                 activePanel={activePanel}
                 onPanelChange={handlePanelChange}
@@ -260,10 +251,10 @@ const GameSettingsEditor = () => {
 
                 {/* 编辑器全局加载遮罩（获取游戏文件 / 刷新数据时） */}
                 {isLoadingData && (
-                    <div className="loadingOverlay">
-                        <div className="loadingSpinner"></div>
-                        <div className="loadingText">正在加载游戏数据...</div>
-                    </div>
+                    <FullPageLoading
+                        rootClassName={styles.page}
+                        contentClassName={styles.mapContainer}
+                    />
                 )}
             </main>
             {showPublishModal && (

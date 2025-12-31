@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUploadStore } from '../../store/uploadStore';
+import { useUploadStore } from '../../../store/uploadStore';
 import styles from './UploadProgressModal.module.css';
 
 const UploadProgressModal: React.FC = () => {

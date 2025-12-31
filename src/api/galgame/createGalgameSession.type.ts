@@ -1,5 +1,3 @@
-import type { Player } from "./EditorData.type";
-
 export interface CreateGalgameSessionRequest {
   presetId: string;
 }

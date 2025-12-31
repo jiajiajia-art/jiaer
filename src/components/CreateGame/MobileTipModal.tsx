@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './MobileTipModal.module.css';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface MobileTipModalProps {
     isOpen: boolean;
@@ -89,15 +89,6 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
             aria-modal="true"
             aria-labelledby="mobile-tip-modal-title"
         >
-            <Toaster
-                position="top-center"
-                containerStyle={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-            />
             <div
                 className={styles.mobileTipModal}
                 onClick={(e) => e.stopPropagation()}

@@ -16,7 +16,7 @@ import GameForm, { type GameFormData } from '../components/CreateGame/GameForm';
 import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import FooterArea from '../components/Layout/FooterArea';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 
 const CreateGame: React.FC = () => {
@@ -507,16 +507,6 @@ const CreateGame: React.FC = () => {
                     )}
                 </>
             )}
-
-            <Toaster
-                position="top-center"
-                containerStyle={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-            />
 
             <div className={`${styles.mainContent} ${isStatsMode && !showForm ? styles.mainContentHidden : ''}`}>
                 <div className={`${styles.main} ${isStatsMode && !showForm ? styles.mainHidden : ''}`}>

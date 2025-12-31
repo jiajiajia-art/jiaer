@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import styles from './StoryIntroModal.module.css';
 import { useStoryTyping } from '../../hooks/story/useStoryTyping';
 import type { AllGameData } from '../../api/worldInteraction/mapWorldData.type';
+import { getImageUrlWithHost } from '../../utils/constants';
 
 interface StoryIntroModalProps {
     isOpen: boolean;
@@ -37,12 +38,12 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
 
     const backgroundImageUrl = useMemo(() => {
         if (!backgroundImage) return null;
-        // 修改：如果已经是完整URL或默认图片，直接返回
+        // 如果已经是完整URL或默认图片，直接返回
         if (backgroundImage.startsWith('http') || backgroundImage.includes('defaultScene.png')) {
             return backgroundImage;
         }
-        // 其他情况（相对路径）加上base路径
-        return `${backgroundImage}`;
+        // 其他情况（相对路径）使用工具函数处理，加上host地址
+        return getImageUrlWithHost(backgroundImage);
     }, [backgroundImage]);
 
     return (

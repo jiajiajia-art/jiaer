@@ -14,9 +14,9 @@ import { useStoryStep } from '../../hooks/story/useStoryStep';
 import { useStoryTyping } from '../../hooks/story/useStoryTyping';
 import { useMobilePanels } from '../../hooks/story/useMobilePanels';
 import LeftPanels from './LeftPanels';
-import RightPanels from './RightPanels';
 import MobilePanels from './MobilePanels';
 import StepModal from './StepModal';
+import RightPanels from './RightPanels';
 import MissionSubmitModal from './MissionSubmitModal';
 
 interface StoryModalProps {

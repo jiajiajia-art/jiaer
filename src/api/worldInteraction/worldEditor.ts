@@ -2,7 +2,7 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { CheckUploadStatusResponse, GenerateImgeResponse, NPC, Player, WorldSetting } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
-import type { CalculatePointsResponse, GenerateALLSceneImage, GenerateNpcImage, GetMusicListResponse, NpcSlot, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
+import type { CalculatePointsResponse, GenerateALLSceneImage, GetMusicListResponse, NpcSlot, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse, UploadSubSceneImageResponse } from "./worldEditor.type";
 import type { UploadWorldFileResponse } from "./worldInteractionApi.type";
 
 const worldEditor = {

@@ -22,6 +22,7 @@ import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../utils/constants';
 import ConfirmModal from '../components/GoodsModal/ConfirmModal';
+import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
@@ -44,6 +45,7 @@ const Create: React.FC = () => {
     const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false); // 控制结算弹窗
     const [isSettling, setIsSettling] = useState(false); // 控制结算中状态
+    const [isPDFModalOpen, setIsPDFModalOpen] = useState(false); // 控制PDF模板指引弹窗
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 将游戏数据分类为已发布和未发布
@@ -283,21 +285,30 @@ const Create: React.FC = () => {
                 <div className={styles.main}>
                     {/* 创作游戏按钮 */}
                     <div className={styles.createGameButton}>
-                        <button
-                            className={styles.createGameButtonItem}
-                            onClick={() => {
-                                // 检测是否为移动端（断点与 CSS 保持一致：768px）
-                                const isMobile = window.innerWidth <= 768;
-                                if (isMobile) {
-                                    setIsMobileTipModalOpen(true);
-                                    return;
-                                }
-                                setIsCreateTypeModalOpen(true);
-                            }}
-                        >
-                            <HiOutlineLightBulb />
-                            <span>创作游戏</span>
-                        </button>
+                        <div className={styles.createGameButtonRow}>
+                            <button
+                                className={styles.createGameButtonItem}
+                                onClick={() => {
+                                    // 检测是否为移动端（断点与 CSS 保持一致：768px）
+                                    const isMobile = window.innerWidth <= 768;
+                                    if (isMobile) {
+                                        setIsMobileTipModalOpen(true);
+                                        return;
+                                    }
+                                    setIsCreateTypeModalOpen(true);
+                                }}
+                            >
+                                <HiOutlineLightBulb />
+                                <span>创作游戏</span>
+                            </button>
+                            <button
+                                className={styles.helpButton}
+                                onClick={() => setIsPDFModalOpen(true)}
+                                title="PDF模板指引"
+                            >
+                                <span className={styles.helpIcon}>?</span>
+                            </button>
+                        </div>
                         <button
                             className={`${styles.createGameButtonItem}`}
                             onClick={() => navigate('/profile')}
@@ -585,6 +596,12 @@ const Create: React.FC = () => {
                 message={`确定要结算当前总收益 ${stats.totalAmount} 积分吗？结算后积分将转入账户余额。`}
                 confirmButtonText={isSettling ? "结算中..." : "确认结算"}
                 cancelButtonText="取消"
+            />
+
+            {/* PDF模板指引弹窗 */}
+            <PDFTemplateModal
+                isOpen={isPDFModalOpen}
+                onClose={() => setIsPDFModalOpen(false)}
             />
         </div>
     );

@@ -17,6 +17,7 @@ import ErrorModal from "../components/GalgameMap/WorldModal";
 import { IoMdCloseCircle } from "react-icons/io";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
+import FullPageLoading from "../components/Skeleton/FullPageLoading";
 
 const Galgame = () => {
     const { user } = useAuthStore();
@@ -69,19 +70,10 @@ const Galgame = () => {
 
     if (controller.isLoading) {
         return (
-            <div className={styles.pageRoot}>
-                <div className={styles.mainContent}>
-                    <div style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100%',
-                        color: '#fff'
-                    }}>
-                        加载中...
-                    </div>
-                </div>
-            </div>
+            <FullPageLoading
+                rootClassName={styles.pageRoot}
+                contentClassName={styles.mainContent}
+            />
         );
     }
 

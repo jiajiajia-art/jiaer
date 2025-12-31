@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import styles from './ConfirmModal.module.css';
 
 interface ConfirmModalProps {
@@ -22,7 +23,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <div className={styles.modalOverlay} onClick={onCancel}>
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.deleteModal}>
@@ -65,6 +66,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </div>
         </div>
     );
+
+    if (typeof document === 'undefined') {
+        return modalContent;
+    }
+    return createPortal(modalContent, document.body);
 };
 
 export default ConfirmModal;

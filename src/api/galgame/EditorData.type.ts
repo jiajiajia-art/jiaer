@@ -76,7 +76,7 @@ export interface Scene {
 // 世界设定类型（visual 模式）
 export interface WorldSetting {
   title: string;
-  summary?: string;
+  summary: string;
   background: string;
   Theme?: string[];
   preamble: string;
@@ -91,12 +91,12 @@ export interface WorldSetting {
 
 // NPC 设定类型
 export interface NPCSetting {
-  npcs?: NPC[];
+  npcs: NPC[];
 }
 
 // 场景设定类型
 export interface SceneSetting {
-  scenes?: Scene[];
+  scenes: Scene[];
 }
 
 // Metadata 类型

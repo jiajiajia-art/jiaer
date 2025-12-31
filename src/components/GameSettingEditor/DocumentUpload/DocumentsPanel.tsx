@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import styles from './DocumentsPanel.module.css';
 import { BsUpload } from 'react-icons/bs';
-import EditorApi from '../../api/galgame/EditorData';
+import EditorApi from '../../../api/galgame/EditorData';
 import toast from 'react-hot-toast';
-import { useUploadStore } from '../../store/uploadStore';
+import { useUploadStore } from '../../../store/uploadStore';
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<boolean>;
     isParsing: boolean;

@@ -19,6 +19,8 @@ import NextRoundButton from "../components/GalgameMap/NextRoundButton";
 import { useMapMusicPlayer } from "../hooks/mapGalgame/useMapMusicPlayer";
 import { mapMusicManager } from "../utils/mapMusicManager";
 import { PiMusicNoteDuotone } from "react-icons/pi";
+import FullPageLoading from "../components/Skeleton/FullPageLoading";
+import { getImageUrlWithHost } from "../utils/constants";
 
 export interface EventData {
     event: GameEvent;
@@ -210,52 +212,43 @@ const GalgameMap = () => {
             if (response.data?.success && response.data.state) {
                 const state = response.data.state;
 
-                const normalizeImage = (img?: string | null): string | null => {
-                    if (!img) return null;
+                // 统一的图片路径处理：规范化 + 添加host前缀 + 默认值兜底
+                const processImage = (img: string | null | undefined, defaultImg: string): string => {
+                    if (!img) return defaultImg;
                     const trimmed = String(img).trim();
                     if (!trimmed || trimmed === "null" || trimmed === "undefined") {
-                        return null;
+                        return defaultImg;
                     }
-                    return trimmed;
+                    // 默认图片（本地静态资源）直接返回
+                    if (trimmed.includes('defaultScene.png') || trimmed.includes('defaultNpc.png') || trimmed.includes('defaultMap.png')) {
+                        return trimmed;
+                    }
+                    // 后端返回的路径使用 getImageUrlWithHost 处理
+                    return getImageUrlWithHost(trimmed);
                 };
 
                 // 处理世界设定里的世界地图 & 玩家立绘
-                const worldMapImage =
-                    normalizeImage(state.worldInfo?.worldMapImage) || DEFAULT_WORLD_MAP_IMAGE;
-
-                const player = state.worldInfo?.player;
-                const playerImagePath =
-                    normalizeImage(player?.imagePath) || DEFAULT_NPC_IMAGE;
+                const worldMapImage = processImage(state.worldInfo?.worldMapImage, DEFAULT_WORLD_MAP_IMAGE);
+                const playerImagePath = processImage(state.worldInfo?.player?.imagePath, DEFAULT_NPC_IMAGE);
 
                 // 处理 NPC 列表，确保 base 立绘有默认图
-                const safeNpcs = (state.npcs || []).map((npc: any) => {
-                    const rawBase = npc?.images?.base as string | undefined;
-                    const base = normalizeImage(rawBase) || DEFAULT_NPC_IMAGE;
-                    return {
-                        ...npc,
-                        images: {
-                            ...npc.images,
-                            base,
-                        },
-                    };
-                });
+                const safeNpcs = (state.npcs || []).map((npc: any) => ({
+                    ...npc,
+                    images: {
+                        ...npc.images,
+                        base: processImage(npc?.images?.base, DEFAULT_NPC_IMAGE),
+                    },
+                }));
 
                 // 处理场景与子场景背景图，缺失时使用默认背景
-                const safeScenes = (state.scenes || []).map((scene: any) => {
-                    const sceneImage = normalizeImage(scene.image) || DEFAULT_SCENE_IMAGE;
-                    const safeSubscenes = (scene.subscenes || []).map((sub: any) => {
-                        const subImage = normalizeImage(sub.image) || DEFAULT_WORLD_MAP_IMAGE;
-                        return {
-                            ...sub,
-                            image: subImage,
-                        };
-                    });
-                    return {
-                        ...scene,
-                        image: sceneImage,
-                        subscenes: safeSubscenes,
-                    };
-                });
+                const safeScenes = (state.scenes || []).map((scene: any) => ({
+                    ...scene,
+                    image: processImage(scene.image, DEFAULT_SCENE_IMAGE),
+                    subscenes: (scene.subscenes || []).map((sub: any) => ({
+                        ...sub,
+                        image: processImage(sub.image, DEFAULT_WORLD_MAP_IMAGE),
+                    })),
+                }));
 
                 const worldFormatData: AllGameData = {
                     success: true,
@@ -425,6 +418,15 @@ const GalgameMap = () => {
             console.error("获取历史记录失败:", error);
         }
     };
+
+    if (isLoading) {
+        return (
+            <FullPageLoading
+                rootClassName={styles.page}
+                contentClassName={styles.mapContainer}
+            />
+        );
+    }
 
     return (
         <div className={styles.page} ref={containerRef}>

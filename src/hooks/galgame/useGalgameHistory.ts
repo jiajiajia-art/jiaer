@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { History } from "../../api/galgame/getGalgamePreset.type";
 import { v4 as uuidv4 } from 'uuid';
@@ -15,7 +15,7 @@ const useGalgameHistory = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [lastVisitedSceneId, setLastVisitedSceneId] = useState<string | null>(null);
-
+    const initializedRef = useRef<boolean>(false);
     const { sessionId } = useGameStore();
 
     const fetchHistory = useCallback(async () => {
@@ -47,7 +47,6 @@ const useGalgameHistory = () => {
         }
     }, [sessionId]);
 
-    // 编辑历史记录
     const editHistory = useCallback(async (historyIndex: number, content: string): Promise<boolean> => {
         if (!sessionId) {
             toast.error('没有 sessionId');
@@ -81,8 +80,17 @@ const useGalgameHistory = () => {
     }, [sessionId, fetchHistory]);
 
     useEffect(() => {
-        fetchHistory();
-    }, [fetchHistory]);
+        if (sessionId && !initializedRef.current) {
+            initializedRef.current = true;
+            fetchHistory();
+        }
+
+        if (!sessionId) {
+            initializedRef.current = false;
+            setHistory([]);
+            setLoading(false);
+        }
+    }, [sessionId]);
 
     const historyWithId = useMemo<HistoryWithId[]>(() => {
         return history.map((item) => ({

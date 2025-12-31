@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import styles from './Sidebar.module.css';
 import { getImageUrl } from '../../utils/constants';
-import PDFTemplateModal from './PDFTemplateModal';
 
 interface SidebarProps {
     activePanel: string;
@@ -12,7 +11,6 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed, mode = 'visual' }) => {
-    const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
     const baseNavItems = [
         {
             id: 'documents',
@@ -44,15 +42,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
     const navItems = mode === 'worldInteraction' 
         ? [
             ...baseNavItems,
-            // {
-            //     id: 'functionalNPCs',
-            //     number: '5',
-            //     title: '剧情事件插件',
-            //     subtitle: '功能性NPC管理',
-            // },
+            {
+                id: 'functionalNPCs',
+                number: '5',
+                title: '剧情事件插件',
+                subtitle: '功能性NPC管理',
+            },
             {
                 id: 'mapEdit',
-                number: '5',
+                number: '6',
                 title: '地图编辑',
                 subtitle: '子场景 / 场景 / 地图',
             },
@@ -111,23 +109,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                     );
                 })}
             </nav>
-            
-            {/* 问号帮助按钮 */}
-            <div className={styles.helpButtonContainer}>
-                <button
-                    className={styles.helpButton}
-                    onClick={() => setIsPDFModalOpen(true)}
-                    title="PDF模板指引"
-                >
-                    <span className={styles.helpIcon}>?</span>
-                </button>
-            </div>
-
-            {/* PDF模板指引弹窗 */}
-            <PDFTemplateModal
-                isOpen={isPDFModalOpen}
-                onClose={() => setIsPDFModalOpen(false)}
-            />
         </aside>
     );
 };

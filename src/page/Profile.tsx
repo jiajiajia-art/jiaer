@@ -7,7 +7,7 @@ import { auth } from '../api/account/authApi';
 import Navbar from '../components/Layout/Navbar';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup } from 'react-icons/md';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { getImageUrl } from '../utils/constants';
 
 const Profile: React.FC = () => {
@@ -125,7 +125,6 @@ const Profile: React.FC = () => {
     return (
         <div className={styles.pageRoot}>
             <Navbar />
-            <Toaster />
             <div className={styles.mainContent}>
                 <div className={styles.main}>
                     {/* 用户信息展示区域 */}

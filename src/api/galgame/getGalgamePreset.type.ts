@@ -96,7 +96,7 @@ export interface Scene {
   description: string;
   atmosphere?: string;
   dangerLevel?: number;
-  images?: string;
+  image?: string;
   npcs: string[];
   enemies?: string[];
   items?: string[];

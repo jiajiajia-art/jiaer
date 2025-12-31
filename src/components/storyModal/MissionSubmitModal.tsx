@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './MissionSubmitModal.module.css';
 import type { MissionData, Mission, CompletionPathRequirements } from '../../api/rpgGame/missionApi.type';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface MissionSubmitModalProps {
     missionData: MissionData | null;
@@ -212,23 +212,6 @@ const MissionSubmitModal: React.FC<MissionSubmitModalProps> = ({
 
     return (
         <div className={styles.modalOverlay}>
-            <Toaster
-                position="top-center"
-                containerStyle={{
-                    position: 'fixed',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                }}
-                toastOptions={{
-                    duration: 3000,
-                    style: {
-                        minWidth: '250px',
-                        textAlign: 'center',
-                        borderRadius: '8px',
-                    },
-                }}
-            />
             <div className={styles.modalContent}>
                 <div className={styles.modalHeader}>
                     <h2 className={styles.modalTitle}>任务提示</h2>

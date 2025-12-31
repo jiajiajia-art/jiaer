@@ -1,5 +1,6 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Home from './page/Home';
 import Create from './page/Create';
 import WareHouse from './page/WareHouse';
@@ -11,11 +12,28 @@ import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
 import RpgGame from './page/RpgGame';
-import UploadProgressModal from './components/GameSettingEditor/UploadProgressModal';
+import UploadProgressModal from './components/GameSettingEditor/DocumentUpload/UploadProgressModal';
 
 function App() {
   return (
     <BrowserRouter basename='/funloom'>
+      <Toaster
+        position="top-center"
+        containerStyle={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+        toastOptions={{
+          duration: 3000,
+          style: {
+            minWidth: '250px',
+            textAlign: 'center',
+            borderRadius: '8px',
+          },
+        }}
+      />
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
