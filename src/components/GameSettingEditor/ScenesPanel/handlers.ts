@@ -10,6 +10,7 @@ import type { SceneApiHelpers } from './apiHelpers';
 import { parseSceneResponse } from './apiHelpers';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
+import { getImageUrlWithHost } from '../../../utils/constants';
 
 export interface LocalScene {
     id: string;
@@ -600,9 +601,10 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 // 使用后端返回的数据更新本地状态
                 const imageData = parseSceneResponse.extractSceneImage(response.data, mode, targetSceneId);
                 if (imageData?.imagePath) {
+                    const processedImagePath = getImageUrlWithHost(imageData.imagePath);
                     setSceneData(prev => prev.map(s =>
                         s.id === targetSceneId
-                            ? { ...s, image: addImageTimestamp(imageData.imagePath!) }
+                            ? { ...s, image: addImageTimestamp(processedImagePath) }
                             : s
                     ));
                 } else {
@@ -652,7 +654,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (isSubscene && mode === 'worldInteraction' && activeSceneId) {
                 response = await api.generateSubSceneImage(fileId, activeSceneId, scene.id);
                 if (response.data?.success) {
-                    imageUrl = response.data.imagePath;
+                    imageUrl = response.data.imagePath ? getImageUrlWithHost(response.data.imagePath) : undefined;
                 }
             } else {
                 response = await api.generateSceneImage({
@@ -666,7 +668,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 if (response.data?.success) {
                     // 使用后端返回的数据更新本地状态
                     const imageData = parseSceneResponse.extractSceneImage(response.data, mode, scene.id);
-                    imageUrl = imageData?.imagePath;
+                    imageUrl = imageData?.imagePath ? getImageUrlWithHost(imageData.imagePath) : undefined;
                 }
             }
 
@@ -748,7 +750,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (response.data.success) {
                 toast.success('大地图生成成功');
                 if (response.data.imagePath) {
-                    setWorldMapImageOverride(addImageTimestamp(response.data.imagePath));
+                    const processedImagePath = getImageUrlWithHost(response.data.imagePath);
+                    setWorldMapImageOverride(addImageTimestamp(processedImagePath));
                 }
                 if (onDataChange) onDataChange();
             } else {
@@ -790,7 +793,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 toast.success('大地图上传成功');
                 if (response.data.imagePath) {
-                    setWorldMapImageOverride(response.data.imagePath);
+                    const processedImagePath = getImageUrlWithHost(response.data.imagePath);
+                    setWorldMapImageOverride(processedImagePath);
                 }
                 if (onDataChange) onDataChange();
             } else {

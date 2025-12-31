@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './FunctionalNPCsPanel.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { FunctionalNPC } from './types';
+import { getImageUrlWithHost } from '../../../utils/constants';
 
 interface FunctionalNPCListProps {
     npcs: FunctionalNPC[];
@@ -45,7 +46,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                             >
                                 <div className={styles.npcCardThumbnail}>
                                     <img
-                                        src={npc.image || DEFAULT_NPC_IMAGE}
+                                        src={npc.image ? getImageUrlWithHost(npc.image) : DEFAULT_NPC_IMAGE}
                                         alt={npc.name}
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;

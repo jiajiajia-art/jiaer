@@ -13,7 +13,6 @@ import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from 
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
 
-// 导出 Message 类型供其他文件使用
 export type { Message } from "./useGalgameMessage";
 
 export const useGalgameController = () => {
@@ -26,12 +25,9 @@ export const useGalgameController = () => {
         return sessionId ? `galgame-allsteps-${sessionId}` : 'galgame-allsteps';
     }, [sessionId]);
 
-    // 基础状态
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['scenes']['scenes'][0] | null>(null);
     const [worldSetting, setWorldSetting] = useState<GetGalgamePresetResponse['world'] | null>(null);
-
-    // UI 状态
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [initialMessages, setInitialMessages] = useState<any[]>([]);
     const [showStoryIntro, setShowStoryIntro] = useState<boolean>(false);
@@ -44,19 +40,17 @@ export const useGalgameController = () => {
     const [completedSteps, setCompletedSteps] = useState<any[]>([]);
     const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
 
-    // Refs
     const currentRequestIdRef = useRef<number>(0);
     const historyProcessedRef = useRef<boolean>(false);
     const requestTimeoutRef = useRef<number | null>(null);
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
-    const presetDataLoadedRef = useRef<boolean>(false); // 标记预设数据是否已加载，避免重复加载
-    const lastRefreshRequestIdRef = useRef<number>(0); // 记录最后一次刷新的请求ID，避免重复刷新
-    const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null); // 保存刷新函数
+    const presetDataLoadedRef = useRef<boolean>(false);
+    const lastRefreshRequestIdRef = useRef<number>(0);
+    const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
 
     const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
-    // 获取玩家图片URL的工具函数
     const getPlayerImageUrl = useCallback((): string | undefined => {
         const images = worldSetting?.player?.images as any;
         if (images) {
@@ -70,7 +64,6 @@ export const useGalgameController = () => {
         return undefined;
     }, [worldSetting]);
 
-    // 创建选择消息的工具函数
     const createChoiceMessage = useCallback((choiceData: ReturnType<typeof extractChoiceFromHistory>) => {
         if (!choiceData) return null;
         
@@ -95,7 +88,7 @@ export const useGalgameController = () => {
         previousIsTypingRef.current = false;
     }, []);
 
-    // 当资源切换（如重新选择文件）时重置历史处理标记和已展示步骤
+    // 资源切换时重置状态
     useEffect(() => {
         historyProcessedRef.current = false;
         resetDisplayedSteps();
@@ -130,8 +123,6 @@ export const useGalgameController = () => {
                             initialScene = matched;
                         }
                     }
-
-                    // 设置当前场景状态
                     setCurrentScene(initialScene);
 
                     const sceneImagePath = initialScene.image || initialScene.images;
@@ -146,7 +137,7 @@ export const useGalgameController = () => {
             }
         } catch (error) {
             console.error('获取游戏数据失败:', error);
-            presetDataLoadedRef.current = false; // 失败时重置标记，允许重试
+            presetDataLoadedRef.current = false;
         } finally {
             setIsLoading(false);
         }
@@ -157,7 +148,48 @@ export const useGalgameController = () => {
         loadPresetData();
     }, [fileId]);
 
-    // 步骤处理器
+    // 根据场景 ID 更新场景和背景图
+    const updateSceneFromId = useCallback((sceneId: string | null) => {
+        if (!sceneId || !presetData) {
+            return;
+        }
+
+        if (currentScene?.id === sceneId) {
+            return;
+        }
+
+        const scenes = presetData.scenes?.scenes;
+        if (!scenes || scenes.length === 0) {
+            return;
+        }
+
+        const matchedScene = scenes.find(
+            (scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => 
+                scene.id === sceneId
+        );
+
+        if (matchedScene) {
+            setCurrentScene(matchedScene);
+
+            const sceneImagePath = matchedScene.image || matchedScene.images;
+            if (sceneImagePath) {
+                const sceneImageUrl = getImageUrlWithHost(sceneImagePath as string);
+                if (sceneImageUrl) {
+                    setBackgroundImage(sceneImageUrl);
+                    console.log('[Galgame] 更新场景:', sceneId, '背景图:', sceneImageUrl);
+                }
+            }
+        } else {
+            console.warn('[Galgame] 未找到匹配的场景 ID:', sceneId);
+        }
+    }, [presetData, currentScene?.id]);
+
+    useEffect(() => {
+        if (lastVisitedSceneId) {
+            updateSceneFromId(lastVisitedSceneId);
+        }
+    }, [lastVisitedSceneId, updateSceneFromId]);
+
     const stepHandlers = useGalgameStep({
         sessionId,
         historyLength: history.length,
@@ -174,15 +206,13 @@ export const useGalgameController = () => {
             }
         },
         onStreamComplete: async () => {
-            // 流式响应完成时，直接调用刷新函数
-            // 函数内部会检查打字机状态，如果完成就立即刷新，如果没完成就等待
             if (refreshHistoryAfterTypingRef.current) {
                 refreshHistoryAfterTypingRef.current();
             }
         },
     });
 
-    // 统一监听是否在等待后端数据，如果超过 60s 仍未返回则弹出超时提示
+    // 请求超时检测（60秒）
     useEffect(() => {
         if (stepHandlers.isWaitingForData) {
             if (requestTimeoutRef.current) {
@@ -208,7 +238,6 @@ export const useGalgameController = () => {
         };
     }, [stepHandlers.isWaitingForData]);
 
-    // 当新请求开始时，清空已完成的步骤
     useEffect(() => {
         const currentRequestId = stepHandlers.currentRequestId?.current || 0;
         if (currentRequestId !== currentRequestIdRef.current) {
@@ -219,7 +248,6 @@ export const useGalgameController = () => {
         }
     }, [stepHandlers.currentRequestId?.current]);
 
-    // 消息转换和打字机效果
     const messageUtils = useGalgameMessage(
         worldSetting,
         gameStarted,
@@ -237,7 +265,6 @@ export const useGalgameController = () => {
         speed: 60
     });
 
-    // 重新计算消息（使用实际的打字机状态）
     const messageUtilsWithTyping = useGalgameMessage(
         worldSetting,
         gameStarted,
@@ -249,7 +276,6 @@ export const useGalgameController = () => {
         stepHandlers.currentStep
     );
 
-    // 更新打字机状态 ref（用于其他逻辑判断）
     useEffect(() => {
         previousIsTypingRef.current = isTyping;
     }, [isTyping]);
@@ -283,37 +309,37 @@ export const useGalgameController = () => {
             return;
         }
         
-        // 打字机已完成，直接刷新
         lastRefreshRequestIdRef.current = currentRequestId;
         refreshHistory().catch((error) => {
             console.error('[Galgame] 刷新历史数据失败:', error);
         });
     }, [isTyping, refreshHistory, stepHandlers]);
 
-    // 保存刷新函数到 ref，供 onStreamComplete 调用
     useEffect(() => {
         refreshHistoryAfterTypingRef.current = refreshHistoryAfterTyping;
     }, [refreshHistoryAfterTyping]);
 
     // 处理场景切换
     useEffect(() => {
-        if (stepHandlers.currentStep?.type === 'scene_change') {
-            const step = stepHandlers.currentStep;
-            const converted = messageUtilsWithTyping.convertStepToMessage(step);
-            if (converted && 'sceneData' in converted) {
-                const sceneData = (converted as any).sceneData;
-                if (sceneData) {
-                    setCurrentScene(sceneData as GetGalgamePresetResponse['scenes']['scenes'][0]);
-                }
-                if (step.sceneImage) {
-                    const sceneImageUrl = getImageUrlWithHost(step.sceneImage);
-                    if (sceneImageUrl) {
-                        setBackgroundImage(sceneImageUrl);
-                    }
+        const currentStep = stepHandlers.currentStep;
+        
+        if (currentStep?.type === 'scene_change' && currentStep.sceneId) {
+            updateSceneFromId(currentStep.sceneId);
+            
+            if (currentStep.sceneImage) {
+                const sceneImageUrl = getImageUrlWithHost(currentStep.sceneImage);
+                if (sceneImageUrl) {
+                    setBackgroundImage(prev => {
+                        if (prev !== sceneImageUrl) {
+                            console.log('[Galgame] 背景图更新（从步骤）:', sceneImageUrl);
+                            return sceneImageUrl;
+                        }
+                        return prev;
+                    });
                 }
             }
         }
-    }, [stepHandlers.currentStep, messageUtilsWithTyping]);
+    }, [stepHandlers.currentStep, updateSceneFromId]);
 
     useEffect(() => {
         if (gameStarted && stepHandlers.currentStep && showStoryIntro) {
@@ -321,7 +347,7 @@ export const useGalgameController = () => {
         }
     }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
-    // 处理历史记录的函数
+    // 处理历史记录
     const processHistoryRecord = useCallback(() => {
         if (!historyLoading && presetData && history.length > 0) {
             const lastMessage = history[history.length - 1];
@@ -442,7 +468,6 @@ export const useGalgameController = () => {
         }
     }, [isTextMode, gameStarted, completedSteps.length, historyLoading, history.length, presetData, processHistoryRecord, stepHandlers.isWaitingForData, stepHandlers.currentStep]);
 
-    // 简化的步骤管理
     useEffect(() => {
         const currentStep = stepHandlers.currentStep;
         const prevStep = previousStepRef.current;
@@ -654,7 +679,6 @@ export const useGalgameController = () => {
     }, [allStepsStorageKey, navigate]);
 
     return {
-        // 状态
         isLoading,
         backgroundImage,
         currentScene,
@@ -670,8 +694,6 @@ export const useGalgameController = () => {
         setIsTextMode,
         requestTimeoutVisible,
         setRequestTimeoutVisible,
-        
-        // 消息和步骤
         currentMessage: messageUtilsWithTyping.currentMessage,
         finalDisplayText: messageUtilsWithTyping.finalDisplayText,
         finalIsTyping: messageUtilsWithTyping.finalIsTyping,
@@ -679,16 +701,10 @@ export const useGalgameController = () => {
         currentStepIndex,
         textModalDisplayText: messageUtilsWithTyping.textModalDisplayText,
         convertStepsToTextModalFormat: messageUtilsWithTyping.convertStepsToTextModalFormat,
-        
-        // 历史记录
         history,
         refreshHistory,
         editHistory,
-        
-        // 步骤处理器
         stepHandlers,
-        
-        // 事件处理
         handleStartGame,
         handleNextMessage,
         handleAutoPlayToggle,
@@ -699,3 +715,4 @@ export const useGalgameController = () => {
         resetDisplayedSteps,
     };
 };
+

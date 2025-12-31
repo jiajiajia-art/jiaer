@@ -4,6 +4,7 @@ import worldEditor from '../../api/worldInteraction/worldEditor';
 import type { NpcSlot } from '../../api/worldInteraction/worldEditor.type';
 import toast from 'react-hot-toast';
 import { IoMdArrowDropdown, IoMdArrowDropright } from 'react-icons/io';
+import { getImageUrlWithHost } from '../../utils/constants';
 
 interface SubScene {
     id: string;
@@ -237,15 +238,13 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
     // 根据当前 tab 选择显示的底图：子场景只使用自己的图片或默认图，不使用父场景图；场景 tab 用场景图
     const sceneImageUrl = useMemo(() => {
         if (mapTab === 'subScene') {
-            // 只使用子场景自己的图片，如果没有则使用默认图，不使用父场景的图片
             if (currentSubScene?.image && currentSubScene.image.trim() !== '') {
-                return currentSubScene.image;
+                return getImageUrlWithHost(currentSubScene.image);
             }
-            // 子场景没有图片时直接使用默认图
             return DEFAULT_MAP_IMAGE;
         }
         if (mapTab === 'scene') {
-            return currentScene?.image || DEFAULT_SCENE_IMAGE;
+            return currentScene?.image ? getImageUrlWithHost(currentScene.image) : DEFAULT_SCENE_IMAGE;
         }
         return DEFAULT_SCENE_IMAGE;
     }, [mapTab, currentSubScene?.image, currentScene?.image]);
@@ -1597,7 +1596,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                                 {/* 只使用子场景自己的图片，不使用父场景的图片 */}
                                                 {sub.image && sub.image.trim() !== '' ? (
                                                     <img
-                                                        src={sub.image}
+                                                        src={getImageUrlWithHost(sub.image)}
                                                         alt={sub.name}
                                                         className={styles.subSceneThumbImage}
                                                         onError={(e) => {
@@ -1746,12 +1745,14 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                         <img 
                                             src={
                                                 // 优先使用子场景自己的图片，小图标跟实际预览一致
-                                                sceneSetting?.scenes
-                                                    ?.find(s => s.id === subScene.parentSceneId)
-                                                    ?.subscenes
-                                                    ?.find(ss => ss.id === subScene.id)
-                                                    ?.image
-                                                || DEFAULT_SUBSCENE_ICON
+                                                (() => {
+                                                    const subSceneImage = sceneSetting?.scenes
+                                                        ?.find(s => s.id === subScene.parentSceneId)
+                                                        ?.subscenes
+                                                        ?.find(ss => ss.id === subScene.id)
+                                                        ?.image;
+                                                    return subSceneImage ? getImageUrlWithHost(subSceneImage) : DEFAULT_SUBSCENE_ICON;
+                                                })()
                                             } 
                                             alt="子场景"
                                             draggable={false}
@@ -1828,7 +1829,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                                                     <div className={styles.subSceneThumbWrapper}>
                                                                         {subScene.image ? (
                                                                             <img
-                                                                                src={subScene.image}
+                                                                                src={getImageUrlWithHost(subScene.image)}
                                                                                 alt={subScene.name}
                                                                                 className={styles.subSceneThumbImage}
                                                                                 onError={(e) => {
@@ -1992,7 +1993,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                         <img 
                                             src={
                                                 // 优先使用场景自己的图片，只有缺失时才使用默认场景图标
-                                                scene.image || DEFAULT_SCENE_IMAGE
+                                                scene.image ? getImageUrlWithHost(scene.image) : DEFAULT_SCENE_IMAGE
                                             } 
                                             alt="场景"
                                             draggable={false}
@@ -2028,7 +2029,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                                                 <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9' }}>
                                                     {scene.image && (
                                                         <img 
-                                                            src={scene.image} 
+                                                            src={getImageUrlWithHost(scene.image)} 
                                                             alt={scene.name}
                                                             className={styles.subSceneThumbImage}
                                                             onError={(e) => {

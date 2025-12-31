@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useGameStore } from "../../store/gameStore";
 import { HOST_ADDRESS } from "../../config";
 import toast from "react-hot-toast";
+import { authFetch } from "../../api/base";
 
 export interface HistoryWithId extends History {
     id: string;
@@ -54,7 +55,7 @@ const useGalgameHistory = () => {
         }
 
         try {
-            const response = await fetch(
+            const response = await authFetch(
                 `${HOST_ADDRESS}/api/visual/session/${sessionId}/history/${historyIndex-1}`,
                 {
                     method: 'PUT',

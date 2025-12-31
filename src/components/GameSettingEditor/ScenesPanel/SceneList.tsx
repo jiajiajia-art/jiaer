@@ -5,6 +5,7 @@ import type { LocalScene } from './handlers';
 import type { WorldSubScene } from '../editorCompat';
 import { getSceneById, isWorldScene } from '../editorCompat';
 import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './utils';
+import { getImageUrlWithHost } from '../../../utils/constants';
 
 interface SceneListProps {
     sceneData: LocalScene[];
@@ -70,7 +71,7 @@ const SceneList: React.FC<SceneListProps> = ({
                             >
                                 <div
                                     className={`${styles.sceneThumb} ${!scene.image ? styles.empty : ''}`}
-                                    style={{ backgroundImage: `url('${scene.image || DEFAULT_SCENE_IMAGE}')` }}
+                                    style={{ backgroundImage: `url('${scene.image ? getImageUrlWithHost(scene.image) : DEFAULT_SCENE_IMAGE}')` }}
                                 >
                                     {!scene.image && <span>待上传</span>}
                                 </div>
@@ -133,7 +134,7 @@ const SceneList: React.FC<SceneListProps> = ({
                                                 <div
                                                     className={`${styles.sceneThumb} ${!sub.image ? styles.empty : ''}`}
                                                     style={{ 
-                                                        backgroundImage: `url('${sub.image ? addImageTimestamp(sub.image) : DEFAULT_WORLD_MAP_IMAGE}')` 
+                                                        backgroundImage: `url('${sub.image ? addImageTimestamp(getImageUrlWithHost(sub.image)) : DEFAULT_WORLD_MAP_IMAGE}')` 
                                                     }}
                                                 >
                                                     {!sub.image && <span>待生成或上传</span>}

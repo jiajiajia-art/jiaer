@@ -78,7 +78,6 @@ export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditor
             hasFetchedRef.current = fileId;
             fetchEditorData(fileId);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fileId]);
 
     return {

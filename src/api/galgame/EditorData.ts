@@ -137,6 +137,7 @@ const EditorApi = {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
+                timeout: 1500000,
             }
         );
     },

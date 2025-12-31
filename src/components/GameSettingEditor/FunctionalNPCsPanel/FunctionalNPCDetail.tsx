@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import styles from './FunctionalNPCsPanel.module.css';
 import { toast } from 'react-hot-toast';
 import type { FunctionalNPC, FunctionalNPCOption } from './types';
+import { getImageUrlWithHost } from '../../../utils/constants';
 
 interface FunctionalNPCDetailProps {
     npc: FunctionalNPC | null;
@@ -207,7 +208,7 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                 <div className={styles.imageSection}>
                     <div className={styles.imagePreview}>
                         <img
-                            src={formData.image || DEFAULT_NPC_IMAGE}
+                            src={formData.image ? getImageUrlWithHost(formData.image) : DEFAULT_NPC_IMAGE}
                             alt="NPC预览"
                             onError={(e) => {
                                 (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;

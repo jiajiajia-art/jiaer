@@ -33,3 +33,14 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
     }
     return `${HOST_ADDRESS}${imagePath}`;
   };
+
+  export const getMusicUrlWithHost = (musicPath: string | null | undefined): string => {
+    if (!musicPath) return '';
+    if (musicPath.startsWith('http://') || musicPath.startsWith('https://')) {
+      return musicPath;
+    }
+    if (musicPath.startsWith('/api')) {
+      return `${HOST_ADDRESS}${musicPath}`;
+    }
+    return `${HOST_ADDRESS}${musicPath}`;
+  };

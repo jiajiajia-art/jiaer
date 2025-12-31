@@ -18,6 +18,7 @@ import UploadProgress from '../components/CreateGame/UploadProgress';
 import FooterArea from '../components/Layout/FooterArea';
 import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
+import { getImageUrlWithHost } from '../utils/constants';
 
 const CreateGame: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -73,7 +74,7 @@ const CreateGame: React.FC = () => {
     };
 
     const defaultHeroCover = `${import.meta.env.BASE_URL}data/events/welcome.png`;
-    const heroBackground = gameDetail?.cover_url || formData?.coverImage || defaultHeroCover;
+    const heroBackground = gameDetail?.cover_url ? getImageUrlWithHost(gameDetail.cover_url) : (formData?.coverImage || defaultHeroCover);
 
     const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const { user } = useAuthStore();

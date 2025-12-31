@@ -9,6 +9,7 @@ import type { NPC, Player } from '../../../api/galgame/EditorData.type';
 import { npcToCharacter, playerToCharacter, withCacheBust, parseVariantKey } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
+import { getImageUrlWithHost } from '../../../utils/constants';
 
 interface HandlersContext {
     fileId: string;
@@ -403,9 +404,13 @@ export const createHandlers = (ctx: HandlersContext) => {
                 // 如果是玩家图片，更新 portrait 或 variations
                 if (type === 'player' && !isAddingNew) {
                     const { image: playerImage, images: playerImages } = parseResponse.extractPlayerImage(response.data, mode);
+                    const processedPlayerImage = playerImage ? getImageUrlWithHost(playerImage) : undefined;
+                    const processedPlayerImages = playerImages ? Object.fromEntries(
+                        Object.entries(playerImages).map(([key, value]) => [key, getImageUrlWithHost(value)])
+                    ) : undefined;
 
                     if (variant === 'base') {
-                        const newPortrait = playerImages?.base || playerImage;
+                        const newPortrait = processedPlayerImages?.base || processedPlayerImage;
                         if (newPortrait) {
                             setCharacterData(prev =>
                                 prev.map(char =>
@@ -422,7 +427,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                         }
                     } else {
                         // 差分图片
-                        const variantImg = playerImages?.[variant] || playerImage;
+                        const variantImg = processedPlayerImages?.[variant] || processedPlayerImage;
                         if (variantImg) {
                             setCharacterData(prev =>
                                 prev.map(char => {
@@ -460,7 +465,8 @@ export const createHandlers = (ctx: HandlersContext) => {
                 if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
                     const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
                     if (imageData?.imagePath) {
-                        const imageUrl = withCacheBust(imageData.imagePath);
+                        const processedImagePath = getImageUrlWithHost(imageData.imagePath);
+                        const imageUrl = withCacheBust(processedImagePath);
                         
                         if (variant === 'base') {
                             updateCharacterImage(targetCharacterId, imageUrl, 'base');
@@ -516,7 +522,8 @@ export const createHandlers = (ctx: HandlersContext) => {
                 // 首先尝试提取 base 图片数据
                 const imageData = parseResponse.extractNpcImage(response.data, mode, 'base');
                 if (imageData?.imagePath) {
-                    const imageUrl = withCacheBust(imageData.imagePath);
+                    const processedImagePath = getImageUrlWithHost(imageData.imagePath);
+                    const imageUrl = withCacheBust(processedImagePath);
                     updateCharacterImage(npc.id, imageUrl, 'base');
                 } else {
                     // 如果无法直接提取图片数据，尝试从响应中获取完整的NPC数据
@@ -543,11 +550,12 @@ export const createHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
+                const processedImageUrl = newImageUrl ? getImageUrlWithHost(newImageUrl) : undefined;
 
-                if (newImageUrl) {
+                if (processedImageUrl) {
                     setCharacterData(prev => prev.map(char =>
                         char.id === 'player'
-                            ? { ...char, portrait: withCacheBust(newImageUrl) }
+                            ? { ...char, portrait: withCacheBust(processedImageUrl) }
                             : char
                     ));
                 } else {
@@ -610,7 +618,8 @@ export const createHandlers = (ctx: HandlersContext) => {
                 );
                 
                 if (imageData?.imagePath) {
-                    const imageUrl = withCacheBust(imageData.imagePath);
+                    const processedImagePath = getImageUrlWithHost(imageData.imagePath);
+                    const imageUrl = withCacheBust(processedImagePath);
                     
                     // 从 variantKey（格式：type_value）中解析 type 和 value
                     let finalType = variation.type || 'expression';
@@ -657,7 +666,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                             };
                             return { ...char, variations: newVariations };
                         } else {
-                            // 如果找不到，添加新的差分（保持原始 id）
                             const newVar: Variation = {
                                 id: originalVariationId, // 保持原始 id，确保加载效果能正确匹配
                                 label: finalValue,

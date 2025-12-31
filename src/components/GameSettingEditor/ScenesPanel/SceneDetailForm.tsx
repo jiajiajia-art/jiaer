@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import styles from './SceneDetailForm.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
-import { IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { IMAGE_GENERATION_COST, getImageUrlWithHost } from '../../../utils/constants';
 import { DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './utils';
 
 interface BgmItem {
@@ -71,7 +71,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 style={{
                     cursor: isDisabled ? 'not-allowed' : 'pointer',
                     opacity: isDisabled ? 0.7 : 1,
-                    backgroundImage: `url('${scene.image || defaultImage}')`,
+                    backgroundImage: `url('${scene.image ? getImageUrlWithHost(scene.image) : defaultImage}')`,
                 }}
             >
                 {/* 下载按钮 */}

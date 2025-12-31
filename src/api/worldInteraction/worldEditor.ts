@@ -248,12 +248,13 @@ const worldEditor = {
         formData.append('name', name);
         formData.append('description', description);
         return api.post<UploadMusicResponse>(
-            `/world-interaction/musics/${fileId}`,
+            `/world-interaction/edit/${fileId}/music`,
             formData,
             {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
+                timeout: 1500000,
             }
         );
     },

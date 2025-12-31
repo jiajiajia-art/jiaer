@@ -1,22 +1,37 @@
 import type { GameEvent, NPCInfo, SubsceneInfo } from '../api/worldInteraction/interactionApi.type';
 import type { AllGameData } from '../api/worldInteraction/mapWorldData.type';
 import type { EventData } from '../page/GalgameMap';
+import { getImageUrlWithHost } from '../utils/constants';
 
-/**
- * 从事件数据构建完整的 EventData
- * 如果事件已经包含 npc 和 subscene，直接使用；否则从 gameData 中查找并构建
- */
 export const buildEventDataFromEvent = (
     event: any,
     gameData: AllGameData | null
 ): EventData | null => {
     if (!gameData || !event) return null;
 
+    const processImagePath = (img: string | null | undefined): string | undefined => {
+        if (!img) return undefined;
+        if (img.startsWith('http') || img.includes('data/assets') || img.includes('default')) {
+            return img;
+        }
+        return getImageUrlWithHost(img) || undefined;
+    };
+
     if (event.npc && event.subscene) {
+        const processedNpc: NPCInfo = {
+            ...event.npc,
+            image: processImagePath(event.npc.image) || event.npc.image || '',
+        };
+        
+        const processedSubscene: SubsceneInfo = {
+            ...event.subscene,
+            ...(event.subscene.image && { image: processImagePath(event.subscene.image) || event.subscene.image }),
+        };
+
         return {
-            event: event as GameEvent,
-            npc: event.npc,
-            subscene: event.subscene,
+            event: { ...event, npc: processedNpc, subscene: processedSubscene } as GameEvent,
+            npc: processedNpc,
+            subscene: processedSubscene,
         };
     }
 
@@ -41,13 +56,14 @@ export const buildEventDataFromEvent = (
     const npcInfo: NPCInfo = {
         id: foundNpc.id,
         name: foundNpc.name,
-        image: npcImage,
+        image: processImagePath(npcImage) || npcImage,
     };
 
     const subsceneInfo: SubsceneInfo = {
         id: foundSubscene.id,
         name: foundSubscene.name,
         parentSceneName: foundSubscene.parentSceneName || '',
+        ...(foundSubscene.image && { image: processImagePath(foundSubscene.image) || foundSubscene.image }),
     };
 
     return {

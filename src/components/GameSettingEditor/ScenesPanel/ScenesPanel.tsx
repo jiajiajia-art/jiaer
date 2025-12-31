@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
-import { IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrlWithHost, getMusicUrlWithHost, IMAGE_GENERATION_COST } from '../../../utils/constants';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { SceneSetting as VisualSceneSetting } from '../../../api/galgame/EditorData.type';
@@ -210,12 +210,16 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 const sceneSoundtrack = scene.soundtrack || '';
                 const soundtrackFilename = sceneSoundtrack ? (sceneSoundtrack) : '';
                 
+                // 先处理图片路径，再添加时间戳
+                const processedImagePath = sceneImage ? getImageUrlWithHost(sceneImage) : '';
+                const imageWithTimestamp = processedImagePath ? addImageTimestamp(processedImagePath) : '';
+                
                 return {
                     id: scene.id || '',
                     name: scene.name,
                     type: sceneType,
                     desc: scene.description || '',
-                    image: addImageTimestamp(sceneImage) || DEFAULT_SCENE_IMAGE,
+                    image: imageWithTimestamp || DEFAULT_SCENE_IMAGE,
                     bgmId: soundtrackFilename, // 保存文件名，用于匹配音乐列表
                 };
             });
@@ -241,7 +245,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             name: music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename,
                             description: music.description || music.originalFilename || music.filename,
                             filename: music.filename,
-                            musicPath: music.url,
+                            musicPath: getMusicUrlWithHost(music.url),
                         };
                     });
                     setMusicList(musicItems);
@@ -318,12 +322,17 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
         setActiveSceneId(sceneId);
         setActiveSubsceneId(subsceneId);
+        
+        // 先处理图片路径，再添加时间戳
+        const processedSubsceneImage = subscene.image ? getImageUrlWithHost(subscene.image) : '';
+        const subsceneImageWithTimestamp = processedSubsceneImage ? addImageTimestamp(processedSubsceneImage) : '';
+        
         setActiveSubsceneDraft({
             id: subsceneId,
             name: subscene.name || '未命名子场景',
             type: '',
             desc: subscene.description || '',
-            image: addImageTimestamp(subscene.image) || '',
+            image: subsceneImageWithTimestamp || '',
             bgmId: sceneData.find(s => s.id === sceneId)?.bgmId || '',
         });
     }, [isAddingNewSubscene, sceneData]);
@@ -404,10 +413,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 toast.success('音乐上传成功');
                 const listResponse = await sceneApi.getMusicList(fileId);
                 if (listResponse.data.success && listResponse.data.files) {
-                    // 后端返回的数据结构：{ filename, originalFilename, name, description, uploadedAt, path, url }
                     const uploadedFilename = response.data.filename || file.name;
                     const musicItems: MusicItem[] = listResponse.data.files.map((music, index) => {
-                        // 检查是否是刚上传的文件（通过 filename 匹配）
                         const isUploadedFile = music.filename === uploadedFilename || 
                                                music.originalFilename === file.name ||
                                                music.filename.includes(file.name);
@@ -419,8 +426,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             description: isUploadedFile
                                 ? (description || music.description || music.originalFilename || music.filename)
                                 : (music.description || music.originalFilename || music.filename),
-                            filename: music.filename, // 使用 filename 用于 API 调用
-                            musicPath: music.url, // 如果有 URL，可以用于直接播放
+                            filename: music.filename,
+                            musicPath: getMusicUrlWithHost(music.url),
                         };
                     });
                     setMusicList(musicItems);
@@ -514,7 +521,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                             name: music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename,
                                             description: music.description || music.originalFilename || music.filename,
                                             filename: music.filename,
-                                            musicPath: music.url,
+                                            musicPath: getMusicUrlWithHost(music.url),
                                         };
                                     });
                                     setMusicList(musicItems);

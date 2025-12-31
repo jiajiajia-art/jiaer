@@ -7,6 +7,7 @@ import type { NPC } from '../../../api/galgame/EditorData.type';
 import type { NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { Character, Variation } from './types';
 import { DEFAULT_NPC_PORTRAIT } from './types';
+import { getImageUrlWithHost } from '../../../utils/constants';
 
 // 辅助函数：获取 npcs（兼容两种模式）
 export function getNpcs(data: AllGameData | WorldInteractionGameData) {
@@ -17,8 +18,11 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
 // 为图片 URL 添加时间戳，避免缓存导致的旧图显示
 export const withCacheBust = (url?: string | null) => {
     if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}cb=${Date.now()}`;
+    // 先处理图片路径，再添加时间戳
+    const processedUrl = getImageUrlWithHost(url);
+    if (!processedUrl) return '';
+    const separator = processedUrl.includes('?') ? '&' : '?';
+    return `${processedUrl}${separator}cb=${Date.now()}`;
 };
 
 // 清理 URL 中的 cb 参数，用于传递给后端 API
@@ -94,7 +98,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
         });
 };
 
-// 从images对象中选取base图片
+// 从images对象中选取base图片（返回原始路径，由 withCacheBust 统一处理）
 export const pickBaseImage = (images?: Record<string, string>, fallback?: string) => {
     const isValidUrl = (url?: string | null): url is string => {
         return !!url && url !== 'null' && url !== 'undefined' && url.trim() !== '';

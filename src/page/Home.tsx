@@ -34,7 +34,7 @@ const Home: React.FC = () => {
             id: meta.file_id || meta.id,
             title: meta.title || '未命名游戏',
             description: meta.description || '一段精彩的冒险故事等待着你...',
-            cover: meta.cover_url || `${import.meta.env.BASE_URL}data/gameCover/image.png`,
+            cover: meta.cover_url ? getImageUrl(meta.cover_url) : `${import.meta.env.BASE_URL}data/gameCover/image.png`,
             game: meta
         }));
     }, [fileMetas]);

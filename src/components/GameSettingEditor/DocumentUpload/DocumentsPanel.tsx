@@ -175,7 +175,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 <div className={styles.card}>
                     <h3>文档导入</h3>
                     <p className={styles.muted}>
-                        支持 PDF / Word（.docx），解析完成后将自动跳转到「世界观表单」
+                        支持 Word（.docx），解析完成后将自动跳转到「世界观表单」
                     </p>
 
                     {!uploadedFile ? (

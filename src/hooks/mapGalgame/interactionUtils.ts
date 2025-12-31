@@ -1,7 +1,4 @@
-/**
- * InteractWithNpc 组件的工具函数和类型定义
- */
-import { HOST_ADDRESS } from "../../config";
+import { getImageUrlWithHost } from "../../utils/constants";
 
 
 export type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -23,12 +20,11 @@ export interface ModalState {
 
 // ==================== 图片处理 ====================
 
-/** 处理图片 URL，添加 HOST 前缀 */
 export const getImageUrl = (image: string | undefined): string | undefined => {
     if (!image) return undefined;
     if (image.startsWith('http')) return image;
-    if (image.startsWith('/') || image.includes('data/assets')) return image;
-    return `${HOST_ADDRESS}${image}`;
+    if (image.includes('data/assets')) return image;
+    return getImageUrlWithHost(image) || undefined;
 };
 
 /** 获取玩家图片（支持字符串或对象格式） */

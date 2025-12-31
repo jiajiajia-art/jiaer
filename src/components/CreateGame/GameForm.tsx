@@ -310,7 +310,7 @@ const GameForm: React.FC<GameFormProps> = ({
                                 <FaFileAlt color="#bfbfbf" />
                             </span>
                             <p className={styles.uploadText}>点击或拖拽文档文件到此处</p>
-                            <p className={styles.uploadHint}>支持 PDF 和 DOCX 格式，最大 10MB</p>
+                            <p className={styles.uploadHint}>支持 DOCX 文件，最大 10MB</p>
                         </div>
                     )}
 
