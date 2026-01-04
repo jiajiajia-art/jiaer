@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useMapGalgameStore, MapViewState } from '../../store/mapGalgameStore';
 import interactionApi from '../../api/worldInteraction/interactionApi';
 import { buildEventDataFromEvent } from '../../utils/eventUtils';
@@ -9,16 +9,29 @@ import { buildEventDataFromEvent } from '../../utils/eventUtils';
  */
 export const useRefreshEventData = () => {
     const {
-        currentView,
-        eventData: currentEventData,
         setEventData,
         setEventCompleted,
     } = useMapGalgameStore();
+    
+    // 防止并发请求
+    const isRequestingRef = useRef<boolean>(false);
 
     const refreshEventData = useCallback(async (sessionId: string, gameData: any) => {
+        // 如果正在请求，跳过
+        if (isRequestingRef.current) {
+            return;
+        }
+        
+        isRequestingRef.current = true;
+        
         try {
             const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
-            if (!activeEventsResponse.data.success) return;
+            if (!activeEventsResponse.data.success) {
+                return;
+            }
+
+            // 在函数内部获取最新状态，避免依赖项变化导致函数重新创建
+            const { currentView, eventData: currentEventData } = useMapGalgameStore.getState();
 
             if (activeEventsResponse.data.events.length > 0) {
                 const newEventData = buildEventDataFromEvent(
@@ -26,8 +39,8 @@ export const useRefreshEventData = () => {
                     gameData
                 );
                 if (newEventData) {
-                    setEventData(newEventData);
                     setEventCompleted(false);
+                    setEventData(newEventData);
                 }
             } else {
                 // 没有活跃事件时，在 NPC 交互页面保留当前 eventData 避免白屏
@@ -39,8 +52,10 @@ export const useRefreshEventData = () => {
             }
         } catch (error) {
             console.error('[WorldInteraction] 刷新事件状态失败:', error);
+        } finally {
+            isRequestingRef.current = false;
         }
-    }, [currentView, currentEventData, setEventData, setEventCompleted]);
+    }, [setEventData, setEventCompleted]);
 
     return { refreshEventData };
 };

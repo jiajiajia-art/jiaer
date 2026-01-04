@@ -18,8 +18,15 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
 // 为图片 URL 添加时间戳，避免缓存导致的旧图显示
 export const withCacheBust = (url?: string | null) => {
     if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
-    // 先处理图片路径，再添加时间戳
-    const processedUrl = getImageUrlWithHost(url);
+        const isDefaultImage = url.includes('defaultNpc.png') || 
+                          url.includes('defaultScene.png') || 
+                          url.includes('defaultMap.png') ||
+                          url.startsWith(import.meta.env.BASE_URL);
+    
+    const processedUrl = isDefaultImage || url.startsWith('http://') || url.startsWith('https://') 
+        ? url 
+        : getImageUrlWithHost(url);
+    
     if (!processedUrl) return '';
     const separator = processedUrl.includes('?') ? '&' : '?';
     return `${processedUrl}${separator}cb=${Date.now()}`;
@@ -98,7 +105,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
         });
 };
 
-// 从images对象中选取base图片（返回原始路径，由 withCacheBust 统一处理）
+// 从images对象中选取base图片
 export const pickBaseImage = (images?: Record<string, string>, fallback?: string) => {
     const isValidUrl = (url?: string | null): url is string => {
         return !!url && url !== 'null' && url !== 'undefined' && url.trim() !== '';

@@ -22,8 +22,7 @@ export function isWorldInteractionMode(data: EditorGameData | null | undefined):
 
 export function isWorldScene(scene: SceneLike | undefined | null): scene is WorldScene {
     if (!scene) return false;
-    // worldInteraction 的 Scene 有 position 字段，并且 subscenes 为必填数组
-    return 'position' in scene && Array.isArray((scene as WorldScene).subscenes);
+    return 'subscenes' in scene && Array.isArray((scene as WorldScene).subscenes);
 }
 
 export function isWorldSubScene(sub: SubSceneLike | undefined | null): sub is WorldSubScene {

@@ -20,6 +20,12 @@ const worldEditor = {
             }
         );
     },
+    createEmptyWorldInteraction: (title: string) => {
+        return api.post<UploadWorldFileResponse>(
+            `/world-interaction/document/create-empty`,
+            { title: title }
+        );
+    },
     checkUploadStatus: (jobId: string) => {
         return api.get<CheckUploadStatusResponse>(`/world-interaction/document/jobs/${jobId}/status`);
     },

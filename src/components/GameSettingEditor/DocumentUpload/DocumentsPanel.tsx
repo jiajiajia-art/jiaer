@@ -1,15 +1,17 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import styles from './DocumentsPanel.module.css';
 import { BsUpload } from 'react-icons/bs';
-import EditorApi from '../../../api/galgame/EditorData';
 import toast from 'react-hot-toast';
 import { useUploadStore } from '../../../store/uploadStore';
+import CreateEmptyGameModal from './CreateEmptyGameModal';
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<boolean>;
     isParsing: boolean;
     onParsingStart: () => void;
     onParsingComplete: () => void;
     fileId: string;
+    onCreateEmptyGame?: (title: string) => Promise<void>;
+    mode?: string;
 }
 
 const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
@@ -17,14 +19,11 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     isParsing,
     onParsingStart,
     onParsingComplete,
-    fileId
+    onCreateEmptyGame,
 }) => {
+    const [showCreateEmptyModal, setShowCreateEmptyModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const coverInputRef = useRef<HTMLInputElement>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [coverPreview, setCoverPreview] = useState<string | null>(null);
-    const [coverUploading, setCoverUploading] = useState<boolean>(false);
-    const [coverError, setCoverError] = useState<string | null>(null);
     const { jobs } = useUploadStore();
     const currentJobRef = useRef<string | null>(null);
 
@@ -49,64 +48,51 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         fileInputRef.current?.click();
     };
 
-    const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const file = e.dataTransfer.files?.[0];
         if (file) {
             // 验证文件类型
-            if (!file.type.startsWith('image/')) {
-                setCoverError('请上传图片文件');
+            const validTypes = ['.pdf', '.docx'];
+            const fileName = file.name.toLowerCase();
+            const isValidType = validTypes.some(type => fileName.endsWith(type));
+            
+            if (!isValidType) {
+                toast.error('请上传 PDF 或 Word (.docx) 文件');
                 return;
             }
-            // 验证文件大小（例如：最大 5MB）
-            if (file.size > 5 * 1024 * 1024) {
-                setCoverError('图片大小不能超过 5MB');
-                return;
+            
+            setUploadedFile(file);
+            onParsingStart();
+
+            try {
+                const success = await onFileUpload(file);
+                if (!success) {
+                    // 上传失败会在轮询状态中处理
+                }
+            } catch (error) {
+                // 错误会在轮询状态中处理
             }
-            setCoverError(null);
-            // 创建预览
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCoverPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-
-            // 上传封面
-            uploadCover(file);
         }
     };
 
-    const handleCoverClick = () => {
-        coverInputRef.current?.click();
-    };
-
-    const handleRemoveCover = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setCoverPreview(null);
-        if (coverInputRef.current) {
-            coverInputRef.current.value = '';
-        }
-    };
-
-    const uploadCover = useCallback(async (file: File) => {
-        if (!fileId) {
-            setCoverError('缺少文件ID，无法上传封面');
-            return;
-        }
-        try {
-            setCoverUploading(true);
-            setCoverError(null);
-            const response = await EditorApi.uploadGameCover(fileId, file);
-            if (response.data.success) {
-                toast.success('封面上传成功');
-            }
-            console.log('封面上传成功:', response.data);
-            setCoverUploading(false);
-        } catch (error) {
-            console.error('上传封面失败:', error);
-            setCoverError('封面上传失败，请重试');
-            setCoverUploading(false);
-        }
-    }, [fileId]);
 
     // 监听 uploadStore 中的任务状态，使用后端返回的真实状态
     useEffect(() => {
@@ -168,7 +154,15 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         一键上传 PDF / Word，系统自动拆解世界观、角色与剧情节点
                     </p>
                 </div>
-                {/* <button className={styles.ghost}>查看解析历史</button> */}
+                {onCreateEmptyGame && (
+                    <button 
+                        className={styles.ghost}
+                        onClick={() => setShowCreateEmptyModal(true)}
+                        disabled={isParsing}
+                    >
+                        无文档，直接填写
+                    </button>
+                )}
             </div>
 
             <div className={styles.twoCol}>
@@ -179,7 +173,14 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     </p>
 
                     {!uploadedFile ? (
-                        <div className={styles.dropzone} onClick={handleDropzoneClick}>
+                        <div 
+                            className={styles.dropzone} 
+                            onClick={handleDropzoneClick}
+                            onDragOver={handleDragOver}
+                            onDragEnter={handleDragEnter}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
                             <BsUpload className={styles.coverUploadIcon} size={32} />
                             <input
                                 ref={fileInputRef}
@@ -212,16 +213,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         </div>
                     )}
 
-                    {/* {isParsing && !apiError && currentJob && (
-                        <div className={styles.statusInfo}>
-                            <p className={styles.statusText}>
-                                {currentJob.status === 'uploading' && '正在上传文件...'}
-                                {currentJob.status === 'processing' && (stage || '正在处理中...')}
-                                {currentJob.status === 'completed' && '解析完成！'}
-                            </p>
-                        </div>
-                    )} */}
-
                     <p className={styles.mutedSmall}>
                         {apiError
                             ? '解析失败，请点击重试。'
@@ -234,44 +225,14 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     </p>
                 </div>
             </div>
-            <div className={styles.uploadCover}>
-                {/* <p className={styles.eyebrow}>Step 1</p> */}
-                <h2>游戏封面图片上传</h2>
-                <div className={styles.coverUploadArea} onClick={handleCoverClick}>
-                    <input
-                        ref={coverInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/jpg,image/webp"
-                        hidden
-                        onChange={handleCoverSelect}
-                        disabled={coverUploading || !fileId}
-                    />
-                    {coverPreview ? (
-                        <div className={styles.coverPreviewContainer}>
-                            <img src={coverPreview} alt="封面预览" className={styles.coverPreview} />
-                            <div className={styles.coverActions}>
-                                <button
-                                    type="button"
-                                    className={styles.removeCoverBtn}
-                                    onClick={handleRemoveCover}
-                                    disabled={coverUploading}
-                                >
-                                    移除
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className={styles.coverPlaceholder}>
-                            <BsUpload className={styles.coverUploadIcon} size={32} />
-                            <p className={styles.coverUploadText}>点击上传封面图片</p>
-                            <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
-                        </div>
-                    )}
-                </div>
-                {coverError && (
-                    <p className={styles.coverErrorText}>{coverError}</p>
-                )}
-            </div>
+            
+            {onCreateEmptyGame && (
+                <CreateEmptyGameModal
+                    isOpen={showCreateEmptyModal}
+                    onClose={() => setShowCreateEmptyModal(false)}
+                    onSubmit={onCreateEmptyGame}
+                />
+            )}
         </div>
     );
 };

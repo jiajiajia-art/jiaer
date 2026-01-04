@@ -164,7 +164,6 @@ export interface GetWorldFilesBySessionResponse {
   state: GameState;
 }
 
-
 export interface CreateWorldEditSessionRequest {
   success: boolean;
   message: string;

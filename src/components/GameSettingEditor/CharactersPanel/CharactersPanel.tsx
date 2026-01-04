@@ -72,17 +72,22 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         if (!gameData) return;
 
         const npcs = getNpcs(gameData);
+        const convertedCharacters: Character[] = [];
+        
+        // 如果有玩家数据，先添加玩家
+        if (gameData.worldSetting.player) {
+            convertedCharacters.push(playerToCharacter(gameData.worldSetting.player));
+        }
+        
+        // 如果有 NPC 数据，添加 NPC
         if (npcs && npcs.length > 0) {
-            const convertedCharacters: Character[] = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
+            const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
+            convertedCharacters.push(...npcCharacters);
+        }
 
-            if (gameData.worldSetting.player) {
-                convertedCharacters.unshift(playerToCharacter(gameData.worldSetting.player));
-            }
-
-            setCharacterData(convertedCharacters);
-            if (convertedCharacters.length > 0 && !isAddingNew) {
-                setActiveCharacterId(convertedCharacters[0].id);
-            }
+        setCharacterData(convertedCharacters);
+        if (convertedCharacters.length > 0 && !isAddingNew) {
+            setActiveCharacterId(convertedCharacters[0].id);
         }
     }, [gameData, isAddingNew]);
 
@@ -198,21 +203,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         }
     };
 
-    // 如果没有角色数据且不在新增模式，显示空状态
-    if (!isAddingNew && (characterData.length === 0 || !currentCharacter)) {
-        return (
-            <div className={styles.panelContent}>
-                <div className={styles.panelHeader}>
-                    <div>
-                        <p className={styles.eyebrow}>Step 3</p>
-                        <h2>角色差分</h2>
-                        <p className={styles.subtitle}>
-                            {isLoading ? '正在加载角色数据...' : '暂无角色数据，请先上传文档并等待解析完成'}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
+    if (!isAddingNew && characterData.length === 0 && !isLoading) {
+
     }
 
     const handleFieldChange = (field: keyof Character, value: string) => {

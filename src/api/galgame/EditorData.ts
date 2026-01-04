@@ -14,6 +14,9 @@ const EditorApi = {
             },
         });
     },
+    createVisualEmptyGame: (title:string) => {
+        return api.post<UploadFileResponse>(`/visual/document/create-empty`, { title: title });
+    },
     checkUploadStatus: (jobId:string) => {
         return api.get<CheckUploadStatusResponse>(`/visual/document/jobs/${jobId}/status`);
     },

@@ -71,6 +71,7 @@ const DEFAULT_Z_INDEX = 1; // 默认层级
 const MIN_Z_INDEX = 0;
 const MAX_Z_INDEX = 999;
 
+
 const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId, onDataChange, isActive }) => {
     // 子场景tab状态
     const [mapTab, setMapTab] = useState<'subScene' | 'scene' | 'map'>('subScene');

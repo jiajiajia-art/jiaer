@@ -93,3 +93,36 @@ export interface GetMusicListResponse {
     url: string;
   }[];
 }
+
+export interface CreateEmptyWorldInteractionResponse {
+    success: boolean;
+    fileId: string;
+    message: string;
+    data: {
+        world: {
+            title: string;
+            background: string;
+            summary: string;
+            preamble: string;
+            initialPlot: string;
+            literary: string;
+            Theme: string[];
+            player: {
+                name: string;
+                gender: string;
+                appearance: string;
+                age: number | null;
+                personality: string;
+                background: string;
+                image: string;
+            };
+            music: string[];
+        };
+        npcs: {
+            npcs: [];
+        };
+        scenes: {
+            scenes: [];
+        };
+    };
+}

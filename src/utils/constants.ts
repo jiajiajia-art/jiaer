@@ -31,6 +31,13 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
+    const isDefaultImage = imagePath.includes('defaultNpc.png') || 
+                          imagePath.includes('defaultScene.png') || 
+                          imagePath.includes('defaultMap.png') ||
+                          imagePath.startsWith(import.meta.env.BASE_URL);
+    if (isDefaultImage) {
+      return imagePath;
+    }
     return `${HOST_ADDRESS}${imagePath}`;
   };
 

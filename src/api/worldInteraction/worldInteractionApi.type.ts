@@ -65,7 +65,7 @@ export interface WorldSetting {
     initialPlot: string;
     literary: string;
     keyEvents: KeyEvent[];
-    player: PlayerCharacter;  // 注意：大写 P
+    player: PlayerCharacter;
     worldMapImage: string;
 }
 

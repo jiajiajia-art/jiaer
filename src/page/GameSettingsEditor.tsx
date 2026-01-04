@@ -18,6 +18,8 @@ import { useEditorSession } from '../hooks/editor/useEditorSession';
 import type { AllGameData } from '../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../api/worldInteraction/worldInteractionApi.type';
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
+import EditorApi from '../api/galgame/EditorData';
+import worldEditor from '../api/worldInteraction/worldEditor';
 
 // 类型守卫：判断是否为 worldInteraction 模式
 function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is WorldInteractionGameData {
@@ -27,7 +29,7 @@ function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | n
 
 const GameSettingsEditor = () => {
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
-    const { fileId } = useGameStore();
+    const { fileId, setFileId } = useGameStore();
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'
     
@@ -67,6 +69,29 @@ const GameSettingsEditor = () => {
         fileId,
         mode,
     });
+
+    // 创建空游戏
+    const handleCreateEmptyGame = useCallback(async (title: string) => {
+        try {
+            let response;
+            if (mode === 'worldInteraction') {
+                response = await worldEditor.createEmptyWorldInteraction(title);
+            } else {
+                response = await EditorApi.createVisualEmptyGame(title);
+            }
+
+            if (response.data?.success && response.data?.fileId) {
+                const newFileId = response.data.fileId;
+                setFileId(newFileId);
+                await fetchEditorData(newFileId, mode || undefined);
+            } else {
+                throw new Error('创建失败');
+            }
+        } catch (error: any) {
+            console.error('创建空游戏失败:', error);
+            throw error;
+        }
+    }, [mode, setFileId, fetchEditorData]);
 
     // 初始化：当 fileId 存在且数据加载完成时，设置解析状态和初始面板
     const hasInitializedRef = useRef<string | null>(null);
@@ -172,6 +197,8 @@ const GameSettingsEditor = () => {
                         onParsingStart={handleParsingStart}
                         onParsingComplete={handleParsingComplete}
                         fileId={fileId || ''}
+                        onCreateEmptyGame={handleCreateEmptyGame}
+                        mode={mode || undefined}
                     />
                 </section>
 
@@ -181,6 +208,8 @@ const GameSettingsEditor = () => {
                         isLoading={isLoadingData}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { worldPanelGetDataRef.current = getDataFn; }}
                         handleSubmit={handleSubmit}
+                        fileId={fileId || undefined}
+                        mode={(mode === 'visual' || mode === 'worldInteraction') ? mode : undefined}
                     />
                 </section>
 
@@ -201,7 +230,6 @@ const GameSettingsEditor = () => {
                 <section className={`${styles.panel} ${activePanel === 'scenes' ? styles.active : ''}`} id="scenes">
                     <ScenesPanel
                         gameData={gameData}
-                        isLoading={isLoadingData}
                         fileId={fileId}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { scenesPanelGetDataRef.current = getDataFn; }}
                         onDataChange={() => {

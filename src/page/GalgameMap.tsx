@@ -52,7 +52,6 @@ const GalgameMap = () => {
         eventCompleted,
         setEventCompleted,
         isTypingInInteractNpc,
-        storedSessionId,
         setStoredSessionId,
         clearState,
     } = useMapGalgameStore();
@@ -75,21 +74,37 @@ const GalgameMap = () => {
     // 当 sessionId 变化时，检查存储的 sessionId 是否匹配
     useEffect(() => {
         if (sessionId) {
-            if (storedSessionId && storedSessionId !== sessionId) {
-                console.log('[WorldInteraction] sessionId 不匹配，清除旧存储数据', { stored: storedSessionId, current: sessionId });
+            const currentStored = useMapGalgameStore.getState().storedSessionId;
+            if (currentStored && currentStored !== sessionId) {
+                console.log('[WorldInteraction] sessionId 不匹配，清除旧存储数据', { stored: currentStored, current: sessionId });
                 clearState();
             }
             setStoredSessionId(sessionId);
         } else {
             clearState();
         }
-    }, [sessionId, storedSessionId, setStoredSessionId, clearState]);
+    }, [sessionId, setStoredSessionId, clearState]);
+
+    const fetchWorldInteractionHistory = useCallback(async () => {
+        if (!sessionId) {
+            return;
+        }
+        try{
+            const response = await interactionApi.getWorldInteractionHistory(sessionId);
+            if (response.data.success) {
+                setWorldInteractionHistory(response.data);
+                console.log("获取历史记录成功", response.data);
+            }
+        } catch (error) {
+            console.error("获取历史记录失败:", error);
+        }
+    }, [sessionId]);
 
     useEffect(() => {
         fetchWorldInteractionHistory();
         // 重置恢复标记，因为 sessionId 变化意味着新的会话
         hasTriedRestoreEventDataRef.current = false;
-    }, [sessionId]);
+    }, [fetchWorldInteractionHistory]);
 
     // 组件卸载时清理音乐播放
     useEffect(() => {
@@ -112,14 +127,17 @@ const GalgameMap = () => {
      * 合并原先的两个 useEffect，避免重复调用 getActiveEvents
      */
     useEffect(() => {
+        let cancelled = false;
+
         const syncEventState = async () => {
             if (!sessionId || !gameData || !worldInteractionHistory) return;
 
             const hasHistory = worldInteractionHistory.interactions.length > 0;
+            const currentStoredSessionId = useMapGalgameStore.getState().storedSessionId;
 
             // 检查存储的 sessionId 是否匹配当前 sessionId，不匹配则清除状态
-            if (storedSessionId && storedSessionId !== sessionId) {
-                console.log('[WorldInteraction] 存储的 sessionId 与当前 sessionId 不匹配，清除状态', { stored: storedSessionId, current: sessionId });
+            if (currentStoredSessionId && currentStoredSessionId !== sessionId) {
+                console.log('[WorldInteraction] 存储的 sessionId 与当前 sessionId 不匹配，清除状态', { stored: currentStoredSessionId, current: sessionId });
                 clearState();
                 return;
             }
@@ -129,6 +147,7 @@ const GalgameMap = () => {
                 if (!hasTriedRestoreEventDataRef.current) {
                     hasTriedRestoreEventDataRef.current = true;
                     await refreshEventData(sessionId, gameData);
+                    if (cancelled) return;
 
                     if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
                         setCurrentView(MapViewState.WORLD_MAP);
@@ -141,8 +160,8 @@ const GalgameMap = () => {
             if (eventData) return;
 
             // 检查存储的 sessionId 是否匹配当前 sessionId，不匹配则不恢复
-            if (storedSessionId !== sessionId) {
-                console.log('[WorldInteraction] 存储的 sessionId 与当前 sessionId 不匹配，不恢复数据', { stored: storedSessionId, current: sessionId });
+            if (currentStoredSessionId !== sessionId) {
+                console.log('[WorldInteraction] 存储的 sessionId 与当前 sessionId 不匹配，不恢复数据', { stored: currentStoredSessionId, current: sessionId });
                 return;
             }
 
@@ -155,6 +174,8 @@ const GalgameMap = () => {
 
             try {
                 const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
+                if (cancelled) return;
+
                 const activeEvents = activeEventsResponse.data.success ? activeEventsResponse.data.events : [];
                 const hasActiveEvent = Array.isArray(activeEvents) && activeEvents.length > 0;
 
@@ -172,34 +193,23 @@ const GalgameMap = () => {
                     }
                 }
             } catch (error) {
-                console.error('检查活跃事件失败:', error);
-                if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
-                    setCurrentView(MapViewState.WORLD_MAP);
+                if (!cancelled) {
+                    console.error('检查活跃事件失败:', error);
+                    if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
+                        setCurrentView(MapViewState.WORLD_MAP);
+                    }
                 }
             }
         };
 
         syncEventState();
-    }, [worldInteractionHistory, gameData, sessionId, currentView, eventData, refreshEventData, setCurrentView, setEventData, storedSessionId]);
 
-    useEffect(() => {
-        getMapWorldData();
-    }, [sessionId]);
+        return () => {
+            cancelled = true;
+        };
+    }, [worldInteractionHistory, gameData, sessionId, currentView, eventData, refreshEventData, setCurrentView, setEventData, clearState]);
 
-    // 确保组件在显示前已经准备好，强制重绘修复尺寸计算问题
-    useEffect(() => {
-        if (currentView !== MapViewState.STORY_INTRO && containerRef.current) {
-            const timer = setTimeout(() => {
-                // 强制重绘，修复尺寸计算问题
-                const event = new Event('resize');
-                window.dispatchEvent(event);
-            }, 50);
-
-            return () => clearTimeout(timer);
-        }
-    }, [currentView]);
-
-    const getMapWorldData = async () => {
+    const getMapWorldData = useCallback(async () => {
         if (!sessionId) {
             setIsLoading(false);
             return;
@@ -271,7 +281,24 @@ const GalgameMap = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [sessionId]);
+
+    useEffect(() => {
+        getMapWorldData();
+    }, [getMapWorldData]);
+
+    // 确保组件在显示前已经准备好，强制重绘修复尺寸计算问题
+    useEffect(() => {
+        if (currentView !== MapViewState.STORY_INTRO && containerRef.current) {
+            const timer = setTimeout(() => {
+                // 强制重绘，修复尺寸计算问题
+                const event = new Event('resize');
+                window.dispatchEvent(event);
+            }, 50);
+
+            return () => clearTimeout(timer);
+        }
+    }, [currentView]);
 
     const handleStartGame = async () => {
         if (!fileId || !sessionId) {
@@ -297,7 +324,9 @@ const GalgameMap = () => {
                 setCurrentView(MapViewState.WORLD_MAP);
                 addConversion();
             }
-        } catch (error) {
+        } catch (error: any) {
+            const errorMessage = error.response.data.error || '分发事件失败，请稍后重试';
+            alert("分发事件失败: " + errorMessage);
             console.error("分发事件失败:", error);
             setIsDistributingEvent(false);
         }
@@ -330,9 +359,14 @@ const GalgameMap = () => {
             const response = await interactionApi.nextRound(sessionId);
             await fetchWorldInteractionHistory();
             
-            // nextRound 返回的数据不完整，需要调用 refreshEventData 获取完整的事件数据
             if (response.data.success) {
+                // 先刷新事件数据，确保获取到最新状态
                 await refreshEventData(sessionId, gameData);
+                
+                const { eventData: updatedEventData } = useMapGalgameStore.getState();
+                if (updatedEventData) {
+                    setEventCompleted(false);
+                }
                 setSelectedSubscene(null);
                 setSelectedScene(null);
                 setCurrentView(MapViewState.WORLD_MAP);
@@ -350,10 +384,6 @@ const GalgameMap = () => {
             // 有子场景，显示场景视图
             setSelectedScene(scene);
             setCurrentView(MapViewState.SCENE_VIEW);
-        } else {
-            // 没有子场景，直接打开场景模态框（使用第一个子场景或创建虚拟子场景）
-            // 这种情况应该不会发生，因为通常场景都有子场景
-            console.warn('场景没有子场景，无法打开场景视图');
         }
     };
 
@@ -390,20 +420,6 @@ const GalgameMap = () => {
         }
     };
 
-    const fetchWorldInteractionHistory = async () => {
-        if (!sessionId) {
-            return;
-        }
-        try{
-            const response = await interactionApi.getWorldInteractionHistory(sessionId);
-            if (response.data.success) {
-                setWorldInteractionHistory(response.data);
-                console.log("获取历史记录成功", response.data);
-            }
-        } catch (error) {
-            console.error("获取历史记录失败:", error);
-        }
-    };
 
     if (isLoading) {
         return (
@@ -506,11 +522,6 @@ const GalgameMap = () => {
                 {(() => {
                     // 基础条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
                     const baseCondition = (!eventData || eventCompleted) && !isLoading;
-                    
-                    console.log('baseCondition', baseCondition);
-                    console.log('currentView', currentView);
-                    console.log('eventCompleted', eventCompleted);
-                    console.log('isTypingInInteractNpc', isTypingInInteractNpc);
                     const shouldShow = baseCondition && 
                         (currentView !== MapViewState.INTERACT_NPC || (eventCompleted && !isTypingInInteractNpc));
                     return shouldShow;

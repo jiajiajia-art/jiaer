@@ -34,7 +34,6 @@ type LocalScene = HandlerLocalScene;
 
 interface ScenesPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
-    isLoading?: boolean;
     fileId?: string | null;
     onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
     onDataChange?: () => void;
@@ -44,7 +43,6 @@ interface ScenesPanelProps {
 // ==================== 组件主体 ====================
 const ScenesPanel: React.FC<ScenesPanelProps> = ({ 
     gameData, 
-    isLoading = false, 
     fileId, 
     onGetData, 
     onDataChange, 
@@ -112,8 +110,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         return isLocalStatic ? worldMapImage : `${worldMapImage}/dummy`;
     })();
 
-    // 当前激活的场景
-    const activeScene = sceneData.find(s => s.id === activeSceneId) || sceneData[0];
+    // 当前激活的场景（如果 sceneData 为空，activeScene 为 null）
+    const activeScene = sceneData.length > 0 
+        ? (sceneData.find(s => s.id === activeSceneId) || sceneData[0])
+        : null;
 
     // ==================== API 和 Handlers ====================
     const sceneApi = useMemo(() => createSceneApiHelpers(mode), [mode]);
@@ -445,22 +445,6 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
     }, [fileId, sceneApi, onDataChange]);
 
-    if (sceneData.length === 0 || !activeScene) {
-        return (
-            <div className={styles.panelContent}>
-                <div className={styles.panelHeader}>
-                    <div>
-                        <p className={styles.eyebrow}>Step 4</p>
-                        <h2>场景绑定 BGM</h2>
-                        <p className={styles.subtitle}>
-                            {isLoading ? '正在加载场景数据...' : '暂无场景数据，请先上传文档并等待解析完成'}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className={styles.panelContent}>
             {/* 世界大地图：仅世界交互模式下显示 */}
@@ -606,7 +590,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     onDownloadImage={handleDownloadImage}
                                     sceneType="subscenes"
                                 />
-                            ) : (
+                            ) : activeScene ? (
                                 <SceneDetailForm
                                     scene={activeScene}
                                     bgmLibrary={bgmLibrary}
@@ -619,6 +603,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     onDownloadImage={handleDownloadImage}
                                     sceneType="scenes"
                                 />
+                            ) : (
+                                <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
+                                    <p>暂无场景数据，请点击左侧"新增场景"按钮添加场景</p>
+                                </div>
                             )}
                         </>
                     )}
