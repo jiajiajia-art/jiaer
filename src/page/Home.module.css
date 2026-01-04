@@ -228,7 +228,7 @@
 .carouselIndicatorActive {
     width: 50px;
     height: 6px;
-    background-color: #fb4755;
+    background-color: var(--primary);
 }
 
 .carouselEmpty {

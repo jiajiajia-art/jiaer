@@ -93,8 +93,8 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .ghostSmall:disabled:hover {
@@ -163,7 +163,7 @@
 .formGrid textarea:focus,
 .formGrid select:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
 }

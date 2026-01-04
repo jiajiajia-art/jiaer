@@ -18,7 +18,7 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 0.75rem;
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -50,8 +50,8 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .primary {
@@ -62,7 +62,7 @@
     cursor: pointer;
     transition: 0.25s ease;
     color: #fff;
-    background: #E03D4B;
+    background: var(--primary);
 }
 
 .primary:hover {
@@ -137,7 +137,7 @@
 
 .npcTypeToggleButtonActive {
     background: #fff;
-    color: #E03D4B;
+    color: var(--primary);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
@@ -180,7 +180,7 @@
 }
 
 .npcCardActive {
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: rgba(224, 61, 75, 0.04);
 }
 
@@ -337,7 +337,7 @@
 }
 
 .required {
-    color: #E03D4B;
+    color: var(--primary);
 }
 
 .formGroup input,
@@ -365,7 +365,7 @@
     width: 18px;
     height: 18px;
     cursor: pointer;
-    accent-color: #E03D4B;
+    accent-color: var(--primary);
 }
 
 .checkboxLabel span {
@@ -379,7 +379,7 @@
 .formGroup select:focus,
 .formGroup textarea:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
 }
 
 .formGroup textarea {
@@ -484,7 +484,7 @@
 .optionFields input:focus,
 .optionFields textarea:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
 }
 
 .deleteButton {

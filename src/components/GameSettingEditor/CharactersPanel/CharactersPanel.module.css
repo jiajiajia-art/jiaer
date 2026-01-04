@@ -17,7 +17,7 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 0.75rem;
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -47,8 +47,8 @@
 }
 
 .ghost:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .ghostTiny {
@@ -64,8 +64,8 @@
 }
 
 .ghostTiny:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 /* 布局 */
@@ -108,8 +108,8 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 /* 角色列表 */
@@ -117,6 +117,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 772px;
 }
 
 .characterRow {
@@ -136,7 +137,7 @@
 }
 
 .characterRow.active {
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: rgba(224, 61, 75, 0.04);
 }
 
@@ -178,7 +179,7 @@
 }
 
 .deleteButton:hover {
-    color: #E03D4B;
+    color: var(--primary);
 }
 
 .mutedSmall {
@@ -329,7 +330,7 @@
 .relationshipRow input:focus,
 .relationshipRow textarea:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
 }
@@ -470,14 +471,14 @@
 }
 
 .addCard:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
     background: rgba(224, 61, 75, 0.02);
 }
 
 /* 必填标识 */
 .required {
-    color: #E03D4B;
+    color: var(--primary);
     margin-left: 2px;
 }
 
@@ -566,7 +567,7 @@
 
 .modalClose:hover {
     background: rgba(224, 61, 75, 0.1);
-    color: #E03D4B;
+    color: var(--primary);
     transform: rotate(90deg);
 }
 
@@ -624,7 +625,7 @@
 .modalBody select:focus,
 .modalBody textarea:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
 }
@@ -650,9 +651,9 @@
 }
 
 .modalFooter .ghostSmall:last-child {
-    background: #E03D4B;
+    background: var(--primary);
     color: #fff;
-    border-color: #E03D4B;
+    border-color: var(--primary);
 }
 
 .modalFooter .ghostSmall:last-child:hover {
@@ -744,7 +745,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #E03D4B;
+    border-top: 3px solid var(--primary);
     border-radius: 50%;
     animation: plusSpin 1s linear infinite;
     margin-bottom: 10px;

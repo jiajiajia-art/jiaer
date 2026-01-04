@@ -169,7 +169,7 @@
 .detailGameTitle {
     font-size: 60px;
     font-weight: 600;
-    color: #fb4755;
+    color: var(--primary);
     text-transform: uppercase;
     flex: 1; /* 允许标题占据剩余空间 */
     min-width: 0; /* 允许标题缩小 */
@@ -303,7 +303,7 @@
 .priceLabelText {
     font-size: 20px;
     font-weight: 500;
-    color: #fb4755;
+    color: var(--primary);
 }
 
 .priceWrapper {
@@ -348,7 +348,7 @@
 .originalPrice {
     font-size: 20px;
     font-weight: 600;
-    color: #fb4755;
+    color: var(--primary);
     text-decoration: line-through;
     white-space: nowrap;
     display: inline-flex;

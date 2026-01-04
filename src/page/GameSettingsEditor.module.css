@@ -1,30 +1,7 @@
-:root {
-    --primary: #E03D4B;
-    --primary-light: #FF5A67;
-    --primary-dark: #C42D3A;
-    --primary-glow: rgba(224, 61, 75, 0.35);
-    --bg-main: #FAFBFC;
-    --bg-card: #FFFFFF;
-    --text-primary: #1A1D21;
-    --text-secondary: rgba(26, 29, 33, 0.65);
-    --text-muted: rgba(26, 29, 33, 0.45);
-    --border-light: rgba(26, 29, 33, 0.08);
-    --border-medium: rgba(26, 29, 33, 0.12);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04);
-    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
-    --shadow-primary: 0 4px 20px rgba(224, 61, 75, 0.25);
-    --radius-sm: 10px;
-    --radius-md: 16px;
-    --radius-lg: 24px;
-    --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 .appShell {
     display: flex;
     height: 100vh;
-    background: var(--bg-main);
+    background: #FAFBFC;
 }
 
 .main {
@@ -113,10 +90,10 @@
     font-weight: 600;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: var(--transition-smooth);
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: #fff;
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    box-shadow: var(--shadow-primary);
+    box-shadow: 0 4px 20px rgba(224, 61, 75, 0.25);
     position: relative;
     overflow: hidden;
 }
@@ -127,7 +104,7 @@
     inset: 0;
     background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
     opacity: 0;
-    transition: var(--transition-fast);
+    transition: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .primary:hover {
@@ -152,14 +129,14 @@
 
 .ghost {
     border-radius: 12px;
-    border: 1.5px solid var(--border-medium);
+    border: 1.5px solid rgba(26, 29, 33, 0.12);
     padding: 11px 22px;
     font-weight: 600;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: var(--transition-smooth);
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: var(--text-primary);
-    background: var(--bg-card);
+    background: #FFFFFF;
     box-shadow: var(--shadow-sm);
 }
 

@@ -23,7 +23,7 @@
 .badge {
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, #E03D4B 0%, #FF5A67 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
     border-radius: 12px;
     display: grid;
     place-items: center;
@@ -79,7 +79,7 @@
     transform: translateY(-50%);
     width: 3px;
     height: 0;
-    background: linear-gradient(180deg, #E03D4B, #FF5A67);
+    background: linear-gradient(180deg, var(--primary), var(--primary-light));
     border-radius: 0 2px 2px 0;
     transition: height 0.25s ease;
 }
@@ -102,7 +102,7 @@
 .navBtn.active {
     border-color: rgba(224, 61, 75, 0.15);
     background: rgba(224, 61, 75, 0.06);
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -169,8 +169,8 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 /* 帮助按钮 */
@@ -188,7 +188,7 @@
     border-radius: 50%;
     border: 2px solid rgba(224, 61, 75, 0.3);
     background: rgba(224, 61, 75, 0.06);
-    color: #E03D4B;
+    color: var(--primary);
     cursor: pointer;
     display: flex;
     align-items: center;

@@ -120,7 +120,7 @@
 .modalBody input[type="text"]:focus,
 .modalBody textarea:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
 }
 
@@ -163,7 +163,7 @@
 }
 
 .uploadArea:hover {
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: rgba(224, 61, 75, 0.03);
 }
 
@@ -172,7 +172,7 @@
 }
 
 .uploadAreaHasFile {
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: rgba(224, 61, 75, 0.05);
     border-style: solid;
 }
@@ -260,7 +260,7 @@
 
 .removeFile:hover:not(:disabled) {
     background: rgba(224, 61, 75, 0.1);
-    color: #E03D4B;
+    color: var(--primary);
     transform: scale(1.1);
 }
 
@@ -270,7 +270,7 @@
 }
 
 .required {
-    color: #E03D4B;
+    color: var(--primary);
     margin-left: 2px;
 }
 
@@ -295,8 +295,8 @@
 }
 
 .ghostSmall:hover:not(:disabled) {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
     background: rgba(224, 61, 75, 0.02);
 }
 

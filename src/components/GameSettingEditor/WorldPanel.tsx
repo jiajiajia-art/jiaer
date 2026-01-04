@@ -534,7 +534,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                                     <>
                                         故事线
                                         <span className={styles.required}>*</span>
-                                        <span style={{ color: '#E03D4B', fontWeight: 600, marginLeft: '8px' }}>（必填）</span>
+                                        <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>（必填）</span>
                                     </>
                                 ) : (
                                     '故事线（可选）'

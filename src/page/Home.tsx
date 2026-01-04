@@ -146,7 +146,6 @@ const Home: React.FC = () => {
         loadLibraryData();
     }, [user?.user.id, loadLibraryData]);
 
-
     // 自动轮播
     useEffect(() => {
         if (carouselItems.length > 1) {

@@ -18,7 +18,7 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 

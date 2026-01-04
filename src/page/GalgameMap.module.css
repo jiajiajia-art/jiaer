@@ -50,7 +50,7 @@
 
 .errorState h2 {
     margin-bottom: 10px;
-    color: #e03d4b;
+    color: var(--primary);
 }
 
 .errorState p {
@@ -60,7 +60,7 @@
 
 .errorState button {
     padding: 10px 30px;
-    background: #e03d4b;
+    background: var(--primary);
     color: white;
     border: none;
     border-radius: 6px;

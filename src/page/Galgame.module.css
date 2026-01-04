@@ -72,7 +72,7 @@
 }
 
 .topHeaderTextMode svg {
-    color: #E03D4B;
+    color: var(--primary);
 }
 
 .characterContainer {

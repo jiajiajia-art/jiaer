@@ -17,7 +17,7 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 0.75rem;
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -49,8 +49,8 @@
 }
 
 .ghost:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .twoCol {
@@ -107,7 +107,7 @@
 }
 
 .dropzone:hover {
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: rgba(224, 61, 75, 0.02);
 }
 
@@ -118,7 +118,7 @@
 }
 
 .link {
-    color: #E03D4B;
+    color: var(--primary);
     cursor: pointer;
     margin-left: 4px;
 }
@@ -154,7 +154,7 @@
 }
 
 .retryLink {
-    color: #E03D4B;
+    color: var(--primary);
     font-size: 0.85rem;
     cursor: pointer;
 }
@@ -165,7 +165,7 @@
 
 .errorText {
     margin: 0;
-    color: #E03D4B;
+    color: var(--primary);
     font-size: 0.85rem;
 }
 
@@ -222,15 +222,15 @@
 }
 
 .statusList li[data-state="active"]::before {
-    background: #E03D4B;
+    background: var(--primary);
 }
 
 .statusList li[data-state="error"] {
-    color: #E03D4B;
+    color: var(--primary);
 }
 
 .statusList li[data-state="error"]::before {
-    background: #E03D4B;
+    background: var(--primary);
 }
 
 @media (max-width: 720px) {

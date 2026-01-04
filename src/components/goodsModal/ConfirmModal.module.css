@@ -108,7 +108,7 @@
 
 .message {
     font-size: 24px;
-    color: #FB4755;
+    color: var(--primary);
     margin: 0;
     text-align: center;
     line-height: 1.6;

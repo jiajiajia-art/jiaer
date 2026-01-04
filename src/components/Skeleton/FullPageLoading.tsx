@@ -26,7 +26,7 @@ const FullPageLoading: React.FC<FullPageLoadingProps> = ({
                         className="loadingSpinner"
                     />
                     
-                    <div style={{ color: "#E03D4B", fontSize: "16px" }}>
+                    <div style={{ color: "var(--primary)", fontSize: "16px" }}>
                         正在获取游戏数据...
                     </div>
                 </div>

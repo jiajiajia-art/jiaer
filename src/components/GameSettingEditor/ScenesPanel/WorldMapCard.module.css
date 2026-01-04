@@ -20,7 +20,7 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 0.75rem;
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -108,8 +108,8 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .ghostSmall:disabled:hover {

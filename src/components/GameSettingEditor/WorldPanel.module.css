@@ -17,7 +17,7 @@
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 0.75rem;
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 600;
 }
 
@@ -44,7 +44,7 @@
     cursor: pointer;
     transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: #fff;
-    background: linear-gradient(135deg, #E03D4B 0%, #FF5A67 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
     box-shadow: 0 4px 20px rgba(224, 61, 75, 0.25);
     position: relative;
     overflow: hidden;
@@ -90,8 +90,8 @@
 }
 
 .ghost:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .ghostSmall {
@@ -108,8 +108,8 @@
 }
 
 .ghostSmall:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 .ghostTiny {
@@ -126,8 +126,8 @@
 }
 
 .ghostTiny:hover {
-    border-color: #E03D4B;
-    color: #E03D4B;
+    border-color: var(--primary);
+    color: var(--primary);
 }
 
 /* 单栏表单容器 */
@@ -162,7 +162,7 @@
 }
 
 .required {
-    color: #E03D4B;
+    color: var(--primary);
     margin-left: 4px;
 }
 
@@ -173,7 +173,7 @@
 }
 
 .errorText {
-    color: #E03D4B;
+    color: var(--primary);
     font-size: 0.85rem;
     margin-top: 8px;
     display: block;
@@ -201,7 +201,7 @@
 .storylineRow input:focus,
 .storylineRow textarea:focus {
     outline: none;
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
 }
@@ -280,7 +280,7 @@
 }
 
 .emptyHintRequired {
-    color: #E03D4B;
+    color: var(--primary);
     font-weight: 500;
     padding: 16px;
     background: rgba(224, 61, 75, 0.05);
@@ -330,7 +330,7 @@
 }
 
 .coverUploadArea:hover {
-    border-color: #E03D4B;
+    border-color: var(--primary);
     background: rgba(224, 61, 75, 0.02);
 }
 
@@ -403,7 +403,7 @@
 }
 
 .removeCoverBtn:hover:not(:disabled) {
-    background: #E03D4B;
+    background: var(--primary);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
 }
@@ -414,7 +414,7 @@
 }
 
 .coverErrorText {
-    color: #E03D4B;
+    color: var(--primary);
     font-size: 0.85rem;
     margin: 0;
 }

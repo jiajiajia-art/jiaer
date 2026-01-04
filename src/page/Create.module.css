@@ -305,7 +305,7 @@
     border-radius: 50%;
     border: 2px solid rgba(224, 61, 75, 0.3);
     background: rgba(224, 61, 75, 0.06);
-    color: #E03D4B;
+    color: var(--primary);
     cursor: pointer;
     display: flex;
     align-items: center;

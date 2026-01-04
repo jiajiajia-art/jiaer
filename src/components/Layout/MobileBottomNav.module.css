@@ -39,7 +39,7 @@
     }
 
     .navItemActive {
-        color: #fb4755;
+        color: var(--primary);
     }
 
     .icon {

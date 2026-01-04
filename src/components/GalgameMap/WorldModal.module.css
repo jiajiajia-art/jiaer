@@ -59,7 +59,7 @@
 }
 
 .globalModalPrimaryButton {
-    background: linear-gradient(135deg, #e03d4b 0%, #fb4655 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, #fb4655 100%);
     color: #fff;
     box-shadow: 0 4px 12px rgba(224, 61, 75, 0.55);
 }

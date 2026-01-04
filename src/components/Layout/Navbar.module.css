@@ -79,7 +79,7 @@
 }
 
 .navLinkActive {
-    border-bottom: 4px solid #fb4755;
+    border-bottom: 4px solid var(--primary);
 }
 
 .navRight {

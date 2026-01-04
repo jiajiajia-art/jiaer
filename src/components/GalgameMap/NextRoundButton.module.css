@@ -14,7 +14,7 @@
     border-radius: 999px;
     border: none;
     cursor: pointer;
-    background: #e03d4b;
+    background: var(--primary);
     color: #fff;
     font-size: 14px;
     font-weight: 600;

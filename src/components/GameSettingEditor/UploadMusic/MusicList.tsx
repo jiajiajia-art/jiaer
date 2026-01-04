@@ -472,9 +472,9 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                                             disabled={isLoading}
                                         >
                                             {isPlaying ? (
-                                                <IoPauseCircleOutline size={24} color='#E03D4B'/>
+                                                <IoPauseCircleOutline size={24} color='var(--primary)'/>
                                             ) : (
-                                                <IoPlaySkipForwardCircleOutline size={24} color='#E03D4B'/>
+                                                <IoPlaySkipForwardCircleOutline size={24} color='var(--primary)'/>
                                             )}
                                         </button>
                                         <div 

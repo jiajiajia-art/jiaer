@@ -46,7 +46,7 @@
     content: '';
     width: 3px;
     height: 16px;
-    background: #E03D4B;
+    background: var(--primary);
     border-radius: 2px;
 }
 
@@ -220,7 +220,7 @@
 .regenerateButton:hover {
     background: rgba(224, 61, 75, 0.12);
     border-color: rgba(224, 61, 75, 0.35);
-    color: #E03D4B;
+    color: var(--primary);
 }
 
 .regenerateButton:active {

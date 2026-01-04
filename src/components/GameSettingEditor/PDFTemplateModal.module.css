@@ -116,7 +116,7 @@
 
 .downloadButton {
     padding: 8px 20px;
-    background: linear-gradient(135deg, #E03D4B 0%, #FF5A67 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
     color: #ffffff;
     border: none;
     border-radius: 8px;
