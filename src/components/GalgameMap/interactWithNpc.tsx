@@ -16,6 +16,7 @@ import { useCharacterAnimation } from "../../hooks/galgame/useCharacterAnimation
 import { useCharacterContainerClassName } from "../../hooks/galgame/useCharacterContainerClassName";
 import { useStoryTyping } from "../../hooks/story/useStoryTyping";
 import { useMapMusicPlayer } from "../../hooks/mapGalgame/useMapMusicPlayer";
+import { useRefreshEventData } from "../../hooks/mapGalgame/useRefreshEventData";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
 import HistoryModal from "./historyModal";
@@ -47,7 +48,8 @@ const InteractWithNpc = ({
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
     const { fileId } = useGameStore();
-    const { eventData, setEventData, setCurrentView, refreshEventData, selectedSubscene, eventCompleted, setEventCompleted, setIsTypingInInteractNpc } = useMapGalgameStore();
+    const { eventData, setEventData, setCurrentView, selectedSubscene, eventCompleted, setEventCompleted, setIsTypingInInteractNpc } = useMapGalgameStore();
+    const { refreshEventData } = useRefreshEventData();
 
     // ==================== 派生数据 ====================
     const eventId = eventData?.event?.eventId || null;
@@ -735,11 +737,9 @@ const InteractWithNpc = ({
                 window.localStorage.removeItem(incompleteKey);
                 console.log('[WorldInteraction] 步骤播放完毕，已清除缓存和不完整标记');
                 
-                // 延迟刷新事件状态，确保数据同步，同时给用户时间看到"开始下一回合"按钮
-                // 延迟 3 秒后刷新，这样既能获取最新状态，又不会立即导致白屏
+                // 延迟刷新事件状态
                 setTimeout(async () => {
                     if (sessionId && gameData) {
-                        console.log('[WorldInteraction] 步骤播放完毕，延迟刷新事件状态');
                         await refreshEventData(sessionId, gameData);
                     }
                 }, 3000);

@@ -21,6 +21,7 @@ import { mapMusicManager } from "../utils/mapMusicManager";
 import { PiMusicNoteDuotone } from "react-icons/pi";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { getImageUrlWithHost } from "../utils/constants";
+import { useRefreshEventData } from "../hooks/mapGalgame/useRefreshEventData";
 
 export interface EventData {
     event: GameEvent;
@@ -48,7 +49,6 @@ const GalgameMap = () => {
         setSelectedSubscene,
         selectedScene,
         setSelectedScene,
-        refreshEventData,
         eventCompleted,
         setEventCompleted,
         isTypingInInteractNpc,
@@ -57,6 +57,7 @@ const GalgameMap = () => {
         clearState,
     } = useMapGalgameStore();
     const { user } = useAuthStore();
+    const { refreshEventData } = useRefreshEventData();
     
     const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
     const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
@@ -129,7 +130,6 @@ const GalgameMap = () => {
                     hasTriedRestoreEventDataRef.current = true;
                     await refreshEventData(sessionId, gameData);
 
-                    // 仅在地图/开场白视图时切回地图，避免覆盖交互中的视图
                     if (currentView === MapViewState.WORLD_MAP || currentView === MapViewState.STORY_INTRO) {
                         setCurrentView(MapViewState.WORLD_MAP);
                     }
@@ -212,26 +212,21 @@ const GalgameMap = () => {
             if (response.data?.success && response.data.state) {
                 const state = response.data.state;
 
-                // 统一的图片路径处理：规范化 + 添加host前缀 + 默认值兜底
                 const processImage = (img: string | null | undefined, defaultImg: string): string => {
                     if (!img) return defaultImg;
                     const trimmed = String(img).trim();
                     if (!trimmed || trimmed === "null" || trimmed === "undefined") {
                         return defaultImg;
                     }
-                    // 默认图片（本地静态资源）直接返回
                     if (trimmed.includes('defaultScene.png') || trimmed.includes('defaultNpc.png') || trimmed.includes('defaultMap.png')) {
                         return trimmed;
                     }
-                    // 后端返回的路径使用 getImageUrlWithHost 处理
                     return getImageUrlWithHost(trimmed);
                 };
 
-                // 处理世界设定里的世界地图 & 玩家立绘
                 const worldMapImage = processImage(state.worldInfo?.worldMapImage, DEFAULT_WORLD_MAP_IMAGE);
                 const playerImagePath = processImage(state.worldInfo?.player?.imagePath, DEFAULT_NPC_IMAGE);
 
-                // 处理 NPC 列表，确保 base 立绘有默认图
                 const safeNpcs = (state.npcs || []).map((npc: any) => ({
                     ...npc,
                     images: {
@@ -240,7 +235,6 @@ const GalgameMap = () => {
                     },
                 }));
 
-                // 处理场景与子场景背景图，缺失时使用默认背景
                 const safeScenes = (state.scenes || []).map((scene: any) => ({
                     ...scene,
                     image: processImage(scene.image, DEFAULT_SCENE_IMAGE),
@@ -269,7 +263,6 @@ const GalgameMap = () => {
                     },
                 };
 
-                // 游戏文件直接使用 AllGameData（worldInteraction 模式的独立类型）
                 setGameData(worldFormatData);
                 console.log('获取地图世界数据成功');
             }
@@ -332,25 +325,18 @@ const GalgameMap = () => {
 
         try {
             setIsEndingRound(true);
-            // 清除事件完成标志
             setEventCompleted(false);
-            const response = await interactionApi.nextRound(sessionId);
             
-            // 刷新历史记录，确保数据同步
+            const response = await interactionApi.nextRound(sessionId);
             await fetchWorldInteractionHistory();
             
-            // 只有成功分发新事件时，才更新状态并切换视图
-            if (response.data.success && response.data.activeEvents?.length > 0) {
-                const nextEventData = buildEventDataFromEvent(response.data.activeEvents[0], gameData);
-                if (nextEventData) {
-                    setEventData(nextEventData);
-                    // 清理场景状态，切换到世界地图视图
-                    setSelectedSubscene(null);
-                    setSelectedScene(null);
-                    setCurrentView(MapViewState.WORLD_MAP);
-                }
+            // nextRound 返回的数据不完整，需要调用 refreshEventData 获取完整的事件数据
+            if (response.data.success) {
+                await refreshEventData(sessionId, gameData);
+                setSelectedSubscene(null);
+                setSelectedScene(null);
+                setCurrentView(MapViewState.WORLD_MAP);
             }
-            // 如果没有新事件（activeEvents 为空），保持当前视图和状态，不强制切换，避免白屏
         } catch (error) {
             console.error('开始新回合失败:', error);
         } finally {
@@ -521,6 +507,10 @@ const GalgameMap = () => {
                     // 基础条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
                     const baseCondition = (!eventData || eventCompleted) && !isLoading;
                     
+                    console.log('baseCondition', baseCondition);
+                    console.log('currentView', currentView);
+                    console.log('eventCompleted', eventCompleted);
+                    console.log('isTypingInInteractNpc', isTypingInInteractNpc);
                     const shouldShow = baseCondition && 
                         (currentView !== MapViewState.INTERACT_NPC || (eventCompleted && !isTypingInInteractNpc));
                     return shouldShow;

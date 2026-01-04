@@ -384,7 +384,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                 {(currentGame.title || '未命名游戏').toUpperCase()}
                             </h3>
                             <div className={styles.detailGameType}>
-                                {/* {currentGame.game_tags[0]} */}
+                                {currentGame.game_tags}
                             </div>
                         </div>
 
