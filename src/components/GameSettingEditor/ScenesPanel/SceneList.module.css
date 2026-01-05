@@ -54,7 +54,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-height: 772px;
 }
 
 .sceneRow {

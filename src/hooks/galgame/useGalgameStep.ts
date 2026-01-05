@@ -16,6 +16,7 @@ interface UseGalgameStepOptions {
     // 后端流式返回 complete 时携带的 allSteps
     onCompleteAllSteps?: (steps: any[]) => void;
     onStreamComplete?: () => void;
+    onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
 }
 
 // 前5条历史消息免费（每回2条消息，共10条）
@@ -27,6 +28,7 @@ export const useGalgameStep = ({
     onMessagesClear,
     onCompleteAllSteps,
     onStreamComplete,
+    onErrorAfterAlert,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -133,7 +135,8 @@ export const useGalgameStep = ({
                             }
                         }
                     },
-                    onError: options?.onError
+                    onError: options?.onError,
+                    onErrorAfterAlert: onErrorAfterAlert
                 });
             } else {
                 const errorMsg = `请求失败: ${response.statusText}`;
@@ -278,7 +281,8 @@ export const useGalgameStep = ({
                             }
                         }
                     },
-                    onError: options?.onError
+                    onError: options?.onError,
+                    onErrorAfterAlert: onErrorAfterAlert
                 });
             } else {
                 const errorMsg = `请求失败: ${response.statusText}`;

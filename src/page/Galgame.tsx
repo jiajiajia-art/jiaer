@@ -214,15 +214,39 @@ const Galgame = () => {
                         onEditSave={controller.editHistory}
                     />
 
+                    {/* 请求超时弹窗 */}
                     <ErrorModal
                         visible={controller.requestTimeoutVisible}
                         title="请求超时"
                         message="网络波动或服务器繁忙，请刷新重试或稍后再试。"
-                        confirmText="刷新"
+                        confirmText="重试"
                         cancelText="取消"
                         primaryType="confirm"
-                        onConfirm={controller.handleRetryLastRequest}
-                        onCancel={() => controller.setRequestTimeoutVisible(false)}
+                        onConfirm={async () => {
+                            await controller.handleRetryLastRequest();
+                        }}
+                        onCancel={async () => {
+                            controller.setRequestTimeoutVisible(false);
+                            await controller.refreshHistory();
+                            if (typeof window !== "undefined") {
+                                window.location.reload();
+                            }
+                        }}
+                    />
+
+                    <ErrorModal
+                        visible={controller.errorModalVisible}
+                        title="请求错误"
+                        message={controller.errorMessage}
+                        confirmText="确定"
+                        primaryType="confirm"
+                        onConfirm={async () => {
+                            controller.setErrorModalVisible(false);
+                            await controller.refreshHistory();
+                            if (typeof window !== "undefined") {
+                                window.location.reload();
+                            }
+                        }}
                     />
 
                 </div>

@@ -39,6 +39,8 @@ export const useGalgameController = () => {
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
     const [completedSteps, setCompletedSteps] = useState<any[]>([]);
     const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
+    const [errorModalVisible, setErrorModalVisible] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
 
     const currentRequestIdRef = useRef<number>(0);
     const historyProcessedRef = useRef<boolean>(false);
@@ -48,6 +50,7 @@ export const useGalgameController = () => {
     const presetDataLoadedRef = useRef<boolean>(false);
     const lastRefreshRequestIdRef = useRef<number>(0);
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
+    const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
 
     const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
@@ -209,6 +212,11 @@ export const useGalgameController = () => {
             if (refreshHistoryAfterTypingRef.current) {
                 refreshHistoryAfterTypingRef.current();
             }
+        },
+        onErrorAfterAlert: async (errorMsg: string) => {
+            // 显示错误弹窗而不是 alert
+            setErrorMessage(errorMsg);
+            setErrorModalVisible(true);
         },
     });
 
@@ -638,6 +646,9 @@ export const useGalgameController = () => {
 
         const optionText = messageUtilsWithTyping.currentMessage.options[optionIndex].text;
 
+        // 保存最后一次请求的 action
+        lastRequestActionRef.current = optionText;
+
         if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
             const stepOptionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
                 const optText = typeof opt === 'string' ? opt : (opt.text || opt);
@@ -660,13 +671,19 @@ export const useGalgameController = () => {
 
     const handleCustomInputSubmit = useCallback((value: string) => {
         if (!value.trim()) return;
+        // 保存最后一次请求的 action
+        lastRequestActionRef.current = value.trim();
         stepHandlers.handleChoiceSend(value);
     }, [stepHandlers]);
 
-    const handleRetryLastRequest = useCallback(() => {
+    const handleRetryLastRequest = useCallback(async () => {
         setRequestTimeoutVisible(false);
-        window.location.reload();
-    }, []);
+        // 刷新历史记录并刷新页面，以显示上一个选项
+        await refreshHistory();
+        if (typeof window !== "undefined") {
+            window.location.reload();
+        }
+    }, [refreshHistory]);
 
     const handleExitGame = useCallback(() => {
         try {
@@ -694,6 +711,9 @@ export const useGalgameController = () => {
         setIsTextMode,
         requestTimeoutVisible,
         setRequestTimeoutVisible,
+        errorModalVisible,
+        setErrorModalVisible,
+        errorMessage,
         currentMessage: messageUtilsWithTyping.currentMessage,
         finalDisplayText: messageUtilsWithTyping.finalDisplayText,
         finalIsTyping: messageUtilsWithTyping.finalIsTyping,

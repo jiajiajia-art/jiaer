@@ -13,6 +13,7 @@ interface UseStepStreamResponseOptions {
 interface ProcessStepStreamResponseOptions {
     onSuccess?: () => void;
     onError?: (error: string) => void;
+    onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
     onFirstStep?: () => void; // 收到第一个 step 时的回调
     onData?: (data: any) => void; // 任意数据回调（含 type=data/complete 等），便于业务层拿到附加字段
 }
@@ -146,7 +147,8 @@ export const useStepStreamResponse = ({
                                 }
                             }
                             
-                            alert(errorMessage);
+                            // 不再使用 alert，改为通过回调传递错误信息显示错误弹窗
+                            options?.onErrorAfterAlert?.(errorMessage);
                             setSelectedOptionIndex(null);
                             setIsWaitingForData(false);
                             options?.onError?.(errorMessage);
@@ -254,7 +256,7 @@ export const useStepStreamResponse = ({
                             }
                         }
                         
-                        alert(errorMessage);
+                        options?.onErrorAfterAlert?.(errorMessage);
                         setSelectedOptionIndex(null);
                         setIsWaitingForData(false);
                         options?.onError?.(errorMessage);

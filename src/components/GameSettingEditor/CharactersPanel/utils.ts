@@ -116,6 +116,60 @@ export const pickBaseImage = (images?: Record<string, string>, fallback?: string
     return first || (isValidUrl(fallback) ? fallback : undefined);
 };
 
+// 统一处理 player 的图片字段（支持多种格式）
+const extractPlayerImages = (player: any): {
+    imagesObject?: Record<string, string>;
+    baseImage?: string;
+} => {
+    const isValidUrl = (url?: string | null): url is string => {
+        return !!url && 
+               url !== 'null' && 
+               url !== 'undefined' && 
+               typeof url === 'string' && 
+               url.trim() !== '';
+    };
+
+    // 情况1: images 是对象格式 { base: string, ... }
+    if (player?.images && typeof player.images === 'object' && !Array.isArray(player.images)) {
+        const imagesObj = player.images as Record<string, any>;
+        // 检查是否是有效的对象（不是 null）
+        if (imagesObj !== null) {
+            // 转换为 Record<string, string>，过滤无效值
+            const validImages: Record<string, string> = {};
+            for (const [key, value] of Object.entries(imagesObj)) {
+                if (isValidUrl(value)) {
+                    validImages[key] = value as string;
+                }
+            }
+            if (Object.keys(validImages).length > 0) {
+                return { imagesObject: validImages };
+            }
+        }
+    }
+
+    // 情况2: images 是字符串（直接作为 base 图片）
+    if (isValidUrl(player?.images)) {
+        return {
+            baseImage: player.images as string,
+        };
+    }
+
+    // 情况3: image 字段（字符串）
+    if (isValidUrl(player?.image)) {
+        return {
+            baseImage: player.image as string,
+        };
+    }
+
+    // 情况4: imagePath 字段（字符串）
+    if (isValidUrl(player?.imagePath)) {
+        return {
+            baseImage: player.imagePath as string,
+        };
+    }
+    return {};
+};
+
 // NPC转换为Character
 export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Character => {
     const npcJob = 'job' in npc ? npc.job : undefined;
@@ -149,10 +203,8 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
 
 // Player转换为Character
 export const playerToCharacter = (player: any): Character => {
-    const playerImages = ('images' in player ? player.images : undefined) as Record<string, string> | undefined;
-    const rawImage = ('image' in player ? player.image : ('imagePath' in player ? player.imagePath : undefined)) as string | undefined;
-    const playerImage = (rawImage && rawImage !== 'null' && rawImage !== 'undefined') ? rawImage : undefined;
-    const portrait = pickBaseImage(playerImages, playerImage) || DEFAULT_NPC_PORTRAIT;
+    const { imagesObject, baseImage } = extractPlayerImages(player);
+    const portrait = pickBaseImage(imagesObject, baseImage) || DEFAULT_NPC_PORTRAIT;
     const playerRace = ('race' in player ? player.race : undefined) as string | undefined;
 
     return {
@@ -169,7 +221,7 @@ export const playerToCharacter = (player: any): Character => {
         portrait: portrait ? withCacheBust(portrait) : '',
         background: '',
         relationships: [],
-        variations: imagesToVariations(playerImages),
+        variations: imagesToVariations(imagesObject),
     };
 };
 
