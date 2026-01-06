@@ -3,7 +3,7 @@ import styles from './NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
-import useGalgameHistory from '../../hooks/galgame/useGalgameHistory';
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -30,10 +30,19 @@ interface NormalModeDisplayProps {
     finalIsTyping: boolean;
     stepHandlers: StepHandlers;
     isAutoPlay: boolean;
+    historyLength: number;
     onNextMessage: () => void;
     onChoiceClick: (option: { id: number; text: string }) => void;
     onCustomInputSubmit: (value: string) => void;
 }
+
+const POINTS_CONFIG = {
+    option: OPTION_COST,
+    custom: INPUT_COST,
+};
+
+// 与 Galgame 文本模式一致：每回 2 条消息
+const FREE_ROUNDS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD * 2;
 
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
@@ -41,14 +50,13 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     finalIsTyping,
     stepHandlers,
     isAutoPlay,
+    historyLength,
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
 }) => {
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
-
-    const { history } = useGalgameHistory();
 
     const { isWaitingForData, currentStep, showNextButton } = stepHandlers;
 
@@ -168,10 +176,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
-                            {history.length > 10 && (
+                            {historyLength >= FREE_ROUNDS_THRESHOLD && (
                                 <div className={styles.choicePrice}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>2</span>
+                                    <span>{POINTS_CONFIG.option}</span>
                                 </div>
                             )}
                         </div>
@@ -199,10 +207,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                {history.length > 10 && (
+                                {historyLength >= FREE_ROUNDS_THRESHOLD && (
                                     <div className={styles.choicePrice}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                        <span>3</span>
+                                        <span>{POINTS_CONFIG.custom}</span>
                                     </div>
                                 )}
                             </button>

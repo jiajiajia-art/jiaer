@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, memo } from 'react';
 import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './TextModeDisplay.module.css';
-import useGalgameHistory from '../../hooks/galgame/useGalgameHistory';
 
 interface TextModalStep {
     id: string;
@@ -22,6 +21,7 @@ interface TextModeDisplayProps {
     currentDisplayText: string;
     isTyping: boolean;
     isWaitingForData: boolean;
+    historyLength: number;
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
 }
@@ -79,12 +79,12 @@ const MessageItem = memo<MessageItemProps>(({
 
     // 计算要显示的文本
     const getDisplayText = () => {
-        // 只有当前步骤且正在打字时，才显示打字文本
-        // 打字完成后，应该显示完整内容，而不是部分文本
-        if (isCurrentStep && isTyping && currentDisplayText) {
-            return currentDisplayText;
+        // 当前步骤处于打字中：始终使用打字中的文本（即使刚开始还是空串）
+        // 这样可以避免“先整段闪一下再开始打字”的问题
+        if (isCurrentStep && isTyping) {
+            return currentDisplayText || '';
         }
-        // 否则显示完整内容（包括打字完成后的当前步骤）
+        // 其它情况：显示完整内容（包括打字结束后的当前步骤，以及历史步骤）
         return step.content || '';
     };
 
@@ -157,9 +157,9 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
-                                        {historyLength > FREE_ROUNDS_THRESHOLD 
-                                            && <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
-                                        }
+                                        {historyLength >= FREE_ROUNDS_THRESHOLD && (
+                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -168,9 +168,9 @@ const MessageItem = memo<MessageItemProps>(({
                             <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
-                                    {historyLength > FREE_ROUNDS_THRESHOLD 
-                                        && <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
-                                    }
+                                    {historyLength >= FREE_ROUNDS_THRESHOLD && (
+                                        <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                                    )}
                                 </div>
                                 <div className={styles.customInputWrapper}>
                                     <input
@@ -219,14 +219,11 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     currentDisplayText,
     isTyping,
     isWaitingForData,
+    historyLength,
     onChoiceClick,
     onCustomInputSubmit
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
-    
-    // 在父组件调用一次，避免每个 MessageItem 都调用
-    const { history } = useGalgameHistory();
-    const historyLength = history.length;
 
     // 自动滚动到底部
     useEffect(() => {

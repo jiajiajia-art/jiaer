@@ -151,6 +151,7 @@ const Galgame = () => {
                                         selectedOptionIndex: controller.stepHandlers.selectedOptionIndex,
                                     }}
                                     isAutoPlay={controller.isAutoPlay}
+                                    historyLength={controller.stepHandlers.localHistoryLength ?? 0}
                                     onNextMessage={controller.handleNextMessage}
                                     onChoiceClick={controller.handleChoiceClick}
                                     onCustomInputSubmit={(value) => controller.handleCustomInputSubmit(value)}
@@ -164,6 +165,7 @@ const Galgame = () => {
                                 currentDisplayText={controller.textModalDisplayText}
                                 isTyping={controller.finalIsTyping}
                                 isWaitingForData={controller.stepHandlers.isWaitingForData}
+                                historyLength={controller.stepHandlers.localHistoryLength ?? 0}
                                 onChoiceClick={(option) => {
                                     controller.resetDisplayedSteps();
                                     controller.handleChoiceClick(option);
@@ -266,9 +268,13 @@ const Galgame = () => {
                         "请求错误",
                         controller.errorMessage,
                         {
-                            confirmText: "确定",
+                            confirmText: "重试",
+                            cancelText: "取消",
                             primaryType: "confirm",
                             onConfirm: async () => {
+                                await controller.handleRetryLastRequest();
+                            },
+                            onCancel: async () => {
                                 controller.setErrorModalVisible(false);
                                 await controller.refreshHistory();
                                 if (typeof window !== "undefined") {

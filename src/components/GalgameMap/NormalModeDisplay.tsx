@@ -3,6 +3,7 @@ import styles from '../Galgame/NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -36,11 +37,12 @@ interface NormalModeDisplayProps {
 }
 
 const POINTS_CONFIG = {
-    option: 2,
-    custom: 3,
+    option: OPTION_COST,
+    custom: INPUT_COST,
 };
 
-const FREE_INTERACTIONS_THRESHOLD = 5;
+// 与扣积分逻辑保持一致：达到阈值（含）开始收费
+const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
 
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
@@ -178,7 +180,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
-                            {historyLength > FREE_INTERACTIONS_THRESHOLD && (
+                            {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
                                 <div className={styles.choicePrice}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                     <span>{POINTS_CONFIG.option}</span>
@@ -214,7 +216,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                {historyLength > FREE_INTERACTIONS_THRESHOLD && (
+                                {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
                                     <div className={styles.choicePrice}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                         <span>{POINTS_CONFIG.custom}</span>

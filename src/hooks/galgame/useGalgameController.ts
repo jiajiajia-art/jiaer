@@ -686,12 +686,20 @@ export const useGalgameController = () => {
 
     const handleRetryLastRequest = useCallback(async () => {
         setRequestTimeoutVisible(false);
-        // 刷新历史记录并刷新页面，以显示上一个选项
-        await refreshHistory();
-        if (typeof window !== "undefined") {
-            window.location.reload();
+        setErrorModalVisible(false);
+
+        const lastAction = lastRequestActionRef.current;
+        if (!lastAction) {
+            toast.error('没有可重试的上次操作');
+            return;
         }
-    }, [refreshHistory]);
+
+        await stepHandlers.handleStreamAction(lastAction, {
+            onError: () => {
+                toast.error('重试失败，请稍后再试');
+            }
+        });
+    }, [stepHandlers]);
 
     const handleExitGame = useCallback(() => {
         try {

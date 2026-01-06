@@ -20,7 +20,7 @@ interface GameDetailModalProps {
     isOpen: boolean;
     game: UserGameData;
     onClose: () => void;
-    onGameUpdated?: () => void; // 游戏数据更新后的回调（用于刷新列表）
+    onGameUpdated?: (updatedGame: UserGameData) => void; // 游戏数据更新后的回调（用于刷新列表，软刷新本地数据）
 }
 
 // 常量
@@ -57,6 +57,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const [isLiked, setIsLiked] = useState(() => checkIsLiked(game.reaction));
     const [likeCount, setLikeCount] = useState(game.like_count || 0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
+    const [isPurchasing, setIsPurchasing] = useState(false);
     const [gameDetail, setGameDetail] = useState<UserGameData | null>(null);
 
     // Refs
@@ -326,6 +327,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     const purchaseGame = useCallback(async () => {
         if (!checkAuth()) return;
         if (!fileId || !userId) return;
+        if (isPurchasing) return;
         
         // 计算实际价格（优先使用 special_price_amount，否则使用 price_amount）
         const actualPrice = (currentGame.special_price_amount != null)
@@ -345,6 +347,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
         }
 
         try {
+            setIsPurchasing(true);
             const response = await payApi.purchasePoints({
                 fileId,
             });
@@ -355,15 +358,25 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     toast.success('购买成功');
                 }
                 setIsPurchaseModalOpen(false);
+
+                // 乐观更新：当前游戏标记为已购买，并通知外层列表做软刷新
+                const updatedGame: UserGameData = {
+                    ...currentGame,
+                    paid: true,
+                };
+                onGameUpdated?.(updatedGame);
+
+                // 同步拉取最新详情，确保评分、价格等信息最新
                 await fetchGameDetail();
-                onGameUpdated?.();
             } else {
                 toast.error(response.data.message || '购买失败');
             }
         } catch (error) {
             console.error('购买失败:', error);
+        } finally {
+            setIsPurchasing(false);
         }
-    }, [checkAuth, fileId, userId, currentGame.special_price_amount, currentGame.price_amount, user?.user.points, fetchGameDetail, onGameUpdated]);
+    }, [checkAuth, fileId, userId, currentGame.special_price_amount, currentGame.price_amount, user?.user.points, isPurchasing, fetchGameDetail, onGameUpdated]);
 
     return (
         <>
@@ -481,15 +494,16 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                                     return (
                                         <button
                                             className={styles.priceWrapper}
+                                            disabled={isPurchasing}
                                             onClick={() => {
-                                                if (!checkAuth()) return;
+                                                if (!checkAuth() || isPurchasing) return;
                                                 if (currentGame.special_price_amount == 0 && !currentGame.paid) {
                                                     purchaseGame();
                                                 } else {
                                                     setIsPurchaseModalOpen(true);
                                                 }
                                             }}
-                                            >
+                                        >
                                             {!isFreePrice && (
                                                 <img
                                                     src={`${import.meta.env.BASE_URL}data/assets/金币.png`}

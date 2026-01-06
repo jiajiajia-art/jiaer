@@ -36,6 +36,8 @@ export const useWorldInteractionStep = ({
   );
   const [isWaitingForData, setIsWaitingForData] = useState(false);
   const [loading, setLoading] = useState(false);
+  // 本地历史计数（即时显示扣分，不依赖接口刷新）
+  const [localHistoryLength, setLocalHistoryLength] = useState(historyLength);
 
   const currentRequestId = useRef(0);
   const currentStepRef = useRef<any>(null);
@@ -78,6 +80,11 @@ export const useWorldInteractionStep = ({
   useEffect(() => {
     currentStepRef.current = currentStep;
   }, [currentStep]);
+
+  // 同步后端历史长度到本地计数（取较大值，避免回退）
+  useEffect(() => {
+    setLocalHistoryLength((prev) => Math.max(prev, historyLength));
+  }, [historyLength]);
 
   // 复用通用的流式 step 解析器
   const { processStreamResponse } = useStepStreamResponse({
@@ -350,7 +357,10 @@ export const useWorldInteractionStep = ({
         return;
       }
 
-      if (historyLength > FREE_INTERACTIONS_THRESHOLD) {
+      const effectiveHistory = Math.max(localHistoryLength, historyLength);
+      const nextHistory = effectiveHistory + 2; // 一次交互约等于 user+assistant 两条
+
+      if (effectiveHistory >= FREE_INTERACTIONS_THRESHOLD) {
         const isCustomInput = optionIndex === -1;
         const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
 
@@ -361,6 +371,9 @@ export const useWorldInteractionStep = ({
 
         await reducePoints(isCustomInput ? "selfDefined" : "option");
       }
+
+      // 本地先行 +2，让前端提示即时生效
+      setLocalHistoryLength(nextHistory);
 
       setSelectedOptionIndex(optionIndex);
       setIsWaitingForData(true);
@@ -487,6 +500,10 @@ export const useWorldInteractionStep = ({
           error instanceof Error ? error.message : "未知错误"
         }`;
         options?.onError?.(errorMsg);
+        // 失败回滚到已知最大值，避免虚增
+        setLocalHistoryLength((prev) =>
+          Math.max(prev, historyLength, effectiveHistory)
+        );
       } finally {
         setLoading(false);
         setIsWaitingForData(false);
@@ -497,6 +514,7 @@ export const useWorldInteractionStep = ({
       sessionId,
       historyLength,
       user?.user.points,
+      localHistoryLength,
       processNarrativeSteps,
       showStep,
       reducePoints,
@@ -510,6 +528,7 @@ export const useWorldInteractionStep = ({
     selectedOptionIndex,
     isWaitingForData,
     loading,
+    localHistoryLength,
     handleInteract,
     handleNextStep,
     handleChoiceOption,

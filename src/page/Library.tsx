@@ -107,7 +107,20 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
                     isOpen={showGameModal}
                     game={selectedGame}
                     onClose={closeModal}
-                    onGameUpdated={loadGames}
+                    onGameUpdated={(updatedGame) => {
+                        const updatedId = updatedGame.file_id || updatedGame.id;
+                        if (!updatedId) return;
+
+                        setGames((prev) =>
+                            prev.map((g) =>
+                                (g.file_id || g.id) === updatedId ? { ...g, ...updatedGame } : g
+                            )
+                        );
+
+                        setSelectedGame((prev) =>
+                            prev && (prev.file_id || prev.id) === updatedId ? { ...prev, ...updatedGame } : prev
+                        );
+                    }}
                 />
             )}
 

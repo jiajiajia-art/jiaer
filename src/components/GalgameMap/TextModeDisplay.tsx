@@ -2,13 +2,15 @@ import React, { useEffect, useRef, memo, useState } from 'react';
 import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
 import styles from '../Galgame/TextModeDisplay.module.css';
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
 
 const POINTS_CONFIG = {
-    option: 2,
-    custom: 3,
+    option: OPTION_COST,
+    custom: INPUT_COST,
 };
 
-const FREE_INTERACTIONS_THRESHOLD = 5;
+// 与扣积分逻辑保持一致：达到阈值（含）开始收费
+const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
 
 interface TextModalStep {
     id: string;
@@ -153,7 +155,7 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
-                                        {historyLength > FREE_INTERACTIONS_THRESHOLD && (
+                                        {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
                                             <div className={styles.choicePrice}>
                                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                                 <span>{POINTS_CONFIG.option}</span>
@@ -167,7 +169,7 @@ const MessageItem = memo<MessageItemProps>(({
                             <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
-                                    {historyLength > FREE_INTERACTIONS_THRESHOLD && (
+                                    {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
                                         <div className={styles.choicePrice}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
                                             <span>{POINTS_CONFIG.custom}</span>

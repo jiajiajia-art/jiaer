@@ -18,7 +18,6 @@ export const HISTORY_MESSAGE_THRESHOLD = 5;
 /** 每日签到可获得的积分 */
 export const CHECK_IN_REWARD_POINTS = 9;
 
-
 export const getImageUrl = (imagePath: string | null | undefined): string => {
   if (!imagePath) return "";
 
@@ -26,7 +25,6 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
     return imagePath;
   }
 
-  // 如果是默认图片或已经包含BASE_URL，直接返回
   const isDefaultImage =
     imagePath.includes("defaultNpc.png") ||
     imagePath.includes("defaultScene.png") ||
@@ -36,7 +34,6 @@ export const getImageUrl = (imagePath: string | null | undefined): string => {
     return imagePath;
   }
 
-  // 自动判断是否需要添加斜杠：如果路径第一个字符不是 '/'，则添加
   const normalizedPath = imagePath.startsWith("/")
     ? imagePath
     : `/${imagePath}`;

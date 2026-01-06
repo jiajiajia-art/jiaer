@@ -36,6 +36,8 @@ export const useGalgameStep = ({
     const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
     const [isWaitingForData, setIsWaitingForData] = useState(false);
     const [loading, setLoading] = useState(false);
+    // 本地历史计数（用于即时显示扣分提示，避免依赖接口刷新）
+    const [localHistoryLength, setLocalHistoryLength] = useState(historyLength);
     
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
@@ -47,6 +49,11 @@ export const useGalgameStep = ({
     useEffect(() => {
         currentStepRef.current = currentStep;
     }, [currentStep]);
+
+    // 同步后端历史长度到本地计数（取较大值，避免回退）
+    useEffect(() => {
+        setLocalHistoryLength((prev) => Math.max(prev, historyLength));
+    }, [historyLength]);
 
     const { processStreamResponse } = useStepStreamResponse({
         setStepQueue,
@@ -181,8 +188,11 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
 
-        // 前5回免费，之后需要扣除积分
-        if (historyLength > FREE_ROUNDS_THRESHOLD) {
+        const effectiveHistory = Math.max(localHistoryLength, historyLength);
+        const nextHistory = effectiveHistory + 2; // 一次交互通常对应 user+assistant 两条
+
+        // 前 N 回免费，达到阈值（含）之后需要扣除积分
+        if (effectiveHistory >= FREE_ROUNDS_THRESHOLD) {
             if (user?.user.points && user.user.points > OPTION_COST) {
                 await reducePoints("option");
             } else {
@@ -193,14 +203,19 @@ export const useGalgameStep = ({
             }
         }
 
+        // 本地先行 +2，让前端提示即时生效
+        setLocalHistoryLength(nextHistory);
+
         await handleStreamAction(option.text, {
             onError: (error) => {
                 console.error('❌ 选择处理错误:', error);
+                // 失败回滚到已知的最大值，避免虚增
+                setLocalHistoryLength((prev) => Math.max(prev, historyLength, effectiveHistory));
                 setIsWaitingForData(false);
                 setSelectedOptionIndex(null);
             }
         });
-    }, [handleStreamAction, user?.user.points, historyLength]);
+    }, [handleStreamAction, user?.user.points, historyLength, localHistoryLength]);
 
     // 处理输入框发送
     const handleChoiceSend = useCallback(async (inputText: string) => {
@@ -211,8 +226,11 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
         
-        // 前5回免费，之后需要扣除积分
-        if (historyLength > FREE_ROUNDS_THRESHOLD) {
+        const effectiveHistory = Math.max(localHistoryLength, historyLength);
+        const nextHistory = effectiveHistory + 2;
+
+        // 前 N 回免费，达到阈值（含）之后需要扣除积分
+        if (effectiveHistory >= FREE_ROUNDS_THRESHOLD) {
             if (user?.user.points && user.user.points > INPUT_COST) {
                 await reducePoints("selfDefined");
             } else {
@@ -222,13 +240,18 @@ export const useGalgameStep = ({
             }
         }
 
+        // 本地先行 +2，让前端提示即时生效
+        setLocalHistoryLength(nextHistory);
+
         await handleStreamAction(inputText, {
             onError: (error) => {
                 console.error('❌ 输入发送错误:', error);
+                // 失败回滚到已知的最大值，避免虚增
+                setLocalHistoryLength((prev) => Math.max(prev, historyLength, effectiveHistory));
                 setIsWaitingForData(false);
             }
         });
-    }, [handleStreamAction, user?.user.points, historyLength]);
+    }, [handleStreamAction, user?.user.points, historyLength, localHistoryLength]);
 
     // 处理重新生成
     const handleRegenerate = useCallback(async (
@@ -333,6 +356,7 @@ export const useGalgameStep = ({
         selectedOptionIndex,
         isWaitingForData,
         loading,
+        localHistoryLength,
         handleStreamAction,
         handleNextStep,
         handleChoiceOption,

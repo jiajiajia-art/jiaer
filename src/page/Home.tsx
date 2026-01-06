@@ -146,6 +146,27 @@ const Home: React.FC = () => {
         loadLibraryData();
     }, [user?.user.id, loadLibraryData]);
 
+    // 购买后软刷新：只更新本地列表中的对应游戏数据
+    const handleGameUpdated = useCallback((updatedGame: UserGameData) => {
+        const updatedId = updatedGame.file_id || updatedGame.id;
+        if (!updatedId) return;
+
+        const matchById = (game: UserGameData) => {
+            const id = game.file_id || game.id;
+            return id === updatedId;
+        };
+
+        setFileMetas((prev) =>
+            prev.map((g) => (matchById(g) ? { ...g, ...updatedGame } : g))
+        );
+        setAllGames((prev) =>
+            prev.map((g) => (matchById(g) ? { ...g, ...updatedGame } : g))
+        );
+        setSelectedGameMeta((prev) =>
+            prev && matchById(prev) ? { ...prev, ...updatedGame } : prev
+        );
+    }, []);
+
     // 自动轮播
     useEffect(() => {
         if (carouselItems.length > 1) {
@@ -307,7 +328,7 @@ const Home: React.FC = () => {
                     isOpen={showGameModal}
                     game={selectedGameMeta}
                     onClose={closeModal}
-                    onGameUpdated={loadLibraryData}
+                    onGameUpdated={handleGameUpdated}
                 />
             )}
 

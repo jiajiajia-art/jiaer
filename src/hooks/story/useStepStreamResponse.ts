@@ -14,7 +14,7 @@ interface ProcessStepStreamResponseOptions {
     onSuccess?: () => void;
     onError?: (error: string) => void;
     onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
-    onFirstStep?: () => void; // 收到第一个 step 时的回调
+    onFirstStep?: () => void; // 接收到后端数据，清空一些状态缓存等
     onData?: (data: any) => void; // 任意数据回调（含 type=data/complete 等），便于业务层拿到附加字段
 }
 
@@ -73,8 +73,8 @@ export const useStepStreamResponse = ({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-            let hasReceivedStep = false;
-            let firstStepReceived = false;
+        let hasReceivedStep = false;
+        let firstStepReceived = false;
 
         try {
             let missionFlagged = false;
@@ -121,15 +121,11 @@ export const useStepStreamResponse = ({
                         // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
                         options?.onData?.(jsonData);
 
-                        // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
-                        options?.onData?.(jsonData);
-
                         if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
                             missionFlagged = true;
                             notifyMissionFlag();
                         }
 
-                        // 处理顶层的 error 类型（不是 step 格式）
                         if (jsonData.type === 'error') {
                             let errorMessage = jsonData.message || jsonData.error || '发生错误';
                             
@@ -157,7 +153,7 @@ export const useStepStreamResponse = ({
                         }
 
                         // 处理 step 类型的数据（增量 step）
-                    if (jsonData.type === 'step' && jsonData.step) {
+                        if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
                             console.log('📝 收到新的 step:', step.type);
                             hasReceivedStep = true;
@@ -181,7 +177,7 @@ export const useStepStreamResponse = ({
                         }
 
                         // 处理完整数据（包含 narrativeSteps）
-                    if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
+                        if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
                             console.log('📚 收到完整数据，包含', jsonData.narrativeSteps.length, '个 steps');
                             if (jsonData.narrativeSteps.length > 0) {
                                 hasReceivedStep = true;
