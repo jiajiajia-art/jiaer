@@ -55,9 +55,10 @@
 
 .twoCol {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
     flex: 1;
+    max-width: 100%;
 }
 
 .card {
@@ -169,69 +170,179 @@
     font-size: 0.85rem;
 }
 
-.progressText {
-    font-size: 0.9rem;
-    color: #1a1a1a;
-    font-weight: 500;
-}
-
-/* 状态列表 */
-.statusList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+/* 进度展示区域 */
+.progressSection {
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.statusList li {
-    padding: 10px 14px;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.02);
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* 进度头部 */
+.progressHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.progressPercentage {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.progressStage {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.5);
+    font-weight: 500;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+/* 步骤指示器 */
+.stepsIndicator {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.stepItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
     position: relative;
-    padding-left: 36px;
-    color: rgba(0, 0, 0, 0.4);
-    font-size: 0.85rem;
-    background: rgba(0, 0, 0, 0.01);
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
-.statusList li::before {
-    content: "";
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
+.stepItem.stepPending {
+    opacity: 0.6;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.stepItem.stepActive {
+    opacity: 1;
+    background: rgba(224, 61, 75, 0.05);
+    border-color: rgba(224, 61, 75, 0.2);
+    box-shadow: 0 1px 3px rgba(224, 61, 75, 0.1);
+}
+
+.stepItem.stepDone {
+    opacity: 0.8;
+    background: rgba(34, 197, 94, 0.03);
+    border-color: rgba(34, 197, 94, 0.15);
+}
+
+/* 图标和连接线容器 */
+.stepIconWrapper {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 24px;
+    position: relative;
+    padding-top: 2px;
+}
+
+.stepIcon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.04);
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
 }
 
-.statusList li[data-state="done"] {
+.stepItem.stepPending .stepIcon {
+    color: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.stepItem.stepActive .stepIcon {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
+    box-shadow: 0 2px 4px rgba(224, 61, 75, 0.3);
+}
+
+.stepItem.stepDone .stepIcon {
+    color: #ffffff;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    box-shadow: 0 1px 3px rgba(34, 197, 94, 0.25);
+}
+
+/* 步骤连接线 - 在盒子之间 */
+.stepConnector {
+    position: absolute;
+    left: 11px;
+    top: 100%;
+    width: 2px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 1px;
+    z-index: 0;
+}
+
+.stepConnectorDone {
+    background: linear-gradient(180deg, #22c55e 0%, rgba(34, 197, 94, 0.3) 100%);
+}
+
+.stepContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 1px;
+    min-width: 0;
+}
+
+.stepLabel {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    line-height: 1.4;
+}
+
+.stepItem.stepPending .stepLabel {
+    color: rgba(0, 0, 0, 0.45);
+    font-weight: 400;
+}
+
+.stepItem.stepActive .stepLabel {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.stepItem.stepDone .stepLabel {
     color: rgba(0, 0, 0, 0.7);
 }
 
-.statusList li[data-state="done"]::before {
-    background: #22c55e;
+.stepDescription {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.55);
+    line-height: 1.4;
+    margin-top: 1px;
 }
 
-.statusList li[data-state="active"] {
-    color: #1a1a1a;
-    font-weight: 500;
-}
-
-.statusList li[data-state="active"]::before {
-    background: var(--primary);
-}
-
-.statusList li[data-state="error"] {
-    color: var(--primary);
-}
-
-.statusList li[data-state="error"]::before {
-    background: var(--primary);
-}
 
 @media (max-width: 720px) {
     .panelHeader {

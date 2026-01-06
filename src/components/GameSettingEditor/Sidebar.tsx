@@ -45,7 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
             {
                 id: 'functionalNPCs',
                 number: '5',
-                title: '剧情事件插件',
+                title: '剧情事件插件（开发中）',
                 subtitle: '功能性NPC管理',
             },
             {
@@ -54,6 +54,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                 title: '地图编辑',
                 subtitle: '子场景 / 场景 / 地图',
             },
+            {
+                id: 'attributeGrowth',
+                number: '7',
+                title:'属性 · 养成培养插件（开发中）',
+                subtitle: '属性养成培养',
+            }
         ]
         : baseNavItems;
 
@@ -114,4 +120,3 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
 };
 
 export default Sidebar;
-

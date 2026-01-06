@@ -6,8 +6,9 @@ import WorldPanel from '../components/GameSettingEditor/WorldPanel';
 import CharactersPanel from '../components/GameSettingEditor/CharactersPanel/CharactersPanel';
 import ScenesPanel from '../components/GameSettingEditor/ScenesPanel/ScenesPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
-import MapPanel from '../components/GameSettingEditor/MapPanel';
+import MapPanel from '../components/GameSettingEditor/MapPanel/MapPanel';
 import FunctionalNPCsPanel from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
+import AttributeGrowthPanel from '../components/GameSettingEditor/AttributeGrowthPanel/AttributeGrowthPanel';
 import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
@@ -277,6 +278,16 @@ const GameSettingsEditor = () => {
                     </section>
                 )}
 
+                {/* 只在 worldInteraction 模式下显示 属性 · 养成培养插件（模块七，静态表单） */}
+                {mode === 'worldInteraction' && (
+                    <section
+                        className={`${styles.panel} ${activePanel === 'attributeGrowth' ? styles.active : ''}`}
+                        id="attributeGrowth"
+                    >
+                        <AttributeGrowthPanel />
+                    </section>
+                )}
+
                 {/* 编辑器全局加载遮罩（获取游戏文件 / 刷新数据时） */}
                 {isLoadingData && (
                     <FullPageLoading
@@ -290,6 +301,7 @@ const GameSettingsEditor = () => {
                     isOpen={showPublishModal}
                     onClose={() => setShowPublishModal(false)}
                     onPublish={onPublishGame}
+                    fileId={fileId || undefined}
                 />
             )}
         </div>

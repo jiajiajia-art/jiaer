@@ -1,7 +1,7 @@
 import type { GameEvent, NPCInfo, SubsceneInfo } from '../api/worldInteraction/interactionApi.type';
 import type { AllGameData } from '../api/worldInteraction/mapWorldData.type';
 import type { EventData } from '../page/GalgameMap';
-import { getImageUrlWithHost } from '../utils/constants';
+import { getImageUrl } from '../utils/constants';
 
 export const buildEventDataFromEvent = (
     event: any,
@@ -14,7 +14,7 @@ export const buildEventDataFromEvent = (
         if (img.startsWith('http') || img.includes('data/assets') || img.includes('default')) {
             return img;
         }
-        return getImageUrlWithHost(img) || undefined;
+        return getImageUrl(img) || undefined;
     };
 
     if (event.npc && event.subscene) {

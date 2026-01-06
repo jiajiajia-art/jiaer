@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import styles from './DocumentsPanel.module.css';
-import { BsUpload } from 'react-icons/bs';
+import { BsUpload, BsCheckCircle } from 'react-icons/bs';
+import { HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineMap, HiOutlineCheckCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { useUploadStore } from '../../../store/uploadStore';
 import CreateEmptyGameModal from './CreateEmptyGameModal';
@@ -32,15 +33,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         if (file) {
             setUploadedFile(file);
             onParsingStart();
-
-            try {
-                const success = await onFileUpload(file);
-                if (!success) {
-                    // 上传失败会在轮询状态中处理
-                }
-            } catch (error) {
-                // 错误会在轮询状态中处理
-            }
+            await onFileUpload(file);
         }
     };
 
@@ -81,15 +74,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             
             setUploadedFile(file);
             onParsingStart();
-
-            try {
-                const success = await onFileUpload(file);
-                if (!success) {
-                    // 上传失败会在轮询状态中处理
-                }
-            } catch (error) {
-                // 错误会在轮询状态中处理
-            }
+            await onFileUpload(file);
         }
     };
 
@@ -108,19 +93,24 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
         if (currentJob) {
             currentJobRef.current = currentJob.jobId;
-
-            // 根据实际状态处理
             if (currentJob.status === 'completed') {
-                // 完成
                 onParsingComplete();
             } else if (currentJob.status === 'failed') {
-                // 失败状态已在下方处理
+                // 上传失败时，清空已上传的文档，让用户可以重新上传
+                setUploadedFile(null);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+                currentJobRef.current = null;
             }
         }
     }, [jobs, uploadedFile, onParsingComplete]);
 
     const handleRetry = () => {
         setUploadedFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
         currentJobRef.current = null;
     };
 
@@ -143,6 +133,50 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const progress = currentJob?.progress || 0;
     const stage = currentJob?.stage || '';
     const apiError = currentJob?.status === 'failed' ? (currentJob.error || '文件上传或解析失败，请重试') : null;
+
+    // 定义解析步骤
+    const parseSteps = useMemo(() => [
+        { 
+            id: 'world', 
+            label: '生成世界', 
+            progress: 30,
+            icon: HiOutlineGlobeAlt,
+            description: '正在分析文档结构，生成世界观设定...'
+        },
+        { 
+            id: 'npc', 
+            label: '解析NPC', 
+            progress: 55,
+            icon: HiOutlineUserGroup,
+            description: '正在提取角色信息，构建NPC数据...'
+        },
+        { 
+            id: 'scene', 
+            label: '解析场景', 
+            progress: 75,
+            icon: HiOutlineMap,
+            description: '正在识别场景描述，整理场景节点...'
+        },
+        { 
+            id: 'complete', 
+            label: '完成', 
+            progress: 100,
+            icon: HiOutlineCheckCircle,
+            description: '解析完成，准备跳转到下一步...'
+        }
+    ], []);
+
+    // 根据进度判断当前步骤
+    const getCurrentStepIndex = () => {
+        if (progress >= 100) return 3;
+        if (progress >= 75) return 2;
+        if (progress >= 55) return 1;
+        if (progress >= 30) return 0;
+        return 0;
+    };
+
+    const currentStepIndex = getCurrentStepIndex();
+    const isCompleted = currentJob?.status === 'completed';
 
     return (
         <div className={styles.panelContent}>
@@ -208,21 +242,67 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     )}
 
                     {isParsing && !apiError && currentJob && (
-                        <div className={styles.progressText}>
-                            {stage ? `${stage}：` : '解析进度：'}{Math.round(progress)}%
+                        <div className={styles.progressSection}>
+                            {/* 进度百分比和阶段 */}
+                            <div className={styles.progressHeader}>
+                                <span className={styles.progressPercentage}>
+                                    {Math.round(progress)}%
+                                </span>
+                                {stage && (
+                                    <span className={styles.progressStage}>{stage}</span>
+                                )}
+                            </div>
+
+                            {/* 步骤指示器 */}
+                            <div className={styles.stepsIndicator}>
+                                {parseSteps.map((step, index) => {
+                                    const StepIcon = step.icon;
+                                    const isActive = index === currentStepIndex && !isCompleted;
+                                    const isDone = index < currentStepIndex || (isCompleted && index === 3);
+
+                                    return (
+                                        <div 
+                                            key={step.id} 
+                                            className={`${styles.stepItem} ${
+                                                isActive ? styles.stepActive : 
+                                                isDone ? styles.stepDone : 
+                                                styles.stepPending
+                                            }`}
+                                        >
+                                            <div className={styles.stepIconWrapper}>
+                                                <div className={styles.stepIcon}>
+                                                    {isDone ? (
+                                                        <BsCheckCircle />
+                                                    ) : (
+                                                        <StepIcon />
+                                                    )}
+                                                </div>
+                                                {index < parseSteps.length - 1 && (
+                                                    <div className={`${styles.stepConnector} ${
+                                                        isDone ? styles.stepConnectorDone : ''
+                                                    }`} />
+                                                )}
+                                            </div>
+                                            <div className={styles.stepContent}>
+                                                <span className={styles.stepLabel}>{step.label}</span>
+                                                {isActive && (
+                                                    <span className={styles.stepDescription}>
+                                                        {step.description}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
-                    <p className={styles.mutedSmall}>
-                        {apiError
-                            ? '解析失败，请点击重试。'
-                            : isParsing
-                                ? currentJob?.status === 'completed'
-                                    ? '解析完成！即将跳转到 Step 2...'
-                                    : '正在解析中，请耐心等待...'
-                                : '解析完成后系统将自动为你打开 Step 2 继续校对。'
-                        }
-                    </p>
+                    {!isParsing && !apiError && (
+                        <p className={styles.mutedSmall}>
+                            解析完成后系统将自动为你打开 Step 2 继续校对。
+                        </p>
+                    )}
                 </div>
             </div>
             

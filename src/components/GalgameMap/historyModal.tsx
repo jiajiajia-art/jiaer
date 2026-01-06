@@ -1,4 +1,4 @@
-import styles from './historyModal.module.css';
+import styles from './HistoryModal.module.css';
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 
 interface HistoryModalProps {

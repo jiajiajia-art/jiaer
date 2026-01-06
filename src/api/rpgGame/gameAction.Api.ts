@@ -29,7 +29,7 @@ export interface GameStatsResponse {
     pv: number;
     likeCount: number;
     ratingAvg: number;
-    amount: number;
+    count: number;
 }
 
 

@@ -68,6 +68,30 @@ const Galgame = () => {
         isLoading: controller.isLoading,
     });
 
+    const renderErrorModal = (
+        visible: boolean,
+        title: string,
+        message: string,
+        options: {
+            confirmText: string;
+            cancelText?: string;
+            primaryType?: "confirm" | "cancel";
+            onConfirm: () => void;
+            onCancel?: () => void;
+        }
+    ) => (
+        <ErrorModal
+            visible={visible}
+            title={title}
+            message={message}
+            confirmText={options.confirmText}
+            cancelText={options.cancelText}
+            primaryType={options.primaryType}
+            onConfirm={options.onConfirm}
+            onCancel={options.onCancel}
+        />
+    );
+
     if (controller.isLoading) {
         return (
             <FullPageLoading
@@ -215,39 +239,44 @@ const Galgame = () => {
                     />
 
                     {/* 请求超时弹窗 */}
-                    <ErrorModal
-                        visible={controller.requestTimeoutVisible}
-                        title="请求超时"
-                        message="网络波动或服务器繁忙，请刷新重试或稍后再试。"
-                        confirmText="重试"
-                        cancelText="取消"
-                        primaryType="confirm"
-                        onConfirm={async () => {
-                            await controller.handleRetryLastRequest();
-                        }}
-                        onCancel={async () => {
-                            controller.setRequestTimeoutVisible(false);
-                            await controller.refreshHistory();
-                            if (typeof window !== "undefined") {
-                                window.location.reload();
-                            }
-                        }}
-                    />
+                    {renderErrorModal(
+                        controller.requestTimeoutVisible,
+                        "请求超时",
+                        "网络波动或服务器繁忙，请刷新重试或稍后再试。",
+                        {
+                            confirmText: "重试",
+                            cancelText: "取消",
+                            primaryType: "confirm",
+                            onConfirm: async () => {
+                                await controller.handleRetryLastRequest();
+                            },
+                            onCancel: async () => {
+                                controller.setRequestTimeoutVisible(false);
+                                await controller.refreshHistory();
+                                if (typeof window !== "undefined") {
+                                    window.location.reload();
+                                }
+                            },
+                        }
+                    )}
 
-                    <ErrorModal
-                        visible={controller.errorModalVisible}
-                        title="请求错误"
-                        message={controller.errorMessage}
-                        confirmText="确定"
-                        primaryType="confirm"
-                        onConfirm={async () => {
-                            controller.setErrorModalVisible(false);
-                            await controller.refreshHistory();
-                            if (typeof window !== "undefined") {
-                                window.location.reload();
-                            }
-                        }}
-                    />
+                    {/* 一般请求错误弹窗 */}
+                    {renderErrorModal(
+                        controller.errorModalVisible,
+                        "请求错误",
+                        controller.errorMessage,
+                        {
+                            confirmText: "确定",
+                            primaryType: "confirm",
+                            onConfirm: async () => {
+                                controller.setErrorModalVisible(false);
+                                await controller.refreshHistory();
+                                if (typeof window !== "undefined") {
+                                    window.location.reload();
+                                }
+                            },
+                        }
+                    )}
 
                 </div>
             </div>

@@ -28,9 +28,7 @@ export const useMapMusicPlayer = ({
     selectedSubscene,
     eventData,
 }: UseMapMusicPlayerOptions) => {
-    // 使用全局状态，确保所有组件中的音乐状态同步
     const { isMusicPlaying, setMusicPlaying } = useMapGalgameStore();
-    // 使用全局音频管理器，确保所有组件共享同一个音频实例
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const lastSceneIdRef = useRef<string | null>(null); // 记录上次的场景 ID，用于检测场景变化
     

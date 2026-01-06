@@ -1,0 +1,145 @@
+/* AttributeList 组件样式 */
+
+.leftList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.attrItem {
+    position: relative;
+    padding: 14px 14px;
+    border-radius: 14px;
+    background: #f9fafb;
+    border: 1px solid var(--border-light);
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) auto;
+    column-gap: 18px;
+    row-gap: 10px;
+    align-items: flex-start;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.attrItem:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.attrItemActive {
+    border-color: var(--primary);
+    background: rgba(224, 61, 75, 0.03);
+    box-shadow: 0 0 0 1px rgba(224, 61, 75, 0.15);
+}
+
+.attrMain {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attrNameRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.attrTag {
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid var(--border-medium);
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: #fff;
+}
+
+.attrTagDisplay {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(224, 61, 75, 0.08);
+}
+
+.attrDesc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.attrKey {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.attrMeta {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-primary);
+    padding-right: 50px;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--border-medium);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.dangerGhost {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    background: #fff;
+    color: #dc3545;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.15s ease-out);
+    z-index: 10;
+}
+
+.dangerGhost:hover {
+    background: rgba(220, 53, 69, 0.08);
+    border-color: rgba(220, 53, 69, 0.5);
+    color: #c82333;
+}
+
+.emptyState {
+    padding: 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.emptyStateTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.emptyStateDesc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+

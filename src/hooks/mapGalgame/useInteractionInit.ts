@@ -188,7 +188,7 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                             visible: true,
                             message: '开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？',
                         });
-                    }, 60_000);
+                    }, 60000);
                     
                     setTimeout(() => {
                         stepHandlers.handleInteract({

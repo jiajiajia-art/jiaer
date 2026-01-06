@@ -7,7 +7,7 @@ import type { NPC } from '../../../api/galgame/EditorData.type';
 import type { NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { Character, Variation } from './types';
 import { DEFAULT_NPC_PORTRAIT } from './types';
-import { getImageUrlWithHost } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
 
 // 辅助函数：获取 npcs（兼容两种模式）
 export function getNpcs(data: AllGameData | WorldInteractionGameData) {
@@ -25,7 +25,7 @@ export const withCacheBust = (url?: string | null) => {
     
     const processedUrl = isDefaultImage || url.startsWith('http://') || url.startsWith('https://') 
         ? url 
-        : getImageUrlWithHost(url);
+        : getImageUrl(url);
     
     if (!processedUrl) return '';
     const separator = processedUrl.includes('?') ? '&' : '?';

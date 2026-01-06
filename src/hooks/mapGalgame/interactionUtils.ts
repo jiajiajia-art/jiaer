@@ -1,4 +1,4 @@
-import { getImageUrlWithHost } from "../../utils/constants";
+import { getImageUrl } from "../../utils/constants";
 
 
 export type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -20,18 +20,18 @@ export interface ModalState {
 
 // ==================== 图片处理 ====================
 
-export const getImageUrl = (image: string | undefined): string | undefined => {
+export const getImageUrls = (image: string | undefined): string | undefined => {
     if (!image) return undefined;
     if (image.startsWith('http')) return image;
     if (image.includes('data/assets')) return image;
-    return getImageUrlWithHost(image) || undefined;
+    return getImageUrl(image) || undefined;
 };
 
 /** 获取玩家图片（支持字符串或对象格式） */
 export const getPlayerImage = (playerImages: string | { [variant: string]: string } | undefined): string | undefined => {
     if (!playerImages) return undefined;
     const image = typeof playerImages === 'string' ? playerImages : (playerImages as any)?.base || '';
-    return image ? getImageUrl(image) : undefined;
+    return image ? getImageUrls(image) : undefined;
 };
 
 // ==================== 步骤转换 ====================
@@ -63,7 +63,7 @@ export const convertStepToMessage = (
         const characterName = step.speakerName || step.npcId || step.speakerId || '未知角色';
         const characterImage = isPlayer 
             ? getPlayerImage(worldSetting?.player?.imagePath)
-            : getImageUrl(step.activeImage || step.npcImages?.base);
+            : getImageUrls(step.activeImage || step.npcImages?.base);
         console.log(characterImage);
         
         return {

@@ -7,7 +7,6 @@ import SceneView from "../components/GalgameMap/SceneView";
 import type { AllGameData, Scene } from "../api/worldInteraction/mapWorldData.type";
 import StoryIntroModal from "../components/GalgameMap/StoryIntroModal";
 import SubSceneModal from "../components/GalgameMap/SubSceneModal";
-import InteractWithNpc from "../components/GalgameMap/interactWithNpc";
 import interactionApi from "../api/worldInteraction/interactionApi";
 import type { GameEvent, GetWorldInteractionHistoryResponse, NPCInfo, SubsceneInfo } from "../api/worldInteraction/interactionApi.type";
 import { useMapGalgameStore, MapViewState } from "../store/mapGalgameStore";
@@ -20,8 +19,9 @@ import { useMapMusicPlayer } from "../hooks/mapGalgame/useMapMusicPlayer";
 import { mapMusicManager } from "../utils/mapMusicManager";
 import { PiMusicNoteDuotone } from "react-icons/pi";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { getImageUrlWithHost } from "../utils/constants";
+import { getImageUrl } from "../utils/constants";
 import { useRefreshEventData } from "../hooks/mapGalgame/useRefreshEventData";
+import InteractWithNpc from "../components/GalgameMap/InteractWithNpc";
 
 export interface EventData {
     event: GameEvent;
@@ -231,7 +231,7 @@ const GalgameMap = () => {
                     if (trimmed.includes('defaultScene.png') || trimmed.includes('defaultNpc.png') || trimmed.includes('defaultMap.png')) {
                         return trimmed;
                     }
-                    return getImageUrlWithHost(trimmed);
+                    return getImageUrl(trimmed);
                 };
 
                 const worldMapImage = processImage(state.worldInfo?.worldMapImage, DEFAULT_WORLD_MAP_IMAGE);

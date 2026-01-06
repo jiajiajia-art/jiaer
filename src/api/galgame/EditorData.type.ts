@@ -168,3 +168,13 @@ export interface CheckUploadStatusResponse {
   error: string;
   updatedAt: string;
 }
+
+export interface UploadGameCoverResponse {
+  success: boolean;
+  message: string;
+  data: {
+    coverUrl: string;
+    filename: string;
+    fileId: string;
+  };
+}

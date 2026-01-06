@@ -20,14 +20,13 @@ import { useRefreshEventData } from "../../hooks/mapGalgame/useRefreshEventData"
 import { useInteractionInit } from "../../hooks/mapGalgame/useInteractionInit";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
-import HistoryModal from "./historyModal";
 import WorldModal from "./WorldModal";
 import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 import interactionApi from "../../api/worldInteraction/interactionApi";
 import {
     type Message,
-    getImageUrl,
+    getImageUrls,
     getPlayerImage,
     convertStepToMessage,
     convertStepsToTextModalFormat,
@@ -35,8 +34,25 @@ import {
     safeSetLocalStorage,
     safeRemoveLocalStorage,
 } from "../../hooks/mapGalgame/interactionUtils";
+import HistoryModal from "./HistoryModal";
 
+// 常量定义
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
+export const REQUEST_TIMEOUT_MS = 60_000; // 60秒
+export const AUTO_PLAY_DELAY_MS = 2000; // 2秒
+export const CACHE_CLEANUP_DELAY_MS = 3000; // 3秒
+
+export const TIMEOUT_MESSAGES = {
+    CHOICE: 'AI 回应本次选择已超过 60 秒仍未返回，是否刷新页面重试？',
+    INTERACT: '开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？',
+    POLLING: 'AI 推演结果长时间未返回，是否刷新页面重试？',
+};
+
+export const ERROR_MESSAGES = {
+    CHOICE_FAILED: '选择选项失败，请检查网络或稍后重试。',
+    INTERACT_FAILED: '开始游戏失败，请检查网络或稍后重试。',
+    RETRY_FAILED: '重试失败，请检查网络或稍后重试。',
+};
 
 const InteractWithNpc = ({ 
     onClose, 
@@ -111,6 +127,7 @@ const InteractWithNpc = ({
         choiceInFlight: false,
         previousStep: null as any,
         previousIsTyping: false,
+        lastRequest: null as { type: 'interact' } | { type: 'choice'; optionId: string; optionIndex: number } | null,
     });
 
     // 其他状态
@@ -124,14 +141,14 @@ const InteractWithNpc = ({
         if (!subscene) return '';
         
         if (subscene.image) {
-            return getImageUrl(subscene.image) || '';
+            return getImageUrls(subscene.image) || '';
         }
         
         if (subscene.id && sceneSetting?.scenes) {
             for (const scene of sceneSetting.scenes) {
                 const found = scene.subscenes?.find((sub: any) => sub.id === subscene.id);
                 if (found?.image) {
-                    return getImageUrl(found.image) || '';
+                    return getImageUrls(found.image) || '';
                 }
             }
         }
@@ -162,6 +179,16 @@ const InteractWithNpc = ({
             refs.current.previousIsTyping = false;
         }
     });
+
+    // 包装 stepHandlers，在调用 handleInteract 时记录最后一次请求
+    const wrappedStepHandlers = useMemo(() => ({
+        ...stepHandlers,
+        handleInteract: (options?: Parameters<typeof stepHandlers.handleInteract>[0]) => {
+            // 记录最后一次请求
+            refs.current.lastRequest = { type: 'interact' };
+            return stepHandlers.handleInteract(options);
+        },
+    }), [stepHandlers]);
 
     useEffect(() => {
         if (worldInteractionHistory) {
@@ -301,7 +328,7 @@ const InteractWithNpc = ({
         setPendingRequestForPoll,
         setTimeoutModal,
         setErrorModal,
-        stepHandlers,
+        stepHandlers: wrappedStepHandlers,
         resetCompletedSteps,
         setRestoringFromCache: (value: boolean) => {
             refs.current.isRestoringFromCache = value;
@@ -336,7 +363,7 @@ const InteractWithNpc = ({
         setHasPendingRequest(false);
         setTimeoutModal({
             visible: true,
-            message: "AI 推演结果长时间未返回，是否刷新页面重试？",
+            message: TIMEOUT_MESSAGES.POLLING,
         });
     }, []);
 
@@ -344,6 +371,7 @@ const InteractWithNpc = ({
         setPendingRequestForPoll(null);
         await refreshHistory();
     }, [refreshHistory]);
+    
     useHistoryPolling({
         sessionId,
         eventId,
@@ -448,7 +476,7 @@ const InteractWithNpc = ({
                     await refreshEventData(sessionId, gameData);
                 }
                 refreshTimerRef.current = null;
-            }, 3000);
+            }, CACHE_CLEANUP_DELAY_MS);
         } else if (!shouldCleanCache) {
             // 如果条件不满足，重置标记
             hasCleanedCacheRef.current = false;
@@ -613,21 +641,12 @@ const InteractWithNpc = ({
     }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
     
     useEffect(() => {
-        if (isTextMode && !isAutoPlay) {
-            setIsAutoPlay(true);
-        }
-    }, [isTextMode, isAutoPlay]);
-
-    useEffect(() => {
         if (!isAutoPlay || !gameStarted) return;
         if (stepHandlers.isWaitingForData) return;
         if (finalIsTyping) return;
         if (!stepHandlers.showNextButton) return;
         if (currentMessage?.type === 'choice') {
-            // 文本模式下，选择时也不关闭自动播放
-            if (!isTextMode) {
-                setIsAutoPlay(false);
-            }
+            setIsAutoPlay(false);
             return;
         }
 
@@ -635,7 +654,7 @@ const InteractWithNpc = ({
             if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
                 handleNextMessage();
             }
-        }, 2000);
+        }, AUTO_PLAY_DELAY_MS);
 
         return () => {
             clearTimeout(autoPlayTimer);
@@ -705,6 +724,9 @@ const InteractWithNpc = ({
         }
         const finalOptionIndex = optionIndex >= 0 ? optionIndex : -1;
 
+        // 记录最后一次请求，用于重试
+        refs.current.lastRequest = { type: 'choice', optionId, optionIndex: finalOptionIndex };
+
         const storageKeys = getStorageKeys(sessionId, eventId);
         if (storageKeys.pendingRequest) {
             const payload = {
@@ -722,9 +744,9 @@ const InteractWithNpc = ({
         refs.current.choiceTimeout = window.setTimeout(() => {
             setTimeoutModal({
                 visible: true,
-                message: 'AI 回应本次选择已超过 60 秒仍未返回，是否刷新页面重试？',
+                message: TIMEOUT_MESSAGES.CHOICE,
             });
-        }, 60_000);
+        }, REQUEST_TIMEOUT_MS);
 
         const clearChoiceTimeout = () => {
             if (refs.current.choiceTimeout) {
@@ -760,7 +782,7 @@ const InteractWithNpc = ({
                 refs.current.choiceInFlight = false;
                 setErrorModal({
                     visible: true,
-                    message: error || '选择选项失败，请检查网络或稍后重试。',
+                    message: error || ERROR_MESSAGES.CHOICE_FAILED,
                 });
                 clearPending();
             }
@@ -779,6 +801,82 @@ const InteractWithNpc = ({
             optionId: customText.trim()
         });
     }, [handleChoiceClick]);
+
+    // 重试最后一次请求
+    const handleRetryRequest = useCallback(() => {
+        const lastRequest = refs.current.lastRequest;
+        if (!lastRequest) {
+            // 如果没有记录最后一次请求，可能是初始交互，尝试调用 handleInteract
+            stepHandlers.handleInteract({
+                onSuccess: () => {
+                    setErrorModal({ visible: false, message: "" });
+                    setTimeoutModal({ visible: false, message: "" });
+                },
+                onError: (error) => {
+                    setErrorModal({
+                        visible: true,
+                        message: error || ERROR_MESSAGES.RETRY_FAILED,
+                    });
+                }
+            });
+            return;
+        }
+
+        if (lastRequest.type === 'choice') {
+            // 重试选择请求
+            stepHandlers.handleChoiceOption(lastRequest.optionId, lastRequest.optionIndex, {
+                onSuccess: () => {
+                    setErrorModal({ visible: false, message: "" });
+                    setTimeoutModal({ visible: false, message: "" });
+                },
+                onError: (error) => {
+                    setErrorModal({
+                        visible: true,
+                        message: error || ERROR_MESSAGES.RETRY_FAILED,
+                    });
+                }
+            });
+        } else if (lastRequest.type === 'interact') {
+            // 重试初始交互请求
+            stepHandlers.handleInteract({
+                onSuccess: () => {
+                    setErrorModal({ visible: false, message: "" });
+                    setTimeoutModal({ visible: false, message: "" });
+                },
+                onError: (error) => {
+                    setErrorModal({
+                        visible: true,
+                        message: error || ERROR_MESSAGES.RETRY_FAILED,
+                    });
+                }
+            });
+        }
+    }, [stepHandlers, setErrorModal, setTimeoutModal]);
+
+    // 统一渲染 WorldModal，避免重复 JSX
+    const renderWorldModal = (
+        visible: boolean,
+        title: string,
+        message: string,
+        options: {
+            confirmText: string;
+            cancelText?: string;
+            primaryType?: "confirm" | "cancel";
+            onConfirm: () => void;
+            onCancel?: () => void;
+        }
+    ) => (
+        <WorldModal
+            visible={visible}
+            title={title}
+            message={message}
+            confirmText={options.confirmText}
+            cancelText={options.cancelText}
+            primaryType={options.primaryType}
+            onConfirm={options.onConfirm}
+            onCancel={options.onCancel}
+        />
+    );
 
     return (
         <>
@@ -867,11 +965,7 @@ const InteractWithNpc = ({
                             <div
                                 className={`${styles.buttonItem} ${isTextMode ? styles.buttonItemActive : ''}`}
                                 onClick={() => {
-                                    const newTextMode = !isTextMode;
-                                    setIsTextMode(newTextMode);
-                                    if (newTextMode && !isAutoPlay) {
-                                        setIsAutoPlay(true);
-                                    }
+                                    setIsTextMode(!isTextMode);
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >
@@ -921,35 +1015,47 @@ const InteractWithNpc = ({
                 history={latestHistory ?? worldInteractionHistory}
             />
             
-            <WorldModal
-                visible={errorModal.visible}
-                title="请求失败"
-                message={errorModal.message}
-                confirmText="知道了"
-                onConfirm={() => {
-                    setErrorModal({ visible: false, message: "" })
-                    if (typeof window !== "undefined") {
-                        window.location.reload();
-                    }
-                }}
-            />
+            {renderWorldModal(errorModal.visible, "请求失败", errorModal.message, {
+                confirmText: "重试",
+                cancelText: "取消",
+                primaryType: "confirm",
+                onConfirm: () => {
+                    // 重试：直接重新发送最后一次请求
+                    setErrorModal({ visible: false, message: "" });
+                    handleRetryRequest();
+                },
+                onCancel: () => {
+                    // 取消：先关闭弹窗，再刷新历史并刷新页面，回到最后一次有效交互
+                    setErrorModal({ visible: false, message: "" });
+                    void (async () => {
+                        await refreshHistory();
+                        if (typeof window !== "undefined") {
+                            window.location.reload();
+                        }
+                    })();
+                },
+            })}
 
-            {/* 请求超时弹窗 */}
-            <WorldModal
-                visible={timeoutModal.visible}
-                title="请求超时"
-                message={timeoutModal.message}
-                confirmText="刷新页面"
-                cancelText="先不用"
-                primaryType="confirm"
-                onConfirm={() => {
+            {renderWorldModal(timeoutModal.visible, "请求超时", timeoutModal.message, {
+                confirmText: "重试",
+                cancelText: "取消",
+                primaryType: "confirm",
+                onConfirm: () => {
+                    // 重试：直接重新发送最后一次请求
                     setTimeoutModal({ visible: false, message: "" });
-                    if (typeof window !== "undefined") {
-                        window.location.reload();
-                    }
-                }}
-                onCancel={() => setTimeoutModal({ visible: false, message: "" })}
-            />
+                    handleRetryRequest();
+                },
+                onCancel: () => {
+                    // 取消：关闭弹窗 + 刷新历史 + 刷新页面，回到最后一次有效交互
+                    setTimeoutModal({ visible: false, message: "" });
+                    void (async () => {
+                        await refreshHistory();
+                        if (typeof window !== "undefined") {
+                            window.location.reload();
+                        }
+                    })();
+                },
+            })}
         </>
     );
 };

@@ -1,0 +1,92 @@
+/* MapPanel 主组件样式 */
+
+.mapSection {
+    margin: 0 0 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.mapHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.mapHeader h2 {
+    margin: 4px 0 0;
+    font-size: 1.6rem;
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.subtitle {
+    margin: 4px 0 0;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.9rem;
+}
+
+.mapTabs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.mapTab {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.mapTabActive {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(224, 61, 75, 0.25);
+}
+
+.mapEditor {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.9fr);
+    gap: 16px;
+    margin-top: 10px;
+    align-items: stretch;
+    min-width: 0;
+}
+
+/* 子场景tab的三栏布局：左侧功能性NPC列表 + 中间拖拽区域 + 右侧原有侧边栏 */
+.mapEditorThreeColumns {
+    grid-template-columns: 280px minmax(0, 1.8fr) minmax(280px, 0.9fr);
+}
+
+@media (max-width: 1100px) {
+    .mapEditor {
+        grid-template-columns: 1fr;
+    }
+    .mapEditorThreeColumns {
+        grid-template-columns: 1fr;
+    }
+    .mapSidebar {
+        display: none;
+    }
+}

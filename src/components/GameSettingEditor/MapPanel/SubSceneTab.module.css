@@ -1,0 +1,246 @@
+/* SubSceneTab 组件样式 */
+
+/* NPC 调色板 */
+.npcPalette {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--border-light);
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.npcPalette h4 {
+    color: var(--text-primary);
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.npcItems {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.npcItem {
+    background: #fff;
+    border: 1px dashed var(--border-light);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.npcItem:active {
+    cursor: grabbing;
+}
+
+.npcItemDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.defaultNpcImage {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+}
+
+.npcName {
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.npcHint {
+    margin-top: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* 已放置的NPC */
+.placedNPC {
+    position: absolute;
+    cursor: move;
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+    will-change: transform, opacity;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.placedNPC:hover {
+    border-color: rgba(224, 61, 75, 0.4);
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.2);
+}
+
+.npcImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    border-radius: 6px;
+}
+
+/* NPC 控制面板 */
+.npcControls {
+    position: absolute;
+    bottom: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 6px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border-light);
+    white-space: nowrap;
+    z-index: 20;
+}
+
+/* 层级控制 */
+.zIndexControl {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 8px;
+    border-right: 1px solid var(--border-light);
+}
+
+.zIndexLabel {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-right: 2px;
+}
+
+.zIndexBtnSmall {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.zIndexBtnSmall:hover:not(:disabled) {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.zIndexBtnSmall:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.zIndexInputSmall {
+    width: 45px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.zIndexInputSmall:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.1);
+}
+
+/* 调整大小手柄 */
+.resizeHandle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: nwse-resize;
+    z-index: 30;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.resizeHandle:hover {
+    transform: scale(1.2);
+    background: #c8323f;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.resizeHandleNW {
+    top: -6px;
+    left: -6px;
+    cursor: nwse-resize;
+}
+
+.resizeHandleNE {
+    top: -6px;
+    right: -6px;
+    cursor: nesw-resize;
+}
+
+.resizeHandleSW {
+    bottom: -6px;
+    left: -6px;
+    cursor: nesw-resize;
+}
+
+.resizeHandleSE {
+    bottom: -6px;
+    right: -6px;
+    cursor: nwse-resize;
+}
+
+.removeBtn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    background: #fff;
+    color: var(--text-danger, #dc3545);
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.removeBtn:hover {
+    background: var(--text-danger, #dc3545);
+    color: #fff;
+    border-color: var(--text-danger, #dc3545);
+}
+

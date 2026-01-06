@@ -1,7 +1,7 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { CalculatePointsResponse, GetMusicListResponse, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateVariantImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse, GenerateImageRequest } from "./EditorData.type";
+import type { AllGameData, NPC, WorldSetting, Player, GenerateVariantImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse, GenerateImageRequest, UploadGameCoverResponse } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -46,7 +46,7 @@ const EditorApi = {
         const formData = new FormData();
         formData.append('cover', file);
         formData.append('fileId', fileId);
-        return api.post<AllGameData>(`/optical/games/upload-cover`, 
+        return api.post<UploadGameCoverResponse>(`/optical/games/upload-cover`, 
             formData , {
             headers: {
                 'Content-Type': 'multipart/form-data',

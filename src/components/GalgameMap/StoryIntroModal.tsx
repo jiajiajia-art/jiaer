@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import styles from './StoryIntroModal.module.css';
 import { useStoryTyping } from '../../hooks/story/useStoryTyping';
 import type { AllGameData } from '../../api/worldInteraction/mapWorldData.type';
-import { getImageUrlWithHost } from '../../utils/constants';
+import { getImageUrl } from '../../utils/constants';
 
 interface StoryIntroModalProps {
     isOpen: boolean;
@@ -43,7 +43,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
             return backgroundImage;
         }
         // 其他情况（相对路径）使用工具函数处理，加上host地址
-        return getImageUrlWithHost(backgroundImage);
+        return getImageUrl(backgroundImage);
     }, [backgroundImage]);
 
     return (

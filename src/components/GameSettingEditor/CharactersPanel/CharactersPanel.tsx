@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import styles from './CharactersPanel.module.css';
-import { IMAGE_GENERATION_COST, getImageUrlWithHost } from '../../../utils/constants';
+import { IMAGE_GENERATION_COST, getImageUrl } from '../../../utils/constants';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
@@ -648,7 +648,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                             >
                                 <div
                                     className={styles.characterThumb}
-                                    style={{ backgroundImage: character.portrait ? `url('${getImageUrlWithHost(character.portrait)}')` : 'none' }}
+                                    style={{ backgroundImage: character.portrait ? `url('${getImageUrl(character.portrait)}')` : 'none' }}
                                 />
                                 <div className={styles.characterMeta}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -721,7 +721,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                             <div
                                 className={styles.portraitLarge}
                                 style={{
-                                    backgroundImage: currentCharacter.portrait ? `url('${getImageUrlWithHost(currentCharacter.portrait)}')` : 'none',
+                                    backgroundImage: currentCharacter.portrait ? `url('${getImageUrl(currentCharacter.portrait)}')` : 'none',
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
@@ -971,7 +971,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                             <div key={variation.id} className={styles.variationCard}>
                                                 <div
                                                     className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
-                                                    style={variation.img ? { backgroundImage: `url('${getImageUrlWithHost(variation.img)}')` } : {}}
+                                                    style={variation.img ? { backgroundImage: `url('${getImageUrl(variation.img)}')` } : {}}
                                                 >
                                                     {/* 加载效果 */}
                                                     {isGeneratingVariation && generatingVariationId === variation.id && (

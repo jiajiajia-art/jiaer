@@ -8,7 +8,7 @@ import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { getImageUrlWithHost } from "../../utils/constants";
+import { getImageUrl } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
@@ -55,13 +55,13 @@ export const useGalgameController = () => {
     const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
     const getPlayerImageUrl = useCallback((): string | undefined => {
-        const images = worldSetting?.player?.images as any;
+        const images = worldSetting?.player?.images as string | { base: string };
         if (images) {
             const playerImage = typeof images === 'string'
                 ? images
                 : (images?.base || images);
             if (playerImage && typeof playerImage === 'string') {
-                return getImageUrlWithHost(playerImage);
+                return getImageUrl(playerImage);
             }
         }
         return undefined;
@@ -129,7 +129,7 @@ export const useGalgameController = () => {
                     setCurrentScene(initialScene);
 
                     const sceneImagePath = initialScene.image || initialScene.images;
-                    const sceneImageUrl = getImageUrlWithHost(sceneImagePath as string);
+                    const sceneImageUrl = getImageUrl(sceneImagePath as string);
                     console.log(sceneImageUrl);
                     if (sceneImageUrl) {
                         setBackgroundImage(sceneImageUrl);
@@ -176,7 +176,7 @@ export const useGalgameController = () => {
 
             const sceneImagePath = matchedScene.image || matchedScene.images;
             if (sceneImagePath) {
-                const sceneImageUrl = getImageUrlWithHost(sceneImagePath as string);
+                const sceneImageUrl = getImageUrl(sceneImagePath as string);
                 if (sceneImageUrl) {
                     setBackgroundImage(sceneImageUrl);
                     console.log('[Galgame] 更新场景:', sceneId, '背景图:', sceneImageUrl);
@@ -335,7 +335,7 @@ export const useGalgameController = () => {
             updateSceneFromId(currentStep.sceneId);
             
             if (currentStep.sceneImage) {
-                const sceneImageUrl = getImageUrlWithHost(currentStep.sceneImage);
+                const sceneImageUrl = getImageUrl(currentStep.sceneImage);
                 if (sceneImageUrl) {
                     setBackgroundImage(prev => {
                         if (prev !== sceneImageUrl) {
@@ -604,20 +604,12 @@ export const useGalgameController = () => {
     }, []);
 
     useEffect(() => {
-        if (isTextMode && !isAutoPlay) {
-            setIsAutoPlay(true);
-        }
-    }, [isTextMode, isAutoPlay]);
-
-    useEffect(() => {
         if (!isAutoPlay || !gameStarted) return;
         if (stepHandlers.isWaitingForData) return;
         if (messageUtilsWithTyping.finalIsTyping) return;
         if (!stepHandlers.showNextButton) return;
         if (messageUtilsWithTyping.currentMessage?.type === 'choice') {
-            if (!isTextMode) {
-                setIsAutoPlay(false);
-            }
+            setIsAutoPlay(false);
             return;
         }
 

@@ -1,8 +1,9 @@
 import React from 'react';
-import styles from './FunctionalNPCsPanel.module.css';
+import styles from './FunctionalNPCList.module.css';
+import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { FunctionalNPC } from './types';
-import { getImageUrlWithHost } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
 
 interface FunctionalNPCListProps {
     npcs: FunctionalNPC[];
@@ -25,7 +26,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
         <div className={styles.npcList}>
             <div className={styles.npcListHeader}>
                 <h3>功能性NPC</h3>
-                <button className={styles.ghostSmall} onClick={onCreateClick}>
+                <button className={sharedStyles.ghostSmall} onClick={onCreateClick}>
                     + 创建
                 </button>
             </div>
@@ -46,7 +47,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                             >
                                 <div className={styles.npcCardThumbnail}>
                                     <img
-                                        src={npc.image ? getImageUrlWithHost(npc.image) : DEFAULT_NPC_IMAGE}
+                                        src={npc.image ? getImageUrl(npc.image) : DEFAULT_NPC_IMAGE}
                                         alt={npc.name}
                                         onError={(e) => {
                                             (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;

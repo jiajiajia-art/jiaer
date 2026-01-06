@@ -22,23 +22,23 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [npcToDelete, setNpcToDelete] = useState<string | null>(null);
     const [isNewNPC, setIsNewNPC] = useState(false);
+    const [creatingNPC, setCreatingNPC] = useState<FunctionalNPC | null>(null);
 
-    // 创建新的功能性NPC
+    // 创建新的功能性NPC（不立即添加到列表）
     const handleCreateNPC = () => {
         const newNPC: FunctionalNPC = {
             id: `npc-${Date.now()}`,
-            name: '新建功能',
-            type: 'portrait', // 默认立绘型，后续在详情里切换
+            name: '',
+            type: 'portrait',
             image: DEFAULT_NPC_IMAGE,
             hasOptions: false,
             buttonText: '',
             options: [],
         };
 
-        setNPCs(prev => [...prev, newNPC]);
-        setActiveNPCId(newNPC.id);
+        setCreatingNPC(newNPC);
+        setActiveNPCId(null); // 清除选中状态
         setIsNewNPC(true);
-        toast.success('已创建立绘型功能');
     };
 
     // 删除功能性NPC
@@ -70,6 +70,8 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
     };
 
     const activeNPC = npcs.find(npc => npc.id === activeNPCId);
+    // 优先显示正在创建的NPC，否则显示选中的NPC
+    const displayNPC = creatingNPC || activeNPC || null;
 
     return (
         <div className={styles.panelContent}>
@@ -91,6 +93,7 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
                     onNPCClick={(id) => {
                         setActiveNPCId(id);
                         setIsNewNPC(false);
+                        setCreatingNPC(null);
                     }}
                     onDeleteClick={handleDeleteClick}
                     onCreateClick={handleCreateNPC}
@@ -98,14 +101,20 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
 
                 {/* 右侧：详情菜单 */}
                 <FunctionalNPCDetail
-                    npc={activeNPC || null}
-                    isNew={isNewNPC}
+                    npc={displayNPC}
                     onSave={(updatedNPC) => {
-                        setNPCs(prev =>
-                            prev.map(npc => (npc.id === updatedNPC.id ? updatedNPC : npc)),
-                        );
+                        if (isNewNPC && creatingNPC) {
+                            setNPCs(prev => [...prev, updatedNPC]);
+                            setActiveNPCId(updatedNPC.id);
+                            setCreatingNPC(null);
+                            toast.success('已创建功能配置');
+                        } else {
+                            setNPCs(prev =>
+                                prev.map(npc => (npc.id === updatedNPC.id ? updatedNPC : npc)),
+                            );
+                            toast.success('已保存功能配置');
+                        }
                         setIsNewNPC(false);
-                        toast.success('已保存功能配置');
                         if (onDataChange) {
                             onDataChange();
                         }

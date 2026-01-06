@@ -9,7 +9,7 @@ import type { NPC, Player } from '../../../api/galgame/EditorData.type';
 import { npcToCharacter, playerToCharacter, withCacheBust, parseVariantKey } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
-import { getImageUrlWithHost } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
 
 interface HandlersContext {
     fileId: string;
@@ -404,9 +404,9 @@ export const createHandlers = (ctx: HandlersContext) => {
                 // 如果是玩家图片，更新 portrait 或 variations
                 if (type === 'player' && !isAddingNew) {
                     const { image: playerImage, images: playerImages } = parseResponse.extractPlayerImage(response.data, mode);
-                    const processedPlayerImage = playerImage ? getImageUrlWithHost(playerImage) : undefined;
+                    const processedPlayerImage = playerImage ? getImageUrl(playerImage) : undefined;
                     const processedPlayerImages = playerImages ? Object.fromEntries(
-                        Object.entries(playerImages).map(([key, value]) => [key, getImageUrlWithHost(value)])
+                        Object.entries(playerImages).map(([key, value]) => [key, getImageUrl(value)])
                     ) : undefined;
 
                     if (variant === 'base') {
@@ -465,7 +465,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
                     const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
                     if (imageData?.imagePath) {
-                        const processedImagePath = getImageUrlWithHost(imageData.imagePath);
+                        const processedImagePath = getImageUrl(imageData.imagePath);
                         const imageUrl = withCacheBust(processedImagePath);
                         
                         if (variant === 'base') {
@@ -522,7 +522,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 // 首先尝试提取 base 图片数据
                 const imageData = parseResponse.extractNpcImage(response.data, mode, 'base');
                 if (imageData?.imagePath) {
-                    const processedImagePath = getImageUrlWithHost(imageData.imagePath);
+                    const processedImagePath = getImageUrl(imageData.imagePath);
                     const imageUrl = withCacheBust(processedImagePath);
                     updateCharacterImage(npc.id, imageUrl, 'base');
                 } else {
@@ -550,7 +550,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
-                const processedImageUrl = newImageUrl ? getImageUrlWithHost(newImageUrl) : undefined;
+                const processedImageUrl = newImageUrl ? getImageUrl(newImageUrl) : undefined;
 
                 if (processedImageUrl) {
                     setCharacterData(prev => prev.map(char =>
@@ -618,7 +618,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 );
                 
                 if (imageData?.imagePath) {
-                    const processedImagePath = getImageUrlWithHost(imageData.imagePath);
+                    const processedImagePath = getImageUrl(imageData.imagePath);
                     const imageUrl = withCacheBust(processedImagePath);
                     
                     // 从 variantKey（格式：type_value）中解析 type 和 value

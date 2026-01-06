@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
-import { getImageUrlWithHost, getMusicUrlWithHost, IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl, getMusicUrlWithHost, IMAGE_GENERATION_COST } from '../../../utils/constants';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { SceneSetting as VisualSceneSetting } from '../../../api/galgame/EditorData.type';
@@ -18,7 +18,7 @@ import SceneDetailForm from './SceneDetailForm';
 import SceneList from './SceneList';
 import WorldMapCard from './WorldMapCard';
 import SceneDetailActions from './SceneDetailActions';
-import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from './utils';
+import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
@@ -138,7 +138,6 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 mode,
                 gameData,
                 api: sceneApi,
-                addImageTimestamp,
                 activeSceneId,
                 activeSubsceneId,
                 activeSubsceneDraft,
@@ -211,7 +210,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 const soundtrackFilename = sceneSoundtrack ? (sceneSoundtrack) : '';
                 
                 // 先处理图片路径，再添加时间戳
-                const processedImagePath = sceneImage ? getImageUrlWithHost(sceneImage) : '';
+                const processedImagePath = sceneImage ? getImageUrl(sceneImage) : '';
                 const imageWithTimestamp = processedImagePath ? addImageTimestamp(processedImagePath) : '';
                 
                 return {
@@ -324,7 +323,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         setActiveSubsceneId(subsceneId);
         
         // 先处理图片路径，再添加时间戳
-        const processedSubsceneImage = subscene.image ? getImageUrlWithHost(subscene.image) : '';
+        const processedSubsceneImage = subscene.image ? getImageUrl(subscene.image) : '';
         const subsceneImageWithTimestamp = processedSubsceneImage ? addImageTimestamp(processedSubsceneImage) : '';
         
         setActiveSubsceneDraft({

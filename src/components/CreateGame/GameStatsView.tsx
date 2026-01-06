@@ -11,7 +11,7 @@ import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/rpgGame/gameAction';
 import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
-import { getImageUrl } from '../../utils/constants';
+import { addImageTimestamp, getImageUrl } from '../../utils/constants';
 import MobileTipModal from './MobileTipModal';
 
 interface GameStatsViewProps {
@@ -151,7 +151,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         <div className={styles.statsModeWrapper}>
             <div
                 className={styles.heroBanner}
-                style={{ backgroundImage: `url(${getImageUrl(heroBackground)})` }}
+                style={{ backgroundImage: `url(${addImageTimestamp(getImageUrl(heroBackground))})` }}
             >
                 <div className={styles.heroOverlay}>
                     <div className={styles.heroContent}>
@@ -238,7 +238,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
                                 <span>收益</span>
                             </div>
-                            <div className={styles.statValue}>{gameStats?.amount || 0}</div>
+                            <div className={styles.statValue}>{gameStats?.count || 0}</div>
                         </div>
                     </div>
                 </div>
