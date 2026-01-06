@@ -199,6 +199,13 @@ export const useGalgameController = () => {
         onMessagesClear: () => {
             setInitialMessages([]);
             resetDisplayedSteps();
+            // 清除本地存储的 allSteps，避免新请求时使用旧数据恢复
+            try {
+                localStorage.removeItem(allStepsStorageKey);
+                console.log('[Galgame] 清除本地 allSteps，准备接收新数据');
+            } catch (e) {
+                console.warn('[Galgame] 清除本地 allSteps 失败:', e);
+            }
         },
         onCompleteAllSteps: (steps: any[]) => {
             try {
@@ -357,6 +364,15 @@ export const useGalgameController = () => {
 
     // 处理历史记录
     const processHistoryRecord = useCallback(() => {
+        // 如果正在等待新数据，不处理历史记录，避免覆盖新请求的数据
+        if (stepHandlers.isWaitingForData) {
+            return;
+        }
+        // 如果当前有新的步骤数据（currentStep 或 stepQueue 中有数据），不处理历史记录
+        // 这确保新请求的数据不会被历史记录覆盖
+        if (stepHandlers.currentStep || (stepHandlers.stepQueue && stepHandlers.stepQueue.length > 0)) {
+            return;
+        }
         if (!historyLoading && presetData && history.length > 0) {
             const lastMessage = history[history.length - 1];
 
