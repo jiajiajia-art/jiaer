@@ -21,6 +21,8 @@ export interface Scene {
     position?: [number, number];
 }
 
+import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
+
 export interface MapPanelProps {
     sceneSetting?: {
         scenes?: Scene[];
@@ -29,6 +31,7 @@ export interface MapPanelProps {
     fileId: string;
     onDataChange?: () => void;
     isActive?: boolean;
+    abilityNodeSetting?: AbilityNodeSetting;
 }
 
 export interface PlacedNPC {
@@ -37,6 +40,11 @@ export interface PlacedNPC {
     y: number;
     scale: number;
     zIndex?: number;
+    nodeId: string;
+    imagePath?: string;
+    type: string;
+    name?: string;
+    authorNote: string;
 }
 
 export interface PlacedSubScene {

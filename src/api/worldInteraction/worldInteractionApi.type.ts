@@ -69,6 +69,24 @@ export interface WorldSetting {
     worldMapImage: string;
 }
 
+export interface AbilityNode {
+    node_id: string;
+    authorNote: string,
+    name?: string,
+    type: string;
+    imagePath: string;
+    imagePrompt: string;
+    actions: Action[];
+    position?: [number, number],
+    layer?: number,
+}
+
+export interface Action {
+    id: string;
+    name: string;
+    description: string;
+}
+
 export interface NPCSetting {
     npcs: NPC[];
 }
@@ -77,12 +95,17 @@ export interface SceneSetting {
     scenes: Scene[];
 }
 
+export interface AbilityNodeSetting {
+    abilityNodes: AbilityNode[];
+}
+
 export interface WorldInteractionGameData {
     success: boolean;
     fileId: string;
     worldSetting: WorldSetting;
     npcSetting: NPCSetting;
     sceneSetting: SceneSetting;
+    abilityNodeSetting?: AbilityNodeSetting;
 }
 
 export interface UploadWorldFileResponse {

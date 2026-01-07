@@ -3,6 +3,8 @@
  * 编辑器使用 UnifiedGameData 联合类型，可以处理两种模式
  */
 
+import type { AbilityNode } from "./worldInteractionApi.type";
+
 export interface NpcSlot {
   position: [number, number];
   zoom: number;
@@ -95,34 +97,66 @@ export interface GetMusicListResponse {
 }
 
 export interface CreateEmptyWorldInteractionResponse {
-    success: boolean;
-    fileId: string;
-    message: string;
-    data: {
-        world: {
-            title: string;
-            background: string;
-            summary: string;
-            preamble: string;
-            initialPlot: string;
-            literary: string;
-            Theme: string[];
-            player: {
-                name: string;
-                gender: string;
-                appearance: string;
-                age: number | null;
-                personality: string;
-                background: string;
-                image: string;
-            };
-            music: string[];
-        };
-        npcs: {
-            npcs: [];
-        };
-        scenes: {
-            scenes: [];
-        };
+  success: boolean;
+  fileId: string;
+  message: string;
+  data: {
+    world: {
+      title: string;
+      background: string;
+      summary: string;
+      preamble: string;
+      initialPlot: string;
+      literary: string;
+      Theme: string[];
+      player: {
+        name: string;
+        gender: string;
+        appearance: string;
+        age: number | null;
+        personality: string;
+        background: string;
+        image: string;
+      };
+      music: string[];
     };
+    npcs: {
+      npcs: [];
+    };
+    scenes: {
+      scenes: [];
+    };
+  };
+}
+
+export interface GenerateFunctionImageResponse {
+  success: boolean;
+  message: string;
+  result: {
+    success: boolean;
+    imagePath: string;
+    url: string;
+    bgRemoved: boolean;
+  };
+}
+
+export interface AbilityNodeItem {
+  node_id: string;
+  name: string;
+  success: boolean;
+  imagePath: string | null;
+  bgRemoved: boolean;
+}
+
+export interface GenerateAllFunctionImageResponse {
+  success: boolean;
+  message: string;
+  results: AbilityNodeItem[];
+  errors: string[];
+}
+
+export interface AddFunctionalNpcResponse {
+  success: boolean;
+  message: string;
+  node: AbilityNode;
 }

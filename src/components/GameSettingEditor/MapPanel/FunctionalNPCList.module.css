@@ -35,6 +35,24 @@
     transition: all 0.15s ease;
 }
 
+.functionalNPCItem[draggable="true"] {
+    cursor: grab;
+}
+
+.functionalNPCItem[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.functionalNPCItem[draggable="true"]:hover {
+    border-color: rgba(224, 61, 75, 0.35);
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.functionalNPCItemNoImage {
+    grid-template-columns: 1fr;
+}
+
 .functionalNPCItem:hover {
     border-color: rgba(224, 61, 75, 0.35);
     background: #fff;

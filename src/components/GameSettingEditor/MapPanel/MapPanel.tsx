@@ -7,7 +7,7 @@ import SubSceneTab from './SubSceneTab';
 import SceneTab from './SceneTab';
 import MapTab from './MapTab';
 
-const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId, onDataChange, isActive }) => {
+const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId, onDataChange, isActive, abilityNodeSetting }) => {
     const [mapTab, setMapTab] = useState<'subScene' | 'scene' | 'map'>('subScene');
 
     useEffect(() => {
@@ -79,6 +79,7 @@ const MapPanel: React.FC<MapPanelProps> = ({ sceneSetting, worldMapImage, fileId
                         onDataChange={onDataChange}
                         isActive={isActive}
                         sceneImageUrl={sceneImageUrl}
+                        abilityNodeSetting={abilityNodeSetting}
                     />
                 )}
 

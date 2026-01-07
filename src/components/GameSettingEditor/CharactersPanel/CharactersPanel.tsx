@@ -11,6 +11,7 @@ import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { useGameStore } from '../../../store/gameStore';
+import { useAuthStore } from '../../../store/useAuthStore';
 import type { Character, Variation, Relationship } from './types';
 import { VARIATION_TYPES } from './types';
 import { getNpcs, npcToCharacter, playerToCharacter } from './utils';
@@ -33,7 +34,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     mode = 'visual'
 }) => {
     const { fileId } = useGameStore();
+    const { user, updateUser } = useAuthStore();
     const api = createApiHelpers(mode);
+    const userPoints = user?.user?.points ?? 0;
     
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
@@ -166,6 +169,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             fileId,
             mode,
             api,
+            userPoints,
+            updateUser,
             setCharacterData,
             setActiveCharacterId,
             setIsAddingNew,
@@ -181,7 +186,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
             newCharacterData,
             onDataChange,
         });
-    }, [fileId, mode, api, activeCharacterId, isAddingNew, newCharacterData, onDataChange]);
+    }, [fileId, mode, api, userPoints, activeCharacterId, isAddingNew, newCharacterData, onDataChange]);
 
     // 获取当前显示的角色（统一处理新增和编辑模式）
     const currentCharacter = isAddingNew && newCharacterData
@@ -530,6 +535,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     };
 
     const confirmGenerateAllNpcImages = async () => {
+        if (npcCostPoints != null && userPoints < npcCostPoints) {
+            toast.error('积分不足');
+            return;
+        }
         setNpcCostModalOpen(false);
         await generateAllNpcImages();
         onDataChange?.();
@@ -1108,8 +1117,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 title="积分扣除确认"
                 message={
                     npcCostPoints != null
-                        ? `本次一键生成角色立绘将扣除 ${npcCostPoints} 积分，是否继续？`
-                        : '将扣除一定积分，是否继续？'
+                        ? `本次一键生成角色立绘将扣除 ${npcCostPoints} 积分（当前账户积分 ${userPoints}${npcCostPoints > userPoints ? '，积分不足' : ''}），是否继续？`
+                        : `将扣除一定积分（当前积分 ${userPoints}），是否继续？`
                 }
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"

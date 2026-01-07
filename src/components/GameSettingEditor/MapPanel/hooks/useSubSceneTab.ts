@@ -80,6 +80,9 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
                 y: slot.position?.[1] ?? 0.5,
                 scale: DEFAULT_SCALE,
                 zIndex: slot.zoom ?? DEFAULT_Z_INDEX,
+                nodeId: '', // 从后端加载的NPC可能没有功能性NPC信息
+                type: 'illustration', // 默认为立绘型
+                authorNote: '', // 默认为空
             }));
             setPlacedNPCs(loadedNPCs);
         } else {
@@ -309,15 +312,42 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             const relativeX = clampedX / displayWidth;
             const relativeY = clampedY / displayHeight;
 
-            const newNPC: PlacedNPC = {
+            // 尝试获取功能性NPC数据
+            let functionalNPCData: any = null;
+            try {
+                const data = e.dataTransfer.getData('application/json');
+                if (data) {
+                    functionalNPCData = JSON.parse(data);
+                }
+            } catch (error) {
+                console.warn('解析拖拽数据失败:', error);
+            }
+
+            const newNPC: PlacedNPC = functionalNPCData ? {
                 id: `npc_${Date.now()}`,
                 x: relativeX,
                 y: relativeY,
                 scale: DEFAULT_SCALE,
                 zIndex: DEFAULT_Z_INDEX,
+                nodeId: functionalNPCData.nodeId || '',
+                imagePath: functionalNPCData.imagePath,
+                type: functionalNPCData.type || 'illustration',
+                name: functionalNPCData.name,
+                authorNote: functionalNPCData.authorNote || '',
+            } : {
+                id: `npc_${Date.now()}`,
+                x: relativeX,
+                y: relativeY,
+                scale: DEFAULT_SCALE,
+                zIndex: DEFAULT_Z_INDEX,
+                nodeId: '', // 非功能性NPC
+                type: 'illustration',
+                authorNote: '',
             };
 
             setPlacedNPCs(prev => [...prev, newNPC]);
+            // 重置拖拽状态
+            setDraggingNPCId(null);
         },
         [placedNPCs.length]
     );
@@ -325,6 +355,11 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+    }, []);
+
+    // 处理拖拽结束，清理状态
+    const handleDragEnd = useCallback(() => {
+        setDraggingNPCId(null);
     }, []);
 
     const handleNPCMouseDown = useCallback(
@@ -472,8 +507,20 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
                 return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
             }
 
-            const width = BASE_NPC_WIDTH * npc.scale;
-            const height = BASE_NPC_HEIGHT * npc.scale;
+            // 按钮型NPC根据文字内容计算尺寸
+            let width: number;
+            let height: number;
+            
+            if (npc.type === 'button' && npc.name) {
+                // 估算文字宽度：每个字符约8-10px，加上padding
+                const textWidth = npc.name.length * 10 + 24; // 24px是padding (8px * 2 + 8px额外空间)
+                const textHeight = 32; // 14px字体 + 16px padding
+                width = Math.max(textWidth, 60) * npc.scale; // 最小宽度60px
+                height = textHeight * npc.scale;
+            } else {
+                width = BASE_NPC_WIDTH * npc.scale;
+                height = BASE_NPC_HEIGHT * npc.scale;
+            }
 
             const centerXInImage = npc.x * displayWidth;
             const centerYInImage = npc.y * displayHeight;
@@ -509,6 +556,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
         handleDragStart,
         handleDrop,
         handleDragOver,
+        handleDragEnd,
         handleNPCMouseDown,
         handleResizeStart,
         handleRemoveNPC,

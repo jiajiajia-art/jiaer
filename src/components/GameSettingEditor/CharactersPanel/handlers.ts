@@ -10,11 +10,15 @@ import { npcToCharacter, playerToCharacter, withCacheBust, parseVariantKey } fro
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
 import { getImageUrl } from '../../../utils/constants';
+import type { User } from '../../../api/account/auth.type';
+import { auth } from '../../../api/account/authApi';
 
 interface HandlersContext {
     fileId: string;
     mode: string;
     api: ApiHelpers;
+    userPoints: number;
+    updateUser?: (user: Partial<User>) => void;
     // State setters
     setCharacterData: React.Dispatch<React.SetStateAction<Character[]>>;
     setActiveCharacterId: React.Dispatch<React.SetStateAction<string>>;
@@ -38,6 +42,8 @@ export const createHandlers = (ctx: HandlersContext) => {
         fileId,
         mode,
         api,
+        userPoints,
+        updateUser,
         setCharacterData,
         setActiveCharacterId,
         setIsAddingNew,
@@ -88,6 +94,20 @@ export const createHandlers = (ctx: HandlersContext) => {
                 return { ...char, variations: [...char.variations, newVar] };
             }
         }));
+    };
+
+    // 刷新用户积分，确保弹窗/扣除后与后端一致
+    const refreshUserPoints = async () => {
+        if (!updateUser) return;
+        try {
+            const resp = await auth.getUserInfo();
+            const latestUser = resp.data?.data;
+            if (latestUser && typeof latestUser.points === 'number') {
+                updateUser({ points: latestUser.points });
+            }
+        } catch (error) {
+            console.error('刷新用户积分失败:', error);
+        }
     };
 
     // 从 API 响应中更新角色数据
@@ -725,6 +745,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 if (onDataChange) {
                     onDataChange();
                 }
+                await refreshUserPoints();
             } else {
                 toast.error('当前使用人数过多，请稍后再试');
             }

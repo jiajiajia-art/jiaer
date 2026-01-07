@@ -1,94 +1,156 @@
 import React, { useState, useRef } from 'react';
 import styles from './FunctionalNPCDetail.module.css';
 import sharedStyles from './shared.module.css';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
-import type { FunctionalNPC, FunctionalNPCOption } from './types';
-import { getImageUrl } from '../../../utils/constants';
+import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
+import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
+import worldEditor from '../../../api/worldInteraction/worldEditor';
+import { useGameStore } from '../../../store/gameStore';
 
 interface FunctionalNPCDetailProps {
-    npc: FunctionalNPC | null;
-    onSave: (updatedNPC: FunctionalNPC) => void;
+    node: AbilityNode | null;
+    onSave: (updatedNode: AbilityNode) => void;
+    fileId?: string | null;
 }
 
 const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
-    npc,
+    node,
     onSave,
+    fileId,
 }) => {
-    const [formData, setFormData] = useState<Partial<FunctionalNPC>>({
-        name: '',
-        type: 'portrait',
-        image: '',
-        hasOptions: false,
-        buttonText: '',
-        options: [],
+    const { fileId: storeFileId } = useGameStore();
+    const currentFileId = fileId || storeFileId;
+    
+    const [formData, setFormData] = useState<Partial<AbilityNode>>({
+        node_id: '',
+        authorNote: '',
+        name: '', // 按钮型NPC的按钮文字
+        type: 'illustration',
+        imagePath: '',
+        imagePrompt: '',
+        actions: [],
     });
     const [isSaving, setIsSaving] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSelectOpen, setIsSelectOpen] = useState(false);
+    const [singleGenerateModalOpen, setSingleGenerateModalOpen] = useState(false);
+    const [deleteActionModalOpen, setDeleteActionModalOpen] = useState(false);
+    const [actionToDelete, setActionToDelete] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const DEFAULT_NPC_IMAGE = '';
+    const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
 
-    // 当npc变化时，更新表单数据
+    // 当node变化时，更新表单数据
     React.useEffect(() => {
-        if (npc) {
+        if (node) {
             setFormData({
-                name: npc.name || '',
-                type: npc.type || 'portrait',
-                image: npc.image || '',
-                hasOptions: npc.hasOptions || false,
-                buttonText: npc.buttonText || '',
-                options: npc.options && npc.options.length > 0 ? npc.options : [{ id: `opt-${Date.now()}`, name: '', description: '' }],
+                node_id: node.node_id || '',
+                authorNote: node.authorNote || '',
+                name: node.name || '', // 按钮型NPC的按钮文字
+                type: node.type || 'illustration',
+                imagePath: node.imagePath || '',
+                imagePrompt: node.imagePrompt || '',
+                actions: node.actions && node.actions.length > 0 ? node.actions : [{ id: `opt-${Date.now()}`, name: '', description: '' }],
             });
         } else {
             setFormData({
-                name: '',
-                type: 'portrait',
-                image: '',
-                hasOptions: false,
-                buttonText: '',
-                options: [{ id: `opt-${Date.now()}`, name: '', description: '' }],
+                node_id: '',
+                authorNote: '',
+                name: '', // 按钮型NPC的按钮文字
+                type: 'illustration',
+                imagePath: '',
+                imagePrompt: '',
+                actions: [{ id: `opt-${Date.now()}`, name: '', description: '' }],
             });
         }
-    }, [npc]);
+    }, [node]);
 
-    const handleFieldChange = (field: keyof FunctionalNPC, value: any) => {
+    const handleFieldChange = (field: keyof AbilityNode, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleAddOption = () => {
-        const currentOptions = formData.options || [];
-        if (currentOptions.length >= 5) {
-            toast.error('最多只能添加5个选项');
+    const handleAddAction = () => {
+        const currentActions = formData.actions || [];
+        if (currentActions.length >= 5) {
+            toast.error('最多只能添加5个功能');
             return;
         }
-        const newOption: FunctionalNPCOption = {
+        const newAction: Action = {
             id: `opt-${Date.now()}`,
             name: '',
-            description: '', // 选项的描述字段保留
+            description: '',
         };
         setFormData(prev => ({
             ...prev,
-            options: [...(prev.options || []), newOption],
+            actions: [...(prev.actions || []), newAction],
         }));
     };
 
-    const handleRemoveOption = (optionId: string) => {
-        const currentOptions = formData.options || [];
-        if (currentOptions.length <= 1) {
-            toast.error('至少需要保留1个选项');
+    const handleRemoveAction = (actionId: string) => {
+        const currentActions = formData.actions || [];
+        if (currentActions.length <= 1) {
+            toast.error('至少需要保留1个功能事件');
             return;
         }
-        setFormData(prev => ({
-            ...prev,
-            options: (prev.options || []).filter(opt => opt.id !== optionId),
-        }));
+        // 打开确认弹窗
+        setActionToDelete(actionId);
+        setDeleteActionModalOpen(true);
     };
 
-    const handleOptionChange = (optionId: string, field: 'name' | 'description', value: string) => {
+    const handleConfirmDeleteAction = async () => {
+        if (!actionToDelete) return;
+        
+        const currentActions = formData.actions || [];
+        if (currentActions.length <= 1) {
+            toast.error('至少需要保留1个功能事件，无法删除');
+            setDeleteActionModalOpen(false);
+            setActionToDelete(null);
+            return;
+        }
+
+        // 如果是已保存的节点（有 node_id），调用 API 删除
+        if (node?.node_id && currentFileId) {
+            try {
+                const action = currentActions.find(a => a.id === actionToDelete);
+                if (action) {
+                    const response = await worldEditor.deleteFunctionalEvent(currentFileId, node.node_id, actionToDelete);
+                    if (response.data?.success === false) {
+                        toast.error(response.data.message || '删除失败，请稍后重试');
+                        setDeleteActionModalOpen(false);
+                        setActionToDelete(null);
+                        return;
+                    }
+                    toast.success('功能事件删除成功');
+                }
+            } catch (error: any) {
+                console.error('删除功能事件失败:', error);
+                toast.error('删除失败：' + (error.message || '请检查网络连接'));
+                setDeleteActionModalOpen(false);
+                setActionToDelete(null);
+                return;
+            }
+        }
+
+        // 从表单中移除该 action
         setFormData(prev => ({
             ...prev,
-            options: (prev.options || []).map(opt =>
-                opt.id === optionId ? { ...opt, [field]: value } : opt
+            actions: (prev.actions || []).filter(action => action.id !== actionToDelete),
+        }));
+
+        setDeleteActionModalOpen(false);
+        setActionToDelete(null);
+    };
+
+    const handleCancelDeleteAction = () => {
+        setDeleteActionModalOpen(false);
+        setActionToDelete(null);
+    };
+
+    const handleActionChange = (actionId: string, field: 'name' | 'description', value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            actions: (prev.actions || []).map(action =>
+                action.id === actionId ? { ...action, [field]: value } : action
             ),
         }));
     };
@@ -103,74 +165,98 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
 
             // 创建本地预览URL
             const imageUrl = URL.createObjectURL(file);
-            setFormData(prev => ({ ...prev, image: imageUrl }));
+            setFormData(prev => ({ ...prev, imagePath: imageUrl }));
             toast.success('图片已选择');
         }
     };
 
-    const handleGenerateImage = async () => {
-        // TODO: 实现图片生成逻辑
+    const handleGenerateImageClick = () => {
+        if (!formData.imagePrompt?.trim()) {
+            toast.error('请先输入图片提示词');
+            return;
+        }
+        setSingleGenerateModalOpen(true);
+    };
+
+    const handleConfirmGenerateImage = async () => {
+        if (!currentFileId || !formData.node_id) {
+            toast.error('缺少必要数据，无法生成');
+            setSingleGenerateModalOpen(false);
+            return;
+        }
+
         setIsGenerating(true);
+        setSingleGenerateModalOpen(false);
         try {
-            // 模拟生成过程
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            toast.success('图片生成成功');
-            // setFormData(prev => ({ ...prev, image: 'generated-image-url' }));
-        } catch (error) {
-            toast.error('图片生成失败');
+            const response = await worldEditor.generateFunctionalNPCImage(currentFileId, formData.node_id);
+            const responseData = response.data;
+            if (responseData.success && responseData.result) {
+                if (responseData.result) {
+                    const imagePath = responseData.result.imagePath || responseData.result.url;
+                    setFormData(prev => ({ ...prev, imagePath }));
+                    toast.success('图片生成成功');
+                }
+            }
+        } catch (error: any) {
+            console.error('生成图片失败:', error);
+            toast.error('图片生成失败：' + (error.message || '请检查网络连接'));
         } finally {
             setIsGenerating(false);
         }
     };
 
+    const handleCancelGenerateImage = () => {
+        setSingleGenerateModalOpen(false);
+    };
+
     const handleSave = () => {
         // 验证必填字段
-        if (!formData.name?.trim()) {
+        if (!formData.authorNote?.trim()) {
             toast.error('请输入NPC名称');
             return;
         }
 
-        // 立绘型需要验证图片
-        if (formData.type === 'portrait' && !formData.image) {
-            toast.error('请上传或生成立绘图');
+        // illustration 型需要验证图片
+        if (formData.type === 'illustration' && !formData.imagePath) {
+            toast.error('请上传或生成图片');
             return;
         }
-
-        // 按钮型需要验证按钮文字
-        if (formData.type === 'button' && !formData.buttonText?.trim()) {
+        // button 型需要校验按钮文字
+        if (formData.type === 'button' && !formData.name?.trim()) {
             toast.error('请输入按钮文字');
             return;
         }
 
-        if (!formData.options || formData.options.length === 0) {
-            toast.error('至少需要添加1个选项');
+        if (!formData.actions || formData.actions.length === 0) {
+            toast.error('至少需要添加1个功能');
             return;
         }
-        if (formData.options.length > 5) {
-            toast.error('最多只能添加5个选项');
+        if (formData.actions.length > 5) {
+            toast.error('最多只能添加5个功能');
             return;
         }
-        for (const option of formData.options) {
-            if (!option.name?.trim()) {
-                toast.error('请填写完整的选项信息');
+        for (const action of formData.actions) {
+            if (!action.name.trim()) {
+                toast.error('请填写完整的功能信息');
                 return;
             }
         }
 
         setIsSaving(true);
 
-        const updatedNPC: FunctionalNPC = {
-            id: npc?.id || `npc-${Date.now()}`,
-            name: formData.name!,
-            type: formData.type!,
-            image: formData.image || '',
-            buttonText: formData.buttonText || '',
-            hasOptions: (formData.options && formData.options.length > 0) || false,
-            options: formData.options || [],
+        const updatedNode: AbilityNode = {
+            node_id: node?.node_id || `node-${Date.now()}`,
+            authorNote: formData.authorNote!,
+            // name 字段只在按钮型时需要
+            name: formData.type === 'button' ? (formData.name || '').trim() : undefined,
+            type: formData.type || 'illustration',
+            imagePath: formData.imagePath || '',
+            imagePrompt: formData.imagePrompt || '',
+            actions: formData.actions || [],
         };
 
         // 通过回调更新父组件状态
-        onSave(updatedNPC);
+        onSave(updatedNode);
         setIsSaving(false);
     };
 
@@ -183,7 +269,7 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                         <select
                             value={formData.type}
                             onChange={(e) => {
-                                handleFieldChange('type', e.target.value as 'portrait' | 'button');
+                                handleFieldChange('type', e.target.value);
                                 requestAnimationFrame(() => {
                                     setIsSelectOpen(false);
                                 });
@@ -198,7 +284,7 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                             }}
                             className={styles.typeSelect}
                         >
-                            <option value="portrait">立绘型</option>
+                            <option value="illustration">立绘型</option>
                             <option value="button">按钮型</option>
                         </select>
                         <span className={`${styles.typeSelectArrow} ${isSelectOpen ? styles.typeSelectArrowOpen : ''}`}></span>
@@ -213,48 +299,71 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                             <span>NPC名称 <span className={sharedStyles.required}>*</span></span>
                             <input
                                 type="text"
-                                value={formData.name}
-                                onChange={(e) => handleFieldChange('name', e.target.value)}
+                                value={formData.authorNote}
+                                onChange={(e) => handleFieldChange('authorNote', e.target.value)}
                                 placeholder="输入NPC名称"
                             />
                         </label>
                     </div>
 
-                    {formData.type === 'portrait' && (
+                    {formData.type === 'illustration' && (
                         <div className={styles.formGroup}>
                             <label>
                                 <span>立绘图 <span className={sharedStyles.required}>*</span></span>
-                                <div className={styles.imageUploadArea}>
-                                    {formData.image ? (
-                                        <div className={styles.imagePreview}>
-                                            <img
-                                                src={formData.image.startsWith('blob:') ? formData.image : getImageUrl(formData.image)}
-                                                alt="NPC预览"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
-                                                }}
+                                <div className={styles.imageUploadRow}>
+                                    {/* 左侧：提示词表单 + AI生成按钮 */}
+                                    <div className={styles.imagePromptSection}>
+                                        <div className={styles.imagePromptInput}>
+                                            <textarea
+                                                rows={4}
+                                                value={formData.imagePrompt || ''}
+                                                onChange={(e) => handleFieldChange('imagePrompt', e.target.value)}
+                                                placeholder="用于AI生成图片的提示词"
                                             />
                                         </div>
-                                    ) : (
-                                        <div className={styles.imagePlaceholder}>
-                                            <span>暂无图片</span>
+                                        <button
+                                            type="button"
+                                            className={sharedStyles.ghostSmall}
+                                            onClick={handleGenerateImageClick}
+                                            disabled={isGenerating}
+                                        >
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" style={{ width: '16px', height: '16px' }} />
+                                            {isGenerating ? '生成中...' : `${IMAGE_GENERATION_COST} AI生成`}
+                                        </button>
+                                    </div>
+                                    {/* 右侧：图片预览 + 上传按钮 */}
+                                    <div className={styles.imagePreviewSection}>
+                                        <div className={styles.imagePreviewWrapper}>
+                                            {formData.imagePath ? (
+                                                <div className={styles.imagePreview}>
+                                                    <img
+                                                        src={formData.imagePath.startsWith('blob:') ? formData.imagePath : getImageUrl(formData.imagePath)}
+                                                        alt="NPC预览"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
+                                                        }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className={styles.imagePlaceholder}>
+                                                    <span>暂无图片</span>
+                                                </div>
+                                            )}
+                                            {/* 单个图片生成加载效果 */}
+                                            {isGenerating && (
+                                                <div className={styles.loadingOverlay}>
+                                                    <div className={styles.loadingSpinner}></div>
+                                                    <div className={styles.loadingText}>正在生成图片...</div>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    <div className={styles.imageUploadActions}>
                                         <button
                                             type="button"
                                             className={sharedStyles.ghostSmall}
                                             onClick={() => fileInputRef.current?.click()}
-                                        >
-                                            上传图片
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={sharedStyles.ghostSmall}
-                                            onClick={handleGenerateImage}
                                             disabled={isGenerating}
                                         >
-                                            {isGenerating ? '生成中...' : 'AI生成'}
+                                            上传图片
                                         </button>
                                         <input
                                             ref={fileInputRef}
@@ -268,15 +377,14 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                             </label>
                         </div>
                     )}
-
                     {formData.type === 'button' && (
                         <div className={styles.formGroup}>
                             <label>
                                 <span>按钮文字 <span className={sharedStyles.required}>*</span></span>
                                 <input
                                     type="text"
-                                    value={formData.buttonText || ''}
-                                    onChange={(e) => handleFieldChange('buttonText', e.target.value)}
+                                    value={formData.name || ''}
+                                    onChange={(e) => handleFieldChange('name', e.target.value)}
                                     placeholder="输入按钮显示的文字"
                                 />
                             </label>
@@ -285,46 +393,46 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
 
                     <div className={styles.formGroup}>
                         <div className={styles.optionsHeader}>
-                            <span>选项列表 <span className={sharedStyles.required}>*</span>（最少1个，最多5个）</span>
+                            <span>功能列表 <span className={sharedStyles.required}>*</span>（最少1个，最多5个）</span>
                             <button
                                 type="button"
                                 className={sharedStyles.ghostSmall}
-                                onClick={handleAddOption}
-                                disabled={(formData.options || []).length >= 5}
+                                onClick={handleAddAction}
+                                disabled={(formData.actions || []).length >= 5}
                             >
-                                + 新增选项
+                                + 新增功能
                             </button>
                         </div>
                         <div className={styles.optionsList}>
-                            {formData.options && formData.options.length > 0 ? (
-                                formData.options.map((option) => (
-                                    <div key={option.id} className={styles.optionItem}>
+                            {formData.actions && formData.actions.length > 0 ? (
+                                formData.actions.map((action) => (
+                                    <div key={action.id} className={styles.optionItem}>
                                         <div className={styles.optionHeader}>
-                                            <span>选项 {formData.options!.indexOf(option) + 1}</span>
+                                            <span>功能 {formData.actions!.indexOf(action) + 1}</span>
                                             <button
                                                 type="button"
                                                 className={styles.deleteButton}
-                                                onClick={() => handleRemoveOption(option.id)}
+                                                onClick={() => handleRemoveAction(action.id)}
                                             >
                                                 删除
                                             </button>
                                         </div>
                                         <div className={styles.optionFields}>
                                             <label>
-                                                <span>选项名称 <span className={sharedStyles.required}>*</span></span>
+                                                <span>功能名称 <span className={sharedStyles.required}>*</span></span>
                                                 <input
                                                     type="text"
-                                                    value={option.name}
-                                                    onChange={(e) => handleOptionChange(option.id, 'name', e.target.value)}
-                                                    placeholder="游戏端展示的选项内容"
+                                                    value={action.name}
+                                                    onChange={(e) => handleActionChange(action.id, 'name', e.target.value)}
+                                                    placeholder="游戏端展示的功能名称"
                                                 />
                                             </label>
                                             <label>
                                                 <span>描述 <span className={sharedStyles.required}>*</span></span>
                                                 <textarea
                                                     rows={2}
-                                                    value={option.description}
-                                                    onChange={(e) => handleOptionChange(option.id, 'description', e.target.value)}
+                                                    value={action.description}
+                                                    onChange={(e) => handleActionChange(action.id, 'description', e.target.value)}
                                                     placeholder="给大模型用的提示词"
                                                 />
                                             </label>
@@ -333,7 +441,7 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                                 ))
                             ) : (
                                 <div className={styles.emptyOptions}>
-                                    <p>暂无选项，点击"新增选项"添加</p>
+                                    <p>暂无功能，点击"新增功能"添加</p>
                                 </div>
                             )}
                         </div>
@@ -351,6 +459,35 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* 单张图片生成积分确认弹窗 */}
+            <ConfirmModal
+                isOpen={singleGenerateModalOpen}
+                onConfirm={handleConfirmGenerateImage}
+                onCancel={handleCancelGenerateImage}
+                title="积分扣除确认"
+                message={`本次生成图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                confirmButtonText="确认生成"
+                cancelButtonText="取消"
+            />
+
+            {/* 删除功能事件确认弹窗 */}
+            <ConfirmModal
+                isOpen={deleteActionModalOpen}
+                onConfirm={handleConfirmDeleteAction}
+                onCancel={handleCancelDeleteAction}
+                title="删除功能事件"
+                message={
+                    (() => {
+                        const action = formData.actions?.find(a => a.id === actionToDelete);
+                        const actionName = action?.name || '该功能事件';
+                        const remainingCount = (formData.actions?.length || 0) - 1;
+                        return `确定要删除功能事件 "${actionName}" 吗？${remainingCount === 1 ? '删除后将只剩1个功能事件。' : ''}删除后不可恢复。`;
+                    })()
+                }
+                confirmButtonText="确认删除"
+                cancelButtonText="取消"
+            />
         </div>
     );
 };

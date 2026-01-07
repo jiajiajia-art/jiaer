@@ -19,6 +19,7 @@ import SceneList from './SceneList';
 import WorldMapCard from './WorldMapCard';
 import SceneDetailActions from './SceneDetailActions';
 import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
+import { useAuthStore } from '../../../store/useAuthStore';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
@@ -103,6 +104,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             ? gameData.worldSetting.worldMapImage 
             : null);
 
+    // 用户积分
+    const { user, updateUser } = useAuthStore();
+    const userPoints = user?.user?.points ?? 0;
+
     // 大地图预览地址
     const worldMapPreviewSrc = (() => {
         if (!worldMapImage) return DEFAULT_WORLD_MAP_IMAGE;
@@ -138,6 +143,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 mode,
                 gameData,
                 api: sceneApi,
+                updateUser,
                 activeSceneId,
                 activeSubsceneId,
                 activeSubsceneDraft,
@@ -177,6 +183,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             mode,
             gameData,
             sceneApi,
+            userPoints,
+            updateUser,
             activeSceneId,
             activeSubsceneId,
             activeSubsceneDraft,
@@ -341,7 +349,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         setSceneCostModalOpen(false);
         await handlers.confirmGenerateAllSceneImages(sceneCostPoints);
         onDataChange?.();
-    }, [handlers, sceneCostPoints, onDataChange]);
+    }, [handlers, sceneCostPoints, onDataChange, userPoints]);
 
     const handleCancelGenerateAllSceneImages = useCallback(() => {
         setSceneCostModalOpen(false);
@@ -640,8 +648,8 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 title="积分扣除确认"
                 message={
                     sceneCostPoints != null
-                        ? `本次一键生成场景立绘将扣除 ${sceneCostPoints} 积分，是否继续？`
-                        : '将扣除一定积分，是否继续？'
+                        ? `本次一键生成场景立绘将扣除 ${sceneCostPoints} 积分（当前积分 ${userPoints}${sceneCostPoints > userPoints ? '，积分不足' : ''}），是否继续？`
+                        : `将扣除一定积分（当前积分 ${userPoints}），是否继续？`
                 }
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"

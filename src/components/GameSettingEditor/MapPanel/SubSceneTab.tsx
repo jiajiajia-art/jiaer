@@ -4,6 +4,7 @@ import sharedStyles from './shared.module.css';
 import FunctionalNPCList from './FunctionalNPCList';
 import { useSubSceneTab } from './hooks/useSubSceneTab';
 import type { SubScene, Scene } from './types';
+import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import {
     DEFAULT_MAP_IMAGE,
     DEFAULT_NPC_IMAGE,
@@ -26,6 +27,7 @@ interface SubSceneTabProps {
     onDataChange?: () => void;
     isActive?: boolean;
     sceneImageUrl: string;
+    abilityNodeSetting?: AbilityNodeSetting;
 }
 
 const SubSceneTab: React.FC<SubSceneTabProps> = ({
@@ -35,6 +37,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
     onDataChange,
     isActive,
     sceneImageUrl,
+    abilityNodeSetting,
 }) => {
     const {
         selectedSubSceneId,
@@ -52,6 +55,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
         handleDragStart,
         handleDrop,
         handleDragOver,
+        handleDragEnd,
         handleNPCMouseDown,
         handleResizeStart,
         handleRemoveNPC,
@@ -100,7 +104,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
         <>
             {/* 左侧：功能性NPC列表 */}
             <div className={sharedStyles.mapLeftSidebar}>
-                <FunctionalNPCList fileId={fileId} />
+                <FunctionalNPCList abilityNodeSetting={abilityNodeSetting} />
             </div>
 
             {/* 中间：拖拽区域 */}
@@ -109,6 +113,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                 className={sharedStyles.mapPreview}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
             >
                 <img
                     ref={imageRef}
@@ -168,25 +173,55 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                             return (
                                 <div
                                     key={npc.id}
-                                    className={`${styles.placedNPC} ${isSelected ? sharedStyles.placedNPCSelected : ''} ${isDragging ? sharedStyles.placedNPCDragging : ''}`}
+                                    className={`${styles.placedNPC} ${npc.type === 'button' ? styles.placedNPCButton : ''} ${isSelected ? sharedStyles.placedNPCSelected : ''} ${isDragging ? sharedStyles.placedNPCDragging : ''}`}
                                     style={{
                                         left: `${pos.left}px`,
                                         top: `${pos.top}px`,
-                                        width: `${pos.width}px`,
-                                        height: `${pos.height}px`,
+                                        width: npc.type === 'button' ? 'auto' : `${pos.width}px`,
+                                        height: npc.type === 'button' ? 'auto' : `${pos.height}px`,
                                         opacity: pos.visible ? 1 : 0,
                                         transition: 'opacity 0.3s ease',
                                         zIndex: npc.zIndex ?? DEFAULT_Z_INDEX,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                     }}
                                     onMouseDown={(e) => handleNPCMouseDown(e, npc.id)}
                                     onClick={() => setSelectedNPCId(npc.id)}
                                 >
-                                    <img
-                                        src={DEFAULT_NPC_IMAGE}
-                                        alt="NPC 立绘"
-                                        draggable={false}
-                                        className={styles.npcImage}
-                                    />
+                                    {(() => {
+                                        // 按钮型NPC：显示文字
+                                        if (npc.nodeId && npc.type === 'button' && npc.name) {
+                                            return (
+                                                <div className={styles.npcButtonText}>
+                                                    {npc.name}
+                                                </div>
+                                            );
+                                        }
+                                        // 立绘型NPC：显示真实图片
+                                        if (npc.nodeId && npc.imagePath && npc.type === 'illustration') {
+                                            return (
+                                                <img
+                                                    src={getImageUrl(npc.imagePath)}
+                                                    alt={npc.authorNote || '功能性NPC'}
+                                                    draggable={false}
+                                                    className={styles.npcImage}
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
+                                                    }}
+                                                />
+                                            );
+                                        }
+                                        // 默认显示默认图片
+                                        return (
+                                            <img
+                                                src={DEFAULT_NPC_IMAGE}
+                                                alt="NPC 立绘"
+                                                draggable={false}
+                                                className={styles.npcImage}
+                                            />
+                                        );
+                                    })()}
                                     {isSelected && (
                                         <>
                                             {/* 四个角的调整手柄 */}

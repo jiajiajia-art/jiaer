@@ -10,6 +10,8 @@ import type { SceneApiHelpers } from './apiHelpers';
 import { parseSceneResponse } from './apiHelpers';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
+import type { User } from '../../../api/account/auth.type';
+import { auth } from '../../../api/account/authApi';
 import { addImageTimestamp, getImageUrl } from '../../../utils/constants';
 
 export interface LocalScene {
@@ -26,6 +28,7 @@ export interface HandlersContext {
     mode: string;
     gameData?: AllGameData | WorldInteractionGameData | null;
     api: SceneApiHelpers;
+    updateUser?: (user: Partial<User>) => void;
 
     // 必要的 state getters
     activeSceneId: string;
@@ -75,6 +78,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         mode,
         gameData,
         api,
+        updateUser,
         // state getters
         activeSceneId,
         activeSubsceneId,
@@ -117,6 +121,20 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     let sceneToDelete: string | null = null;
     let subsceneToDelete: { sceneId: string; subsceneId: string } | null = null;
     let pendingSceneForGenerate: LocalScene | null = null;
+
+    // 刷新用户积分，避免弹窗/扣除后显示不一致
+    const refreshUserPoints = async () => {
+        if (!updateUser) return;
+        try {
+            const resp = await auth.getUserInfo();
+            const latestUser = resp.data?.data;
+            if (latestUser && typeof latestUser.points === 'number') {
+                updateUser({ points: latestUser.points });
+            }
+        } catch (error) {
+            console.error('刷新用户积分失败:', error);
+        }
+    };
 
     // 更新场景字段（本地）
     const updateSceneField = (field: keyof LocalScene, value: string) => {
@@ -371,6 +389,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 toast.success(isAddingNewSubscene ? '子场景创建成功' : '子场景更新成功');
                 if (onDataChange) onDataChange();
+                await refreshUserPoints();
                 if (isAddingNewSubscene) {
                     setIsAddingNewSubscene(false);
                     setActiveSubsceneId(null);
@@ -875,6 +894,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
     const confirmGenerateAllSceneImages = async (sceneCostPoints: number | null) => {
         await generateAllSceneImages(sceneCostPoints);
+        await refreshUserPoints();
     };
 
     return {

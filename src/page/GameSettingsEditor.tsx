@@ -22,12 +22,6 @@ import FullPageLoading from '../components/Skeleton/FullPageLoading';
 import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
 
-// 类型守卫：判断是否为 worldInteraction 模式
-function isWorldInteractionMode(data: AllGameData | WorldInteractionGameData | null | undefined): data is WorldInteractionGameData {
-    if (!data) return false;
-    return !('metadata' in data && data.metadata !== undefined);
-}
-
 const GameSettingsEditor = () => {
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { fileId, setFileId } = useGameStore();
@@ -242,18 +236,22 @@ const GameSettingsEditor = () => {
                     />
                 </section>
 
-                {/* 只在 worldInteraction 模式下显示 MapPanel（模块五） */}
                 {mode === 'worldInteraction' && (
                     <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
                         <MapPanel
                             sceneSetting={gameData?.sceneSetting}
                             worldMapImage={
-                                gameData && isWorldInteractionMode(gameData) && gameData.worldSetting?.worldMapImage
-                                    ? gameData.worldSetting.worldMapImage
+                                mode === 'worldInteraction' && gameData
+                                    ? (gameData as WorldInteractionGameData).worldSetting?.worldMapImage || null
                                     : null
                             }
                             fileId={fileId || ''}
                             isActive={activePanel === 'mapEdit'}
+                            abilityNodeSetting={
+                                mode === 'worldInteraction' && gameData && 'abilityNodeSetting' in gameData
+                                    ? gameData.abilityNodeSetting
+                                    : undefined
+                            }
                             onDataChange={() => {
                                 if (fileId) {
                                     fetchEditorData(fileId);
@@ -263,12 +261,16 @@ const GameSettingsEditor = () => {
                     </section>
                 )}
 
-                {/* 只在 worldInteraction 模式下显示 FunctionalNPCsPanel（模块六） */}
                 {mode === 'worldInteraction' && (
                     <section className={`${styles.panel} ${activePanel === 'functionalNPCs' ? styles.active : ''}`} id="functionalNPCs">
                         <FunctionalNPCsPanel
                             fileId={fileId}
                             mode={mode || 'worldInteraction'}
+                            abilityNodeSetting={
+                                mode === 'worldInteraction' && gameData && 'abilityNodeSetting' in gameData
+                                    ? gameData.abilityNodeSetting
+                                    : undefined
+                            }
                             onDataChange={() => {
                                 if (fileId) {
                                     fetchEditorData(fileId);
