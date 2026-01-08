@@ -54,6 +54,7 @@ export interface Scene {
     subscenes: SubScene[];
     soundtrack: string;
     position: [number, number];
+    abilityNodes: string[];
 }
 
 export interface WorldSetting {
@@ -79,6 +80,9 @@ export interface AbilityNode {
     actions: Action[];
     position?: [number, number],
     layer?: number,
+    scale?: number,
+    color?: string,
+    tempImageId?: string; // AI生图返回的临时图片ID（仅用于提交，不会持久化）
 }
 
 export interface Action {

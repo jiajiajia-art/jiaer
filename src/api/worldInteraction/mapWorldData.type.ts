@@ -47,6 +47,7 @@ export interface SubScene {
         position: [number, number];
         zoom: number;
     }[];
+    abilityNodes?: string[]; 
 }
 
 export interface Scene {
@@ -80,6 +81,8 @@ export interface SceneSetting {
     scenes: Scene[];
 }
 
+import type { AbilityNodeSetting } from './worldInteractionApi.type';
+
 // 游戏地图的完整数据类型
 export interface AllGameData {
     success: boolean;
@@ -87,4 +90,5 @@ export interface AllGameData {
     worldSetting: WorldSetting;
     npcSetting: NPCSetting;
     sceneSetting: SceneSetting;
+    abilityNodeSetting?: AbilityNodeSetting; // 功能性NPC设置
 }

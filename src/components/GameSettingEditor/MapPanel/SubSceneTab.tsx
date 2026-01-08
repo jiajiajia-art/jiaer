@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './SubSceneTab.module.css';
 import sharedStyles from './shared.module.css';
 import FunctionalNPCList from './FunctionalNPCList';
+import ColorPicker from './ColorPicker';
 import { useSubSceneTab } from './hooks/useSubSceneTab';
 import type { SubScene, Scene } from './types';
 import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -17,7 +18,7 @@ import {
 } from './constants';
 import { getImageUrl } from '../../../utils/constants';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
-import type { NpcSlot } from '../../../api/worldInteraction/worldEditor.type';
+import type { NpcSlot, FunctionalNpcPatch } from '../../../api/worldInteraction/worldEditor.type';
 import toast from 'react-hot-toast';
 
 interface SubSceneTabProps {
@@ -42,7 +43,9 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
     const {
         selectedSubSceneId,
         setSelectedSubSceneId,
-        placedNPCs,
+        placedNormalNPCs,
+        placedFunctionalNPCs,
+        allPlacedNPCs,
         draggingNPCId,
         selectedNPCId,
         setSelectedNPCId,
@@ -61,44 +64,80 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
         handleRemoveNPC,
         handleChangeZIndex,
         handleSetZIndex,
+        handleChangeBackgroundColor,
         getNPCPosition,
-    } = useSubSceneTab({ subScenes, sceneSetting, isActive });
+    } = useSubSceneTab({ subScenes, sceneSetting, isActive, abilityNodeSetting });
 
     const handleConfirm = React.useCallback(async () => {
         if (!currentSceneIdRef.current || !currentSubSceneIdRef.current) {
-            alert('请先选择子场景');
+            toast.error('请先选择子场景');
             return;
         }
 
         if (!fileId) {
-            alert('文件ID不存在，请先上传文件');
+            toast.error('文件ID不存在，请先上传文件');
             return;
         }
 
-        const npcSlots: NpcSlot[] = placedNPCs.map(npc => ({
-            position: [npc.x, npc.y] as [number, number],
-            zoom: npc.zIndex ?? DEFAULT_Z_INDEX,
-        }));
-
         try {
-            const response = await worldEditor.setZoomNpc(
-                fileId,
-                currentSceneIdRef.current,
-                currentSubSceneIdRef.current,
-                npcSlots
-            );
+            // 保存普通NPC位置
+            if (placedNormalNPCs.length > 0) {
+                const npcSlots: NpcSlot[] = placedNormalNPCs.map(npc => ({
+                    position: [npc.x, npc.y] as [number, number],
+                    zoom: npc.scale,
+                    layer: npc.zIndex ?? DEFAULT_Z_INDEX,
+                }));
 
-            if (response.data.success) {
-                toast.success('NPC位置和层级已保存');
-                if (onDataChange) {
-                    onDataChange();
+                const response = await worldEditor.setZoomNpc(
+                    fileId,
+                    currentSceneIdRef.current,
+                    currentSubSceneIdRef.current,
+                    npcSlots
+                );
+
+                if (!response.data.success) {
+                    toast.error('保存普通NPC位置失败');
+                    return;
                 }
+            }
+
+            // 保存功能性NPC位置
+            if (placedFunctionalNPCs.length > 0) {
+                // 批量更新功能性NPC的位置和层级
+                const validFunctionalNPCs = placedFunctionalNPCs.filter(npc => npc.nodeId);
+                
+                if (validFunctionalNPCs.length > 0) {
+                    const patchData: FunctionalNpcPatch = {
+                        patches: validFunctionalNPCs.map(npc => ({
+                            node_id: npc.nodeId,
+                            sceneBinding: {
+                                sceneId: currentSceneIdRef.current!,
+                                subsceneId: currentSubSceneIdRef.current!,
+                            },
+                            position: [npc.x, npc.y] as [number, number],
+                            layer: npc.zIndex ?? DEFAULT_Z_INDEX,
+                            scale: npc.scale,
+                            color: npc.backgroundColor || undefined, // 确保使用16进制格式（#ffffff）
+                        })),
+                    };
+                    const response = await worldEditor.moveFunctionalNpc(fileId, patchData);
+                    
+                    if (!response.data?.success) {
+                        toast.error(response.data?.message || '保存功能性NPC位置失败');
+                        return;
+                    }
+                }
+            }
+
+            toast.success('NPC位置和层级已保存');
+            if (onDataChange) {
+                onDataChange();
             }
         } catch (error: any) {
             console.error('保存失败:', error);
             toast.error('保存失败：' + (error.message || '请检查网络连接'));
         }
-    }, [placedNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef]);
+    }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef]);
 
     return (
         <>
@@ -161,7 +200,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
 
                 {/* 只在内容准备好时才渲染NPC（按层级排序） */}
                 {isSubSceneContentReady &&
-                    [...placedNPCs]
+                    [...allPlacedNPCs]
                         .sort((a, b) => (a.zIndex ?? DEFAULT_Z_INDEX) - (b.zIndex ?? DEFAULT_Z_INDEX))
                         .map(npc => {
                             const pos = getNPCPosition(npc);
@@ -193,7 +232,12 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                                         // 按钮型NPC：显示文字
                                         if (npc.nodeId && npc.type === 'button' && npc.name) {
                                             return (
-                                                <div className={styles.npcButtonText}>
+                                                <div 
+                                                    className={styles.npcButtonText}
+                                                    style={{
+                                                        backgroundColor: npc.backgroundColor || '#E03D4B',
+                                                    }}
+                                                >
                                                     {npc.name}
                                                 </div>
                                             );
@@ -283,6 +327,15 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                                                         +
                                                     </button>
                                                 </div>
+                                                {/* 按钮型NPC的颜色选择器 */}
+                                                {npc.type === 'button' && (
+                                                    <ColorPicker
+                                                        color={npc.backgroundColor || '#E03D4B'}
+                                                        onChange={(color) => {
+                                                            handleChangeBackgroundColor(npc.id, color);
+                                                        }}
+                                                    />
+                                                )}
                                                 {/* 移除按钮 */}
                                                 <button
                                                     className={styles.removeBtn}
@@ -301,7 +354,9 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                         })}
 
                 <div className={sharedStyles.mapOverlayHint}>
-                    拖拽 NPC 到场景，支持缩放（已放置: {placedNPCs.length}/{MAX_NPCS}）
+                    拖拽 NPC 到场景，支持缩放
+                    <br />
+                    普通NPC: {placedNormalNPCs.length}/{MAX_NPCS} | 功能性NPC: {placedFunctionalNPCs.length}
                     {selectedNPCId && (
                         <span className={sharedStyles.hintSelected}> • 拖拽四个角调整大小</span>
                     )}
@@ -370,11 +425,11 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                 </div>
 
                 <div className={styles.npcPalette}>
-                    <h4>NPC 立绘（拖拽）</h4>
+                    <h4>普通NPC 立绘（拖拽）</h4>
                     <div className={styles.npcItems}>
                         <div
-                            className={`${styles.npcItem} ${placedNPCs.length >= MAX_NPCS ? styles.npcItemDisabled : ''}`}
-                            draggable={placedNPCs.length < MAX_NPCS}
+                            className={`${styles.npcItem} ${placedNormalNPCs.length >= MAX_NPCS ? styles.npcItemDisabled : ''}`}
+                            draggable={placedNormalNPCs.length < MAX_NPCS}
                             onDragStart={handleDragStart}
                         >
                             <img
@@ -397,14 +452,14 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                     <button
                         className={sharedStyles.confirmBtn}
                         onClick={handleConfirm}
-                        disabled={placedNPCs.length === 0 || !fileId}
+                        disabled={(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0) || !fileId}
                     >
                         确认保存 NPC 位置
                     </button>
                     <div className={sharedStyles.confirmHint}>
-                        {placedNPCs.length === 0
+                        {(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0)
                             ? '请先放置NPC到场景中'
-                            : `将保存 ${placedNPCs.length} 个NPC的位置和层级信息`}
+                            : `将保存 ${placedNormalNPCs.length} 个普通NPC和 ${placedFunctionalNPCs.length} 个功能性NPC的位置和层级信息`}
                     </div>
                 </div>
             </div>

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './WorldPanel.module.css';
-import type { AllGameData } from '../../api/galgame/EditorData.type';
-import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
-import type { WorldSetting as VisualWorldSetting } from '../../api/galgame/EditorData.type';
-import type { WorldSetting as WorldWorldSetting } from '../../api/worldInteraction/worldInteractionApi.type';
+import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
+import type { WorldSetting as VisualWorldSetting } from '../../../api/galgame/EditorData.type';
+import type { WorldSetting as WorldWorldSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
-import EditorApi from '../../api/galgame/EditorData';
+import EditorApi from '../../../api/galgame/EditorData';
 
 interface WorldField {
     id: string;
@@ -69,6 +69,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     const [isStorylineExpanded, setIsStorylineExpanded] = useState<boolean>(false);
     const [isToneExpanded, setIsToneExpanded] = useState<boolean>(false);
     const [storylineError, setStorylineError] = useState<string>('');
+    const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
 
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
@@ -147,6 +148,10 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     }, [gameData]);
 
     const handleFieldChange = (fieldId: string, value: string) => {
+        // 禁止修改玩家信息字段
+        if (fieldId === 'playerRole') {
+            return;
+        }
         setWorldFields(prev => prev.map(f => f.id === fieldId ? { ...f, value } : f));
     };
 
@@ -504,130 +509,171 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             </div>
 
             <div className={styles.formContainer}>
-                {worldFields.map((field) => (
-                    <div key={field.id} className={styles.formRow}>
-                        <div className={styles.fieldHeader}>
-                            <span className={styles.fieldLabel}>{field.label}</span>
-                            {field.hint && <span className={styles.fieldHint}>{field.hint}</span>}
-                        </div>
-                        {field.type === 'textarea' ? (
-                            <textarea
-                                rows={field.rows || 3}
-                                value={field.value}
-                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                            />
-                        ) : (
-                            <input
-                                type="text"
-                                value={field.value}
-                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                            />
-                        )}
+                {/* Tab 切换 - 仅在 visual 模式下显示 */}
+                {mode === 'visual' && (
+                    <div className={styles.tabContainer}>
+                        <button
+                            className={`${styles.tab} ${activeTab === 'basic' ? styles.tabActive : ''}`}
+                            onClick={() => setActiveTab('basic')}
+                        >
+                            基本设定
+                        </button>
+                        <button
+                            className={`${styles.tab} ${activeTab === 'advanced' ? styles.tabActive : ''}`}
+                            onClick={() => setActiveTab('advanced')}
+                        >
+                            高级设置
+                        </button>
                     </div>
-                ))}
+                )}
 
-                <div className={styles.storylineSection}>
-                    <div className={styles.storylineHeader} style={{ cursor: 'pointer' }} onClick={() => setIsStorylineExpanded(!isStorylineExpanded)}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                            <span className={styles.fieldLabel}>
-                                {isWorldInteractionMode ? (
-                                    <>
-                                        故事线
-                                        <span className={styles.required}>*</span>
-                                        <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>（必填）</span>
-                                    </>
-                                ) : (
-                                    '故事线（可选）'
-                                )}
-                            </span>
-                            {isWorldInteractionMode && (
-                                <span className={styles.fieldHint} style={{ fontSize: '0.8rem', color: 'rgba(224, 61, 75, 0.8)' }}>
-                                    用于约束世界交互节奏，必须至少添加一条
-                                </span>
-                            )}
-                            {!isStorylineExpanded && isWorldInteractionMode && storylines.length === 0 && (
-                                <span className={styles.errorText} style={{ fontSize: '0.85rem', marginTop: '4px' }}>
-                                    请添加至少一条故事线
-                                </span>
-                            )}
+                {/* Tab 内容 */}
+                <div className={styles.tabContent}>
+                    {mode === 'visual' && activeTab === 'advanced' ? (
+                        <div className={styles.advancedContent}>
+                            {/* 高级设置内容 - 暂时为空 */}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {isStorylineExpanded && (
-                                <button
-                                    className={styles.ghostSmall}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        addStoryline();
-                                    }}
-                                >
-                                    + 添加故事线
-                                </button>
-                            )}
-                            <MdArrowDropDown size={30} style={{ transform: isStorylineExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                        </div>
-                    </div>
-                    {isStorylineExpanded && (
+                    ) : (
                         <>
-                            <span className={styles.fieldHint} style={{ marginBottom: '16px', display: 'block' }}>用标签 + 内容描述关键剧情走向，方便约束 AI 推演。</span>
-                            {storylineError && (
-                                <span className={styles.errorText} style={{ marginBottom: '12px', display: 'block' }}>{storylineError}</span>
-                            )}
-                            <div className={styles.storylineList}>
-                                {storylines.length === 0 ? (
-                                    <p className={isWorldInteractionMode ? styles.emptyHintRequired : styles.emptyHint}>
-                                        {isWorldInteractionMode 
-                                            ? '⚠️ 请至少添加一条故事线（世界交互模式下为必填项）' 
-                                            : '暂未添加故事线。可按时间、好感或章节自定义标签。'}
-                                    </p>
-                                ) : (
-                                    storylines.map((line) => (
-                                        <div key={line.id} className={styles.storylineRow}>
-                                            <div className={styles.storylineMeta}>
-                                                <label>
-                                                    <span>标签</span>
-                                                    <input
-                                                        type="text"
-                                                        value={line.tag}
-                                                        onChange={(e) => handleStorylineChange(line.id, 'tag', e.target.value)}
-                                                    />
-                                                </label>
-                                            </div>
-                                            <label className={styles.wide}>
-                                                <span>内容</span>
-                                                <textarea
-                                                    rows={3}
-                                                    value={line.content}
-                                                    onChange={(e) => handleStorylineChange(line.id, 'content', e.target.value)}
-                                                />
-                                            </label>
-                                            <button
-                                                className={styles.ghostTiny}
-                                                onClick={() => removeStoryline(line.id)}
-                                            >
-                                                删除
-                                            </button>
+                            {worldFields.map((field) => {
+                                const isPlayerRole = field.id === 'playerRole';
+                                return (
+                                    <div key={field.id} className={styles.formRow}>
+                                        <div className={styles.fieldHeader}>
+                                            <span className={styles.fieldLabel}>{field.label}</span>
+                                            {field.hint && <span className={styles.fieldHint}>{field.hint}</span>}
+                                            {isPlayerRole && (
+                                                <span className={styles.fieldHint} style={{ color: 'rgba(0, 0, 0, 0.5)', fontStyle: 'italic' }}>
+                                                    玩家信息需要在"角色设定"面板中修改
+                                                </span>
+                                            )}
                                         </div>
-                                    ))
+                                        {field.type === 'textarea' ? (
+                                            <textarea
+                                                rows={field.rows || 3}
+                                                value={field.value}
+                                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                                                disabled={isPlayerRole}
+                                                className={isPlayerRole ? styles.disabledInput : ''}
+                                            />
+                                        ) : (
+                                            <input
+                                                type="text"
+                                                value={field.value}
+                                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                                                disabled={isPlayerRole}
+                                                className={isPlayerRole ? styles.disabledInput : ''}
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            <div className={styles.storylineSection}>
+                                <div className={styles.storylineHeader} style={{ cursor: 'pointer' }} onClick={() => setIsStorylineExpanded(!isStorylineExpanded)}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                                        <span className={styles.fieldLabel}>
+                                            {isWorldInteractionMode ? (
+                                                <>
+                                                    故事线
+                                                    <span className={styles.required}>*</span>
+                                                    <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>（必填）</span>
+                                                </>
+                                            ) : (
+                                                '故事线（可选）'
+                                            )}
+                                        </span>
+                                        {isWorldInteractionMode && (
+                                            <span className={styles.fieldHint} style={{ fontSize: '0.8rem', color: 'rgba(224, 61, 75, 0.8)' }}>
+                                                用于约束世界交互节奏，必须至少添加一条
+                                            </span>
+                                        )}
+                                        {!isStorylineExpanded && isWorldInteractionMode && storylines.length === 0 && (
+                                            <span className={styles.errorText} style={{ fontSize: '0.85rem', marginTop: '4px' }}>
+                                                请添加至少一条故事线
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        {isStorylineExpanded && (
+                                            <button
+                                                className={styles.ghostSmall}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    addStoryline();
+                                                }}
+                                            >
+                                                + 添加故事线
+                                            </button>
+                                        )}
+                                        <MdArrowDropDown size={30} style={{ transform: isStorylineExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                                    </div>
+                                </div>
+                                {isStorylineExpanded && (
+                                    <>
+                                        <span className={styles.fieldHint} style={{ marginBottom: '16px', display: 'block' }}>用标签 + 内容描述关键剧情走向，方便约束 AI 推演。</span>
+                                        {storylineError && (
+                                            <span className={styles.errorText} style={{ marginBottom: '12px', display: 'block' }}>{storylineError}</span>
+                                        )}
+                                        <div className={styles.storylineList}>
+                                            {storylines.length === 0 ? (
+                                                <p className={isWorldInteractionMode ? styles.emptyHintRequired : styles.emptyHint}>
+                                                    {isWorldInteractionMode
+                                                        ? '⚠️ 请至少添加一条故事线（世界交互模式下为必填项）'
+                                                        : '暂未添加故事线。可按时间、好感或章节自定义标签。'}
+                                                </p>
+                                            ) : (
+                                                storylines.map((line) => (
+                                                    <div key={line.id} className={styles.storylineRow}>
+                                                        <div className={styles.storylineMeta}>
+                                                            <label>
+                                                                <span>标签</span>
+                                                                <input
+                                                                    type="text"
+                                                                    value={line.tag}
+                                                                    onChange={(e) => handleStorylineChange(line.id, 'tag', e.target.value)}
+                                                                />
+                                                            </label>
+                                                        </div>
+                                                        <label className={styles.wide}>
+                                                            <span>内容</span>
+                                                            <textarea
+                                                                rows={3}
+                                                                value={line.content}
+                                                                onChange={(e) => handleStorylineChange(line.id, 'content', e.target.value)}
+                                                            />
+                                                        </label>
+                                                        <button
+                                                            className={styles.ghostTiny}
+                                                            onClick={() => removeStoryline(line.id)}
+                                                        >
+                                                            删除
+                                                        </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </>
                                 )}
                             </div>
-                        </>
-                    )}
-                </div>
 
-                <div className={styles.storylineSection}>
-                    <div className={styles.storylineHeader} style={{ marginBottom: isToneExpanded ? '8px' : '0', cursor: 'pointer' }} onClick={() => setIsToneExpanded(!isToneExpanded)}>
-                        <span className={styles.fieldLabel}>文风要求（可选）</span>
-                        <MdArrowDropDown size={30} style={{ transform: isToneExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                    </div>
-                    {isToneExpanded && (
-                        <>
-                            <span className={styles.fieldHint} style={{ marginBottom: '8px', display: 'block' }}>限定语言风格、叙述视角、禁用词汇等，帮助 AI 保持统一语气。</span>
-                            <textarea
-                                rows={4}
-                                value={toneValue}
-                                onChange={(e) => handleToneChange(e.target.value)}
-                                style={{ width: '100%', boxSizing: 'border-box' }}
-                            />
+                            <div className={styles.storylineSection}>
+                                <div className={styles.storylineHeader} style={{ marginBottom: isToneExpanded ? '8px' : '0', cursor: 'pointer' }} onClick={() => setIsToneExpanded(!isToneExpanded)}>
+                                    <span className={styles.fieldLabel}>文风要求（可选）</span>
+                                    <MdArrowDropDown size={30} style={{ transform: isToneExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                                </div>
+                                {isToneExpanded && (
+                                    <>
+                                        <span className={styles.fieldHint} style={{ marginBottom: '8px', display: 'block' }}>限定语言风格、叙述视角、禁用词汇等，帮助 AI 保持统一语气。</span>
+                                        <textarea
+                                            rows={4}
+                                            value={toneValue}
+                                            onChange={(e) => handleToneChange(e.target.value)}
+                                            style={{ width: '100%', boxSizing: 'border-box' }}
+                                        />
+                                    </>
+                                )}
+                            </div>
                         </>
                     )}
                 </div>

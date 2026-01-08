@@ -5,6 +5,9 @@ import type { AllGameData, NPC, WorldSetting, Player, GenerateVariantImageReques
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
+    generateGameFromIdea: (idea:string) => {
+        return api.post<UploadFileResponse>(`/visual/document/generate-from-idea`, { idea: idea });
+    },
     uploadGameFile: (file:File) => {
         const formData = new FormData();
         formData.append('document', file);
@@ -28,6 +31,8 @@ const EditorApi = {
         ),
     updateWorldSetting: (fileId:string, data:Partial<WorldSetting>) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/world`, data),
+    generateStoryStructure: (fileId:string) =>
+        api.post<AllGameData>(`/visual/edit/${fileId}/story-structure/generate`),
     addNpc: (fileId:string, data:NPC) =>
         api.post<AllGameData>(`/visual/edit/${fileId}/npcs`, data),
     updateNpc: (fileId:string, data:NPC) =>

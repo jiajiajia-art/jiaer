@@ -7,9 +7,10 @@ export interface SubScene {
     image?: string;
     npcs?: string[];
     position?: number[];
-    npcs_slots?: Array<{ position?: number[]; zoom?: number }>;
+    npcs_slots?: Array<{ position?: number[]; zoom?: number; layer?: number }>;
     parentId?: string;
     parentName?: string;
+    abilityNodes?: string[]; // 功能性NPC的ID数组
 }
 
 export interface Scene {
@@ -19,6 +20,7 @@ export interface Scene {
     image?: string;
     subscenes?: SubScene[];
     position?: [number, number];
+    abilityNodes?: string[];
 }
 
 import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -45,6 +47,7 @@ export interface PlacedNPC {
     type: string;
     name?: string;
     authorNote: string;
+    backgroundColor?: string;
 }
 
 export interface PlacedSubScene {

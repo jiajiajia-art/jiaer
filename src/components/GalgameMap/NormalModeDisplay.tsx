@@ -106,10 +106,24 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
             {currentMessage?.type !== 'choice' && (
                 <div
                     className={styles.messageContainer}
-                    onClick={() => {
+                    onClick={(e) => {
+                        // 防止点击事件冒泡到按钮
+                        if ((e.target as HTMLElement).closest(`.${styles.nextButtonContainer}`)) {
+                            return;
+                        }
                         // 只有在有下一步按钮、不在打字、不在自动播放时才允许点击
+                        // 在非自动模式下，必须等待打字完成才能点击
                         if (showNextButton && !finalIsTyping && !isAutoPlay && !isWaitingForData) {
-                            onNextMessage();
+                            // 额外检查：确保显示文本已经完整（打字已完成）
+                            const originalPlainText = currentMessage?.message ? extractPlainText(currentMessage.message) : '';
+                            const displayedPlainText = finalDisplayText ? extractPlainText(finalDisplayText) : '';
+                            const isTextComplete = originalPlainText.length > 0 && 
+                                displayedPlainText.length >= originalPlainText.length;
+                            
+                            // 只有在文本完整时才允许点击（非自动模式下）
+                            if (isTextComplete) {
+                                onNextMessage();
+                            }
                         }
                     }}
                     style={{

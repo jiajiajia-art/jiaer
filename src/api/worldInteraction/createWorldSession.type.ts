@@ -1,4 +1,4 @@
-import type { PlayerCharacter } from "./worldInteractionApi.type";
+import type { AbilityNode, PlayerCharacter } from "./worldInteractionApi.type";
 
 export interface CreateWorldSessionResponse {
   success: true;
@@ -111,6 +111,7 @@ interface Subscene {
   npcs: string[];
   position: [number, number];
   npcs_slots?: NPCsSlot[];
+  abilityNodes: string[];
 }
 
 // 场景类型
@@ -143,6 +144,7 @@ interface GameState {
   fileId: string;
   currentRound: number;
   worldInfo: WorldInfo;
+  abilityNodes: AbilityNode[];
   player: Player;
   currentKeyEvent: KeyEvent;
   currentKeyEventIndex: number;

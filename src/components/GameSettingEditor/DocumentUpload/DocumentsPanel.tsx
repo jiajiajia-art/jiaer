@@ -5,6 +5,7 @@ import { HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineMap, HiOutlineCheckCirc
 import toast from 'react-hot-toast';
 import { useUploadStore } from '../../../store/uploadStore';
 import CreateEmptyGameModal from './CreateEmptyGameModal';
+import GenerateFromIdeaModal from './GenerateFromIdeaModal';
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<boolean>;
     isParsing: boolean;
@@ -12,6 +13,7 @@ interface DocumentsPanelProps {
     onParsingComplete: () => void;
     fileId: string;
     onCreateEmptyGame?: (title: string) => Promise<void>;
+    onGenerateFromIdea?: (idea: string) => Promise<boolean>;
     mode?: string;
 }
 
@@ -21,8 +23,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     onParsingStart,
     onParsingComplete,
     onCreateEmptyGame,
+    onGenerateFromIdea,
+    mode,
 }) => {
     const [showCreateEmptyModal, setShowCreateEmptyModal] = useState(false);
+    const [showGenerateFromIdeaModal, setShowGenerateFromIdeaModal] = useState(false);
+    const isVisualMode = mode === 'visual' || !mode; // 默认为 visual 模式
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const { jobs } = useUploadStore();
@@ -199,6 +205,28 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 )}
             </div>
 
+            {/* 一句话生成 - 更突出的展示 */}
+            {isVisualMode && onGenerateFromIdea && (
+                <div className={styles.generateFromIdeaCard}>
+                    <div className={styles.generateFromIdeaContent}>
+                        <div className={styles.generateFromIdeaIcon}>✨</div>
+                        <div className={styles.generateFromIdeaText}>
+                            <h3 className={styles.generateFromIdeaTitle}>AI 一句话生成游戏</h3>
+                            <p className={styles.generateFromIdeaDesc}>
+                                输入你的游戏创意，AI 自动生成完整的游戏设定文档
+                            </p>
+                        </div>
+                        <button 
+                            className={styles.generateFromIdeaButton}
+                            onClick={() => setShowGenerateFromIdeaModal(true)}
+                            disabled={isParsing}
+                        >
+                            立即生成
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className={styles.twoCol}>
                 <div className={styles.card}>
                     <h3>文档导入</h3>
@@ -311,6 +339,14 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     isOpen={showCreateEmptyModal}
                     onClose={() => setShowCreateEmptyModal(false)}
                     onSubmit={onCreateEmptyGame}
+                />
+            )}
+            
+            {isVisualMode && onGenerateFromIdea && (
+                <GenerateFromIdeaModal
+                    isOpen={showGenerateFromIdeaModal}
+                    onClose={() => setShowGenerateFromIdeaModal(false)}
+                    onSubmit={onGenerateFromIdea}
                 />
             )}
         </div>

@@ -100,10 +100,40 @@
     cursor: not-allowed;
 }
 
+.textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    resize: vertical;
+    font-family: inherit;
+    min-height: 120px;
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.textarea:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
 .errorText {
     margin: 8px 0 0 0;
     color: var(--primary);
     font-size: 0.875rem;
+}
+
+.hintText {
+    margin: 8px 0 0 0;
+    color: #666;
+    font-size: 0.75rem;
+    line-height: 1.4;
 }
 
 .buttonGroup {

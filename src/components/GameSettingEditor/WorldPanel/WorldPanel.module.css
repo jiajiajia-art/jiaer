@@ -133,13 +133,81 @@
 /* 单栏表单容器 */
 .formContainer {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
+    flex-direction: row;
+    gap: 0;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 24px;
-    padding: 28px;
+    padding: 0;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 当没有 tab 容器时，tabContent 应该全宽 */
+.formContainer:not(:has(.tabContainer)) .tabContent {
+    padding: 28px;
+}
+
+/* Tab 容器 - 侧边 */
+.tabContainer {
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.02);
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    width: fit-content;
+    min-width: 120px;
+    gap: 6px;
+    border-radius: 12px 0 0 12px;
+    margin-right: 1px;
+}
+
+/* Tab 按钮 - 突出样式 */
+.tab {
+    position: relative;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    white-space: nowrap;
+    min-width: 100px;
+}
+
+.tab:hover {
+    color: var(--primary);
+    background: rgba(224, 61, 75, 0.08);
+}
+
+.tabActive {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
+}
+
+/* Tab 内容区域 */
+.tabContent {
+    flex: 1;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+/* 高级设置内容 */
+.advancedContent {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(0, 0, 0, 0.4);
+    font-size: 0.9rem;
 }
 
 /* 表单行 */
@@ -204,6 +272,31 @@
     border-color: var(--primary);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+/* 禁用输入框样式 */
+.formContainer input:disabled,
+.formContainer textarea:disabled {
+    background: rgba(0, 0, 0, 0.03);
+    color: rgba(0, 0, 0, 0.5);
+    cursor: not-allowed;
+    border-color: rgba(0, 0, 0, 0.08);
+    opacity: 0.7;
+}
+
+.formContainer input:disabled:focus,
+.formContainer textarea:disabled:focus {
+    border-color: rgba(0, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.03);
+    box-shadow: none;
+}
+
+.disabledInput {
+    background: rgba(0, 0, 0, 0.03) !important;
+    color: rgba(0, 0, 0, 0.5) !important;
+    cursor: not-allowed !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    opacity: 0.7;
 }
 
 .formContainer textarea,

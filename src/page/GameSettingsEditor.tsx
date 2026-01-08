@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styles from './GameSettingsEditor.module.css';
 import DocumentsPanel from '../components/GameSettingEditor/DocumentUpload/DocumentsPanel';
-import WorldPanel from '../components/GameSettingEditor/WorldPanel';
+import WorldPanel from '../components/GameSettingEditor/WorldPanel/WorldPanel';
 import CharactersPanel from '../components/GameSettingEditor/CharactersPanel/CharactersPanel';
 import ScenesPanel from '../components/GameSettingEditor/ScenesPanel/ScenesPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
@@ -35,7 +35,7 @@ const GameSettingsEditor = () => {
     // 使用自定义 Hooks
     const { gameData, isLoadingData, fetchEditorData } = useEditorData({ fileId, mode });
 
-    const { handleFileUpload } = useFileUpload({
+    const { handleFileUpload, handleGenerateFromIdea } = useFileUpload({
         mode,
         onUploadComplete: async (fileId, dataMode) => {
             await fetchEditorData(fileId, dataMode);
@@ -88,6 +88,36 @@ const GameSettingsEditor = () => {
         }
     }, [mode, setFileId, fetchEditorData]);
 
+    const handleParsingStart = useCallback(() => {
+        setIsParsing(true);
+        setIsParsed(false);
+    }, [setIsParsed]);
+
+    const handleParsingComplete = useCallback(() => {
+        setIsParsing(false);
+        setIsParsed(true);
+        // 延迟1秒后自动跳转到下一步
+        setTimeout(() => {
+            setActivePanel('world');
+        }, 1000);
+    }, [setIsParsed, setActivePanel]);
+
+    // 一句话生成游戏
+    const handleGenerateFromIdeaWrapper = useCallback(async (idea: string) => {
+        // mode 为 null 时默认为 visual 模式，只有 worldInteraction 模式才不允许
+        if (mode === 'worldInteraction') {
+            throw new Error('一句话生成功能仅在 visual 模式下可用');
+        }
+        // 开始解析状态
+        handleParsingStart();
+        const result = await handleGenerateFromIdea(idea);
+        // 如果失败，重置解析状态
+        if (!result) {
+            setIsParsing(false);
+        }
+        return result;
+    }, [mode, handleGenerateFromIdea, handleParsingStart]);
+
     // 初始化：当 fileId 存在且数据加载完成时，设置解析状态和初始面板
     const hasInitializedRef = useRef<string | null>(null);
     useEffect(() => {
@@ -120,20 +150,6 @@ const GameSettingsEditor = () => {
 
         setActivePanel(panelId);
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel]);
-
-    const handleParsingStart = useCallback(() => {
-        setIsParsing(true);
-        setIsParsed(false);
-    }, [setIsParsed]);
-
-    const handleParsingComplete = useCallback(() => {
-        setIsParsing(false);
-        setIsParsed(true);
-        // 延迟1秒后自动跳转到下一步
-        setTimeout(() => {
-            setActivePanel('world');
-        }, 1000);
-    }, [setIsParsed, setActivePanel]);
 
     const onPublishGame = useCallback(async (price: number | null, isFree: boolean) => {
         await handlePublishGame(price, isFree);
@@ -193,6 +209,7 @@ const GameSettingsEditor = () => {
                         onParsingComplete={handleParsingComplete}
                         fileId={fileId || ''}
                         onCreateEmptyGame={handleCreateEmptyGame}
+                        onGenerateFromIdea={handleGenerateFromIdeaWrapper}
                         mode={mode || undefined}
                     />
                 </section>

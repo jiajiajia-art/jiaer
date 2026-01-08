@@ -271,6 +271,9 @@ const GalgameMap = () => {
                     sceneSetting: {
                         scenes: safeScenes,
                     },
+                    abilityNodeSetting: state.abilityNodes ? {
+                        abilityNodes: state.abilityNodes,
+                    } : undefined,
                 };
 
                 setGameData(worldFormatData);

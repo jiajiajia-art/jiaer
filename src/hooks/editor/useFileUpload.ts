@@ -12,7 +12,7 @@ interface JobStatusResponseRunning {
     success?: boolean;
     jobId: string;
     fileId?: string;
-    status: 'running' | 'queued';
+    status: 'running' | 'queued' | 'pending';
     stage?: JobStage;
     progress?: number;
     error?: string;
@@ -38,6 +38,7 @@ interface UseFileUploadOptions {
 
 interface UseFileUploadReturn {
     handleFileUpload: (file: File) => Promise<boolean>;
+    handleGenerateFromIdea: (idea: string) => Promise<boolean>;
 }
 
 export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions): UseFileUploadReturn => {
@@ -76,13 +77,16 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     : EditorApi.checkUploadStatus(jobId);
                 const statusData = (await statusResponse).data;
                 
-                if (statusData.status === 'running' || statusData.status === 'queued') {
+                console.log('[轮询状态] jobId:', jobId, 'status:', statusData.status, 'progress:', statusData.progress, 'stage:', statusData.stage);
+                
+                if (statusData.status === 'running' || statusData.status === 'queued' || statusData.status === 'pending') {
                     const runningData = statusData as JobStatusResponseRunning;
+                    const isQueuedOrPending = runningData.status === 'queued' || runningData.status === 'pending';
                     updateJob(jobId, {
                         fileId: runningData.fileId || null,
-                        status: runningData.status === 'queued' ? 'uploading' : 'processing',
+                        status: isQueuedOrPending ? 'uploading' : 'processing',
                         progress: runningData.progress || 0,
-                        stage: runningData.stage || (runningData.status === 'queued' ? '上传中' : '处理中'),
+                        stage: runningData.stage || (isQueuedOrPending ? '排队中' : '处理中'),
                         error: null,
                     });
                     
@@ -216,8 +220,62 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         }
     }, [mode, setFileId, setIsParsed, setIsPreset, updateJob, startPollingUploadStatus]);
 
+    const handleGenerateFromIdea = useCallback(async (idea: string): Promise<boolean> => {
+        if (mode === 'worldInteraction') {
+            toast.error('一句话生成功能仅在 visual 模式下可用');
+            return false;
+        }
+        try {
+            const response = await EditorApi.generateGameFromIdea(idea);
+            if (response.status === 200) {
+                const legacy = response.data;
+                if (legacy.success && legacy.fileId) {
+                    setFileId(legacy.fileId);
+                    setIsParsed(false);
+                    setIsPreset(false);
+                    return true;
+                } else {
+                    console.error('Unexpected generate response: 200 but no fileId in body');
+                    return false;
+                }
+            }
+            
+            if (response.status !== 202) {
+                console.error('Unexpected generate response status:', response.status);
+                toast.error('生成失败，请重试');
+                return false;
+            }
+            
+            const accepted = response.data;
+            if (!accepted.success || !accepted.jobId) {
+                console.error('Invalid 202 Accepted payload', accepted);
+                toast.error('生成失败，请重试');
+                return false;
+            }
+            
+            const { jobId, fileId: initialFileId } = accepted;
+            
+            if (initialFileId) {
+                updateJob(jobId, {
+                    fileId: initialFileId,
+                });
+            }
+            
+            // 使用相同的轮询机制
+            console.log('[一句话生成] 开始轮询，jobId:', jobId);
+            startPollingUploadStatus(jobId, `生成游戏：${idea.substring(0, 20)}...`, 'visual');
+            
+            return true;
+        } catch (error) {
+            console.error('Error generating from idea:', error);
+            toast.error('生成失败，请重试');
+            return false;
+        }
+    }, [mode, setFileId, setIsParsed, setIsPreset, updateJob, startPollingUploadStatus]);
+
     return {
         handleFileUpload,
+        handleGenerateFromIdea,
     };
 };
 

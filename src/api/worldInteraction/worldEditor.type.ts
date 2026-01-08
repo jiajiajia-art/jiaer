@@ -7,7 +7,8 @@ import type { AbilityNode } from "./worldInteractionApi.type";
 
 export interface NpcSlot {
   position: [number, number];
-  zoom: number;
+  zoom: number; // 缩放
+  layer?: number; // 层级
 }
 
 export interface GenerateNpcImage {
@@ -134,9 +135,9 @@ export interface GenerateFunctionImageResponse {
   message: string;
   result: {
     success: boolean;
-    imagePath: string;
+    tempImagePath: string;
     url: string;
-    bgRemoved: boolean;
+    tempImageId: string;
   };
 }
 
@@ -159,4 +160,18 @@ export interface AddFunctionalNpcResponse {
   success: boolean;
   message: string;
   node: AbilityNode;
+}
+
+export interface FunctionalNpcPatch {
+  patches: {
+      node_id: string;
+      sceneBinding: {
+        sceneId: string;
+        subsceneId: string;
+      };
+      position: [number, number];
+      layer: number;
+      scale: number;
+      color?: string;
+    }[];
 }

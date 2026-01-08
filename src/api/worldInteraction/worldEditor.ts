@@ -12,6 +12,7 @@ import type { Scene, SubScene } from "./mapWorldData.type";
 import type {
   AddFunctionalNpcResponse,
   CalculatePointsResponse,
+  FunctionalNpcPatch,
   GenerateAllFunctionImageResponse,
   GenerateALLSceneImage,
   GenerateFunctionImageResponse,
@@ -395,12 +396,12 @@ const worldEditor = {
   },
 
   // 功能性NPC相关接口
-  generateFunctionalNPCImage: (fileId: string, nodeId: string) => {
+  generateFunctionalNPCImage: (fileId: string, prompt: string) => {
     return api.post<GenerateFunctionImageResponse>(
       `/world-interaction/images/generate-ability-node`,
       {
         fileId: fileId,
-        nodeId: nodeId,
+        prompt: prompt,
       },
       {
         timeout: 180000,
@@ -418,11 +419,25 @@ const worldEditor = {
       }
     );
   },
-  addFunctionalNpc: (fileId: string, data: AbilityNode) => {
-    return api.post<AddFunctionalNpcResponse>(
-      `/world-interaction/edit/${fileId}/ability-nodes`,
-      data
-    );
+  addFunctionalNpc: (fileId: string, data: FormData | AbilityNode) => {
+    if (data instanceof FormData) {
+      // 如果有文件，使用 FormData
+      return api.post<AddFunctionalNpcResponse>(
+        `/world-interaction/edit/${fileId}/ability-nodes`,
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+    } else {
+      // 如果没有文件，使用普通 JSON
+      return api.post<AddFunctionalNpcResponse>(
+        `/world-interaction/edit/${fileId}/ability-nodes`,
+        data
+      );
+    }
   },
   deleteFunctionalNpc: (fileId: string, nodeId: string) => {
     return api.delete<ApiResponse<null>>(
@@ -432,15 +447,32 @@ const worldEditor = {
   updateFunctionalNpc: (
     fileId: string,
     nodeId: string,
-    data: Partial<AbilityNode>
+    data: FormData | Partial<AbilityNode>
   ) => {
-    return api.put<AddFunctionalNpcResponse>(
-      `/world-interaction/edit/${fileId}/ability-nodes/${nodeId}`,
-      data
-    );
+    if (data instanceof FormData) {
+      // 如果有文件，使用 FormData
+      return api.put<AddFunctionalNpcResponse>(
+        `/world-interaction/edit/${fileId}/ability-nodes/${nodeId}`,
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+    } else {
+      // 如果没有文件，使用普通 JSON
+      return api.put<AddFunctionalNpcResponse>(
+        `/world-interaction/edit/${fileId}/ability-nodes/${nodeId}`,
+        data
+      );
+    }
   },
   deleteFunctionalEvent:(fileId: string, nodeId: string, actionId: string)=>{
     return api.delete<AddFunctionalNpcResponse>(`/world-interaction/edit/${fileId}/ability-nodes/${nodeId}/actions/${actionId}`)
+  },
+  moveFunctionalNpc:(fileId: string, data: FunctionalNpcPatch)=>{
+    return api.post<AddFunctionalNpcResponse>(`/world-interaction/edit/${fileId}/ability-nodes/patch`, data)
   }
 };
 

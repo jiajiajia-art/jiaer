@@ -130,32 +130,32 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
                             }}
                         >
                             {shouldShowImage && (
-                                <div className={styles.functionalNPCThumbWrapper}>
-                                    <img
-                                        src={getImageUrl(abilityNode.imagePath)}
+                        <div className={styles.functionalNPCThumbWrapper}>
+                                <img
+                                    src={getImageUrl(abilityNode.imagePath)}
                                         alt={abilityNode.authorNote || '功能性NPC'}
-                                        className={styles.functionalNPCThumbImage}
+                                    className={styles.functionalNPCThumbImage}
                                         draggable={false}
-                                        onError={(e) => {
-                                            const target = e.target as HTMLImageElement;
-                                            target.onerror = null;
-                                            target.style.display = 'none';
-                                            const placeholder = target.nextElementSibling as HTMLElement;
-                                            if (placeholder) placeholder.style.display = 'block';
-                                        }}
-                                    />
-                                    <div
-                                        className={styles.functionalNPCThumb}
-                                        style={{
+                                    onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.onerror = null;
+                                        target.style.display = 'none';
+                                        const placeholder = target.nextElementSibling as HTMLElement;
+                                        if (placeholder) placeholder.style.display = 'block';
+                                    }}
+                                />
+                            <div
+                                className={styles.functionalNPCThumb}
+                                style={{
                                             display: 'none',
                                             backgroundImage: `url('${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png')`,
-                                            backgroundSize: 'cover',
-                                            backgroundPosition: 'center',
-                                        }}
-                                    />
-                                </div>
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                }}
+                            />
+                        </div>
                             )}
-                            <div className={styles.functionalNPCMeta}>
+                        <div className={styles.functionalNPCMeta}>
                                 <div className={styles.functionalNPCName}>{abilityNode.authorNote || '未命名NPC'}</div>
                                 <div className={styles.functionalNPCType}>
                                     {abilityNode.type === 'illustration' ? '立绘型' : abilityNode.type === 'button' ? '按钮型' : abilityNode.type || '功能性NPC'}
@@ -163,15 +163,15 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
                                 {abilityNode.type === 'button' && abilityNode.name && (
                                     <div className={styles.functionalNPCButtonText}>
                                         按钮文字: {abilityNode.name}
-                                    </div>
-                                )}
-                                {abilityNode.actions && abilityNode.actions.length > 0 && (
-                                    <div className={styles.functionalNPCButtonText}>
-                                        功能: {abilityNode.actions.map(a => a.name).join(', ')}
-                                    </div>
-                                )}
                             </div>
+                                )}
+                            {abilityNode.actions && abilityNode.actions.length > 0 && (
+                                <div className={styles.functionalNPCButtonText}>
+                                    功能: {abilityNode.actions.map(a => a.name).join(', ')}
+                                </div>
+                            )}
                         </div>
+                    </div>
                     );
                 })}
             </div>

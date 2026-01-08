@@ -12,12 +12,14 @@ interface FunctionalNPCDetailProps {
     node: AbilityNode | null;
     onSave: (updatedNode: AbilityNode) => void;
     fileId?: string | null;
+    isNewNode?: boolean; // 标识是否为新建节点
 }
 
 const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
     node,
     onSave,
     fileId,
+    isNewNode: isNewNodeProp,
 }) => {
     const { fileId: storeFileId } = useGameStore();
     const currentFileId = fileId || storeFileId;
@@ -39,6 +41,8 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
     const [actionToDelete, setActionToDelete] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
+    const [localFile, setLocalFile] = useState<File | null>(null);
+    const [tempImageId, setTempImageId] = useState<string | null>(null);
 
     // 当node变化时，更新表单数据
     React.useEffect(() => {
@@ -52,6 +56,8 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                 imagePrompt: node.imagePrompt || '',
                 actions: node.actions && node.actions.length > 0 ? node.actions : [{ id: `opt-${Date.now()}`, name: '', description: '' }],
             });
+            setLocalFile(null);
+            setTempImageId(null);
         } else {
             setFormData({
                 node_id: '',
@@ -62,6 +68,8 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                 imagePrompt: '',
                 actions: [{ id: `opt-${Date.now()}`, name: '', description: '' }],
             });
+            setLocalFile(null);
+            setTempImageId(null);
         }
     }, [node]);
 
@@ -163,11 +171,15 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                 return;
             }
 
+            setLocalFile(file);
+            setTempImageId(null);
             // 创建本地预览URL
             const imageUrl = URL.createObjectURL(file);
             setFormData(prev => ({ ...prev, imagePath: imageUrl }));
             toast.success('图片已选择');
         }
+        // 清空input，允许重复选择同一文件
+        e.target.value = '';
     };
 
     const handleGenerateImageClick = () => {
@@ -179,8 +191,8 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
     };
 
     const handleConfirmGenerateImage = async () => {
-        if (!currentFileId || !formData.node_id) {
-            toast.error('缺少必要数据，无法生成');
+        if (!currentFileId || !formData.imagePrompt?.trim()) {
+            toast.error('请先输入图片提示词');
             setSingleGenerateModalOpen(false);
             return;
         }
@@ -188,11 +200,15 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
         setIsGenerating(true);
         setSingleGenerateModalOpen(false);
         try {
-            const response = await worldEditor.generateFunctionalNPCImage(currentFileId, formData.node_id);
+            const response = await worldEditor.generateFunctionalNPCImage(currentFileId, formData.imagePrompt || '');
             const responseData = response.data;
             if (responseData.success && responseData.result) {
                 if (responseData.result) {
-                    const imagePath = responseData.result.imagePath || responseData.result.url;
+                    if (responseData.result.tempImageId) {
+                        setTempImageId(responseData.result.tempImageId);
+                    }
+                    setLocalFile(null);
+                    const imagePath = responseData.result.url;
                     setFormData(prev => ({ ...prev, imagePath }));
                     toast.success('图片生成成功');
                 }
@@ -209,7 +225,7 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
         setSingleGenerateModalOpen(false);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         // 验证必填字段
         if (!formData.authorNote?.trim()) {
             toast.error('请输入NPC名称');
@@ -217,7 +233,7 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
         }
 
         // illustration 型需要验证图片
-        if (formData.type === 'illustration' && !formData.imagePath) {
+        if (formData.type === 'illustration' && !formData.imagePath && !localFile && !tempImageId) {
             toast.error('请上传或生成图片');
             return;
         }
@@ -242,22 +258,104 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
             }
         }
 
+        if (!currentFileId) {
+            toast.error('缺少必要数据，无法保存');
+            return;
+        }
+
         setIsSaving(true);
 
-        const updatedNode: AbilityNode = {
-            node_id: node?.node_id || `node-${Date.now()}`,
-            authorNote: formData.authorNote!,
-            // name 字段只在按钮型时需要
-            name: formData.type === 'button' ? (formData.name || '').trim() : undefined,
-            type: formData.type || 'illustration',
-            imagePath: formData.imagePath || '',
-            imagePrompt: formData.imagePrompt || '',
-            actions: formData.actions || [],
-        };
-
-        // 通过回调更新父组件状态
-        onSave(updatedNode);
-        setIsSaving(false);
+        try {
+            // 优先使用传入的 isNewNode 属性，如果没有则根据 node_id 判断
+            const isNewNode = isNewNodeProp !== undefined ? isNewNodeProp : !node?.node_id;
+            
+            let response;
+            
+            // 如果有文件，使用 FormData 格式
+            if (localFile) {
+                const formDataToSend = new FormData();
+                formDataToSend.append('image', localFile);
+                
+                formDataToSend.append('node_id', node?.node_id || `node-${Date.now()}`);
+                formDataToSend.append('authorNote', formData.authorNote || '');
+                if (formData.type === 'button' && formData.name) {
+                    formDataToSend.append('name', formData.name.trim());
+                }
+                formDataToSend.append('type', formData.type || 'illustration');
+                formDataToSend.append('imagePath', formData.imagePath || '');
+                formDataToSend.append('imagePrompt', formData.imagePrompt || '');
+                formDataToSend.append('actions', JSON.stringify(formData.actions || []));
+                
+                if (isNewNode) {
+                    response = await worldEditor.addFunctionalNpc(currentFileId, formDataToSend);
+                } else {
+                    if (!node?.node_id) {
+                        toast.error('缺少节点ID，无法更新');
+                        setIsSaving(false);
+                        return;
+                    }
+                    response = await worldEditor.updateFunctionalNpc(currentFileId, node.node_id, formDataToSend);
+                }
+            } else {
+                // 如果没有文件，使用普通 JSON 格式
+                // 构建节点数据，如果有tempImageId则添加
+                const nodeData: AbilityNode = {
+                    node_id: node?.node_id || `node-${Date.now()}`,
+                    authorNote: formData.authorNote!,
+                    name: formData.type === 'button' ? formData.name?.trim() : undefined,
+                    type: formData.type || 'illustration',
+                    imagePath: formData.imagePath || '',
+                    imagePrompt: formData.imagePrompt || '',
+                    actions: formData.actions || [],
+                    ...(tempImageId ? { tempImageId } : {}),
+                };
+                
+                // 调用 API
+                if (isNewNode) {
+                    response = await worldEditor.addFunctionalNpc(currentFileId, nodeData);
+                } else {
+                    if (!node?.node_id) {
+                        toast.error('缺少节点ID，无法更新');
+                        setIsSaving(false);
+                        return;
+                    }
+                    response = await worldEditor.updateFunctionalNpc(currentFileId, node.node_id, nodeData);
+                }
+            }
+            
+            if (response.data?.success) {
+                const savedNode = response.data?.node;
+                if (savedNode) {
+                    // 通过 onSave 回调更新父组件状态
+                    await onSave(savedNode);
+                } else {
+                    // 如果没有返回节点，构建节点数据传递给父组件
+                    const nodeData: AbilityNode = {
+                        node_id: node?.node_id || `node-${Date.now()}`,
+                        authorNote: formData.authorNote!,
+                        name: formData.type === 'button' ? formData.name?.trim() : undefined,
+                        type: formData.type || 'illustration',
+                        imagePath: formData.imagePath || '',
+                        imagePrompt: formData.imagePrompt || '',
+                        actions: formData.actions || [],
+                    };
+                    await onSave(nodeData);
+                }
+            } else {
+                toast.error(response.data?.message || '保存失败');
+                setIsSaving(false);
+                return;
+            }
+            
+            // 提交成功后，清除tempImageId和本地文件
+            setTempImageId(null);
+            setLocalFile(null);
+        } catch (error: any) {
+            console.error('保存失败:', error);
+            toast.error('保存失败：' + (error.message || '请检查网络连接'));
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (

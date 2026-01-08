@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { SubScene, PlacedNPC, Scene } from '../types';
+import type { AbilityNodeSetting, AbilityNode } from '../../../../api/worldInteraction/worldInteractionApi.type';
 import {
     DEFAULT_SCALE,
     DEFAULT_Z_INDEX,
@@ -18,11 +19,13 @@ interface UseSubSceneTabProps {
     subScenes: SubScene[];
     sceneSetting?: { scenes?: Scene[] };
     isActive?: boolean;
+    abilityNodeSetting?: AbilityNodeSetting;
 }
 
-export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubSceneTabProps) => {
+export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeSetting }: UseSubSceneTabProps) => {
     const [selectedSubSceneId, setSelectedSubSceneId] = useState<string | null>(null);
-    const [placedNPCs, setPlacedNPCs] = useState<PlacedNPC[]>([]);
+    const [placedNormalNPCs, setPlacedNormalNPCs] = useState<PlacedNPC[]>([]);
+    const [placedFunctionalNPCs, setPlacedFunctionalNPCs] = useState<PlacedNPC[]>([]);
     const [draggingNPCId, setDraggingNPCId] = useState<string | null>(null);
     const [selectedNPCId, setSelectedNPCId] = useState<string | null>(null);
     const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
@@ -56,7 +59,8 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
     useEffect(() => {
         if (subScenes.length === 0) {
             setSelectedSubSceneId(null);
-            setPlacedNPCs([]);
+            setPlacedNormalNPCs([]);
+            setPlacedFunctionalNPCs([]);
             return;
         }
 
@@ -73,22 +77,56 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
         currentSceneIdRef.current = targetSubScene.parentId || null;
         currentSubSceneIdRef.current = targetSubScene.id;
 
+        // 从后端加载的NPC都是普通NPC（通过npcs_slots）
         if (targetSubScene.npcs_slots && targetSubScene.npcs_slots.length > 0) {
             const loadedNPCs: PlacedNPC[] = targetSubScene.npcs_slots.map((slot, index) => ({
                 id: `slot_${targetSubScene.id}_${index}`,
                 x: slot.position?.[0] ?? 0.5,
                 y: slot.position?.[1] ?? 0.5,
-                scale: DEFAULT_SCALE,
-                zIndex: slot.zoom ?? DEFAULT_Z_INDEX,
-                nodeId: '', // 从后端加载的NPC可能没有功能性NPC信息
+                scale: slot.zoom ?? DEFAULT_SCALE, // zoom是缩放
+                zIndex: slot.layer ?? DEFAULT_Z_INDEX, // layer是层级
+                nodeId: '', // 普通NPC没有nodeId
                 type: 'illustration', // 默认为立绘型
                 authorNote: '', // 默认为空
             }));
-            setPlacedNPCs(loadedNPCs);
+            setPlacedNormalNPCs(loadedNPCs);
         } else {
-            setPlacedNPCs([]);
+            setPlacedNormalNPCs([]);
         }
-    }, [subScenes, selectedSubSceneId, currentSubScene, sceneSetting]);
+        // 功能性NPC的位置信息需要从AbilityNode中加载（如果有的话）
+        // 根据子场景的 abilityNodes ID 数组，从 abilityNodeSetting 中找到对应的 AbilityNode
+        if (abilityNodeSetting?.abilityNodes && targetSubScene?.abilityNodes?.length) {
+            const functionalNPCs: PlacedNPC[] = targetSubScene.abilityNodes
+                .map((nodeId: string): PlacedNPC | null => {
+                    const abilityNode = abilityNodeSetting.abilityNodes.find(
+                        (node: AbilityNode) => node.node_id === nodeId
+                    );
+                    
+                    if (!abilityNode || !abilityNode.position || abilityNode.position.length !== 2) {
+                        return null;
+                    }
+                    
+                    return {
+                        id: `functional_npc_${abilityNode.node_id}`,
+                        x: abilityNode.position[0],
+                        y: abilityNode.position[1],
+                        scale: abilityNode.scale ?? DEFAULT_SCALE,
+                        zIndex: abilityNode.layer ?? DEFAULT_Z_INDEX,
+                        nodeId: abilityNode.node_id,
+                        imagePath: abilityNode.imagePath,
+                        type: abilityNode.type || 'illustration',
+                        name: abilityNode.name,
+                        authorNote: abilityNode.authorNote || '',
+                        backgroundColor: abilityNode.color || (abilityNode.type === 'button' ? '#E03D4B' : undefined),
+                    };
+                })
+                .filter((npc): npc is PlacedNPC => npc !== null);
+            
+            setPlacedFunctionalNPCs(functionalNPCs);
+        } else {
+            setPlacedFunctionalNPCs([]);
+        }
+    }, [subScenes, selectedSubSceneId, currentSubScene, sceneSetting, abilityNodeSetting]);
 
     // 内容就绪检测
     useEffect(() => {
@@ -175,14 +213,14 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
         };
     }, [isActive]);
 
-    // NPC拖拽处理
+    // NPC拖拽处理（普通NPC）
     const handleDragStart = useCallback((e: React.DragEvent) => {
-        if (placedNPCs.length >= MAX_NPCS) {
+        if (placedNormalNPCs.length >= MAX_NPCS) {
             e.preventDefault();
             return;
         }
         setDraggingNPCId('new');
-    }, [placedNPCs.length]);
+    }, [placedNormalNPCs.length]);
 
     // 实时鼠标移动处理
     useEffect(() => {
@@ -213,9 +251,17 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
                 const newScale = (currentDistance / resizeStart.initialDistance) * resizeStart.scale;
                 const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
 
-                setPlacedNPCs(prev =>
-                    prev.map(n => (n.id === resizingNPCId ? { ...n, scale: clampedScale } : n))
-                );
+                // 判断是功能性NPC还是普通NPC
+                const isFunctional = placedFunctionalNPCs.some(npc => npc.id === resizingNPCId);
+                if (isFunctional) {
+                    setPlacedFunctionalNPCs(prev =>
+                        prev.map(n => (n.id === resizingNPCId ? { ...n, scale: clampedScale } : n))
+                    );
+                } else {
+                    setPlacedNormalNPCs(prev =>
+                        prev.map(n => (n.id === resizingNPCId ? { ...n, scale: clampedScale } : n))
+                    );
+                }
                 return;
             }
 
@@ -230,7 +276,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
             if (displayWidth <= 0 || displayHeight <= 0) return;
 
-            const currentNpc = placedNPCs.find(npc => npc.id === draggingNPCId);
+            const currentNpc = [...placedNormalNPCs, ...placedFunctionalNPCs].find(npc => npc.id === draggingNPCId);
             if (!currentNpc) return;
             const npcWidth = BASE_NPC_WIDTH * currentNpc.scale;
             const npcHeight = BASE_NPC_HEIGHT * currentNpc.scale;
@@ -258,9 +304,17 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             const relativeX = clampedX / displayWidth;
             const relativeY = clampedY / displayHeight;
 
-            setPlacedNPCs(prev =>
-                prev.map(npc => (npc.id === draggingNPCId ? { ...npc, x: relativeX, y: relativeY } : npc))
-            );
+            // 判断是功能性NPC还是普通NPC
+            const isFunctional = placedFunctionalNPCs.some(npc => npc.id === draggingNPCId);
+            if (isFunctional) {
+                setPlacedFunctionalNPCs(prev =>
+                    prev.map(npc => (npc.id === draggingNPCId ? { ...npc, x: relativeX, y: relativeY } : npc))
+                );
+            } else {
+                setPlacedNormalNPCs(prev =>
+                    prev.map(npc => (npc.id === draggingNPCId ? { ...npc, x: relativeX, y: relativeY } : npc))
+                );
+            }
         };
 
         const handleMouseUp = () => {
@@ -280,7 +334,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [draggingNPCId, dragOffset, resizingNPCId, resizeHandle, resizeStart, placedNPCs]);
+    }, [draggingNPCId, dragOffset, resizingNPCId, resizeHandle, resizeStart, placedNormalNPCs, placedFunctionalNPCs]);
 
     // 处理从侧边栏拖拽新NPC
     const handleDrop = useCallback(
@@ -291,10 +345,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             const preview = previewRef.current;
             const image = imageRef.current;
             if (!preview || !image) return;
-
-            if (placedNPCs.length >= MAX_NPCS) {
-                return;
-            }
 
             const bounds = getImageDisplayBounds(image, preview);
             const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
@@ -323,8 +373,10 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
                 console.warn('解析拖拽数据失败:', error);
             }
 
-            const newNPC: PlacedNPC = functionalNPCData ? {
-                id: `npc_${Date.now()}`,
+            if (functionalNPCData) {
+                // 功能性NPC：无数量限制
+                const newNPC: PlacedNPC = {
+                id: `functional_npc_${Date.now()}`,
                 x: relativeX,
                 y: relativeY,
                 scale: DEFAULT_SCALE,
@@ -334,22 +386,30 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
                 type: functionalNPCData.type || 'illustration',
                 name: functionalNPCData.name,
                 authorNote: functionalNPCData.authorNote || '',
-            } : {
-                id: `npc_${Date.now()}`,
-                x: relativeX,
-                y: relativeY,
-                scale: DEFAULT_SCALE,
-                zIndex: DEFAULT_Z_INDEX,
-                nodeId: '', // 非功能性NPC
-                type: 'illustration',
-                authorNote: '',
+                backgroundColor: functionalNPCData.type === 'button' ? '#E03D4B' : undefined, // 按钮型NPC默认背景色
             };
-
-            setPlacedNPCs(prev => [...prev, newNPC]);
+                setPlacedFunctionalNPCs(prev => [...prev, newNPC]);
+            } else {
+                // 普通NPC：限制3个
+                if (placedNormalNPCs.length >= MAX_NPCS) {
+                    return;
+                }
+                const newNPC: PlacedNPC = {
+                    id: `normal_npc_${Date.now()}`,
+                    x: relativeX,
+                    y: relativeY,
+                    scale: DEFAULT_SCALE,
+                    zIndex: DEFAULT_Z_INDEX,
+                    nodeId: '', // 普通NPC没有nodeId
+                    type: 'illustration',
+                    authorNote: '',
+                };
+                setPlacedNormalNPCs(prev => [...prev, newNPC]);
+            }
             // 重置拖拽状态
             setDraggingNPCId(null);
         },
-        [placedNPCs.length]
+        [placedNormalNPCs.length, placedFunctionalNPCs.length]
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -369,7 +429,8 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
 
             const image = imageRef.current;
             const preview = previewRef.current;
-            const npc = placedNPCs.find(n => n.id === npcId);
+            const allNPCs = [...placedNormalNPCs, ...placedFunctionalNPCs];
+            const npc = allNPCs.find(n => n.id === npcId);
             if (!image || !preview || !npc) return;
 
             const bounds = getImageDisplayBounds(image, preview);
@@ -387,7 +448,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             setDraggingNPCId(npcId);
             setSelectedNPCId(npcId);
         },
-        [placedNPCs]
+        [placedNormalNPCs, placedFunctionalNPCs]
     );
 
     // 处理调整大小开始
@@ -396,7 +457,8 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
             e.preventDefault();
             e.stopPropagation();
 
-            const npc = placedNPCs.find(n => n.id === npcId);
+            const allNPCs = [...placedNormalNPCs, ...placedFunctionalNPCs];
+            const npc = allNPCs.find(n => n.id === npcId);
             if (!npc) return;
 
             const image = imageRef.current;
@@ -413,8 +475,19 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
 
             let handleX = 0;
             let handleY = 0;
-            const halfWidth = (BASE_NPC_WIDTH * npc.scale) / 2;
-            const halfHeight = (BASE_NPC_HEIGHT * npc.scale) / 2;
+            
+            // 按钮型NPC的尺寸计算方式不同
+            let halfWidth: number;
+            let halfHeight: number;
+            if (npc.type === 'button' && npc.name) {
+                const textWidth = npc.name.length * 10 + 24;
+                const textHeight = 32;
+                halfWidth = (Math.max(textWidth, 60) * npc.scale) / 2;
+                halfHeight = (textHeight * npc.scale) / 2;
+            } else {
+                halfWidth = (BASE_NPC_WIDTH * npc.scale) / 2;
+                halfHeight = (BASE_NPC_HEIGHT * npc.scale) / 2;
+            }
 
             switch (handle) {
                 case 'nw':
@@ -456,31 +529,68 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
                 scale: npc.scale,
             });
         },
-        [placedNPCs]
+        [placedNormalNPCs, placedFunctionalNPCs]
     );
 
     const handleRemoveNPC = useCallback((npcId: string) => {
-        setPlacedNPCs(prev => prev.filter(npc => npc.id !== npcId));
+        // 判断是功能性NPC还是普通NPC
+        const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
+        if (isFunctional) {
+            setPlacedFunctionalNPCs(prev => prev.filter(npc => npc.id !== npcId));
+        } else {
+            setPlacedNormalNPCs(prev => prev.filter(npc => npc.id !== npcId));
+        }
         setSelectedNPCId(null);
-    }, []);
+    }, [placedFunctionalNPCs]);
 
     const handleChangeZIndex = useCallback((npcId: string, delta: number) => {
-        setPlacedNPCs(prev =>
-            prev.map(npc => {
-                if (npc.id === npcId) {
-                    const currentZIndex = npc.zIndex ?? DEFAULT_Z_INDEX;
-                    const newZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, currentZIndex + delta));
-                    return { ...npc, zIndex: newZIndex };
-                }
-                return npc;
-            })
-        );
-    }, []);
+        // 判断是功能性NPC还是普通NPC
+        const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
+        if (isFunctional) {
+            setPlacedFunctionalNPCs(prev =>
+                prev.map(npc => {
+                    if (npc.id === npcId) {
+                        const currentZIndex = npc.zIndex ?? DEFAULT_Z_INDEX;
+                        const newZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, currentZIndex + delta));
+                        return { ...npc, zIndex: newZIndex };
+                    }
+                    return npc;
+                })
+            );
+        } else {
+            setPlacedNormalNPCs(prev =>
+                prev.map(npc => {
+                    if (npc.id === npcId) {
+                        const currentZIndex = npc.zIndex ?? DEFAULT_Z_INDEX;
+                        const newZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, currentZIndex + delta));
+                        return { ...npc, zIndex: newZIndex };
+                    }
+                    return npc;
+                })
+            );
+        }
+    }, [placedFunctionalNPCs]);
 
     const handleSetZIndex = useCallback((npcId: string, zIndex: number) => {
         const clampedZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, zIndex));
-        setPlacedNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, zIndex: clampedZIndex } : npc)));
-    }, []);
+        // 判断是功能性NPC还是普通NPC
+        const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
+        if (isFunctional) {
+            setPlacedFunctionalNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, zIndex: clampedZIndex } : npc)));
+        } else {
+            setPlacedNormalNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, zIndex: clampedZIndex } : npc)));
+        }
+    }, [placedFunctionalNPCs]);
+
+    const handleChangeBackgroundColor = useCallback((npcId: string, backgroundColor: string) => {
+        // 判断是功能性NPC还是普通NPC
+        const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
+        if (isFunctional) {
+            setPlacedFunctionalNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, backgroundColor } : npc)));
+        } else {
+            setPlacedNormalNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, backgroundColor } : npc)));
+        }
+    }, [placedFunctionalNPCs]);
 
     const getNPCPosition = useCallback(
         (npc: PlacedNPC): NPCPosition => {
@@ -536,11 +646,19 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
         [windowSize, imageLoaded, containerReady, forceUpdate]
     );
 
+    // 合并所有NPC用于渲染
+    const allPlacedNPCs = useMemo(() => {
+        return [...placedNormalNPCs, ...placedFunctionalNPCs];
+    }, [placedNormalNPCs, placedFunctionalNPCs]);
+
     return {
         selectedSubSceneId,
         setSelectedSubSceneId,
-        placedNPCs,
-        setPlacedNPCs,
+        placedNormalNPCs,
+        setPlacedNormalNPCs,
+        placedFunctionalNPCs,
+        setPlacedFunctionalNPCs,
+        allPlacedNPCs, // 用于渲染
         draggingNPCId,
         selectedNPCId,
         setSelectedNPCId,
@@ -562,6 +680,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive }: UseSubScen
         handleRemoveNPC,
         handleChangeZIndex,
         handleSetZIndex,
+        handleChangeBackgroundColor,
         getNPCPosition,
     };
 };

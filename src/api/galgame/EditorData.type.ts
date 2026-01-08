@@ -73,6 +73,49 @@ export interface Scene {
   subscenes?: SubScene[];
 }
 
+export interface StoryStructure {
+  enabled: boolean;
+  defaultPhase: string;
+  phases: {
+    id: string;
+    name: string;
+    description: string;
+    context: string;
+    activeByDefault: boolean;
+    setFlags: string[];
+    transitions: {
+      targetPhase: string;
+      condition: {
+        minTurns: number;
+        flags: {
+          required: string[];
+          anyOf: string[];
+        };
+      };
+      automatic: boolean;
+    }[];
+    isFinalPhase: boolean;
+  }[];
+}
+
+export interface DynamicEntry {
+id: string;
+category: string;
+content: string;
+activationConditions: {
+  flags: {
+    required: string[];
+  };
+  probability: number;
+  maxActivations: number;
+};
+setFlags: string[];
+sticky: number;
+cooldown: number;
+order: number;
+enabled: boolean;
+}
+
 // 世界设定类型（visual 模式）
 export interface WorldSetting {
   title: string;

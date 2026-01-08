@@ -132,3 +132,42 @@
     font-size: 16px;
     opacity: 0.8;
 }
+
+/* 功能性NPC层 */
+.functionalNPCLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 5; /* 在背景层之上，但在普通NPC层之下 */
+}
+
+/* 功能性NPC容器 */
+.functionalNPCContainer {
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.functionalNPCContainer:hover {
+    transform: translate(-50%, -50%) scale(1.05) !important;
+}
+
+/* 功能性NPC图片 */
+.functionalNPCImage {
+    display: block;
+    user-select: none;
+}
+
+/* 功能性NPC按钮 */
+.functionalNPCButton {
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.functionalNPCButton:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+}

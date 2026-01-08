@@ -52,8 +52,8 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
     useEffect(() => {
         if (abilityNodeSetting?.abilityNodes) {
             setAbilityNodes(abilityNodeSetting.abilityNodes);
-            // 如果有节点，默认选中第一个
-            if (abilityNodeSetting.abilityNodes.length > 0 && !activeNodeId) {
+            // 如果有节点，默认选中第一个（只在初始化时）
+            if (abilityNodeSetting.abilityNodes.length > 0 && !activeNodeId && !isNewNode) {
                 setActiveNodeId(abilityNodeSetting.abilityNodes[0].node_id);
             }
         } else {
@@ -61,7 +61,7 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
             setAbilityNodes([]);
             setActiveNodeId(null);
         }
-    }, [abilityNodeSetting, activeNodeId]);
+    }, [abilityNodeSetting]); // 移除 activeNodeId 依赖，避免新增节点后状态被重置
 
     // 创建新的功能性NPC
     const handleCreateNode = () => {
@@ -125,30 +125,36 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
         if (!fileId) {
             return;
         }
-
         try {
-            if (isNewNode && creatingNode) {
-                const resp = await worldEditor.addFunctionalNpc(fileId, updatedNode);
-                const savedNode = resp.data?.node ?? updatedNode;
-
-                setAbilityNodes(prev => [...prev, savedNode]);
-                setActiveNodeId(savedNode.node_id);
+            // 子组件已经调用了 API，这里只更新本地状态
+            if (isNewNode) {
+                setAbilityNodes(prev => {
+                    const exists = prev.some(node => node.node_id === updatedNode.node_id);
+                    if (exists) {
+                        return prev.map(node => (node.node_id === updatedNode.node_id ? updatedNode : node));
+                    } else {
+                        return [...prev, updatedNode];
+                    }
+                });
+                setActiveNodeId(updatedNode.node_id);
                 setCreatingNode(null);
+                setIsNewNode(false);
                 toast.success('已创建功能配置');
             } else {
-                const resp = await worldEditor.updateFunctionalNpc(fileId, updatedNode.node_id, updatedNode);
-                const savedNode = resp.data?.node ?? updatedNode;
-
+                // 更新现有节点
                 setAbilityNodes(prev =>
-                    prev.map(node => (node.node_id === savedNode.node_id ? savedNode : node))
+                    prev.map(node => (node.node_id === updatedNode.node_id ? updatedNode : node))
                 );
                 toast.success('已保存功能配置');
             }
 
-            setIsNewNode(false);
+            // 触发数据刷新回调
+            if (onDataChange) {
+                onDataChange();
+            }
         } catch (error: any) {
-            console.error('保存功能性NPC失败:', error);
-            toast.error('保存失败，请检查网络连接');
+            console.error('更新功能性NPC状态失败:', error);
+            toast.error('更新失败，请检查网络连接');
         }
     };
 
@@ -256,6 +262,7 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
                     node={displayNode}
                     onSave={handleSave}
                     fileId={fileId}
+                    isNewNode={isNewNode}
                 />
             </div>
 
