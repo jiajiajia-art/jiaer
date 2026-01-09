@@ -72,6 +72,7 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
     useEffect(() => {
         if (hasInitializedRef.current) return;
         if (!sessionId) return;
+        if (!eventId) return; // 如果没有 eventId，跳过初始化（用于功能性NPC场景）
 
         let cancelled = false;
         const storageKeys = getStorageKeys(sessionId, eventId);

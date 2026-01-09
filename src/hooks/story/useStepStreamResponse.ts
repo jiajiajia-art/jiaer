@@ -70,6 +70,9 @@ export const useStepStreamResponse = ({
             return;
         }
 
+        // 开始处理流式响应时，设置等待状态
+        setIsWaitingForData(true);
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -114,7 +117,11 @@ export const useStepStreamResponse = ({
 
                         // 检查是否是当前请求的数据
                         if (currentRequestId.current !== requestId) {
-                            console.log('⚠️ 忽略旧请求的数据');
+                            console.log('⚠️ 忽略旧请求的数据', {
+                                currentRequestId: currentRequestId.current,
+                                requestId,
+                                jsonDataType: jsonData.type
+                            });
                             continue;
                         }
 
@@ -155,20 +162,31 @@ export const useStepStreamResponse = ({
                         // 处理 step 类型的数据（增量 step）
                         if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
-                            console.log('📝 收到新的 step:', step.type);
+                            console.log('📝 收到新的 step:', {
+                                stepType: step.type,
+                                requestId,
+                                currentRequestId: currentRequestId.current,
+                                stepContent: step.content?.substring(0, 50)
+                            });
                             hasReceivedStep = true;
 
                             // 如果是第一个 step，触发回调
                             if (!firstStepReceived) {
                                 firstStepReceived = true;
+                                console.log('📝 触发 onFirstStep 回调');
                                 options?.onFirstStep?.();
                             }
 
                             setStepQueue(prev => {
                                 if (currentRequestId.current !== requestId) {
+                                    console.log('⚠️ 队列更新时请求ID不匹配，忽略', {
+                                        currentRequestId: currentRequestId.current,
+                                        requestId
+                                    });
                                     return prev;
                                 }
                                 const newQueue = [...prev, step];
+                                console.log('📝 队列更新（step），当前队列长度:', newQueue.length);
                                 return newQueue;
                             });
 
@@ -178,18 +196,26 @@ export const useStepStreamResponse = ({
 
                         // 处理完整数据（包含 narrativeSteps）
                         if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
-                            console.log('📚 收到完整数据，包含', jsonData.narrativeSteps.length, '个 steps');
+                            console.log('📚 收到完整数据，包含', jsonData.narrativeSteps.length, '个 steps', {
+                                requestId,
+                                currentRequestId: currentRequestId.current
+                            });
                             if (jsonData.narrativeSteps.length > 0) {
                                 hasReceivedStep = true;
 
                                 // 如果是第一个 step，触发回调
                                 if (!firstStepReceived && jsonData.narrativeSteps.length > 0) {
                                     firstStepReceived = true;
+                                    console.log('📚 触发 onFirstStep 回调（完整数据）');
                                     options?.onFirstStep?.();
                                 }
 
                                 setStepQueue(prev => {
                                     if (currentRequestId.current !== requestId) {
+                                        console.log('⚠️ 队列更新时请求ID不匹配（完整数据），忽略', {
+                                            currentRequestId: currentRequestId.current,
+                                            requestId
+                                        });
                                         return prev;
                                     }
                                     const newQueue = [...prev, ...jsonData.narrativeSteps];

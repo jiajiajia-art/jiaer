@@ -1,5 +1,5 @@
 // SubSceneDetailPage.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styles from './SubSceneModal.module.css';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
@@ -7,6 +7,8 @@ import type { AllGameData, NPC, SubScene } from '../../api/worldInteraction/mapW
 import type { AbilityNode } from '../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl } from '../../utils/constants';
 import EventDisplayModal from './EventDisplayModal';
+import { useGameStore } from '../../store/gameStore';
+import InteractWithNpc from './InteractWithNpc';
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
@@ -34,6 +36,15 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
     const { eventData } = useMapGalgameStore();
     const [selectedAbilityNode, setSelectedAbilityNode] = useState<AbilityNode | null>(null);
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+    const [isInteractionActive, setIsInteractionActive] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{ nodeId: string; actionId: string } | null>(null); // 待处理的操作
+    const { sessionId } = useGameStore();
+    const selectedAbilityNodeRef = useRef<AbilityNode | null>(null);
+    
+    // 同步 selectedAbilityNode 到 ref
+    React.useEffect(() => {
+        selectedAbilityNodeRef.current = selectedAbilityNode;
+    }, [selectedAbilityNode]);
 
     const handleBack = () => {
         if (onBack) {
@@ -95,12 +106,41 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
         setSelectedAbilityNode(null);
     };
 
-    // 处理选项点击
-    const handleOptionClick = (_actionIndex: number, action: { id: string; name: string; description: string }) => {
-        console.log('点击了选项:', action, '来自功能性NPC:', selectedAbilityNode?.node_id);
-        // TODO: 这里可以添加具体的选项处理逻辑
-        // 例如：调用API、更新状态等
-    };
+    // 处理选项点击 - 设置待处理操作，让 InteractWithNpc 自己处理流式响应
+    const handleOptionClick = useCallback((action: { id: string; name: string; description: string }) => {
+        // 使用 ref 获取最新的 selectedAbilityNode，避免闭包问题
+        const currentAbilityNode = selectedAbilityNodeRef.current;
+        
+        console.log('[SubSceneModal] handleOptionClick 开始', { 
+            action, 
+            currentAbilityNode: currentAbilityNode?.node_id,
+            sessionId 
+        });
+        
+        if (!currentAbilityNode || !sessionId) {
+            console.error('[handleOptionClick] 缺少必要参数', { currentAbilityNode, sessionId });
+            return;
+        }
+        
+        // 关闭事件弹窗
+        setIsEventModalOpen(false);
+        
+        // 设置待处理的操作，让 InteractWithNpc 自己处理流式响应
+        setPendingAction({
+            nodeId: currentAbilityNode.node_id,
+            actionId: action.id
+        });
+        setIsInteractionActive(true);
+    }, [sessionId]);
+    
+    // 处理关闭交互
+    const handleCloseInteraction = useCallback(() => {
+        console.log('[SubSceneModal] 关闭交互页面');
+        setIsInteractionActive(false);
+        setPendingAction(null);
+        // 重置 selectedAbilityNode，以便下次可以重新打开
+        setSelectedAbilityNode(null);
+    }, []);
 
     // 获取功能性NPC列表
     const functionalNPCs = useMemo(() => {
@@ -263,8 +303,20 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                 isOpen={isEventModalOpen}
                 abilityNode={selectedAbilityNode}
                 onClose={handleEventModalClose}
-                onOptionClick={handleOptionClick}
+                onOptionClick={(action) => handleOptionClick(action)}
             />
+            
+            {/* 交互页面 - 复用 InteractWithNpc */}
+            {isInteractionActive && (
+                <InteractWithNpc
+                    onClose={handleCloseInteraction}
+                    gameData={gameData || null}
+                    worldInteractionHistory={null}
+                    pendingAction={pendingAction || undefined}
+                    skipAutoInit={true}
+                    currentSubsceneId={currentSubScene?.id || displayData.id}
+                />
+            )}
             
         </div>
     );

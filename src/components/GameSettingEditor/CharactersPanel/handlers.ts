@@ -42,7 +42,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         fileId,
         mode,
         api,
-        userPoints,
+        // userPoints,
         updateUser,
         setCharacterData,
         setActiveCharacterId,

@@ -124,7 +124,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             
             setPlacedFunctionalNPCs(functionalNPCs);
         } else {
-            setPlacedFunctionalNPCs([]);
+        setPlacedFunctionalNPCs([]);
         }
     }, [subScenes, selectedSubSceneId, currentSubScene, sceneSetting, abilityNodeSetting]);
 

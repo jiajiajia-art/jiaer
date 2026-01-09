@@ -107,10 +107,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 <div
                     className={styles.messageContainer}
                     onClick={(e) => {
-                        // 防止点击事件冒泡到按钮
-                        if ((e.target as HTMLElement).closest(`.${styles.nextButtonContainer}`)) {
+                        const clickedButton = (e.target as HTMLElement).closest(`.${styles.nextButtonContainer}`);
+                        if (clickedButton) {
                             return;
                         }
+                        
                         // 只有在有下一步按钮、不在打字、不在自动播放时才允许点击
                         // 在非自动模式下，必须等待打字完成才能点击
                         if (showNextButton && !finalIsTyping && !isAutoPlay && !isWaitingForData) {
@@ -173,7 +174,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         <div className={styles.nextButtonContainer}>
                             <button
                                 className={styles.nextButton}
-                                onClick={onNextMessage}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // 阻止事件冒泡到消息容器
+                                    onNextMessage();
+                                }}
                                 disabled={isWaitingForData}
                             >
                                 <IoArrowDownCircleOutline />
@@ -259,4 +263,3 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
 };
 
 export default NormalModeDisplay;
-

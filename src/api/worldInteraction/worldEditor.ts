@@ -2,7 +2,7 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type {
   CheckUploadStatusResponse,
-  GenerateAllImageRequest,
+  // GenerateAllImageRequest,
   GenerateImgeResponse,
   NPC,
   Player,

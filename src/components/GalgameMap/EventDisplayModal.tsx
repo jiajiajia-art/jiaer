@@ -7,7 +7,7 @@ interface EventDisplayModalProps {
     isOpen: boolean;
     abilityNode: AbilityNode | null;
     onClose?: () => void;
-    onOptionClick?: (actionIndex: number, action: { id: string; name: string; description: string }) => void;
+    onOptionClick?: (action: { id: string; name: string; description: string }) => void;
 }
 
 const EventDisplayModal: React.FC<EventDisplayModalProps> = ({
@@ -46,7 +46,8 @@ const EventDisplayModal: React.FC<EventDisplayModalProps> = ({
                             <button
                                 key={action.id || idx}
                                 className={styles.eventOption}
-                                onClick={() => onOptionClick?.(idx, action)}
+
+                                onClick={() => onOptionClick?.(action)}
                             >
                                 {action.name}
                             </button>

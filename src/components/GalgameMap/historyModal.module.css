@@ -66,16 +66,33 @@
 .block {
     background: rgba(255, 255, 255, 0.02);
     border-radius: 12px;
-    padding: 14px 16px 16px;
-    margin-bottom: 12px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.block:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 功能性NPC交互的特殊样式 */
+.blockAbilityNode {
+    border-left: 3px solid rgba(154, 208, 255, 0.6);
+    background: rgba(154, 208, 255, 0.03);
+}
+
+.blockAbilityNode:hover {
+    border-left-color: rgba(154, 208, 255, 0.9);
+    background: rgba(154, 208, 255, 0.05);
 }
 
 .blockHeader {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .blockMeta {
@@ -100,6 +117,11 @@
     color: #9ad0ff;
 }
 
+.actionName {
+    color: #9ad0ff;
+    font-weight: 500;
+}
+
 .dot {
     opacity: 0.6;
 }
@@ -115,13 +137,13 @@
 
 .timeline {
     position: relative;
-    padding-left: 10px;
+    padding-left: 12px;
 }
 
 .timeline::before {
     content: "";
     position: absolute;
-    left: 3px;
+    left: 4px;
     top: 0;
     bottom: 0;
     width: 2px;
@@ -130,26 +152,36 @@
 
 .timelineItem {
     display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 10px;
+    margin-bottom: 10px;
     position: relative;
 }
 
 .timelineDot,
-.timelineDotPlayer {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    margin-top: 4px;
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.03);
+.timelineDotPlayer,
+.timelineDotAbility {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .timelineDot {
     background: linear-gradient(135deg, #fff, #f3f3f3);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 
 .timelineDotPlayer {
     background: linear-gradient(135deg, #ff6b99, #ffb199);
+    box-shadow: 0 0 0 3px rgba(255, 107, 153, 0.1);
+}
+
+.timelineDotAbility {
+    background: linear-gradient(135deg, #9ad0ff, #6bb5ff);
+    box-shadow: 0 0 0 3px rgba(154, 208, 255, 0.1);
 }
 
 .timelineContent {
@@ -162,13 +194,13 @@
     color: #ddd;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 8px 12px;
 }
 
 .dialogue {
     background: rgba(0, 0, 0, 0.4);
     border-radius: 8px;
-    padding: 6px 10px;
+    padding: 8px 12px;
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -230,6 +262,63 @@
     border-radius: 8px;
     padding: 6px 10px;
     border: 1px solid rgba(255, 153, 200, 0.35);
+}
+
+/* 类型标签 */
+.typeTag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(154, 208, 255, 0.2);
+    color: #9ad0ff;
+    border: 1px solid rgba(154, 208, 255, 0.4);
+    margin-right: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.typeTagNpc {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255, 153, 200, 0.2);
+    color: #ff99c8;
+    border: 1px solid rgba(255, 153, 200, 0.4);
+    margin-right: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* 功能性NPC操作显示 */
+.actionLabel {
+    font-size: 12px;
+    color: #9ad0ff;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.actionText {
+    background: rgba(154, 208, 255, 0.08);
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: 1px solid rgba(154, 208, 255, 0.25);
+}
+
+.actionNameText {
+    font-size: 13px;
+    font-weight: 600;
+    color: #9ad0ff;
+    margin-bottom: 4px;
+}
+
+.actionDesc {
+    font-size: 12px;
+    color: #ddd;
+    line-height: 1.5;
 }
 
 /* 移动端全屏显示 */

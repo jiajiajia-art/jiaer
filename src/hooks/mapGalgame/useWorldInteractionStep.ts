@@ -118,10 +118,12 @@ export const useWorldInteractionStep = ({
   const showStep = useCallback(async (step: any) => {
     if (!step) return;
 
+    const shouldShowNext = step.type !== "choice";
+    
     setCurrentStep(step);
     setIsWaitingForData(false);
     setSelectedOptionIndex(null);
-    setShowNextButton(step.type !== "choice");
+    setShowNextButton(shouldShowNext);
   }, []);
 
   // 确保即使跳过 handleInteract（直接使用历史选项）也能拿到最新的 eventId
@@ -177,10 +179,6 @@ export const useWorldInteractionStep = ({
       try {
         const key = `${sessionId}-${eventId}`;
         if (startedEvents.has(key)) {
-          console.log(
-            "[WorldInteraction] 初始交互已触发过，忽略重复请求:",
-            key
-          );
           return;
         }
         startedEvents.add(key);
@@ -536,6 +534,7 @@ export const useWorldInteractionStep = ({
     setShowNextButton,
     currentRequestId,
     setStepQueue,
+    processStreamResponse, // 暴露 processStreamResponse
     newEvent,
     clearNewEvent: () => {
       setNewEvent(null);
