@@ -143,7 +143,12 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
         <>
             {/* 左侧：功能性NPC列表 */}
             <div className={sharedStyles.mapLeftSidebar}>
-                <FunctionalNPCList abilityNodeSetting={abilityNodeSetting} />
+                <FunctionalNPCList
+                    abilityNodeSetting={abilityNodeSetting}
+                    usedNodeIds={placedFunctionalNPCs
+                        .filter(npc => !!npc.nodeId)
+                        .map(npc => npc.nodeId as string)}
+                />
             </div>
 
             {/* 中间：拖拽区域 */}
@@ -218,6 +223,8 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                                         top: `${pos.top}px`,
                                         width: npc.type === 'button' ? 'auto' : `${pos.width}px`,
                                         height: npc.type === 'button' ? 'auto' : `${pos.height}px`,
+                                        transform: pos.scale !== undefined ? `scale(${pos.scale})` : undefined,
+                                        transformOrigin: 'center center',
                                         opacity: pos.visible ? 1 : 0,
                                         transition: 'opacity 0.3s ease',
                                         zIndex: npc.zIndex ?? DEFAULT_Z_INDEX,

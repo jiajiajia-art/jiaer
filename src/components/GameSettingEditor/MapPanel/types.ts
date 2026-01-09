@@ -78,6 +78,7 @@ export interface NPCPosition {
     top: number;
     width: number;
     height: number;
+    scale?: number; // 缩放值，用于 transform scale
     visible: boolean;
 }
 

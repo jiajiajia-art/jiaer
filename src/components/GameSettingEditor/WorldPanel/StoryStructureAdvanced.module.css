@@ -1,0 +1,551 @@
+.advancedContent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 8px 8px 24px;
+}
+
+.advancedHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 22px 16px;
+    border-radius: 12px;
+    background: white;
+    border: 1px solid rgba(224, 61, 75, 0.12);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    margin: 4px;
+}
+
+.advancedTitle {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.02em;
+    position: relative;
+    padding-left: 12px;
+}
+
+.advancedTitle::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(to bottom, #E03D4B, #FF5A67);
+    border-radius: 2px;
+}
+
+.advancedSubtitle {
+    margin: 8px 0 0;
+    font-size: 0.87rem;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.68);
+    max-width: 700px;
+}
+
+.storyPromptBox {
+    padding: 0 8px 8px;
+}
+
+.storyPromptBox textarea {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    background: white;
+    transition: all 0.2s ease;
+    resize: vertical;
+    min-height: 90px;
+}
+
+.storyPromptBox textarea:focus {
+    outline: none;
+    border-color: rgba(224, 61, 75, 0.5);
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.sectionDivider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 12px 0 16px;
+}
+
+.phaseHeaderRow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 12px;
+}
+
+.sectionHeaderRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.storyMetaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(249, 250, 252, 0.8);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    margin: 8px 0;
+}
+
+.storyMetaItem {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.storyMetaItem input {
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.storyMetaItem input:focus {
+    outline: none;
+    border-color: #E03D4B;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.storyMetaToggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.87rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.8);
+    padding: 8px 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+}
+
+.storyMetaToggle:hover {
+    border-color: rgba(224, 61, 75, 0.3);
+}
+
+.storyMetaToggle input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    background: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.storyMetaToggle input[type="checkbox"]:checked {
+    background-color: #E03D4B;
+    border-color: #E03D4B;
+}
+
+.storyMetaToggle input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 4px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: translate(-50%, -60%) rotate(-45deg);
+}
+
+.advancedSection {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 8px 8px;
+}
+
+.phaseList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.phaseCard {
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    background: white;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.phaseCard:hover {
+    border-color: rgba(224, 61, 75, 0.2);
+}
+
+.phaseMetaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.phaseIdPill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(224, 61, 75, 0.08);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #E03D4B;
+    letter-spacing: 0.02em;
+}
+
+.phaseToggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.75);
+}
+
+.phaseToggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    background: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.phaseToggle input[type="checkbox"]:checked {
+    background-color: #E03D4B;
+    border-color: #E03D4B;
+}
+
+.phaseFields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.phaseFields label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.phaseFields input,
+.phaseFields textarea {
+    padding: 12px 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.phaseFields input:focus,
+.phaseFields textarea:focus {
+    outline: none;
+    border-color: rgba(224, 61, 75, 0.6);
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.phaseFlagsRow {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dynamicList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dynamicCard {
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    background: white;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+}
+
+.dynamicCard:hover {
+    border-color: rgba(224, 61, 75, 0.2);
+}
+
+.dynamicHeader {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.emptyHint {
+    color: rgba(0, 0, 0, 0.45);
+    font-style: italic;
+    padding: 24px;
+    text-align: center;
+    background: rgba(249, 250, 252, 0.6);
+    border-radius: 12px;
+    border: 1.5px dashed rgba(0, 0, 0, 0.08);
+}
+
+.subTabRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 8px 12px 0;
+    padding: 8px 0;
+}
+
+.subTabGroup {
+    display: inline-flex;
+    border-radius: 10px;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.03);
+    gap: 2px;
+}
+
+.subTab {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.65);
+    transition: all 0.2s ease;
+}
+
+.subTab:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.subTabActive {
+    background: white;
+    color: #E03D4B;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.phaseActions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.inlineModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.inlineModal {
+    width: 560px;
+    max-width: 90vw;
+    max-height: 80vh;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
+    padding: 24px 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+.inlineModal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #E03D4B, #FF5A67);
+}
+
+.inlineModalTitle {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.01em;
+}
+
+.inlineModalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-right: 8px;
+    padding-top: 4px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.inlineModalBody label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.inlineModalBody input,
+.inlineModalBody textarea {
+    padding: 12px 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.inlineModalBody input:focus,
+.inlineModalBody textarea:focus {
+    outline: none;
+    border-color: #E03D4B;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.inlineModalBody textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.inlineModalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.inlineCheckboxRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 0.87rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.75);
+    padding: 8px 0;
+}
+
+.inlineCheckboxRow input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    background: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.inlineCheckboxRow input[type="checkbox"]:checked {
+    background-color: #E03D4B;
+    border-color: #E03D4B;
+}
+
+.transitionList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.transitionCard {
+    border-radius: 12px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    padding: 16px;
+    background: rgba(249, 250, 252, 0.8);
+    position: relative;
+}
+
+.transitionMetaRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dynamicNumberRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.dynamicNumberRow label {
+    flex: 1;
+    min-width: 150px;
+}
+
+.inlineTwoCol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* 表单字段标签样式 */
+label span[class*="fieldLabel"] {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.01em;
+}
+
+label span[class*="fieldHint"] {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.55);
+    line-height: 1.4;
+}

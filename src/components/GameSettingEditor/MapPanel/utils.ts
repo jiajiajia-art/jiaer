@@ -3,7 +3,8 @@
 import type { ImageDisplayBounds } from './types';
 
 /**
- * 计算图片在 object-fit: contain 模式下的实际显示尺寸和偏移
+ * 计算图片在 object-fit: cover 模式下的实际显示尺寸和偏移
+ * 图片会填满容器，但拖拽区域限制在图片的固定尺寸内
  */
 export const getImageDisplayBounds = (
     image: HTMLImageElement,
@@ -23,30 +24,20 @@ export const getImageDisplayBounds = (
         return { displayWidth: 0, displayHeight: 0, offsetX: 0, offsetY: 0 };
     }
     
-    const naturalWidth = image.naturalWidth;
-    const naturalHeight = image.naturalHeight;
+    // 获取图片的实际渲染尺寸（CSS 设置的固定尺寸）
+    const imageRect = image.getBoundingClientRect();
+    const imageDisplayWidth = imageRect.width;
+    const imageDisplayHeight = imageRect.height;
     
-    // 计算 object-fit: contain 的实际显示尺寸
-    const containerAspect = containerWidth / containerHeight;
-    const imageAspect = naturalWidth / naturalHeight;
+    // 计算图片在容器中的居中偏移
+    const offsetX = (containerWidth - imageDisplayWidth) / 2;
+    const offsetY = (containerHeight - imageDisplayHeight) / 2;
     
-    let displayWidth: number;
-    let displayHeight: number;
-    let offsetX = 0;
-    let offsetY = 0;
-    
-    if (imageAspect > containerAspect) {
-        // 图片更宽，宽度填满容器，高度按比例缩放
-        displayWidth = containerWidth;
-        displayHeight = containerWidth / imageAspect;
-        offsetY = (containerHeight - displayHeight) / 2;
-    } else {
-        // 图片更高，高度填满容器，宽度按比例缩放
-        displayHeight = containerHeight;
-        displayWidth = containerHeight * imageAspect;
-        offsetX = (containerWidth - displayWidth) / 2;
-    }
-    
-    return { displayWidth, displayHeight, offsetX, offsetY };
+    return { 
+        displayWidth: imageDisplayWidth, 
+        displayHeight: imageDisplayHeight, 
+        offsetX: Math.max(0, offsetX), 
+        offsetY: Math.max(0, offsetY) 
+    };
 };
 

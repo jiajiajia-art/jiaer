@@ -44,35 +44,35 @@
 /* NPC容器 - 控制单个NPC的位置 */
 .npcContainer {
     position: absolute;
-    bottom: 0;
-    max-height: 80vh;
-    height: auto;
+    width: 100px;
+    height: 150px;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    justify-content: center;
     pointer-events: auto; /* NPC图片可以有点击事件 */
     z-index: 10; /* NPC在最上层 */
-    min-width: 200px; /* 最小宽度 */
     cursor: pointer;
 }
 
-/* NPC图片 */
+/* NPC图片 - 与编辑器统一的基础尺寸 100×150 */
 .npcImage {
-    max-height: 100%;
-    max-width: 100%;
+    width: 100px;
+    height: 150px;
     object-fit: contain;
-    object-position: bottom;
     filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7));
-    transform-origin: bottom center;
+    transform-origin: center center;
     transition: transform 0.3s ease;
     position: relative;
 }
 
 .eventLocation {
     position: absolute;
-    top: 0;
-    right: 20px;
-    width: 46px;
-    height: 46px;
+    top: -18px;
+    right: 18px;
+    width: 30px;
+    height: 30px;
+    z-index: 20;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
 }
 
 /* 顶部标题栏 */

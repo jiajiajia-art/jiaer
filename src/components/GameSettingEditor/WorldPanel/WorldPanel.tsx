@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './WorldPanel.module.css';
-import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type {
+    AllGameData,
+    StoryStructure,
+    DynamicEntry,
+} from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { WorldSetting as VisualWorldSetting } from '../../../api/galgame/EditorData.type';
 import type { WorldSetting as WorldWorldSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -8,6 +12,7 @@ import { MdArrowDropDown } from 'react-icons/md';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
+import StoryStructureAdvanced from './StoryStructureAdvanced';
 
 interface WorldField {
     id: string;
@@ -70,6 +75,11 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
     const [isToneExpanded, setIsToneExpanded] = useState<boolean>(false);
     const [storylineError, setStorylineError] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
+    const [storyStructure, setStoryStructure] = useState<StoryStructure | null>(null);
+    const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
+    const [isGeneratingStory, setIsGeneratingStory] = useState<boolean>(false);
+    const [advancedError, setAdvancedError] = useState<string | null>(null);
+    const [storyPrompt, setStoryPrompt] = useState<string>('');
 
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
@@ -129,6 +139,22 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                     return field;
             }
         }));
+
+        // 同步故事结构与动态事件（仅 visual 模式）
+        if (mode === 'visual') {
+            const visualData = gameData as AllGameData;
+            if (visualData.storySetting) {
+                setStoryStructure(visualData.storySetting);
+            }
+            if (visualData.worldSetting?.dynamicEntries) {
+                setDynamicEntries(visualData.worldSetting.dynamicEntries);
+            } else {
+                setDynamicEntries([]);
+            }
+        } else {
+            setStoryStructure(null);
+            setDynamicEntries([]);
+        }
 
         if (ws.keyEvents && ws.keyEvents.length > 0) {
             setStorylines(ws.keyEvents.map((event: { title?: string; description?: string }, index: number) => ({
@@ -324,6 +350,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 literary: toneValue ?? '',
                 WorldRules: worldRules,
                 keyEvents: keyEvents,
+                dynamicEntries: dynamicEntries,
                 player: {
                     ...currentPlayer,
                     name: playerName,
@@ -356,7 +383,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 },
             } as unknown as WorldWorldSetting;
         }
-    }, [worldFields, storylines, toneValue, gameData, mode]);
+    }, [worldFields, storylines, toneValue, gameData, mode, dynamicEntries]);
 
     // 获取修改过的字段（Diff 策略）
     const getWorldSettingData = useCallback((): Partial<VisualWorldSetting> | Partial<WorldWorldSetting> | null => {
@@ -385,6 +412,10 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
 
             if (JSON.stringify(full.keyEvents) !== JSON.stringify(orig.keyEvents)) {
                 diff.keyEvents = full.keyEvents;
+            }
+
+            if (JSON.stringify(full.dynamicEntries) !== JSON.stringify(orig.dynamicEntries)) {
+                (diff as any).dynamicEntries = full.dynamicEntries;
             }
 
             const origTheme = Array.isArray(orig.Theme) ? orig.Theme : [];
@@ -441,6 +472,45 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             });
         }
     }, [onGetData, getWorldSettingData]);
+
+    const handleGenerateStoryStructure = useCallback(async () => {
+        if (!currentFileId) {
+            toast.error('缺少文件ID，无法生成故事结构');
+            return;
+        }
+        const trimmedPrompt = storyPrompt.trim();
+        if (!trimmedPrompt) {
+            const msg = '请先在下方输入你期望的故事章节结构描述，例如：希望拆成 5 章，从校园日常到超自然事件爆发再到最终决战。';
+            toast.error(msg);
+            setAdvancedError(msg);
+            return;
+        }
+        try {
+            setIsGeneratingStory(true);
+            setAdvancedError(null);
+            const res = await EditorApi.generateStoryStructure(currentFileId, trimmedPrompt);
+            const resData = res.data;
+            if (!resData.success || !resData.data) {
+                toast.error('生成故事结构失败，请稍后重试');
+                setAdvancedError('生成故事结构失败，请稍后重试');
+                return;
+            }
+            const { storyStructure: newStoryStructure, DynamicEntries, message } = resData.data;
+            if (newStoryStructure) {
+                setStoryStructure(newStoryStructure);
+            }
+            if (DynamicEntries) {
+                setDynamicEntries(DynamicEntries);
+            }
+            toast.success(message || '故事结构已生成');
+        } catch (error) {
+            console.error('生成故事结构失败:', error);
+            toast.error('生成故事结构失败，请稍后重试');
+            setAdvancedError('生成故事结构失败，请稍后重试');
+        } finally {
+            setIsGeneratingStory(false);
+        }
+    }, [currentFileId, storyPrompt]);
 
     return (
         <div className={styles.panelContent}>
@@ -530,9 +600,31 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 {/* Tab 内容 */}
                 <div className={styles.tabContent}>
                     {mode === 'visual' && activeTab === 'advanced' ? (
-                        <div className={styles.advancedContent}>
-                            {/* 高级设置内容 - 暂时为空 */}
-                        </div>
+                        <>
+                            <StoryStructureAdvanced
+                                fileId={currentFileId}
+                                storyStructure={storyStructure}
+                                setStoryStructure={setStoryStructure}
+                                dynamicEntries={dynamicEntries}
+                                setDynamicEntries={setDynamicEntries}
+                                storyPrompt={storyPrompt}
+                                setStoryPrompt={setStoryPrompt}
+                                isGeneratingStory={isGeneratingStory}
+                                advancedError={advancedError}
+                                onGenerate={handleGenerateStoryStructure}
+                                canGenerate={!!currentFileId}
+                            />
+                            {isGeneratingStory && (
+                                <div className={styles.tabLoadingOverlay}>
+                                    <div className={styles.tabLoadingContent}>
+                                        <div className={styles.tabLoadingSpinner} />
+                                        <div className={styles.tabLoadingText}>
+                                            正在生成故事结构和动态条目，请稍候…
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <>
                             {worldFields.map((field) => {

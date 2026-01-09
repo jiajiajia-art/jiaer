@@ -5,9 +5,10 @@ import { getImageUrl } from '../../../utils/constants';
 
 interface FunctionalNPCListProps {
     abilityNodeSetting?: AbilityNodeSetting;
+    usedNodeIds?: string[];
 }
 
-const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSetting }) => {
+const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSetting, usedNodeIds = [] }) => {
     const abilityNodes = abilityNodeSetting?.abilityNodes || [];
 
     if (abilityNodes.length === 0) {
@@ -24,6 +25,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
             <h4>功能性NPC</h4>
             <div className={styles.functionalNPCItems}>
                 {abilityNodes.map((abilityNode) => {
+                    const isUsedInCurrentSubScene = usedNodeIds.includes(abilityNode.node_id);
                     // 按钮型NPC如果没有文字，不显示图片
                     const shouldShowImage = abilityNode.type === 'illustration' 
                         ? !!abilityNode.imagePath 
@@ -129,6 +131,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({ abilityNodeSettin
                                 }
                             }}
                         >
+                            <div className={`${styles.statusDot} ${isUsedInCurrentSubScene ? styles.statusDotUsed : styles.statusDotUnused}`} />
                             {shouldShowImage && (
                         <div className={styles.functionalNPCThumbWrapper}>
                                 <img

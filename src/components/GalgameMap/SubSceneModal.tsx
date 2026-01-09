@@ -3,7 +3,7 @@ import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styles from './SubSceneModal.module.css';
 import { useMapGalgameStore } from '../../store/mapGalgameStore';
-import type { AllGameData, NPC, SubScene } from '../../api/worldInteraction/mapWorldData.type';
+import type { AllGameData, SubScene } from '../../api/worldInteraction/mapWorldData.type';
 import type { AbilityNode } from '../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl } from '../../utils/constants';
 import EventDisplayModal from './EventDisplayModal';
@@ -75,24 +75,62 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
         return null;
     }, [gameData, displayData.id]);
 
-    // 获取与当前子场景相关的NPC
-    // 这里可以扩展逻辑，比如从eventData获取，或者根据场景配置获取
-    const getRelatedNpcs = (): NPC[] => {
-        const npcs: NPC[] = [];
+    const isTargetSubscene = eventData?.subscene?.id === displayData.id;
+
+    // 获取与当前子场景相关的NPC，优先使用事件数据中的NPC（因为一般场景都没有固定的NPC，NPC来自事件分发）
+    const getRelatedNpc = useMemo(() => {
+        // 优先使用事件数据中的NPC（因为一般场景都没有固定的NPC，NPC来自事件分发）
+        if (eventData?.npc && isTargetSubscene) {
+            // 尝试从 gameData 中获取完整的NPC信息（包含图片等）
+            let npc = null;
+            if (gameData?.npcSetting?.npcs) {
+                npc = gameData.npcSetting.npcs.find(n => n.id === eventData.npc.id);
+            }
+            
+            // 如果找不到，使用事件数据中的NPC信息
+            if (!npc) {
+                npc = eventData.npc;
+            }
+            
+            // 尝试从子场景的 npcs_slots 中获取位置信息
+            let position: [number, number] = [0.5, 0.5];
+            let zoom = 1;
+            if (currentSubScene?.npcs_slots && currentSubScene.npcs_slots.length > 0) {
+                const firstSlot = currentSubScene.npcs_slots[0];
+                if (firstSlot.position) {
+                    position = firstSlot.position;
+                    zoom = firstSlot.zoom ?? 1;
+                }
+            }
+            return {
+                npc,
+                position,
+                zoom,
+            };
+        }
         
-        // 如果有eventData，先添加事件相关的NPC
-        if (eventData?.npc?.id && gameData?.npcSetting?.npcs) {
-            const eventNpc = gameData.npcSetting.npcs.find(npc => npc.id === eventData.npc?.id);
-            if (eventNpc) {
-                npcs.push(eventNpc);
+        // 兜底：如果事件数据中没有NPC，尝试从子场景配置中获取（虽然一般不会有）
+        if (currentSubScene && gameData?.npcSetting?.npcs) {
+            // 如果有 npcs_slots，使用第一个的位置和缩放信息
+            if (currentSubScene.npcs_slots && currentSubScene.npcs_slots.length > 0) {
+                const firstSlot = currentSubScene.npcs_slots[0];
+                const npcId = currentSubScene.npcs?.[0];
+                
+                if (npcId && firstSlot.position) {
+                    const npc = gameData.npcSetting.npcs.find(n => n.id === npcId);
+                    if (npc) {
+                        return {
+                            npc,
+                            position: firstSlot.position,
+                            zoom: firstSlot.zoom ?? 1,
+                        };
+                    }
+                }
             }
         }
         
-        return npcs;
-    };
-
-    const relatedNpcs = getRelatedNpcs();
-    const isTargetSubscene = eventData?.subscene?.id === displayData.id;
+        return null;
+    }, [currentSubScene, gameData?.npcSetting?.npcs, eventData, displayData.id, isTargetSubscene]);
 
     // 处理功能性NPC点击
     const handleFunctionalNpcClick = (abilityNode: AbilityNode) => {
@@ -111,14 +149,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
         // 使用 ref 获取最新的 selectedAbilityNode，避免闭包问题
         const currentAbilityNode = selectedAbilityNodeRef.current;
         
-        console.log('[SubSceneModal] handleOptionClick 开始', { 
-            action, 
-            currentAbilityNode: currentAbilityNode?.node_id,
-            sessionId 
-        });
-        
         if (!currentAbilityNode || !sessionId) {
-            console.error('[handleOptionClick] 缺少必要参数', { currentAbilityNode, sessionId });
             return;
         }
         
@@ -135,7 +166,6 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
     
     // 处理关闭交互
     const handleCloseInteraction = useCallback(() => {
-        console.log('[SubSceneModal] 关闭交互页面');
         setIsInteractionActive(false);
         setPendingAction(null);
         // 重置 selectedAbilityNode，以便下次可以重新打开
@@ -160,31 +190,6 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
             .filter((node): node is AbilityNode => node !== null);
     }, [currentSubScene, gameData?.abilityNodeSetting]);
 
-    // 计算NPC的位置布局
-    const getNpcPositionStyle = (index: number, total: number) => {
-        if (total === 1) {
-            // 只有一个NPC：居中
-            return {
-                right: '50%',
-                justifyContent: 'center' as const
-            };
-        } else if (total === 2) {
-            // 两个NPC：左右分布
-            return {
-                left: index === 0 ? '20%' : 'auto',
-                right: index === 1 ? '20%' : 'auto',
-                justifyContent: index === 0 ? 'flex-start' as const : 'flex-end' as const
-            };
-        } else {
-            // 三个或更多NPC：平均分布
-            const positions = ['25%', '50%', '75%'];
-            return {
-                left: `${positions[index]}`,
-                transform: 'translateX(-50%)',
-                justifyContent: 'center' as const
-            };
-        }
-    };
 
     return (
         <div className={styles.container}>
@@ -205,24 +210,35 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                     </div>
                 </div>
 
-                {/* NPC层 - 悬浮在背景之上 */}
-                {isTargetSubscene && relatedNpcs.length > 0 && (
+                {/* NPC层 - 只显示第一个NPC，使用 npcs_slots 中的位置和缩放信息 */}
+                {isTargetSubscene && getRelatedNpc && (
                     <div className={styles.npcLayer}>
-                        {relatedNpcs.map((npc, index) => (
-                            <div 
-                                key={npc.id}
-                                className={styles.npcContainer}
-                                style={getNpcPositionStyle(index, relatedNpcs.length)}
-                                onClick={() => onNpcInteract?.()}
-                            >
-                                <img 
-                                    src={npc.images?.base || ''} 
-                                    alt={npc.name}
-                                    className={styles.npcImage}
-                                />
-                                <img src={`${import.meta.env.BASE_URL}/data/assets/任务.png`} alt="任务" className={styles.eventLocation} />
-                            </div>
-                        ))}
+                        <div 
+                            className={styles.npcContainer}
+                            style={{
+                                position: 'absolute',
+                                left: `${getRelatedNpc!.position[0] * 100}%`,
+                                top: `${getRelatedNpc!.position[1] * 100}%`,
+                                transform: `translate(-50%, -50%) scale(${getRelatedNpc!.zoom})`,
+                                transformOrigin: 'center center',
+                                cursor: 'pointer',
+                            }}
+                            onClick={() => onNpcInteract?.()}
+                        >
+                            <img 
+                                src={getRelatedNpc!.npc.images?.base || ''} 
+                                alt={getRelatedNpc!.npc.name}
+                                className={styles.npcImage}
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
+                                }}
+                            />
+                            <img 
+                                src={`${import.meta.env.BASE_URL}/data/assets/任务.png`} 
+                                alt="任务" 
+                                className={styles.eventLocation} 
+                            />
+                        </div>
                     </div>
                 )}
 
@@ -280,8 +296,8 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                             alt={abilityNode.authorNote || '功能性NPC'}
                                             className={styles.functionalNPCImage}
                                             style={{
-                                                maxWidth: '200px',
-                                                maxHeight: '300px',
+                                                width: '100px',
+                                                height: '150px',
                                                 objectFit: 'contain',
                                                 filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7))',
                                             }}

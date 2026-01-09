@@ -278,6 +278,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
 
             const currentNpc = [...placedNormalNPCs, ...placedFunctionalNPCs].find(npc => npc.id === draggingNPCId);
             if (!currentNpc) return;
+            // 使用缩放后的尺寸进行边界检测（与渲染一致）
             const npcWidth = BASE_NPC_WIDTH * currentNpc.scale;
             const npcHeight = BASE_NPC_HEIGHT * currentNpc.scale;
             const halfW = npcWidth / 2;
@@ -349,12 +350,25 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             const bounds = getImageDisplayBounds(image, preview);
             const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
 
+            // 如果图片尺寸无效，不允许放置
+            if (displayWidth <= 0 || displayHeight <= 0) return;
+
             const previewRect = preview.getBoundingClientRect();
             const mouseX = e.clientX - previewRect.left;
             const mouseY = e.clientY - previewRect.top;
 
             const mouseXInImage = mouseX - offsetX;
             const mouseYInImage = mouseY - offsetY;
+
+            // 检查鼠标是否在图片显示区域内
+            const isWithinImageBounds = 
+                mouseXInImage >= 0 && 
+                mouseXInImage <= displayWidth &&
+                mouseYInImage >= 0 && 
+                mouseYInImage <= displayHeight;
+
+            // 如果不在图片区域内，不允许放置
+            if (!isWithinImageBounds) return;
 
             const clampedX = Math.max(0, Math.min(displayWidth, mouseXInImage));
             const clampedY = Math.max(0, Math.min(displayHeight, mouseYInImage));
@@ -413,8 +427,51 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+        const preview = previewRef.current;
+        const image = imageRef.current;
+        if (!preview || !image) {
+            e.preventDefault();
+            return;
+        }
+
+        const bounds = getImageDisplayBounds(image, preview);
+        const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+
+        // 如果图片尺寸无效，不允许拖拽
+        if (displayWidth <= 0 || displayHeight <= 0) {
+            e.preventDefault();
+            return;
+        }
+
+        const previewRect = preview.getBoundingClientRect();
+        const mouseX = e.clientX - previewRect.left;
+        const mouseY = e.clientY - previewRect.top;
+
+        const mouseXInImage = mouseX - offsetX;
+        const mouseYInImage = mouseY - offsetY;
+
+        // 检查鼠标是否在图片显示区域内
+        const isWithinImageBounds = 
+            mouseXInImage >= 0 && 
+            mouseXInImage <= displayWidth &&
+            mouseYInImage >= 0 && 
+            mouseYInImage <= displayHeight;
+
+        // 只有在图片区域内才允许 drop
+        if (isWithinImageBounds) {
+            e.preventDefault();
+            e.stopPropagation();
+            // 设置拖拽效果为 copy
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'copy';
+            }
+        } else {
+            // 在图片区域外，不允许 drop
+            e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'none';
+            }
+        }
     }, []);
 
     // 处理拖拽结束，清理状态
@@ -617,20 +674,26 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                 return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
             }
 
-            // 按钮型NPC根据文字内容计算尺寸
-            let width: number;
-            let height: number;
+            // 与游戏一致：使用固定基础尺寸，然后通过 transform scale 应用缩放
+            // 按钮型NPC根据文字内容计算基础尺寸
+            let baseWidth: number;
+            let baseHeight: number;
             
             if (npc.type === 'button' && npc.name) {
                 // 估算文字宽度：每个字符约8-10px，加上padding
                 const textWidth = npc.name.length * 10 + 24; // 24px是padding (8px * 2 + 8px额外空间)
                 const textHeight = 32; // 14px字体 + 16px padding
-                width = Math.max(textWidth, 60) * npc.scale; // 最小宽度60px
-                height = textHeight * npc.scale;
+                baseWidth = Math.max(textWidth, 60); // 最小宽度60px
+                baseHeight = textHeight;
             } else {
-                width = BASE_NPC_WIDTH * npc.scale;
-                height = BASE_NPC_HEIGHT * npc.scale;
+                // 立绘型NPC：使用固定基础尺寸（与游戏中 maxWidth/maxHeight 一致）
+                baseWidth = BASE_NPC_WIDTH;
+                baseHeight = BASE_NPC_HEIGHT;
             }
+
+            // 计算缩放后的实际尺寸（用于定位）
+            const scaledWidth = baseWidth * npc.scale;
+            const scaledHeight = baseHeight * npc.scale;
 
             const centerXInImage = npc.x * displayWidth;
             const centerYInImage = npc.y * displayHeight;
@@ -638,10 +701,17 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             const centerX = offsetX + centerXInImage;
             const centerY = offsetY + centerYInImage;
 
-            const left = centerX - width / 2;
-            const top = centerY - height / 2;
+            const left = centerX - scaledWidth / 2;
+            const top = centerY - scaledHeight / 2;
 
-            return { left, top, width, height, visible: true };
+            return { 
+                left, 
+                top, 
+                width: baseWidth,  // 返回基础尺寸，不乘以 scale
+                height: baseHeight, // 返回基础尺寸，不乘以 scale
+                scale: npc.scale,   // 单独返回 scale 值
+                visible: true 
+            };
         },
         [windowSize, imageLoaded, containerReady, forceUpdate]
     );

@@ -129,7 +129,14 @@ export interface WorldSetting {
   WorldRules?: {
     [key: string]: string;
   };
-  player: Player; // visual 模式使用小写 player
+  player: Player;
+  dynamicEntries?: DynamicEntry[];
+  llmConfig?: {
+      targetOutputLength?: number;
+      outputLengthMode?: "characters" | "words";
+      minOutputLength?: number;
+      maxOutputLength?: number;
+  },
 }
 
 // NPC 设定类型
@@ -155,6 +162,7 @@ export interface AllGameData {
   npcSetting: NPCSetting;
   sceneSetting: SceneSetting;
   metadata: Metadata | null;
+  storySetting: StoryStructure;
 }
 
 export interface GeneratePlayerImageRequest {
@@ -220,4 +228,13 @@ export interface UploadGameCoverResponse {
     filename: string;
     fileId: string;
   };
+}
+
+export interface GenerateStoryStructureResponse {
+  success: boolean;
+  data:{
+    storyStructure: StoryStructure;
+    DynamicEntries: DynamicEntry[];
+    message: string;
+  }
 }

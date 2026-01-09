@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
 import styles from './FunctionalNPCsPanel.module.css';
 import FunctionalNPCList from './FunctionalNPCList';
 import FunctionalNPCDetail from './FunctionalNPCDetail';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNodeSetting, AbilityNode } from '../../../api/worldInteraction/worldInteractionApi.type';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
@@ -15,13 +16,19 @@ interface FunctionalNPCsPanelProps {
     mode?: string;
     onDataChange?: () => void;
     abilityNodeSetting?: AbilityNodeSetting;
+    onBeforePanelChange?: () => Promise<boolean>; // 返回 false 表示阻止切换
 }
 
-const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
+export interface FunctionalNPCsPanelRef {
+    checkBeforeLeave: () => boolean;
+}
+
+const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalNPCsPanelProps>(({
     fileId,
     onDataChange,
     abilityNodeSetting,
-}) => {
+    onBeforePanelChange,
+}, ref) => {
     const [abilityNodes, setAbilityNodes] = useState<AbilityNode[]>([]);
     const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -34,6 +41,17 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
     const [isLoadingAllImagesCost, setIsLoadingAllImagesCost] = useState(false);
     const { user, updateUser } = useAuthStore();
     const userPoints = user?.user?.points ?? 0;
+    
+    // 未保存修改相关状态
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{
+        type: 'switchNode' | 'switchPanel' | 'close';
+        targetNodeId?: string | null;
+        targetPanelId?: string;
+    } | null>(null);
+    const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
+    const detailRef = useRef<{ save: () => Promise<void> } | null>(null);
 
     const refreshUserPoints = async () => {
         if (!updateUser) return;
@@ -61,10 +79,80 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
             setAbilityNodes([]);
             setActiveNodeId(null);
         }
-    }, [abilityNodeSetting]); // 移除 activeNodeId 依赖，避免新增节点后状态被重置
+    }, [abilityNodeSetting]);
+
+    // 使用 ref 来存储最新的状态值，避免闭包问题
+    const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+    const isBlockingSwitchRef = useRef(isBlockingSwitch);
+    
+    useEffect(() => {
+        hasUnsavedChangesRef.current = hasUnsavedChanges;
+    }, [hasUnsavedChanges]);
+    
+    useEffect(() => {
+        isBlockingSwitchRef.current = isBlockingSwitch;
+    }, [isBlockingSwitch]);
+    
+    // 执行待处理的操作
+    const executePendingAction = useCallback(() => {
+        if (!pendingAction) return;
+
+        if (pendingAction.type === 'switchNode') {
+            setActiveNodeId(pendingAction.targetNodeId || null);
+            setIsNewNode(false);
+            setCreatingNode(null);
+        } else if (pendingAction.type === 'switchPanel') {
+            if (onBeforePanelChange) {
+                onBeforePanelChange().then((canSwitch) => {
+                    if (canSwitch && pendingAction.targetPanelId) {
+                        setPendingAction(null);
+                    }
+                });
+            }
+        } else if (pendingAction.type === 'close') {
+            setPendingAction(null);
+        }
+
+        setPendingAction(null);
+    }, [pendingAction, onBeforePanelChange]);
+
+    // 检查是否可以切换（如果有未保存修改，显示确认弹窗）
+    const checkBeforeSwitch = useCallback((action: { type: 'switchNode' | 'switchPanel' | 'close'; targetNodeId?: string | null; targetPanelId?: string }) => {
+        if (hasUnsavedChanges) {
+            setPendingAction(action);
+            setSaveConfirmModalOpen(true);
+            setIsBlockingSwitch(true);
+            return false;
+        }
+        return true;
+    }, [hasUnsavedChanges]);
+
+    // 暴露给父组件的方法，用于在切换面板前检查
+    useImperativeHandle(ref, () => ({
+        checkBeforeLeave: () => {
+            const hasChanges = hasUnsavedChangesRef.current;
+            const isBlocking = isBlockingSwitchRef.current;
+            
+            if (hasChanges && !isBlocking) {
+                setPendingAction({ type: 'switchPanel' });
+                setSaveConfirmModalOpen(true);
+                setIsBlockingSwitch(true);
+                return false;
+            }
+            
+            if (isBlocking) {
+                return false;
+            }
+            
+            return true;
+        },
+    }), []);
 
     // 创建新的功能性NPC
     const handleCreateNode = () => {
+        if (!checkBeforeSwitch({ type: 'switchNode', targetNodeId: null })) {
+            return;
+        }
         const newNode: AbilityNode = {
             node_id: `node-${Date.now()}`,
             authorNote: '', // NPC名称（所有类型都需要）
@@ -249,6 +337,9 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
                     abilityNodes={abilityNodes}
                     activeNodeId={activeNodeId}
                     onNodeClick={(id) => {
+                        if (!checkBeforeSwitch({ type: 'switchNode', targetNodeId: id })) {
+                            return;
+                        }
                         setActiveNodeId(id);
                         setIsNewNode(false);
                         setCreatingNode(null);
@@ -259,10 +350,12 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
 
                 {/* 右侧：详情菜单 */}
                 <FunctionalNPCDetail
+                    ref={detailRef}
                     node={displayNode}
                     onSave={handleSave}
                     fileId={fileId}
                     isNewNode={isNewNode}
+                    onHasUnsavedChanges={setHasUnsavedChanges}
                 />
             </div>
 
@@ -298,8 +391,47 @@ const FunctionalNPCsPanel: React.FC<FunctionalNPCsPanelProps> = ({
                     <div className={styles.plusLoadingText}>正在生成功能性NPC图片...</div>
                 </div>
             )}
+
+            {/* 保存确认弹窗 */}
+            <SaveConfirmModal
+                isOpen={saveConfirmModalOpen}
+                onSave={async () => {
+                    if (detailRef.current?.save) {
+                        try {
+                            await detailRef.current.save();
+                            setSaveConfirmModalOpen(false);
+                            setIsBlockingSwitch(false);
+                            executePendingAction();
+                        } catch (error) {
+                            toast.error('保存失败，请重试');
+                            // 保存失败时不关闭弹窗，不执行待处理操作，保持表单数据
+                        }
+                    } else {
+                        setSaveConfirmModalOpen(false);
+                        setIsBlockingSwitch(false);
+                        executePendingAction();
+                    }
+                }}
+                onDiscard={() => {
+                    setSaveConfirmModalOpen(false);
+                    setHasUnsavedChanges(false);
+                    setIsBlockingSwitch(false);
+                    executePendingAction();
+                }}
+                onCancel={() => {
+                    setSaveConfirmModalOpen(false);
+                    setPendingAction(null);
+                    setIsBlockingSwitch(false);
+                }}
+                title="未保存的修改"
+                message="您有未保存的修改，是否要保存？"
+                saveButtonText="保存"
+                discardButtonText="不保存"
+            />
         </div>
     );
-};
+});
+
+FunctionalNPCsPanel.displayName = 'FunctionalNPCsPanel';
 
 export default FunctionalNPCsPanel;

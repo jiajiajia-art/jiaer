@@ -7,7 +7,7 @@ import CharactersPanel from '../components/GameSettingEditor/CharactersPanel/Cha
 import ScenesPanel from '../components/GameSettingEditor/ScenesPanel/ScenesPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
 import MapPanel from '../components/GameSettingEditor/MapPanel/MapPanel';
-import FunctionalNPCsPanel from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
+import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
 import AttributeGrowthPanel from '../components/GameSettingEditor/AttributeGrowthPanel/AttributeGrowthPanel';
 import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
 import { useEditorStore } from '../store/editorStore';
@@ -128,12 +128,27 @@ const GameSettingsEditor = () => {
         }
     }, [fileId, gameData, isLoadingData, setIsParsed, setActivePanel]);
 
-    const handlePanelChange = useCallback((panelId: string) => {
+    const functionalNPCsPanelRef = useRef<FunctionalNPCsPanelRef | null>(null);
+    
+    // 使用回调 ref 来确保能捕获到 ref 的变化
+    const setFunctionalNPCsPanelRef = useCallback((node: FunctionalNPCsPanelRef | null) => {
+        functionalNPCsPanelRef.current = node;
+    }, []);
+
+    const handlePanelChange = useCallback(async (panelId: string) => {
         if (isParsing && panelId !== 'documents') {
             return;
         }
         if (!isParsed && panelId !== 'documents') {
             return;
+        }
+
+        // 从功能性NPC面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'functionalNPCs' && panelId !== 'functionalNPCs' && functionalNPCsPanelRef.current) {
+            const canLeave = functionalNPCsPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
         }
 
         // 首次进入地图编辑面板时，确保拉取一次最新的世界交互数据（包含场景位置信息）
@@ -149,7 +164,7 @@ const GameSettingsEditor = () => {
         }
 
         setActivePanel(panelId);
-    }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel]);
+    }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel]);
 
     const onPublishGame = useCallback(async (price: number | null, isFree: boolean) => {
         await handlePublishGame(price, isFree);
@@ -281,6 +296,7 @@ const GameSettingsEditor = () => {
                 {mode === 'worldInteraction' && (
                     <section className={`${styles.panel} ${activePanel === 'functionalNPCs' ? styles.active : ''}`} id="functionalNPCs">
                         <FunctionalNPCsPanel
+                            ref={setFunctionalNPCsPanelRef}
                             fileId={fileId}
                             mode={mode || 'worldInteraction'}
                             abilityNodeSetting={

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useImperativeHandle } from 'react';
 import styles from './FunctionalNPCDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
@@ -13,14 +13,18 @@ interface FunctionalNPCDetailProps {
     onSave: (updatedNode: AbilityNode) => void;
     fileId?: string | null;
     isNewNode?: boolean; // 标识是否为新建节点
+    onHasUnsavedChanges?: (hasChanges: boolean) => void; // 通知父组件是否有未保存的修改
 }
 
-const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
-    node,
-    onSave,
-    fileId,
-    isNewNode: isNewNodeProp,
-}) => {
+const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void> }, FunctionalNPCDetailProps>(
+    (props, ref) => {
+    const {
+        node,
+        onSave,
+        fileId,
+        isNewNode: isNewNodeProp,
+        onHasUnsavedChanges,
+    } = props;
     const { fileId: storeFileId } = useGameStore();
     const currentFileId = fileId || storeFileId;
     
@@ -44,9 +48,13 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
     const [localFile, setLocalFile] = useState<File | null>(null);
     const [tempImageId, setTempImageId] = useState<string | null>(null);
 
+    // 保存原始节点数据，用于比较是否有修改
+    const originalNodeRef = React.useRef<AbilityNode | null>(null);
+
     // 当node变化时，更新表单数据
     React.useEffect(() => {
         if (node) {
+            originalNodeRef.current = JSON.parse(JSON.stringify(node)); // 深拷贝
             setFormData({
                 node_id: node.node_id || '',
                 authorNote: node.authorNote || '',
@@ -58,7 +66,12 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
             });
             setLocalFile(null);
             setTempImageId(null);
+            // 重置未保存状态
+            if (onHasUnsavedChanges) {
+                onHasUnsavedChanges(false);
+            }
         } else {
+            originalNodeRef.current = null;
             setFormData({
                 node_id: '',
                 authorNote: '',
@@ -70,8 +83,52 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
             });
             setLocalFile(null);
             setTempImageId(null);
+            // 重置未保存状态
+            if (onHasUnsavedChanges) {
+                onHasUnsavedChanges(false);
+            }
         }
-    }, [node]);
+    }, [node, onHasUnsavedChanges]);
+
+    // 检测是否有未保存的修改
+    const checkUnsavedChanges = React.useCallback(() => {
+        if (!node || !originalNodeRef.current) {
+            // 新建节点：检查是否有任何内容
+            if (isNewNodeProp) {
+                const hasContent = 
+                    formData.authorNote?.trim() ||
+                    formData.name?.trim() ||
+                    formData.imagePath ||
+                    localFile ||
+                    tempImageId ||
+                    (formData.actions && formData.actions.some((a: any) => a.name?.trim() || a.description?.trim()));
+                return hasContent;
+            }
+            return false;
+        }
+
+        // 比较原始节点和当前表单数据
+        const original = originalNodeRef.current;
+        const hasChanges = 
+            formData.authorNote !== (original.authorNote || '') ||
+            formData.name !== (original.name || '') ||
+            formData.type !== (original.type || 'illustration') ||
+            formData.imagePath !== (original.imagePath || '') ||
+            formData.imagePrompt !== (original.imagePrompt || '') ||
+            localFile !== null ||
+            tempImageId !== null ||
+            JSON.stringify(formData.actions) !== JSON.stringify(original.actions || []);
+
+        return hasChanges;
+    }, [node, formData, localFile, tempImageId, isNewNodeProp]);
+
+    // 当表单数据变化时，通知父组件
+    React.useEffect(() => {
+        if (onHasUnsavedChanges) {
+            const hasChanges = checkUnsavedChanges();
+            onHasUnsavedChanges(!!hasChanges);
+        }
+    }, [formData, localFile, tempImageId, checkUnsavedChanges, onHasUnsavedChanges]);
 
     const handleFieldChange = (field: keyof AbilityNode, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -328,6 +385,11 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                 if (savedNode) {
                     // 通过 onSave 回调更新父组件状态
                     await onSave(savedNode);
+                    // 更新原始节点引用，重置未保存状态
+                    originalNodeRef.current = JSON.parse(JSON.stringify(savedNode));
+                    if (onHasUnsavedChanges) {
+                        onHasUnsavedChanges(false);
+                    }
                 } else {
                     // 如果没有返回节点，构建节点数据传递给父组件
                     const nodeData: AbilityNode = {
@@ -340,6 +402,11 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
                         actions: formData.actions || [],
                     };
                     await onSave(nodeData);
+                    // 更新原始节点引用，重置未保存状态
+                    originalNodeRef.current = JSON.parse(JSON.stringify(nodeData));
+                    if (onHasUnsavedChanges) {
+                        onHasUnsavedChanges(false);
+                    }
                 }
             } else {
                 toast.error(response.data?.message || '保存失败');
@@ -357,6 +424,11 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
             setIsSaving(false);
         }
     };
+
+    // 暴露 save 方法给父组件
+    useImperativeHandle(ref, () => ({
+        save: handleSave,
+    }));
 
     return (
         <div className={styles.npcDetail}>
@@ -588,7 +660,10 @@ const FunctionalNPCDetail: React.FC<FunctionalNPCDetailProps> = ({
             />
         </div>
     );
-};
+    }
+);
+
+FunctionalNPCDetail.displayName = 'FunctionalNPCDetail';
 
 export default FunctionalNPCDetail;
 

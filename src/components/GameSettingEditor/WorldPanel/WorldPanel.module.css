@@ -200,15 +200,10 @@
     flex-direction: column;
     gap: 20px;
     overflow-y: auto;
+    position: relative;
 }
 
-/* 高级设置内容 */
-.advancedContent {
-    padding: 40px 20px;
-    text-align: center;
-    color: rgba(0, 0, 0, 0.4);
-    font-size: 0.9rem;
-}
+/* 高级 story-structure 样式已迁移到 StoryStructureAdvanced.module.css */
 
 /* 表单行 */
 .formRow {
@@ -510,6 +505,50 @@
     color: var(--primary);
     font-size: 0.85rem;
     margin: 0;
+}
+
+/* 故事结构生成全局 Loading 遮罩（锁定整个 Tab） */
+.tabLoadingOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+.tabLoadingContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.tabLoadingSpinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(224, 61, 75, 0.2);
+    border-top-color: var(--primary);
+    animation: worldpanel-spin 0.8s linear infinite;
+}
+
+.tabLoadingText {
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.75);
+    text-align: center;
+}
+
+@keyframes worldpanel-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* 响应式布局 */

@@ -399,8 +399,7 @@ const GalgameMap = () => {
     }) => {
         setSelectedSubscene(subscene);
         setCurrentView(MapViewState.SUBSCENE_MODAL);
-        // 关闭场景视图，回到世界地图
-        setSelectedScene(null);
+        // 保留 selectedScene，以便返回时知道是从哪个场景来的
     };
 
     // 从场景视图返回世界地图
@@ -414,12 +413,20 @@ const GalgameMap = () => {
         setCurrentView(MapViewState.INTERACT_NPC);
     };
 
-    // 处理返回
+    // 处理返回 - 实现层级返回：子场景 -> 场景 -> 大地图
     const handleBack = () => {
         if (currentView === MapViewState.INTERACT_NPC) {
             setCurrentView(MapViewState.SUBSCENE_MODAL);
         } else if (currentView === MapViewState.SUBSCENE_MODAL) {
-            setCurrentView(MapViewState.WORLD_MAP);
+            // 如果 selectedScene 存在，说明是从场景视图进入的，先返回到场景视图
+            if (selectedScene) {
+                setCurrentView(MapViewState.SCENE_VIEW);
+                setSelectedSubscene(null);
+            } else {
+                // 否则直接返回到世界地图
+                setCurrentView(MapViewState.WORLD_MAP);
+                setSelectedSubscene(null);
+            }
         }
     };
 
@@ -471,7 +478,8 @@ const GalgameMap = () => {
 
                         {/* 当事件已完成（没有活跃事件或 eventCompleted 标志为 true）时，提供"开启下一回合"按钮 */}
                         {(() => {
-                            const shouldShow = (!eventData || eventCompleted) && !isLoading;
+                            const isFirstTime = worldInteractionHistory && worldInteractionHistory.interactions.length === 0;
+                            const shouldShow = !isFirstTime && (!eventData || eventCompleted) && !isLoading;
                             return shouldShow;
                         })() && (
                                 <NextRoundButton
@@ -523,8 +531,10 @@ const GalgameMap = () => {
                 )}
 
                 {(() => {
+                    // 如果是第一次进入（没有历史记录），不显示按钮，应该显示开场白
+                    const isFirstTime = worldInteractionHistory && worldInteractionHistory.interactions.length === 0;
                     // 基础条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
-                    const baseCondition = (!eventData || eventCompleted) && !isLoading;
+                    const baseCondition = !isFirstTime && (!eventData || eventCompleted) && !isLoading;
                     const shouldShow = baseCondition && 
                         (currentView !== MapViewState.INTERACT_NPC || (eventCompleted && !isTypingInInteractNpc));
                     return shouldShow;

@@ -752,6 +752,23 @@ const InteractWithNpc = ({
         return canShow;
     }, [stepHandlers.newEvent, stepHandlers.stepQueue, stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, finalIsTyping, hasPendingRequest]);
 
+    // 功能性NPC交互的继续按钮显示条件
+    const shouldShowAbilityNodeContinueButton = useMemo(() => {
+        if (!isAbilityNodeInteraction) return false;
+
+        // 交互完成的条件：步骤队列为空、没有等待数据、没有正在输入、没有待处理请求、没有下一步按钮
+        const queueEmpty = !stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0;
+        const isChoiceStep = stepHandlers.currentStep?.type === 'choice';
+        
+        const canShow = !stepHandlers.isWaitingForData 
+            && !finalIsTyping 
+            && !hasPendingRequest
+            && gameStarted
+            && ((queueEmpty && !stepHandlers.showNextButton) || (isChoiceStep && !stepHandlers.showNextButton));
+        
+        return canShow;
+    }, [isAbilityNodeInteraction, stepHandlers.stepQueue, stepHandlers.isWaitingForData, stepHandlers.showNextButton, stepHandlers.currentStep, finalIsTyping, hasPendingRequest, gameStarted]);
+
     const handleContinue = useCallback(() => {
         const newEvent = stepHandlers.newEvent;
         const hasFullNewEvent = newEvent?.event && newEvent.npc && newEvent.subscene;
@@ -782,6 +799,12 @@ const InteractWithNpc = ({
             stepHandlers.clearNewEvent?.();
         }
     }, [stepHandlers, setEventData, setCurrentView, getSubsceneImage, setDisplayBackgroundImage]);
+
+    // 功能性NPC交互的继续按钮处理
+    const handleAbilityNodeContinue = useCallback(() => {
+        // 关闭交互页面，返回到子场景视图
+        onClose();
+    }, [onClose]);
 
     const textModalDisplayText = useMemo(() => {
         if (stepHandlers.currentStep &&
@@ -1169,6 +1192,17 @@ const InteractWithNpc = ({
                             >
                                 <MdCheckCircle />
                                 <span>继续游戏</span>
+                            </div>
+                        )}
+                        
+                        {shouldShowAbilityNodeContinueButton && (
+                            <div 
+                                className={styles.continueButton} 
+                                onClick={handleAbilityNodeContinue}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <MdCheckCircle />
+                                <span>返回</span>
                             </div>
                         )}
                     </div>

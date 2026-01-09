@@ -1,7 +1,22 @@
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type { CalculatePointsResponse, GetMusicListResponse, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
-import type { AllGameData, NPC, WorldSetting, Player, GenerateVariantImageRequest, GenerateAllImageRequest, GenerateImgeResponse, CheckUploadStatusResponse, UploadFileResponse, GenerateImageRequest, UploadGameCoverResponse } from "./EditorData.type";
+import type {
+    AllGameData,
+    NPC,
+    WorldSetting,
+    Player,
+    GenerateVariantImageRequest,
+    GenerateAllImageRequest,
+    GenerateImgeResponse,
+    CheckUploadStatusResponse,
+    UploadFileResponse,
+    GenerateImageRequest,
+    UploadGameCoverResponse,
+    GenerateStoryStructureResponse,
+    StoryStructure,
+    DynamicEntry,
+} from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
 const EditorApi = {
@@ -31,8 +46,26 @@ const EditorApi = {
         ),
     updateWorldSetting: (fileId:string, data:Partial<WorldSetting>) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/world`, data),
-    generateStoryStructure: (fileId:string) =>
-        api.post<AllGameData>(`/visual/edit/${fileId}/story-structure/generate`),
+    generateStoryStructure: (fileId:string, description:string) =>
+        api.post<GenerateStoryStructureResponse>(`/visual/edit/${fileId}/story-structure/generate`, {
+            description: description,
+        }, {
+            timeout: 1500000,
+        }),
+    // story-structure phases CRUD
+    addStoryPhase: (fileId: string, phase: StoryStructure['phases'][number]) =>
+        api.post<StoryStructure>(`/visual/edit/${fileId}/story-phases/phases`, phase),
+    updateStoryPhase: (fileId: string, phaseId: string, phase: StoryStructure['phases'][number]) =>
+        api.put<StoryStructure>(`/visual/edit/${fileId}/story-phases/phases/${phaseId}`, phase),
+    deleteStoryPhase: (fileId: string, phaseId: string) =>
+        api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/story-phases/phases/${phaseId}`),
+    // dynamicEntries CRUD
+    addDynamicEntry: (fileId: string, entry: DynamicEntry) =>
+        api.post<DynamicEntry>(`/visual/edit/${fileId}/dynamic-entries`, entry),
+    updateDynamicEntry: (fileId: string, entryId: string, entry: DynamicEntry) =>
+        api.put<DynamicEntry>(`/visual/edit/${fileId}/dynamic-entries/${entryId}`, entry),
+    deleteDynamicEntry: (fileId: string, entryId: string) =>
+        api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/dynamic-entries/${entryId}`),
     addNpc: (fileId:string, data:NPC) =>
         api.post<AllGameData>(`/visual/edit/${fileId}/npcs`, data),
     updateNpc: (fileId:string, data:NPC) =>
