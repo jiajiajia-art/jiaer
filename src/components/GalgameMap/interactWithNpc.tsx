@@ -59,7 +59,6 @@ interface InteractWithNpcProps {
     onClose: () => void;
     gameData: AllGameData | null;
     worldInteractionHistory: GetWorldInteractionHistoryResponse | null;
-    initialStreamResponse?: Response | null; // 可选的初始流式响应（用于功能性NPC，已废弃，使用 pendingAction）
     pendingAction?: { nodeId: string; actionId: string } | null; // 待处理的功能性NPC操作
     skipAutoInit?: boolean; // 是否跳过自动初始化
     currentSubsceneId?: string | null; // 当前子场景ID（用于功能性NPC交互时获取背景图片）
@@ -69,13 +68,10 @@ const InteractWithNpc = ({
     onClose, 
     gameData,
     worldInteractionHistory,
-    initialStreamResponse, // 已废弃，保留以兼容旧代码，请使用 pendingAction
     pendingAction, // 新的方式：让 InteractWithNpc 自己处理流式响应
     skipAutoInit = false,
     currentSubsceneId, // 当前子场景ID（用于功能性NPC交互时获取背景图片）
 }: InteractWithNpcProps) => {
-    // 忽略未使用的 initialStreamResponse（已废弃）
-    void initialStreamResponse;
     const { user } = useAuthStore();
     const sessionId = useGameStore((state) => state.sessionId);
     const { fileId } = useGameStore();
@@ -86,6 +82,8 @@ const InteractWithNpc = ({
     const worldSetting = gameData?.worldSetting || null;
     const sceneSetting = gameData?.sceneSetting || null;
     const currentSubscene = eventData?.subscene || null;
+    // 是否为功能性 NPC 交互（有 pendingAction 即视为功能性交互）
+    const isAbilityNodeInteraction = !!pendingAction;
     const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
         fileId: fileId || null,
         gameData,
@@ -172,27 +170,17 @@ const InteractWithNpc = ({
     // 获取当前子场景（用于功能性NPC交互）
     const getCurrentSubscene = useCallback((): { id?: string; image?: string } | null => {
         // 如果是功能性NPC交互，优先使用传入的 currentSubsceneId
-        if (pendingAction && currentSubsceneId && gameData?.sceneSetting?.scenes) {
-            console.log('[InteractWithNpc] 尝试通过 currentSubsceneId 查找子场景', { 
-                currentSubsceneId,
-                scenesCount: gameData.sceneSetting.scenes.length 
-            });
+        if (isAbilityNodeInteraction && currentSubsceneId && gameData?.sceneSetting?.scenes) {
             for (const scene of gameData.sceneSetting.scenes) {
                 const found = scene.subscenes?.find((sub: any) => sub.id === currentSubsceneId);
                 if (found) {
-                    console.log('[InteractWithNpc] 找到子场景', { 
-                        id: found.id, 
-                        hasImage: !!found.image,
-                        image: found.image 
-                    });
                     return found;
                 }
             }
-            console.log('[InteractWithNpc] 未找到子场景，currentSubsceneId:', currentSubsceneId);
         }
         
         // 如果找不到，尝试从 latestHistory 中查找最近的功能性NPC交互
-        if (pendingAction && gameData?.sceneSetting?.scenes && latestHistory?.interactions?.length) {
+        if (isAbilityNodeInteraction && gameData?.sceneSetting?.scenes && latestHistory?.interactions?.length) {
             const lastAbilityNodeInteraction = [...latestHistory.interactions]
                 .reverse()
                 .find((interaction: any) => interaction.type === 'ability_node_interaction');
@@ -214,13 +202,12 @@ const InteractWithNpc = ({
         
         // 普通NPC交互，使用 eventData 中的 subscene
         return eventData?.subscene || null;
-    }, [pendingAction, currentSubsceneId, gameData, latestHistory, eventData]);
+    }, [isAbilityNodeInteraction, currentSubsceneId, gameData, latestHistory, eventData]);
 
     // 计算最终使用的背景图片（包含兜底逻辑）
     const backgroundImage = useMemo(() => {
         // 如果已经设置了背景图片，直接使用
         if (displayBackgroundImage) {
-            console.log('[InteractWithNpc] 使用已设置的背景图片', displayBackgroundImage);
             return displayBackgroundImage;
         }
         
@@ -228,19 +215,12 @@ const InteractWithNpc = ({
         const currentSubscene = getCurrentSubscene();
         if (currentSubscene) {
             const subsceneImage = getSubsceneImage(currentSubscene);
-            console.log('[InteractWithNpc] 使用子场景图片作为兜底', { 
-                subsceneId: currentSubscene.id, 
-                subsceneImage,
-                hasImage: !!subsceneImage,
-                rawImage: currentSubscene.image
-            });
             if (subsceneImage) {
                 return subsceneImage;
             }
         }
         
         // 最后返回空字符串，使用默认图片
-        console.log('[InteractWithNpc] 使用默认图片');
         return '';
     }, [displayBackgroundImage, getCurrentSubscene, getSubsceneImage]);
 
@@ -251,21 +231,8 @@ const InteractWithNpc = ({
         // 如果是功能性NPC交互，使用当前子场景的图片
         if (pendingAction) {
             const currentSubscene = getCurrentSubscene();
-            console.log('[InteractWithNpc] 功能性NPC交互 - 初始化背景图片', {
-                currentSubsceneId,
-                currentSubscene,
-                hasGameData: !!gameData,
-                hasSceneSetting: !!gameData?.sceneSetting?.scenes,
-                scenesCount: gameData?.sceneSetting?.scenes?.length
-            });
-            
             if (currentSubscene) {
                 const bgImage = getSubsceneImage(currentSubscene);
-                console.log('[InteractWithNpc] 获取到的背景图片', { 
-                    bgImage, 
-                    subsceneId: currentSubscene.id,
-                    subsceneImage: currentSubscene.image 
-                });
                 if (bgImage) {
                     setDisplayBackgroundImage(bgImage);
                     refs.current.backgroundInitialized = true;
@@ -275,11 +242,6 @@ const InteractWithNpc = ({
                 }
             } else {
                 // 找不到子场景，不设置 displayBackgroundImage，让 useMemo 处理兜底
-                console.log('[InteractWithNpc] 找不到子场景，使用默认图片', {
-                    currentSubsceneId,
-                    hasGameData: !!gameData,
-                    hasSceneSetting: !!gameData?.sceneSetting?.scenes
-                });
                 refs.current.backgroundInitialized = true;
             }
         } else if (!displayBackgroundImage && eventData?.subscene) {
@@ -325,14 +287,14 @@ const InteractWithNpc = ({
 
     const refreshHistory = useCallback(async () => {
         if (!sessionId) return;
-        try {
-            const response = await interactionApi.getWorldInteractionHistory(sessionId);
-            if (response.data?.success) {
-                setLatestHistory(response.data);
+            try {
+                const response = await interactionApi.getWorldInteractionHistory(sessionId);
+                if (response.data?.success) {
+                    setLatestHistory(response.data);
+                }
+            } catch (error) {
+                console.error('[WorldInteraction] 获取最新历史记录失败:', error);
             }
-        } catch (error) {
-            console.warn('[WorldInteraction] 获取最新历史记录失败:', error);
-        }
     }, [sessionId]);
     // 清理超时
     useEffect(() => {
@@ -401,29 +363,18 @@ const InteractWithNpc = ({
         if (gameStarted && stepHandlers.currentStep && stepHandlers.currentStep.type) {
             const converted = convertStepToMessage(stepHandlers.currentStep, worldSetting);
             if (converted) {
-                console.log('[InteractWithNpc] currentMessage 来自 currentStep', {
-                    type: converted.type,
-                    hasMessage: !!converted.message,
-                    messageLength: converted.message?.length
-                });
                 return converted;
             }
         }
-
+        
         if (historyChoiceMessage && !hasPendingRequest) {
-            console.log('[InteractWithNpc] currentMessage 来自 historyChoiceMessage');
             return historyChoiceMessage;
         }
-
+        
         if (hasPendingRequest || stepHandlers.isWaitingForData) {
-            console.log('[InteractWithNpc] currentMessage 为空（等待数据）', {
-                hasPendingRequest,
-                isWaitingForData: stepHandlers.isWaitingForData
-            });
             return { id: 0, type: 'narration', message: '' };
         }
-
-        console.log('[InteractWithNpc] currentMessage 为空（默认）');
+        
         return { id: 0, type: 'narration', message: '' };
     }, [gameStarted, stepHandlers.currentStep, stepHandlers.isWaitingForData, worldSetting, historyChoiceMessage, hasPendingRequest]);
     
@@ -462,19 +413,11 @@ const InteractWithNpc = ({
             sessionId &&
             refs.current.processedPendingAction !== pendingAction) {
             
-            console.log('[InteractWithNpc] 开始处理功能性NPC操作', {
-                pendingAction,
-                gameStarted,
-                sessionId,
-                hasProcessStreamResponse: !!stepHandlers.processStreamResponse
-            });
-            
             // 标记为已处理，防止重复处理（React 严格模式会调用两次）
             refs.current.processedPendingAction = pendingAction;
             
             // 1. 先设置游戏状态，确保UI能正确显示（和普通NPC交互一致）
             setGameStarted(true);
-            console.log('[InteractWithNpc] 设置 gameStarted = true');
             
             // 2. 清空状态（和普通NPC交互一致）
             setCompletedSteps([]);
@@ -484,61 +427,49 @@ const InteractWithNpc = ({
             stepHandlers.setCurrentStep(null);
             stepHandlers.setShowNextButton(false);
             setHasPendingRequest(false);
-            console.log('[InteractWithNpc] 状态已清空');
             
             // 3. 调用功能性NPC的接口，获取流式响应
             const fetchAndProcessStream = async () => {
-                try {
-                    const { nodeId, actionId } = pendingAction;
-                    console.log('[InteractWithNpc] 准备发送请求', { nodeId, actionId });
-                    
-                    const response = await authFetch(`/api/world-interaction/session/${sessionId}/ability-node/${nodeId}/select-action/stream`, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            actionId: actionId
-                        })
-                    });
-                    
-                    console.log('[InteractWithNpc] 收到响应', { 
-                        ok: response.ok, 
-                        status: response.status,
-                        hasBody: !!response.body,
-                        bodyLocked: response.body?.locked 
-                    });
-                    
-                    if (!response.ok || !response.body) {
-                        console.error('[InteractWithNpc] 响应失败', { status: response.status, hasBody: !!response.body });
-                        setErrorModal({ visible: true, message: '请求失败，请重试' });
-                        return;
-                    }
-                    
-                    if (response.body.locked) {
-                        console.error('[InteractWithNpc] response.body 已被锁定');
-                        setErrorModal({ visible: true, message: '响应体已被锁定' });
-                        return;
-                    }
-                    
-                    // 4. 使用 processStreamResponse 处理流式响应
-                    // 注意：此时 currentRequestId 已经在 useWorldInteractionStep 中初始化，我们直接使用它
-                    const requestId = ++stepHandlers.currentRequestId.current;
-                    console.log('[InteractWithNpc] 生成的 requestId:', requestId, 'stepHandlers.currentRequestId:', stepHandlers.currentRequestId.current);
-                    
-                    console.log('[InteractWithNpc] 调用 processStreamResponse');
-                    await stepHandlers.processStreamResponse(response, requestId, {
-                        onFirstStep: () => {
-                            console.log('[InteractWithNpc] 收到第一个步骤');
-                            // 第一个步骤到达时的处理（和普通NPC交互一致）
-                            // processStreamResponse 内部已经设置了 isWaitingForData = false
-                        },
-                        onError: (error: string) => {
-                            console.error('[InteractWithNpc] 流式响应错误:', error);
-                            setErrorModal({ visible: true, message: error });
-                        },
-                    });
-                } catch (error: any) {
-                    console.error('[InteractWithNpc] 处理功能性NPC操作失败:', error);
-                    setErrorModal({ visible: true, message: error.message || '处理失败，请重试' });
-                }
+                       try {
+                           const { nodeId, actionId } = pendingAction;
+                           
+                           const response = await authFetch(`/api/world-interaction/session/${sessionId}/ability-node/${nodeId}/select-action/stream`, {
+                               method: 'POST',
+                               body: JSON.stringify({
+                                   actionId: actionId
+                               })
+                           });
+                           
+                           if (!response.ok || !response.body) {
+                               console.error('[InteractWithNpc] 响应失败', { status: response.status, hasBody: !!response.body });
+                               setErrorModal({ visible: true, message: '请求失败，请重试' });
+                               return;
+                           }
+                           
+                           if (response.body.locked) {
+                               console.error('[InteractWithNpc] response.body 已被锁定');
+                               setErrorModal({ visible: true, message: '响应体已被锁定' });
+                               return;
+                           }
+                           
+                           // 4. 使用 processStreamResponse 处理流式响应
+                           // 注意：此时 currentRequestId 已经在 useWorldInteractionStep 中初始化，我们直接使用它
+                           const requestId = ++stepHandlers.currentRequestId.current;
+                           
+                           await stepHandlers.processStreamResponse(response, requestId, {
+                               onFirstStep: () => {
+                                   // 第一个步骤到达时的处理（和普通NPC交互一致）
+                                   // processStreamResponse 内部已经设置了 isWaitingForData = false
+                               },
+                               onError: (error: string) => {
+                                   console.error('[InteractWithNpc] 流式响应错误:', error);
+                                   setErrorModal({ visible: true, message: error });
+                               },
+                           });
+                       } catch (error: any) {
+                           console.error('[InteractWithNpc] 处理功能性NPC操作失败:', error);
+                           setErrorModal({ visible: true, message: error.message || '处理失败，请重试' });
+                       }
             };
             
             void fetchAndProcessStream();
