@@ -495,12 +495,14 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 setAdvancedError('生成故事结构失败，请稍后重试');
                 return;
             }
-            const { storyStructure: newStoryStructure, DynamicEntries, message } = resData.data;
+            const { storyPhases: newStoryStructure, dynamicEntries, message } = resData.data;
+            console.log(resData);
+            
             if (newStoryStructure) {
                 setStoryStructure(newStoryStructure);
             }
-            if (DynamicEntries) {
-                setDynamicEntries(DynamicEntries);
+            if (dynamicEntries) {
+                setDynamicEntries(dynamicEntries);
             }
             toast.success(message || '故事结构已生成');
         } catch (error) {

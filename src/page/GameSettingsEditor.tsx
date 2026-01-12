@@ -319,7 +319,18 @@ const GameSettingsEditor = () => {
                         className={`${styles.panel} ${activePanel === 'attributeGrowth' ? styles.active : ''}`}
                         id="attributeGrowth"
                     >
-                        <AttributeGrowthPanel />
+                        <AttributeGrowthPanel
+                            attributeSetting={
+                                gameData && 'attributeSetting' in gameData
+                                    ? gameData.attributeSetting
+                                    : undefined
+                            }
+                            onDataChange={async () => {
+                                if (fileId) {
+                                    await fetchEditorData(fileId);
+                                }
+                            }}
+                        />
                     </section>
                 )}
 

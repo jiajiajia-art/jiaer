@@ -85,6 +85,58 @@ export interface AbilityNode {
     tempImageId?: string; // AI生图返回的临时图片ID（仅用于提交，不会持久化）
 }
 
+// 基础属性元数据接口
+interface AttributeMeta {
+    displayName: string;
+    description: string;
+    defaultValue: number;
+    maxValue: number;
+    unit: string;
+    visible: boolean;
+    formula: string;
+  }
+  
+  // 属性状态接口
+  interface AttributeState {
+    value: number;
+    formula: string;
+  }
+  
+  // 玩家属性定义（固定类别player，但内部属性动态）
+  interface PlayerAttributeDefinitions {
+    [attributeKey: string]: AttributeMeta;
+  }
+  
+  // NPC属性定义（固定类别npc，但内部属性动态）
+  interface NPCAttributeDefinitions {
+    [attributeKey: string]: AttributeMeta;
+  }
+  
+  // 玩家属性状态（玩家只有一个实体）
+  interface PlayerAttributeStates {
+    player: {
+      [attributeKey: string]: AttributeState;
+    };
+  }
+  
+  // NPC属性状态（多个NPC实体，每个NPC有多个属性）
+  interface NPCAttributeStates {
+    [npcId: string]: {
+      [attributeKey: string]: AttributeState;
+    };
+  }
+  
+  export interface AttributeSetting {
+    attributeDefinitions: {
+      player: PlayerAttributeDefinitions;
+      npc: NPCAttributeDefinitions;
+    };
+    attributeStates: {
+      player: PlayerAttributeStates;
+      npc: NPCAttributeStates;
+    };
+  }
+
 export interface Action {
     id: string;
     name: string;
@@ -110,6 +162,7 @@ export interface WorldInteractionGameData {
     npcSetting: NPCSetting;
     sceneSetting: SceneSetting;
     abilityNodeSetting?: AbilityNodeSetting;
+    attributeSetting?: AttributeSetting;
 }
 
 export interface UploadWorldFileResponse {
@@ -118,4 +171,58 @@ export interface UploadWorldFileResponse {
     fileId: string;
     status: string;
     message: string;
+}
+
+export interface AddAttributesRequest {
+  type: string;
+  attributes: {
+    key: string;
+    displayName: string;
+    description: string;
+    defaultValue: number;
+    maxValue: number;
+    unit: string;
+    visible: boolean;
+    formula: string;
+  };
+}
+
+export interface AddAttributesResponse {
+  success: boolean;
+  message: string;
+  result: {
+    type: string;
+    key: string;
+    definition: AttributeMeta;
+  };
+}
+
+export interface DeleteAttributesRequest {
+  fileId: string;
+  type: string;
+  attributeName: string;
+}
+
+export interface NpcAddAttributesRequest {
+    fileId: string;
+    npcId: string;
+    attributeName: string;
+    value: number;
+    formula: string;
+}
+
+export interface NpcDeleteAttributesRequest {
+    fileId: string;
+    npcId: string;
+    attributeName: string;
+}
+
+export interface NpcUpdateAttributesRequest {
+    id: string;
+    update: {
+        [attributeKey: string]: {
+            value: number;
+            formula: string;
+        };
+    };
 }

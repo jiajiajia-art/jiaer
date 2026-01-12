@@ -41,7 +41,7 @@
     padding: 10px 20px;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.25s ease;
+    transition: 0.2s ease;
     color: #1a1a1a;
     background: #fff;
 }
@@ -58,7 +58,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.25s ease;
+    transition: 0.2s ease;
     color: rgba(0, 0, 0, 0.6);
     background: transparent;
 }
@@ -66,6 +66,7 @@
 .ghostTiny:hover {
     border-color: var(--primary);
     color: var(--primary);
+    background: rgba(224, 61, 75, 0.05);
 }
 
 /* 布局 */
@@ -80,10 +81,10 @@
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 24px;
-    padding: 24px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -101,7 +102,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.25s ease;
+    transition: 0.2s ease;
     color: #1a1a1a;
     background: #fff;
     flex-shrink: 0;
@@ -110,6 +111,25 @@
 .ghostSmall:hover {
     border-color: var(--primary);
     color: var(--primary);
+    background: rgba(224, 61, 75, 0.05);
+}
+
+.primaryButton {
+    border-radius: 6px;
+    border: 1px solid var(--primary);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: #fff;
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.primaryButton:hover {
+    background: rgba(224, 61, 75, 0.9);
+    border-color: rgba(224, 61, 75, 0.9);
 }
 
 /* 角色列表 */
@@ -126,7 +146,7 @@
     gap: 12px;
     padding: 12px;
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
+    border-radius: 8px;
     cursor: pointer;
     background: rgba(0, 0, 0, 0.01);
     transition: 0.2s ease;
@@ -134,11 +154,12 @@
 
 .characterRow:hover {
     background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(224, 61, 75, 0.2);
 }
 
 .characterRow.active {
     border-color: var(--primary);
-    background: rgba(224, 61, 75, 0.04);
+    background: rgba(224, 61, 75, 0.06);
 }
 
 .characterThumb {
@@ -313,7 +334,7 @@
 .relationshipRow textarea {
     border-radius: 12px;
     border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 11px 14px;
+    padding: 10px 12px;
     background: rgba(0, 0, 0, 0.015);
     color: #1a1a1a;
     font-size: 0.95rem;
@@ -347,10 +368,10 @@
 .detailBlock {
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 16px;
-    padding: 16px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
 }
 
 .cardHead {
@@ -392,15 +413,145 @@
 .relationshipRow {
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 14px;
-    padding: 12px;
+    padding: 10px;
     background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.relationshipRow:hover {
+    border-color: rgba(224, 61, 75, 0.2);
+    background: rgba(224, 61, 75, 0.02);
+}
+
+/* 属性列表 */
+.attributeList {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.relationshipRow:hover {
-    border-color: rgba(224, 61, 75, 0.15);
+.attributeRow {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.attributeRow:hover {
+    border-color: rgba(224, 61, 75, 0.2);
+    background: rgba(224, 61, 75, 0.02);
+}
+
+.attributeRow label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attributeRowHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.attributeRowHeader span {
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.attributeRowMeta {
+    display: flex;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.attributeRowMeta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.attributeRowFormula {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.6);
+    background: rgba(224, 61, 75, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+}
+
+.attributeRowInputGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.attributeRow input {
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.015);
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    flex: 1;
+}
+
+.attributeRow input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.1);
+}
+
+.attributeRowValueInfo {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+}
+
+.attributeRowSelect {
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px 10px;
+    background: #fff;
+    color: #1a1a1a;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    cursor: pointer;
+}
+
+.attributeRowSelect:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.1);
+}
+
+.attributeAddButton {
+    border-radius: 6px;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    background: rgba(224, 61, 75, 0.03);
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    text-align: center;
+}
+
+.attributeAddButton:hover {
+    border-color: var(--primary);
+    background: rgba(224, 61, 75, 0.08);
 }
 
 /* 差分网格 */
@@ -521,7 +672,7 @@
 .modalContent {
     background: #fff;
     border-radius: 24px;
-    padding: 32px;
+    padding: 24px;
     min-width: 420px;
     max-width: 520px;
     width: 90%;

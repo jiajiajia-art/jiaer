@@ -8,7 +8,13 @@ interface AttributeDetailFormProps {
     onSave?: () => void;
 }
 
-const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({ formState, onChange, onSave }) => {
+const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
+    formState,
+    onChange,
+    onSave,
+}) => {
+
+    
     if (!formState) {
         return (
             <div className={styles.rightCard}>

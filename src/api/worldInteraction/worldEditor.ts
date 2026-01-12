@@ -26,6 +26,13 @@ import type {
 } from "./worldEditor.type";
 import type {
   AbilityNode,
+  AddAttributesRequest,
+  AddAttributesResponse,
+  AttributeSetting,
+  DeleteAttributesRequest,
+  NpcAddAttributesRequest,
+  NpcDeleteAttributesRequest,
+  NpcUpdateAttributesRequest,
   UploadWorldFileResponse,
 } from "./worldInteractionApi.type";
 
@@ -473,7 +480,24 @@ const worldEditor = {
   },
   moveFunctionalNpc:(fileId: string, data: FunctionalNpcPatch)=>{
     return api.post<AddFunctionalNpcResponse>(`/world-interaction/edit/${fileId}/ability-nodes/patch`, data)
-  }
+  },
+
+  // 属性相关接口
+  addAttributeDefinitions: (fileId: string, data: AddAttributesRequest) => {
+    return api.post<ApiResponse<AddAttributesResponse>>(`/world-interaction/edit/${fileId}/attributes`, data)
+  },
+  deleteAttributeDefinitions: (data: DeleteAttributesRequest) => {
+    return api.delete<ApiResponse<null>>(`/world-interaction/edit/attributes`, { data })
+  },
+  addNpcAttributeDefinitions: (data: NpcAddAttributesRequest) => {
+    return api.post<ApiResponse<AddAttributesResponse>>(`/world-interaction/edit/npc/attributes`, data)
+  },
+  deleteNpcAttributeDefinitions: (data: NpcDeleteAttributesRequest) => {
+    return api.delete<ApiResponse<null>>(`/world-interaction/edit/npc/attributes`, { data })
+  },
+  updateNpcAttributeDefinitions: (fileId: string, data: NpcUpdateAttributesRequest) => {
+    return api.put<ApiResponse<AddAttributesResponse>>(`/world-interaction/edit/${fileId}/attributes`, data)
+  },
 };
 
 export default worldEditor;

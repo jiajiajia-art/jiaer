@@ -26,7 +26,6 @@ const AttributeList: React.FC<AttributeListProps> = ({ attributes, activeId, onS
             {attributes.map((attr) => {
                 const isActive = activeId === attr.id;
                 const requiredTag = attr.required ? '必修' : '选修';
-                const targetLabel = attr.target === 'player' ? '玩家' : 'NPC';
 
                 return (
                     <div
@@ -36,26 +35,15 @@ const AttributeList: React.FC<AttributeListProps> = ({ attributes, activeId, onS
                     >
                         <div className={styles.attrMain}>
                             <div className={styles.attrNameRow}>
-                                <span>{attr.name}</span>
-                                <span className={styles.attrTag}>{targetLabel}</span>
-                                {attr.visible && (
-                                    <span className={`${styles.attrTag} ${styles.attrTagDisplay}`}>显示</span>
-                                )}
+                                <span className={styles.attrName}>{attr.name}</span>
+                                <span className={styles.attrValues}>
+                                    {attr.defaultValue}{attr.unit} / {attr.maxValue}{attr.unit}
+                                </span>
                             </div>
                             <div className={styles.attrDesc}>{attr.description}</div>
                             <div className={styles.attrKey}>
                                 Key: {attr.key} · {requiredTag}
                             </div>
-                        </div>
-                        <div className={styles.attrMeta}>
-                            <span className={styles.pill}>
-                                {attr.defaultValue}
-                                {attr.unit}
-                            </span>
-                            <span>
-                                上限 {attr.maxValue}
-                                {attr.unit}
-                            </span>
                         </div>
                         {onDelete && (
                             <button

@@ -17,6 +17,7 @@ import { VARIATION_TYPES } from './types';
 import { getNpcs, npcToCharacter, playerToCharacter } from './utils';
 import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
+import { getCharacterAttributes, getAvailableAttributes } from './characterAttributeUtils';
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
@@ -42,6 +43,8 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
     const [isRelationshipExpanded, setIsRelationshipExpanded] = useState<boolean>(false);
+    const [isAttributeExpanded, setIsAttributeExpanded] = useState<boolean>(false);
+    const [pendingAttributeKey, setPendingAttributeKey] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
@@ -193,6 +196,21 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         ? newCharacterData
         : (characterData.find(c => c.id === activeCharacterId) || characterData[0]);
 
+    // 获取当前角色的属性（仅在 worldInteraction 模式下）
+    const isWorldInteractionMode = mode === 'worldInteraction';
+    const attributeSetting = isWorldInteractionMode && gameData && 'attributeSetting' in gameData
+        ? gameData.attributeSetting
+        : undefined;
+    const isCurrentPlayer = currentCharacter?.id === 'player';
+    const currentCharacterAttributes = useMemo(() => {
+        if (!currentCharacter || !attributeSetting) return [];
+        return getCharacterAttributes(attributeSetting, currentCharacter.id, isCurrentPlayer);
+    }, [currentCharacter, attributeSetting, isCurrentPlayer]);
+    const availableAttributes = useMemo(() => {
+        if (!currentCharacter || !attributeSetting) return [];
+        return getAvailableAttributes(attributeSetting, currentCharacter.id, isCurrentPlayer);
+    }, [currentCharacter, attributeSetting, isCurrentPlayer]);
+
     // 更新角色字段（统一处理新增和编辑模式）
     const updateField = (field: keyof Character, value: string | string[]) => {
         if (isAddingNew && newCharacterData) {
@@ -281,6 +299,42 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         }
     };
 
+    // 属性管理函数（仅在 worldInteraction 模式下可用）
+    const updateAttributeValue = (_attributeKey: string, _newValue: number) => {
+        if (!fileId || !attributeSetting || !currentCharacter || !isWorldInteractionMode) return;
+        // TODO: 调用 API 更新属性值
+        // 暂时只触发数据刷新
+        onDataChange?.();
+    };
+
+    const addAttribute = (_attributeKey: string) => {
+        if (!fileId || !attributeSetting || !currentCharacter || !isWorldInteractionMode) return;
+        // TODO: 调用 API 添加属性
+        // 暂时只触发数据刷新
+        setPendingAttributeKey(null);
+        onDataChange?.();
+    };
+
+    const handleAddAttributeClick = () => {
+        if (availableAttributes.length > 0) {
+            setPendingAttributeKey('');
+        }
+    };
+
+    const handlePendingAttributeSelect = (attributeKey: string) => {
+        if (attributeKey) {
+            addAttribute(attributeKey);
+        } else {
+            setPendingAttributeKey(null);
+        }
+    };
+
+    const removeAttribute = (_attributeKey: string) => {
+        if (!fileId || !attributeSetting || !currentCharacter || !isWorldInteractionMode) return;
+        // TODO: 调用 API 删除属性
+        // 暂时只触发数据刷新
+        onDataChange?.();
+    };
 
     // 打开新增差分弹窗
     const openAddVariationModal = () => {
@@ -964,6 +1018,118 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                     </div>
                                 )}
                             </div>
+
+                            {/* 角色属性（仅在 worldInteraction 模式下显示） */}
+                            {isWorldInteractionMode && attributeSetting && (
+                                <div className={styles.detailBlock}>
+                                    <div
+                                        className={styles.collapsibleHeader}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setIsAttributeExpanded(!isAttributeExpanded)}
+                                    >
+                                        <strong>角色属性</strong>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            {isAttributeExpanded && availableAttributes.length > 0 && !pendingAttributeKey && (
+                                                <button
+                                                    className={styles.primaryButton}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddAttributeClick();
+                                                    }}
+                                                >
+                                                    + 添加属性
+                                                </button>
+                                            )}
+                                            <MdArrowDropDown size={30} style={{ transform: isAttributeExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                                        </div>
+                                    </div>
+                                    {isAttributeExpanded && (
+                                        <div className={styles.attributeList}>
+                                            {/* 待添加的属性表单 */}
+                                            {pendingAttributeKey !== null && (
+                                                <div className={styles.attributeRow}>
+                                                    <div className={styles.attributeRowHeader}>
+                                                        <span>选择属性</span>
+                                                        <button
+                                                            className={styles.ghostTiny}
+                                                            onClick={() => setPendingAttributeKey(null)}
+                                                            type="button"
+                                                        >
+                                                            取消
+                                                        </button>
+                                                    </div>
+                                                    <select
+                                                        className={styles.attributeRowSelect}
+                                                        value={pendingAttributeKey || ''}
+                                                        onChange={(e) => handlePendingAttributeSelect(e.target.value)}
+                                                        autoFocus
+                                                    >
+                                                        <option value="">请选择属性</option>
+                                                        {availableAttributes.map((attr) => (
+                                                            <option key={attr.key} value={attr.key}>
+                                                                {attr.displayName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+                                            {currentCharacterAttributes.length === 0 && pendingAttributeKey === null ? (
+                                                <p className={styles.mutedSmall}>
+                                                    暂无属性。{availableAttributes.length > 0 ? '点击上方按钮添加属性。' : '请先在属性设置面板中定义属性。'}
+                                                </p>
+                                            ) : (
+                                                currentCharacterAttributes.map((attr) => {
+                                                    const definitions = isCurrentPlayer 
+                                                        ? attributeSetting.attributeDefinitions.player
+                                                        : attributeSetting.attributeDefinitions.npc;
+                                                    const definition = definitions[attr.key];
+                                                    const displayFormula = attr.formula || definition?.formula || '';
+                                                    
+                                                    return (
+                                                        <div key={attr.key} className={styles.attributeRow}>
+                                                            <div className={styles.attributeRowHeader}>
+                                                                <span>{attr.displayName}</span>
+                                                                <button
+                                                                    className={styles.ghostTiny}
+                                                                    onClick={() => removeAttribute(attr.key)}
+                                                                    type="button"
+                                                                >
+                                                                    删除
+                                                                </button>
+                                                            </div>
+                                                            <div className={styles.attributeRowMeta}>
+                                                                <span>默认值: {attr.defaultValue}{attr.unit}</span>
+                                                                {displayFormula && (
+                                                                    <span className={styles.attributeRowFormula}>
+                                                                        公式: {displayFormula}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className={styles.attributeRowInputGroup}>
+                                                                <input
+                                                                    type="number"
+                                                                    value={attr.value}
+                                                                    onChange={(e) => {
+                                                                        const newValue = Number(e.target.value);
+                                                                        if (!isNaN(newValue)) {
+                                                                            updateAttributeValue(attr.key, newValue);
+                                                                        }
+                                                                    }}
+                                                                    min={0}
+                                                                    max={attr.maxValue}
+                                                                />
+                                                                <span className={styles.attributeRowValueInfo}>
+                                                                    / {attr.maxValue} {attr.unit}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* 立绘差分 */}
                             {

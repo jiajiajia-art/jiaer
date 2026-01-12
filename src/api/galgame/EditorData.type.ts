@@ -233,8 +233,8 @@ export interface UploadGameCoverResponse {
 export interface GenerateStoryStructureResponse {
   success: boolean;
   data:{
-    storyStructure: StoryStructure;
-    DynamicEntries: DynamicEntry[];
+    storyPhases: StoryStructure;
+    dynamicEntries: DynamicEntry[];
     message: string;
   }
 }
