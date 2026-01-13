@@ -5,6 +5,7 @@ import worldPanelStyles from './WorldPanel.module.css';
 import EditorApi from '../../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import { MdArrowDropDown } from 'react-icons/md';
 
 const parseCommaSeparated = (value: string): string[] =>
     value
@@ -590,34 +591,52 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                     }
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <span className={styles.phaseIdPill}>
-                                        phase.id：{phase.id}
-                                    </span>
-                                    <label className={styles.phaseToggle}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <MdArrowDropDown 
+                                            size={20} 
+                                            style={{ 
+                                                transform: collapsedPhases[phase.id] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                                transition: 'transform 0.2s ease',
+                                                flexShrink: 0
+                                            }} 
+                                        />
+                                        <span className={styles.phaseIdPill}>
+                                            phase.id：{phase.id}
+                                        </span>
+                                    </div>
+                                    <label 
+                                        className={styles.phaseToggle}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
                                         <input
                                             type="checkbox"
                                             checked={phase.activeByDefault}
-                                            onChange={(e) =>
+                                            onChange={(e) => {
+                                                e.stopPropagation();
                                                 handlePhaseToggleChange(
                                                     phase.id,
                                                     'activeByDefault',
                                                     e.target.checked,
-                                                )
-                                            }
+                                                );
+                                            }}
                                         />
                                         <span>activeByDefault</span>
                                     </label>
-                                    <label className={styles.phaseToggle}>
+                                    <label 
+                                        className={styles.phaseToggle}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
                                         <input
                                             type="checkbox"
                                             checked={phase.isFinalPhase}
-                                            onChange={(e) =>
+                                            onChange={(e) => {
+                                                e.stopPropagation();
                                                 handlePhaseToggleChange(
                                                     phase.id,
                                                     'isFinalPhase',
                                                     e.target.checked,
-                                                )
-                                            }
+                                                );
+                                            }}
                                         />
                                         <span>isFinalPhase</span>
                                     </label>
@@ -834,20 +853,34 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                     }
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <span className={styles.phaseIdPill}>
-                                        id：{entry.id}
-                                    </span>
-                                    <label className={styles.phaseToggle}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <MdArrowDropDown 
+                                            size={20} 
+                                            style={{ 
+                                                transform: collapsedDynamics[entry.id] ? 'rotate(-90deg)' : 'rotate(0deg)',
+                                                transition: 'transform 0.2s ease',
+                                                flexShrink: 0
+                                            }} 
+                                        />
+                                        <span className={styles.phaseIdPill}>
+                                            id：{entry.id}
+                                        </span>
+                                    </div>
+                                    <label 
+                                        className={styles.phaseToggle}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
                                         <input
                                             type="checkbox"
                                             checked={entry.enabled}
-                                            onChange={(e) =>
+                                            onChange={(e) => {
+                                                e.stopPropagation();
                                                 handleDynamicEntryChange(
                                                     entry.id,
                                                     'enabled',
                                                     e.target.checked,
-                                                )
-                                            }
+                                                );
+                                            }}
                                         />
                                         <span>enabled</span>
                                     </label>

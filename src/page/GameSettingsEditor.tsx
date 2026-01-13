@@ -2,13 +2,14 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styles from './GameSettingsEditor.module.css';
 import DocumentsPanel from '../components/GameSettingEditor/DocumentUpload/DocumentsPanel';
-import WorldPanel from '../components/GameSettingEditor/WorldPanel/WorldPanel';
-import CharactersPanel from '../components/GameSettingEditor/CharactersPanel/CharactersPanel';
-import ScenesPanel from '../components/GameSettingEditor/ScenesPanel/ScenesPanel';
+import CharactersPanel, { type CharactersPanelRef } from '../components/GameSettingEditor/CharactersPanel/CharactersPanel';
+import ScenesPanel, { type ScenesPanelRef } from '../components/GameSettingEditor/ScenesPanel/ScenesPanel';
+import AttributeGrowthPanel, { type AttributeGrowthPanelRef } from '../components/GameSettingEditor/AttributeGrowthPanel/AttributeGrowthPanel';
+import WorldPanel, { type WorldPanelRef } from '../components/GameSettingEditor/WorldPanel/WorldPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
 import MapPanel from '../components/GameSettingEditor/MapPanel/MapPanel';
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
-import AttributeGrowthPanel from '../components/GameSettingEditor/AttributeGrowthPanel/AttributeGrowthPanel';
+import ObjectsPanel, { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
 import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
@@ -129,10 +130,35 @@ const GameSettingsEditor = () => {
     }, [fileId, gameData, isLoadingData, setIsParsed, setActivePanel]);
 
     const functionalNPCsPanelRef = useRef<FunctionalNPCsPanelRef | null>(null);
+    const objectsPanelRef = useRef<ObjectsPanelRef | null>(null);
+    const charactersPanelRef = useRef<CharactersPanelRef | null>(null);
+    const scenesPanelRef = useRef<ScenesPanelRef | null>(null);
+    const attributeGrowthPanelRef = useRef<AttributeGrowthPanelRef | null>(null);
+    const worldPanelRef = useRef<WorldPanelRef | null>(null);
     
     // 使用回调 ref 来确保能捕获到 ref 的变化
     const setFunctionalNPCsPanelRef = useCallback((node: FunctionalNPCsPanelRef | null) => {
         functionalNPCsPanelRef.current = node;
+    }, []);
+
+    const setObjectsPanelRef = useCallback((node: ObjectsPanelRef | null) => {
+        objectsPanelRef.current = node;
+    }, []);
+
+    const setCharactersPanelRef = useCallback((node: CharactersPanelRef | null) => {
+        charactersPanelRef.current = node;
+    }, []);
+
+    const setScenesPanelRef = useCallback((node: ScenesPanelRef | null) => {
+        scenesPanelRef.current = node;
+    }, []);
+
+    const setAttributeGrowthPanelRef = useCallback((node: AttributeGrowthPanelRef | null) => {
+        attributeGrowthPanelRef.current = node;
+    }, []);
+
+    const setWorldPanelRef = useCallback((node: WorldPanelRef | null) => {
+        worldPanelRef.current = node;
     }, []);
 
     const handlePanelChange = useCallback(async (panelId: string) => {
@@ -146,6 +172,46 @@ const GameSettingsEditor = () => {
         // 从功能性NPC面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'functionalNPCs' && panelId !== 'functionalNPCs' && functionalNPCsPanelRef.current) {
             const canLeave = functionalNPCsPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 从物品面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'objects' && panelId !== 'objects' && objectsPanelRef.current) {
+            const canLeave = objectsPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 从角色面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'characters' && panelId !== 'characters' && charactersPanelRef.current) {
+            const canLeave = charactersPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 从场景面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'scenes' && panelId !== 'scenes' && scenesPanelRef.current) {
+            const canLeave = scenesPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 从属性面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'attributeGrowth' && panelId !== 'attributeGrowth' && attributeGrowthPanelRef.current) {
+            const canLeave = attributeGrowthPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 从世界观面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'world' && panelId !== 'world' && worldPanelRef.current) {
+            const canLeave = worldPanelRef.current.checkBeforeLeave();
             if (!canLeave) {
                 return;
             }
@@ -231,6 +297,7 @@ const GameSettingsEditor = () => {
 
                 <section className={`${styles.panel} ${activePanel === 'world' ? styles.active : ''}`} id="world">
                     <WorldPanel
+                        ref={setWorldPanelRef}
                         gameData={gameData}
                         isLoading={isLoadingData}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { worldPanelGetDataRef.current = getDataFn; }}
@@ -242,6 +309,7 @@ const GameSettingsEditor = () => {
 
                 <section className={`${styles.panel} ${activePanel === 'characters' ? styles.active : ''}`} id="characters">
                     <CharactersPanel
+                        ref={setCharactersPanelRef}
                         gameData={gameData}
                         isLoading={isLoadingData}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { charactersPanelGetDataRef.current = getDataFn; }}
@@ -256,6 +324,7 @@ const GameSettingsEditor = () => {
 
                 <section className={`${styles.panel} ${activePanel === 'scenes' ? styles.active : ''}`} id="scenes">
                     <ScenesPanel
+                        ref={setScenesPanelRef}
                         gameData={gameData}
                         fileId={fileId}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { scenesPanelGetDataRef.current = getDataFn; }}
@@ -320,6 +389,7 @@ const GameSettingsEditor = () => {
                         id="attributeGrowth"
                     >
                         <AttributeGrowthPanel
+                            ref={setAttributeGrowthPanelRef}
                             attributeSetting={
                                 gameData && 'attributeSetting' in gameData
                                     ? gameData.attributeSetting
@@ -330,6 +400,30 @@ const GameSettingsEditor = () => {
                                     await fetchEditorData(fileId);
                                 }
                             }}
+                        />
+                    </section>
+                )}
+
+                {/* 只在 worldInteraction 模式下显示物品编辑面板 */}
+                {mode === 'worldInteraction' && (
+                    <section
+                        className={`${styles.panel} ${activePanel === 'objects' ? styles.active : ''}`}
+                        id="objects"
+                    >
+                        <ObjectsPanel
+                            ref={setObjectsPanelRef}
+                            fileId={fileId}
+                            mode={mode || 'worldInteraction'}
+                            // objects={
+                            //     mode === 'worldInteraction' && gameData && 'items' in gameData
+                            //         ? (gameData as any).items || []
+                            //         : []
+                            // }
+                            // onDataChange={async () => {
+                            //     if (fileId) {
+                            //         await fetchEditorData(fileId);
+                            //     }
+                            // }}
                         />
                     </section>
                 )}

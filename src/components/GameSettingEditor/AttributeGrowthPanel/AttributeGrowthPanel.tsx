@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useImperativeHandle } from 'react';
 import styles from './AttributeGrowthPanel.module.css';
 import AttributeList from './AttributeList';
 import AttributeDetailForm from './AttributeDetailForm';
@@ -9,13 +9,18 @@ import worldEditor from '../../../api/worldInteraction/worldEditor';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { useGameStore } from '../../../store/gameStore';
+import { useUnsavedChanges } from '../../../hooks/editor/useUnsavedChanges';
+
+export interface AttributeGrowthPanelRef {
+    checkBeforeLeave: () => boolean;
+}
 
 interface AttributeGrowthPanelProps {
     attributeSetting?: AttributeSetting;
     onDataChange?: () => void;
 }
 
-const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSetting, onDataChange }) => {
+const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, AttributeGrowthPanelProps>(({ attributeSetting, onDataChange }, ref) => {
     const { fileId } = useGameStore();
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [attributeToDelete, setAttributeToDelete] = useState<AttributeConfig | null>(null);
@@ -35,6 +40,31 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
     const [isCreatingNew, setIsCreatingNew] = useState<boolean>(false);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [formState, setFormState] = useState<Partial<AttributeConfig> | null>(null);
+    
+    // 保存原始表单状态用于比较
+    const originalFormStateRef = useRef<Partial<AttributeConfig> | null>(null);
+    
+    // 保存方法（需要在 hook 之前定义）
+    const handleSaveRef = useRef<(() => Promise<void>) | null>(null);
+    
+    // 使用未保存修改检测 hook
+    const {
+        setHasUnsavedChanges,
+        SaveConfirmModalComponent,
+        getCheckBeforeLeave,
+        checkBeforeAction,
+    } = useUnsavedChanges({
+        onSave: async () => {
+            if (handleSaveRef.current) {
+                await handleSaveRef.current();
+            }
+        },
+    });
+    
+    // 暴露给父组件的方法
+    useImperativeHandle(ref, () => ({
+        checkBeforeLeave: getCheckBeforeLeave(),
+    }), [getCheckBeforeLeave]);
 
     // 初始化 activeId
     useEffect(() => {
@@ -68,8 +98,11 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
         if (activeAttribute) {
             setIsCreatingNew(false);
             setFormState(activeAttribute);
+            // 保存原始数据用于比较
+            originalFormStateRef.current = JSON.parse(JSON.stringify(activeAttribute));
+            setHasUnsavedChanges(false);
         } else {
-            setFormState({
+            const emptyState = {
                 target,
                 key: '',
                 name: '',
@@ -80,9 +113,29 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
                 unit: '',
                 required: false,
                 visible: true,
-            });
+            };
+            setFormState(emptyState);
+            originalFormStateRef.current = JSON.parse(JSON.stringify(emptyState));
+            setHasUnsavedChanges(false);
         }
-    }, [activeAttribute, target, isCreatingNew]);
+    }, [activeAttribute, target, isCreatingNew, setHasUnsavedChanges]);
+    
+    // 检测表单是否有未保存的修改
+    useEffect(() => {
+        if (!originalFormStateRef.current || !formState) {
+            return;
+        }
+        
+        const currentStr = JSON.stringify(formState);
+        const originalStr = JSON.stringify(originalFormStateRef.current);
+        const hasChanges = currentStr !== originalStr;
+        
+        if (hasChanges) {
+            setHasUnsavedChanges(true);
+        } else {
+            setHasUnsavedChanges(false);
+        }
+    }, [formState, setHasUnsavedChanges]);
 
     // 当 attributeSetting prop 变化时（从后端刷新），清空本地删除记录
     useEffect(() => {
@@ -104,23 +157,7 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
         }
     }, [filteredAttributes, activeId, isCreatingNew]);
 
-    const handleCreateNew = () => {
-        setActiveId(null);
-        setIsCreatingNew(true);
-        setFormState({
-            target,
-            key: '',
-            name: '',
-            displayName: '',
-            description: '',
-            defaultValue: 0,
-            maxValue: 100,
-            unit: '',
-            required: false,
-            visible: true,
-        });
-    };
-
+    // 保存方法
     const handleSave = async () => {
         if (!fileId || !formState) {
             toast.error('缺少必要数据');
@@ -132,6 +169,8 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
             toast.error('请填写所有必填字段');
             return;
         }
+
+        const isCreate = isCreatingNew || !activeId;
 
         try {
             const attributes = {
@@ -145,18 +184,56 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
                 formula: formState.formula || '',
             };
 
-            await worldEditor.addAttributeDefinitions(fileId, {
-                type: formState.target,
-                attributes: attributes,
-            });
+            if (isCreate) {
+                await worldEditor.addAttributeDefinitions(fileId, {
+                    type: formState.target,
+                    attributes,
+                });
+                toast.success('属性添加成功');
+            } else {
+                await worldEditor.updateAttributeDefinitions(fileId, {
+                    type: formState.target,
+                    attributes,
+                });
+                toast.success('属性更新成功');
+            }
 
-            toast.success('属性添加成功');
             setIsCreatingNew(false);
             setFormState(null);
+            originalFormStateRef.current = null;
+            setHasUnsavedChanges(false);
             onDataChange?.();
         } catch (error) {
             console.error('保存属性失败:', error);
             toast.error('保存属性失败，请稍后重试');
+            throw error; // 重新抛出错误，让 useUnsavedChanges 知道保存失败
+        }
+    };
+    
+    // 将 handleSave 保存到 ref 中
+    handleSaveRef.current = handleSave;
+
+    const handleCreateNew = () => {
+        if (!checkBeforeAction(() => {
+            setActiveId(null);
+            setIsCreatingNew(true);
+            const emptyState = {
+                target,
+                key: '',
+                name: '',
+                displayName: '',
+                description: '',
+                defaultValue: 0,
+                maxValue: 100,
+                unit: '',
+                required: false,
+                visible: true,
+            };
+            setFormState(emptyState);
+            originalFormStateRef.current = JSON.parse(JSON.stringify(emptyState));
+            setHasUnsavedChanges(false);
+        })) {
+            return;
         }
     };
 
@@ -232,8 +309,12 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
                                 type="button"
                                 className={`${styles.leftTab} ${target === 'player' ? styles.leftTabActive : ''}`}
                                 onClick={() => {
-                                    setTarget('player');
-                                    setIsCreatingNew(false);
+                                    if (!checkBeforeAction(() => {
+                                        setTarget('player');
+                                        setIsCreatingNew(false);
+                                    })) {
+                                        return;
+                                    }
                                 }}
                             >
                                 玩家属性
@@ -242,8 +323,12 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
                                 type="button"
                                 className={`${styles.leftTab} ${target === 'npc' ? styles.leftTabActive : ''}`}
                                 onClick={() => {
-                                    setTarget('npc');
-                                    setIsCreatingNew(false);
+                                    if (!checkBeforeAction(() => {
+                                        setTarget('npc');
+                                        setIsCreatingNew(false);
+                                    })) {
+                                        return;
+                                    }
                                 }}
                             >
                                 NPC 属性
@@ -255,8 +340,12 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
                         attributes={filteredAttributes}
                         activeId={activeId}
                         onSelect={(id) => {
-                            setIsCreatingNew(false);
-                            setActiveId(id);
+                            if (!checkBeforeAction(() => {
+                                setIsCreatingNew(false);
+                                setActiveId(id);
+                            })) {
+                                return;
+                            }
                         }}
                         onDelete={handleDeleteClick}
                     />
@@ -284,10 +373,14 @@ const AttributeGrowthPanel: React.FC<AttributeGrowthPanelProps> = ({ attributeSe
                 confirmButtonText="确认删除"
                 cancelButtonText="取消"
             />
+            
+            {/* 未保存修改确认弹窗 */}
+            {SaveConfirmModalComponent}
         </div>
     );
-};
+});
 
+AttributeGrowthPanel.displayName = 'AttributeGrowthPanel';
 export default AttributeGrowthPanel;
 
 

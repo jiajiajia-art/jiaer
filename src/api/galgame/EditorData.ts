@@ -13,9 +13,11 @@ import type {
     UploadFileResponse,
     GenerateImageRequest,
     UploadGameCoverResponse,
-    GenerateStoryStructureResponse,
     StoryStructure,
     DynamicEntry,
+    CheckGenerateStatusResponse,
+    GetGenerateResultResponse,
+    GenerateStoryStructureResponse,
 } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
 
@@ -47,11 +49,15 @@ const EditorApi = {
     updateWorldSetting: (fileId:string, data:Partial<WorldSetting>) =>
         api.put<AllGameData>(`/visual/edit/${fileId}/world`, data),
     generateStoryStructure: (fileId:string, description:string) =>
-        api.post<GenerateStoryStructureResponse>(`/visual/edit/${fileId}/story-structure/generate`, {
+        api.post<UploadFileResponse | GenerateStoryStructureResponse>(`/visual/edit/${fileId}/story-structure/generate`, {
             description: description,
         }, {
             timeout: 1500000,
         }),
+    checkGenerateStatus: (jobId:string) =>
+        api.get<CheckGenerateStatusResponse>(`/visual/story-generation/jobs/${jobId}/status`),
+    getGenerateResult: (jobId:string) =>
+        api.get<GetGenerateResultResponse>(`/visual/story-generation/jobs/${jobId}/result`),
     // story-structure phases CRUD
     addStoryPhase: (fileId: string, phase: StoryStructure['phases'][number]) =>
         api.post<StoryStructure>(`/visual/edit/${fileId}/story-phases/phases`, phase),

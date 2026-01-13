@@ -23,6 +23,7 @@ interface SubSceneModalProps {
     onBack?: () => void;
     gameData?: AllGameData;
     onNpcInteract?: () => void;
+    onUpdateAttributes?: () => Promise<void>;
 }
 
 const SubSceneModal: React.FC<SubSceneModalProps> = ({
@@ -30,6 +31,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
     onBack,
     gameData,
     onNpcInteract,
+    onUpdateAttributes,
 }) => {
     const navigate = useNavigate();
     const { subsceneId } = useParams<{ sceneId: string; subsceneId: string }>();
@@ -162,7 +164,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
             actionId: action.id
         });
         setIsInteractionActive(true);
-    }, [sessionId]);
+    }, [sessionId, onUpdateAttributes]);
     
     // 处理关闭交互
     const handleCloseInteraction = useCallback(() => {
@@ -331,6 +333,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                     pendingAction={pendingAction || undefined}
                     skipAutoInit={true}
                     currentSubsceneId={currentSubScene?.id || displayData.id}
+                    onUpdateAttributes={onUpdateAttributes}
                 />
             )}
             

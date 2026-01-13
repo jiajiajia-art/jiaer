@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
 import { getImageUrl, getMusicUrlWithHost, IMAGE_GENERATION_COST } from '../../../utils/constants';
@@ -21,6 +21,7 @@ import SceneDetailActions from './SceneDetailActions';
 import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { useAuthStore } from '../../../store/useAuthStore';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 
@@ -41,14 +42,18 @@ interface ScenesPanelProps {
     mode?: string;
 }
 
+export interface ScenesPanelRef {
+    checkBeforeLeave: () => boolean;
+}
+
 // ==================== 组件主体 ====================
-const ScenesPanel: React.FC<ScenesPanelProps> = ({ 
+const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({ 
     gameData, 
     fileId, 
     onGetData, 
     onDataChange, 
-    mode = 'visual' 
-}) => {
+    mode = 'visual',
+}, ref) => {
     // ==================== 状态定义 ====================
     // 场景相关状态
     const [activeSceneId, setActiveSceneId] = useState<string>('');
@@ -87,6 +92,51 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
     const sceneFileInputRef = useRef<HTMLInputElement>(null);
     const newSceneFileInputRef = useRef<HTMLInputElement>(null);
     const worldMapFileInputRef = useRef<HTMLInputElement>(null);
+    const originalSceneDataRef = useRef<LocalScene[]>([]);
+
+    // 未保存修改相关状态
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{
+        type: 'switchScene' | 'switchSubscene' | 'switchPanel' | 'createScene';
+        targetSceneId?: string | null;
+        targetSubsceneId?: string | null;
+    } | null>(null);
+    const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
+
+    // 使用 ref 来存储最新的状态值，避免闭包问题
+    const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+    const isBlockingSwitchRef = useRef(isBlockingSwitch);
+    
+    useEffect(() => {
+        hasUnsavedChangesRef.current = hasUnsavedChanges;
+    }, [hasUnsavedChanges]);
+    
+    useEffect(() => {
+        isBlockingSwitchRef.current = isBlockingSwitch;
+    }, [isBlockingSwitch]);
+
+    // 检测是否有未保存的修改（通过比较当前数据和原始数据）
+    // 这个检测会捕获所有数据变化，包括图片上传等
+    useEffect(() => {
+        if (originalSceneDataRef.current.length === 0 && sceneData.length === 0) {
+            return;
+        }
+
+        // 比较当前数据和原始数据（排除临时场景）
+        const currentScenes = sceneData.filter(s => !s.id.startsWith('temp-'));
+        const currentDataStr = JSON.stringify(currentScenes);
+        const originalDataStr = JSON.stringify(originalSceneDataRef.current);
+        const hasChanges = currentDataStr !== originalDataStr;
+        
+        // 如果数据确实有变化，则设置
+        if (hasChanges) {
+            setHasUnsavedChanges(true);
+        } else {
+            // 如果数据没有变化，清除标记
+            setHasUnsavedChanges(false);
+        }
+    }, [sceneData]);
     
     // 将音乐列表转换为 BGM 库格式
     const bgmLibrary = useMemo<BgmItem[]>(() => {
@@ -232,11 +282,27 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             });
 
             setSceneData(convertedScenes);
+            // 保存原始数据用于比较
+            originalSceneDataRef.current = JSON.parse(JSON.stringify(convertedScenes));
+            setHasUnsavedChanges(false);
             if (convertedScenes.length > 0) {
                 setActiveSceneId(prev => prev || convertedScenes[0].id);
             }
         }
     }, [gameData]);
+
+    // 当数据保存成功后，更新原始数据
+    useEffect(() => {
+        if (onDataChange) {
+            // 当 onDataChange 被调用时，说明数据已保存，更新原始数据
+            const currentDataStr = JSON.stringify(sceneData);
+            const originalDataStr = JSON.stringify(originalSceneDataRef.current);
+            if (currentDataStr !== originalDataStr) {
+                // 数据已变化但还未保存，保持 hasUnsavedChanges 为 true
+                // 如果数据已保存，会在 gameData 变化时重置
+            }
+        }
+    }, [sceneData, onDataChange]);
 
     useEffect(() => {
         const loadMusicList = async () => {
@@ -306,9 +372,66 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         }
     }, [onGetData, getSceneSettingData]);
 
+    // 执行待处理的操作
+    const executePendingAction = useCallback(() => {
+        if (!pendingAction) return;
+
+        if (pendingAction.type === 'switchScene') {
+            setIsAddingNew(false);
+            setNewSceneData(null);
+            if (isAddingNewSubscene) {
+                setIsAddingNewSubscene(false);
+            }
+            setActiveSubsceneDraft(null);
+            setActiveSceneId(pendingAction.targetSceneId || '');
+            setActiveSubsceneId(null);
+        } else if (pendingAction.type === 'switchSubscene') {
+            // 这个操作会在 handleSubsceneClick 中执行，这里不需要重复
+        } else if (pendingAction.type === 'createScene') {
+            // 这个操作会在创建场景的函数中执行，这里不需要重复
+        }
+
+        setPendingAction(null);
+    }, [pendingAction, isAddingNewSubscene]);
+
+    // 检查是否可以切换（如果有未保存修改，显示确认弹窗）
+    const checkBeforeSwitch = useCallback((action: { type: 'switchScene' | 'switchSubscene' | 'switchPanel' | 'createScene'; targetSceneId?: string | null; targetSubsceneId?: string | null }) => {
+        if (hasUnsavedChanges) {
+            setPendingAction(action);
+            setSaveConfirmModalOpen(true);
+            setIsBlockingSwitch(true);
+            return false;
+        }
+        return true;
+    }, [hasUnsavedChanges]);
+
+    // 暴露给父组件的方法，用于在切换面板前检查
+    useImperativeHandle(ref, () => ({
+        checkBeforeLeave: () => {
+            const hasChanges = hasUnsavedChangesRef.current;
+            const isBlocking = isBlockingSwitchRef.current;
+            
+            if (hasChanges && !isBlocking) {
+                setPendingAction({ type: 'switchPanel' });
+                setSaveConfirmModalOpen(true);
+                setIsBlockingSwitch(true);
+                return false;
+            }
+            
+            if (isBlocking) {
+                return false;
+            }
+            
+            return true;
+        },
+    }), []);
+
     // ==================== 事件处理函数 ====================
     // 场景点击处理
     const handleSceneClick = useCallback((sceneId: string) => {
+        if (!checkBeforeSwitch({ type: 'switchScene', targetSceneId: sceneId })) {
+            return;
+        }
         setIsAddingNew(false);
         setNewSceneData(null);
         if (isAddingNewSubscene) {
@@ -318,10 +441,13 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
         setActiveSceneId(sceneId);
         setActiveSubsceneId(null);
         setActiveSubsceneDraft(null);
-    }, [isAddingNewSubscene]);
+    }, [isAddingNewSubscene, checkBeforeSwitch]);
 
     // 子场景点击处理
     const handleSubsceneClick = useCallback((sceneId: string, subsceneId: string, subscene: WorldSubScene) => {
+        if (!checkBeforeSwitch({ type: 'switchSubscene', targetSceneId: sceneId, targetSubsceneId: subsceneId })) {
+            return;
+        }
         setIsAddingNew(false);
         setNewSceneData(null);
         if (isAddingNewSubscene) {
@@ -342,7 +468,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
             image: subsceneImageWithTimestamp || '',
             bgmId: sceneData.find(s => s.id === sceneId)?.bgmId || '',
         });
-    }, [isAddingNewSubscene, sceneData]);
+    }, [isAddingNewSubscene, sceneData, checkBeforeSwitch]);
 
     // 一键生成所有场景立绘 - 确认/取消
     const handleConfirmGenerateAllSceneImages = useCallback(async () => {
@@ -476,7 +602,7 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                 <button
                     className={`${styles.ghost} ${styles.generateButton}`}
                     onClick={() => handlers.openSceneCostModal()}
-                    disabled={isGeneratingAllSceneImages || isLoadingSceneCost}
+                    disabled={isGeneratingAllSceneImages || isLoadingSceneCost || isBlockingSwitch}
                 >
                     <img
                         src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -552,17 +678,26 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                         isAddingNewSubscene={isAddingNewSubscene}
                         onConfirmAddNew={async () => {
                             await handlers.confirmAddNew();
+                            // 保存成功后，更新原始数据并清除未保存状态
+                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
+                            setHasUnsavedChanges(false);
                             onDataChange?.();
                         }}
                         onCancelAddNew={handlers.cancelAddNew}
                         onConfirmSubsceneEdit={async () => {
                             await handlers.confirmSubsceneEdit();
+                            // 保存成功后，更新原始数据并清除未保存状态
+                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
+                            setHasUnsavedChanges(false);
                             onDataChange?.();
                         }}
                         onCancelAddNewSubscene={handlers.cancelAddNewSubscene}
                         onConfirmEdit={async () => {
                             if (activeScene) {
                                 await handlers.confirmEdit(activeScene);
+                                // 保存成功后，更新原始数据并清除未保存状态
+                                originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
+                                setHasUnsavedChanges(false);
                                 onDataChange?.();
                             }
                         }}
@@ -574,11 +709,14 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                             scene={newSceneData}
                             bgmLibrary={bgmLibrary}
                             fileInputRef={newSceneFileInputRef}
+                            onFieldChange={(field, value) => {
+                                handlers.updateNewSceneField(field, value);
+                                setHasUnsavedChanges(true);
+                            }}
                             isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === newSceneData.id}
                             onImageClick={() => toast.error('请先确认新增场景，然后再上传图片')}
                             onUploadChange={handlers.handleUploadSceneImage}
                             onRequestRegenerate={() => toast.error('请先确认新增场景，然后再生成图片')}
-                            onFieldChange={handlers.updateNewSceneField}
                             sceneType="scenes"
                         />
                     ) : (
@@ -593,7 +731,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     onImageClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
-                                    onFieldChange={handlers.updateSubsceneField}
+                                    onFieldChange={(field, value) => {
+                                        handlers.updateSubsceneField(field, value);
+                                        setHasUnsavedChanges(true);
+                                    }}
                                     onDownloadImage={handleDownloadImage}
                                     sceneType="subscenes"
                                 />
@@ -606,7 +747,10 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                                     onImageClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
-                                    onFieldChange={handlers.updateSceneField}
+                                    onFieldChange={(field, value) => {
+                                        handlers.updateSceneField(field, value);
+                                        setHasUnsavedChanges(true);
+                                    }}
                                     onDownloadImage={handleDownloadImage}
                                     sceneType="scenes"
                                 />
@@ -689,8 +833,63 @@ const ScenesPanel: React.FC<ScenesPanelProps> = ({
                     <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
                 </div>
             )}
+
+            {/* 保存确认弹窗 */}
+            <SaveConfirmModal
+                isOpen={saveConfirmModalOpen}
+                onSave={async () => {
+                    // 保存当前正在编辑的场景/子场景，而不是所有场景
+                    try {
+                        if (isAddingNew && newSceneData) {
+                            // 正在新增场景
+                            await handlers.confirmAddNew();
+                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
+                            setHasUnsavedChanges(false);
+                            onDataChange?.();
+                        } else if (isAddingNewSubscene && activeSubsceneDraft) {
+                            // 正在新增子场景
+                            await handlers.confirmSubsceneEdit();
+                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
+                            setHasUnsavedChanges(false);
+                            onDataChange?.();
+                        } else if (activeScene) {
+                            // 正在编辑场景
+                            await handlers.confirmEdit(activeScene);
+                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
+                            setHasUnsavedChanges(false);
+                            onDataChange?.();
+                        } else {
+                            // 没有正在编辑的内容，直接清除状态
+                            setHasUnsavedChanges(false);
+                        }
+                        setSaveConfirmModalOpen(false);
+                        setIsBlockingSwitch(false);
+                        executePendingAction();
+                    } catch (error) {
+                        toast.error('保存失败，请重试');
+                        // 保存失败时不关闭弹窗，不执行待处理操作
+                    }
+                }}
+                onDiscard={() => {
+                    setSaveConfirmModalOpen(false);
+                    setHasUnsavedChanges(false);
+                    setIsBlockingSwitch(false);
+                    executePendingAction();
+                }}
+                onCancel={() => {
+                    setSaveConfirmModalOpen(false);
+                    setPendingAction(null);
+                    setIsBlockingSwitch(false);
+                }}
+                title="未保存的修改"
+                message="您有未保存的修改，是否要保存？"
+                saveButtonText="保存"
+                discardButtonText="不保存"
+            />
         </div>
     );
-};
+});
+
+ScenesPanel.displayName = 'ScenesPanel';
 
 export default ScenesPanel;

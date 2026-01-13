@@ -28,11 +28,12 @@ import type {
   AbilityNode,
   AddAttributesRequest,
   AddAttributesResponse,
-  AttributeSetting,
   DeleteAttributesRequest,
+  GetAttributesResponse,
   NpcAddAttributesRequest,
   NpcDeleteAttributesRequest,
   NpcUpdateAttributesRequest,
+  updateAttributesResponse,
   UploadWorldFileResponse,
 } from "./worldInteractionApi.type";
 
@@ -489,6 +490,9 @@ const worldEditor = {
   deleteAttributeDefinitions: (data: DeleteAttributesRequest) => {
     return api.delete<ApiResponse<null>>(`/world-interaction/edit/attributes`, { data })
   },
+  updateAttributeDefinitions: (fileId: string, data: AddAttributesRequest) => {
+    return api.put<ApiResponse<updateAttributesResponse>>(`/world-interaction/edit/${fileId}/attributes`, data)
+  },
   addNpcAttributeDefinitions: (data: NpcAddAttributesRequest) => {
     return api.post<ApiResponse<AddAttributesResponse>>(`/world-interaction/edit/npc/attributes`, data)
   },
@@ -496,8 +500,12 @@ const worldEditor = {
     return api.delete<ApiResponse<null>>(`/world-interaction/edit/npc/attributes`, { data })
   },
   updateNpcAttributeDefinitions: (fileId: string, data: NpcUpdateAttributesRequest) => {
-    return api.put<ApiResponse<AddAttributesResponse>>(`/world-interaction/edit/${fileId}/attributes`, data)
+    return api.put<ApiResponse<AddAttributesResponse>>(`/world-interaction/edit/npc/${fileId}/attributes`, data)
   },
+  getAttributes: (sessionId: string) => {
+    return api.get<GetAttributesResponse>(`/world-interaction/session/${sessionId}/attributes`)
+  },
+
 };
 
 export default worldEditor;

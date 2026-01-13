@@ -238,3 +238,29 @@ export interface GenerateStoryStructureResponse {
     message: string;
   }
 }
+
+export interface CheckGenerateStatusResponse {
+  success: boolean;
+  jobId: string;
+  fileId?: string;
+  status: 'running' | 'queued' | 'pending' | 'completed' | 'failed' | 'unknown';
+  progress?: number;
+  stage?: string;
+  error?: string;
+  updatedAt?: string;
+}
+
+export interface GetGenerateResultResponse {
+  success: boolean;
+  jobId?: string;
+  fileId?: string;
+  status?: 'completed';
+  stage?: string;
+  progress?: number;
+  updatedAt?: string;
+  result?: {
+    storyPhases: StoryStructure;
+    dynamicEntries: DynamicEntry[];
+    message: string;
+  };
+}

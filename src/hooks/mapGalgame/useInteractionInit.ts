@@ -31,6 +31,8 @@ interface InitOptions {
     // Refs for reset
     resetCompletedSteps: () => void;
     setRestoringFromCache: (value: boolean) => void;
+    // 属性更新回调
+    onUpdateAttributes?: () => Promise<void>;
 }
 
 interface UseInteractionInitReturn {
@@ -53,10 +55,18 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
         stepHandlers,
         resetCompletedSteps,
         setRestoringFromCache,
+        onUpdateAttributes,
     } = options;
 
     const hasInitializedRef = useRef(false);
     const interactTimeoutRef = useRef<number | null>(null);
+    // 使用 ref 存储最新的 onUpdateAttributes，避免闭包问题
+    const onUpdateAttributesRef = useRef(onUpdateAttributes);
+    
+    // 每次 onUpdateAttributes 变化时更新 ref
+    useEffect(() => {
+        onUpdateAttributesRef.current = onUpdateAttributes;
+    }, [onUpdateAttributes]);
 
     // 组件卸载时清理超时定时器
     useEffect(() => {
@@ -84,8 +94,6 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
             }
             
             try {
-                console.log("[Init] 开始初始化交互页面", { sessionId, eventId });
-
                 // 1）优先尝试从本地缓存恢复
                 if (storageKeys.allSteps && storageKeys.incomplete) {
                     const isIncomplete = safeGetLocalStorage(storageKeys.incomplete) === 'true';
@@ -105,8 +113,6 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                                 stepHandlers.setStepQueue(rest || []);
                                 stepHandlers.setShowNextButton(first?.type !== 'choice');
 
-                                console.log('[Init] 从本地缓存恢复，步骤数:', savedSteps.length);
-                                
                                 setTimeout(() => setRestoringFromCache(false), 1000);
                                 return;
                             }
@@ -125,7 +131,6 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                             const requestAge = Date.now() - (parsed?.timestamp || 0);
                             
                             if (requestAge < 5 * 60 * 1000) {
-                                console.log("[Init] 检测到未完成请求，启动轮询", parsed);
                                 hasInitializedRef.current = true;
                                 setHasPendingRequest(true);
                                 stepHandlers.setCurrentStep(null);
@@ -154,21 +159,18 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                 if (resp.data?.success) {
                     const history = resp.data;
                     setLatestHistory(history);
-                    console.log("[Init] 获取历史成功，交互条数:", history.interactions?.length);
 
                     const lastInteraction = history.interactions?.[history.interactions.length - 1] as any;
 
                     // 如果历史最后一条是 npc_dialogue，直接用历史选项
                     if (lastInteraction?.type === 'npc_dialogue') {
                         hasInitializedRef.current = true;
-                        console.log('[Init] 检测到未完成的 npc_dialogue，使用历史选项');
                         return;
                     }
                 }
 
                 // 4）发起初始交互
                 if (gameData && sessionId && eventId && fileId) {
-                    console.log("[Init] 发起初始交互 /interact");
                     hasInitializedRef.current = true;
                     
                     // 保存请求状态
@@ -194,7 +196,6 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                     setTimeout(() => {
                         stepHandlers.handleInteract({
                             onSuccess: () => {
-                                console.log("[Init] /interact 成功");
                                 if (interactTimeoutRef.current) {
                                     clearTimeout(interactTimeoutRef.current);
                                     interactTimeoutRef.current = null;
@@ -202,6 +203,14 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                                 setTimeoutModal({ visible: false, message: '' });
                                 safeRemoveLocalStorage(storageKeys.pendingRequest);
                                 setHasPendingRequest(false);
+                                
+                                // 更新属性
+                                const updateFn = onUpdateAttributesRef.current;
+                                if (updateFn) {
+                                    updateFn().catch(error => {
+                                        console.error('[Init] ❌ 更新属性失败:', error);
+                                    });
+                                }
                             },
                             onError: (error) => {
                                 console.error("[Init] /interact 失败:", error);

@@ -30,6 +30,7 @@ export const useStepStreamResponse = ({
     onMissionFlag,
     onCompleteAllSteps,
 }: UseStepStreamResponseOptions) => {
+
     const notifyMissionFlag = useCallback(() => {
         if (!onMissionFlag) return;
         try {

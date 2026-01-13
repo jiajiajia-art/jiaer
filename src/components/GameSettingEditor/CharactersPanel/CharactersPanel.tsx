@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import styles from './CharactersPanel.module.css';
 import { IMAGE_GENERATION_COST, getImageUrl } from '../../../utils/constants';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
@@ -8,6 +8,7 @@ import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../ap
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { useGameStore } from '../../../store/gameStore';
@@ -17,7 +18,7 @@ import { VARIATION_TYPES } from './types';
 import { getNpcs, npcToCharacter, playerToCharacter } from './utils';
 import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
-import { getCharacterAttributes, getAvailableAttributes } from './characterAttributeUtils';
+import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
@@ -27,13 +28,17 @@ interface CharactersPanelProps {
     mode: string;
 }
 
-const CharactersPanel: React.FC<CharactersPanelProps> = ({
+export interface CharactersPanelRef {
+    checkBeforeLeave: () => boolean;
+}
+
+const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProps>(({
     gameData,
     isLoading = false,
     onGetData,
     onDataChange,
-    mode = 'visual'
-}) => {
+    mode = 'visual',
+}, ref) => {
     const { fileId } = useGameStore();
     const { user, updateUser } = useAuthStore();
     const api = createApiHelpers(mode);
@@ -43,8 +48,6 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
     const [isRelationshipExpanded, setIsRelationshipExpanded] = useState<boolean>(false);
-    const [isAttributeExpanded, setIsAttributeExpanded] = useState<boolean>(false);
-    const [pendingAttributeKey, setPendingAttributeKey] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
@@ -72,6 +75,51 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
     // 差分图片生成积分确认
     const [variationCostModalOpen, setVariationCostModalOpen] = useState<boolean>(false);
     const [pendingVariationForGenerate, setPendingVariationForGenerate] = useState<{ variation: Variation; character: Character } | null>(null);
+    const attributePanelRef = useRef<CharacterAttributesPanelRef>(null);
+    const originalCharacterDataRef = useRef<Character[]>([]);
+
+    // 未保存修改相关状态
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<{
+        type: 'switchCharacter' | 'switchPanel' | 'createCharacter';
+        targetCharacterId?: string | null;
+    } | null>(null);
+    const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
+
+    // 使用 ref 来存储最新的状态值，避免闭包问题
+    const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+    const isBlockingSwitchRef = useRef(isBlockingSwitch);
+    
+    useEffect(() => {
+        hasUnsavedChangesRef.current = hasUnsavedChanges;
+    }, [hasUnsavedChanges]);
+    
+    useEffect(() => {
+        isBlockingSwitchRef.current = isBlockingSwitch;
+    }, [isBlockingSwitch]);
+
+    // 检测是否有未保存的修改（通过比较当前数据和原始数据）
+    // 这个检测会捕获所有数据变化，包括图片上传等
+    useEffect(() => {
+        if (originalCharacterDataRef.current.length === 0) {
+            return;
+        }
+
+        // 比较当前数据和原始数据（排除临时角色）
+        const currentCharacters = characterData.filter(c => !c.id.startsWith('temp-'));
+        const currentDataStr = JSON.stringify(currentCharacters);
+        const originalDataStr = JSON.stringify(originalCharacterDataRef.current);
+        const hasChanges = currentDataStr !== originalDataStr;
+        
+        // 如果数据确实有变化，则设置
+        if (hasChanges) {
+            setHasUnsavedChanges(true);
+        } else {
+            // 如果数据没有变化，清除标记
+            setHasUnsavedChanges(false);
+        }
+    }, [characterData]);
 
     // 当 gameData 变化时，填充角色数据
     useEffect(() => {
@@ -92,6 +140,10 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         }
 
         setCharacterData(convertedCharacters);
+        // 保存原始数据用于比较
+        originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
+        setHasUnsavedChanges(false);
+        
         if (convertedCharacters.length > 0 && !isAddingNew) {
             setActiveCharacterId(convertedCharacters[0].id);
         }
@@ -154,6 +206,51 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         };
     }, [characterData, gameData]);
 
+    // 执行待处理的操作
+    const executePendingAction = useCallback(() => {
+        if (!pendingAction) return;
+
+        if (pendingAction.type === 'switchCharacter') {
+            setActiveCharacterId(pendingAction.targetCharacterId || '');
+        } else if (pendingAction.type === 'createCharacter') {
+            // 这个操作会在 openAddNewPanel 中执行，这里不需要重复
+        }
+
+        setPendingAction(null);
+    }, [pendingAction]);
+
+    // 检查是否可以切换（如果有未保存修改，显示确认弹窗）
+    const checkBeforeSwitch = useCallback((action: { type: 'switchCharacter' | 'switchPanel' | 'createCharacter'; targetCharacterId?: string | null }) => {
+        if (hasUnsavedChanges) {
+            setPendingAction(action);
+            setSaveConfirmModalOpen(true);
+            setIsBlockingSwitch(true);
+            return false;
+        }
+        return true;
+    }, [hasUnsavedChanges]);
+
+    // 暴露给父组件的方法，用于在切换面板前检查
+    useImperativeHandle(ref, () => ({
+        checkBeforeLeave: () => {
+            const hasChanges = hasUnsavedChangesRef.current;
+            const isBlocking = isBlockingSwitchRef.current;
+            
+            if (hasChanges && !isBlocking) {
+                setPendingAction({ type: 'switchPanel' });
+                setSaveConfirmModalOpen(true);
+                setIsBlockingSwitch(true);
+                return false;
+            }
+            
+            if (isBlocking) {
+                return false;
+            }
+            
+            return true;
+        },
+    }), []);
+
     // 提供给父组件的数据获取函数
     useEffect(() => {
         if (onGetData) {
@@ -196,20 +293,25 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         ? newCharacterData
         : (characterData.find(c => c.id === activeCharacterId) || characterData[0]);
 
-    // 获取当前角色的属性（仅在 worldInteraction 模式下）
+    // 获取当前角色的属性设置（仅在 worldInteraction 模式下）
     const isWorldInteractionMode = mode === 'worldInteraction';
     const attributeSetting = isWorldInteractionMode && gameData && 'attributeSetting' in gameData
         ? gameData.attributeSetting
         : undefined;
-    const isCurrentPlayer = currentCharacter?.id === 'player';
-    const currentCharacterAttributes = useMemo(() => {
-        if (!currentCharacter || !attributeSetting) return [];
-        return getCharacterAttributes(attributeSetting, currentCharacter.id, isCurrentPlayer);
-    }, [currentCharacter, attributeSetting, isCurrentPlayer]);
-    const availableAttributes = useMemo(() => {
-        if (!currentCharacter || !attributeSetting) return [];
-        return getAvailableAttributes(attributeSetting, currentCharacter.id, isCurrentPlayer);
-    }, [currentCharacter, attributeSetting, isCurrentPlayer]);
+
+    // 获取当前 NPC 的属性（来自 npcSetting.npcs[].attributes），用于统一使用 npcSetting 中的属性状态
+    const currentNpcAttributes = useMemo(() => {
+        if (!isWorldInteractionMode || !gameData || !currentCharacter || currentCharacter.id === 'player') {
+            return undefined;
+        }
+        if (!('npcSetting' in gameData) || !gameData.npcSetting) {
+            return undefined;
+        }
+        const worldNpc = (gameData as WorldInteractionGameData).npcSetting.npcs?.find(
+            (npc) => npc.id === currentCharacter.id,
+        );
+        return worldNpc?.attributes;
+    }, [isWorldInteractionMode, gameData, currentCharacter]);
 
     // 更新角色字段（统一处理新增和编辑模式）
     const updateField = (field: keyof Character, value: string | string[]) => {
@@ -237,6 +339,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         } else {
             updateField(field, value);
         }
+        setHasUnsavedChanges(true);
     };
 
     // 关系管理（统一处理新增和编辑模式）
@@ -256,6 +359,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 )
             );
         }
+        setHasUnsavedChanges(true);
     };
 
     const updateRelationship = (relId: string, key: 'name' | 'description', value: string) => {
@@ -280,6 +384,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 )
             );
         }
+        setHasUnsavedChanges(true);
     };
 
     const removeRelationship = (relId: string) => {
@@ -297,44 +402,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 )
             );
         }
+        setHasUnsavedChanges(true);
     };
 
-    // 属性管理函数（仅在 worldInteraction 模式下可用）
-    const updateAttributeValue = (_attributeKey: string, _newValue: number) => {
-        if (!fileId || !attributeSetting || !currentCharacter || !isWorldInteractionMode) return;
-        // TODO: 调用 API 更新属性值
-        // 暂时只触发数据刷新
-        onDataChange?.();
-    };
-
-    const addAttribute = (_attributeKey: string) => {
-        if (!fileId || !attributeSetting || !currentCharacter || !isWorldInteractionMode) return;
-        // TODO: 调用 API 添加属性
-        // 暂时只触发数据刷新
-        setPendingAttributeKey(null);
-        onDataChange?.();
-    };
-
-    const handleAddAttributeClick = () => {
-        if (availableAttributes.length > 0) {
-            setPendingAttributeKey('');
-        }
-    };
-
-    const handlePendingAttributeSelect = (attributeKey: string) => {
-        if (attributeKey) {
-            addAttribute(attributeKey);
-        } else {
-            setPendingAttributeKey(null);
-        }
-    };
-
-    const removeAttribute = (_attributeKey: string) => {
-        if (!fileId || !attributeSetting || !currentCharacter || !isWorldInteractionMode) return;
-        // TODO: 调用 API 删除属性
-        // 暂时只触发数据刷新
-        onDataChange?.();
-    };
 
     // 打开新增差分弹窗
     const openAddVariationModal = () => {
@@ -388,7 +458,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 )
             );
         }
-
+        setHasUnsavedChanges(true);
         closeVariationModal();
     };
 
@@ -399,6 +469,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
 
     // 打开新增角色面板（使用空角色数据）
     const openAddNewPanel = () => {
+        if (!checkBeforeSwitch({ type: 'createCharacter' })) {
+            return;
+        }
         const emptyCharacter: Character = {
             id: `temp-${Date.now()}`,
             name: '',
@@ -438,7 +511,31 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
         const characterToSave = isAddingNew && newCharacterData
             ? newCharacterData
             : currentCharacter;
+        
+        // 先保存属性修改（如果有）
+        if (attributePanelRef.current && attributePanelRef.current.hasChanges) {
+            const success = await attributePanelRef.current.saveAttributes();
+            if (!success) {
+                toast.error('属性保存失败，请重试');
+                return;
+            }
+        }
+        
         await handlers.confirmEdit(characterToSave);
+        // 保存成功后，更新原始数据并清除未保存状态
+        if (gameData) {
+            const npcs = getNpcs(gameData);
+            const convertedCharacters: Character[] = [];
+            if (gameData.worldSetting.player) {
+                convertedCharacters.push(playerToCharacter(gameData.worldSetting.player));
+            }
+            if (npcs && npcs.length > 0) {
+                const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
+                convertedCharacters.push(...npcCharacters);
+            }
+            originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
+        }
+        setHasUnsavedChanges(false);
         onDataChange?.();
     };
 
@@ -667,7 +764,7 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                 <button
                     className={`${styles.ghost} ${styles.generateButton}`}
                     onClick={openNpcCostModal}
-                    disabled={isGeneratingNpcImages || isLoadingNpcCost}
+                    disabled={isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
                 >
                     <img
                         src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -701,6 +798,9 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 key={character.id}
                                 className={`${styles.characterRow} ${character.id === activeCharacterId ? styles.active : ''}`}
                                 onClick={() => {
+                                    if (!checkBeforeSwitch({ type: 'switchCharacter', targetCharacterId: character.id })) {
+                                        return;
+                                    }
                                     // 如果正在新增模式，点击侧边栏时取消新增并切换到所选角色
                                     if (isAddingNew) {
                                         setIsAddingNew(false);
@@ -1019,116 +1119,16 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                                 )}
                             </div>
 
-                            {/* 角色属性（仅在 worldInteraction 模式下显示） */}
-                            {isWorldInteractionMode && attributeSetting && (
-                                <div className={styles.detailBlock}>
-                                    <div
-                                        className={styles.collapsibleHeader}
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => setIsAttributeExpanded(!isAttributeExpanded)}
-                                    >
-                                        <strong>角色属性</strong>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            {isAttributeExpanded && availableAttributes.length > 0 && !pendingAttributeKey && (
-                                                <button
-                                                    className={styles.primaryButton}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleAddAttributeClick();
-                                                    }}
-                                                >
-                                                    + 添加属性
-                                                </button>
-                                            )}
-                                            <MdArrowDropDown size={30} style={{ transform: isAttributeExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                                        </div>
-                                    </div>
-                                    {isAttributeExpanded && (
-                                        <div className={styles.attributeList}>
-                                            {/* 待添加的属性表单 */}
-                                            {pendingAttributeKey !== null && (
-                                                <div className={styles.attributeRow}>
-                                                    <div className={styles.attributeRowHeader}>
-                                                        <span>选择属性</span>
-                                                        <button
-                                                            className={styles.ghostTiny}
-                                                            onClick={() => setPendingAttributeKey(null)}
-                                                            type="button"
-                                                        >
-                                                            取消
-                                                        </button>
-                                                    </div>
-                                                    <select
-                                                        className={styles.attributeRowSelect}
-                                                        value={pendingAttributeKey || ''}
-                                                        onChange={(e) => handlePendingAttributeSelect(e.target.value)}
-                                                        autoFocus
-                                                    >
-                                                        <option value="">请选择属性</option>
-                                                        {availableAttributes.map((attr) => (
-                                                            <option key={attr.key} value={attr.key}>
-                                                                {attr.displayName}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            )}
-                                            {currentCharacterAttributes.length === 0 && pendingAttributeKey === null ? (
-                                                <p className={styles.mutedSmall}>
-                                                    暂无属性。{availableAttributes.length > 0 ? '点击上方按钮添加属性。' : '请先在属性设置面板中定义属性。'}
-                                                </p>
-                                            ) : (
-                                                currentCharacterAttributes.map((attr) => {
-                                                    const definitions = isCurrentPlayer 
-                                                        ? attributeSetting.attributeDefinitions.player
-                                                        : attributeSetting.attributeDefinitions.npc;
-                                                    const definition = definitions[attr.key];
-                                                    const displayFormula = attr.formula || definition?.formula || '';
-                                                    
-                                                    return (
-                                                        <div key={attr.key} className={styles.attributeRow}>
-                                                            <div className={styles.attributeRowHeader}>
-                                                                <span>{attr.displayName}</span>
-                                                                <button
-                                                                    className={styles.ghostTiny}
-                                                                    onClick={() => removeAttribute(attr.key)}
-                                                                    type="button"
-                                                                >
-                                                                    删除
-                                                                </button>
-                                                            </div>
-                                                            <div className={styles.attributeRowMeta}>
-                                                                <span>默认值: {attr.defaultValue}{attr.unit}</span>
-                                                                {displayFormula && (
-                                                                    <span className={styles.attributeRowFormula}>
-                                                                        公式: {displayFormula}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className={styles.attributeRowInputGroup}>
-                                                                <input
-                                                                    type="number"
-                                                                    value={attr.value}
-                                                                    onChange={(e) => {
-                                                                        const newValue = Number(e.target.value);
-                                                                        if (!isNaN(newValue)) {
-                                                                            updateAttributeValue(attr.key, newValue);
-                                                                        }
-                                                                    }}
-                                                                    min={0}
-                                                                    max={attr.maxValue}
-                                                                />
-                                                                <span className={styles.attributeRowValueInfo}>
-                                                                    / {attr.maxValue} {attr.unit}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                            {/* 角色属性（worldInteraction 模式） */}
+                            {isWorldInteractionMode && attributeSetting && currentCharacter && fileId && (
+                                <CharacterAttributesPanel
+                                    ref={attributePanelRef}
+                                    attributeSetting={attributeSetting}
+                                    npcAttributes={currentCharacter.id === 'player' ? undefined : currentNpcAttributes}
+                                    characterId={currentCharacter.id}
+                                    isPlayer={currentCharacter.id === 'player'}
+                                    fileId={fileId}
+                                />
                             )}
 
                             {/* 立绘差分 */}
@@ -1318,8 +1318,43 @@ const CharactersPanel: React.FC<CharactersPanelProps> = ({
                     <div className={styles.plusLoadingText}>正在生成角色立绘...</div>
                 </div>
             )}
+
+            {/* 保存确认弹窗 */}
+            <SaveConfirmModal
+                isOpen={saveConfirmModalOpen}
+                onSave={async () => {
+                    // 保存当前正在编辑的角色，而不是所有角色
+                    try {
+                        await confirmEdit();
+                        setSaveConfirmModalOpen(false);
+                        setIsBlockingSwitch(false);
+                        setHasUnsavedChanges(false);
+                        executePendingAction();
+                    } catch (error) {
+                        toast.error('保存失败，请重试');
+                        // 保存失败时不关闭弹窗，不执行待处理操作
+                    }
+                }}
+                onDiscard={() => {
+                    setSaveConfirmModalOpen(false);
+                    setHasUnsavedChanges(false);
+                    setIsBlockingSwitch(false);
+                    executePendingAction();
+                }}
+                onCancel={() => {
+                    setSaveConfirmModalOpen(false);
+                    setPendingAction(null);
+                    setIsBlockingSwitch(false);
+                }}
+                title="未保存的修改"
+                message="您有未保存的修改，是否要保存？"
+                saveButtonText="保存"
+                discardButtonText="不保存"
+            />
         </div>
     );
-};
+});
+
+CharactersPanel.displayName = 'CharactersPanel';
 
 export default CharactersPanel;

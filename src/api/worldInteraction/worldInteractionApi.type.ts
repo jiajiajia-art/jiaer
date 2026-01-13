@@ -16,6 +16,14 @@ export interface PlayerCharacter {
     appearance: string;
     tone: string;
     imagePath: string;
+    attributes: {
+      [attributeKey: string]: {
+        displayName: string;
+        value: number;
+        formula: string;
+        visible: boolean;
+      };
+  }
 }
 
 export interface NPC {
@@ -30,6 +38,13 @@ export interface NPC {
     images: {
         base: string;
         [key: string]: string;
+    };
+    attributes: {
+        [attributeKey: string]: {
+            displayName: string;
+            value: number;
+            formula: string;
+        };
     };
 }
 
@@ -100,6 +115,7 @@ interface AttributeMeta {
   interface AttributeState {
     value: number;
     formula: string;
+    displayName: string;
   }
   
   // 玩家属性定义（固定类别player，但内部属性动态）
@@ -187,7 +203,7 @@ export interface AddAttributesRequest {
   };
 }
 
-export interface AddAttributesResponse {
+export interface updateAttributesResponse {
   success: boolean;
   message: string;
   result: {
@@ -195,6 +211,19 @@ export interface AddAttributesResponse {
     key: string;
     definition: AttributeMeta;
   };
+}
+
+export interface AddAttributesResponse {
+  success: boolean;
+  message: string;
+  result:{
+    npcId: string;
+    attributeName: string;
+    state: {
+      value: number;
+      formula: string;
+    };
+  }[];
 }
 
 export interface DeleteAttributesRequest {
@@ -205,10 +234,8 @@ export interface DeleteAttributesRequest {
 
 export interface NpcAddAttributesRequest {
     fileId: string;
-    npcId: string;
-    attributeName: string;
-    value: number;
-    formula: string;
+    id: string;
+    attributeNames: string[];
 }
 
 export interface NpcDeleteAttributesRequest {
@@ -225,4 +252,11 @@ export interface NpcUpdateAttributesRequest {
             formula: string;
         };
     };
+}
+
+export interface GetAttributesResponse {
+  success: boolean;
+  player: PlayerCharacter;
+  npc: NPC[];
+  sessionId: string;
 }

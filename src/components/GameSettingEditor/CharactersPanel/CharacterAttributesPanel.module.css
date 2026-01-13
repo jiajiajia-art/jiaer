@@ -1,0 +1,426 @@
+/* 详情区块 */
+.detailBlock {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.collapsibleHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 8px 0;
+}
+
+.collapsibleHeader strong {
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+
+/* 按钮样式 */
+.primaryButton {
+    border-radius: 6px;
+    border: 1px solid var(--primary);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: #fff;
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.primaryButton:hover {
+    background: rgba(224, 61, 75, 0.9);
+    border-color: rgba(224, 61, 75, 0.9);
+}
+
+.primaryButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.saveButton {
+    border-radius: 6px;
+    border: 1px solid var(--primary);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: #fff;
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.saveButton:hover {
+    background: rgba(224, 61, 75, 0.9);
+    border-color: rgba(224, 61, 75, 0.9);
+}
+
+.ghostTiny {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: rgba(0, 0, 0, 0.6);
+    background: transparent;
+}
+
+.ghostTiny:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(224, 61, 75, 0.05);
+}
+
+.ghostTiny:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ghostSmall {
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+    color: #1a1a1a;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.ghostSmall:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(224, 61, 75, 0.05);
+}
+
+.ghostSmall:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 属性列表 */
+.attributeList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mutedSmall {
+    color: rgba(0, 0, 0, 0.5);
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* 属性选择器 */
+.attributeSelector {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.01);
+    margin-bottom: 12px;
+}
+
+.attributeSelectorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    gap: 12px;
+}
+
+.attributeSelectorTitle {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.attributeSelectorTitle > span:first-child {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.attributeSelectorCount {
+    font-size: 0.8rem;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.attributeSelectorActions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.attributeSelectorList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.attributeSelectorItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+}
+
+.attributeSelectorItem:hover:not(.attributeSelectorItemDisabled) {
+    background: rgba(224, 61, 75, 0.03);
+    border-color: rgba(224, 61, 75, 0.2);
+}
+
+.attributeSelectorItemSelected {
+    background: rgba(224, 61, 75, 0.08) !important;
+    border-color: var(--primary) !important;
+}
+
+.attributeSelectorItemDisabled {
+    background: rgba(0, 0, 0, 0.02);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.attributeSelectorItem input[type="checkbox"] {
+    margin-top: 2px;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.attributeSelectorItem input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.attributeSelectorEmpty {
+    padding: 40px 20px;
+    text-align: center;
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.attributeSelectorEmpty p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.attributeSelectorEmptyHint {
+    margin-top: 8px !important;
+    font-size: 0.8rem !important;
+    color: rgba(0, 0, 0, 0.4) !important;
+}
+
+.attributeSelectorItemContent {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.attributeSelectorItemName {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.attributeSelectorItemBadge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.08);
+    color: rgba(0, 0, 0, 0.6);
+    font-weight: 500;
+}
+
+.attributeSelectorItemMeta {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.attributeSelectorItemFormula {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.6);
+    background: rgba(224, 61, 75, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.attributeSelectorFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* 属性行 */
+.attributeRow {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.01);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: 0.2s ease;
+}
+
+.attributeRow:hover {
+    border-color: rgba(224, 61, 75, 0.2);
+    background: rgba(224, 61, 75, 0.02);
+}
+
+.attributeRowModified {
+    border-color: rgba(224, 61, 75, 0.3);
+    background: rgba(224, 61, 75, 0.04);
+}
+
+.attributeRowHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.attributeRowHeader span {
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.newBadge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    font-weight: 600;
+}
+
+.modifiedBadge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+    font-weight: 600;
+}
+
+.attributeRowFields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.attributeRowField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attributeRowField label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.attributeRowField label span {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+}
+
+.attributeRowFieldInput {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.attributeRowField input[type="number"],
+.attributeRowField input[type="text"] {
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.015);
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    flex: 1;
+    box-sizing: border-box;
+}
+
+.attributeRowField input[type="number"]:focus,
+.attributeRowField input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(224, 61, 75, 0.1);
+}
+
+.attributeRowUnit {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 响应式布局 */
+@media (max-width: 720px) {
+    .attributeSelector {
+        padding: 12px;
+    }
+
+    .attributeSelectorList {
+        max-height: 200px;
+    }
+
+    .attributeRowFields {
+        gap: 8px;
+    }
+
+    .attributeRowFieldInput {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .attributeRowUnit {
+        text-align: right;
+    }
+}
+

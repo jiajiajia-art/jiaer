@@ -64,7 +64,6 @@ export const convertStepToMessage = (
         const characterImage = isPlayer 
             ? getPlayerImage(worldSetting?.player?.imagePath)
             : getImageUrls(step.activeImage || step.npcImages?.base);
-        console.log(characterImage);
         
         return {
             id: Date.now(),

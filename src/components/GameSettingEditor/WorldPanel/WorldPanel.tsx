@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useImperativeHandle } from 'react';
 import styles from './WorldPanel.module.css';
 import type {
     AllGameData,
@@ -8,25 +8,17 @@ import type {
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { WorldSetting as VisualWorldSetting } from '../../../api/galgame/EditorData.type';
 import type { WorldSetting as WorldWorldSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { MdArrowDropDown } from 'react-icons/md';
-import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
 import StoryStructureAdvanced from './StoryStructureAdvanced';
+import { useUnsavedChanges } from '../../../hooks/editor/useUnsavedChanges';
+import CoverUpload from './CoverUpload';
+import WorldSettingForm from './WorldSettingForm';
+import StorylinesSection, { type StoryLine } from './StorylinesSection';
+import ToneSection from './ToneSection';
 
-interface WorldField {
-    id: string;
-    label: string;
-    type: 'text' | 'textarea';
-    rows?: number;
-    value: string;
-    hint?: string;
-}
-
-interface StoryLine {
-    id: string;
-    tag: string;
-    content: string;
+export interface WorldPanelRef {
+    checkBeforeLeave: () => boolean;
 }
 
 interface WorldPanelProps {
@@ -50,26 +42,24 @@ function getPlayer(data: AllGameData | WorldInteractionGameData | null | undefin
     return undefined;
 }
 
-const WorldPanel: React.FC<WorldPanelProps> = ({
+const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     gameData,
     onGetData,
     handleSubmit,
     isSubmitting = false,
     fileId,
     mode = 'visual',
-}) => {
-    const defaultFields: WorldField[] = [
-        { id: 'title', label: '作品标题', type: 'text', value: '' },
-        { id: 'tagline', label: '一句话概述', type: 'text', value: '' },
-        { id: 'era', label: '时代背景 / 前情提要', type: 'textarea', rows: 6, value: '' },
-        { id: 'worldRules', label: '世界规则', type: 'textarea', rows: 4, value: '' },
-        { id: 'playerRole', label: '玩家身份', type: 'text', value: '' },
-        { id: 'opening', label: '开场白', type: 'textarea', rows: 5, value: '', hint: '用于玩家进入游戏时的第一段旁白，可随时微调语气。' },
-        { id: 'openingPlot', label: '开场剧情', type: 'textarea', rows: 5, value: '', hint: '描述第一轮推演至玩家做出首个选择前的剧情骨架，用于引导 AI 理解节奏。' },
-    ];
-
+}, ref) => {
+    // 表单字段状态
+    const [title, setTitle] = useState<string>('');
+    const [tagline, setTagline] = useState<string>('');
+    const [era, setEra] = useState<string>('');
+    const [worldRules, setWorldRules] = useState<string>('');
+    const [opening, setOpening] = useState<string>('');
+    const [openingPlot, setOpeningPlot] = useState<string>('');
+    const [playerRole, setPlayerRole] = useState<string>('');
+    
     const [toneValue, setToneValue] = useState<string>('');
-    const [worldFields, setWorldFields] = useState<WorldField[]>(defaultFields);
     const [storylines, setStorylines] = useState<StoryLine[]>([]);
     const [isStorylineExpanded, setIsStorylineExpanded] = useState<boolean>(false);
     const [isToneExpanded, setIsToneExpanded] = useState<boolean>(false);
@@ -83,23 +73,62 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
 
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
-
-    const coverInputRef = useRef<HTMLInputElement>(null);
-    const [coverPreview, setCoverPreview] = useState<string | null>(null);
-    const [coverUploading, setCoverUploading] = useState<boolean>(false);
-    const [coverError, setCoverError] = useState<string | null>(null);
+    const lastWorldSettingSnapshotRef = useRef<string | null>(null);
+    const storyPollingRef = useRef<{
+        timeoutId: ReturnType<typeof setTimeout> | null;
+        delay: number;
+        started: number;
+    } | null>(null);
 
     const currentFileId = gameData?.fileId || fileId;
+    
+    // 获取完整数据的函数（需要在 hook 之前定义，使用 ref 来避免依赖问题）
+    const getFullWorldSettingDataRef = useRef<(() => VisualWorldSetting | WorldWorldSetting | null) | null>(null);
+    
+    // 使用未保存修改检测 hook
+    const {
+        setHasUnsavedChanges,
+        SaveConfirmModalComponent,
+        getCheckBeforeLeave,
+    } = useUnsavedChanges({
+        onSave: async () => {
+            if (handleSubmit) {
+                await handleSubmit();
+            }
+        },
+    });
+    
+    // 暴露给父组件的方法
+    useImperativeHandle(ref, () => ({
+        checkBeforeLeave: getCheckBeforeLeave(),
+    }), [getCheckBeforeLeave]);
 
     useEffect(() => {
         if (!gameData?.worldSetting || !gameData?.fileId) return;
 
         const currentFileId = gameData.fileId;
-        if (lastFileIdRef.current === currentFileId) return;
-
-        lastFileIdRef.current = currentFileId;
         const ws = gameData.worldSetting;
-        originalDataRef.current = JSON.parse(JSON.stringify(ws));
+        const currentWorldSettingSnapshot = JSON.stringify(ws);
+        
+        // 如果 fileId 变化，重置所有状态
+        const isFileIdChanged = lastFileIdRef.current !== currentFileId;
+        if (isFileIdChanged) {
+            lastFileIdRef.current = currentFileId;
+            lastWorldSettingSnapshotRef.current = currentWorldSettingSnapshot;
+            originalDataRef.current = JSON.parse(JSON.stringify(ws));
+        } else {
+            // fileId 不变，但 worldSetting 可能更新了（例如保存后数据刷新）
+            // 如果 worldSetting 变化了，更新 originalDataRef
+            if (lastWorldSettingSnapshotRef.current !== currentWorldSettingSnapshot) {
+                lastWorldSettingSnapshotRef.current = currentWorldSettingSnapshot;
+                originalDataRef.current = JSON.parse(JSON.stringify(ws));
+                // 如果刚刚保存过，此时 originalDataRef 已更新，检测修改的 useEffect 会重新运行
+                return; // 不重置其他状态，只更新 originalDataRef
+            } else {
+                // worldSetting 没变化，不需要做任何事情
+                return;
+            }
+        } 
 
         let worldRulesText = '';
         if (mode === 'visual' && 'WorldRules' in ws && ws.WorldRules) {
@@ -119,26 +148,14 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             ? `${player.name} (${player.gender}${player.age ? `, ${player.age}岁` : ''}${playerRace ? `, ${playerRace}` : ''})`
             : '';
 
-        setWorldFields(defaultFields.map(field => {
-            switch (field.id) {
-                case 'title':
-                    return { ...field, value: ws.title || '' };
-                case 'tagline':
-                    return { ...field, value: ws.summary || '' };
-                case 'era':
-                    return { ...field, value: ws.background || '' };
-                case 'worldRules':
-                    return { ...field, value: worldRulesText };
-                case 'playerRole':
-                    return { ...field, value: playerRoleText };
-                case 'opening':
-                    return { ...field, value: ws.preamble || '' };
-                case 'openingPlot':
-                    return { ...field, value: ws.initialPlot || '' };
-                default:
-                    return field;
-            }
-        }));
+        // 设置表单字段值
+        setTitle(ws.title || '');
+        setTagline(ws.summary || '');
+        setEra(ws.background || '');
+        setWorldRules(worldRulesText);
+        setPlayerRole(playerRoleText);
+        setOpening(ws.preamble || '');
+        setOpeningPlot(ws.initialPlot || '');
 
         // 同步故事结构与动态事件（仅 visual 模式）
         if (mode === 'visual') {
@@ -173,13 +190,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
         setToneValue(ws.literary || '');
     }, [gameData]);
 
-    const handleFieldChange = (fieldId: string, value: string) => {
-        // 禁止修改玩家信息字段
-        if (fieldId === 'playerRole') {
-            return;
-        }
-        setWorldFields(prev => prev.map(f => f.id === fieldId ? { ...f, value } : f));
-    };
+    // 字段变更处理函数（playerRole 字段是只读的，不提供修改函数）
 
     const handleToneChange = (value: string) => {
         setToneValue(value);
@@ -219,78 +230,24 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
         });
     };
 
-    const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            setCoverError('请上传图片文件');
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            setCoverError('图片大小不能超过 5MB');
-            return;
-        }
-
-        setCoverError(null);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setCoverPreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-        uploadCover(file);
-    };
-
-    const handleCoverClick = () => {
-        coverInputRef.current?.click();
-    };
-
-    const handleRemoveCover = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setCoverPreview(null);
-        coverInputRef.current && (coverInputRef.current.value = '');
-    };
-
-    const uploadCover = useCallback(async (file: File) => {
-        if (!currentFileId) {
-            setCoverError('缺少文件ID，无法上传封面');
-            return;
-        }
-        try {
-            setCoverUploading(true);
-            setCoverError(null);
-            const response = await EditorApi.uploadGameCover(currentFileId, file);
-            if (response.data.success) {
-                toast.success('封面上传成功');
-            }
-        } catch (error) {
-            console.error('上传封面失败:', error);
-            setCoverError('封面上传失败，请重试');
-        } finally {
-            setCoverUploading(false);
-        }
-    }, [currentFileId]);
-
     const isWorldInteractionMode = mode === 'worldInteraction';
 
     const getFullWorldSettingData = useCallback((): VisualWorldSetting | WorldWorldSetting | null => {
         if (!gameData?.worldSetting) return null;
 
-        const getFieldValue = (id: string) => worldFields.find(f => f.id === id)?.value ?? '';
-        const titleVal = getFieldValue('title');
-        const taglineVal = getFieldValue('tagline');
-        const eraVal = getFieldValue('era');
-        const worldRulesVal = getFieldValue('worldRules');
-        const playerRoleVal = getFieldValue('playerRole');
-        const openingVal = getFieldValue('opening');
-        const openingPlotVal = getFieldValue('openingPlot');
+        // 直接使用状态值
+        const titleVal = title;
+        const taglineVal = tagline;
+        const eraVal = era;
+        const worldRulesVal = worldRules;
+        const openingVal = opening;
+        const openingPlotVal = openingPlot;
 
         // 解析世界规则：支持 "key: value" 形式（视觉模式）和 "每行一条规则" 形式（worldInteraction 模式）
-        const worldRules: { [key: string]: string } = {};
+        const parsedWorldRules: { [key: string]: string } = {};
         const worldRulesLines: string[] = [];
         if (worldRulesVal) {
-            worldRulesVal.split('\n').forEach(line => {
+            worldRulesVal.split('\n').forEach((line: string) => {
                 const trimmedLine = line.trim();
                 if (!trimmedLine) return;
                 const colonIndex = trimmedLine.indexOf(':');
@@ -298,40 +255,18 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                     const key = trimmedLine.substring(0, colonIndex).trim();
                     const value = trimmedLine.substring(colonIndex + 1).trim();
                     if (key && value) {
-                        worldRules[key] = value;
+                        parsedWorldRules[key] = value;
                         worldRulesLines.push(`${key}: ${value}`);
                     }
                 } else {
-                    worldRules[trimmedLine] = trimmedLine;
+                    parsedWorldRules[trimmedLine] = trimmedLine;
                     worldRulesLines.push(trimmedLine);
                 }
             });
         }
 
-        // 解析玩家信息（从文本格式解析）
+        // playerRole 字段是只读的，用户无法修改，所以直接使用后端返回的 player 数据
         const player = getPlayer(gameData);
-        const playerInfo = playerRoleVal || '';
-        let playerName = playerInfo ? '' : (player?.name || '');
-        let playerGender = playerInfo ? '' : (player?.gender || '');
-        let playerAge = playerInfo ? undefined : player?.age;
-        let playerRace = playerInfo ? undefined : (player && 'race' in player ? player.race : undefined);
-
-        if (playerInfo) {
-            const playerMatch = playerInfo.match(/^(.+?)\s*\((.+?)\)/);
-            if (playerMatch) {
-                playerName = playerMatch[1].trim();
-                const playerDetails = playerMatch[2];
-                const ageMatch = playerDetails.match(/(\d+)岁/);
-                const raceMatch = playerDetails.match(/,\s*([^,]+)$/);
-                const genderMatch = playerDetails.match(/^([^,]+)/);
-
-                if (genderMatch) playerGender = genderMatch[1].trim();
-                if (ageMatch) playerAge = parseInt(ageMatch[1]);
-                if (raceMatch) playerRace = raceMatch[1].trim();
-            } else {
-                playerName = playerInfo.trim();
-            }
-        }
 
         const keyEvents = storylines.map(line => ({
             title: line.tag,
@@ -348,19 +283,32 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 preamble: openingVal,
                 initialPlot: openingPlotVal,
                 literary: toneValue ?? '',
-                WorldRules: worldRules,
+                WorldRules: parsedWorldRules,
                 keyEvents: keyEvents,
                 dynamicEntries: dynamicEntries,
-                player: {
-                    ...currentPlayer,
-                    name: playerName,
-                    gender: playerGender,
-                    age: playerAge,
-                    race: playerRace,
-                },
+                player: currentPlayer, // 直接使用后端返回的 player 数据
             } as VisualWorldSetting;
         } else {
             // worldInteraction 模式：将世界规则行映射到 Theme（string[]）
+            // playerRole 字段是只读的，直接使用后端返回的 player 数据
+            const worldPlayer = player ? {
+                name: player.name || '',
+                gender: player.gender || '',
+                age: player.age || 0,
+                personality: 'personality' in player ? player.personality : '',
+                appearance: player.appearance || '',
+                tone: player.tone || '',
+                imagePath: 'imagePath' in player ? player.imagePath : ('images' in player && player.images?.base) || '',
+            } : {
+                name: '',
+                gender: '',
+                age: 0,
+                personality: '',
+                appearance: '',
+                tone: '',
+                imagePath: '',
+            };
+            
             return {
                 ...gameData.worldSetting,
                 title: titleVal,
@@ -371,23 +319,20 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 literary: toneValue ?? '',
                 keyEvents: keyEvents,
                 Theme: worldRulesLines,
-                WorldRules: worldRules,
-                player: {
-                    name: playerName,
-                    gender: playerGender,
-                    age: playerAge || 0,
-                    personality: (player && 'personality' in player) ? player.personality : '',
-                    appearance: player?.appearance || '',
-                    tone: player?.tone || '',
-                    imagePath: (player && 'imagePath' in player) ? player.imagePath : (player?.images?.base || ''),
-                },
+                WorldRules: parsedWorldRules,
+                player: worldPlayer, // 直接使用后端返回的 player 数据
             } as unknown as WorldWorldSetting;
         }
-    }, [worldFields, storylines, toneValue, gameData, mode, dynamicEntries]);
+    }, [title, tagline, era, worldRules, opening, openingPlot, storylines, toneValue, gameData, mode, dynamicEntries]);
+    
+    // 将 getFullWorldSettingData 保存到 ref 中，供 hook 使用
+    getFullWorldSettingDataRef.current = getFullWorldSettingData;
 
     // 获取修改过的字段（Diff 策略）
     const getWorldSettingData = useCallback((): Partial<VisualWorldSetting> | Partial<WorldWorldSetting> | null => {
-        if (!gameData?.worldSetting || !originalDataRef.current) return null;
+        if (!gameData?.worldSetting || !originalDataRef.current) {
+            return null;
+        }
 
         const fullData = getFullWorldSettingData();
         if (!fullData) return null;
@@ -423,9 +368,7 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 diff.Theme = full.Theme;
             }
 
-            if (JSON.stringify(full.player) !== JSON.stringify(orig.player)) {
-                diff.player = full.player;
-            }
+            // player 字段不参与比较（只读字段，用户在 WorldPanel 中无法修改）
 
             return Object.keys(diff).length > 0 ? diff : null;
         } else {
@@ -455,13 +398,21 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                 (diff as any).WorldRules = fullWorldRules;
             }
 
-            if (JSON.stringify(full.player) !== JSON.stringify(orig.player)) {
-                diff.player = full.player;
-            }
+            // player 字段不参与比较（只读字段，用户在 WorldPanel 中无法修改）
 
             return Object.keys(diff).length > 0 ? diff : null;
         }
     }, [getFullWorldSettingData, gameData, mode]);
+
+    // 检测是否有未保存的修改
+    useEffect(() => {
+        if (!originalDataRef.current) {
+            return;
+        }
+        const worldSettingDiff = getWorldSettingData();
+        const hasChanges = worldSettingDiff !== null;
+        setHasUnsavedChanges(hasChanges);
+    }, [title, tagline, era, worldRules, opening, openingPlot, storylines, toneValue, storyStructure, dynamicEntries, gameData, mode, getWorldSettingData, setHasUnsavedChanges]);
 
     useEffect(() => {
         if (onGetData) {
@@ -472,6 +423,132 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             });
         }
     }, [onGetData, getWorldSettingData]);
+
+    // 停止故事结构生成的轮询
+    const stopStoryPolling = useCallback(() => {
+        if (storyPollingRef.current?.timeoutId) {
+            clearTimeout(storyPollingRef.current.timeoutId);
+            storyPollingRef.current = null;
+        }
+    }, []);
+
+    // 开始轮询故事结构生成状态
+    const startStoryPolling = useCallback((jobId: string) => {
+        // 如果已经在轮询，先停止
+        stopStoryPolling();
+
+        let delay = 1000;
+        const maxDelay = 5000;
+        const timeoutMs = 25 * 60 * 1000; // 25分钟超时
+        const started = Date.now();
+
+        const pollStatus = async () => {
+            try {
+                // 检查超时
+                if (Date.now() - started > timeoutMs) {
+                    stopStoryPolling();
+                    setIsGeneratingStory(false);
+                    const errorMsg = '故事结构生成超时，请重试';
+                    toast.error(errorMsg);
+                    setAdvancedError(errorMsg);
+                    return;
+                }
+
+                // 检查状态
+                const statusResponse = await EditorApi.checkGenerateStatus(jobId);
+                const statusData = statusResponse.data;
+
+                console.log('[故事结构生成轮询] jobId:', jobId, 'status:', statusData.status, 'progress:', statusData.progress, 'stage:', statusData.stage);
+
+                if (
+                    statusData.status === 'running' ||
+                    statusData.status === 'queued' ||
+                    statusData.status === 'pending'
+                ) {
+                    // 继续轮询
+                    delay = Math.min(Math.round(delay * 1.3), maxDelay);
+                    if (storyPollingRef.current) {
+                        storyPollingRef.current.delay = delay;
+                        storyPollingRef.current.timeoutId = setTimeout(() => {
+                            pollStatus();
+                        }, delay);
+                    }
+                } else if (statusData.status === 'completed') {
+                    // 任务完成，获取结果
+                    try {
+                        const resultResponse = await EditorApi.getGenerateResult(jobId);
+                        const result = resultResponse.data;
+                        
+                        console.log('[故事结构生成完成]', result);
+                        
+                        // 从 result.result 中获取数据（根据实际 API 响应格式）
+                        if (result.result) {
+                            const { storyPhases: newStoryStructure, dynamicEntries, message } = result.result;
+                            
+                            stopStoryPolling();
+                            setIsGeneratingStory(false);
+                            setAdvancedError(null);
+                            
+                            if (newStoryStructure) {
+                                setStoryStructure(newStoryStructure);
+                            }
+                            if (dynamicEntries) {
+                                setDynamicEntries(dynamicEntries);
+                            }
+                            toast.success(message || '故事结构已生成');
+                        } else {
+                            throw new Error('响应中缺少 result 字段');
+                        }
+                    } catch (error) {
+                        console.error('获取故事结构生成结果失败:', error);
+                        stopStoryPolling();
+                        setIsGeneratingStory(false);
+                        const errorMsg = '获取故事结构生成结果失败，请重试';
+                        toast.error(errorMsg);
+                        setAdvancedError(errorMsg);
+                    }
+                } else if (statusData.status === 'failed') {
+                    // 任务失败
+                    stopStoryPolling();
+                    setIsGeneratingStory(false);
+                    const errorMsg = statusData.error || '故事结构生成失败，请重试';
+                    toast.error(errorMsg);
+                    setAdvancedError(errorMsg);
+                } else if (statusData.status === 'unknown') {
+                    // 任务不存在
+                    stopStoryPolling();
+                    setIsGeneratingStory(false);
+                    const errorMsg = '故事结构生成任务不存在或已回收，请重试';
+                    toast.error(errorMsg);
+                    setAdvancedError(errorMsg);
+                }
+            } catch (error) {
+                console.error('轮询故事结构生成状态失败:', error);
+                stopStoryPolling();
+                setIsGeneratingStory(false);
+                const errorMsg = error instanceof Error ? error.message : '轮询故事结构生成状态失败';
+                toast.error(errorMsg);
+                setAdvancedError(errorMsg);
+            }
+        };
+
+        // 初始化轮询状态
+        storyPollingRef.current = {
+            timeoutId: null,
+            delay: delay,
+            started: started,
+        };
+
+        // 开始第一次轮询
+        pollStatus();
+    }, [stopStoryPolling]);
+
+    // 组件卸载时清理轮询
+    useEffect(() => {
+        return () => {
+            stopStoryPolling();
+        };
+    }, [stopStoryPolling]);
 
     const handleGenerateStoryStructure = useCallback(async () => {
         if (!currentFileId) {
@@ -485,75 +562,60 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
             setAdvancedError(msg);
             return;
         }
+        
+        // 如果正在轮询，先停止
+        stopStoryPolling();
+
         try {
             setIsGeneratingStory(true);
             setAdvancedError(null);
+            
+            // 发起生成请求
             const res = await EditorApi.generateStoryStructure(currentFileId, trimmedPrompt);
             const resData = res.data;
-            if (!resData.success || !resData.data) {
+            
+            if (!resData.success) {
                 toast.error('生成故事结构失败，请稍后重试');
                 setAdvancedError('生成故事结构失败，请稍后重试');
+                setIsGeneratingStory(false);
                 return;
             }
-            const { storyPhases: newStoryStructure, dynamicEntries, message } = resData.data;
-            console.log(resData);
-            
-            if (newStoryStructure) {
-                setStoryStructure(newStoryStructure);
+
+            // 检查是否返回了 jobId（异步任务）
+            if ('jobId' in resData && resData.jobId) {
+                // 启动轮询
+                console.log('[故事结构生成] 开始轮询，jobId:', resData.jobId);
+                startStoryPolling(resData.jobId);
+            } else if ('data' in resData && resData.data) {
+                // 兼容同步返回的情况（直接返回结果）
+                const { storyPhases: newStoryStructure, dynamicEntries, message } = resData.data;
+                console.log('[故事结构生成] 同步返回结果', resData);
+                
+                setIsGeneratingStory(false);
+                
+                if (newStoryStructure) {
+                    setStoryStructure(newStoryStructure);
+                }
+                if (dynamicEntries) {
+                    setDynamicEntries(dynamicEntries);
+                }
+                toast.success(message || '故事结构已生成');
+            } else {
+                toast.error('生成故事结构失败，请稍后重试');
+                setAdvancedError('生成故事结构失败，请稍后重试');
+                setIsGeneratingStory(false);
             }
-            if (dynamicEntries) {
-                setDynamicEntries(dynamicEntries);
-            }
-            toast.success(message || '故事结构已生成');
         } catch (error) {
             console.error('生成故事结构失败:', error);
             toast.error('生成故事结构失败，请稍后重试');
             setAdvancedError('生成故事结构失败，请稍后重试');
-        } finally {
             setIsGeneratingStory(false);
         }
-    }, [currentFileId, storyPrompt]);
+    }, [currentFileId, storyPrompt, startStoryPolling, stopStoryPolling]);
 
     return (
         <div className={styles.panelContent}>
-            <div className={styles.uploadCover}>
-                <p className={styles.eyebrow}>Step 2</p>
-                <h2>游戏封面图片上传</h2>
-                <div className={styles.coverUploadArea} onClick={handleCoverClick}>
-                    <input
-                        ref={coverInputRef}
-                        type="file"
-                        accept="image/jpeg,image/png,image/jpg,image/webp"
-                        hidden
-                        onChange={handleCoverSelect}
-                        disabled={coverUploading || !currentFileId}
-                    />
-                    {coverPreview ? (
-                        <div className={styles.coverPreviewContainer}>
-                            <img src={coverPreview} alt="封面预览" className={styles.coverPreview} />
-                            <div className={styles.coverActions}>
-                                <button
-                                    type="button"
-                                    className={styles.removeCoverBtn}
-                                    onClick={handleRemoveCover}
-                                    disabled={coverUploading}
-                                >
-                                    移除
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className={styles.coverPlaceholder}>
-                            <BsUpload className={styles.coverUploadIcon} size={32} />
-                            <p className={styles.coverUploadText}>点击上传封面图片</p>
-                            <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
-                        </div>
-                    )}
-                </div>
-                {coverError && (
-                    <p className={styles.coverErrorText}>{coverError}</p>
-                )}
-            </div>
+            <CoverUpload fileId={currentFileId} />
             <div className={styles.panelHeader}>
                 <div>
                     <h2>世界观 & 表单化设定</h2>
@@ -579,6 +641,9 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                     </button>
                 )}
             </div>
+            
+            {/* 未保存修改确认弹窗 */}
+            {SaveConfirmModalComponent}
 
             <div className={styles.formContainer}>
                 {/* Tab 切换 - 仅在 visual 模式下显示 */}
@@ -629,151 +694,46 @@ const WorldPanel: React.FC<WorldPanelProps> = ({
                         </>
                     ) : (
                         <>
-                            {worldFields.map((field) => {
-                                const isPlayerRole = field.id === 'playerRole';
-                                return (
-                                    <div key={field.id} className={styles.formRow}>
-                                        <div className={styles.fieldHeader}>
-                                            <span className={styles.fieldLabel}>{field.label}</span>
-                                            {field.hint && <span className={styles.fieldHint}>{field.hint}</span>}
-                                            {isPlayerRole && (
-                                                <span className={styles.fieldHint} style={{ color: 'rgba(0, 0, 0, 0.5)', fontStyle: 'italic' }}>
-                                                    玩家信息需要在"角色设定"面板中修改
-                                                </span>
-                                            )}
-                                        </div>
-                                        {field.type === 'textarea' ? (
-                                            <textarea
-                                                rows={field.rows || 3}
-                                                value={field.value}
-                                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                                                disabled={isPlayerRole}
-                                                className={isPlayerRole ? styles.disabledInput : ''}
-                                            />
-                                        ) : (
-                                            <input
-                                                type="text"
-                                                value={field.value}
-                                                onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                                                disabled={isPlayerRole}
-                                                className={isPlayerRole ? styles.disabledInput : ''}
-                                            />
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            <WorldSettingForm
+                                title={title}
+                                tagline={tagline}
+                                era={era}
+                                worldRules={worldRules}
+                                playerRole={playerRole}
+                                opening={opening}
+                                openingPlot={openingPlot}
+                                onTitleChange={setTitle}
+                                onTaglineChange={setTagline}
+                                onEraChange={setEra}
+                                onWorldRulesChange={setWorldRules}
+                                onOpeningChange={setOpening}
+                                onOpeningPlotChange={setOpeningPlot}
+                            />
 
-                            <div className={styles.storylineSection}>
-                                <div className={styles.storylineHeader} style={{ cursor: 'pointer' }} onClick={() => setIsStorylineExpanded(!isStorylineExpanded)}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                                        <span className={styles.fieldLabel}>
-                                            {isWorldInteractionMode ? (
-                                                <>
-                                                    故事线
-                                                    <span className={styles.required}>*</span>
-                                                    <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>（必填）</span>
-                                                </>
-                                            ) : (
-                                                '故事线（可选）'
-                                            )}
-                                        </span>
-                                        {isWorldInteractionMode && (
-                                            <span className={styles.fieldHint} style={{ fontSize: '0.8rem', color: 'rgba(224, 61, 75, 0.8)' }}>
-                                                用于约束世界交互节奏，必须至少添加一条
-                                            </span>
-                                        )}
-                                        {!isStorylineExpanded && isWorldInteractionMode && storylines.length === 0 && (
-                                            <span className={styles.errorText} style={{ fontSize: '0.85rem', marginTop: '4px' }}>
-                                                请添加至少一条故事线
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        {isStorylineExpanded && (
-                                            <button
-                                                className={styles.ghostSmall}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    addStoryline();
-                                                }}
-                                            >
-                                                + 添加故事线
-                                            </button>
-                                        )}
-                                        <MdArrowDropDown size={30} style={{ transform: isStorylineExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                                    </div>
-                                </div>
-                                {isStorylineExpanded && (
-                                    <>
-                                        <span className={styles.fieldHint} style={{ marginBottom: '16px', display: 'block' }}>用标签 + 内容描述关键剧情走向，方便约束 AI 推演。</span>
-                                        {storylineError && (
-                                            <span className={styles.errorText} style={{ marginBottom: '12px', display: 'block' }}>{storylineError}</span>
-                                        )}
-                                        <div className={styles.storylineList}>
-                                            {storylines.length === 0 ? (
-                                                <p className={isWorldInteractionMode ? styles.emptyHintRequired : styles.emptyHint}>
-                                                    {isWorldInteractionMode
-                                                        ? '⚠️ 请至少添加一条故事线（世界交互模式下为必填项）'
-                                                        : '暂未添加故事线。可按时间、好感或章节自定义标签。'}
-                                                </p>
-                                            ) : (
-                                                storylines.map((line) => (
-                                                    <div key={line.id} className={styles.storylineRow}>
-                                                        <div className={styles.storylineMeta}>
-                                                            <label>
-                                                                <span>标签</span>
-                                                                <input
-                                                                    type="text"
-                                                                    value={line.tag}
-                                                                    onChange={(e) => handleStorylineChange(line.id, 'tag', e.target.value)}
-                                                                />
-                                                            </label>
-                                                        </div>
-                                                        <label className={styles.wide}>
-                                                            <span>内容</span>
-                                                            <textarea
-                                                                rows={3}
-                                                                value={line.content}
-                                                                onChange={(e) => handleStorylineChange(line.id, 'content', e.target.value)}
-                                                            />
-                                                        </label>
-                                                        <button
-                                                            className={styles.ghostTiny}
-                                                            onClick={() => removeStoryline(line.id)}
-                                                        >
-                                                            删除
-                                                        </button>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                            <StorylinesSection
+                                storylines={storylines}
+                                isExpanded={isStorylineExpanded}
+                                error={storylineError}
+                                isWorldInteractionMode={isWorldInteractionMode}
+                                onToggleExpand={() => setIsStorylineExpanded(!isStorylineExpanded)}
+                                onAddStoryline={addStoryline}
+                                onStorylineChange={handleStorylineChange}
+                                onRemoveStoryline={removeStoryline}
+                            />
 
-                            <div className={styles.storylineSection}>
-                                <div className={styles.storylineHeader} style={{ marginBottom: isToneExpanded ? '8px' : '0', cursor: 'pointer' }} onClick={() => setIsToneExpanded(!isToneExpanded)}>
-                                    <span className={styles.fieldLabel}>文风要求（可选）</span>
-                                    <MdArrowDropDown size={30} style={{ transform: isToneExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                                </div>
-                                {isToneExpanded && (
-                                    <>
-                                        <span className={styles.fieldHint} style={{ marginBottom: '8px', display: 'block' }}>限定语言风格、叙述视角、禁用词汇等，帮助 AI 保持统一语气。</span>
-                                        <textarea
-                                            rows={4}
-                                            value={toneValue}
-                                            onChange={(e) => handleToneChange(e.target.value)}
-                                            style={{ width: '100%', boxSizing: 'border-box' }}
-                                        />
-                                    </>
-                                )}
-                            </div>
+                            <ToneSection
+                                value={toneValue}
+                                isExpanded={isToneExpanded}
+                                onToggleExpand={() => setIsToneExpanded(!isToneExpanded)}
+                                onChange={handleToneChange}
+                            />
                         </>
                     )}
                 </div>
             </div>
         </div>
     );
-};
+});
 
+WorldPanel.displayName = 'WorldPanel';
 export default WorldPanel;

@@ -22,6 +22,7 @@ import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { getImageUrl } from "../utils/constants";
 import { useRefreshEventData } from "../hooks/mapGalgame/useRefreshEventData";
 import InteractWithNpc from "../components/GalgameMap/InteractWithNpc";
+import worldEditor from "../api/worldInteraction/worldEditor";
 
 export interface EventData {
     event: GameEvent;
@@ -349,6 +350,63 @@ const GalgameMap = () => {
         }
     }, [fileId, user?.user.id]);
 
+    /**
+     * 更新游戏属性（player 和所有 NPC）
+     * 在每次交互完成后调用，确保属性值是最新的
+     */
+    const updateGameAttributes = useCallback(async () => {
+        if (!sessionId || !gameData) {
+            return;
+        }
+        
+        try {
+            const response = await worldEditor.getAttributes(sessionId);
+            
+            if (response.data.success) {
+                const { player, npc: npcs } = response.data;
+                
+                // 更新 gameData 中的 player 和 npcs
+                setGameData(prevData => {
+                    if (!prevData) return prevData;
+                    
+                    // 更新 player 属性（如果存在）
+                    const updatedPlayer = player ? {
+                        ...prevData.worldSetting.player,
+                        ...player, // 覆盖属性值
+                    } : prevData.worldSetting.player;
+                    
+                    // 更新所有 NPC 的属性（如果 npcs 存在）
+                    const updatedNpcs = (npcs && Array.isArray(npcs)) 
+                        ? prevData.npcSetting.npcs.map(existingNpc => {
+                            const updatedNpc = npcs.find((n: any) => n.id === existingNpc.id);
+                            if (updatedNpc) {
+                                return {
+                                    ...existingNpc,
+                                    ...updatedNpc, // 覆盖属性值
+                                };
+                            }
+                            return existingNpc;
+                        })
+                        : prevData.npcSetting.npcs;
+                    
+                    return {
+                        ...prevData,
+                        worldSetting: {
+                            ...prevData.worldSetting,
+                            player: updatedPlayer,
+                        },
+                        npcSetting: {
+                            ...prevData.npcSetting,
+                            npcs: updatedNpcs,
+                        },
+                    };
+                });
+            }
+        } catch (error) {
+            console.error('[GalgameMap] ❌ 更新属性失败:', error);
+        }
+    }, [sessionId, gameData]);
+
     const handleEndRound = async () => {
         if (!sessionId || !gameData) {
             console.error('缺少 sessionId 或 gameData');
@@ -518,16 +576,19 @@ const GalgameMap = () => {
                         gameData={gameData}
                         onBack={handleBack}
                         onNpcInteract={handleNpcInteract}
+                        onUpdateAttributes={updateGameAttributes}
                     />
                 )}
 
                 {currentView === MapViewState.INTERACT_NPC && (
-                    eventData && gameData  &&
+                    eventData && gameData && (
                         <InteractWithNpc
                             onClose={handleBack}
                             gameData={gameData}
                             worldInteractionHistory={worldInteractionHistory ?? null}
+                            onUpdateAttributes={updateGameAttributes}
                         />
+                    )
                 )}
 
                 {(() => {
