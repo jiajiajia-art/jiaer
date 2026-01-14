@@ -3,12 +3,7 @@ import styles from './Inventory.module.css';
 import { IoClose } from 'react-icons/io5';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
 import { useGameStore } from '../../../store/gameStore';
-
-interface Item {
-    item_id: string;
-    quantity: number;
-    slot: number;
-}
+import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 
 interface InventoryProps {
   isOpen: boolean;
@@ -16,7 +11,7 @@ interface InventoryProps {
 }
 
 export const Inventory: React.FC<InventoryProps> = ({ isOpen, onClose }) => {
-    const [inventoryData, setInventoryData] = useState<Item[]>([]);
+    const [inventoryData, setInventoryData] = useState<ObjectItem[]>([]);
     const { sessionId } = useGameStore();
 
     const fetchInventoryData = async () => {
@@ -49,14 +44,6 @@ export const Inventory: React.FC<InventoryProps> = ({ isOpen, onClose }) => {
 
     const totalSlots = 20;
     const gridItems = new Array(totalSlots).fill(null);
-    
-    // 根据 slot 属性将道具放到正确的位置
-    inventoryData.forEach((item) => {
-        // slot 是从 0 开始的索引
-        if (item.slot >= 0 && item.slot < totalSlots) {
-            gridItems[item.slot] = item;
-        }
-    });
 
     if (!isOpen) return null;
     

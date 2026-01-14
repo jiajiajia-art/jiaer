@@ -3,7 +3,7 @@ import styles from './ObjectDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
-import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl, IMAGE_GENERATION_COST, addImageTimestamp } from '../../../utils/constants';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
 
@@ -15,7 +15,7 @@ interface ObjectDetailProps {
     onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const ObjectDetail = React.forwardRef<{ save: () => Promise<void> }, ObjectDetailProps>(({
+const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImageChanged: () => boolean }, ObjectDetailProps>(({
     object,
     onSave,
     fileId,
@@ -132,6 +132,45 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void> }, ObjectDetai
             }, 0);
         }
     }, [object, onHasUnsavedChanges]);
+
+    // 检测是否只修改了图片
+    const checkOnlyImageChanged = React.useCallback((): boolean => {
+        if (!object || !originalObjectRef.current) {
+            // 新建物品：只检查是否有图片相关修改，且没有其他内容
+            if (isNewObjectProp) {
+                const hasImageChange = !!(formData.icon || localFile || tempImageId);
+                const hasOtherContent = !!(
+                    formData.name?.trim() !== '新建物品' ||
+                    formData.description?.trim() ||
+                    formData.functionalDescription?.trim() ||
+                    (formData.acquisition?.source && formData.acquisition.source !== 'ability_node') ||
+                    (formData.acquisition?.condition && formData.acquisition.condition !== '') ||
+                    formData.otherNotes?.trim()
+                );
+                return hasImageChange && !hasOtherContent;
+            }
+            return false;
+        }
+
+        // 比较原始物品和当前表单数据，检查是否只有图片相关字段变化
+        const original = originalObjectRef.current;
+        const imageChanged = 
+            formData.icon !== (original.icon || '') ||
+            localFile !== null ||
+            tempImageId !== null;
+        
+        const otherFieldsChanged = 
+            formData.name !== (original.name || '') ||
+            formData.category !== (original.category || 'consumable') ||
+            formData.stackable !== original.stackable ||
+            formData.description !== (original.description || '') ||
+            formData.functionalDescription !== (original.functionalDescription || '') ||
+            formData.acquisition?.source !== (original.acquisition?.source || '') ||
+            formData.acquisition?.condition !== (original.acquisition?.condition || '') ||
+            formData.otherNotes !== (original.otherNotes || '');
+
+        return imageChanged && !otherFieldsChanged;
+    }, [object, formData, localFile, tempImageId, isNewObjectProp]);
 
     // 检测是否有未保存的修改
     const checkUnsavedChanges = React.useCallback(() => {
@@ -276,13 +315,22 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void> }, ObjectDetai
             
             formDataToSend.append('otherNotes', formData.otherNotes || '');
             
-            // 如果有本地上传的文件，使用 image
+            // 图片处理：优先使用本地上传的文件
             if (localFile) {
                 formDataToSend.append('image', localFile);
+                console.log('[ObjectDetail] 保存时传递文件:', localFile.name, localFile.size, 'type:', localFile.type);
             } 
             // 如果有 AI 生成的图片，使用 tempImageId
             else if (tempImageId) {
                 formDataToSend.append('tempImageId', tempImageId);
+                console.log('[ObjectDetail] 保存时传递 tempImageId:', tempImageId);
+            }
+            // 如果既没有文件也没有 tempImageId，但有 icon URL（且不是 blob URL），传递 icon
+            else if (formData.icon && !formData.icon.startsWith('blob:')) {
+                formDataToSend.append('icon', formData.icon);
+                console.log('[ObjectDetail] 保存时传递 icon URL:', formData.icon);
+            } else {
+                console.warn('[ObjectDetail] 保存时没有图片信息: localFile=', localFile, 'tempImageId=', tempImageId, 'icon=', formData.icon);
             }
             
             if (isNewObject) {
@@ -319,9 +367,10 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void> }, ObjectDetai
         }
     };
 
-    // 暴露 save 方法给父组件
+    // 暴露 save 和 checkOnlyImageChanged 方法给父组件
     useImperativeHandle(ref, () => ({
         save: handleSave,
+        checkOnlyImageChanged: checkOnlyImageChanged,
     }));
 
     if (!object && !isNewObjectProp) {
@@ -366,7 +415,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void> }, ObjectDetai
                                         {formData.icon ? (
                                             <div className={styles.imagePreview}>
                                                 <img
-                                                    src={formData.icon.startsWith('blob:') ? formData.icon : getImageUrl(formData.icon)}
+                                                    src={formData.icon.startsWith('blob:') ? formData.icon : addImageTimestamp(getImageUrl(formData.icon))}
                                                     alt="物品预览"
                                                 />
                                             </div>

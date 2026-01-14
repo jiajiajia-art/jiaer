@@ -20,7 +20,7 @@ interface FunctionalNPCsPanelProps {
 }
 
 export interface FunctionalNPCsPanelRef {
-    checkBeforeLeave: () => boolean;
+    checkBeforeLeave: () => Promise<boolean> | boolean;
 }
 
 const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalNPCsPanelProps>(({
@@ -51,7 +51,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
         targetPanelId?: string;
     } | null>(null);
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
-    const detailRef = useRef<{ save: () => Promise<void> } | null>(null);
+    const detailRef = useRef<{ save: () => Promise<void>; checkOnlyImageChanged: () => boolean } | null>(null);
 
     const refreshUserPoints = async () => {
         if (!updateUser) return;
@@ -117,23 +117,69 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
     }, [pendingAction, onBeforePanelChange]);
 
     // 检查是否可以切换（如果有未保存修改，显示确认弹窗）
-    const checkBeforeSwitch = useCallback((action: { type: 'switchNode' | 'switchPanel' | 'close'; targetNodeId?: string | null; targetPanelId?: string }) => {
+    const checkBeforeSwitch = useCallback(async (action: { type: 'switchNode' | 'switchPanel' | 'close'; targetNodeId?: string | null; targetPanelId?: string }) => {
         if (hasUnsavedChanges) {
+            // 检查是否只修改了图片，如果是则自动保存
+            if (detailRef.current?.checkOnlyImageChanged && detailRef.current.checkOnlyImageChanged()) {
+                try {
+                    if (detailRef.current?.save) {
+                        await detailRef.current.save();
+                        // 保存成功，等待状态更新（onSave 回调会更新本地数据）
+                        // 使用 setTimeout 确保状态更新完成
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        // 保存成功后直接执行切换操作
+                        if (action.type === 'switchNode') {
+                            setActiveNodeId(action.targetNodeId || null);
+                            setIsNewNode(false);
+                            setCreatingNode(null);
+                        } else if (action.type === 'switchPanel') {
+                            if (onBeforePanelChange) {
+                                await onBeforePanelChange();
+                            }
+                        }
+                        return true;
+                    }
+                } catch (error) {
+                    // 自动保存失败，显示确认弹窗
+                    console.error('自动保存图片失败:', error);
+                    toast.error('自动保存失败，请手动保存');
+                }
+            }
+            
+            // 不是只修改图片，或者自动保存失败，显示确认弹窗
             setPendingAction(action);
             setSaveConfirmModalOpen(true);
             setIsBlockingSwitch(true);
             return false;
         }
         return true;
-    }, [hasUnsavedChanges]);
+    }, [hasUnsavedChanges, onBeforePanelChange]);
 
     // 暴露给父组件的方法，用于在切换面板前检查
     useImperativeHandle(ref, () => ({
-        checkBeforeLeave: () => {
+        checkBeforeLeave: async () => {
             const hasChanges = hasUnsavedChangesRef.current;
             const isBlocking = isBlockingSwitchRef.current;
             
             if (hasChanges && !isBlocking) {
+                // 检查是否只修改了图片，如果是则自动保存
+                if (detailRef.current?.checkOnlyImageChanged && detailRef.current.checkOnlyImageChanged()) {
+                    try {
+                        if (detailRef.current?.save) {
+                            await detailRef.current.save();
+                            // 保存成功，等待状态更新（onSave 回调会更新本地数据）
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            // 自动保存成功，允许切换
+                            return true;
+                        }
+                    } catch (error) {
+                        // 自动保存失败，显示确认弹窗
+                        console.error('自动保存图片失败:', error);
+                        toast.error('自动保存失败，请手动保存');
+                    }
+                }
+                
+                // 不是只修改图片，或者自动保存失败，显示确认弹窗
                 setPendingAction({ type: 'switchPanel' });
                 setSaveConfirmModalOpen(true);
                 setIsBlockingSwitch(true);
@@ -149,10 +195,12 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
     }), []);
 
     // 创建新的功能性NPC
-    const handleCreateNode = () => {
-        if (!checkBeforeSwitch({ type: 'switchNode', targetNodeId: null })) {
+    const handleCreateNode = async () => {
+        const canSwitch = await checkBeforeSwitch({ type: 'switchNode', targetNodeId: null });
+        if (!canSwitch) {
             return;
         }
+        // 创建新节点（如果自动保存成功，checkBeforeSwitch 已经处理了切换，这里仍然需要创建新节点）
         const newNode: AbilityNode = {
             node_id: `node-${Date.now()}`,
             authorNote: '', // NPC名称（所有类型都需要）
@@ -336,10 +384,12 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
                 <FunctionalNPCList
                     abilityNodes={abilityNodes}
                     activeNodeId={activeNodeId}
-                    onNodeClick={(id) => {
-                        if (!checkBeforeSwitch({ type: 'switchNode', targetNodeId: id })) {
+                    onNodeClick={async (id) => {
+                        const canSwitch = await checkBeforeSwitch({ type: 'switchNode', targetNodeId: id });
+                        if (!canSwitch) {
                             return;
                         }
+                        // 切换节点（如果自动保存成功，checkBeforeSwitch 已经处理了切换，这里仍然需要更新状态）
                         setActiveNodeId(id);
                         setIsNewNode(false);
                         setCreatingNode(null);

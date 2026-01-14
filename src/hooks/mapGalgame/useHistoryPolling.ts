@@ -50,28 +50,25 @@ export function useHistoryPolling({
             return;
         }
 
-        console.log("[Poll] 轮询 effect 启动", pendingRequest);
         cancelledRef.current = false;
 
         const { type: pendingType, optionId: pendingOptionId, startTime } = pendingRequest;
 
         const pollHistory = async () => {
             if (cancelledRef.current) {
-                console.log("[Poll] 轮询已取消");
                 return;
             }
 
-            const POLL_INTERVAL_MS = 6000; // 轮询间隔（10 秒）
+            const POLL_INTERVAL_MS = 6000; // 轮询间隔（6 秒）
+            const POLL_TIMEOUT_MS = 60_000; // 轮询超时时间（60 秒）
             try {
                 const elapsed = Date.now() - startTime;
-                console.log(`[Poll] 轮询中... 已过去 ${elapsed}ms`);
 
                 const resp = await interactionApi.getWorldInteractionHistory(sessionId);
                 if (cancelledRef.current) return;
 
                 if (!resp.data?.success) {
-                    if (elapsed > 60_000) {
-                        console.warn("[Poll] 超时：历史获取失败");
+                    if (elapsed > POLL_TIMEOUT_MS) {
                         onTimeout();
                         onPollEnd();
                         return;
@@ -82,7 +79,6 @@ export function useHistoryPolling({
 
                 const history = resp.data;
                 onHistoryUpdate(history);
-                console.log("[Poll] 获取到历史，条数:", history.interactions?.length);
 
                 const interactions = (history.interactions || []) as any[];
                 let matchedSteps: any[] | null = null;
@@ -105,7 +101,6 @@ export function useHistoryPolling({
                         );
                     }
                     if (matched) {
-                        console.log("[Poll] 匹配到 npc_dialogue:", matched.eventId);
                         if (Array.isArray(matched.narrativeSteps)) {
                             matchedSteps = matched.narrativeSteps;
                         }
@@ -123,7 +118,6 @@ export function useHistoryPolling({
                         }
                     }
                     if (matched) {
-                        console.log("[Poll] 匹配到 player_choice:", matched.eventId);
                         if (Array.isArray(matched.npcResponse)) {
                             matchedSteps = matched.npcResponse;
                         }
@@ -132,25 +126,21 @@ export function useHistoryPolling({
 
                 // 找到匹配的步骤
                 if (matchedSteps && matchedSteps.length > 0) {
-                    console.log("[Poll] 轮询成功，步骤数:", matchedSteps.length);
                     onMatchFound(matchedSteps);
                     onPollEnd();
                     return;
                 }
 
                 // 超时检查
-                if (elapsed > 60_000) {
-                    console.warn("[Poll] 超时：未找到匹配记录");
+                if (elapsed > POLL_TIMEOUT_MS) {
                     onTimeout();
                     onPollEnd();
                     return;
                 }
 
                 // 继续轮询
-                console.log(`[Poll] 未找到匹配，${POLL_INTERVAL_MS / 6000} 秒后继续...`);
                 pollTimerRef.current = window.setTimeout(pollHistory, POLL_INTERVAL_MS);
             } catch (error) {
-                console.error("[Poll] 轮询出错:", error);
                 if (cancelledRef.current) return;
 
                 const elapsed = Date.now() - startTime;

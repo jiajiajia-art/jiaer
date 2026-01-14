@@ -10,7 +10,6 @@ import { MdDownload } from 'react-icons/md';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
-import { RiDeleteBin5Line } from 'react-icons/ri';
 import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
 import type { Character, Variation, Relationship } from './types';
@@ -19,6 +18,7 @@ import { getNpcs, npcToCharacter, playerToCharacter } from './utils';
 import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
+import CharactersSidebar from './CharactersSidebar';
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
@@ -48,6 +48,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
     const [isRelationshipExpanded, setIsRelationshipExpanded] = useState<boolean>(false);
+    const [isVariationExpanded, setIsVariationExpanded] = useState<boolean>(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
@@ -100,16 +101,27 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     }, [isBlockingSwitch]);
 
     // 检测是否有未保存的修改（通过比较当前数据和原始数据）
-    // 这个检测会捕获所有数据变化，包括图片上传等
+    // 这里有意忽略图片字段（portrait / variations.img），避免「已上传并保存的图片」导致误判为未保存
     useEffect(() => {
         if (originalCharacterDataRef.current.length === 0) {
             return;
         }
 
-        // 比较当前数据和原始数据（排除临时角色）
-        const currentCharacters = characterData.filter(c => !c.id.startsWith('temp-'));
-        const currentDataStr = JSON.stringify(currentCharacters);
-        const originalDataStr = JSON.stringify(originalCharacterDataRef.current);
+        // 归一化角色数据：排除临时角色，并忽略图片相关字段
+        const normalizeCharacters = (list: Character[]) =>
+            list
+                .filter(c => !c.id.startsWith('temp-'))
+                .map((c) => ({
+                    ...c,
+                    portrait: '', // 忽略基础立绘
+                    variations: c.variations.map(v => ({
+                        ...v,
+                        img: '', // 忽略差分图片
+                    })),
+                }));
+
+        const currentDataStr = JSON.stringify(normalizeCharacters(characterData));
+        const originalDataStr = JSON.stringify(normalizeCharacters(originalCharacterDataRef.current));
         const hasChanges = currentDataStr !== originalDataStr;
         
         // 如果数据确实有变化，则设置
@@ -564,16 +576,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 触发文件选择
     const handlePortraitClick = () => {
-        if (isAddingNew && newCharacterData) {
-            // 新增模式
-            npcFileInputRef.current?.click();
+        // 新增模式下禁止上传图片
+        if (isAddingNew) {
+            return;
+        }
+        
+        // 正常模式 - 区分玩家和NPC
+        if (currentCharacter?.id === 'player') {
+            playerFileInputRef.current?.click();
         } else {
-            // 正常模式 - 区分玩家和NPC
-            if (currentCharacter?.id === 'player') {
-                playerFileInputRef.current?.click();
-            } else {
-                npcFileInputRef.current?.click();
-            }
+            npcFileInputRef.current?.click();
         }
     };
 
@@ -627,6 +639,12 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // 新增模式下禁止上传图片
+        if (isAddingNew) {
+            toast.error('请先确认增加角色后再上传图片');
+            return;
+        }
+
         if (!currentCharacter) {
             toast.error('缺少必要数据，无法上传');
             return;
@@ -647,6 +665,12 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 点击差分 AI 生成前，先弹出积分确认
     const handleRequestVariationGenerate = (variation: Variation) => {
+        // 新增模式下禁止生成图片
+        if (isAddingNew) {
+            toast.error('请先确认增加角色后再生成图片');
+            return;
+        }
+
         if (!currentCharacter) {
             toast.error('缺少必要数据，无法生成');
             return;
@@ -782,65 +806,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
             <div className={styles.characterLayout}>
                 {/* 左栏 - 角色列表 */}
-                <div 
-                    className={styles.card}
-                    style={{ maxHeight: '72vh', overflowY: 'auto' }}
-                >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <h3>解析出的角色</h3>
-                        <button className={styles.ghostSmall} onClick={openAddNewPanel}>
-                            + 新增角色
-                        </button>
-                    </div>
-                    <div className={styles.characterRoster}>
-                        {characterData.map((character) => (
-                            <article
-                                key={character.id}
-                                className={`${styles.characterRow} ${character.id === activeCharacterId ? styles.active : ''}`}
-                                onClick={() => {
-                                    if (!checkBeforeSwitch({ type: 'switchCharacter', targetCharacterId: character.id })) {
-                                        return;
-                                    }
-                                    // 如果正在新增模式，点击侧边栏时取消新增并切换到所选角色
-                                    if (isAddingNew) {
-                                        setIsAddingNew(false);
-                                        setNewCharacterData(null);
-                                    }
-                                    setActiveCharacterId(character.id);
-                                }}
-                            >
-                                <div
-                                    className={styles.characterThumb}
-                                    style={{ backgroundImage: character.portrait ? `url('${getImageUrl(character.portrait)}')` : 'none' }}
-                                />
-                                <div className={styles.characterMeta}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                        <strong>{character.name || '未命名'}</strong>
-                                        {character.id !== 'player' && (
-                                            <button
-                                                className={styles.deleteButton}
-                                                onClick={(e) => handleDeleteClick(character.id, e)}
-                                                title="删除角色"
-                                            >
-                                                <RiDeleteBin5Line />
-                                            </button>
-                                        )}
-                                    </div>
-                                    <p className={styles.mutedSmall}>{character.role || ''} · {character.identity || ''}</p>
-                                    <div className={styles.tagRow}>
-                                        {character.personality && character.personality.length > 0 ? (
-                                            character.personality.map((tag) => (
-                                                <span key={tag} className={styles.tag}>{tag}</span>
-                                            ))
-                                        ) : (
-                                            <span className={styles.mutedSmall}>暂无性格标签</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
-                </div>
+                <CharactersSidebar
+                    characters={characterData}
+                    activeCharacterId={activeCharacterId}
+                    isAddingNew={isAddingNew}
+                    onSelectCharacter={setActiveCharacterId}
+                    onDeleteCharacter={handleDeleteClick}
+                    onAddNew={openAddNewPanel}
+                    checkBeforeSwitch={checkBeforeSwitch}
+                    setIsAddingNew={setIsAddingNew}
+                    setNewCharacterData={setNewCharacterData}
+                />
 
                 {/* 右栏 - 角色详情（统一表单） */}
                 {currentCharacter && (
@@ -888,7 +864,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
-                                    cursor: isGeneratingSingleNpcImage ? 'not-allowed' : 'pointer'
+                                    cursor: (isAddingNew || (isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id)) ? 'not-allowed' : 'pointer'
                                 }}
                                 onClick={handlePortraitClick}
                             >
@@ -909,7 +885,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     </button>
                                 )}
                                 <span className={styles.portraitHint}>
-                                    {isAddingNew ? '点击上传角色基础立绘' : '点击替换角色基础立绘'}
+                                    {isAddingNew ? '请先确认增加角色后再上传图片' : '点击替换角色基础立绘'}
                                 </span>
                                 {isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id && (
                                     <div className={styles.loadingOverlay}>
@@ -922,7 +898,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div className={styles.portraitImageActions}>
                                 <button className={styles.ghostSmall}
                                     onClick={handlePortraitClick}
-                                    disabled={isGeneratingSingleNpcImage}
+                                    disabled={isAddingNew || (isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id)}
                                 >
                                     上传图片
                                 </button>
@@ -930,7 +906,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     <button
                                         className={`${styles.ghostSmall} ${styles.generateButton}`}
                                         onClick={() => handleRequestSingleNpcGenerate(currentCharacter)}
-                                        disabled={isGeneratingSingleNpcImage}
+                                        disabled={isAddingNew || (isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id)}
                                     >
                                         <img
                                             src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -1002,6 +978,112 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     />
                                 </label>
                             </div>
+
+                            {/* 立绘差分（可折叠） */}
+                            {
+                                currentCharacter.id !== 'player' &&
+                                <div className={styles.detailBlock}>
+                                    <div
+                                        className={styles.collapsibleHeader}
+                                        style={{ cursor: 'pointer' }}
+                                        onClick={() => setIsVariationExpanded(!isVariationExpanded)}
+                                    >
+                                        <strong>立绘差分</strong>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span className={styles.mutedSmall}>
+                                                {currentCharacter.variations.filter(v => v.label !== 'base').length} 个差分
+                                            </span>
+                                            <MdArrowDropDown size={30} style={{ transform: isVariationExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                                        </div>
+                                    </div>
+                                    {isVariationExpanded && (
+                                        <div className={styles.variationGrid}>
+                                            {currentCharacter.variations.filter(v => v.label !== 'base').map((variation) => (
+                                                <div key={variation.id} className={styles.variationCard}>
+                                                    <div
+                                                        className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
+                                                        style={variation.img ? { backgroundImage: `url('${getImageUrl(variation.img)}')` } : {}}
+                                                    >
+                                                        {/* 加载效果 */}
+                                                        {isGeneratingVariation && generatingVariationId === variation.id && (
+                                                            <div className={styles.loadingOverlay}>
+                                                                <div className={styles.loadingSpinner}></div>
+                                                                <div className={styles.loadingText}>正在生成...</div>
+                                                            </div>
+                                                        )}
+                                                        {/* 下载按钮 */}
+                                                        {variation.img && currentCharacter.id !== 'player' && (
+                                                            <button
+                                                                className={styles.downloadButton}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const variantType = variation.label;
+                                                                    handleDownloadImage('npcs', currentCharacter.id, variantType);
+                                                                }}
+                                                                title="下载图片"
+                                                            >
+                                                                <MdDownload size={16} />
+                                                            </button>
+                                                        )}
+                                                        {!variation.img && !isGeneratingVariation && <span className={styles.mutedSmall}>等待图片</span>}
+                                                    </div>
+                                                    <p>{variation.label}</p>
+                                                    {variation.description && (
+                                                        <p className={styles.mutedSmall} style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                                            {variation.description}
+                                                        </p>
+                                                    )}
+                                                    <div className={styles.variationActions}>
+                                                        <input
+                                                            ref={(el) => {
+                                                                if (el) {
+                                                                    variationFileInputRefs.current[variation.id] = el;
+                                                                }
+                                                            }}
+                                                            type="file"
+                                                            accept="image/*"
+                                                            style={{ display: 'none' }}
+                                                            onChange={(e) => handleUploadVariationImage(variation, e)}
+                                                        />
+                                                        <button
+                                                            className={styles.ghostTiny}
+                                                            onClick={() => variationFileInputRefs.current[variation.id]?.click()}
+                                                            disabled={isAddingNew || (isGeneratingVariation && generatingVariationId === variation.id)}
+                                                        >
+                                                            上传图片
+                                                        </button>
+                                                        <button
+                                                            className={`${styles.ghostTiny} ${styles.generateButton}`}
+                                                            onClick={() => handleRequestVariationGenerate(variation)}
+                                                            disabled={isAddingNew || (isGeneratingVariation && generatingVariationId === variation.id)}
+                                                        >
+                                                            <img
+                                                                src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                                                                alt=""
+                                                                className={styles.priceIcon}
+                                                            />
+                                                            <span>{isGeneratingVariation && generatingVariationId === variation.id ? '生成中...' : `${IMAGE_GENERATION_COST} AI生成`}</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <button className={styles.addCard} onClick={addVariation}>+ 新差分</button>
+                                        </div>
+                                    )}
+                                </div>
+                            }
+                            {/* 角色属性（worldInteraction 模式） */}
+                            {isWorldInteractionMode && attributeSetting && currentCharacter && fileId && (
+                                <CharacterAttributesPanel
+                                    ref={attributePanelRef}
+                                    attributeSetting={attributeSetting}
+                                    npcAttributes={currentCharacter.id === 'player' ? undefined : currentNpcAttributes}
+                                    characterId={currentCharacter.id}
+                                    isPlayer={currentCharacter.id === 'player'}
+                                    fileId={fileId}
+                                />
+                            )}
+
 
                             {/* 人物背景 & 动机（可折叠） */}
                             <div className={styles.detailBlock}>
@@ -1118,104 +1200,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     </div>
                                 )}
                             </div>
-
-                            {/* 角色属性（worldInteraction 模式） */}
-                            {isWorldInteractionMode && attributeSetting && currentCharacter && fileId && (
-                                <CharacterAttributesPanel
-                                    ref={attributePanelRef}
-                                    attributeSetting={attributeSetting}
-                                    npcAttributes={currentCharacter.id === 'player' ? undefined : currentNpcAttributes}
-                                    characterId={currentCharacter.id}
-                                    isPlayer={currentCharacter.id === 'player'}
-                                    fileId={fileId}
-                                />
-                            )}
-
-                            {/* 立绘差分 */}
-                            {
-                                currentCharacter.id !== 'player' &&
-                                <div className={styles.detailBlock}>
-                                    <div className={styles.cardHead}>
-                                        <strong>立绘差分</strong>
-                                        <span className={styles.mutedSmall}>
-                                            {currentCharacter.variations.filter(v => v.label !== 'base').length} 个差分
-                                        </span>
-                                    </div>
-                                    <div className={styles.variationGrid}>
-                                        {currentCharacter.variations.filter(v => v.label !== 'base').map((variation) => (
-                                            <div key={variation.id} className={styles.variationCard}>
-                                                <div
-                                                    className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
-                                                    style={variation.img ? { backgroundImage: `url('${getImageUrl(variation.img)}')` } : {}}
-                                                >
-                                                    {/* 加载效果 */}
-                                                    {isGeneratingVariation && generatingVariationId === variation.id && (
-                                                        <div className={styles.loadingOverlay}>
-                                                            <div className={styles.loadingSpinner}></div>
-                                                            <div className={styles.loadingText}>正在生成...</div>
-                                                        </div>
-                                                    )}
-                                                    {/* 下载按钮 */}
-                                                    {variation.img && currentCharacter.id !== 'player' && (
-                                                        <button
-                                                            className={styles.downloadButton}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const variantType = variation.label;
-                                                                handleDownloadImage('npcs', currentCharacter.id, variantType);
-                                                            }}
-                                                            title="下载图片"
-                                                        >
-                                                            <MdDownload size={16} />
-                                                        </button>
-                                                    )}
-                                                    {!variation.img && !isGeneratingVariation && <span className={styles.mutedSmall}>等待图片</span>}
-                                                </div>
-                                                <p>{variation.label}</p>
-                                                {variation.description && (
-                                                    <p className={styles.mutedSmall} style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                                                        {variation.description}
-                                                    </p>
-                                                )}
-                                                <div className={styles.variationActions}>
-                                                    <input
-                                                        ref={(el) => {
-                                                            if (el) {
-                                                                variationFileInputRefs.current[variation.id] = el;
-                                                            }
-                                                        }}
-                                                        type="file"
-                                                        accept="image/*"
-                                                        style={{ display: 'none' }}
-                                                        onChange={(e) => handleUploadVariationImage(variation, e)}
-                                                    />
-                                                    <button
-                                                        className={styles.ghostTiny}
-                                                        onClick={() => variationFileInputRefs.current[variation.id]?.click()}
-                                                        disabled={isGeneratingVariation && generatingVariationId === variation.id}
-                                                    >
-                                                        上传图片
-                                                    </button>
-                                                    <button
-                                                        className={`${styles.ghostTiny} ${styles.generateButton}`}
-                                                        onClick={() => handleRequestVariationGenerate(variation)}
-                                                        disabled={isGeneratingVariation && generatingVariationId === variation.id}
-                                                    >
-                                                        <img
-                                                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                                                            alt=""
-                                                            className={styles.priceIcon}
-                                                        />
-                                                        <span>{isGeneratingVariation && generatingVariationId === variation.id ? '生成中...' : `${IMAGE_GENERATION_COST} AI生成`}</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        <button className={styles.addCard} onClick={addVariation}>+ 新差分</button>
-                                    </div>
-                                </div>
-                            }
-
                         </>
                     </div>
                 )}

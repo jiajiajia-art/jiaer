@@ -49,6 +49,9 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
     const imageRef = useRef<HTMLImageElement>(null);
     const currentSceneIdRef = useRef<string | null>(null);
     const currentSubSceneIdRef = useRef<string | null>(null);
+    // 保存初始 NPC 状态，用于检测未保存的修改
+    const initialNormalNPCsRef = useRef<PlacedNPC[]>([]);
+    const initialFunctionalNPCsRef = useRef<PlacedNPC[]>([]);
 
     const currentSubScene = useMemo(
         () => subScenes.find(s => s.id === selectedSubSceneId) || null,
@@ -90,8 +93,11 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                 authorNote: '', // 默认为空
             }));
             setPlacedNormalNPCs(loadedNPCs);
+            // 保存初始状态
+            initialNormalNPCsRef.current = JSON.parse(JSON.stringify(loadedNPCs));
         } else {
             setPlacedNormalNPCs([]);
+            initialNormalNPCsRef.current = [];
         }
         // 功能性NPC的位置信息需要从AbilityNode中加载（如果有的话）
         // 根据子场景的 abilityNodes ID 数组，从 abilityNodeSetting 中找到对应的 AbilityNode
@@ -117,14 +123,17 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                         type: abilityNode.type || 'illustration',
                         name: abilityNode.name,
                         authorNote: abilityNode.authorNote || '',
-                        backgroundColor: abilityNode.color || (abilityNode.type === 'button' ? '#E03D4B' : undefined),
+                        backgroundColor: abilityNode.color || (abilityNode.type === 'button' ? '#37333480' : undefined),
                     };
                 })
                 .filter((npc): npc is PlacedNPC => npc !== null);
             
             setPlacedFunctionalNPCs(functionalNPCs);
+            // 保存初始状态
+            initialFunctionalNPCsRef.current = JSON.parse(JSON.stringify(functionalNPCs));
         } else {
-        setPlacedFunctionalNPCs([]);
+            setPlacedFunctionalNPCs([]);
+            initialFunctionalNPCsRef.current = [];
         }
     }, [subScenes, selectedSubSceneId, currentSubScene, sceneSetting, abilityNodeSetting]);
 
@@ -400,7 +409,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                 type: functionalNPCData.type || 'illustration',
                 name: functionalNPCData.name,
                 authorNote: functionalNPCData.authorNote || '',
-                backgroundColor: functionalNPCData.type === 'button' ? '#E03D4B' : undefined, // 按钮型NPC默认背景色
+                backgroundColor: functionalNPCData.type === 'button' ? '#37333480' : undefined, // 按钮型NPC默认背景色
             };
                 setPlacedFunctionalNPCs(prev => [...prev, newNPC]);
             } else {
@@ -721,6 +730,22 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         return [...placedNormalNPCs, ...placedFunctionalNPCs];
     }, [placedNormalNPCs, placedFunctionalNPCs]);
 
+    // 检测是否有未保存的修改
+    const checkUnsavedChanges = useCallback((): boolean => {
+        // 比较普通NPC
+        const normalNPCsChanged = JSON.stringify(placedNormalNPCs) !== JSON.stringify(initialNormalNPCsRef.current);
+        // 比较功能性NPC
+        const functionalNPCsChanged = JSON.stringify(placedFunctionalNPCs) !== JSON.stringify(initialFunctionalNPCsRef.current);
+        
+        return normalNPCsChanged || functionalNPCsChanged;
+    }, [placedNormalNPCs, placedFunctionalNPCs]);
+
+    // 重置初始状态（保存成功后调用）
+    const resetInitialState = useCallback(() => {
+        initialNormalNPCsRef.current = JSON.parse(JSON.stringify(placedNormalNPCs));
+        initialFunctionalNPCsRef.current = JSON.parse(JSON.stringify(placedFunctionalNPCs));
+    }, [placedNormalNPCs, placedFunctionalNPCs]);
+
     return {
         selectedSubSceneId,
         setSelectedSubSceneId,
@@ -736,7 +761,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         imageRef,
         currentSceneIdRef,
         currentSubSceneIdRef,
-        currentSubScene,
         imageLoaded,
         setImageLoaded,
         isSubSceneContentReady,
@@ -752,6 +776,9 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         handleSetZIndex,
         handleChangeBackgroundColor,
         getNPCPosition,
+        currentSubScene,
+        checkUnsavedChanges,
+        resetInitialState,
     };
 };
 

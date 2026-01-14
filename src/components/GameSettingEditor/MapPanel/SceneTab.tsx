@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import styles from './SceneTab.module.css';
 import sharedStyles from './shared.module.css';
 import { IoMdArrowDropdown, IoMdArrowDropright } from 'react-icons/io';
@@ -17,15 +17,20 @@ interface SceneTabProps {
     sceneSetting?: { scenes?: Scene[] };
     fileId: string;
     onDataChange?: () => void;
-    sceneImageUrl: string;
+    onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const SceneTab: React.FC<SceneTabProps> = ({
+export interface SceneTabRef {
+    checkUnsavedChanges: () => boolean;
+    save: () => Promise<void>;
+}
+
+const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
     sceneSetting,
     fileId,
     onDataChange,
-    sceneImageUrl,
-}) => {
+    onHasUnsavedChanges,
+}, ref) => {
     const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
     const [placedSubScenes, setPlacedSubScenes] = useState<PlacedSubScene[]>([]);
     const [draggingSubSceneId, setDraggingSubSceneId] = useState<string | null>(null);
@@ -41,6 +46,7 @@ const SceneTab: React.FC<SceneTabProps> = ({
     const scenePreviewRef = useRef<HTMLDivElement>(null);
     const sceneImageRef = useRef<HTMLImageElement>(null);
     const subSceneDefaultPosRef = useRef<Record<string, { x: number; y: number }>>({});
+    const initialPlacedSubScenesRef = useRef<PlacedSubScene[]>([]);
 
     const currentScene = useMemo(() => {
         if (!sceneSetting?.scenes || sceneSetting.scenes.length === 0) return null;
@@ -121,6 +127,7 @@ const SceneTab: React.FC<SceneTabProps> = ({
             });
         }
         setPlacedSubScenes(loadedSubScenes);
+        initialPlacedSubScenesRef.current = JSON.parse(JSON.stringify(loadedSubScenes)); // 保存初始状态
         setSelectedSubSceneIdInScene(null);
         setEditingSubScene(null);
     }, [currentScene]);
@@ -362,6 +369,13 @@ const SceneTab: React.FC<SceneTabProps> = ({
 
             if (response.data.success) {
                 toast.success(`成功保存 ${placedSubScenes.length} 个子场景的位置`);
+                initialPlacedSubScenesRef.current = JSON.parse(JSON.stringify(placedSubScenes)); // 重置初始状态
+                if (onHasUnsavedChanges) {
+                    onHasUnsavedChanges(false);
+                }
+                if (onDataChange) {
+                    onDataChange();
+                }
             } else {
                 toast.error('保存失败，请检查网络连接');
             }
@@ -369,7 +383,26 @@ const SceneTab: React.FC<SceneTabProps> = ({
             console.error('保存失败:', error);
             toast.error('保存失败：' + (error.message || '请检查网络连接'));
         }
-    }, [placedSubScenes, fileId, currentScene]);
+    }, [placedSubScenes, fileId, currentScene, onHasUnsavedChanges, onDataChange]);
+
+    // 检测是否有未保存的修改
+    const checkUnsavedChanges = useCallback((): boolean => {
+        return JSON.stringify(placedSubScenes) !== JSON.stringify(initialPlacedSubScenesRef.current);
+    }, [placedSubScenes]);
+
+    // 当未保存状态变化时，通知父组件
+    useEffect(() => {
+        if (onHasUnsavedChanges) {
+            const hasChanges = checkUnsavedChanges();
+            onHasUnsavedChanges(hasChanges);
+        }
+    }, [checkUnsavedChanges, onHasUnsavedChanges, placedSubScenes]);
+
+    // 暴露方法给父组件
+    useImperativeHandle(ref, () => ({
+        checkUnsavedChanges,
+        save: handleSaveSubScenePositions,
+    }), [checkUnsavedChanges, handleSaveSubScenePositions]);
 
     return (
         <>
@@ -381,7 +414,7 @@ const SceneTab: React.FC<SceneTabProps> = ({
             >
                 <img
                     ref={sceneImageRef}
-                    src={sceneImageUrl}
+                    src={currentScene?.image ? getImageUrl(currentScene.image) : DEFAULT_SCENE_IMAGE}
                     alt={currentScene?.name || '场景地图'}
                     className={sharedStyles.sceneImage}
                     draggable={false}
@@ -619,7 +652,9 @@ const SceneTab: React.FC<SceneTabProps> = ({
             </div>
         </>
     );
-};
+});
+
+SceneTab.displayName = 'SceneTab';
 
 export default SceneTab;
 

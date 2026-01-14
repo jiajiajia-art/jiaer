@@ -8,56 +8,80 @@ interface ColorPickerProps {
     onChange: (color: string) => void;
 }
 
-// 将任意 rgba(...) / hex 字符串转成标准的 #RRGGBB
+// 将任意 rgba(...) / hex 字符串转成标准的 #RRGGBBAA（包含透明度）
 const toHexString = (color: string): string => {
     const rgbaMatch = color.match(/rgba?\(([^)]+)\)/);
     if (rgbaMatch) {
         const parts = rgbaMatch[1].split(',').map(p => parseFloat(p.trim()));
-        const [r = 224, g = 61, b = 75] = parts;
+        const [r = 55, g = 51, b = 52, a = 1] = parts;
         const toHex = (v: number) => v.toString(16).padStart(2, '0');
-        return `#${toHex(Math.round(r))}${toHex(Math.round(g))}${toHex(Math.round(b))}`;
+        const alpha = isNaN(a) ? 1 : Math.max(0, Math.min(1, a));
+        const aByte = Math.round(alpha * 255);
+        return `#${toHex(Math.round(r))}${toHex(Math.round(g))}${toHex(Math.round(b))}${toHex(aByte)}`;
     }
 
     const rawHex = color.replace('#', '');
-    if (rawHex.length === 3) {
+    // 支持 3/4/6/8 位 hex，统一标准化为 8 位（RRGGBBAA）
+    if (rawHex.length === 3 || rawHex.length === 4) {
         const full = rawHex.split('').map(c => c + c).join('');
-        return `#${full.toLowerCase()}`;
+        const rgb = full.slice(0, 6);
+        const alpha = full.length === 8 ? full.slice(6, 8) : 'ff';
+        return `#${(rgb + alpha).toLowerCase()}`;
     }
     if (rawHex.length === 6) {
+        return `#${(rawHex + 'ff').toLowerCase()}`;
+    }
+    if (rawHex.length === 8) {
         return `#${rawHex.toLowerCase()}`;
     }
 
-    return '#e03d4b';
+    return '#37333480';
 };
 
 const isValidHex = (value: string): boolean => {
-    return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(value.trim());
+    return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/.test(value.trim());
 };
 
 const hexToRgbaString = (value: string): string => {
     const raw = value.replace('#', '');
     let hex = raw;
-    if (raw.length === 3) {
-        hex = raw.split('').map(c => c + c).join('');
+    let r = 55, g = 51, b = 52, aByte = 255;
+
+    if (raw.length === 3 || raw.length === 4) {
+        // #RGB / #RGBA
+        const full = raw.split('').map(c => c + c).join('');
+        hex = full;
     }
+
+    if (hex.length === 6) {
+        // 没有 alpha，默认不透明
+        aByte = 255;
+    } else if (hex.length === 8) {
+        aByte = parseInt(hex.slice(6, 8), 16);
+        hex = hex.slice(0, 6);
+    }
+
     const bigint = parseInt(hex, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `rgba(${r}, ${g}, ${b}, 1)`;
+    if (!Number.isNaN(bigint)) {
+        r = (bigint >> 16) & 255;
+        g = (bigint >> 8) & 255;
+        b = bigint & 255;
+    }
+    const alpha = Math.max(0, Math.min(1, aByte / 255));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
 const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [internalColor, setInternalColor] = useState<string>(color || '#E03D4B');
-    const [hexInput, setHexInput] = useState<string>(toHexString(color || '#E03D4B'));
+    const [internalColor, setInternalColor] = useState<string>(color || '#37333480');
+    const [hexInput, setHexInput] = useState<string>(toHexString(color || '#37333480'));
     const [isEditing, setIsEditing] = useState(false);
     const pickerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (!isEditing) {
-            const next = color || '#E03D4B';
+            const next = color || '#37333480';
             setInternalColor(next);
             setHexInput(toHexString(next));
         }
@@ -87,21 +111,26 @@ const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange }) => {
         const rgbaMatch = internalColor.match(/rgba?\(([^)]+)\)/);
         if (rgbaMatch) {
             const parts = rgbaMatch[1].split(',').map(p => parseFloat(p.trim()));
-            const [r = 255, g = 61, b = 75, a = 1] = parts;
+            const [r = 55, g = 51, b = 52, a = 1] = parts;
             return { r, g, b, a: isNaN(a) ? 1 : a };
         }
         // hex 转换
         const hex = internalColor.replace('#', '');
-        if (hex.length === 3 || hex.length === 6) {
-            const bigint = parseInt(hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex, 16);
+        if (hex.length === 3 || hex.length === 4 || hex.length === 6 || hex.length === 8) {
+            const normalized = toHexString(`#${hex}`); // 标准化为 8 位
+            const clean = normalized.replace('#', '');
+            const rgbHex = clean.slice(0, 6);
+            const aHex = clean.slice(6, 8);
+            const bigint = parseInt(rgbHex, 16);
+            const aByte = parseInt(aHex, 16);
             return {
                 r: (bigint >> 16) & 255,
                 g: (bigint >> 8) & 255,
                 b: bigint & 255,
-                a: 1,
+                a: Number.isNaN(aByte) ? 1 : Math.max(0, Math.min(1, aByte / 255)),
             };
         }
-        return { r: 224, g: 61, b: 75, a: 1 };
+        return { r: 55, g: 51, b: 52, a: 1 };
     }, [internalColor]);
 
     // 选色后转成 rgba(...) 字符串回传

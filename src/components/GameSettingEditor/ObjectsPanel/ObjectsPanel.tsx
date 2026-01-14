@@ -17,7 +17,7 @@ interface ObjectsPanelProps {
 }
 
 export interface ObjectsPanelRef {
-    checkBeforeLeave: () => boolean;
+    checkBeforeLeave: () => Promise<boolean> | boolean;
 }
 
 const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
@@ -42,7 +42,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
         targetPanelId?: string;
     } | null>(null);
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
-    const detailRef = useRef<{ save: () => Promise<void> } | null>(null);
+    const detailRef = useRef<{ save: () => Promise<void>; checkOnlyImageChanged: () => boolean } | null>(null);
     
     // 一键生成相关状态
     const [isGeneratingAll, setIsGeneratingAll] = useState(false);
@@ -112,23 +112,69 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
     }, [pendingAction, onBeforePanelChange]);
 
     // 检查是否可以切换（如果有未保存修改，显示确认弹窗）
-    const checkBeforeSwitch = useCallback((action: { type: 'switchObject' | 'switchPanel' | 'close'; targetObjectId?: string | null; targetPanelId?: string }) => {
+    const checkBeforeSwitch = useCallback(async (action: { type: 'switchObject' | 'switchPanel' | 'close'; targetObjectId?: string | null; targetPanelId?: string }) => {
         if (hasUnsavedChanges) {
+            // 检查是否只修改了图片，如果是则自动保存
+            if (detailRef.current?.checkOnlyImageChanged && detailRef.current.checkOnlyImageChanged()) {
+                try {
+                    if (detailRef.current?.save) {
+                        await detailRef.current.save();
+                        // 保存成功，等待状态更新（onSave 回调会更新本地数据）
+                        // 使用 setTimeout 确保状态更新完成
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        // 保存成功后直接执行切换操作
+                        if (action.type === 'switchObject') {
+                            setActiveObjectId(action.targetObjectId || null);
+                            setIsNewObject(false);
+                            setCreatingObject(null);
+                        } else if (action.type === 'switchPanel') {
+                            if (onBeforePanelChange) {
+                                await onBeforePanelChange();
+                            }
+                        }
+                        return true;
+                    }
+                } catch (error) {
+                    // 自动保存失败，显示确认弹窗
+                    console.error('自动保存图片失败:', error);
+                    toast.error('自动保存失败，请手动保存');
+                }
+            }
+            
+            // 不是只修改图片，或者自动保存失败，显示确认弹窗
             setPendingAction(action);
             setSaveConfirmModalOpen(true);
             setIsBlockingSwitch(true);
             return false;
         }
         return true;
-    }, [hasUnsavedChanges]);
+    }, [hasUnsavedChanges, onBeforePanelChange]);
 
     // 暴露给父组件的方法，用于在切换面板前检查
     React.useImperativeHandle(ref, () => ({
-        checkBeforeLeave: () => {
+        checkBeforeLeave: async () => {
             const hasChanges = hasUnsavedChangesRef.current;
             const isBlocking = isBlockingSwitchRef.current;
             
             if (hasChanges && !isBlocking) {
+                // 检查是否只修改了图片，如果是则自动保存
+                if (detailRef.current?.checkOnlyImageChanged && detailRef.current.checkOnlyImageChanged()) {
+                    try {
+                        if (detailRef.current?.save) {
+                            await detailRef.current.save();
+                            // 保存成功，等待状态更新（onSave 回调会更新本地数据）
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            // 自动保存成功，允许切换
+                            return true;
+                        }
+                    } catch (error) {
+                        // 自动保存失败，显示确认弹窗
+                        console.error('自动保存图片失败:', error);
+                        toast.error('自动保存失败，请手动保存');
+                    }
+                }
+                
+                // 不是只修改图片，或者自动保存失败，显示确认弹窗
                 setPendingAction({ type: 'switchPanel' });
                 setSaveConfirmModalOpen(true);
                 setIsBlockingSwitch(true);
@@ -144,10 +190,12 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
     }), []);
 
     // 创建新的物品
-    const handleCreateObject = () => {
-        if (!checkBeforeSwitch({ type: 'switchObject', targetObjectId: null })) {
+    const handleCreateObject = async () => {
+        const canSwitch = await checkBeforeSwitch({ type: 'switchObject', targetObjectId: null });
+        if (!canSwitch) {
             return;
         }
+        // 创建新物品（如果自动保存成功，checkBeforeSwitch 已经处理了切换，这里仍然需要创建新物品）
         const newObject: ObjectItem = {
             item_id: `item-${Date.now()}`,
             name: '新建物品',
@@ -330,10 +378,12 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
                 <ObjectsList
                     objects={objects}
                     activeObjectId={activeObjectId}
-                    onObjectClick={(id) => {
-                        if (!checkBeforeSwitch({ type: 'switchObject', targetObjectId: id })) {
+                    onObjectClick={async (id) => {
+                        const canSwitch = await checkBeforeSwitch({ type: 'switchObject', targetObjectId: id });
+                        if (!canSwitch) {
                             return;
                         }
+                        // 切换物品（如果自动保存成功，checkBeforeSwitch 已经处理了切换，这里仍然需要更新状态）
                         setActiveObjectId(id);
                         setIsNewObject(false);
                         setCreatingObject(null);

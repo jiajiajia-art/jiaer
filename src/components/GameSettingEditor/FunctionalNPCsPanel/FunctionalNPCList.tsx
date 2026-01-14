@@ -3,7 +3,7 @@ import styles from './FunctionalNPCList.module.css';
 import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { AbilityNode } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { getImageUrl } from '../../../utils/constants';
+import { addImageTimestamp, getImageUrl } from '../../../utils/constants';
 
 interface FunctionalNPCListProps {
     abilityNodes: AbilityNode[];
@@ -53,7 +53,7 @@ const FunctionalNPCList: React.FC<FunctionalNPCListProps> = ({
                                 {shouldShowImage && (
                                     <div className={styles.npcCardThumbnail}>
                                         <img
-                                            src={node.imagePath ? getImageUrl(node.imagePath) : DEFAULT_NPC_IMAGE}
+                                            src={node.imagePath ? addImageTimestamp(getImageUrl(node.imagePath)) : DEFAULT_NPC_IMAGE}
                                             alt={node.authorNote || '功能性NPC'}
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;

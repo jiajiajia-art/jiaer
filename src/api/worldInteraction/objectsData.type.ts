@@ -53,10 +53,6 @@ export interface GetObjectsBySessionIdResponse {
     message: string;
     inventory: {
         maxSlots: number;
-        items: {
-            item_id: string;
-            quantity: number;
-            slot: number;
-        }[];
+        items: ObjectItem[];
     }
 }

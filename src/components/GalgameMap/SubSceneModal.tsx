@@ -35,7 +35,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
 }) => {
     const navigate = useNavigate();
     const { subsceneId } = useParams<{ sceneId: string; subsceneId: string }>();
-    const { eventData } = useMapGalgameStore();
+    const { eventData, setCurrentView } = useMapGalgameStore();
     const [selectedAbilityNode, setSelectedAbilityNode] = useState<AbilityNode | null>(null);
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [isInteractionActive, setIsInteractionActive] = useState(false);
@@ -164,11 +164,15 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
             actionId: action.id
         });
         setIsInteractionActive(true);
+        // 设置视图状态为 INTERACT_NPC，用于隐藏音乐按钮
+        setCurrentView('interact_npc');
     }, [sessionId, onUpdateAttributes]);
     
     // 处理关闭交互
     const handleCloseInteraction = useCallback(() => {
         setIsInteractionActive(false);
+        // 恢复视图状态，用于显示音乐按钮
+        setCurrentView('subScene_modal');
         setPendingAction(null);
         // 重置 selectedAbilityNode，以便下次可以重新打开
         setSelectedAbilityNode(null);

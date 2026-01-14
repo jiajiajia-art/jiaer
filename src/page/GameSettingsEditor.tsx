@@ -7,7 +7,7 @@ import ScenesPanel, { type ScenesPanelRef } from '../components/GameSettingEdito
 import AttributeGrowthPanel, { type AttributeGrowthPanelRef } from '../components/GameSettingEditor/AttributeGrowthPanel/AttributeGrowthPanel';
 import WorldPanel, { type WorldPanelRef } from '../components/GameSettingEditor/WorldPanel/WorldPanel';
 import Sidebar from '../components/GameSettingEditor/Sidebar';
-import MapPanel from '../components/GameSettingEditor/MapPanel/MapPanel';
+import MapPanel, { type MapPanelRef } from '../components/GameSettingEditor/MapPanel/MapPanel';
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
 import ObjectsPanel, { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
 import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
@@ -135,6 +135,7 @@ const GameSettingsEditor = () => {
     const scenesPanelRef = useRef<ScenesPanelRef | null>(null);
     const attributeGrowthPanelRef = useRef<AttributeGrowthPanelRef | null>(null);
     const worldPanelRef = useRef<WorldPanelRef | null>(null);
+    const mapPanelRef = useRef<MapPanelRef | null>(null);
     
     // 使用回调 ref 来确保能捕获到 ref 的变化
     const setFunctionalNPCsPanelRef = useCallback((node: FunctionalNPCsPanelRef | null) => {
@@ -161,6 +162,10 @@ const GameSettingsEditor = () => {
         worldPanelRef.current = node;
     }, []);
 
+    const setMapPanelRef = useCallback((node: MapPanelRef | null) => {
+        mapPanelRef.current = node;
+    }, []);
+
     const handlePanelChange = useCallback(async (panelId: string) => {
         if (isParsing && panelId !== 'documents') {
             return;
@@ -171,7 +176,7 @@ const GameSettingsEditor = () => {
 
         // 从功能性NPC面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'functionalNPCs' && panelId !== 'functionalNPCs' && functionalNPCsPanelRef.current) {
-            const canLeave = functionalNPCsPanelRef.current.checkBeforeLeave();
+            const canLeave = await functionalNPCsPanelRef.current.checkBeforeLeave();
             if (!canLeave) {
                 return;
             }
@@ -179,7 +184,7 @@ const GameSettingsEditor = () => {
 
         // 从物品面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'objects' && panelId !== 'objects' && objectsPanelRef.current) {
-            const canLeave = objectsPanelRef.current.checkBeforeLeave();
+            const canLeave = await objectsPanelRef.current.checkBeforeLeave();
             if (!canLeave) {
                 return;
             }
@@ -212,6 +217,14 @@ const GameSettingsEditor = () => {
         // 从世界观面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'world' && panelId !== 'world' && worldPanelRef.current) {
             const canLeave = worldPanelRef.current.checkBeforeLeave();
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 从地图编辑面板切换出去时，检查是否有未保存的修改
+        if (activePanel === 'mapEdit' && panelId !== 'mapEdit' && mapPanelRef.current) {
+            const canLeave = await mapPanelRef.current.checkBeforeLeave();
             if (!canLeave) {
                 return;
             }
@@ -340,6 +353,7 @@ const GameSettingsEditor = () => {
                 {mode === 'worldInteraction' && (
                     <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">
                         <MapPanel
+                            ref={setMapPanelRef}
                             sceneSetting={gameData?.sceneSetting}
                             worldMapImage={
                                 mode === 'worldInteraction' && gameData

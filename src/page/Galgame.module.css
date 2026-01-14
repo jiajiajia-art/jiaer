@@ -18,7 +18,7 @@
 }
 
 .topHeader {
-    background: #0000003e;
+    background: #37333480;
     padding: 10px 20px;
     display: flex;
     align-items: center;
@@ -47,7 +47,7 @@
     left: 16px;
     z-index: 101;
     background: none;
-    color: #0000003e;
+    color: #37333480;
 }
 
 .exitButton:hover {

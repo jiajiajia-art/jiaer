@@ -18,8 +18,8 @@ const Attributes: React.FC<AttributesProps> = ({ npc, player, visible, onClose }
     const visibleAttributes = Object.entries(target?.attributes || {}).filter(([, attr]) => attr.visible === true);
 
     return (
-        <div className={styles.overlay}>
-            <div className={styles.panelWrapper}>
+        <div className={styles.overlay} onClick={onClose}>
+            <div className={styles.panelWrapper} onClick={(e) => e.stopPropagation()}>
                 <button className={styles.closeButton} onClick={onClose}>
                     <IoClose />
                 </button>

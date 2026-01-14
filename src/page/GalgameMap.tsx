@@ -591,7 +591,13 @@ const GalgameMap = () => {
       <div className={styles.mapContainer}>
         {/* 音乐控制按钮和Player属性按钮 - 在所有视图中显示 */}
         {gameData && (
-          <div className={styles.topButtonsContainer}>
+          <div
+            className={`${styles.topButtonsContainer} ${
+              currentView === MapViewState.INTERACT_NPC
+                ? styles.topButtonsContainerAligned
+                : ""
+            }`}
+          >
             {currentView !== MapViewState.INTERACT_NPC && (
               <div
                 className={`${styles.buttonItem} ${

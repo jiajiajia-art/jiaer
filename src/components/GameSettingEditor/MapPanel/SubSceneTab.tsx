@@ -20,6 +20,7 @@ import { getImageUrl } from '../../../utils/constants';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import type { NpcSlot, FunctionalNpcPatch } from '../../../api/worldInteraction/worldEditor.type';
 import toast from 'react-hot-toast';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 
 interface SubSceneTabProps {
     subScenes: SubScene[];
@@ -27,19 +28,24 @@ interface SubSceneTabProps {
     fileId: string;
     onDataChange?: () => void;
     isActive?: boolean;
-    sceneImageUrl: string;
     abilityNodeSetting?: AbilityNodeSetting;
+    onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const SubSceneTab: React.FC<SubSceneTabProps> = ({
+export interface SubSceneTabRef {
+    checkUnsavedChanges: () => boolean;
+    save: () => Promise<void>;
+}
+
+const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
     subScenes,
     sceneSetting,
     fileId,
     onDataChange,
     isActive,
-    sceneImageUrl,
     abilityNodeSetting,
-}) => {
+    onHasUnsavedChanges,
+}, ref) => {
     const {
         selectedSubSceneId,
         setSelectedSubSceneId,
@@ -66,7 +72,40 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
         handleSetZIndex,
         handleChangeBackgroundColor,
         getNPCPosition,
+        currentSubScene,
+        checkUnsavedChanges,
+        resetInitialState,
     } = useSubSceneTab({ subScenes, sceneSetting, isActive, abilityNodeSetting });
+
+    const [saveConfirmModalOpen, setSaveConfirmModalOpen] = React.useState(false);
+    const [pendingSubSceneId, setPendingSubSceneId] = React.useState<string | null>(null);
+
+    // 检查是否可以切换子场景
+    const checkBeforeSwitchSubScene = React.useCallback((targetSubSceneId: string) => {
+        if (checkUnsavedChanges()) {
+            setPendingSubSceneId(targetSubSceneId);
+            setSaveConfirmModalOpen(true);
+            return false;
+        }
+        return true;
+    }, [checkUnsavedChanges]);
+
+    // 执行待处理的切换操作
+    const executePendingSwitch = React.useCallback(() => {
+        if (pendingSubSceneId !== null) {
+            setSelectedSubSceneId(pendingSubSceneId);
+            setPendingSubSceneId(null);
+        }
+    }, [pendingSubSceneId, setSelectedSubSceneId]);
+
+    const previewImageUrl = React.useMemo(() => {
+        // 优先使用当前选中的子场景图片
+        if (currentSubScene?.image && currentSubScene.image.trim() !== '') {
+            return getImageUrl(currentSubScene.image);
+        }
+        // 兜底：使用默认地图图
+        return DEFAULT_MAP_IMAGE;
+    }, [currentSubScene]);
 
     const handleConfirm = React.useCallback(async () => {
         if (!currentSceneIdRef.current || !currentSubSceneIdRef.current) {
@@ -130,6 +169,8 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
             }
 
             toast.success('NPC位置和层级已保存');
+            // 重置初始状态，标记为已保存
+            resetInitialState();
             if (onDataChange) {
                 onDataChange();
             }
@@ -137,7 +178,21 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
             console.error('保存失败:', error);
             toast.error('保存失败：' + (error.message || '请检查网络连接'));
         }
-    }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef]);
+    }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef, resetInitialState]);
+
+    // 暴露 checkUnsavedChanges 和 save 方法给父组件
+    React.useImperativeHandle(ref, () => ({
+        checkUnsavedChanges,
+        save: handleConfirm,
+    }), [checkUnsavedChanges, handleConfirm]);
+
+    // 当未保存状态变化时，通知父组件
+    React.useEffect(() => {
+        if (onHasUnsavedChanges) {
+            const hasChanges = checkUnsavedChanges();
+            onHasUnsavedChanges(hasChanges);
+        }
+    }, [checkUnsavedChanges, onHasUnsavedChanges, placedNormalNPCs, placedFunctionalNPCs]);
 
     return (
         <>
@@ -161,7 +216,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
             >
                 <img
                     ref={imageRef}
-                    src={sceneImageUrl}
+                    src={previewImageUrl}
                     alt="子场景预览"
                     className={sharedStyles.sceneImage}
                     draggable={false}
@@ -242,7 +297,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                                                 <div 
                                                     className={styles.npcButtonText}
                                                     style={{
-                                                        backgroundColor: npc.backgroundColor || '#E03D4B',
+                                                        backgroundColor: npc.backgroundColor || '#37333480',
                                                     }}
                                                 >
                                                     {npc.name}
@@ -337,7 +392,7 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                                                 {/* 按钮型NPC的颜色选择器 */}
                                                 {npc.type === 'button' && (
                                                     <ColorPicker
-                                                        color={npc.backgroundColor || '#E03D4B'}
+                                                        color={npc.backgroundColor || '#37333480'}
                                                         onChange={(color) => {
                                                             handleChangeBackgroundColor(npc.id, color);
                                                         }}
@@ -382,7 +437,11 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                             <div
                                 key={sub.id}
                                 className={`${sharedStyles.subSceneItem} ${selectedSubSceneId === sub.id ? sharedStyles.subSceneItemActive : ''}`}
-                                onClick={() => setSelectedSubSceneId(sub.id)}
+                                onClick={() => {
+                                    if (checkBeforeSwitchSubScene(sub.id)) {
+                                        setSelectedSubSceneId(sub.id);
+                                    }
+                                }}
                             >
                                 <div className={sharedStyles.subSceneThumbWrapper}>
                                     {sub.image && sub.image.trim() !== '' ? (
@@ -470,9 +529,40 @@ const SubSceneTab: React.FC<SubSceneTabProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* 保存确认弹窗（切换子场景时） */}
+            <SaveConfirmModal
+                isOpen={saveConfirmModalOpen}
+                onSave={async () => {
+                    try {
+                        await handleConfirm();
+                        setSaveConfirmModalOpen(false);
+                        executePendingSwitch();
+                    } catch (error) {
+                        // 保存失败时不关闭弹窗，不执行切换
+                        console.error('保存失败:', error);
+                    }
+                }}
+                onDiscard={() => {
+                    setSaveConfirmModalOpen(false);
+                    // 重置未保存状态
+                    resetInitialState();
+                    executePendingSwitch();
+                }}
+                onCancel={() => {
+                    setSaveConfirmModalOpen(false);
+                    setPendingSubSceneId(null);
+                }}
+                title="未保存的修改"
+                message="您有未保存的NPC位置修改，是否要保存？"
+                saveButtonText="保存"
+                discardButtonText="不保存"
+            />
         </>
     );
-};
+});
+
+SubSceneTab.displayName = 'SubSceneTab';
 
 export default SubSceneTab;
 

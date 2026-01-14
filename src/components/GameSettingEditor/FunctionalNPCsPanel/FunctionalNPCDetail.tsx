@@ -4,7 +4,7 @@ import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl, IMAGE_GENERATION_COST, addImageTimestamp } from '../../../utils/constants';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
 
@@ -16,7 +16,7 @@ interface FunctionalNPCDetailProps {
     onHasUnsavedChanges?: (hasChanges: boolean) => void; // 通知父组件是否有未保存的修改
 }
 
-const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void> }, FunctionalNPCDetailProps>(
+const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImageChanged: () => boolean }, FunctionalNPCDetailProps>(
     (props, ref) => {
     const {
         node,
@@ -89,6 +89,39 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void> }, Func
             }
         }
     }, [node, onHasUnsavedChanges]);
+
+    // 检测是否只修改了图片
+    const checkOnlyImageChanged = React.useCallback((): boolean => {
+        if (!node || !originalNodeRef.current) {
+            // 新建节点：只检查是否有图片相关修改，且没有其他内容
+            if (isNewNodeProp) {
+                const hasImageChange = !!(formData.imagePath || localFile || tempImageId);
+                const hasOtherContent = !!(
+                    formData.authorNote?.trim() ||
+                    formData.name?.trim() ||
+                    (formData.actions && formData.actions.some((a: any) => a.name?.trim() || a.description?.trim()))
+                );
+                return hasImageChange && !hasOtherContent;
+            }
+            return false;
+        }
+
+        // 比较原始节点和当前表单数据，检查是否只有图片相关字段变化
+        const original = originalNodeRef.current;
+        const imageChanged = 
+            formData.imagePath !== (original.imagePath || '') ||
+            localFile !== null ||
+            tempImageId !== null;
+        
+        const otherFieldsChanged = 
+            formData.authorNote !== (original.authorNote || '') ||
+            formData.name !== (original.name || '') ||
+            formData.type !== (original.type || 'illustration') ||
+            formData.imagePrompt !== (original.imagePrompt || '') ||
+            JSON.stringify(formData.actions) !== JSON.stringify(original.actions || []);
+
+        return imageChanged && !otherFieldsChanged;
+    }, [node, formData, localFile, tempImageId, isNewNodeProp]);
 
     // 检测是否有未保存的修改
     const checkUnsavedChanges = React.useCallback(() => {
@@ -425,9 +458,10 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void> }, Func
         }
     };
 
-    // 暴露 save 方法给父组件
+    // 暴露 save 和 checkOnlyImageChanged 方法给父组件
     useImperativeHandle(ref, () => ({
         save: handleSave,
+        checkOnlyImageChanged: checkOnlyImageChanged,
     }));
 
     return (
@@ -507,7 +541,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void> }, Func
                                             {formData.imagePath ? (
                                                 <div className={styles.imagePreview}>
                                                     <img
-                                                        src={formData.imagePath.startsWith('blob:') ? formData.imagePath : getImageUrl(formData.imagePath)}
+                                                        src={formData.imagePath.startsWith('blob:') ? formData.imagePath : addImageTimestamp(getImageUrl(formData.imagePath))}
                                                         alt="NPC预览"
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;

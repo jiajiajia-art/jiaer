@@ -55,6 +55,7 @@ export const TIMEOUT_MESSAGES = {
   CHOICE: "AI 回应本次选择已超过 60 秒仍未返回，是否刷新页面重试？",
   INTERACT: "开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？",
   POLLING: "AI 推演结果长时间未返回，是否刷新页面重试？",
+  ABILITY_NODE: "功能性NPC交互请求已超过 60 秒仍未返回，是否刷新页面重试？",
 };
 
 export const ERROR_MESSAGES = {
@@ -219,6 +220,7 @@ const InteractWithNpc = ({
       | { type: "choice"; optionId: string; optionIndex: number }
       | null,
     processedPendingAction: null as { nodeId: string; actionId: string } | null, // 跟踪已处理的待处理操作
+    abilityNodeTimeout: null as number | null, // 功能性NPC交互超时定时器
   });
 
   // 其他状态
@@ -435,6 +437,10 @@ const InteractWithNpc = ({
         clearTimeout(refs.current.choiceTimeout);
         refs.current.choiceTimeout = null;
       }
+      if (refs.current.abilityNodeTimeout) {
+        clearTimeout(refs.current.abilityNodeTimeout);
+        refs.current.abilityNodeTimeout = null;
+      }
     };
   }, []);
 
@@ -579,6 +585,35 @@ const InteractWithNpc = ({
 
       // 3. 调用功能性NPC的接口，获取流式响应
       const fetchAndProcessStream = async () => {
+        // 清除之前的超时定时器（如果存在）
+        if (refs.current.abilityNodeTimeout) {
+          clearTimeout(refs.current.abilityNodeTimeout);
+          refs.current.abilityNodeTimeout = null;
+        }
+
+        // 设置超时定时器
+        refs.current.abilityNodeTimeout = window.setTimeout(() => {
+          // 只有在定时器仍然存在且没有被清除时才显示超时弹窗
+          if (refs.current.abilityNodeTimeout) {
+            setTimeoutModal({
+              visible: true,
+              message: TIMEOUT_MESSAGES.ABILITY_NODE,
+            });
+            setErrorModal({
+              visible: true,
+              message: TIMEOUT_MESSAGES.ABILITY_NODE,
+            });
+          }
+        }, REQUEST_TIMEOUT_MS);
+
+        const clearAbilityNodeTimeout = () => {
+          if (refs.current.abilityNodeTimeout) {
+            clearTimeout(refs.current.abilityNodeTimeout);
+            refs.current.abilityNodeTimeout = null;
+            setTimeoutModal({ visible: false, message: "" });
+          }
+        };
+
         try {
           const { nodeId, actionId } = pendingAction;
 
@@ -597,12 +632,14 @@ const InteractWithNpc = ({
               status: response.status,
               hasBody: !!response.body,
             });
+            clearAbilityNodeTimeout();
             setErrorModal({ visible: true, message: "请求失败，请重试" });
             return;
           }
 
           if (response.body.locked) {
             console.error("[InteractWithNpc] response.body 已被锁定");
+            clearAbilityNodeTimeout();
             setErrorModal({ visible: true, message: "响应体已被锁定" });
             return;
           }
@@ -613,6 +650,8 @@ const InteractWithNpc = ({
 
           await stepHandlers.processStreamResponse(response, requestId, {
             onFirstStep: () => {
+              // 第一个步骤到达时清除超时定时器
+              clearAbilityNodeTimeout();
               // 第一个步骤到达时的处理（和普通NPC交互一致）
               // processStreamResponse 内部已经设置了 isWaitingForData = false
               // 更新属性
@@ -626,6 +665,8 @@ const InteractWithNpc = ({
               }
             },
             onSuccess: async () => {
+              // 流式响应完成后清除超时定时器
+              clearAbilityNodeTimeout();
               // 流式响应完成后立即刷新 active 事件，用于判断显示继续游戏还是开始下一回合
               if (sessionId && gameData) {
                 await refreshEventData(sessionId, gameData).catch((error) => {
@@ -641,11 +682,13 @@ const InteractWithNpc = ({
                 "[InteractWithNpc] ❌ 功能性NPC: 流式响应错误:",
                 error
               );
+              clearAbilityNodeTimeout();
               setErrorModal({ visible: true, message: error });
             },
           });
         } catch (error: any) {
           console.error("[InteractWithNpc] 处理功能性NPC操作失败:", error);
+          clearAbilityNodeTimeout();
           setErrorModal({
             visible: true,
             message: error.message || "处理失败，请重试",
@@ -732,11 +775,12 @@ const InteractWithNpc = ({
 
   const handlePollTimeout = useCallback(() => {
     setHasPendingRequest(false);
+    setPendingRequestForPoll(null); // 清理轮询标记，停止轮询
     setTimeoutModal({
       visible: true,
       message: TIMEOUT_MESSAGES.POLLING,
     });
-  }, []);
+  }, [setTimeoutModal]);
 
   const handlePollEnd = useCallback(async () => {
     setPendingRequestForPoll(null);
@@ -1484,41 +1528,47 @@ const InteractWithNpc = ({
             <CiLocationOn />
             <span>{currentSubscene?.name}</span>
           </div>
-          {currentNpcObject &&
-            (currentMessage?.type === "dialogue" ||
-              currentMessage?.type === "choice") &&
-            !isAttributesVisible && (
+          {/* NPC属性按钮和背包按钮容器 - 与玩家属性按钮对齐在一列，文本模式下隐藏 */}
+          {!isTextMode && (
+            <div className={styles.interactButtonsContainer}>
+              {currentNpcObject &&
+                (currentMessage?.type === "dialogue" ||
+                  currentMessage?.type === "choice") &&
+                !isAttributesVisible && (
+                  <div
+                    className={`${styles.topAttributesButton} ${
+                      isAttributesVisible ? styles.topAttributesButtonActive : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAttributesViewType("npc");
+                      setIsAttributesVisible(!isAttributesVisible);
+                    }}
+                  >
+                    <div className={styles.buttonInner}>
+                      <MdOutlinePerson />
+                      <span>NPC属性</span>
+                    </div>
+                  </div>
+                )}
+
+              {/* 背包按钮始终显示 */}
               <div
-                className={`${styles.topAttributesButton} ${styles.npcAttributesButton} ${
-                  isAttributesVisible ? styles.topAttributesButtonActive : ""
+                className={`${styles.topAttributesButton} ${
+                  isInventoryVisible ? styles.topAttributesButtonActive : ""
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setAttributesViewType("npc");
-                  setIsAttributesVisible(!isAttributesVisible);
+                  setIsInventoryVisible(!isInventoryVisible);
                 }}
               >
                 <div className={styles.buttonInner}>
                   <MdOutlinePerson />
-                  <span>NPC属性</span>
+                  <span>背包</span>
                 </div>
               </div>
-            )}
-
-          <div
-            className={`${styles.topAttributesButton} ${styles.inventoryButton} ${
-              isInventoryVisible ? styles.topAttributesButtonActive : ""
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsInventoryVisible(!isInventoryVisible);
-              }}
-            >
-              <div className={styles.buttonInner}>
-                <MdOutlinePerson />
-                <span>背包</span>
-              </div>
             </div>
+          )}
           {currentMessage.characterImage && !isTextMode && (
             <div className={getCharacterContainerClassName()}>
               <img
@@ -1711,12 +1761,16 @@ const InteractWithNpc = ({
           cancelText: "取消",
           primaryType: "confirm",
           onConfirm: () => {
-            // 重试：直接重新发送最后一次请求
+            // 重试：清理轮询状态，然后重新发送最后一次请求
+            setPendingRequestForPoll(null);
+            setHasPendingRequest(false);
             setTimeoutModal({ visible: false, message: "" });
             handleRetryRequest();
           },
           onCancel: () => {
-            // 取消：关闭弹窗 + 刷新历史 + 刷新页面，回到最后一次有效交互
+            // 取消：清理轮询状态，关闭弹窗 + 刷新历史 + 刷新页面，回到最后一次有效交互
+            setPendingRequestForPoll(null);
+            setHasPendingRequest(false);
             setTimeoutModal({ visible: false, message: "" });
             void (async () => {
               await refreshHistory();

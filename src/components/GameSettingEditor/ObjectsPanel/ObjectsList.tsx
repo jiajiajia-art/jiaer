@@ -3,7 +3,7 @@ import styles from './ObjectsList.module.css';
 import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
-import { getImageUrl } from '../../../utils/constants';
+import { addImageTimestamp, getImageUrl } from '../../../utils/constants';
 
 interface ObjectsListProps {
     objects: ObjectItem[];
@@ -47,7 +47,7 @@ const ObjectsList: React.FC<ObjectsListProps> = ({
                             >
                                 <div className={styles.objectCardThumbnail}>
                                     <img
-                                        src={obj.icon ? getImageUrl(obj.icon) : ''}
+                                        src={obj.icon ? addImageTimestamp(getImageUrl(obj.icon)) : ''}
                                         alt={obj.name || '物品'}
                                     />
                                 </div>

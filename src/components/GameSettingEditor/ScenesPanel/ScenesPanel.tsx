@@ -117,16 +117,23 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     }, [isBlockingSwitch]);
 
     // 检测是否有未保存的修改（通过比较当前数据和原始数据）
-    // 这个检测会捕获所有数据变化，包括图片上传等
+    // 这里有意忽略场景 / 子场景图片字段，避免「已上传并保存的图片」导致误判为未保存
     useEffect(() => {
         if (originalSceneDataRef.current.length === 0 && sceneData.length === 0) {
             return;
         }
 
-        // 比较当前数据和原始数据（排除临时场景）
-        const currentScenes = sceneData.filter(s => !s.id.startsWith('temp-'));
-        const currentDataStr = JSON.stringify(currentScenes);
-        const originalDataStr = JSON.stringify(originalSceneDataRef.current);
+        // 归一化场景数据：排除临时场景，并忽略图片相关字段（scene.image）
+        const normalizeScenes = (list: LocalScene[]) =>
+            list
+                .filter(s => !s.id.startsWith('temp-'))
+                .map((s) => ({
+                    ...s,
+                    image: '', // 忽略场景大图
+                }));
+
+        const currentDataStr = JSON.stringify(normalizeScenes(sceneData));
+        const originalDataStr = JSON.stringify(normalizeScenes(originalSceneDataRef.current));
         const hasChanges = currentDataStr !== originalDataStr;
         
         // 如果数据确实有变化，则设置

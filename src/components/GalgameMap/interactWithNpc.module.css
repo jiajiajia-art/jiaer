@@ -21,7 +21,7 @@
 }
 
 .topHeader {
-    background: #0000003e;
+    background: #37333480;
     padding: 10px 20px;
     display: flex;
     align-items: center;
@@ -76,29 +76,47 @@
     font-size: 18px;
 }
 
-.topAttributesButton {
+/* NPC属性按钮和背包按钮容器 - 垂直排列 */
+/* 玩家属性按钮在 top: 16px，按钮高度 42px，gap 12px，所以从 16px + 42px + 12px = 70px 开始 */
+.interactButtonsContainer {
     position: absolute;
+    top: 70px; /* 玩家属性按钮下方：16px (top) + 42px (按钮高度) + 12px (gap) */
     right: 20px;
-    top: 100px;
+    z-index: 2001; /* 确保在 topButtonsContainer 之上 */
+    display: flex;
+    flex-direction: column; /* 垂直排列 */
+    gap: 12px; /* 按钮之间的间距 */
+    align-items: flex-end; /* 右对齐 */
+}
+
+.topAttributesButton {
+    position: relative; /* 改为相对定位，作为 flex 容器的子元素 */
     width: 42px;
     height: 42px;
-    background: rgba(0, 0, 0, 0.5); /* 进一步加深背景色 */
+    background: rgba(37, 37, 37, 0.341); /* 与 buttonItem 保持一致 */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 12px;
     transform: rotate(45deg);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
     z-index: 101;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .topAttributesButton:active {
     transform: rotate(45deg) scale(0.95);
+}
+
+.topAttributesButtonActive {
+    background: rgba(251, 70, 85, 0.3);
+    border-color: rgba(251, 70, 85, 0.5);
+    box-shadow: 0 2px 12px rgba(251, 70, 85, 0.3);
 }
 
 .topAttributesButton .buttonInner {
@@ -110,27 +128,24 @@
     flex-direction: column;
     transform: rotate(-45deg); /* 抵消外层的旋转 */
     color: #fff;
-    gap: 1px;
+    gap: 2px; /* 与 buttonItem 保持一致 */
+    font-size: 12px;
 }
 
 .topAttributesButton .buttonInner svg {
-    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
 }
 
 .topAttributesButton .buttonInner span {
     font-size: 9px;
     font-weight: 600;
     line-height: 1.2;
-}
-
-/* NPC属性按钮位置 */
-.npcAttributesButton {
-    top: 100px;
-}
-
-/* 背包按钮位置 - 错开位置 */
-.inventoryButton {
-    top: 150px;
+    text-align: center;
+    white-space: nowrap;
 }
 
 /* 文本模式下的位置显示 */

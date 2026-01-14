@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import styles from './MapTab.module.css';
 import sharedStyles from './shared.module.css';
 import type { Scene, PlacedScene } from './types';
@@ -14,14 +14,22 @@ interface MapTabProps {
     fileId: string;
     onDataChange?: () => void;
     isActive?: boolean;
+    onHasUnsavedChanges?: (hasChanges: boolean) => void;
 }
 
-const MapTab: React.FC<MapTabProps> = ({
+export interface MapTabRef {
+    checkUnsavedChanges: () => boolean;
+    save: () => Promise<void>;
+}
+
+const MapTab = forwardRef<MapTabRef, MapTabProps>(({
     sceneSetting,
     worldMapImage,
     fileId,
     isActive,
-}) => {
+    onDataChange,
+    onHasUnsavedChanges,
+}, ref) => {
     const [placedScenes, setPlacedScenes] = useState<PlacedScene[]>([]);
     const [draggingSceneId, setDraggingSceneId] = useState<string | null>(null);
     const [selectedSceneIdInMap, setSelectedSceneIdInMap] = useState<string | null>(null);
@@ -36,6 +44,7 @@ const MapTab: React.FC<MapTabProps> = ({
     const mapPreviewRef = useRef<HTMLDivElement>(null);
     const mapImageRef = useRef<HTMLImageElement>(null);
     const sceneDefaultPosRef = useRef<Record<string, { x: number; y: number }>>({});
+    const initialPlacedScenesRef = useRef<PlacedScene[]>([]);
 
     // 地图 tab 使用的图片地址
     const mapImageSources = useMemo(() => {
@@ -122,6 +131,7 @@ const MapTab: React.FC<MapTabProps> = ({
             }
         });
         setPlacedScenes(loadedScenes);
+        initialPlacedScenesRef.current = JSON.parse(JSON.stringify(loadedScenes)); // 保存初始状态
         setSelectedSceneIdInMap(null);
     }, [sceneSetting?.scenes]);
 
@@ -330,6 +340,13 @@ const MapTab: React.FC<MapTabProps> = ({
 
             if (response.data.success) {
                 toast.success(`成功保存 ${placedScenes.length} 个场景的位置`);
+                initialPlacedScenesRef.current = JSON.parse(JSON.stringify(placedScenes)); // 重置初始状态
+                if (onHasUnsavedChanges) {
+                    onHasUnsavedChanges(false);
+                }
+                if (onDataChange) {
+                    onDataChange();
+                }
             } else {
                 toast.error('保存失败，请检查网络连接');
             }
@@ -337,7 +354,26 @@ const MapTab: React.FC<MapTabProps> = ({
             console.error('保存失败:', error);
             toast.error('保存失败：' + (error.message || '请检查网络连接'));
         }
-    }, [placedScenes, fileId]);
+    }, [placedScenes, fileId, onHasUnsavedChanges, onDataChange]);
+
+    // 检测是否有未保存的修改
+    const checkUnsavedChanges = useCallback((): boolean => {
+        return JSON.stringify(placedScenes) !== JSON.stringify(initialPlacedScenesRef.current);
+    }, [placedScenes]);
+
+    // 当未保存状态变化时，通知父组件
+    useEffect(() => {
+        if (onHasUnsavedChanges) {
+            const hasChanges = checkUnsavedChanges();
+            onHasUnsavedChanges(hasChanges);
+        }
+    }, [checkUnsavedChanges, onHasUnsavedChanges, placedScenes]);
+
+    // 暴露方法给父组件
+    useImperativeHandle(ref, () => ({
+        checkUnsavedChanges,
+        save: handleSaveScenePositions,
+    }), [checkUnsavedChanges, handleSaveScenePositions]);
 
     return (
         <>
@@ -496,7 +532,9 @@ const MapTab: React.FC<MapTabProps> = ({
             </div>
         </>
     );
-};
+});
+
+MapTab.displayName = 'MapTab';
 
 export default MapTab;
 
