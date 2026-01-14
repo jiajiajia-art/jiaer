@@ -210,24 +210,6 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting, w
                         onHasUnsavedChanges={setHasUnsavedChangesMap}
                     />
                 )}
-
-                {mapTab === 'scene' && (
-                    <SceneTab
-                        sceneSetting={sceneSetting}
-                        fileId={fileId}
-                        onDataChange={onDataChange}
-                    />
-                )}
-
-                {mapTab === 'map' && (
-                    <MapTab
-                        sceneSetting={sceneSetting}
-                        worldMapImage={worldMapImage}
-                        fileId={fileId}
-                        onDataChange={onDataChange}
-                        isActive={isActive}
-                    />
-                )}
             </div>
 
             {/* 保存确认弹窗 */}
