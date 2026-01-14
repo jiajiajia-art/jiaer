@@ -44,6 +44,7 @@ export interface NPC {
             displayName: string;
             value: number;
             formula: string;
+            visible: boolean;
         };
     };
 }

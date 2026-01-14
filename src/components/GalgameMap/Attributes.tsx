@@ -15,7 +15,7 @@ const Attributes: React.FC<AttributesProps> = ({ npc, player, visible, onClose }
 
     const target = npc || player;
     const name = npc ? npc.name : (player ? player.name : '');
-    const attributes = target?.attributes || {};
+    const visibleAttributes = Object.entries(target?.attributes || {}).filter(([, attr]) => attr.visible === true);
 
     return (
         <div className={styles.overlay}>
@@ -25,11 +25,11 @@ const Attributes: React.FC<AttributesProps> = ({ npc, player, visible, onClose }
                 </button>
                 <div className={styles.panel}>
                     <div className={styles.content}>
-                        {Object.keys(attributes).length > 0 ? (
+                        {visibleAttributes.length > 0 ? (
                             <>
                                 <div className={styles.title}>{name}</div>
                                 <div className={styles.attributeList}>
-                                    {Object.entries(attributes).map(([key, attr]) => (
+                                    {visibleAttributes.map(([key, attr]) => (
                                         <div key={key} className={styles.attributeItem}>
                                             <span className={styles.attrName}>{attr.displayName}:</span>
                                             <span className={styles.attrValue}>{attr.value}</span>
