@@ -26,6 +26,7 @@ export const useRefreshEventData = () => {
         
         try {
             const activeEventsResponse = await interactionApi.getActiveEvents(sessionId);
+
             if (!activeEventsResponse.data.success) {
                 return;
             }
@@ -44,14 +45,16 @@ export const useRefreshEventData = () => {
                 }
             } else {
                 // 没有活跃事件时，在 NPC 交互页面保留当前 eventData 避免白屏
+                // 但需要设置 eventCompleted = true，以便显示"开始下一回合"按钮
                 if (currentView === MapViewState.INTERACT_NPC && currentEventData) {
+                    setEventCompleted(true);
                     return;
                 }
                 setEventData(null);
                 setEventCompleted(true);
             }
         } catch (error) {
-            console.error('[WorldInteraction] 刷新事件状态失败:', error);
+            console.error('[WorldInteraction] ❌ 刷新事件状态失败:', error);
         } finally {
             isRequestingRef.current = false;
         }

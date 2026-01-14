@@ -33,6 +33,8 @@ interface InitOptions {
     setRestoringFromCache: (value: boolean) => void;
     // 属性更新回调
     onUpdateAttributes?: () => Promise<void>;
+    // 刷新事件数据回调（用于流式响应完成后立即请求 active 事件）
+    onRefreshEventData?: (sessionId: string, gameData: any) => Promise<void>;
 }
 
 interface UseInteractionInitReturn {
@@ -56,17 +58,20 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
         resetCompletedSteps,
         setRestoringFromCache,
         onUpdateAttributes,
+        onRefreshEventData,
     } = options;
 
     const hasInitializedRef = useRef(false);
     const interactTimeoutRef = useRef<number | null>(null);
     // 使用 ref 存储最新的 onUpdateAttributes，避免闭包问题
     const onUpdateAttributesRef = useRef(onUpdateAttributes);
+    const onRefreshEventDataRef = useRef(onRefreshEventData);
     
-    // 每次 onUpdateAttributes 变化时更新 ref
+    // 每次回调变化时更新 ref
     useEffect(() => {
         onUpdateAttributesRef.current = onUpdateAttributes;
-    }, [onUpdateAttributes]);
+        onRefreshEventDataRef.current = onRefreshEventData;
+    }, [onUpdateAttributes, onRefreshEventData]);
 
     // 组件卸载时清理超时定时器
     useEffect(() => {
@@ -186,16 +191,19 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                         clearTimeout(interactTimeoutRef.current);
                     }
                     interactTimeoutRef.current = window.setTimeout(() => {
-                        console.warn("[Init] /interact 超时");
-                        setTimeoutModal({
-                            visible: true,
-                            message: '开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？',
-                        });
+                        // 只有在定时器仍然存在且没有被清除时才显示超时弹窗
+                        if (interactTimeoutRef.current) {
+                            console.warn("[Init] /interact 超时");
+                            setTimeoutModal({
+                                visible: true,
+                                message: '开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？',
+                            });
+                        }
                     }, 60000);
                     
                     setTimeout(() => {
                         stepHandlers.handleInteract({
-                            onSuccess: () => {
+                            onSuccess: async () => {
                                 if (interactTimeoutRef.current) {
                                     clearTimeout(interactTimeoutRef.current);
                                     interactTimeoutRef.current = null;
@@ -203,6 +211,14 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                                 setTimeoutModal({ visible: false, message: '' });
                                 safeRemoveLocalStorage(storageKeys.pendingRequest);
                                 setHasPendingRequest(false);
+                                
+                                // 流式响应完成后立即刷新 active 事件，用于判断显示继续游戏还是开始下一回合
+                                const refreshFn = onRefreshEventDataRef.current;
+                                if (refreshFn && sessionId && gameData) {
+                                    await refreshFn(sessionId, gameData).catch((error) => {
+                                        console.error('[Init] ❌ 刷新 active 事件失败:', error);
+                                    });
+                                }
                                 
                                 // 更新属性
                                 const updateFn = onUpdateAttributesRef.current;

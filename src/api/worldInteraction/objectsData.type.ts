@@ -47,3 +47,16 @@ export interface GenerateAllObjectImagesResponse {
     message: string;
     images: string[];
 }
+
+export interface GetObjectsBySessionIdResponse {
+    success: boolean;
+    message: string;
+    inventory: {
+        maxSlots: number;
+        items: {
+            item_id: string;
+            quantity: number;
+            slot: number;
+        }[];
+    }
+}

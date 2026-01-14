@@ -486,7 +486,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void> }, ObjectDetai
                                 rows={4}
                                 value={formData.functionalDescription}
                                 onChange={(e) => handleFieldChange('functionalDescription', e.target.value)}
-                                placeholder="详细描述物品的功能（作为prompt拼接）"
+                                placeholder="用作ai推演的物品的功能性描述（如：提供抗毒效果、提升生命值50点等），尽量描述详细、可量化，作为ai推演使用"
                             />
                         </label>
                     </div>

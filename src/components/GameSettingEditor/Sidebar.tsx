@@ -21,10 +21,10 @@ const modeConfigs = {
     worldInteraction: [
         { id: 'documents', title: '文档解析', subtitle: '上传设定 / 自动出稿' },
         { id: 'world', title: '世界观表单', subtitle: '可修改世界观设定' },
-        { id: 'attributeGrowth', title: '属性 · 养成培养插件（开发中）', subtitle: '属性养成培养' },
+        { id: 'attributeGrowth', title: '属性 · 养成培养插件', subtitle: '属性养成培养' },
         { id: 'characters', title: '角色档案', subtitle: '修改或添加角色立绘、差分' },
         { id: 'scenes', title: '场景 / BGM', subtitle: '背景 + 配乐绑定' },
-        { id: 'functionalNPCs', title: '剧情事件插件（开发中）', subtitle: '功能性NPC管理' },
+        { id: 'functionalNPCs', title: '剧情事件插件', subtitle: '功能性NPC管理' },
         { id: 'mapEdit', title: '地图编辑', subtitle: '子场景 / 场景 / 地图' },
         { id: 'objects', title: '物品编辑', subtitle: '管理游戏中所有物品' },
     ]

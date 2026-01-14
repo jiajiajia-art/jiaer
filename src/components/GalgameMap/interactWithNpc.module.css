@@ -123,6 +123,16 @@
     line-height: 1.2;
 }
 
+/* NPC属性按钮位置 */
+.npcAttributesButton {
+    top: 100px;
+}
+
+/* 背包按钮位置 - 错开位置 */
+.inventoryButton {
+    top: 150px;
+}
+
 /* 文本模式下的位置显示 */
 .topHeaderTextMode {
     background: linear-gradient(135deg, rgba(224, 61, 75, 0.15) 0%, rgba(224, 61, 75, 0.08) 100%);

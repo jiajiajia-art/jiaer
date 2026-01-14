@@ -20,22 +20,6 @@ export const MapViewState = {
     INTERACT_NPC: 'interact_npc' as const,
 };
 
-interface AttributeChange {
-    playerChanges:  {
-        [key: string]: {
-            delta: number;
-            reason: string;
-        }[]
-    },
-    npcChanges: {
-        [key: string]: {
-                delta: number;
-                reason: string;
-        }[]
-    },
-    reason: string;
-}
-
 interface useMapGalgameState {
     eventData: EventData | null;
     setEventData: (eventData: EventData | null) => void;

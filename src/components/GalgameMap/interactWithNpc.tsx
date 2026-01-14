@@ -23,12 +23,12 @@ import { useRefreshEventData } from "../../hooks/mapGalgame/useRefreshEventData"
 import { useInteractionInit } from "../../hooks/mapGalgame/useInteractionInit";
 import NormalModeDisplay from "./NormalModeDisplay";
 import TextModeDisplay from "./TextModeDisplay";
-import WorldModal from "./WorldModal";
+import WorldModal from "./Modal/WorldModal";
 import type { AllGameData } from "../../api/worldInteraction/mapWorldData.type";
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 import interactionApi from "../../api/worldInteraction/interactionApi";
 import { authFetch } from "../../api/base";
-import Attributes from "./Attributes";
+import Attributes from "./Plugin/Attributes";
 import {
   type Message,
   getImageUrls,
@@ -39,7 +39,9 @@ import {
   safeSetLocalStorage,
   safeRemoveLocalStorage,
 } from "../../hooks/mapGalgame/interactionUtils";
-import HistoryModal from "./HistoryModal";
+import HistoryModal from "./Modal/HistoryModal";
+import { Inventory } from "./Plugin/Inventory";
+import { HOST_ADDRESS } from "../../config";
 
 // 常量定义
 const DEFAULT_SCENE_IMAGE = `${
@@ -118,7 +120,13 @@ const InteractWithNpc = ({
     isAttributesVisible: false,
     attributesViewType: "npc" as "npc" | "player", // 当前查看的属性类型
     hasPendingRequest: false,
+    isInventoryVisible: false,
   });
+  const setIsInventoryVisible = useCallback(
+    (value: boolean) =>
+      setGameState((prev) => ({ ...prev, isInventoryVisible: value })),
+    []
+  );
   const setGameStarted = useCallback(
     (value: boolean) =>
       setGameState((prev) => ({ ...prev, gameStarted: value })),
@@ -173,6 +181,7 @@ const InteractWithNpc = ({
     isAttributesVisible,
     attributesViewType,
     hasPendingRequest,
+    isInventoryVisible
   } = gameState;
 
   // 合并弹窗状态
@@ -574,7 +583,7 @@ const InteractWithNpc = ({
           const { nodeId, actionId } = pendingAction;
 
           const response = await authFetch(
-            `/api/world-interaction/session/${sessionId}/ability-node/${nodeId}/select-action/stream`,
+            `${HOST_ADDRESS}/api/world-interaction/session/${sessionId}/ability-node/${nodeId}/select-action/stream`,
             {
               method: "POST",
               body: JSON.stringify({
@@ -608,13 +617,30 @@ const InteractWithNpc = ({
               // processStreamResponse 内部已经设置了 isWaitingForData = false
               // 更新属性
               if (onUpdateAttributes) {
-                onUpdateAttributes().catch(error => {
-                  console.error('[InteractWithNpc] ❌ 功能性NPC: 更新属性失败:', error);
+                onUpdateAttributes().catch((error) => {
+                  console.error(
+                    "[InteractWithNpc] ❌ 功能性NPC: 更新属性失败:",
+                    error
+                  );
+                });
+              }
+            },
+            onSuccess: async () => {
+              // 流式响应完成后立即刷新 active 事件，用于判断显示继续游戏还是开始下一回合
+              if (sessionId && gameData) {
+                await refreshEventData(sessionId, gameData).catch((error) => {
+                  console.error(
+                    "[InteractWithNpc] ❌ 功能性NPC: 刷新 active 事件失败:",
+                    error
+                  );
                 });
               }
             },
             onError: (error: string) => {
-              console.error("[InteractWithNpc] ❌ 功能性NPC: 流式响应错误:", error);
+              console.error(
+                "[InteractWithNpc] ❌ 功能性NPC: 流式响应错误:",
+                error
+              );
               setErrorModal({ visible: true, message: error });
             },
           });
@@ -640,14 +666,7 @@ const InteractWithNpc = ({
     sessionId,
   ]);
 
-  // 根据当前消息类型自动切换属性查看类型
-  useEffect(() => {
-    if (currentMessage?.type === "choice") {
-      setAttributesViewType("player");
-    } else {
-      setAttributesViewType("npc");
-    }
-  }, [currentMessage?.type]);
+  // 移除自动切换逻辑，NPC属性按钮只显示NPC属性
   // 获取当前互动的 NPC 对象
   const currentNpcObject = useMemo(() => {
     if (!gameData?.npcSetting?.npcs || !eventData?.npc?.id) return null;
@@ -681,6 +700,7 @@ const InteractWithNpc = ({
       refs.current.isRestoringFromCache = value;
     },
     onUpdateAttributes,
+    onRefreshEventData: refreshEventData, // 传入刷新事件数据的回调
   });
 
   // 同步 interactTimeoutRef 到 refs
@@ -957,7 +977,9 @@ const InteractWithNpc = ({
 
   const shouldShowContinueButton = useMemo(() => {
     const newEvent = stepHandlers.newEvent;
-    if (!newEvent) return false;
+    if (!newEvent) {
+      return false;
+    }
 
     const hasFullNewEvent = !!(
       newEvent.event &&
@@ -1244,20 +1266,28 @@ const InteractWithNpc = ({
         setHasPendingRequest(true);
       }
 
+      // 清除之前的超时定时器（如果存在）
       if (refs.current.choiceTimeout) {
         clearTimeout(refs.current.choiceTimeout);
+        refs.current.choiceTimeout = null;
       }
+      // 设置新的超时定时器
       refs.current.choiceTimeout = window.setTimeout(() => {
-        setTimeoutModal({
-          visible: true,
-          message: TIMEOUT_MESSAGES.CHOICE,
-        });
+        // 只有在定时器仍然存在且没有被清除时才显示超时弹窗
+        if (refs.current.choiceTimeout) {
+          setTimeoutModal({
+            visible: true,
+            message: TIMEOUT_MESSAGES.CHOICE,
+          });
+        }
       }, REQUEST_TIMEOUT_MS);
 
       const clearChoiceTimeout = () => {
         if (refs.current.choiceTimeout) {
           clearTimeout(refs.current.choiceTimeout);
           refs.current.choiceTimeout = null;
+          // 确保关闭超时弹窗
+          setTimeoutModal({ visible: false, message: "" });
         }
       };
 
@@ -1275,10 +1305,13 @@ const InteractWithNpc = ({
             setTimeoutModal({ visible: false, message: "" });
             refs.current.choiceInFlight = false;
             clearPending();
-            // 更新属性
-            if (onUpdateAttributes) {
-              await onUpdateAttributes().catch(error => {
-                console.error('[InteractWithNpc] ❌ 普通对话: onSuccess 更新属性失败:', error);
+            // 流式响应完成后立即刷新 active 事件，用于判断显示继续游戏还是开始下一回合
+            if (sessionId && gameData) {
+              await refreshEventData(sessionId, gameData).catch((error) => {
+                console.error(
+                  "[InteractWithNpc] ❌ 普通对话: 刷新 active 事件失败:",
+                  error
+                );
               });
             }
           },
@@ -1289,8 +1322,11 @@ const InteractWithNpc = ({
             clearPending();
             // 更新属性
             if (onUpdateAttributes) {
-              onUpdateAttributes().catch(error => {
-                console.error('[InteractWithNpc] ❌ 普通对话: onFirstStep 更新属性失败:', error);
+              onUpdateAttributes().catch((error) => {
+                console.error(
+                  "[InteractWithNpc] ❌ 普通对话: onFirstStep 更新属性失败:",
+                  error
+                );
               });
             }
           },
@@ -1451,22 +1487,38 @@ const InteractWithNpc = ({
           {currentNpcObject &&
             (currentMessage?.type === "dialogue" ||
               currentMessage?.type === "choice") &&
-              !isAttributesVisible && (
+            !isAttributesVisible && (
               <div
-                className={`${styles.topAttributesButton} ${
+                className={`${styles.topAttributesButton} ${styles.npcAttributesButton} ${
                   isAttributesVisible ? styles.topAttributesButtonActive : ""
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
+                  setAttributesViewType("npc");
                   setIsAttributesVisible(!isAttributesVisible);
                 }}
               >
                 <div className={styles.buttonInner}>
                   <MdOutlinePerson />
-                  <span>属性</span>
+                  <span>NPC属性</span>
                 </div>
               </div>
             )}
+
+          <div
+            className={`${styles.topAttributesButton} ${styles.inventoryButton} ${
+              isInventoryVisible ? styles.topAttributesButtonActive : ""
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsInventoryVisible(!isInventoryVisible);
+              }}
+            >
+              <div className={styles.buttonInner}>
+                <MdOutlinePerson />
+                <span>背包</span>
+              </div>
+            </div>
           {currentMessage.characterImage && !isTextMode && (
             <div className={getCharacterContainerClassName()}>
               <img
@@ -1622,9 +1674,13 @@ const InteractWithNpc = ({
       <Attributes
         visible={isAttributesVisible}
         onClose={() => setIsAttributesVisible(false)}
-        npc={currentNpcObject}
+        npc={attributesViewType === "npc" ? currentNpcObject : null}
+        player={attributesViewType === "player" ? (gameData?.worldSetting?.player as any || null) : null}
       />
-
+      <Inventory
+        isOpen={isInventoryVisible}
+        onClose={() => setIsInventoryVisible(false)}
+      />
       {renderWorldModal(errorModal.visible, "请求失败", errorModal.message, {
         confirmText: "重试",
         cancelText: "取消",

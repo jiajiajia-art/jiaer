@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './Attributes.module.css';
 import { IoClose } from 'react-icons/io5';
-import type { NPC, PlayerCharacter } from '../../api/worldInteraction/worldInteractionApi.type';
+import type { NPC, PlayerCharacter } from '../../../api/worldInteraction/worldInteractionApi.type';
 
 interface AttributesProps {
     npc?: NPC | null;

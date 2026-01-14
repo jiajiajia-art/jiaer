@@ -6,7 +6,7 @@ import { useMapGalgameStore } from '../../store/mapGalgameStore';
 import type { AllGameData, SubScene } from '../../api/worldInteraction/mapWorldData.type';
 import type { AbilityNode } from '../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl } from '../../utils/constants';
-import EventDisplayModal from './EventDisplayModal';
+import EventDisplayModal from './Plugin/EventDisplayModal';
 import { useGameStore } from '../../store/gameStore';
 import InteractWithNpc from './InteractWithNpc';
 

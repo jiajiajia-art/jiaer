@@ -1,5 +1,5 @@
 import styles from './HistoryModal.module.css';
-import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
+import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
 
 interface HistoryModalProps {
     visible: boolean;

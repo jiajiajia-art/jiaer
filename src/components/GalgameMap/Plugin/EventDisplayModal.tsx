@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './EventDisplayModal.module.css';
-import type { AbilityNode } from '../../api/worldInteraction/worldInteractionApi.type';
-import { getImageUrl } from '../../utils/constants';
+import type { AbilityNode } from '../../../api/worldInteraction/worldInteractionApi.type';
+import { getImageUrl } from '../../../utils/constants';
 
 interface EventDisplayModalProps {
     isOpen: boolean;

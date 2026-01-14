@@ -13,7 +13,7 @@ import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterCon
 import { useMusicPlayer } from "../hooks/mapGalgame/useMusicPlayer";
 import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
-import ErrorModal from "../components/GalgameMap/WorldModal";
+import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { IoMdCloseCircle } from "react-icons/io";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";

@@ -1,6 +1,6 @@
 import type { ApiResponse } from "../api.types"
 import { api } from "../base"
-import type { AddObjectResponse, CalculateObjectPointsResponse, GenerateAllObjectImagesResponse, GenerateObjectImageResponse, getAllObjectsResponse } from "./objectsData.type"
+import type { AddObjectResponse, CalculateObjectPointsResponse, GenerateAllObjectImagesResponse, GenerateObjectImageResponse, getAllObjectsResponse, GetObjectsBySessionIdResponse } from "./objectsData.type"
 export const objectsData = {
     getAllObjects: (fileId: string) => {
         return api.get<getAllObjectsResponse>(`/world-interaction/edit/${fileId}/items`)
@@ -34,5 +34,8 @@ export const objectsData = {
         }, {
             timeout: 2500000,
         })
+    },
+    getObjectsBySessionId: (sessionId: string) => {
+        return api.get<GetObjectsBySessionIdResponse>(`/world-interaction/session/${sessionId}/inventory`)
     }
 }
