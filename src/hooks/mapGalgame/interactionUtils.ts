@@ -27,11 +27,19 @@ export const getImageUrls = (image: string | undefined): string | undefined => {
     return getImageUrl(image) || undefined;
 };
 
+import { getPlayerImageUrl } from '../../utils/constants';
+
 /** 获取玩家图片（支持字符串或对象格式） */
 export const getPlayerImage = (playerImages: string | { [variant: string]: string } | undefined): string | undefined => {
     if (!playerImages) return undefined;
     const image = typeof playerImages === 'string' ? playerImages : (playerImages as any)?.base || '';
     return image ? getImageUrls(image) : undefined;
+};
+
+/** 获取玩家图片的统一兜底函数（支持 imagePath、image、images 三个字段） */
+export const getPlayerImageWithFallback = (player: any, defaultImage?: string): string | undefined => {
+    const imageUrl = getPlayerImageUrl(player, defaultImage);
+    return imageUrl ? getImageUrls(imageUrl) : undefined;
 };
 
 // ==================== 步骤转换 ====================
@@ -62,7 +70,7 @@ export const convertStepToMessage = (
         const isPlayer = step.npcId === worldSetting?.player?.name;
         const characterName = step.speakerName || step.npcId || step.speakerId || '未知角色';
         const characterImage = isPlayer 
-            ? getPlayerImage(worldSetting?.player?.imagePath)
+            ? getPlayerImage(worldSetting?.player?.images)
             : getImageUrls(step.activeImage || step.npcImages?.base);
         
         return {
@@ -94,7 +102,7 @@ export const convertStepToMessage = (
             type: 'choice',
             message,
             options,
-            characterImage: getPlayerImage(worldSetting?.player?.imagePath),
+            characterImage: getPlayerImage(worldSetting?.player?.images),
             characterPosition: 'right',
         };
     } else if (step.type === 'scene_change') {

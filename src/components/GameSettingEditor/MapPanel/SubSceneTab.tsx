@@ -71,10 +71,9 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
         handleChangeZIndex,
         handleSetZIndex,
         handleChangeBackgroundColor,
-        getNPCPosition,
-        currentSubScene,
-        checkUnsavedChanges,
         resetInitialState,
+        checkUnsavedChanges,
+        currentSubScene,
     } = useSubSceneTab({ subScenes, sceneSetting, isActive, abilityNodeSetting });
 
     const [saveConfirmModalOpen, setSaveConfirmModalOpen] = React.useState(false);
@@ -214,206 +213,207 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
             >
-                <img
+                {/* 关键修改：将 imageRef 移到这个 div 上，作为逻辑画布的基准 */}
+                <div 
                     ref={imageRef}
-                    src={previewImageUrl}
-                    alt="子场景预览"
-                    className={sharedStyles.sceneImage}
-                    draggable={false}
-                    onLoad={() => {
-                        requestAnimationFrame(() => {
+                    className={styles.imageCanvas}
+                >
+                    <img
+                        src={previewImageUrl}
+                        alt="子场景预览"
+                        className={sharedStyles.sceneImage}
+                        draggable={false}
+                        onLoad={() => {
                             requestAnimationFrame(() => {
-                                const container = previewRef.current;
+                                const container = imageRef.current;
                                 if (container) {
                                     const rect = container.getBoundingClientRect();
                                     if (rect.width > 0 && rect.height > 0) {
                                         setImageLoaded(true);
-                                    } else {
-                                        setTimeout(() => {
-                                            const rect2 = container.getBoundingClientRect();
-                                            if (rect2.width > 0 && rect2.height > 0) {
-                                                setImageLoaded(true);
-                                            }
-                                        }, 100);
                                     }
                                 }
                             });
-                        });
-                    }}
-                    onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        if (target.src !== DEFAULT_MAP_IMAGE) {
-                            target.src = DEFAULT_MAP_IMAGE;
-                        } else {
-                            setImageLoaded(true);
-                        }
-                    }}
-                />
+                        }}
+                        onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== DEFAULT_MAP_IMAGE) {
+                                target.src = DEFAULT_MAP_IMAGE;
+                            } else {
+                                setImageLoaded(true);
+                            }
+                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
 
-                {/* 加载遮罩 */}
-                {!isSubSceneContentReady && (
-                    <div className={sharedStyles.loadingOverlay}>
-                        <div className={sharedStyles.loadingSpinner}></div>
-                        <div className={sharedStyles.loadingText}>正在加载场景...</div>
-                    </div>
-                )}
+                    {/* 加载遮罩 */}
+                    {!isSubSceneContentReady && (
+                        <div className={sharedStyles.loadingOverlay} style={{ borderRadius: 0 }}>
+                            <div className={sharedStyles.loadingSpinner}></div>
+                            <div className={sharedStyles.loadingText}>正在加载场景...</div>
+                        </div>
+                    )}
 
-                {/* 只在内容准备好时才渲染NPC（按层级排序） */}
-                {isSubSceneContentReady &&
-                    [...allPlacedNPCs]
-                        .sort((a, b) => (a.zIndex ?? DEFAULT_Z_INDEX) - (b.zIndex ?? DEFAULT_Z_INDEX))
-                        .map(npc => {
-                            const pos = getNPCPosition(npc);
-                            const isSelected = selectedNPCId === npc.id;
-                            const isDragging = draggingNPCId === npc.id;
+                    {/* NPC 渲染列表 */}
+                    {isSubSceneContentReady &&
+                        [...allPlacedNPCs]
+                            .sort((a, b) => (a.zIndex ?? DEFAULT_Z_INDEX) - (b.zIndex ?? DEFAULT_Z_INDEX))
+                            .map(npc => {
+                                const isSelected = selectedNPCId === npc.id;
+                                const isDragging = draggingNPCId === npc.id;
 
-                            if (!pos.visible) return null;
+                                // 基础尺寸
+                                let baseWidth = BASE_NPC_WIDTH;
+                                let baseHeight = BASE_NPC_HEIGHT;
+                                if (npc.type === 'button' && npc.name) {
+                                    const textWidth = npc.name.length * 10 + 24;
+                                    const textHeight = 32;
+                                    baseWidth = Math.max(textWidth, 60);
+                                    baseHeight = textHeight;
+                                }
 
-                            return (
-                                <div
-                                    key={npc.id}
-                                    className={`${styles.placedNPC} ${npc.type === 'button' ? styles.placedNPCButton : ''} ${isSelected ? sharedStyles.placedNPCSelected : ''} ${isDragging ? sharedStyles.placedNPCDragging : ''}`}
-                                    style={{
-                                        left: `${pos.left}px`,
-                                        top: `${pos.top}px`,
-                                        width: npc.type === 'button' ? 'auto' : `${pos.width}px`,
-                                        height: npc.type === 'button' ? 'auto' : `${pos.height}px`,
-                                        transform: pos.scale !== undefined ? `scale(${pos.scale})` : undefined,
-                                        transformOrigin: 'center center',
-                                        opacity: pos.visible ? 1 : 0,
-                                        transition: 'opacity 0.3s ease',
-                                        zIndex: npc.zIndex ?? DEFAULT_Z_INDEX,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                    onMouseDown={(e) => handleNPCMouseDown(e, npc.id)}
-                                    onClick={() => setSelectedNPCId(npc.id)}
-                                >
-                                    {(() => {
-                                        // 按钮型NPC：显示文字
-                                        if (npc.nodeId && npc.type === 'button' && npc.name) {
-                                            return (
-                                                <div 
-                                                    className={styles.npcButtonText}
-                                                    style={{
-                                                        backgroundColor: npc.backgroundColor || '#37333480',
-                                                    }}
-                                                >
-                                                    {npc.name}
-                                                </div>
-                                            );
-                                        }
-                                        // 立绘型NPC：显示真实图片
-                                        if (npc.nodeId && npc.imagePath && npc.type === 'illustration') {
+                                return (
+                                    <div
+                                        key={npc.id}
+                                        className={`${styles.placedNPC} ${npc.type === 'button' ? styles.placedNPCButton : ''} ${isSelected ? sharedStyles.placedNPCSelected : ''} ${isDragging ? sharedStyles.placedNPCDragging : ''}`}
+                                        style={{
+                                            left: `${npc.x * 414}px`,
+                                            top: `${npc.y * 740}px`,
+                                            width: npc.type === 'button' ? 'auto' : `${baseWidth}px`,
+                                            height: npc.type === 'button' ? 'auto' : `${baseHeight}px`,
+                                            // 保持中心点定位，缩放不偏移
+                                            transform: `translate(-50%, -50%) scale(${npc.scale || 1})`,
+                                            transformOrigin: 'center center',
+                                            zIndex: npc.zIndex ?? DEFAULT_Z_INDEX,
+                                            opacity: 1,
+                                        }}
+                                        onMouseDown={(e) => handleNPCMouseDown(e, npc.id)}
+                                        onClick={() => setSelectedNPCId(npc.id)}
+                                    >
+                                        {(() => {
+                                            // 按钮型NPC：显示文字
+                                            if (npc.nodeId && npc.type === 'button' && npc.name) {
+                                                return (
+                                                    <div 
+                                                        className={styles.npcButtonText}
+                                                        style={{
+                                                            backgroundColor: npc.backgroundColor || '#37333480',
+                                                        }}
+                                                    >
+                                                        {npc.name}
+                                                    </div>
+                                                );
+                                            }
+                                            // 立绘型NPC：显示真实图片
+                                            if (npc.nodeId && npc.imagePath && npc.type === 'illustration') {
+                                                return (
+                                                    <img
+                                                        src={getImageUrl(npc.imagePath)}
+                                                        alt={npc.authorNote || '功能性NPC'}
+                                                        draggable={false}
+                                                        className={styles.npcImage}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
+                                                        }}
+                                                    />
+                                                );
+                                            }
+                                            // 默认显示默认图片
                                             return (
                                                 <img
-                                                    src={getImageUrl(npc.imagePath)}
-                                                    alt={npc.authorNote || '功能性NPC'}
+                                                    src={DEFAULT_NPC_IMAGE}
+                                                    alt="NPC 立绘"
                                                     draggable={false}
                                                     className={styles.npcImage}
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
-                                                    }}
                                                 />
                                             );
-                                        }
-                                        // 默认显示默认图片
-                                        return (
-                                            <img
-                                                src={DEFAULT_NPC_IMAGE}
-                                                alt="NPC 立绘"
-                                                draggable={false}
-                                                className={styles.npcImage}
-                                            />
-                                        );
-                                    })()}
-                                    {isSelected && (
-                                        <>
-                                            {/* 四个角的调整手柄 */}
-                                            <div
-                                                className={`${styles.resizeHandle} ${styles.resizeHandleNW}`}
-                                                onMouseDown={(e) => handleResizeStart(e, npc.id, 'nw')}
-                                            />
-                                            <div
-                                                className={`${styles.resizeHandle} ${styles.resizeHandleNE}`}
-                                                onMouseDown={(e) => handleResizeStart(e, npc.id, 'ne')}
-                                            />
-                                            <div
-                                                className={`${styles.resizeHandle} ${styles.resizeHandleSW}`}
-                                                onMouseDown={(e) => handleResizeStart(e, npc.id, 'sw')}
-                                            />
-                                            <div
-                                                className={`${styles.resizeHandle} ${styles.resizeHandleSE}`}
-                                                onMouseDown={(e) => handleResizeStart(e, npc.id, 'se')}
-                                            />
-                                            {/* 控制按钮 */}
-                                            <div className={styles.npcControls}>
-                                                {/* 层级控制 */}
-                                                <div className={styles.zIndexControl}>
-                                                    <span className={styles.zIndexLabel}>层级:</span>
+                                        })()}
+                                        {isSelected && (
+                                            <>
+                                                {/* 四个角的调整手柄 */}
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleNW}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'nw')}
+                                                />
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleNE}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'ne')}
+                                                />
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleSW}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'sw')}
+                                                />
+                                                <div
+                                                    className={`${styles.resizeHandle} ${styles.resizeHandleSE}`}
+                                                    onMouseDown={(e) => handleResizeStart(e, npc.id, 'se')}
+                                                />
+                                                {/* 控制按钮 */}
+                                                <div className={styles.npcControls}>
+                                                    {/* 层级控制 */}
+                                                    <div className={styles.zIndexControl}>
+                                                        <span className={styles.zIndexLabel}>层级:</span>
+                                                        <button
+                                                            className={styles.zIndexBtnSmall}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleChangeZIndex(npc.id, -1);
+                                                            }}
+                                                            disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) <= MIN_Z_INDEX}
+                                                            title="降低层级"
+                                                        >
+                                                            -
+                                                        </button>
+                                                        <input
+                                                            type="number"
+                                                            className={styles.zIndexInputSmall}
+                                                            value={npc.zIndex ?? DEFAULT_Z_INDEX}
+                                                            min={MIN_Z_INDEX}
+                                                            max={MAX_Z_INDEX}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={(e) => {
+                                                                const value = parseInt(e.target.value, 10);
+                                                                if (!isNaN(value)) {
+                                                                    handleSetZIndex(npc.id, value);
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            className={styles.zIndexBtnSmall}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleChangeZIndex(npc.id, 1);
+                                                            }}
+                                                            disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) >= MAX_Z_INDEX}
+                                                            title="提高层级"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    </div>
+                                                    {/* 按钮型NPC的颜色选择器 */}
+                                                    {npc.type === 'button' && (
+                                                        <ColorPicker
+                                                            color={npc.backgroundColor || '#37333480'}
+                                                            onChange={(color) => {
+                                                                handleChangeBackgroundColor(npc.id, color);
+                                                            }}
+                                                        />
+                                                    )}
+                                                    {/* 移除按钮 */}
                                                     <button
-                                                        className={styles.zIndexBtnSmall}
+                                                        className={styles.removeBtn}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            handleChangeZIndex(npc.id, -1);
+                                                            handleRemoveNPC(npc.id);
                                                         }}
-                                                        disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) <= MIN_Z_INDEX}
-                                                        title="降低层级"
                                                     >
-                                                        -
-                                                    </button>
-                                                    <input
-                                                        type="number"
-                                                        className={styles.zIndexInputSmall}
-                                                        value={npc.zIndex ?? DEFAULT_Z_INDEX}
-                                                        min={MIN_Z_INDEX}
-                                                        max={MAX_Z_INDEX}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onChange={(e) => {
-                                                            const value = parseInt(e.target.value, 10);
-                                                            if (!isNaN(value)) {
-                                                                handleSetZIndex(npc.id, value);
-                                                            }
-                                                        }}
-                                                    />
-                                                    <button
-                                                        className={styles.zIndexBtnSmall}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleChangeZIndex(npc.id, 1);
-                                                        }}
-                                                        disabled={(npc.zIndex ?? DEFAULT_Z_INDEX) >= MAX_Z_INDEX}
-                                                        title="提高层级"
-                                                    >
-                                                        +
+                                                        移除
                                                     </button>
                                                 </div>
-                                                {/* 按钮型NPC的颜色选择器 */}
-                                                {npc.type === 'button' && (
-                                                    <ColorPicker
-                                                        color={npc.backgroundColor || '#37333480'}
-                                                        onChange={(color) => {
-                                                            handleChangeBackgroundColor(npc.id, color);
-                                                        }}
-                                                    />
-                                                )}
-                                                {/* 移除按钮 */}
-                                                <button
-                                                    className={styles.removeBtn}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRemoveNPC(npc.id);
-                                                    }}
-                                                >
-                                                    移除
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                </div>
 
                 <div className={sharedStyles.mapOverlayHint}>
                     拖拽 NPC 到场景，支持缩放
@@ -565,4 +565,3 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
 SubSceneTab.displayName = 'SubSceneTab';
 
 export default SubSceneTab;
-

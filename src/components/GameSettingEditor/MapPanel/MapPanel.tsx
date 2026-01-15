@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, useImperativeHandle } from 'react';
 import styles from './MapPanel.module.css';
+import sharedStyles from './shared.module.css';
 import type { MapPanelProps, SubScene } from './types';
 import SubSceneTab, { type SubSceneTabRef } from './SubSceneTab';
 import SceneTab, { type SceneTabRef } from './SceneTab';
@@ -13,9 +14,15 @@ export interface MapPanelRef {
     checkBeforeLeave: () => Promise<boolean> | boolean;
 }
 
-const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting, worldMapImage, fileId, onDataChange, isActive, abilityNodeSetting: propAbilityNodeSetting }, ref) => {
+const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: propSceneSetting, worldMapImage: propWorldMapImage, fileId, onDataChange, isActive, abilityNodeSetting: propAbilityNodeSetting }, ref) => {
     const [mapTab, setMapTab] = useState<'subScene' | 'scene' | 'map'>('subScene');
+    
+    // 本地数据状态，独立管理所有数据
+    const [localSceneSetting, setLocalSceneSetting] = useState(propSceneSetting);
+    const [localWorldMapImage, setLocalWorldMapImage] = useState(propWorldMapImage);
     const [localAbilityNodeSetting, setLocalAbilityNodeSetting] = useState<AbilityNodeSetting | undefined>(propAbilityNodeSetting);
+    const [isLoading, setIsLoading] = useState(false);
+    
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{ type: 'switchTab' | 'switchPanel'; targetTab?: string } | null>(null);
@@ -26,29 +33,56 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting, w
     const [hasUnsavedChangesScene, setHasUnsavedChangesScene] = useState(false);
     const [hasUnsavedChangesMap, setHasUnsavedChangesMap] = useState(false);
 
-    // 当面板激活时，独立请求最新的 abilityNodeSetting
+    // 当面板激活时，获取全部最新数据
     useEffect(() => {
         if (isActive && fileId) {
-            const fetchAbilityNodeSetting = async () => {
+            const fetchAllData = async () => {
+                setIsLoading(true);
                 try {
                     const response = await MapWorldData.getMapWorldData(fileId);
-                    if (response.data?.success && response.data.abilityNodeSetting) {
-                        setLocalAbilityNodeSetting(response.data.abilityNodeSetting);
+                    if (response.data?.success) {
+                        // 更新所有本地数据
+                        if (response.data.sceneSetting) {
+                            setLocalSceneSetting(response.data.sceneSetting);
+                        }
+                        if (response.data.worldSetting?.worldMapImage) {
+                            setLocalWorldMapImage(response.data.worldSetting.worldMapImage);
+                        }
+                        if (response.data.abilityNodeSetting) {
+                            setLocalAbilityNodeSetting(response.data.abilityNodeSetting);
+                        }
                     }
                 } catch (error) {
-                    console.warn('获取 abilityNodeSetting 失败，使用 prop 值:', error);
-                    // 如果请求失败，使用 prop 值
+                    console.error('获取地图数据失败:', error);
+                    toast.error('获取地图数据失败，请刷新重试');
+                    // 如果请求失败，使用 prop 值作为降级方案
+                    setLocalSceneSetting(propSceneSetting);
+                    setLocalWorldMapImage(propWorldMapImage);
                     setLocalAbilityNodeSetting(propAbilityNodeSetting);
+                } finally {
+                    setIsLoading(false);
                 }
             };
-            fetchAbilityNodeSetting();
+            fetchAllData();
         }
     }, [isActive, fileId]);
 
-    // 当 prop 更新时，同步更新本地状态
+    // 当 prop 更新时，仅在非激活状态同步本地状态（作为降级方案和初始化）
+    // 激活状态下，MapPanel 会自己获取最新数据，不依赖 props
     useEffect(() => {
-        setLocalAbilityNodeSetting(propAbilityNodeSetting);
-    }, [propAbilityNodeSetting]);
+        if (!isActive) {
+            // 只有在非激活状态时才同步 prop，避免覆盖刚获取的最新数据
+            if (propSceneSetting) {
+                setLocalSceneSetting(propSceneSetting);
+            }
+            if (propWorldMapImage !== undefined) {
+                setLocalWorldMapImage(propWorldMapImage);
+            }
+            if (propAbilityNodeSetting !== undefined) {
+                setLocalAbilityNodeSetting(propAbilityNodeSetting);
+            }
+        }
+    }, [propSceneSetting, propWorldMapImage, propAbilityNodeSetting, isActive]);
 
     useEffect(() => {
         if (isActive) {
@@ -56,17 +90,46 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting, w
         }
     }, [isActive]);
 
-    // 计算属性，提取subscenes
+    // 计算属性，提取subscenes（使用本地数据）
     const subScenes = useMemo<SubScene[]>(() => {
-        if (!sceneSetting?.scenes) return [];
-        return sceneSetting.scenes.flatMap(scene =>
+        if (!localSceneSetting?.scenes) return [];
+        return localSceneSetting.scenes.flatMap(scene =>
             (scene.subscenes || []).map(sub => ({
                 ...sub,
                 parentId: scene.id,
                 parentName: scene.name,
             }))
         );
-    }, [sceneSetting?.scenes]);
+    }, [localSceneSetting?.scenes]);
+    
+    // 数据变更回调，通知父组件刷新数据
+    const handleDataChange = React.useCallback(() => {
+        if (onDataChange) {
+            onDataChange();
+            // 数据变更后，重新获取最新数据
+            if (isActive && fileId) {
+                const refreshData = async () => {
+                    try {
+                        const response = await MapWorldData.getMapWorldData(fileId);
+                        if (response.data?.success) {
+                            if (response.data.sceneSetting) {
+                                setLocalSceneSetting(response.data.sceneSetting);
+                            }
+                            if (response.data.worldSetting?.worldMapImage) {
+                                setLocalWorldMapImage(response.data.worldSetting.worldMapImage);
+                            }
+                            if (response.data.abilityNodeSetting) {
+                                setLocalAbilityNodeSetting(response.data.abilityNodeSetting);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('刷新地图数据失败:', error);
+                    }
+                };
+                refreshData();
+            }
+        }
+    }, [onDataChange, isActive, fileId]);
 
     // 使用 ref 来存储最新的状态值，避免闭包问题
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
@@ -177,38 +240,48 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting, w
                 ))}
             </div>
 
-            <div className={`${styles.mapEditor} ${mapTab === 'subScene' ? styles.mapEditorThreeColumns : ''}`}>
-                {mapTab === 'subScene' && (
-                    <SubSceneTab
-                        ref={subSceneTabRef}
-                        subScenes={subScenes}
-                        sceneSetting={sceneSetting}
-                        fileId={fileId}
-                        onDataChange={onDataChange}
-                        isActive={isActive}
-                        abilityNodeSetting={localAbilityNodeSetting}
-                        onHasUnsavedChanges={setHasUnsavedChanges}
-                    />
+            <div className={`${styles.mapEditor} ${mapTab === 'subScene' ? styles.mapEditorThreeColumns : ''}`} style={{ position: 'relative' }}>
+                {isLoading && (
+                    <div className={sharedStyles.loadingOverlay}>
+                        <div className={sharedStyles.loadingSpinner}></div>
+                        <div className={sharedStyles.loadingText}>正在加载地图数据...</div>
+                    </div>
                 )}
-                {mapTab === 'scene' && (
-                    <SceneTab
-                        ref={sceneTabRef}
-                        sceneSetting={sceneSetting}
-                        fileId={fileId}
-                        onDataChange={onDataChange}
-                        onHasUnsavedChanges={setHasUnsavedChangesScene}
-                    />
-                )}
-                {mapTab === 'map' && (
-                    <MapTab
-                        ref={mapTabRef}
-                        sceneSetting={sceneSetting}
-                        worldMapImage={worldMapImage}
-                        fileId={fileId}
-                        onDataChange={onDataChange}
-                        isActive={isActive}
-                        onHasUnsavedChanges={setHasUnsavedChangesMap}
-                    />
+                {!isLoading && (
+                    <>
+                        {mapTab === 'subScene' && (
+                            <SubSceneTab
+                                ref={subSceneTabRef}
+                                subScenes={subScenes}
+                                sceneSetting={localSceneSetting}
+                                fileId={fileId}
+                                onDataChange={handleDataChange}
+                                isActive={isActive}
+                                abilityNodeSetting={localAbilityNodeSetting}
+                                onHasUnsavedChanges={setHasUnsavedChanges}
+                            />
+                        )}
+                        {mapTab === 'scene' && (
+                            <SceneTab
+                                ref={sceneTabRef}
+                                sceneSetting={localSceneSetting}
+                                fileId={fileId}
+                                onDataChange={handleDataChange}
+                                onHasUnsavedChanges={setHasUnsavedChangesScene}
+                            />
+                        )}
+                        {mapTab === 'map' && (
+                            <MapTab
+                                ref={mapTabRef}
+                                sceneSetting={localSceneSetting}
+                                worldMapImage={localWorldMapImage}
+                                fileId={fileId}
+                                onDataChange={handleDataChange}
+                                isActive={isActive}
+                                onHasUnsavedChanges={setHasUnsavedChangesMap}
+                            />
+                        )}
+                    </>
                 )}
             </div>
 

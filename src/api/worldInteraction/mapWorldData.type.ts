@@ -15,10 +15,7 @@ export interface PlayerCharacter {
     personality: string;
     appearance: string;
     tone: string;
-    imagePath: string;
-    images?: {
-        [key: string]: string;
-    };
+    images: string;
 }
 
 export interface NPC {

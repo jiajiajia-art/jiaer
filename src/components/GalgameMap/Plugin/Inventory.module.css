@@ -1,6 +1,6 @@
 /* 遮罩（不挡游戏操作，只挡面板） */
 .overlay {
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 1000;
     pointer-events: auto;

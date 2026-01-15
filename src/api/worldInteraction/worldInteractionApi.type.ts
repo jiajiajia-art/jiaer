@@ -15,7 +15,7 @@ export interface PlayerCharacter {
     personality: string;
     appearance: string;
     tone: string;
-    imagePath: string;
+    images: string;
     attributes: {
       [attributeKey: string]: {
         displayName: string;

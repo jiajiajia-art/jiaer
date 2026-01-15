@@ -6,13 +6,21 @@ export const objectsData = {
         return api.get<getAllObjectsResponse>(`/world-interaction/edit/${fileId}/items`)
     },
     addObject: (fileId: string, data: FormData) => {
-        return api.post<AddObjectResponse>(`/world-interaction/edit/${fileId}/items`, data)
+        return api.post<AddObjectResponse>(`/world-interaction/edit/${fileId}/items`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        })
     },
     deleteObject: (fileId: string, itemId: string) => {
         return api.delete<ApiResponse<null>>(`/world-interaction/edit/${fileId}/items/${itemId}`)
     },
     updateObject: (fileId: string, itemId: string, data: FormData) => {
-        return api.put<AddObjectResponse>(`/world-interaction/edit/${fileId}/items/${itemId}`, data)
+        return api.put<AddObjectResponse>(`/world-interaction/edit/${fileId}/items/${itemId}`, data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        })
     },
     generateObjectImage: (fileId: string, prompt: string) => {
         return api.post<GenerateObjectImageResponse>(`/world-interaction/images/generate-item-preview`, {

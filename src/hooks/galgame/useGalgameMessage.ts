@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
 import { HOST_ADDRESS } from "../../config";
 import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
+import { getPlayerImageUrl } from "../../utils/constants";
 
 export interface Message {
     id: number;
@@ -53,16 +54,11 @@ export const useGalgameMessage = (
             }
 
             if (step.isPlayer) {
-                const images = worldSetting?.player?.images as any;
-                if (images) {
-                    const playerImage = typeof images === 'string'
-                        ? images
-                        : (images?.base || images);
-                    if (playerImage && typeof playerImage === 'string') {
-                        characterImage = playerImage.startsWith('http')
-                            ? playerImage
-                            : `${HOST_ADDRESS}${playerImage}`;
-                    }
+                const playerImageUrl = getPlayerImageUrl(worldSetting?.player);
+                if (playerImageUrl) {
+                    characterImage = playerImageUrl.startsWith('http')
+                        ? playerImageUrl
+                        : `${HOST_ADDRESS}${playerImageUrl}`;
                 }
             }
 
@@ -85,16 +81,11 @@ export const useGalgameMessage = (
                 : (step.description || '请选择你的行动');
 
             let characterImage: string | undefined;
-            const images = worldSetting?.player?.images as any;
-            if (images) {
-                const playerImage = typeof images === 'string'
-                    ? images
-                    : (images?.base || images);
-                if (playerImage && typeof playerImage === 'string') {
-                    characterImage = playerImage.startsWith('http')
-                        ? playerImage
-                        : `${HOST_ADDRESS}${playerImage}`;
-                }
+            const playerImageUrl = getPlayerImageUrl(worldSetting?.player);
+            if (playerImageUrl) {
+                characterImage = playerImageUrl.startsWith('http')
+                    ? playerImageUrl
+                    : `${HOST_ADDRESS}${playerImageUrl}`;
             }
 
             return {

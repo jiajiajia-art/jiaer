@@ -148,11 +148,6 @@
 .functionalNPCContainer {
     pointer-events: auto;
     cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.functionalNPCContainer:hover {
-    transform: translate(-50%, -50%) scale(1.05) !important;
 }
 
 /* 功能性NPC图片 */

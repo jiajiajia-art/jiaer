@@ -8,7 +8,7 @@ import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { getImageUrl } from "../../utils/constants";
+import { getImageUrl, getPlayerImageUrl } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
@@ -54,17 +54,9 @@ export const useGalgameController = () => {
 
     const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
 
-    const getPlayerImageUrl = useCallback((): string | undefined => {
-        const images = worldSetting?.player?.images as string | { base: string };
-        if (images) {
-            const playerImage = typeof images === 'string'
-                ? images
-                : (images?.base || images);
-            if (playerImage && typeof playerImage === 'string') {
-                return getImageUrl(playerImage);
-            }
-        }
-        return undefined;
+    const getPlayerImageUrlCallback = useCallback((): string | undefined => {
+        const imageUrl = getPlayerImageUrl(worldSetting?.player);
+        return imageUrl ? getImageUrl(imageUrl) : undefined;
     }, [worldSetting]);
 
     const createChoiceMessage = useCallback((choiceData: ReturnType<typeof extractChoiceFromHistory>) => {
@@ -80,10 +72,10 @@ export const useGalgameController = () => {
                 id: index + 1,
                 text: extractPlainText(opt),
             })),
-            characterImage: getPlayerImageUrl(),
+            characterImage: getPlayerImageUrlCallback(),
             characterPosition: 'right' as const,
         };
-    }, [getPlayerImageUrl]);
+    }, [getPlayerImageUrlCallback]);
 
     const resetDisplayedSteps = useCallback(() => {
         setCompletedSteps([]);
@@ -467,7 +459,7 @@ export const useGalgameController = () => {
                 }
             }
         }
-    }, [historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrl, createChoiceMessage]);
+    }, [historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrlCallback, createChoiceMessage]);
 
     useEffect(() => {
         if (historyLoading || !presetData) return;

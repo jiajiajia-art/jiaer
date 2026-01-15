@@ -16,6 +16,7 @@ import CoverUpload from './CoverUpload';
 import WorldSettingForm from './WorldSettingForm';
 import StorylinesSection, { type StoryLine } from './StorylinesSection';
 import ToneSection from './ToneSection';
+import { getPlayerImageUrl } from '../../../utils/constants';
 
 export interface WorldPanelRef {
     checkBeforeLeave: () => boolean;
@@ -298,7 +299,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 personality: 'personality' in player ? player.personality : '',
                 appearance: player.appearance || '',
                 tone: player.tone || '',
-                imagePath: 'imagePath' in player ? player.imagePath : ('images' in player && player.images?.base) || '',
+                imagePath: getPlayerImageUrl(player, ''),
             } : {
                 name: '',
                 gender: '',

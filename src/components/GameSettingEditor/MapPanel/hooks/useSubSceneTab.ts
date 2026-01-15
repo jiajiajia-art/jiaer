@@ -12,8 +12,6 @@ import {
     BASE_NPC_WIDTH,
     BASE_NPC_HEIGHT,
 } from '../constants';
-import { getImageDisplayBounds } from '../utils';
-import type { NPCPosition } from '../types';
 
 interface UseSubSceneTabProps {
     subScenes: SubScene[];
@@ -42,14 +40,11 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
     const [imageLoaded, setImageLoaded] = useState(false);
     const [containerReady, setContainerReady] = useState(false);
     const [isSubSceneContentReady, setIsSubSceneContentReady] = useState(false);
-    const [forceUpdate, setForceUpdate] = useState(0);
-    const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
     const previewRef = useRef<HTMLDivElement>(null);
-    const imageRef = useRef<HTMLImageElement>(null);
+    const imageRef = useRef<HTMLDivElement>(null); // 现在指向的是 .imageCanvas
     const currentSceneIdRef = useRef<string | null>(null);
     const currentSubSceneIdRef = useRef<string | null>(null);
-    // 保存初始 NPC 状态，用于检测未保存的修改
     const initialNormalNPCsRef = useRef<PlacedNPC[]>([]);
     const initialFunctionalNPCsRef = useRef<PlacedNPC[]>([]);
 
@@ -58,7 +53,20 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         [subScenes, selectedSubSceneId]
     );
 
-    // 初始化子场景tab
+    // 获取 NPC 逻辑尺寸的辅助函数
+    const getNPCLogicSize = (npc: PlacedNPC) => {
+        let width = BASE_NPC_WIDTH;
+        let height = BASE_NPC_HEIGHT;
+        if (npc.type === 'button' && npc.name) {
+            width = Math.max(npc.name.length * 10 + 24, 60);
+            height = 32;
+        }
+        return { 
+            halfW: (width * (npc.scale || 1)) / 2,
+            halfH: (height * (npc.scale || 1)) / 2
+        };
+    };
+
     useEffect(() => {
         if (subScenes.length === 0) {
             setSelectedSubSceneId(null);
@@ -80,27 +88,23 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         currentSceneIdRef.current = targetSubScene.parentId || null;
         currentSubSceneIdRef.current = targetSubScene.id;
 
-        // 从后端加载的NPC都是普通NPC（通过npcs_slots）
         if (targetSubScene.npcs_slots && targetSubScene.npcs_slots.length > 0) {
             const loadedNPCs: PlacedNPC[] = targetSubScene.npcs_slots.map((slot, index) => ({
                 id: `slot_${targetSubScene.id}_${index}`,
                 x: slot.position?.[0] ?? 0.5,
                 y: slot.position?.[1] ?? 0.5,
-                scale: slot.zoom ?? DEFAULT_SCALE, // zoom是缩放
-                zIndex: slot.layer ?? DEFAULT_Z_INDEX, // layer是层级
-                nodeId: '', // 普通NPC没有nodeId
-                type: 'illustration', // 默认为立绘型
-                authorNote: '', // 默认为空
+                scale: slot.zoom ?? DEFAULT_SCALE,
+                zIndex: slot.layer ?? DEFAULT_Z_INDEX,
+                nodeId: '',
+                type: 'illustration',
+                authorNote: '',
             }));
             setPlacedNormalNPCs(loadedNPCs);
-            // 保存初始状态
             initialNormalNPCsRef.current = JSON.parse(JSON.stringify(loadedNPCs));
         } else {
             setPlacedNormalNPCs([]);
             initialNormalNPCsRef.current = [];
         }
-        // 功能性NPC的位置信息需要从AbilityNode中加载（如果有的话）
-        // 根据子场景的 abilityNodes ID 数组，从 abilityNodeSetting 中找到对应的 AbilityNode
         if (abilityNodeSetting?.abilityNodes && targetSubScene?.abilityNodes?.length) {
             const functionalNPCs: PlacedNPC[] = targetSubScene.abilityNodes
                 .map((nodeId: string): PlacedNPC | null => {
@@ -129,7 +133,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                 .filter((npc): npc is PlacedNPC => npc !== null);
             
             setPlacedFunctionalNPCs(functionalNPCs);
-            // 保存初始状态
             initialFunctionalNPCsRef.current = JSON.parse(JSON.stringify(functionalNPCs));
         } else {
             setPlacedFunctionalNPCs([]);
@@ -137,12 +140,10 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         }
     }, [subScenes, selectedSubSceneId, currentSubScene, sceneSetting, abilityNodeSetting]);
 
-    // 内容就绪检测
     useEffect(() => {
         if (imageLoaded && containerReady) {
             const timer = setTimeout(() => {
                 setIsSubSceneContentReady(true);
-                setForceUpdate(prev => prev + 1);
             }, 50);
             return () => clearTimeout(timer);
         } else {
@@ -156,16 +157,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         }
     }, [imageLoaded, containerReady]);
 
-    // 监听窗口大小变化
-    useEffect(() => {
-        const handleResize = () => {
-            setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-        };
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    // 监听容器尺寸变化
     useEffect(() => {
         if (!isActive) {
             setContainerReady(false);
@@ -194,7 +185,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         let debounceTimer: ReturnType<typeof setTimeout> | null = null;
         const updatePositions = () => {
             checkContainer();
-            setForceUpdate(prev => prev + 1);
         };
 
         const resizeObserver = new ResizeObserver(() => {
@@ -210,8 +200,8 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         };
         window.addEventListener('resize', handleResize);
 
-        const image = imageRef.current;
-        if (image && image.complete) {
+        const canvas = imageRef.current;
+        if (canvas) {
             setImageLoaded(true);
         }
 
@@ -222,7 +212,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         };
     }, [isActive]);
 
-    // NPC拖拽处理（普通NPC）
     const handleDragStart = useCallback((e: React.DragEvent) => {
         if (placedNormalNPCs.length >= MAX_NPCS) {
             e.preventDefault();
@@ -231,36 +220,27 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         setDraggingNPCId('new');
     }, [placedNormalNPCs.length]);
 
-    // 实时鼠标移动处理
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            // 处理调整大小
+            const canvas = imageRef.current;
+            if (!canvas) return;
+
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvasRect.width > 0 ? 414 / canvasRect.width : 1;
+            const scaleY = canvasRect.height > 0 ? 740 / canvasRect.height : 1;
+
+            const mouseX = (e.clientX - canvasRect.left) * scaleX;
+            const mouseY = (e.clientY - canvasRect.top) * scaleY;
+
             if (resizingNPCId && resizeHandle && resizeStart) {
-                const image = imageRef.current;
-                const preview = previewRef.current;
-                if (!image || !preview) return;
-
-                const bounds = getImageDisplayBounds(image, preview);
-                const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
-
-                if (displayWidth <= 0 || displayHeight <= 0) return;
-
-                const previewRect = preview.getBoundingClientRect();
-                const mouseX = e.clientX - previewRect.left;
-                const mouseY = e.clientY - previewRect.top;
-
-                const mouseXInImage = mouseX - offsetX;
-                const mouseYInImage = mouseY - offsetY;
-
                 const currentDistance = Math.sqrt(
-                    Math.pow(mouseXInImage - resizeStart.npcCenterX, 2) +
-                    Math.pow(mouseYInImage - resizeStart.npcCenterY, 2)
+                    Math.pow(mouseX - resizeStart.npcCenterX, 2) +
+                    Math.pow(mouseY - resizeStart.npcCenterY, 2)
                 );
 
                 const newScale = (currentDistance / resizeStart.initialDistance) * resizeStart.scale;
                 const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
 
-                // 判断是功能性NPC还是普通NPC
                 const isFunctional = placedFunctionalNPCs.some(npc => npc.id === resizingNPCId);
                 if (isFunctional) {
                     setPlacedFunctionalNPCs(prev =>
@@ -274,47 +254,22 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                 return;
             }
 
-            // 处理拖拽NPC
             if (!draggingNPCId || !dragOffset) return;
-
-            const image = imageRef.current;
-            const preview = previewRef.current;
-            if (!image || !preview) return;
-
-            const bounds = getImageDisplayBounds(image, preview);
-            const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
-            if (displayWidth <= 0 || displayHeight <= 0) return;
 
             const currentNpc = [...placedNormalNPCs, ...placedFunctionalNPCs].find(npc => npc.id === draggingNPCId);
             if (!currentNpc) return;
-            // 使用缩放后的尺寸进行边界检测（与渲染一致）
-            const npcWidth = BASE_NPC_WIDTH * currentNpc.scale;
-            const npcHeight = BASE_NPC_HEIGHT * currentNpc.scale;
-            const halfW = npcWidth / 2;
-            const halfH = npcHeight / 2;
 
-            const previewRect = preview.getBoundingClientRect();
-            const mouseX = e.clientX - previewRect.left;
-            const mouseY = e.clientY - previewRect.top;
+            const adjustedX = mouseX - dragOffset.x;
+            const adjustedY = mouseY - dragOffset.y;
 
-            const mouseXInImage = mouseX - offsetX;
-            const mouseYInImage = mouseY - offsetY;
+            // 严格边界检查：不允许 NPC 身体任何部分超出 414x740
+            const { halfW, halfH } = getNPCLogicSize(currentNpc);
+            const clampedX = Math.max(halfW, Math.min(414 - halfW, adjustedX));
+            const clampedY = Math.max(halfH, Math.min(740 - halfH, adjustedY));
 
-            const adjustedX = mouseXInImage - dragOffset.x;
-            const adjustedY = mouseYInImage - dragOffset.y;
+            const relativeX = clampedX / 414;
+            const relativeY = clampedY / 740;
 
-            const minCenterX = halfW;
-            const maxCenterX = displayWidth - halfW;
-            const minCenterY = halfH;
-            const maxCenterY = displayHeight - halfH;
-
-            const clampedX = Math.max(minCenterX, Math.min(maxCenterX, adjustedX));
-            const clampedY = Math.max(minCenterY, Math.min(maxCenterY, adjustedY));
-
-            const relativeX = clampedX / displayWidth;
-            const relativeY = clampedY / displayHeight;
-
-            // 判断是功能性NPC还是普通NPC
             const isFunctional = placedFunctionalNPCs.some(npc => npc.id === draggingNPCId);
             if (isFunctional) {
                 setPlacedFunctionalNPCs(prev =>
@@ -346,46 +301,31 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         };
     }, [draggingNPCId, dragOffset, resizingNPCId, resizeHandle, resizeStart, placedNormalNPCs, placedFunctionalNPCs]);
 
-    // 处理从侧边栏拖拽新NPC
     const handleDrop = useCallback(
         (e: React.DragEvent) => {
             e.preventDefault();
             e.stopPropagation();
 
-            const preview = previewRef.current;
-            const image = imageRef.current;
-            if (!preview || !image) return;
+            const canvas = imageRef.current;
+            if (!canvas) return;
 
-            const bounds = getImageDisplayBounds(image, preview);
-            const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvasRect.width > 0 ? 414 / canvasRect.width : 1;
+            const scaleY = canvasRect.height > 0 ? 740 / canvasRect.height : 1;
 
-            // 如果图片尺寸无效，不允许放置
-            if (displayWidth <= 0 || displayHeight <= 0) return;
+            const mouseX = (e.clientX - canvasRect.left) * scaleX;
+            const mouseY = (e.clientY - canvasRect.top) * scaleY;
 
-            const previewRect = preview.getBoundingClientRect();
-            const mouseX = e.clientX - previewRect.left;
-            const mouseY = e.clientY - previewRect.top;
-
-            const mouseXInImage = mouseX - offsetX;
-            const mouseYInImage = mouseY - offsetY;
-
-            // 检查鼠标是否在图片显示区域内
+            // 检查鼠标是否在逻辑图片范围内
             const isWithinImageBounds = 
-                mouseXInImage >= 0 && 
-                mouseXInImage <= displayWidth &&
-                mouseYInImage >= 0 && 
-                mouseYInImage <= displayHeight;
+                mouseX >= 0 && mouseX <= 414 &&
+                mouseY >= 0 && mouseY <= 740;
 
-            // 如果不在图片区域内，不允许放置
             if (!isWithinImageBounds) return;
 
-            const clampedX = Math.max(0, Math.min(displayWidth, mouseXInImage));
-            const clampedY = Math.max(0, Math.min(displayHeight, mouseYInImage));
+            const relativeX = mouseX / 414;
+            const relativeY = mouseY / 740;
 
-            const relativeX = clampedX / displayWidth;
-            const relativeY = clampedY / displayHeight;
-
-            // 尝试获取功能性NPC数据
             let functionalNPCData: any = null;
             try {
                 const data = e.dataTransfer.getData('application/json');
@@ -397,23 +337,21 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             }
 
             if (functionalNPCData) {
-                // 功能性NPC：无数量限制
                 const newNPC: PlacedNPC = {
-                id: `functional_npc_${Date.now()}`,
-                x: relativeX,
-                y: relativeY,
-                scale: DEFAULT_SCALE,
-                zIndex: DEFAULT_Z_INDEX,
-                nodeId: functionalNPCData.nodeId || '',
-                imagePath: functionalNPCData.imagePath,
-                type: functionalNPCData.type || 'illustration',
-                name: functionalNPCData.name,
-                authorNote: functionalNPCData.authorNote || '',
-                backgroundColor: functionalNPCData.type === 'button' ? '#37333480' : undefined, // 按钮型NPC默认背景色
-            };
+                    id: `functional_npc_${Date.now()}`,
+                    x: relativeX,
+                    y: relativeY,
+                    scale: DEFAULT_SCALE,
+                    zIndex: DEFAULT_Z_INDEX,
+                    nodeId: functionalNPCData.nodeId || '',
+                    imagePath: functionalNPCData.imagePath,
+                    type: functionalNPCData.type || 'illustration',
+                    name: functionalNPCData.name,
+                    authorNote: functionalNPCData.authorNote || '',
+                    backgroundColor: functionalNPCData.type === 'button' ? '#37333480' : undefined,
+                };
                 setPlacedFunctionalNPCs(prev => [...prev, newNPC]);
             } else {
-                // 普通NPC：限制3个
                 if (placedNormalNPCs.length >= MAX_NPCS) {
                     return;
                 }
@@ -423,59 +361,42 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                     y: relativeY,
                     scale: DEFAULT_SCALE,
                     zIndex: DEFAULT_Z_INDEX,
-                    nodeId: '', // 普通NPC没有nodeId
+                    nodeId: '',
                     type: 'illustration',
                     authorNote: '',
                 };
                 setPlacedNormalNPCs(prev => [...prev, newNPC]);
             }
-            // 重置拖拽状态
             setDraggingNPCId(null);
         },
         [placedNormalNPCs.length, placedFunctionalNPCs.length]
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
-        const preview = previewRef.current;
-        const image = imageRef.current;
-        if (!preview || !image) {
+        const canvas = imageRef.current;
+        if (!canvas) {
             e.preventDefault();
             return;
         }
 
-        const bounds = getImageDisplayBounds(image, preview);
-        const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+        const canvasRect = canvas.getBoundingClientRect();
+        const scaleX = canvasRect.width > 0 ? 414 / canvasRect.width : 1;
+        const scaleY = canvasRect.height > 0 ? 740 / canvasRect.height : 1;
 
-        // 如果图片尺寸无效，不允许拖拽
-        if (displayWidth <= 0 || displayHeight <= 0) {
-            e.preventDefault();
-            return;
-        }
+        const mouseX = (e.clientX - canvasRect.left) * scaleX;
+        const mouseY = (e.clientY - canvasRect.top) * scaleY;
 
-        const previewRect = preview.getBoundingClientRect();
-        const mouseX = e.clientX - previewRect.left;
-        const mouseY = e.clientY - previewRect.top;
-
-        const mouseXInImage = mouseX - offsetX;
-        const mouseYInImage = mouseY - offsetY;
-
-        // 检查鼠标是否在图片显示区域内
         const isWithinImageBounds = 
-            mouseXInImage >= 0 && 
-            mouseXInImage <= displayWidth &&
-            mouseYInImage >= 0 && 
-            mouseYInImage <= displayHeight;
+            mouseX >= 0 && mouseX <= 414 &&
+            mouseY >= 0 && mouseY <= 740;
 
-        // 只有在图片区域内才允许 drop
         if (isWithinImageBounds) {
             e.preventDefault();
             e.stopPropagation();
-            // 设置拖拽效果为 copy
             if (e.dataTransfer) {
                 e.dataTransfer.dropEffect = 'copy';
             }
         } else {
-            // 在图片区域外，不允许 drop
             e.preventDefault();
             if (e.dataTransfer) {
                 e.dataTransfer.dropEffect = 'none';
@@ -483,7 +404,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         }
     }, []);
 
-    // 处理拖拽结束，清理状态
     const handleDragEnd = useCallback(() => {
         setDraggingNPCId(null);
     }, []);
@@ -493,22 +413,23 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             e.preventDefault();
             e.stopPropagation();
 
-            const image = imageRef.current;
-            const preview = previewRef.current;
+            const canvas = imageRef.current;
             const allNPCs = [...placedNormalNPCs, ...placedFunctionalNPCs];
             const npc = allNPCs.find(n => n.id === npcId);
-            if (!image || !preview || !npc) return;
+            if (!canvas || !npc) return;
 
-            const bounds = getImageDisplayBounds(image, preview);
-            const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvasRect.width > 0 ? 414 / canvasRect.width : 1;
+            const scaleY = canvasRect.height > 0 ? 740 / canvasRect.height : 1;
 
-            const previewRect = preview.getBoundingClientRect();
-            const centerXInImage = npc.x * displayWidth;
-            const centerYInImage = npc.y * displayHeight;
-            const npcCenterX = previewRect.left + offsetX + centerXInImage;
-            const npcCenterY = previewRect.top + offsetY + centerYInImage;
-            const offsetX_drag = e.clientX - npcCenterX;
-            const offsetY_drag = e.clientY - npcCenterY;
+            const mouseX = (e.clientX - canvasRect.left) * scaleX;
+            const mouseY = (e.clientY - canvasRect.top) * scaleY;
+
+            const npcCenterX = npc.x * 414;
+            const npcCenterY = npc.y * 740;
+
+            const offsetX_drag = mouseX - npcCenterX;
+            const offsetY_drag = mouseY - npcCenterY;
 
             setDragOffset({ x: offsetX_drag, y: offsetY_drag });
             setDraggingNPCId(npcId);
@@ -517,7 +438,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         [placedNormalNPCs, placedFunctionalNPCs]
     );
 
-    // 处理调整大小开始
     const handleResizeStart = useCallback(
         (e: React.MouseEvent, npcId: string, handle: 'nw' | 'ne' | 'sw' | 'se') => {
             e.preventDefault();
@@ -527,68 +447,39 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             const npc = allNPCs.find(n => n.id === npcId);
             if (!npc) return;
 
-            const image = imageRef.current;
-            const preview = previewRef.current;
-            if (!image || !preview) return;
+            const canvas = imageRef.current;
+            if (!canvas) return;
 
-            const bounds = getImageDisplayBounds(image, preview);
-            const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
+            const canvasRect = canvas.getBoundingClientRect();
+            const scaleX = canvasRect.width > 0 ? 414 / canvasRect.width : 1;
+            const scaleY = canvasRect.height > 0 ? 740 / canvasRect.height : 1;
 
-            if (displayWidth <= 0 || displayHeight <= 0) return;
+            const mouseX = (e.clientX - canvasRect.left) * scaleX;
+            const mouseY = (e.clientY - canvasRect.top) * scaleY;
 
-            const npcCenterX = npc.x * displayWidth;
-            const npcCenterY = npc.y * displayHeight;
+            const npcCenterX = npc.x * 414;
+            const npcCenterY = npc.y * 740;
+
+            const { halfW, halfH } = getNPCLogicSize(npc);
 
             let handleX = 0;
             let handleY = 0;
-            
-            // 按钮型NPC的尺寸计算方式不同
-            let halfWidth: number;
-            let halfHeight: number;
-            if (npc.type === 'button' && npc.name) {
-                const textWidth = npc.name.length * 10 + 24;
-                const textHeight = 32;
-                halfWidth = (Math.max(textWidth, 60) * npc.scale) / 2;
-                halfHeight = (textHeight * npc.scale) / 2;
-            } else {
-                halfWidth = (BASE_NPC_WIDTH * npc.scale) / 2;
-                halfHeight = (BASE_NPC_HEIGHT * npc.scale) / 2;
-            }
-
             switch (handle) {
-                case 'nw':
-                    handleX = npcCenterX - halfWidth;
-                    handleY = npcCenterY - halfHeight;
-                    break;
-                case 'ne':
-                    handleX = npcCenterX + halfWidth;
-                    handleY = npcCenterY - halfHeight;
-                    break;
-                case 'sw':
-                    handleX = npcCenterX - halfWidth;
-                    handleY = npcCenterY + halfHeight;
-                    break;
-                case 'se':
-                    handleX = npcCenterX + halfWidth;
-                    handleY = npcCenterY + halfHeight;
-                    break;
+                case 'nw': handleX = npcCenterX - halfW; handleY = npcCenterY - halfH; break;
+                case 'ne': handleX = npcCenterX + halfW; handleY = npcCenterY - halfH; break;
+                case 'sw': handleX = npcCenterX - halfW; handleY = npcCenterY + halfH; break;
+                case 'se': handleX = npcCenterX + halfW; handleY = npcCenterY + halfH; break;
             }
 
             const initialDistance = Math.sqrt(
                 Math.pow(handleX - npcCenterX, 2) + Math.pow(handleY - npcCenterY, 2)
             );
 
-            const previewRect = preview.getBoundingClientRect();
-            const mouseX = e.clientX - previewRect.left;
-            const mouseY = e.clientY - previewRect.top;
-            const mouseXInImage = mouseX - offsetX;
-            const mouseYInImage = mouseY - offsetY;
-
             setResizingNPCId(npcId);
             setResizeHandle(handle);
             setResizeStart({
-                mouseX: mouseXInImage,
-                mouseY: mouseYInImage,
+                mouseX,
+                mouseY,
                 npcCenterX,
                 npcCenterY,
                 initialDistance,
@@ -599,7 +490,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
     );
 
     const handleRemoveNPC = useCallback((npcId: string) => {
-        // 判断是功能性NPC还是普通NPC
         const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
         if (isFunctional) {
             setPlacedFunctionalNPCs(prev => prev.filter(npc => npc.id !== npcId));
@@ -610,7 +500,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
     }, [placedFunctionalNPCs]);
 
     const handleChangeZIndex = useCallback((npcId: string, delta: number) => {
-        // 判断是功能性NPC还是普通NPC
         const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
         if (isFunctional) {
             setPlacedFunctionalNPCs(prev =>
@@ -639,7 +528,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
 
     const handleSetZIndex = useCallback((npcId: string, zIndex: number) => {
         const clampedZIndex = Math.max(MIN_Z_INDEX, Math.min(MAX_Z_INDEX, zIndex));
-        // 判断是功能性NPC还是普通NPC
         const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
         if (isFunctional) {
             setPlacedFunctionalNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, zIndex: clampedZIndex } : npc)));
@@ -649,7 +537,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
     }, [placedFunctionalNPCs]);
 
     const handleChangeBackgroundColor = useCallback((npcId: string, backgroundColor: string) => {
-        // 判断是功能性NPC还是普通NPC
         const isFunctional = placedFunctionalNPCs.some(npc => npc.id === npcId);
         if (isFunctional) {
             setPlacedFunctionalNPCs(prev => prev.map(npc => (npc.id === npcId ? { ...npc, backgroundColor } : npc)));
@@ -658,89 +545,16 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         }
     }, [placedFunctionalNPCs]);
 
-    const getNPCPosition = useCallback(
-        (npc: PlacedNPC): NPCPosition => {
-            const image = imageRef.current;
-            const preview = previewRef.current;
-
-            if (!image || !preview || !imageLoaded || !containerReady) {
-                return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
-            }
-
-            if (!image.complete || image.naturalWidth === 0 || image.naturalHeight === 0) {
-                return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
-            }
-
-            const previewRect = preview.getBoundingClientRect();
-            if (previewRect.width <= 0 || previewRect.height <= 0) {
-                return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
-            }
-
-            const bounds = getImageDisplayBounds(image, preview);
-            const { displayWidth, displayHeight, offsetX, offsetY } = bounds;
-
-            if (displayWidth <= 0 || displayHeight <= 0) {
-                return { left: -9999, top: -9999, width: 0, height: 0, visible: false };
-            }
-
-            // 与游戏一致：使用固定基础尺寸，然后通过 transform scale 应用缩放
-            // 按钮型NPC根据文字内容计算基础尺寸
-            let baseWidth: number;
-            let baseHeight: number;
-            
-            if (npc.type === 'button' && npc.name) {
-                // 估算文字宽度：每个字符约8-10px，加上padding
-                const textWidth = npc.name.length * 10 + 24; // 24px是padding (8px * 2 + 8px额外空间)
-                const textHeight = 32; // 14px字体 + 16px padding
-                baseWidth = Math.max(textWidth, 60); // 最小宽度60px
-                baseHeight = textHeight;
-            } else {
-                // 立绘型NPC：使用固定基础尺寸（与游戏中 maxWidth/maxHeight 一致）
-                baseWidth = BASE_NPC_WIDTH;
-                baseHeight = BASE_NPC_HEIGHT;
-            }
-
-            // 计算缩放后的实际尺寸（用于定位）
-            const scaledWidth = baseWidth * npc.scale;
-            const scaledHeight = baseHeight * npc.scale;
-
-            const centerXInImage = npc.x * displayWidth;
-            const centerYInImage = npc.y * displayHeight;
-
-            const centerX = offsetX + centerXInImage;
-            const centerY = offsetY + centerYInImage;
-
-            const left = centerX - scaledWidth / 2;
-            const top = centerY - scaledHeight / 2;
-
-            return { 
-                left, 
-                top, 
-                width: baseWidth,  // 返回基础尺寸，不乘以 scale
-                height: baseHeight, // 返回基础尺寸，不乘以 scale
-                scale: npc.scale,   // 单独返回 scale 值
-                visible: true 
-            };
-        },
-        [windowSize, imageLoaded, containerReady, forceUpdate]
-    );
-
-    // 合并所有NPC用于渲染
     const allPlacedNPCs = useMemo(() => {
         return [...placedNormalNPCs, ...placedFunctionalNPCs];
     }, [placedNormalNPCs, placedFunctionalNPCs]);
 
-    // 检测是否有未保存的修改
     const checkUnsavedChanges = useCallback((): boolean => {
-        // 比较普通NPC
         const normalNPCsChanged = JSON.stringify(placedNormalNPCs) !== JSON.stringify(initialNormalNPCsRef.current);
-        // 比较功能性NPC
         const functionalNPCsChanged = JSON.stringify(placedFunctionalNPCs) !== JSON.stringify(initialFunctionalNPCsRef.current);
-        
         return normalNPCsChanged || functionalNPCsChanged;
     }, [placedNormalNPCs, placedFunctionalNPCs]);
 
-    // 重置初始状态（保存成功后调用）
     const resetInitialState = useCallback(() => {
         initialNormalNPCsRef.current = JSON.parse(JSON.stringify(placedNormalNPCs));
         initialFunctionalNPCsRef.current = JSON.parse(JSON.stringify(placedFunctionalNPCs));
@@ -753,7 +567,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         setPlacedNormalNPCs,
         placedFunctionalNPCs,
         setPlacedFunctionalNPCs,
-        allPlacedNPCs, // 用于渲染
+        allPlacedNPCs,
         draggingNPCId,
         selectedNPCId,
         setSelectedNPCId,
@@ -764,7 +578,6 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         imageLoaded,
         setImageLoaded,
         isSubSceneContentReady,
-        setForceUpdate,
         handleDragStart,
         handleDrop,
         handleDragOver,
@@ -775,10 +588,8 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
         handleChangeZIndex,
         handleSetZIndex,
         handleChangeBackgroundColor,
-        getNPCPosition,
         currentSubScene,
         checkUnsavedChanges,
         resetInitialState,
     };
 };
-

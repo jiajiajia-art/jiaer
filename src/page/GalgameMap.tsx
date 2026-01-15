@@ -28,7 +28,7 @@ import { mapMusicManager } from "../utils/mapMusicManager";
 import { PiMusicNoteDuotone } from "react-icons/pi";
 import { MdOutlinePerson } from "react-icons/md";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { getImageUrl } from "../utils/constants";
+import { getImageUrl, getPlayerImageUrl } from "../utils/constants";
 import { useRefreshEventData } from "../hooks/mapGalgame/useRefreshEventData";
 import InteractWithNpc from "../components/GalgameMap/InteractWithNpc";
 import worldEditor from "../api/worldInteraction/worldEditor";
@@ -41,15 +41,9 @@ export interface EventData {
 }
 
 // 默认资源（当后端未提供图片时的兜底）
-const DEFAULT_SCENE_IMAGE = `${
-  import.meta.env.BASE_URL
-}data/assets/创作界面切图/defaultScene.png`;
-const DEFAULT_NPC_IMAGE = `${
-  import.meta.env.BASE_URL
-}data/assets/创作界面切图/defaultNpc.png`;
-const DEFAULT_WORLD_MAP_IMAGE = `${
-  import.meta.env.BASE_URL
-}data/assets/创作界面切图/defaultMap.png`;
+const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
+const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
+const DEFAULT_WORLD_MAP_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
 
 const GalgameMap = () => {
   const { fileId, sessionId } = useGameStore();
@@ -315,7 +309,7 @@ const GalgameMap = () => {
           DEFAULT_WORLD_MAP_IMAGE
         );
         const playerImagePath = processImage(
-          state.worldInfo?.player?.imagePath,
+          getPlayerImageUrl(state.worldInfo?.player, DEFAULT_NPC_IMAGE),
           DEFAULT_NPC_IMAGE
         );
 
@@ -344,7 +338,7 @@ const GalgameMap = () => {
             worldMapImage,
             player: {
               ...state.worldInfo.player,
-              imagePath: playerImagePath,
+              images: playerImagePath,
             },
           },
           npcSetting: {

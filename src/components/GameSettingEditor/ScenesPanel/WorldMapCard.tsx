@@ -1,6 +1,5 @@
 import React from 'react';
 import styles from './WorldMapCard.module.css';
-import { getImageUrl } from '../../../utils/constants';
 
 interface WorldMapCardProps {
     worldMapPreviewSrc: string;
@@ -35,7 +34,7 @@ const WorldMapCard: React.FC<WorldMapCardProps> = ({
             {/* 大地图预览 + 右上角操作按钮 */}
             <div
                 className={styles.sceneHero}
-                style={worldMapPreviewSrc ? { backgroundImage: `url('${getImageUrl(worldMapPreviewSrc)}')` } : {}}
+                style={worldMapPreviewSrc ? { backgroundImage: `url('${worldMapPreviewSrc}')` } : {}}
             >
                 {worldMapPreviewSrc ? (
                     <span className={styles.heroHint}>当前大地图预览</span>

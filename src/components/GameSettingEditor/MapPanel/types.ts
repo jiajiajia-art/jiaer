@@ -26,13 +26,15 @@ export interface Scene {
 import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 
 export interface MapPanelProps {
+    fileId: string;
+    onDataChange?: () => void;
+    isActive?: boolean;
+    // 以下 props 为可选，仅作为初始化值和降级方案使用
+    // MapPanel 会在激活时自动获取最新数据，不依赖这些 props
     sceneSetting?: {
         scenes?: Scene[];
     };
     worldMapImage?: string | null;
-    fileId: string;
-    onDataChange?: () => void;
-    isActive?: boolean;
     abilityNodeSetting?: AbilityNodeSetting;
 }
 

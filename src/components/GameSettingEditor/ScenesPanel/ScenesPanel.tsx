@@ -9,7 +9,6 @@ import type { SceneSetting as WorldSceneSetting } from '../../../api/worldIntera
 import { 
     getScenes, 
     getSceneById, 
-    isWorldInteractionMode, 
     type WorldSubScene
 } from '../editorCompat';
 import { createSceneApiHelpers } from './apiHelpers';
@@ -155,22 +154,26 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     }, [musicList]);
 
     // 大地图图片
-    const worldMapImage = worldMapImageOverride
-        ? worldMapImageOverride
-        : (gameData && isWorldInteractionMode(gameData) && gameData.worldSetting?.worldMapImage 
-            ? gameData.worldSetting.worldMapImage 
-            : null);
+    const worldMapImage = useMemo(() => {
+        if (worldMapImageOverride) return worldMapImageOverride;
+        if (gameData && 'worldSetting' in gameData) {
+            return (gameData as WorldInteractionGameData).worldSetting?.worldMapImage || null;
+        }
+        return null;
+    }, [worldMapImageOverride, gameData]);
 
     // 用户积分
     const { user, updateUser } = useAuthStore();
     const userPoints = user?.user?.points ?? 0;
 
     // 大地图预览地址
-    const worldMapPreviewSrc = (() => {
+    const worldMapPreviewSrc = useMemo(() => {
         if (!worldMapImage) return DEFAULT_WORLD_MAP_IMAGE;
         const isLocalStatic = worldMapImage.startsWith(import.meta.env.BASE_URL);
-        return isLocalStatic ? worldMapImage : `${worldMapImage}/dummy`;
-    })();
+        if (isLocalStatic) return addImageTimestamp(worldMapImage);
+        const processedUrl = getImageUrl(worldMapImage);
+        return processedUrl ? addImageTimestamp(`${processedUrl}/dummy`) : DEFAULT_WORLD_MAP_IMAGE;
+    }, [worldMapImage]);
 
     // 当前激活的场景（如果 sceneData 为空，activeScene 为 null）
     const activeScene = sceneData.length > 0 

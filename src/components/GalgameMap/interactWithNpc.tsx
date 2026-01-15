@@ -493,7 +493,7 @@ const InteractWithNpc = ({
       type: "choice",
       message: "请选择你的行动",
       options,
-      characterImage: getPlayerImage(worldSetting?.player?.imagePath),
+      characterImage: getPlayerImage(worldSetting?.player?.images),
       characterPosition: "right",
     };
   }, [latestHistory, worldSetting]);

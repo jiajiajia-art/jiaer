@@ -3,7 +3,7 @@ import styles from './MapTab.module.css';
 import sharedStyles from './shared.module.css';
 import type { Scene, PlacedScene } from './types';
 import { DEFAULT_MAP_IMAGE, DEFAULT_SCENE_IMAGE, SCENE_ICON_SIZE } from './constants';
-import { getImageUrl } from '../../../utils/constants';
+import { getImageUrl, addImageTimestamp } from '../../../utils/constants';
 import { getImageDisplayBounds } from './utils';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import toast from 'react-hot-toast';
@@ -48,19 +48,31 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
 
     // 地图 tab 使用的图片地址
     const mapImageSources = useMemo(() => {
-        const base = worldMapImageUrl || worldMapImage || null;
+        const rawBase = worldMapImageUrl || worldMapImage || null;
+        if (!rawBase) {
+            return { dummy: null, base: null };
+        }
+        // 先使用 getImageUrl 处理路径（将相对路径转换为完整 URL）
+        const base = rawBase.startsWith('http://') || rawBase.startsWith('https://') || rawBase.startsWith(import.meta.env.BASE_URL)
+            ? rawBase
+            : getImageUrl(rawBase);
         const dummy = base ? `${base}/dummy` : null;
         return { dummy, base };
     }, [worldMapImageUrl, worldMapImage]);
 
-    const currentMapSrc = mapImageSources.dummy || mapImageSources.base || DEFAULT_MAP_IMAGE;
+    const currentMapSrc = useMemo(() => {
+        const baseSrc = mapImageSources.dummy || mapImageSources.base || DEFAULT_MAP_IMAGE;
+        return worldMapImage ? addImageTimestamp(baseSrc) : baseSrc;
+    }, [mapImageSources, worldMapImage]);
 
     // 同步后端返回的 worldMapImage 到本地状态
     useEffect(() => {
         if (worldMapImage) {
             setWorldMapImageUrl(worldMapImage);
+            setMapImageLoaded(false);
         } else {
             setWorldMapImageUrl(null);
+            setMapImageLoaded(false);
         }
     }, [worldMapImage]);
 
@@ -380,18 +392,18 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
             <div ref={mapPreviewRef} className={sharedStyles.mapPreview}>
                 <img
                     ref={mapImageRef}
-                    src={`${currentMapSrc}`}
+                    src={currentMapSrc}
                     alt="世界地图"
                     className={sharedStyles.sceneImage}
                     draggable={false}
-                    key={currentMapSrc}
+                    key={`map-${worldMapImage || 'default'}`}
                     onLoad={() => {
                         setMapImageLoaded(true);
                         setForceUpdate(prev => prev + 1);
                     }}
                     onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        if (mapImageSources.dummy && target.src === mapImageSources.dummy && mapImageSources.base) {
+                        if (mapImageSources.dummy && target.src.includes('/dummy') && mapImageSources.base) {
                             target.src = mapImageSources.base;
                             return;
                         }

@@ -7,7 +7,7 @@ import type { NPC } from '../../../api/galgame/EditorData.type';
 import type { NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { Character, Variation } from './types';
 import { DEFAULT_NPC_PORTRAIT } from './types';
-import { getImageUrl } from '../../../utils/constants';
+import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
 
 // 辅助函数：获取 npcs（兼容两种模式）
 export function getNpcs(data: AllGameData | WorldInteractionGameData) {
@@ -147,24 +147,11 @@ const extractPlayerImages = (player: any): {
         }
     }
 
-    // 情况2: images 是字符串（直接作为 base 图片）
-    if (isValidUrl(player?.images)) {
+    // 情况2-4: 使用统一的 getPlayerImageUrl 函数处理 imagePath、image、images 字段
+    const playerImageUrl = getPlayerImageUrl(player);
+    if (isValidUrl(playerImageUrl)) {
         return {
-            baseImage: player.images as string,
-        };
-    }
-
-    // 情况3: image 字段（字符串）
-    if (isValidUrl(player?.image)) {
-        return {
-            baseImage: player.image as string,
-        };
-    }
-
-    // 情况4: imagePath 字段（字符串）
-    if (isValidUrl(player?.imagePath)) {
-        return {
-            baseImage: player.imagePath as string,
+            baseImage: playerImageUrl,
         };
     }
     return {};

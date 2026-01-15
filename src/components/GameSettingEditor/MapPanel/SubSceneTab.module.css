@@ -64,16 +64,33 @@
     line-height: 1.5;
 }
 
+/* 新增：画布容器，尺寸固定为 414x740，用于承载图片和NPC */
+.imageCanvas {
+    position: relative;
+    width: 414px;
+    height: 740px;
+    background: #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: visible; /* 允许控制面板溢出显示 */
+    user-select: none;
+    flex-shrink: 0;
+    display: block;
+}
+
 /* 已放置的NPC */
 .placedNPC {
     position: absolute;
     cursor: move;
     z-index: 10;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.3s ease; /* 移除 position 相关的 transition，防止拖拽抖动 */
     border: 2px solid transparent;
     border-radius: 8px;
     animation: fadeIn 0.3s ease;
     will-change: transform, opacity;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 @keyframes fadeIn {

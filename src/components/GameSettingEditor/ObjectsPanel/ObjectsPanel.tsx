@@ -314,23 +314,36 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
             return;
         }
         try {
-            // 子组件已经调用了 API 并弹出 toast，这里只更新本地状态
+            // ObjectDetail 已经规范化了对象数据（icon 是字符串格式）
+            // 这里只需要创建新对象引用，确保 React 检测到变化并重新渲染
+            const normalizedObject: ObjectItem = { ...updatedObject };
+
             if (isNewObject) {
                 setObjects(prev => {
-                    const exists = prev.some(obj => obj.item_id === updatedObject.item_id);
+                    const exists = prev.some(obj => obj.item_id === normalizedObject.item_id);
                     if (exists) {
-                        return prev.map(obj => (obj.item_id === updatedObject.item_id ? updatedObject : obj));
+                        // 如果已存在，更新它（创建新数组和新对象引用）
+                        return prev.map(obj => 
+                            obj.item_id === normalizedObject.item_id 
+                                ? normalizedObject 
+                                : obj
+                        );
                     } else {
-                        return [...prev, updatedObject];
+                        // 添加新物品（创建新数组）
+                        return [...prev, normalizedObject];
                     }
                 });
-                setActiveObjectId(updatedObject.item_id);
+                setActiveObjectId(normalizedObject.item_id);
                 setCreatingObject(null);
                 setIsNewObject(false);
             } else {
-                // 更新现有物品
+                // 更新现有物品（创建新数组和新对象引用，确保 React 检测到变化）
                 setObjects(prev =>
-                    prev.map(obj => (obj.item_id === updatedObject.item_id ? updatedObject : obj))
+                    prev.map(obj => 
+                        obj.item_id === normalizedObject.item_id 
+                            ? normalizedObject 
+                            : obj
+                    )
                 );
             }
 
