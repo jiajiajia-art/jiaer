@@ -371,7 +371,7 @@ const CharacterAttributesPanel = forwardRef<CharacterAttributesPanelRef, Charact
         try {
             const requestData = {
                 fileId,
-                npcId: characterId,
+                id: characterId,
                 attributeName: attributeToDelete,
             };
 

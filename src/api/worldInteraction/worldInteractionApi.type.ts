@@ -16,7 +16,7 @@ export interface PlayerCharacter {
     appearance: string;
     tone: string;
     images: string;
-    attributes: {
+    attributes?: {
       [attributeKey: string]: {
         displayName: string;
         value: number;
@@ -39,7 +39,7 @@ export interface NPC {
         base: string;
         [key: string]: string;
     };
-    attributes: {
+    attributes?: {
         [attributeKey: string]: {
             displayName: string;
             value: number;
@@ -241,7 +241,7 @@ export interface NpcAddAttributesRequest {
 
 export interface NpcDeleteAttributesRequest {
     fileId: string;
-    npcId: string;
+    id: string;
     attributeName: string;
 }
 

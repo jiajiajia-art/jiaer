@@ -107,7 +107,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
     }, [currentSubScene]);
 
     const handleConfirm = React.useCallback(async () => {
-        if (!currentSceneIdRef.current || !currentSubSceneIdRef.current) {
+        if (!currentSceneIdRef.current || !currentSubSceneIdRef.current || !currentSubScene) {
             toast.error('请先选择子场景');
             return;
         }
@@ -118,57 +118,56 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
         }
 
         try {
-            // 保存普通NPC位置
-            if (placedNormalNPCs.length > 0) {
-                const npcSlots: NpcSlot[] = placedNormalNPCs.map(npc => ({
-                    position: [npc.x, npc.y] as [number, number],
-                    zoom: npc.scale,
-                    layer: npc.zIndex ?? DEFAULT_Z_INDEX,
-                }));
+            // 1. 准备覆盖数据：获取当前页面上所有的普通 NPC 槽位
+            const npcSlots: NpcSlot[] = placedNormalNPCs.map(npc => ({
+                position: [npc.x, npc.y] as [number, number],
+                zoom: npc.scale,
+                layer: npc.zIndex ?? DEFAULT_Z_INDEX,
+            }));
+            
+            // 2. 准备覆盖数据：获取当前页面上所有的功能性 NPC ID
+            const newNodeIds = placedFunctionalNPCs.map(npc => npc.nodeId).filter(Boolean);
 
-                const response = await worldEditor.setZoomNpc(
-                    fileId,
-                    currentSceneIdRef.current,
-                    currentSubSceneIdRef.current,
-                    npcSlots
-                );
+            // 3. 执行全量覆盖更新 (同步到 SubScene 对象)
+            // 排除 UI 辅助字段 parentId, parentName
+            const { parentId, parentName, ...baseSubScene } = currentSubScene as any;
+            const updatedSubSceneData = {
+                ...baseSubScene,
+                npcs_slots: npcSlots,
+                abilityNodes: newNodeIds,
+            };
+            
+            const responseSub = await worldEditor.updateSubScene(
+                fileId,
+                currentSceneIdRef.current,
+                updatedSubSceneData
+            );
 
-                if (!response.data.success) {
-                    toast.error('保存普通NPC位置失败');
-                    return;
-                }
+            if (!responseSub.data?.success) {
+                toast.error('保存场景信息失败');
+                return;
             }
 
-            // 保存功能性NPC位置
-            if (placedFunctionalNPCs.length > 0) {
-                // 批量更新功能性NPC的位置和层级
-                const validFunctionalNPCs = placedFunctionalNPCs.filter(npc => npc.nodeId);
-                
-                if (validFunctionalNPCs.length > 0) {
-                    const patchData: FunctionalNpcPatch = {
-                        patches: validFunctionalNPCs.map(npc => ({
-                            node_id: npc.nodeId,
-                            sceneBinding: {
-                                sceneId: currentSceneIdRef.current!,
-                                subsceneId: currentSubSceneIdRef.current!,
-                            },
-                            position: [npc.x, npc.y] as [number, number],
-                            layer: npc.zIndex ?? DEFAULT_Z_INDEX,
-                            scale: npc.scale,
-                            color: npc.backgroundColor || undefined, // 确保使用16进制格式（#ffffff）
-                        })),
-                    };
-                    const response = await worldEditor.moveFunctionalNpc(fileId, patchData);
-                    
-                    if (!response.data?.success) {
-                        toast.error(response.data?.message || '保存功能性NPC位置失败');
-                        return;
-                    }
-                }
+            // 4. 更新功能性 NPC 的详细位置信息 (Patch)
+            const validFunctionalNPCs = placedFunctionalNPCs.filter(npc => npc.nodeId);
+            if (validFunctionalNPCs.length >= 0) {
+                const patchData: FunctionalNpcPatch = {
+                    patches: validFunctionalNPCs.map(npc => ({
+                        node_id: npc.nodeId!,
+                        sceneBinding: {
+                            sceneId: currentSceneIdRef.current!,
+                            subsceneId: currentSubSceneIdRef.current!,
+                        },
+                        position: [npc.x, npc.y] as [number, number],
+                        layer: npc.zIndex ?? DEFAULT_Z_INDEX,
+                        scale: npc.scale,
+                        color: npc.backgroundColor || undefined,
+                    })),
+                };
+                await worldEditor.moveFunctionalNpc(fileId, patchData);
             }
 
             toast.success('NPC位置和层级已保存');
-            // 重置初始状态，标记为已保存
             resetInitialState();
             if (onDataChange) {
                 onDataChange();
@@ -177,7 +176,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
             console.error('保存失败:', error);
             toast.error('保存失败：' + (error.message || '请检查网络连接'));
         }
-    }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef, resetInitialState]);
+    }, [placedNormalNPCs, placedFunctionalNPCs, fileId, onDataChange, currentSceneIdRef, currentSubSceneIdRef, currentSubScene, resetInitialState]);
 
     // 暴露 checkUnsavedChanges 和 save 方法给父组件
     React.useImperativeHandle(ref, () => ({
@@ -196,7 +195,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
     return (
         <>
             {/* 左侧：功能性NPC列表 */}
-            <div className={sharedStyles.mapLeftSidebar}>
+            <div className={sharedStyles.mapLeftSidebar} onMouseDown={(e) => e.stopPropagation()}>
                 <FunctionalNPCList
                     abilityNodeSetting={abilityNodeSetting}
                     usedNodeIds={placedFunctionalNPCs
@@ -212,11 +211,18 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
+                onMouseDown={() => setSelectedNPCId(null)}
             >
                 {/* 关键修改：将 imageRef 移到这个 div 上，作为逻辑画布的基准 */}
                 <div 
                     ref={imageRef}
                     className={styles.imageCanvas}
+                    onMouseDown={(e) => {
+                        // 如果点击的是画布本身或背景图片，取消选中
+                        if (e.target === e.currentTarget || (e.target as HTMLElement).tagName === 'IMG') {
+                            setSelectedNPCId(null);
+                        }
+                    }}
                 >
                     <img
                         src={previewImageUrl}
@@ -426,7 +432,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
             </div>
 
             {/* 右侧：原有的侧边栏内容 */}
-            <div className={sharedStyles.mapSidebar}>
+            <div className={sharedStyles.mapSidebar} onMouseDown={(e) => e.stopPropagation()}>
                 <div className={sharedStyles.subSceneList}>
                     <h4>子场景列表</h4>
                     <div className={sharedStyles.subSceneItems}>
@@ -518,7 +524,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                     <button
                         className={sharedStyles.confirmBtn}
                         onClick={handleConfirm}
-                        disabled={(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0) || !fileId}
+                        // disabled={(placedNormalNPCs.length === 0 && placedFunctionalNPCs.length === 0) || !fileId}
                     >
                         确认保存 NPC 位置
                     </button>

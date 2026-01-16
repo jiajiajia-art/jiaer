@@ -5,7 +5,7 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Character, Variation } from './types';
-import type { NPC, Player } from '../../../api/galgame/EditorData.type';
+import type { NPC } from '../../../api/galgame/EditorData.type';
 import { npcToCharacter, playerToCharacter, withCacheBust, parseVariantKey } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
@@ -157,7 +157,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             };
 
             try {
-                const response = await api.updatePlayer(fileId, playerData as Player);
+                const response = await api.updatePlayer(fileId, playerData as any);
                 if (response.data?.success) {
                     toast.success('主角信息更新成功');
                     const p = parseResponse.extractPlayer(response.data, mode);

@@ -2,11 +2,7 @@ import type { ApiResponse } from "../api.types";
 import { api } from "../base";
 import type {
   CheckUploadStatusResponse,
-  // GenerateAllImageRequest,
   GenerateImgeResponse,
-  NPC,
-  Player,
-  WorldSetting,
 } from "../galgame/EditorData.type";
 import type { Scene, SubScene } from "./mapWorldData.type";
 import type {
@@ -35,6 +31,9 @@ import type {
   NpcUpdateAttributesRequest,
   updateAttributesResponse,
   UploadWorldFileResponse,
+  WorldSetting as WIWorldSetting,
+  NPC as WINPC,
+  PlayerCharacter as WIPlayer,
 } from "./worldInteractionApi.type";
 
 const worldEditor = {
@@ -63,20 +62,20 @@ const worldEditor = {
       `/world-interaction/document/jobs/${jobId}/status`
     );
   },
-  updateWorldSetting: (fileId: string, data: Partial<WorldSetting>) => {
-    return api.put<ApiResponse<WorldSetting>>(
+  updateWorldSetting: (fileId: string, data: Partial<WIWorldSetting>) => {
+    return api.put<ApiResponse<WIWorldSetting>>(
       `/world-interaction/edit/${fileId}/world-setting`,
       data
     );
   },
-  updatePlayer: (fileId: string, data: Player) => {
-    return api.put<ApiResponse<Player>>(
+  updatePlayer: (fileId: string, data: Partial<WIPlayer>) => {
+    return api.put<ApiResponse<WIPlayer>>(
       `/world-interaction/edit/${fileId}/player`,
       data
     );
   },
-  updateNpc: (fileId: string, data: NPC) => {
-    return api.put<ApiResponse<NPC>>(
+  updateNpc: (fileId: string, data: Partial<WINPC>) => {
+    return api.put<ApiResponse<WINPC>>(
       `/world-interaction/edit/${fileId}/npcs/${data.id}`,
       data
     );
@@ -94,7 +93,7 @@ const worldEditor = {
     );
   },
   deleteNpc: (fileId: string, id: string) => {
-    return api.delete<ApiResponse<NPC>>(
+    return api.delete<ApiResponse<WINPC>>(
       `/world-interaction/edit/${fileId}/npcs/${id}`
     );
   },
@@ -108,8 +107,8 @@ const worldEditor = {
       `/world-interaction/edit/${fileId}/scenes/${sceneId}/subscenes/${id}`
     );
   },
-  addNpc: (fileId: string, data: NPC) => {
-    return api.post<ApiResponse<NPC>>(
+  addNpc: (fileId: string, data: WINPC) => {
+    return api.post<ApiResponse<WINPC>>(
       `/world-interaction/edit/${fileId}/npcs`,
       data
     );

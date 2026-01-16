@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef } from 'react';
-import type { MutableRefObject } from 'react';
+import type { RefObject } from 'react';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../api/galgame/EditorData';
 import worldEditor from '../../api/worldInteraction/worldEditor';
-import type { AllGameData } from '../../api/galgame/EditorData.type';
-import type { WorldInteractionGameData } from '../../api/worldInteraction/worldInteractionApi.type';
+import type { AllGameData, WorldSetting as GalgameWorldSetting } from '../../api/galgame/EditorData.type';
+import type { WorldInteractionGameData, WorldSetting as WIWorldSetting } from '../../api/worldInteraction/worldInteractionApi.type';
 import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
 
 interface UseEditorSubmitOptions {
@@ -18,9 +18,9 @@ interface UseEditorSubmitOptions {
 interface UseEditorSubmitReturn {
     isSubmitting: boolean;
     handleSubmit: () => Promise<void>;
-    worldPanelGetDataRef: MutableRefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
-    charactersPanelGetDataRef: MutableRefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
-    scenesPanelGetDataRef: MutableRefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
+    worldPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
+    charactersPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
+    scenesPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
 }
 
 export const useEditorSubmit = ({
@@ -51,23 +51,17 @@ export const useEditorSubmit = ({
                         const worldData = worldPanelGetDataRef.current();
                         if (worldData?.worldSetting) {
                             const worldSettingDiff = worldData.worldSetting;
-                            if (!fileId) {
-                                toast.error('缺少文件ID，无法保存');
-                                setIsSubmitting(false);
-                                return;
+                            
+                            if (mode === 'worldInteraction') {
+                                response = await worldEditor.updateWorldSetting(fileId, worldSettingDiff as Partial<WIWorldSetting>);
+                            } else {
+                                response = await EditorApi.updateWorldSetting(fileId, worldSettingDiff as Partial<GalgameWorldSetting>);
                             }
-                            response = mode === 'worldInteraction' 
-                                ? await worldEditor.updateWorldSetting(fileId, worldSettingDiff) 
-                                : await EditorApi.updateWorldSetting(fileId, worldSettingDiff);
                         } else {
                             toast.error('没有需要保存的修改');
                             setIsSubmitting(false);
                             return;
                         }
-                    } else {
-                        toast.error('数据获取函数未初始化');
-                        setIsSubmitting(false);
-                        return;
                     }
                     break;
                 case 'characters':
@@ -76,38 +70,17 @@ export const useEditorSubmit = ({
                         if (npcData?.npcSetting) {
                             const npcs = npcData.npcSetting.npcs;
                             if (npcs && npcs.length > 0) {
-                                if (!fileId) {
-                                    toast.error('缺少文件ID，无法保存');
-                                    setIsSubmitting(false);
-                                    return;
-                                }
                                 const updatePromises = npcs.map(npc =>
                                     mode === 'worldInteraction' 
-                                        ? worldEditor.updateNpc(fileId, npc)
-                                        : EditorApi.updateNpc(fileId, npc)
+                                        ? worldEditor.updateNpc(fileId, npc as any)
+                                        : EditorApi.updateNpc(fileId, npc as any)
                                 );
                                 const results = await Promise.all(updatePromises);
                                 if (results.every(r => r.data?.success)) {
                                     response = { data: { success: true } };
-                                } else {
-                                    toast.error('部分角色更新失败');
-                                    setIsSubmitting(false);
-                                    return;
                                 }
-                            } else {
-                                toast.error('没有需要保存的修改');
-                                setIsSubmitting(false);
-                                return;
                             }
-                        } else {
-                            toast.error('没有需要保存的修改');
-                            setIsSubmitting(false);
-                            return;
                         }
-                    } else {
-                        toast.error('数据获取函数未初始化');
-                        setIsSubmitting(false);
-                        return;
                     }
                     break;
                 case 'scenes':
@@ -116,16 +89,11 @@ export const useEditorSubmit = ({
                         if (sceneData?.sceneSetting) {
                             const scenes = sceneData.sceneSetting.scenes;
                             if (scenes && scenes.length > 0) {
-                                if (!fileId) {
-                                    toast.error('缺少文件ID，无法保存');
-                                    setIsSubmitting(false);
-                                    return;
-                                }
                                 const updatePromises = scenes.map(scene => {
                                     if (mode === 'worldInteraction') {
                                         return worldEditor.updateScene(fileId, scene as any);
                                     } else {
-                                        const sceneData: ApiScene = {
+                                        const apiScene: ApiScene = {
                                             id: scene.id,
                                             name: scene.name,
                                             type: 'type' in scene ? (scene.type || '') : '',
@@ -135,31 +103,15 @@ export const useEditorSubmit = ({
                                             npcs: [],
                                             events: [],
                                         };
-                                        return EditorApi.updateScene(fileId, sceneData);
+                                        return EditorApi.updateScene(fileId, apiScene);
                                     }
                                 });
                                 const results = await Promise.all(updatePromises);
                                 if (results.every(r => r.data?.success)) {
                                     response = { data: { success: true } };
-                                } else {
-                                    toast.error('部分场景更新失败');
-                                    setIsSubmitting(false);
-                                    return;
                                 }
-                            } else {
-                                toast.error('没有需要保存的修改');
-                                setIsSubmitting(false);
-                                return;
                             }
-                        } else {
-                            toast.error('没有需要保存的修改');
-                            setIsSubmitting(false);
-                            return;
                         }
-                    } else {
-                        toast.error('数据获取函数未初始化');
-                        setIsSubmitting(false);
-                        return;
                     }
                     break;
                 default:
@@ -170,9 +122,7 @@ export const useEditorSubmit = ({
 
             if (response && response.data?.success) {
                 toast.success('修改已保存');
-                if (fileId) {
-                    await onDataRefresh();
-                }
+                await onDataRefresh();
             } else {
                 toast.error('保存失败，请重试');
             }
@@ -192,4 +142,3 @@ export const useEditorSubmit = ({
         scenesPanelGetDataRef,
     };
 };
-

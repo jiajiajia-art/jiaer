@@ -11,8 +11,8 @@ export const SUBSCENE_ICON_SIZE = 40;
 export const SCENE_ICON_SIZE = 40;
 
 export const DEFAULT_SCALE = 1.0;
-export const MIN_SCALE = 0.5;
-export const MAX_SCALE = 2.0;
+export const MIN_SCALE = 0.1;
+export const MAX_SCALE = 5.0;
 export const MAX_NPCS = 3;
 
 export const DEFAULT_Z_INDEX = 1;
