@@ -263,13 +263,16 @@ const Create: React.FC = () => {
         }
     };
 
-    const handleSelectGameType = (type: 'avg' | 'rpg' | 'txt') => {
+    const handleSelectGameType = (type: 'avg' | 'rpg' | 'txt' | 'custom') => {
         clearAll();
         if (type === 'rpg') {
             navigate('/createGame');
         } else if (type === 'txt') {
             clearState();
             navigate('/gameSettingsEditor');
+        } else if (type === 'custom') {
+            clearState();
+            navigate('/customif/create');
         } else if (type === 'avg') {
             clearState();
             navigate('/gameSettingsEditor?mode=worldInteraction');

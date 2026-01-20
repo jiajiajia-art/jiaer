@@ -1011,3 +1011,16 @@
         opacity: 0;
     }
 }
+
+/* Custom UI Host overlay container */
+.customUIRoot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: auto;
+    height: auto;
+    z-index: 1600; /* above content, below injury/timeout overlays */
+    pointer-events: auto;
+}
+
+/* removed floating test button; toggling is handled within the custom UI itself */

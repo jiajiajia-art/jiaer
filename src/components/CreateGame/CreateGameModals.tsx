@@ -8,7 +8,7 @@ interface CreateGameModalsProps {
     isMobileTipModalOpen: boolean;
     onCloseCreateTypeModal: () => void;
     onCloseMobileTipModal: () => void;
-    onSelectGameType: (type: 'avg' | 'rpg' | 'txt') => void;
+    onSelectGameType: (type: 'avg' | 'rpg' | 'txt' | 'custom') => void;
 }
 
 const AVG_INVITE_CODE = 'AVG2025DEV';
@@ -99,6 +99,13 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             >
                                 <span>AVG</span>
                                 <span className={styles.createTypeOptionLockedTag}>需邀请码</span>
+                            </button>
+                            <button
+                                className={styles.createTypeOption}
+                                onClick={() => onSelectGameType('custom')}
+                            >
+                                <span>自定义</span>
+                                <span className={styles.createTypeOptionRecommend}>新</span>
                             </button>
                             <button
                                 className={`${styles.createTypeOption} ${styles.createTypeOptionDisabled}`}
@@ -195,4 +202,3 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
 };
 
 export default CreateGameModals;
-

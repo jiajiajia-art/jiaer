@@ -215,40 +215,68 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
     }, [userId]);
 
     
-    // 处理开始游戏
+    // 处理开始游戏（以服务端 engine 为准，缺失时按 version 兜底）
     const handleStartGame = useCallback(async () => {
         if (!checkAuth()) return;
         if (!fileId) {
             alert('游戏信息错误，请重试');
             return;
         }
-        
-        if (currentGame.version == 'new') {
+        // engine 映射：RPG→story，TXT→galgame，AVG→world，CUSTOM→customif
+        const mapServerEngine = (engine?: string) => {
+            switch ((engine || '').toUpperCase()) {
+                case 'RPG': return 'story' as const;
+                case 'TXT': return 'galgame' as const;
+                case 'AVG': return 'world' as const;
+                case 'CUSTOM': return 'customif' as const;
+                default: return undefined;
+            }
+        };
+        // 旧版 version 兜底：new→galgame，old→story，map-plugin-version→world
+        const mapVersionToEngine = (version?: string) => {
+            switch (version) {
+                case 'new': return 'galgame' as const;
+                case 'old': return 'story' as const;
+                case 'map-plugin-version': return 'world' as const;
+                default: return undefined;
+            }
+        };
+
+        const normalized = mapServerEngine(currentGame.engine) || mapVersionToEngine(currentGame.version);
+        if (!normalized) {
+            alert('未知的游戏类型，无法创建会话');
+            return;
+        }
+
+        if (normalized === 'customif') {
+            const appId = currentGame.customAppId || fileId; // 临时兜底
+            if (!appId) { alert('缺少自定义 AppID，无法开始游戏'); return; }
+            navigate(`/customif/${appId}`);
+            return;
+        }
+
+        if (normalized === 'galgame') {
             setFileId(fileId);
             setIsPreset(currentGame.is_preset == 1);
             const sessionId = await createGalgameSession(fileId);
-            
-            if (sessionId) {
-                setSessionId(sessionId);
-                navigate(`/galgame`);
-            }
-        } else if(currentGame.version == 'old') {
+            if (sessionId) { setSessionId(sessionId); navigate('/galgame'); }
+            return;
+        }
+
+        if (normalized === 'story') {
             setFileId(fileId);
             setIsPreset(currentGame.is_preset == 1);
             const sessionId = await createSession(fileId);
-            
-            if (sessionId) {
-                setSessionId(sessionId);
-                navigate('/rpgGame');
-            }
-        } else if(currentGame.version == 'map-plugin-version') {
+            if (sessionId) { setSessionId(sessionId); navigate('/rpgGame'); }
+            return;
+        }
+
+        if (normalized === 'world') {
             setFileId(fileId);
             const sessionId = await createMapWorldSession(fileId);
-            if (sessionId) {    
-                setSessionId(sessionId);
-                navigate('/galgameMap');
-            }
-        } 
+            if (sessionId) { setSessionId(sessionId); navigate('/galgameMap'); }
+            return;
+        }
     }, [checkAuth, fileId, createSession, createGalgameSession, setFileId, setSessionId, navigate]);
 
     // 处理点赞

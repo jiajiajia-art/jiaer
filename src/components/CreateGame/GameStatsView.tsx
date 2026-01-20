@@ -43,7 +43,8 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
 
     /**
-     * 创建会话
+     * 创建会话（按引擎类型分发）。
+     * customif：不在此处创建会话，直接跳转到 /customif/:appId，由宿主页创建。
      */
     const createSession = async (fileId: string): Promise<{ sessionId: string | null; redirectUrl: string }> => {
         if (!fileId) {
@@ -56,50 +57,77 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             return { sessionId: null, redirectUrl: '' };
         }
 
+        // 服务端 engine 优先：RPG/TXT/AVG/CUSTOM → 统一为内部 key
+        const mapServerEngine = (engine?: string) => {
+            switch ((engine || '').toUpperCase()) {
+                case 'RPG': return 'story' as const;
+                case 'TXT': return 'galgame' as const;
+                case 'AVG': return 'world' as const;
+                case 'CUSTOM': return 'customif' as const;
+                default: return undefined;
+            }
+        };
+        // 版本到引擎的兜底映射（仅当 engine 缺失时启用，保持兼容）
+        const mapVersionToEngine = (version?: string) => {
+            switch (version) {
+                case 'new': return 'galgame' as const;
+                case 'old': return 'story' as const;
+                case 'map-plugin-version': return 'world' as const;
+                default: return undefined;
+            }
+        };
+
         setIsLoading(true);
         try {
-            // 根据游戏版本判断进入的模式
-            if (gameDetail.version == 'new') {
-                // Galgame 模式
-                const response = await createGalgameSessionApi.createGalgameEditSession({
-                    fileId: fileId,
-                });
-
-                if (response.data.success) {
-                    const sessionId = response.data.data.session;
-                    return { sessionId, redirectUrl: `/galgame` };
-                } else {
-                    alert(response.data.message || '创建游戏失败，请重试');
-                    return { sessionId: null, redirectUrl: '' };
-                }
-            } else if(gameDetail.version == 'old') {
-                // 普通模式（Story）
-                const response = await createSessionApi.getSession({
-                    fileId: fileId,
-                });
-
-                if (response.data.success) {
-                    const data = response.data.data;
-                    const sessionId = data?.session.session_id || null;
-                    return { sessionId, redirectUrl: '/rpgGame' };
-                } else {
-                    alert(response.data.message || '创建游戏失败，请重试');
-                    return { sessionId: null, redirectUrl: '' };
-                }
-            } else if(gameDetail.version == 'map-plugin-version'){
-                const response = await createWorldSessionApi.createWorldEditSession({fileId}); 
-                if (response.data.success) {
-                    const sessionId = response.data.session.sessionId;
-                    return { sessionId, redirectUrl: '/galgameMap'};
-                } else {
-                    alert(response.data.message || '创建游戏失败，请重试');
-                    return { sessionId: null, redirectUrl: '' };
-                } 
-            } else {
-                // 未知版本类型
-                alert('未知的游戏版本类型，无法创建会话');
+            const normalized = mapServerEngine(gameDetail?.engine) || mapVersionToEngine(gameDetail?.version);
+            if (!normalized) {
+                alert('未知的游戏类型，无法创建会话');
                 return { sessionId: null, redirectUrl: '' };
             }
+
+            if (normalized === 'customif') {
+                const appId = gameDetail?.customAppId || gameDetail?.file_id;
+                if (!appId) {
+                    alert('缺少自定义 AppID，无法开始游戏');
+                    return { sessionId: null, redirectUrl: '' };
+                }
+                // 不创建 session，直接跳转宿主页
+                return { sessionId: null, redirectUrl: `/customif/${appId}` };
+            }
+
+            if (normalized === 'galgame') {
+                const response = await createGalgameSessionApi.createGalgameEditSession({ fileId });
+                if (response.data.success) {
+                    const sessionId = response.data.data.session;
+                    return { sessionId, redirectUrl: '/galgame' };
+                }
+                alert(response.data.message || '创建游戏失败，请重试');
+                return { sessionId: null, redirectUrl: '' };
+            }
+
+            if (normalized === 'story') {
+                const response = await createSessionApi.getSession({ fileId });
+                if (response.data.success) {
+                    const data = response.data.data;
+                    const sessionId = data?.session?.session_id || null;
+                    return { sessionId, redirectUrl: '/rpgGame' };
+                }
+                alert(response.data.message || '创建游戏失败，请重试');
+                return { sessionId: null, redirectUrl: '' };
+            }
+
+            if (normalized === 'world') {
+                const response = await createWorldSessionApi.createWorldEditSession({ fileId });
+                if (response.data.success) {
+                    const sessionId = response.data.session.sessionId;
+                    return { sessionId, redirectUrl: '/galgameMap' };
+                }
+                alert(response.data.message || '创建游戏失败，请重试');
+                return { sessionId: null, redirectUrl: '' };
+            }
+
+            alert('未知的游戏类型，无法创建会话');
+            return { sessionId: null, redirectUrl: '' };
         } catch (error) {
             console.error('❌ Session 创建错误:', error);
             alert('创建游戏失败，请稍后重试');
@@ -130,8 +158,8 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
         // 创建会话
         const { sessionId, redirectUrl } = await createSession(fileId);
-        if (sessionId && redirectUrl) {
-            setSessionId(sessionId);
+        if (redirectUrl) {
+            if (sessionId) setSessionId(sessionId);
             navigate(redirectUrl);
         }
     };
@@ -280,4 +308,3 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 };
 
 export default GameStatsView;
-

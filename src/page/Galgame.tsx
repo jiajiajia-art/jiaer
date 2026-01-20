@@ -1,4 +1,5 @@
 import { CiLocationOn } from "react-icons/ci";
+import { useEffect } from "react";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
@@ -68,6 +69,26 @@ const Galgame = () => {
         isLoading: controller.isLoading,
     });
 
+    // Inject the simple HTML UI loader (runs when container exists)
+    /*useEffect(() => {
+        try {
+            // Avoid duplicate injection across navigations
+            // @ts-ignore
+            const existingHost = (window as any).__customUIHost as any | undefined;
+            const uiRoot = document.getElementById('custom-ui-root');
+            if (!uiRoot) return; // container not in DOM yet
+            if (existingHost && existingHost.container === uiRoot) return; // already initialized for this container
+            if (!uiRoot) return; // container not in DOM yet; effect will run again when isLoading changes
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = `${import.meta.env.BASE_URL}examples/custom_ui_system/simple_loader.js`;
+            script.async = true;
+            document.body.appendChild(script);
+        } catch (e) {
+            console.error('[CustomUI] inject loader failed:', e);
+        }
+    }, [controller.isLoading]);*/
+
     const renderErrorModal = (
         visible: boolean,
         title: string,
@@ -117,6 +138,8 @@ const Galgame = () => {
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
+                    {/* Custom UI Host container (Shadow DOM will mount here) */}
+                    <div id="custom-ui-root" className={styles.customUIRoot}></div>
                     <button
                         className={styles.exitButton}
                         onClick={controller.handleExitGame}

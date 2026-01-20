@@ -25,6 +25,10 @@ export interface UserGameData {
     version: string;
     game_tags: string;
     is_preset: number;
+    // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）
+    // RPG → story, TXT → galgame, AVG → world, CUSTOM → customif
+    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM';
+    customAppId?: string;
 }
 
 export interface UserGameResponse {

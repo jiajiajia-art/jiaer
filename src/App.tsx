@@ -13,6 +13,8 @@ import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
 import RpgGame from './page/RpgGame';
 import UploadProgressModal from './components/GameSettingEditor/DocumentUpload/UploadProgressModal';
+import CustomIF from './page/CustomIF';
+import CustomIFCreate from './page/CustomIFCreate';
 
 function App() {
   return (
@@ -48,6 +50,8 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
+          <Route path="/customif/create" element={<CustomIFCreate />} />
+          <Route path="/customif/:appId" element={<CustomIF />} />
         </Route>
       </Routes>
       <UploadProgressModal />
