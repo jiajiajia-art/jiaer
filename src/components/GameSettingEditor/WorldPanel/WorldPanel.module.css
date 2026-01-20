@@ -331,6 +331,7 @@
     flex-direction: column;
     gap: 12px;
     transition: all 0.25s ease;
+    position: relative;
 }
 
 .storylineRow:hover {
@@ -549,6 +550,172 @@
     to {
         transform: rotate(360deg);
     }
+}
+
+/* 故事线排序控件 - 使用表单样式 */
+.storylineOrderLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.storylineOrderLabel span {
+    font-size: 0.82rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-weight: 500;
+}
+
+.orderInput {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    /* 隐藏number input的spinner */
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.orderInput::-webkit-outer-spin-button,
+.orderInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.orderInput:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+/* 弹窗样式 - 简单表单 */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modalContent {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.modalCloseBtn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modalCloseBtn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #1a1a1a;
+}
+
+.modalBody {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.formGroup:last-child {
+    margin-bottom: 0;
+}
+
+.formGroup label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formGroup label span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.formGroup input,
+.formGroup textarea {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.02);
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.formGroup textarea {
+    resize: vertical;
+    min-height: 120px;
 }
 
 /* 响应式布局 */

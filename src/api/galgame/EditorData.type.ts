@@ -163,6 +163,7 @@ export interface AllGameData {
   sceneSetting: SceneSetting;
   metadata: Metadata | null;
   storySetting: StoryStructure;
+  coverUrl: string;
 }
 
 export interface GeneratePlayerImageRequest {

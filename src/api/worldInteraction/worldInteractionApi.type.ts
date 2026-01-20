@@ -180,6 +180,7 @@ export interface WorldInteractionGameData {
     sceneSetting: SceneSetting;
     abilityNodeSetting?: AbilityNodeSetting;
     attributeSetting?: AttributeSetting;
+    coverUrl: string;
 }
 
 export interface UploadWorldFileResponse {

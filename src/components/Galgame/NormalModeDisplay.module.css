@@ -7,10 +7,9 @@
     overflow-x: hidden;
     padding: 18px;
     box-sizing: border-box;
-    padding-bottom: 0px;
+    padding-bottom: 80px; /* 为底部按钮容器留出空间（按钮高度 42px + 上下 padding 24px + 安全边距） */
     display: flex;
     flex-direction: column;
-    margin-bottom: 80px;
     padding-top: 60px;
 }
 

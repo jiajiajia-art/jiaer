@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, memo, useState } from 'react';
-import { extractPlainText } from '../../utils/textUtils';
-import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
-import styles from '../Galgame/TextModeDisplay.module.css';
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
+import { extractPlainText } from '../../../../utils/textUtils';
+import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
+import styles from '../../../Galgame/TextModeDisplay.module.css';
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../../../utils/constants';
 
 const POINTS_CONFIG = {
     option: OPTION_COST,
@@ -33,6 +33,7 @@ interface TextModeDisplayProps {
     historyLength: number;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
+    noPaddingBottom?: boolean; // 当父容器已有 padding-bottom 时，设置为 true 以移除 TextModeDisplay 的 padding-bottom
 }
 
 interface MessageItemProps {
@@ -225,7 +226,8 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     isWaitingForData,
     historyLength,
     onChoiceClick,
-    onCustomInputSubmit
+    onCustomInputSubmit,
+    noPaddingBottom = false
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -244,7 +246,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     const showDotLoader = isWaitingForData && steps.length > 0 && !isTyping && !lastStepIsChoice;
 
     return (
-        <div className={styles.textModeContainer}>
+        <div className={`${styles.textModeContainer} ${noPaddingBottom ? styles.noPaddingBottom : ''}`}>
             {steps.length === 0 && !isWaitingForData ? (
                 <div className={styles.emptyState}>暂无内容</div>
             ) : showMainLoader ? (

@@ -15,6 +15,7 @@ import { useUnsavedChanges } from '../../../hooks/editor/useUnsavedChanges';
 import CoverUpload from './CoverUpload';
 import WorldSettingForm from './WorldSettingForm';
 import StorylinesSection, { type StoryLine } from './StorylinesSection';
+import StorylineModal from './StorylineModal';
 import ToneSection from './ToneSection';
 import { getPlayerImageUrl } from '../../../utils/constants';
 
@@ -30,6 +31,7 @@ interface WorldPanelProps {
     isSubmitting?: boolean;
     fileId?: string;
     mode: 'visual' | 'worldInteraction' | undefined;
+    onDataChange?: () => void;
 }
 
 
@@ -50,6 +52,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     isSubmitting = false,
     fileId,
     mode = 'visual',
+    onDataChange,
 }, ref) => {
     // 表单字段状态
     const [title, setTitle] = useState<string>('');
@@ -65,6 +68,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [isStorylineExpanded, setIsStorylineExpanded] = useState<boolean>(false);
     const [isToneExpanded, setIsToneExpanded] = useState<boolean>(false);
     const [storylineError, setStorylineError] = useState<string>('');
+    const [storylineModalVisible, setStorylineModalVisible] = useState<boolean>(false);
+    const [editingStoryline, setEditingStoryline] = useState<StoryLine | null>(null);
     const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
     const [storyStructure, setStoryStructure] = useState<StoryStructure | null>(null);
     const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
@@ -176,9 +181,11 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         if (ws.keyEvents && ws.keyEvents.length > 0) {
             setStorylines(ws.keyEvents.map((event: { title?: string; description?: string }, index: number) => ({
-                id: `${index}`,
+                id: `${Date.now()}-${index}`, // 使用时间戳确保唯一性
                 tag: event.title || `事件 ${index + 1}`,
                 content: event.description || '',
+                order: index, // 内部排序字段
+                index: index + 1, // 用户可见的序号，从1开始
             })));
             setStorylineError('');
         } else {
@@ -197,39 +204,137 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setToneValue(value);
     };
 
-    const handleStorylineChange = (id: string, key: 'tag' | 'content', value: string) => {
+    /**
+     * 重新分配连续的序号和顺序
+     * 确保所有项的 index 从 1 开始连续递增，order 从 0 开始连续递增
+     */
+    const reorderStorylines = (storylines: StoryLine[]): StoryLine[] => {
+        const sorted = [...storylines].sort((a, b) => a.index - b.index);
+        return sorted.map((s, idx) => ({
+            ...s,
+            order: idx,
+            index: idx + 1
+        }));
+    };
+
+    /**
+     * 处理故事线的字段修改
+     * @param id - 故事线ID
+     * @param key - 要修改的字段（tag/content/index）
+     * @param value - 新值
+     */
+    const handleStorylineChange = (id: string, key: 'tag' | 'content' | 'index', value: string | number) => {
         setStorylines(prev => {
-            const updated = prev.map(s => s.id === id ? { ...s, [key]: value } : s);
-            if (mode === 'worldInteraction' && updated.length > 0) {
-                setStorylineError('');
+            if (key === 'index') {
+                // 修改序号：实现插入式移动
+                const newIndex = typeof value === 'number' ? value : parseInt(String(value), 10);
+                if (isNaN(newIndex) || newIndex < 1) return prev;
+                
+                const currentItem = prev.find(s => s.id === id);
+                if (!currentItem) return prev;
+                
+                const oldIndex = currentItem.index;
+                if (newIndex === oldIndex) return prev; // 序号未变化，无需处理
+                
+                // 移除当前项，调整其他项的序号
+                const withoutCurrent = prev.filter(s => s.id !== id);
+                const adjusted = withoutCurrent.map(s => {
+                    if (newIndex < oldIndex) {
+                        // 向前移动：新序号到旧序号之间的项需要后移
+                        if (s.index >= newIndex && s.index < oldIndex) {
+                            return { ...s, index: s.index + 1 };
+                        }
+                    } else {
+                        // 向后移动：旧序号到新序号之间的项需要前移
+                        if (s.index > oldIndex && s.index <= newIndex) {
+                            return { ...s, index: s.index - 1 };
+                        }
+                    }
+                    return s;
+                });
+                
+                // 插入当前项到新位置，重新分配序号
+                const withNewIndex = [...adjusted, { ...currentItem, index: newIndex }];
+                const result = reorderStorylines(withNewIndex);
+                
+                if (mode === 'worldInteraction' && result.length > 0) {
+                    setStorylineError('');
+                }
+                return result;
+            } else {
+                // 修改标签或内容：直接更新
+                const updated = prev.map(s => s.id === id ? { ...s, [key]: value } : s);
+                if (mode === 'worldInteraction' && updated.length > 0) {
+                    setStorylineError('');
+                }
+                return updated;
             }
-            return updated;
         });
     };
 
-    const addStoryline = () => {
-        setStorylines(prev => {
-            const updated = [...prev, {
-                id: `${Date.now()}`,
-                tag: `阶段 ${prev.length + 1}`,
-                content: '',
-            }];
-            if (mode === 'worldInteraction') {
-                setStorylineError('');
-            }
-            return updated;
-        });
+    const openAddStorylineModal = () => {
+        setEditingStoryline(null);
+        setStorylineModalVisible(true);
     };
 
+    /**
+     * 保存故事线（新增或编辑）
+     * @param data - 故事线数据（不包含 id 和 order）
+     */
+    const handleSaveStoryline = (data: Omit<StoryLine, 'id' | 'order'>) => {
+        if (editingStoryline) {
+            // 编辑模式：分别更新各个字段
+            handleStorylineChange(editingStoryline.id, 'tag', data.tag);
+            handleStorylineChange(editingStoryline.id, 'content', data.content);
+            handleStorylineChange(editingStoryline.id, 'index', data.index);
+        } else {
+            // 新增模式：插入式移动，目标位置及之后的项序号+1
+            setStorylines(prev => {
+                const newIndex = data.index;
+                
+                // 调整现有项的序号：新序号及之后的项序号+1
+                const adjusted = prev.map(s => 
+                    s.index >= newIndex ? { ...s, index: s.index + 1 } : s
+                );
+                
+                // 添加新项
+                const newStoryline: StoryLine = {
+                    id: `${Date.now()}`,
+                    tag: data.tag,
+                    content: data.content,
+                    order: prev.length, // 临时order，后续会重新分配
+                    index: newIndex,
+                };
+                
+                // 重新分配连续的序号
+                const result = reorderStorylines([...adjusted, newStoryline]);
+                
+                if (mode === 'worldInteraction') {
+                    setStorylineError('');
+                }
+                return result;
+            });
+        }
+        setStorylineModalVisible(false);
+        setEditingStoryline(null);
+    };
+
+    /**
+     * 删除故事线
+     * @param id - 要删除的故事线ID
+     */
     const removeStoryline = (id: string) => {
         setStorylines(prev => {
             const updated = prev.filter(s => s.id !== id);
-            if (mode === 'worldInteraction' && updated.length === 0) {
+            const reordered = reorderStorylines(updated);
+            
+            if (mode === 'worldInteraction' && reordered.length === 0) {
                 setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
             }
-            return updated;
+            return reordered;
         });
     };
+
 
     const isWorldInteractionMode = mode === 'worldInteraction';
 
@@ -269,7 +374,9 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         // playerRole 字段是只读的，用户无法修改，所以直接使用后端返回的 player 数据
         const player = getPlayer(gameData);
 
-        const keyEvents = storylines.map(line => ({
+        // 按 index 排序后转换为 keyEvents（用户可见的序号）
+        const sortedStorylines = [...storylines].sort((a, b) => a.index - b.index);
+        const keyEvents = sortedStorylines.map(line => ({
             title: line.tag,
             description: line.content,
         }));
@@ -340,33 +447,45 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         const original = originalDataRef.current;
 
+        // 辅助函数：归一化字符串比较
+        const isStrDiff = (a: any, b: any) => (a || '') !== (b || '');
+        // 辅助函数：判断是否非空
+        const hasKeys = (obj: any) => obj && Object.keys(obj).length > 0;
+        const hasLen = (arr: any) => arr && arr.length > 0;
+
         if (mode === 'visual') {
             const diff: Partial<VisualWorldSetting> = {};
             const orig = original as VisualWorldSetting;
             const full = fullData as VisualWorldSetting;
 
-            if (full.title !== orig.title) diff.title = full.title;
-            if (full.summary !== orig.summary) diff.summary = full.summary;
-            if (full.background !== orig.background) diff.background = full.background;
-            if (full.preamble !== orig.preamble) diff.preamble = full.preamble;
-            if (full.initialPlot !== orig.initialPlot) diff.initialPlot = full.initialPlot;
-            if (full.literary !== orig.literary) diff.literary = full.literary;
+            if (isStrDiff(full.title, orig.title)) diff.title = full.title;
+            if (isStrDiff(full.summary, orig.summary)) diff.summary = full.summary;
+            if (isStrDiff(full.background, orig.background)) diff.background = full.background;
+            if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
+            if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
+            if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
 
-            if (JSON.stringify(full.WorldRules) !== JSON.stringify(orig.WorldRules)) {
-                diff.WorldRules = full.WorldRules;
+            // 复杂字段：仅在“当前非空”且“发生变化”时包含
+            const fullWorldRules = full.WorldRules || {};
+            if (hasKeys(fullWorldRules) && JSON.stringify(fullWorldRules) !== JSON.stringify(orig.WorldRules || {})) {
+                diff.WorldRules = fullWorldRules;
             }
 
-            if (JSON.stringify(full.keyEvents) !== JSON.stringify(orig.keyEvents)) {
-                diff.keyEvents = full.keyEvents;
+            const fullKeyEvents = full.keyEvents || [];
+            if (hasLen(fullKeyEvents) && JSON.stringify(fullKeyEvents) !== JSON.stringify(orig.keyEvents || [])) {
+                diff.keyEvents = fullKeyEvents;
             }
 
-            if (JSON.stringify(full.dynamicEntries) !== JSON.stringify(orig.dynamicEntries)) {
-                (diff as any).dynamicEntries = full.dynamicEntries;
+            const fullDynamicEntries = full.dynamicEntries || [];
+            const origDynamicEntries = (orig as any).dynamicEntries || [];
+            if (hasLen(fullDynamicEntries) && JSON.stringify(fullDynamicEntries) !== JSON.stringify(origDynamicEntries)) {
+                (diff as any).dynamicEntries = fullDynamicEntries;
             }
 
-            const origTheme = Array.isArray(orig.Theme) ? orig.Theme : [];
-            if (JSON.stringify(full.Theme) !== JSON.stringify(origTheme)) {
-                diff.Theme = full.Theme;
+            const fullTheme = full.Theme || [];
+            const origTheme = orig.Theme || [];
+            if (hasLen(fullTheme) && JSON.stringify(fullTheme) !== JSON.stringify(origTheme)) {
+                diff.Theme = fullTheme;
             }
 
             // player 字段不参与比较（只读字段，用户在 WorldPanel 中无法修改）
@@ -377,29 +496,28 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             const orig = original as WorldWorldSetting;
             const full = fullData as WorldWorldSetting;
 
-            if (full.title !== orig.title) diff.title = full.title;
-            if (full.summary !== orig.summary) diff.summary = full.summary;
-            if (full.background !== orig.background) diff.background = full.background;
-            if (full.preamble !== orig.preamble) diff.preamble = full.preamble;
-            if (full.initialPlot !== orig.initialPlot) diff.initialPlot = full.initialPlot;
-            if (full.literary !== orig.literary) diff.literary = full.literary;
+            if (isStrDiff(full.title, orig.title)) diff.title = full.title;
+            if (isStrDiff(full.summary, orig.summary)) diff.summary = full.summary;
+            if (isStrDiff(full.background, orig.background)) diff.background = full.background;
+            if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
+            if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
+            if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
 
-            if (JSON.stringify(full.keyEvents) !== JSON.stringify(orig.keyEvents)) {
-                diff.keyEvents = full.keyEvents;
+            const fullKeyEvents = full.keyEvents || [];
+            if (hasLen(fullKeyEvents) && JSON.stringify(fullKeyEvents) !== JSON.stringify(orig.keyEvents || [])) {
+                diff.keyEvents = fullKeyEvents;
             }
 
-            const origTheme = Array.isArray(orig.Theme) ? orig.Theme : [];
-            if (JSON.stringify(full.Theme) !== JSON.stringify(origTheme)) {
-                diff.Theme = full.Theme;
+            const fullTheme = full.Theme || [];
+            const origTheme = orig.Theme || [];
+            if (hasLen(fullTheme) && JSON.stringify(fullTheme) !== JSON.stringify(origTheme)) {
+                diff.Theme = fullTheme;
             }
 
             const fullWorldRules = (full as any).WorldRules ?? {};
-            const origWorldRules = (orig as any).WorldRules ?? {};
-            if (JSON.stringify(fullWorldRules) !== JSON.stringify(origWorldRules)) {
+            if (hasKeys(fullWorldRules) && JSON.stringify(fullWorldRules) !== JSON.stringify((orig as any).WorldRules || {})) {
                 (diff as any).WorldRules = fullWorldRules;
             }
-
-            // player 字段不参与比较（只读字段，用户在 WorldPanel 中无法修改）
 
             return Object.keys(diff).length > 0 ? diff : null;
         }
@@ -616,7 +734,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
     return (
         <div className={styles.panelContent}>
-            <CoverUpload fileId={currentFileId} />
+            <CoverUpload 
+                fileId={currentFileId} 
+                coverUrl={gameData?.coverUrl || undefined}
+                onCoverUploaded={() => {
+                    onDataChange?.();
+                }}
+            />
             <div className={styles.panelHeader}>
                 <div>
                     <h2>世界观 & 表单化设定</h2>
@@ -717,10 +841,23 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 error={storylineError}
                                 isWorldInteractionMode={isWorldInteractionMode}
                                 onToggleExpand={() => setIsStorylineExpanded(!isStorylineExpanded)}
-                                onAddStoryline={addStoryline}
+                                onAddStoryline={openAddStorylineModal}
                                 onStorylineChange={handleStorylineChange}
                                 onRemoveStoryline={removeStoryline}
                             />
+
+                            <StorylineModal
+                                visible={storylineModalVisible}
+                                storyline={editingStoryline}
+                                defaultIndex={storylines.length > 0 ? Math.max(...storylines.map(s => s.index)) + 1 : 1}
+                                maxIndex={storylines.length + 10}
+                                onClose={() => {
+                                    setStorylineModalVisible(false);
+                                    setEditingStoryline(null);
+                                }}
+                                onSave={handleSaveStoryline}
+                            />
+
 
                             <ToneSection
                                 value={toneValue}

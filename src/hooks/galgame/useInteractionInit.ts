@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import interactionApi from "../../api/worldInteraction/interactionApi";
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
 import type { PendingRequest } from "../mapGalgame/useHistoryPolling";
-import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from "../mapGalgame/interactionUtils";
+import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from "../mapGalgame/common/interactionUtils";
 
 interface InitOptions {
     sessionId: string | null;

@@ -6,7 +6,12 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    padding-bottom: 80px;
+    padding-bottom: 80px; /* galgame 页面：为底部按钮容器留出空间（按钮高度 42px + 上下 padding 24px + 安全边距） */
+}
+
+/* 当父容器已有 padding-bottom 时（如 galgameMap），移除 TextModeDisplay 的 padding-bottom */
+.textModeContainer.noPaddingBottom {
+    padding-bottom: 0;
 }
 
 .messagesContainer {

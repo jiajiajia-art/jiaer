@@ -3,10 +3,11 @@
  * 处理：缓存恢复、未完成请求检测、历史获取、初始交互发起
  */
 import { useEffect, useRef } from "react";
-import interactionApi from "../../api/worldInteraction/interactionApi";
-import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
-import type { PendingRequest } from "./useHistoryPolling";
-import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from "./interactionUtils";
+import interactionApi from "../../../api/worldInteraction/interactionApi";
+import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
+import type { PendingRequest } from "../useHistoryPolling";
+import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from "../common/interactionUtils";
+import { REQUEST_TIMEOUT_MS, TIMEOUT_MESSAGES } from "../../../components/GalgameMap/interaction/constants";
 
 interface InitOptions {
     sessionId: string | null;
@@ -14,7 +15,6 @@ interface InitOptions {
     gameData: any | null;
     fileId: string | null;
     gameStarted: boolean;
-    // Setters
     setGameStarted: (value: boolean) => void;
     setLatestHistory: (history: GetWorldInteractionHistoryResponse) => void;
     setHasPendingRequest: (value: boolean) => void;
@@ -26,7 +26,12 @@ interface InitOptions {
         setCurrentStep: (step: any) => void;
         setStepQueue: (queue: any[]) => void;
         setShowNextButton: (show: boolean) => void;
-        handleInteract: (options: { onSuccess?: () => void; onError?: (error: string) => void }) => void;
+        handleInteract: (options: { 
+            onBeforeRequest?: () => void;
+            onSuccess?: (data: any) => void; 
+            onError?: (error: string) => void;
+            onFirstStep?: () => void;
+        }) => void;
     };
     // Refs for reset
     resetCompletedSteps: () => void;
@@ -35,13 +40,20 @@ interface InitOptions {
     onUpdateAttributes?: () => Promise<void>;
     // 刷新事件数据回调（用于流式响应完成后立即请求 active 事件）
     onRefreshEventData?: (sessionId: string, gameData: any) => Promise<void>;
+    // 设置最后一次请求的回调（用于超时重试）
+    setLastRequest?: (request: { type: "interact" } | { type: "choice"; optionId: string; optionIndex: number } | null) => void;
+    // 请求管理器回调（用于统一管理请求状态）
+    onRequestStart?: () => void;
+    onRequestComplete?: () => void;
+    onRequestError?: (error: string) => void;
+    clearRequestTimeout?: () => void;
 }
 
 interface UseInteractionInitReturn {
     interactTimeoutRef: React.MutableRefObject<number | null>;
 }
 
-export function useInteractionInit(options: InitOptions): UseInteractionInitReturn {
+export function useNpcInteractionInit(options: InitOptions): UseInteractionInitReturn {
     const {
         sessionId,
         eventId,
@@ -59,6 +71,11 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
         setRestoringFromCache,
         onUpdateAttributes,
         onRefreshEventData,
+        setLastRequest,
+        onRequestStart,
+        onRequestComplete,
+        onRequestError,
+        clearRequestTimeout,
     } = options;
 
     const hasInitializedRef = useRef(false);
@@ -85,10 +102,24 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
 
     // 主初始化逻辑
     useEffect(() => {
-        if (hasInitializedRef.current) return;
-        if (!sessionId) return;
-        if (!eventId) return; // 如果没有 eventId，跳过初始化（用于功能性NPC场景）
+        if (hasInitializedRef.current) {
+            console.log("[useNpcInteractionInit] ⏭️ 已经初始化过，跳过");
+            return;
+        }
+        if (!sessionId) {
+            console.warn("[useNpcInteractionInit] ⚠️ 没有 sessionId，跳过初始化");
+            return;
+        }
+        if (!eventId) {
+            console.warn("[useNpcInteractionInit] ⚠️ 没有 eventId，跳过初始化（用于功能性NPC场景）");
+            return; // 如果没有 eventId，跳过初始化（用于功能性NPC场景）
+        }
 
+        console.log("[useNpcInteractionInit] ✅ 开始执行初始化逻辑", {
+            sessionId,
+            eventId,
+            fileId
+        });
         let cancelled = false;
         const storageKeys = getStorageKeys(sessionId, eventId);
 
@@ -178,48 +209,53 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                 if (gameData && sessionId && eventId && fileId) {
                     hasInitializedRef.current = true;
                     
-                    // 保存请求状态
-                    if (storageKeys.pendingRequest) {
-                        safeSetLocalStorage(storageKeys.pendingRequest, JSON.stringify({
-                            type: "interact" as const,
-                            timestamp: Date.now(),
-                        }));
-                    }
-
-                    // 启动 60 秒超时计时器
-                    if (interactTimeoutRef.current) {
-                        clearTimeout(interactTimeoutRef.current);
-                    }
-                    interactTimeoutRef.current = window.setTimeout(() => {
-                        // 只有在定时器仍然存在且没有被清除时才显示超时弹窗
-                        if (interactTimeoutRef.current) {
-                            console.warn("[Init] /interact 超时");
-                            setTimeoutModal({
-                                visible: true,
-                                message: '开始游戏请求已超过 60 秒仍未返回，是否刷新页面重试？',
-                            });
+                    // 使用请求管理器记录请求开始（如果提供）
+                    if (onRequestStart) {
+                        onRequestStart();
+                    } else {
+                        // 兼容旧逻辑：如果没有提供请求管理器，使用旧的方式
+                        if (storageKeys.pendingRequest) {
+                            safeSetLocalStorage(storageKeys.pendingRequest, JSON.stringify({
+                                type: "interact" as const,
+                                timestamp: Date.now(),
+                            }));
                         }
-                    }, 60000);
+                        setHasPendingRequest(true);
+                        
+                        // 启动 60 秒超时计时器
+                        if (interactTimeoutRef.current) {
+                            clearTimeout(interactTimeoutRef.current);
+                        }
+                        interactTimeoutRef.current = window.setTimeout(() => {
+                            if (interactTimeoutRef.current) {
+                                console.warn("[Init] /interact 超时");
+                                setTimeoutModal({
+                                    visible: true,
+                                    message: TIMEOUT_MESSAGES.INTERACT,
+                                });
+                            }
+                        }, REQUEST_TIMEOUT_MS);
+                    }
+                    
+                    // 在调用 handleInteract 之前设置 lastRequest，确保超时重试时能正确重试
+                    if (setLastRequest) {
+                        setLastRequest({ type: "interact" });
+                    }
                     
                     setTimeout(() => {
                         stepHandlers.handleInteract({
-                            onSuccess: async () => {
-                                if (interactTimeoutRef.current) {
-                                    clearTimeout(interactTimeoutRef.current);
-                                    interactTimeoutRef.current = null;
+                            onFirstStep: () => {
+                                // 收到第一个步骤时清除超时计时器
+                                if (clearRequestTimeout) {
+                                    clearRequestTimeout();
+                                } else {
+                                    // 兼容旧逻辑
+                                    if (interactTimeoutRef.current) {
+                                        clearTimeout(interactTimeoutRef.current);
+                                        interactTimeoutRef.current = null;
+                                    }
+                                    setTimeoutModal({ visible: false, message: '' });
                                 }
-                                setTimeoutModal({ visible: false, message: '' });
-                                safeRemoveLocalStorage(storageKeys.pendingRequest);
-                                setHasPendingRequest(false);
-                                
-                                // 流式响应完成后立即刷新 active 事件，用于判断显示继续游戏还是开始下一回合
-                                const refreshFn = onRefreshEventDataRef.current;
-                                if (refreshFn && sessionId && gameData) {
-                                    await refreshFn(sessionId, gameData).catch((error) => {
-                                        console.error('[Init] ❌ 刷新 active 事件失败:', error);
-                                    });
-                                }
-                                
                                 // 更新属性
                                 const updateFn = onUpdateAttributesRef.current;
                                 if (updateFn) {
@@ -228,19 +264,51 @@ export function useInteractionInit(options: InitOptions): UseInteractionInitRetu
                                     });
                                 }
                             },
+                            onSuccess: async () => {
+                                // 使用请求管理器记录请求完成（如果提供）
+                                if (onRequestComplete) {
+                                    onRequestComplete();
+                                } else {
+                                    // 兼容旧逻辑
+                                    if (interactTimeoutRef.current) {
+                                        clearTimeout(interactTimeoutRef.current);
+                                        interactTimeoutRef.current = null;
+                                    }
+                                    setTimeoutModal({ visible: false, message: '' });
+                                    safeRemoveLocalStorage(storageKeys.pendingRequest);
+                                    setHasPendingRequest(false);
+                                }
+                                
+                                // 流式响应完成后立即刷新 active 事件，用于判断显示继续游戏还是开始下一回合
+                                const refreshFn = onRefreshEventDataRef.current;
+                                if (refreshFn && sessionId && gameData) {
+                                    await refreshFn(sessionId, gameData).catch((error) => {
+                                        console.error('[Init] ❌ 刷新 active 事件失败:', error);
+                                    });
+                                }
+                            },
                             onError: (error) => {
                                 console.error("[Init] /interact 失败:", error);
-                                if (interactTimeoutRef.current) {
-                                    clearTimeout(interactTimeoutRef.current);
-                                    interactTimeoutRef.current = null;
+                                // 重置初始化标记，允许重试
+                                hasInitializedRef.current = false;
+                                
+                                // 使用请求管理器记录请求错误（如果提供）
+                                if (onRequestError) {
+                                    onRequestError(error || '开始游戏失败，请检查网络或稍后重试。');
+                                } else {
+                                    // 兼容旧逻辑
+                                    if (interactTimeoutRef.current) {
+                                        clearTimeout(interactTimeoutRef.current);
+                                        interactTimeoutRef.current = null;
+                                    }
+                                    setTimeoutModal({ visible: false, message: '' });
+                                    setErrorModal({
+                                        visible: true,
+                                        message: error || '开始游戏失败，请检查网络或稍后重试。',
+                                    });
+                                    safeRemoveLocalStorage(storageKeys.pendingRequest);
+                                    setHasPendingRequest(false);
                                 }
-                                setTimeoutModal({ visible: false, message: '' });
-                                setErrorModal({
-                                    visible: true,
-                                    message: error || '开始游戏失败，请检查网络或稍后重试。',
-                                });
-                                safeRemoveLocalStorage(storageKeys.pendingRequest);
-                                setHasPendingRequest(false);
                             }
                         });
                     }, 100);

@@ -1,0 +1,47 @@
+/* 继续游戏按钮 - 浅白/浅灰磨砂感 */
+.continueButton {
+    position: absolute;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    right: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 300;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+.continueButton:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.continueButton:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .continueButton {
+        bottom: max(16px, env(safe-area-inset-bottom));
+        right: 16px;
+        padding: 8px 14px;
+        font-size: 13px;
+        min-width: 90px;
+    }
+}
+

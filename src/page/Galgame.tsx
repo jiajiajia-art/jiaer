@@ -1,5 +1,4 @@
 import { CiLocationOn } from "react-icons/ci";
-import { useEffect } from "react";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";

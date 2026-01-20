@@ -1,4 +1,4 @@
-import { getImageUrl } from "../../utils/constants";
+import { getImageUrl } from "../../../utils/constants";
 
 
 export type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -27,7 +27,7 @@ export const getImageUrls = (image: string | undefined): string | undefined => {
     return getImageUrl(image) || undefined;
 };
 
-import { getPlayerImageUrl } from '../../utils/constants';
+import { getPlayerImageUrl } from '../../../utils/constants';
 
 /** 获取玩家图片（支持字符串或对象格式） */
 export const getPlayerImage = (playerImages: string | { [variant: string]: string } | undefined): string | undefined => {

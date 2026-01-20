@@ -12,7 +12,7 @@ const CustomIFCreate: React.FC = () => {
   const [manifestText, setManifestText] = useState('');
   const [creating, setCreating] = useState(false);
   const [appId, setAppId] = useState<string>('');
-  const [entryUrl, setEntryUrl] = useState<string>('');
+  const [, setEntryUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
   const fileRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();

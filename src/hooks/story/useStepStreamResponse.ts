@@ -79,17 +79,18 @@ export const useStepStreamResponse = ({
         let buffer = '';
         let hasReceivedStep = false;
         let firstStepReceived = false;
-
         try {
             let missionFlagged = false;
-            console.log('📡 开始接收流式数据...');
 
             while (true) {
                 const { value, done } = await reader.read();
 
                 if (done) {
-                    console.log('✅ 流式数据接收完成，请求 ID:', requestId);
+                    // 流式响应结束
                     if (!hasReceivedStep) {
+                        // 如果没有收到任何 step，说明响应为空或立即结束
+                        // 注意：这里不会调用 onFirstStep，所以超时定时器不会被清除
+                        // 如果设置了超时定时器，它会在超时后触发
                         setSelectedOptionIndex(null);
                         setIsWaitingForData(false);
                     }
@@ -118,11 +119,6 @@ export const useStepStreamResponse = ({
 
                         // 检查是否是当前请求的数据
                         if (currentRequestId.current !== requestId) {
-                            console.log('⚠️ 忽略旧请求的数据', {
-                                currentRequestId: currentRequestId.current,
-                                requestId,
-                                jsonDataType: jsonData.type
-                            });
                             continue;
                         }
 
@@ -135,9 +131,12 @@ export const useStepStreamResponse = ({
                         }
 
                         if (jsonData.type === 'error') {
-                            let errorMessage = jsonData.message || jsonData.error || '发生错误';
+                            let errorMessage = jsonData.error || jsonData.message || '发生错误';
                             
-                            // 尝试解析 message 中可能包含的嵌套 JSON
+                            if (typeof errorMessage === 'object' && errorMessage !== null) {
+                                errorMessage = errorMessage.message || errorMessage.error || JSON.stringify(errorMessage);
+                            }
+                            
                             if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
                                 try {
                                     const parsed = JSON.parse(errorMessage);
@@ -145,13 +144,16 @@ export const useStepStreamResponse = ({
                                         errorMessage = parsed.error.message;
                                     } else if (parsed.message) {
                                         errorMessage = parsed.message;
+                                    } else if (parsed.error) {
+                                        errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
                                     }
                                 } catch (e) {
                                     // 解析失败，使用原始 message
                                 }
                             }
                             
-                            // 不再使用 alert，改为通过回调传递错误信息显示错误弹窗
+                            // 显示错误弹窗给用户
+                            console.error('❌ 流式响应错误:', errorMessage);
                             options?.onErrorAfterAlert?.(errorMessage);
                             setSelectedOptionIndex(null);
                             setIsWaitingForData(false);
@@ -163,64 +165,42 @@ export const useStepStreamResponse = ({
                         // 处理 step 类型的数据（增量 step）
                         if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
-                            console.log('📝 收到新的 step:', {
-                                stepType: step.type,
-                                requestId,
-                                currentRequestId: currentRequestId.current,
-                                stepContent: step.content?.substring(0, 50)
-                            });
                             hasReceivedStep = true;
 
-                            // 如果是第一个 step，触发回调
+                            // 如果是第一个 step，触发回调（清除超时定时器）
                             if (!firstStepReceived) {
                                 firstStepReceived = true;
-                                console.log('📝 触发 onFirstStep 回调');
                                 options?.onFirstStep?.();
                             }
 
                             setStepQueue(prev => {
                                 if (currentRequestId.current !== requestId) {
-                                    console.log('⚠️ 队列更新时请求ID不匹配，忽略', {
-                                        currentRequestId: currentRequestId.current,
-                                        requestId
-                                    });
                                     return prev;
                                 }
                                 const newQueue = [...prev, step];
-                                console.log('📝 队列更新（step），当前队列长度:', newQueue.length);
                                 return newQueue;
                             });
 
-                            // 首个 step 收到时，立即关闭等待态，避免等 complete 才渲染
-                            setIsWaitingForData(false);
+                            // 注意：不在这里设置 setIsWaitingForData(false)
+                            // 等待 currentStep 被设置后再关闭等待态（由 showStep 函数负责）
                         }
 
                         // 处理完整数据（包含 narrativeSteps）
                         if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
-                            console.log('📚 收到完整数据，包含', jsonData.narrativeSteps.length, '个 steps', {
-                                requestId,
-                                currentRequestId: currentRequestId.current
-                            });
                             if (jsonData.narrativeSteps.length > 0) {
                                 hasReceivedStep = true;
 
-                                // 如果是第一个 step，触发回调
+                                // 如果是第一个 step（narrativeSteps 不为空），触发回调（清除超时定时器）
                                 if (!firstStepReceived && jsonData.narrativeSteps.length > 0) {
                                     firstStepReceived = true;
-                                    console.log('📚 触发 onFirstStep 回调（完整数据）');
                                     options?.onFirstStep?.();
                                 }
 
                                 setStepQueue(prev => {
                                     if (currentRequestId.current !== requestId) {
-                                        console.log('⚠️ 队列更新时请求ID不匹配（完整数据），忽略', {
-                                            currentRequestId: currentRequestId.current,
-                                            requestId
-                                        });
                                         return prev;
                                     }
                                     const newQueue = [...prev, ...jsonData.narrativeSteps];
-                                    console.log('📋 队列更新（完整数据），当前队列长度:', newQueue.length);
                                     return newQueue;
                                 });
                             }
@@ -235,7 +215,7 @@ export const useStepStreamResponse = ({
                             }
                         }
                     } catch (e) {
-                        console.log('📦 收到流式数据（原始）:', trimmedLine);
+                        // 忽略无法解析的数据
                     }
                 }
             }
@@ -263,7 +243,13 @@ export const useStepStreamResponse = ({
 
                     // 处理顶层的 error 类型
                     if (jsonData.type === 'error') {
-                        let errorMessage = jsonData.message || jsonData.error || '发生错误';
+                        // 优先使用 error 字段，然后是 message 字段
+                        let errorMessage = jsonData.error || jsonData.message || '发生错误';
+                        
+                        // 如果 error 是对象，尝试提取 message
+                        if (typeof errorMessage === 'object' && errorMessage !== null) {
+                            errorMessage = errorMessage.message || errorMessage.error || JSON.stringify(errorMessage);
+                        }
                         
                         // 尝试解析 message 中可能包含的嵌套 JSON
                         if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
@@ -273,12 +259,16 @@ export const useStepStreamResponse = ({
                                     errorMessage = parsed.error.message;
                                 } else if (parsed.message) {
                                     errorMessage = parsed.message;
+                                } else if (parsed.error) {
+                                    errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
                                 }
                             } catch (e) {
                                 // 解析失败，使用原始 message
                             }
                         }
                         
+                        // 显示错误弹窗给用户
+                        console.error('❌ 流式响应错误（缓冲区）:', errorMessage);
                         options?.onErrorAfterAlert?.(errorMessage);
                         setSelectedOptionIndex(null);
                         setIsWaitingForData(false);
@@ -315,7 +305,7 @@ export const useStepStreamResponse = ({
                         });
                     }
                 } catch (e) {
-                    console.log('📦 收到流式数据（最后，原始）:', dataStr);
+                    // 忽略无法解析的数据
                 }
             }
 

@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
-import { useMapGalgameStore, MapViewState } from '../../store/mapGalgameStore';
-import interactionApi from '../../api/worldInteraction/interactionApi';
-import { buildEventDataFromEvent } from '../../utils/eventUtils';
+import { useMapGalgameStore, MapViewState } from '../../../store/mapGalgameStore';
+import interactionApi from '../../../api/worldInteraction/interactionApi';
+import { buildEventDataFromEvent } from '../../../utils/eventUtils';
 
 /**
  * 刷新事件状态 Hook
@@ -46,7 +46,8 @@ export const useRefreshEventData = () => {
             } else {
                 // 没有活跃事件时，在 NPC 交互页面保留当前 eventData 避免白屏
                 // 但需要设置 eventCompleted = true，以便显示"开始下一回合"按钮
-                if (currentView === MapViewState.INTERACT_NPC && currentEventData) {
+                if ((currentView === MapViewState.INTERACT_NPC_NORMAL || 
+                     currentView === MapViewState.INTERACT_NPC_ABILITY) && currentEventData) {
                     setEventCompleted(true);
                     return;
                 }

@@ -1,10 +1,10 @@
 import { useEffect, useCallback, useRef } from 'react';
-import MapWorldData from '../../api/worldInteraction/mapWorldData';
-import type { AllGameData, Scene } from '../../api/worldInteraction/mapWorldData.type';
-import type { MapViewState } from '../../store/mapGalgameStore';
-import type { EventData } from '../../page/GalgameMap';
-import { useMapGalgameStore } from '../../store/mapGalgameStore';
-import { mapMusicManager } from '../../utils/mapMusicManager';
+import MapWorldData from '../../../api/worldInteraction/mapWorldData';
+import type { AllGameData, Scene } from '../../../api/worldInteraction/mapWorldData.type';
+import type { MapViewState } from '../../../store/mapGalgameStore';
+import type { EventData } from '../../../page/GalgameMap';
+import { useMapGalgameStore } from '../../../store/mapGalgameStore';
+import { mapMusicManager } from '../../../utils/mapMusicManager';
 
 interface UseMapMusicPlayerOptions {
     fileId: string | null;
@@ -95,7 +95,7 @@ export const useMapMusicPlayer = ({
         }
 
         // 如果是在 NPC 交互视图，使用事件中子场景的父场景音乐
-        if (currentView === 'interact_npc' && eventData?.subscene) {
+        if ((currentView === 'interact_npc_normal' || currentView === 'interact_npc_ability') && eventData?.subscene) {
             // 从 eventData.subscene 中找到对应的场景
             const parentScene = gameData.sceneSetting.scenes.find(
                 scene => scene.subscenes.some(sub => sub.id === eventData.subscene.id)
@@ -384,3 +384,4 @@ export const useMapMusicPlayer = ({
         handleMusicToggle,
     };
 };
+

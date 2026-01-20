@@ -2,8 +2,8 @@
  * 处理选择选项的逻辑 Hook
  */
 import { useCallback, useRef } from 'react';
-import { getStorageKeys, safeSetLocalStorage, safeRemoveLocalStorage } from './interactionUtils';
-import { REQUEST_TIMEOUT_MS, TIMEOUT_MESSAGES, ERROR_MESSAGES } from '../../components/GalgameMap/InteractWithNpc';
+import { getStorageKeys, safeSetLocalStorage, safeRemoveLocalStorage } from '../common/interactionUtils';
+import { REQUEST_TIMEOUT_MS, TIMEOUT_MESSAGES, ERROR_MESSAGES } from '../../../components/GalgameMap/interaction/constants';
 
 interface UseChoiceHandlerOptions {
     sessionId: string | null;
@@ -30,7 +30,7 @@ interface UseChoiceHandlerOptions {
     onLastRequestRecord?: (request: { type: 'choice'; optionId: string; optionIndex: number }) => void;
 }
 
-export function useChoiceHandler({
+export function useNpcChoiceHandler({
     sessionId,
     eventId,
     hasPendingRequest,

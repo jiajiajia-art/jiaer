@@ -317,6 +317,11 @@ const GameSettingsEditor = () => {
                         handleSubmit={handleSubmit}
                         fileId={fileId || undefined}
                         mode={(mode === 'visual' || mode === 'worldInteraction') ? mode : undefined}
+                        onDataChange={async () => {
+                            if (fileId) {
+                                await fetchEditorData(fileId);
+                            }
+                        }}
                     />
                 </section>
 

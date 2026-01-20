@@ -52,7 +52,7 @@ export const useGalgameController = () => {
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
 
-    const { history, refreshHistory, loading: historyLoading, editHistory, lastVisitedSceneId } = useGalgameHistory();
+    const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
         const imageUrl = getPlayerImageUrl(worldSetting?.player);
@@ -100,7 +100,7 @@ export const useGalgameController = () => {
         try {
             setIsLoading(true);
             presetDataLoadedRef.current = true;
-            const response =await getGalgamePresetApi.getGalgameFileId(fileId);
+            const response = await getGalgamePresetApi.getGalgameFileId(fileId);
 
             if (response.data.data) {
                 setPresetData(response.data.data);
@@ -109,15 +109,31 @@ export const useGalgameController = () => {
                 const scenes = response.data.data.scenes.scenes;
                 if (scenes && scenes.length > 0) {
                     let initialScene = scenes[0];
-                    if (lastVisitedSceneId) {
-                        const matched = scenes.find(
-                            (scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => 
-                                scene.id === lastVisitedSceneId
-                        );
-                        if (matched) {
-                            initialScene = matched;
+                    
+                    // 直接从历史数据获取 visitedScenes 的最后一个值，而不是使用 hook
+                    if (sessionId) {
+                        try {
+                            const historyResponse = await getGalgamePresetApi.getGalgameHistory(sessionId);
+                            if (historyResponse.data?.success && historyResponse.data.visitedScenes) {
+                                const visitedScenes = historyResponse.data.visitedScenes;
+                                if (Array.isArray(visitedScenes) && visitedScenes.length > 0) {
+                                    const lastSceneId = visitedScenes[visitedScenes.length - 1];
+                                    if (lastSceneId && typeof lastSceneId === 'string') {
+                                        const matched = scenes.find(
+                                            (scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => 
+                                                scene.id === lastSceneId
+                                        );
+                                        if (matched) {
+                                            initialScene = matched;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (historyError) {
+                            console.warn('获取历史数据失败，使用默认场景:', historyError);
                         }
                     }
+                    
                     setCurrentScene(initialScene);
 
                     const sceneImagePath = initialScene.image || initialScene.images;
@@ -136,7 +152,7 @@ export const useGalgameController = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, lastVisitedSceneId]);
+    }, [fileId, sessionId]);
 
     useEffect(() => {
         presetDataLoadedRef.current = false;
@@ -178,12 +194,6 @@ export const useGalgameController = () => {
             console.warn('[Galgame] 未找到匹配的场景 ID:', sceneId);
         }
     }, [presetData, currentScene?.id]);
-
-    useEffect(() => {
-        if (lastVisitedSceneId) {
-            updateSceneFromId(lastVisitedSceneId);
-        }
-    }, [lastVisitedSceneId, updateSceneFromId]);
 
     const stepHandlers = useGalgameStep({
         sessionId,

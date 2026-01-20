@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import interactionApi from "../../api/worldInteraction/interactionApi";
 import type { GetWorldInteractionHistoryResponse } from "../../api/worldInteraction/interactionApi.type";
+import { REQUEST_TIMEOUT_MS } from "../../components/GalgameMap/interaction/constants";
 
 export interface PendingRequest {
     type: "interact" | "select-option";
@@ -15,6 +16,7 @@ interface UseHistoryPollingOptions {
     onHistoryUpdate: (history: GetWorldInteractionHistoryResponse) => void;
     onMatchFound: (matchedSteps: any[]) => void;
     onTimeout: () => void;
+    onError?: (error: string) => void; // 轮询错误回调
     onPollEnd: () => void;
 }
 
@@ -31,6 +33,7 @@ export function useHistoryPolling({
     onHistoryUpdate,
     onMatchFound,
     onTimeout,
+    onError,
     onPollEnd,
 }: UseHistoryPollingOptions) {
     const pollTimerRef = useRef<number | null>(null);
@@ -59,8 +62,8 @@ export function useHistoryPolling({
                 return;
             }
 
-            const POLL_INTERVAL_MS = 6000; // 轮询间隔（6 秒）
-            const POLL_TIMEOUT_MS = 60_000; // 轮询超时时间（60 秒）
+            const POLL_INTERVAL_MS = 10000; // 轮询间隔（10 秒，减少请求频率）
+            const POLL_TIMEOUT_MS = REQUEST_TIMEOUT_MS; // 轮询超时时间（使用统一常量）
             try {
                 const elapsed = Date.now() - startTime;
 
@@ -144,11 +147,25 @@ export function useHistoryPolling({
                 if (cancelledRef.current) return;
 
                 const elapsed = Date.now() - startTime;
-                if (elapsed > 60_000) {
+                
+                // 如果超过超时时间，调用超时回调
+                if (elapsed > REQUEST_TIMEOUT_MS) {
                     onTimeout();
                     onPollEnd();
                     return;
                 }
+                
+                // 如果有错误回调，调用它（用于显示错误弹窗）
+                if (onError) {
+                    const errorMessage = error instanceof Error 
+                        ? error.message 
+                        : '轮询请求失败，请检查网络连接后重试。';
+                    onError(errorMessage);
+                    onPollEnd();
+                    return;
+                }
+                
+                // 如果没有错误回调，继续轮询（兼容旧代码）
                 pollTimerRef.current = window.setTimeout(pollHistory, POLL_INTERVAL_MS);
             }
         };

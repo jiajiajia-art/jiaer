@@ -8,8 +8,9 @@ import type {
   AllGameData,
   Scene,
 } from "../api/worldInteraction/mapWorldData.type";
-import StoryIntroModal from "../components/GalgameMap/StoryIntroModal";
+import StoryIntroModal from "../components/GalgameMap/Modal/StoryIntroModal";
 import SubSceneModal from "../components/GalgameMap/SubSceneModal";
+import InteractWithNpcModal from "../components/GalgameMap/interaction/InteractWithNpcModal";
 import interactionApi from "../api/worldInteraction/interactionApi";
 import type {
   GameEvent,
@@ -23,14 +24,13 @@ import { buildEventDataFromEvent } from "../utils/eventUtils";
 import statisticsApi from "../api/statistics/statisticsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import NextRoundButton from "../components/GalgameMap/NextRoundButton";
-import { useMapMusicPlayer } from "../hooks/mapGalgame/useMapMusicPlayer";
+import { useMapMusicPlayer } from "../hooks/mapGalgame/common/useMapMusicPlayer";
 import { mapMusicManager } from "../utils/mapMusicManager";
 import { PiMusicNoteDuotone } from "react-icons/pi";
 import { MdOutlinePerson } from "react-icons/md";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { getImageUrl, getPlayerImageUrl } from "../utils/constants";
-import { useRefreshEventData } from "../hooks/mapGalgame/useRefreshEventData";
-import InteractWithNpc from "../components/GalgameMap/InteractWithNpc";
+import { useRefreshEventData } from "../hooks/mapGalgame/common/useRefreshEventData";
 import worldEditor from "../api/worldInteraction/worldEditor";
 import Attributes from "../components/GalgameMap/Plugin/Attributes";
 
@@ -63,15 +63,14 @@ const GalgameMap = () => {
     setSelectedScene,
     eventCompleted,
     setEventCompleted,
-    isTypingInInteractNpc,
     setStoredSessionId,
     clearState,
+    pendingAction,
   } = useMapGalgameStore();
   const { user } = useAuthStore();
   const { refreshEventData } = useRefreshEventData();
 
-  const [isDistributingEvent, setIsDistributingEvent] =
-    useState<boolean>(false);
+  const [isDistributingEvent, setIsDistributingEvent] = useState<boolean>(false);
   const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
   const hasTriedRestoreEventDataRef = useRef(false); // 标记是否已尝试恢复 eventData，避免重复请求
 
@@ -85,8 +84,7 @@ const GalgameMap = () => {
   });
 
   // Player属性面板状态
-  const [isPlayerAttributesVisible, setIsPlayerAttributesVisible] =
-    useState(false);
+  const [isPlayerAttributesVisible, setIsPlayerAttributesVisible] = useState(false);
 
   // 当 sessionId 变化时，检查存储的 sessionId 是否匹配
   useEffect(() => {
@@ -104,6 +102,21 @@ const GalgameMap = () => {
       clearState();
     }
   }, [sessionId, setStoredSessionId, clearState]);
+
+  // 页面加载时，如果当前视图是功能性NPC交互，清除 pendingAction 并返回子场景
+  // 功能性NPC交互不保存状态，刷新后回到子场景
+  useEffect(() => {
+    const { setPendingAction, setCurrentView, selectedSubscene } = useMapGalgameStore.getState();
+    if (currentView === MapViewState.INTERACT_NPC_ABILITY) {
+      setPendingAction(null);
+      // 如果有选中的子场景，回到子场景；否则回到世界地图
+      if (selectedSubscene) {
+        setCurrentView(MapViewState.SUBSCENE_MODAL);
+      } else {
+        setCurrentView(MapViewState.WORLD_MAP);
+      }
+    }
+  }, []); // 只在组件挂载时执行一次
 
   const fetchWorldInteractionHistory = useCallback(async () => {
     if (!sessionId) {
@@ -127,6 +140,20 @@ const GalgameMap = () => {
     // 重置恢复标记，因为 sessionId 变化意味着新的会话
     hasTriedRestoreEventDataRef.current = false;
   }, [fetchWorldInteractionHistory]);
+
+  // 当从 NPC 交互返回首页时，刷新历史记录，避免因为历史记录未更新而错误显示开场白
+  const prevViewRef = useRef<MapViewState | null>(null);
+  useEffect(() => {
+    if (
+      (prevViewRef.current === MapViewState.INTERACT_NPC_NORMAL || 
+       prevViewRef.current === MapViewState.INTERACT_NPC_ABILITY) &&
+      currentView === MapViewState.WORLD_MAP
+    ) {
+      // 从交互返回首页，刷新历史记录
+      fetchWorldInteractionHistory();
+    }
+    prevViewRef.current = currentView;
+  }, [currentView, fetchWorldInteractionHistory]);
 
   // 组件卸载时清理音乐播放
   useEffect(() => {
@@ -199,12 +226,14 @@ const GalgameMap = () => {
 
       // 交互/场景内视图说明是 sessionStorage 恢复，不强制重置
       if (
-        currentView === MapViewState.INTERACT_NPC ||
+        currentView === MapViewState.INTERACT_NPC_NORMAL ||
+        currentView === MapViewState.INTERACT_NPC_ABILITY ||
         currentView === MapViewState.SUBSCENE_MODAL ||
         currentView === MapViewState.SCENE_VIEW
       ) {
         return;
       }
+
 
       try {
         const activeEventsResponse = await interactionApi.getActiveEvents(
@@ -396,7 +425,6 @@ const GalgameMap = () => {
         sessionId: sessionId,
       });
       if (response.data.success) {
-        console.log(response.data);
         setEventData({
           event: response.data.event,
           npc: response.data.npc,
@@ -407,7 +435,7 @@ const GalgameMap = () => {
       }
     } catch (error: any) {
       const errorMessage =
-        error.response.data.error || "分发事件失败，请稍后重试";
+      error.response.data.error || "分发事件失败，请稍后重试";
       alert("分发事件失败: " + errorMessage);
       console.error("分发事件失败:", error);
       setIsDistributingEvent(false);
@@ -549,14 +577,10 @@ const GalgameMap = () => {
     setCurrentView(MapViewState.WORLD_MAP);
   };
 
-  // 处理NPC交互 - 打开NPC交互界面
-  const handleNpcInteract = () => {
-    setCurrentView(MapViewState.INTERACT_NPC);
-  };
-
   // 处理返回 - 实现层级返回：子场景 -> 场景 -> 大地图
   const handleBack = () => {
-    if (currentView === MapViewState.INTERACT_NPC) {
+    if (currentView === MapViewState.INTERACT_NPC_NORMAL || 
+        currentView === MapViewState.INTERACT_NPC_ABILITY) {
       setCurrentView(MapViewState.SUBSCENE_MODAL);
     } else if (currentView === MapViewState.SUBSCENE_MODAL) {
       // 如果 selectedScene 存在，说明是从场景视图进入的，先返回到场景视图
@@ -587,12 +611,13 @@ const GalgameMap = () => {
         {gameData && (
           <div
             className={`${styles.topButtonsContainer} ${
-              currentView === MapViewState.INTERACT_NPC
+              currentView === MapViewState.INTERACT_NPC_NORMAL || currentView === MapViewState.INTERACT_NPC_ABILITY
                 ? styles.topButtonsContainerAligned
                 : ""
             }`}
           >
-            {currentView !== MapViewState.INTERACT_NPC && (
+            {currentView !== MapViewState.INTERACT_NPC_NORMAL && 
+             currentView !== MapViewState.INTERACT_NPC_ABILITY && (
               <div
                 className={`${styles.buttonItem} ${
                   isMusicPlaying ? styles.buttonItemActive : ""
@@ -686,19 +711,36 @@ const GalgameMap = () => {
               subsceneData={selectedSubscene}
               gameData={gameData}
               onBack={handleBack}
-              onNpcInteract={handleNpcInteract}
+            />
+          )}
+
+        {/* 普通NPC交互页面 */}
+        {currentView === MapViewState.INTERACT_NPC_NORMAL &&
+          selectedSubscene &&
+          gameData && (
+            <InteractWithNpcModal
+              onClose={handleBack}
+              gameData={gameData}
+              worldInteractionHistory={worldInteractionHistory ?? null}
+              pendingAction={undefined}
+              currentSubsceneId={selectedSubscene?.id || null}
               onUpdateAttributes={updateGameAttributes}
             />
           )}
 
-        {currentView === MapViewState.INTERACT_NPC && eventData && gameData && (
-          <InteractWithNpc
-            onClose={handleBack}
-            gameData={gameData}
-            worldInteractionHistory={worldInteractionHistory ?? null}
-            onUpdateAttributes={updateGameAttributes}
-          />
-        )}
+        {/* 功能性NPC交互页面 */}
+        {currentView === MapViewState.INTERACT_NPC_ABILITY &&
+          selectedSubscene &&
+          gameData && (
+            <InteractWithNpcModal
+              onClose={handleBack}
+              gameData={gameData}
+              worldInteractionHistory={null}
+              pendingAction={pendingAction || undefined}
+              currentSubsceneId={selectedSubscene?.id || null}
+              onUpdateAttributes={updateGameAttributes}
+            />
+          )}
 
         {/* Player属性面板 - 全局显示 */}
         {gameData && (
@@ -707,28 +749,6 @@ const GalgameMap = () => {
             onClose={() => setIsPlayerAttributesVisible(false)}
             player={(gameData.worldSetting?.player as any) || null}
             npc={null}
-          />
-        )}
-
-        {(() => {
-          // 如果是第一次进入（没有历史记录），不显示按钮，应该显示开场白
-          const isFirstTime =
-            worldInteractionHistory &&
-            worldInteractionHistory.interactions.length === 0;
-          // 基础条件：事件已完成（没有 eventData 或 eventCompleted 为 true）
-          const baseCondition =
-            !isFirstTime && (!eventData || eventCompleted) && !isLoading;
-          const shouldShow =
-            baseCondition &&
-            (currentView !== MapViewState.INTERACT_NPC ||
-              (eventCompleted && !isTypingInInteractNpc));
-          
-          return shouldShow;
-        })() && (
-          <NextRoundButton
-            onClick={handleEndRound}
-            disabled={isEndingRound}
-            isLoading={isEndingRound}
           />
         )}
       </div>

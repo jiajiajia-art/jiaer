@@ -2,7 +2,7 @@
  * 处理请求重试的逻辑 Hook
  */
 import { useCallback, useRef } from 'react';
-import { ERROR_MESSAGES } from '../../components/GalgameMap/InteractWithNpc';
+import { ERROR_MESSAGES } from '../../../components/GalgameMap/interaction/constants';
 
 type LastRequest = 
     | { type: 'interact' }
@@ -28,7 +28,7 @@ interface UseRetryHandlerOptions {
     setTimeoutModal: (value: { visible: boolean; message: string }) => void;
 }
 
-export function useRetryHandler({
+export function useNpcRetryHandler({
     stepHandlers,
     setErrorModal,
     setTimeoutModal,

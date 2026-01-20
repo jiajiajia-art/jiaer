@@ -2,13 +2,12 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styles from './SubSceneModal.module.css';
-import { useMapGalgameStore } from '../../store/mapGalgameStore';
+import { useMapGalgameStore, MapViewState } from '../../store/mapGalgameStore';
 import type { AllGameData, SubScene } from '../../api/worldInteraction/mapWorldData.type';
 import type { AbilityNode } from '../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl } from '../../utils/constants';
 import EventDisplayModal from './Plugin/EventDisplayModal';
 import { useGameStore } from '../../store/gameStore';
-import InteractWithNpc from './InteractWithNpc';
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
@@ -22,24 +21,18 @@ interface SubSceneModalProps {
     };
     onBack?: () => void;
     gameData?: AllGameData;
-    onNpcInteract?: () => void;
-    onUpdateAttributes?: () => Promise<void>;
 }
 
 const SubSceneModal: React.FC<SubSceneModalProps> = ({
     subsceneData,
     onBack,
     gameData,
-    onNpcInteract,
-    onUpdateAttributes,
 }) => {
     const navigate = useNavigate();
     const { subsceneId } = useParams<{ sceneId: string; subsceneId: string }>();
-    const { eventData, setCurrentView } = useMapGalgameStore();
+    const { eventData, setCurrentView, setPendingAction: setStorePendingAction } = useMapGalgameStore();
     const [selectedAbilityNode, setSelectedAbilityNode] = useState<AbilityNode | null>(null);
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-    const [isInteractionActive, setIsInteractionActive] = useState(false);
-    const [pendingAction, setPendingAction] = useState<{ nodeId: string; actionId: string } | null>(null); // 待处理的操作
     const { sessionId } = useGameStore();
     const selectedAbilityNodeRef = useRef<AbilityNode | null>(null);
     
@@ -158,25 +151,15 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
         // 关闭事件弹窗
         setIsEventModalOpen(false);
         
-        // 设置待处理的操作，让 InteractWithNpc 自己处理流式响应
-        setPendingAction({
+        // 设置待处理的操作，并切换到功能性NPC交互视图
+        const pendingActionData = {
             nodeId: currentAbilityNode.node_id,
             actionId: action.id
-        });
-        setIsInteractionActive(true);
-        // 设置视图状态为 INTERACT_NPC，用于隐藏音乐按钮
-        setCurrentView('interact_npc');
-    }, [sessionId, onUpdateAttributes]);
-    
-    // 处理关闭交互
-    const handleCloseInteraction = useCallback(() => {
-        setIsInteractionActive(false);
-        // 恢复视图状态，用于显示音乐按钮
-        setCurrentView('subScene_modal');
-        setPendingAction(null);
-        // 重置 selectedAbilityNode，以便下次可以重新打开
-        setSelectedAbilityNode(null);
-    }, []);
+        };
+        
+        setStorePendingAction(pendingActionData);
+        setCurrentView(MapViewState.INTERACT_NPC_ABILITY);
+    }, [sessionId, setStorePendingAction, setCurrentView]);
 
     // 获取功能性NPC列表
     const functionalNPCs = useMemo(() => {
@@ -229,7 +212,18 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                 transformOrigin: 'center center',
                                 cursor: 'pointer',
                             }}
-                            onClick={() => onNpcInteract?.()}
+                            onClick={() => {
+                                // 普通NPC点击，切换到普通NPC交互视图
+                                if (!sessionId) {
+                                    return;
+                                }
+                                
+                                if (!eventData?.event?.eventId) {
+                                    return;
+                                }
+                                
+                                setCurrentView(MapViewState.INTERACT_NPC_NORMAL);
+                            }}
                         >
                             <img 
                                 src={getRelatedNpc!.npc.images?.base || ''} 
@@ -317,7 +311,6 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                         })}
                     </div>
                 )}
-
             </div>
 
             {/* 功能性NPC事件弹窗 */}
@@ -327,20 +320,6 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                 onClose={handleEventModalClose}
                 onOptionClick={(action) => handleOptionClick(action)}
             />
-            
-            {/* 交互页面 - 复用 InteractWithNpc */}
-            {isInteractionActive && (
-                <InteractWithNpc
-                    onClose={handleCloseInteraction}
-                    gameData={gameData || null}
-                    worldInteractionHistory={null}
-                    pendingAction={pendingAction || undefined}
-                    skipAutoInit={true}
-                    currentSubsceneId={currentSubScene?.id || displayData.id}
-                    onUpdateAttributes={onUpdateAttributes}
-                />
-            )}
-            
         </div>
     );
 };

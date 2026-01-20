@@ -9,7 +9,8 @@ export type MapViewState =
     | 'world_map'          // 世界地图
     | 'scene_view'         // 场景视图（显示某个场景的子场景列表）
     | 'subScene_modal'        // 场景详情
-    | 'interact_npc';      // NPC交互
+    | 'interact_npc_normal'   // 普通NPC交互
+    | 'interact_npc_ability';  // 功能性NPC交互
 
 // 视图状态常量
 export const MapViewState = {
@@ -17,7 +18,8 @@ export const MapViewState = {
     WORLD_MAP: 'world_map' as const,
     SCENE_VIEW: 'scene_view' as const,
     SUBSCENE_MODAL: 'subScene_modal' as const,
-    INTERACT_NPC: 'interact_npc' as const,
+    INTERACT_NPC_NORMAL: 'interact_npc_normal' as const,
+    INTERACT_NPC_ABILITY: 'interact_npc_ability' as const,
 };
 
 interface useMapGalgameState {
@@ -53,6 +55,10 @@ interface useMapGalgameState {
     selectedScene: Scene | null;
     setSelectedScene: (scene: Scene | null) => void;
     
+    // 功能性NPC交互的待处理操作
+    pendingAction: { nodeId: string; actionId: string } | null;
+    setPendingAction: (action: { nodeId: string; actionId: string } | null) => void;
+    
     isMusicPlaying: boolean;
     setMusicPlaying: (playing: boolean) => void;
     
@@ -84,6 +90,10 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             selectedScene: null,
             setSelectedScene: (scene) => set({ selectedScene: scene }),
             
+            // 功能性NPC交互的待处理操作
+            pendingAction: null,
+            setPendingAction: (action) => set({ pendingAction: action }),
+            
             // 音乐播放状态（全局共享）
             // 默认开启，让地图在加载到音乐资源后尝试自动播放
             isMusicPlaying: true,
@@ -97,6 +107,7 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
                 currentView: MapViewState.WORLD_MAP,
                 selectedSubscene: null,
                 selectedScene: null,
+                pendingAction: null,
                 isMusicPlaying: true,
             }),
         }),
@@ -105,9 +116,12 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             storage: createJSONStorage(() => sessionStorage),
             // 持久化视图、选中场景 & 事件数据，刷新后可恢复上次进度
             // 同时存储 sessionId 用于比对，确保恢复的数据属于当前会话
+            // 注意：pendingAction 不持久化，功能性NPC交互刷新后回到子场景
             partialize: (state) => ({
                 eventData: state.eventData,
-                currentView: state.currentView,
+                currentView: state.currentView === MapViewState.INTERACT_NPC_ABILITY 
+                    ? MapViewState.SUBSCENE_MODAL  // 功能性NPC交互不持久化，刷新后回到子场景
+                    : state.currentView,
                 selectedSubscene: state.selectedSubscene,
                 selectedScene: state.selectedScene,
                 storedSessionId: state.storedSessionId,

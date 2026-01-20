@@ -26,7 +26,7 @@ const modeConfigs = {
         { id: 'scenes', title: '场景 / BGM', subtitle: '背景 + 配乐绑定' },
         { id: 'functionalNPCs', title: '剧情事件插件', subtitle: '功能性NPC管理' },
         { id: 'mapEdit', title: '地图编辑', subtitle: '子场景 / 场景 / 地图' },
-        { id: 'objects', title: '物品编辑', subtitle: '管理游戏中所有物品' },
+        // { id: 'objects', title: '物品编辑', subtitle: '管理游戏中所有物品' },
     ]
 };
 

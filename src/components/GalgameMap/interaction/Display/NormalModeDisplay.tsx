@@ -1,9 +1,9 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import styles from '../Galgame/NormalModeDisplay.module.css';
-import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
-import ColoredMarkdownText from '../Galgame/ColoredMarkdownText';
+import styles from '../../../../components/Galgame/NormalModeDisplay.module.css';
+import { extractPlainText, truncateTextWithTags } from '../../../../utils/textUtils';
+import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -22,6 +22,7 @@ interface StepHandlers {
     currentStep: any;
     showNextButton: boolean;
     selectedOptionIndex: number | null;
+    stepQueue?: any[]; // 步骤队列，用于判断是否有待处理的步骤
 }
 
 interface NormalModeDisplayProps {
@@ -58,7 +59,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
 
-    const { isWaitingForData, currentStep, showNextButton } = stepHandlers;
+    const { isWaitingForData, currentStep, showNextButton, stepQueue } = stepHandlers;
+    
+    // 优化：如果有下一步按钮（showNextButton），说明有步骤可以继续
+    // 即使 isWaitingForData 为 true，只要队列中有步骤，就应该允许点击（后端存在一次性返回一坨step的情况，兜底处理）
+    const shouldDisableButton = isWaitingForData && (!stepQueue || stepQueue.length === 0);
 
     const handleCustomInputClick = useCallback(() => {
         setShowCustomInput(true);
@@ -93,7 +98,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     // 使用统一的 truncateTextWithTags 截取带颜色标签的文本
     // 使用统一的 ColoredMarkdownText 组件渲染
     const renderTextWithMarkdown = useCallback((displayedPlainText: string, originalText: string, showCursor: boolean = false) => {
-        if (!displayedPlainText || !originalText) return null;
+        if (!originalText) return null;
+        
+        // 如果 displayedPlainText 为空，回退到显示完整的 originalText（与文本模式保持一致）
+        if (!displayedPlainText) {
+            return <ColoredMarkdownText text={originalText} showCursor={showCursor} />;
+        }
         
         // 使用 truncateTextWithTags 根据纯文本长度截取带颜色标签的文本
         const textToRender = truncateTextWithTags(originalText, displayedPlainText.length);
@@ -131,7 +141,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         cursor: (showNextButton && !finalIsTyping && !isAutoPlay && !isWaitingForData) ? 'pointer' : 'default'
                     }}
                 >
-                    {isWaitingForData && !currentStep && currentMessage && (
+                    {isWaitingForData && !currentStep && (
                         <div className={styles.loadingContainer}>
                             <div className={styles.aiLoader}>
                                 <div className={styles.orbit}></div>
@@ -144,29 +154,42 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         </div>
                     )}
 
-                    {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
+                    {/* 与文本模式保持一致：只要有 currentStep 或 currentMessage，即使 isWaitingForData 为 true 也渲染 */}
+                    {(currentStep || !isWaitingForData) && currentMessage && currentMessage.type === 'narration' && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
-                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                            {renderTextWithMarkdown(
+                                finalDisplayText, 
+                                currentMessage.message || (currentStep?.content || currentStep?.text || ''), 
+                                finalIsTyping
+                            )}
                         </div>
                     )}
 
-                    {!isWaitingForData && currentMessage && currentMessage.type === 'dialogue' && currentMessage.message && (
+                    {(currentStep || !isWaitingForData) && currentMessage && currentMessage.type === 'dialogue' && (
                         <>
                             <div className={styles.characterMessage}>
                                 <div className={styles.characterName}>{currentMessage.characterName}</div>
                                 <div className={styles.characterDivider}></div>
                                 <div className={styles.characterText}>
-                                    {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                                    {renderTextWithMarkdown(
+                                        finalDisplayText, 
+                                        currentMessage.message || (currentStep?.content || currentStep?.text || ''), 
+                                        finalIsTyping
+                                    )}
                                 </div>
                             </div>
                         </>
                     )}
 
-                    {!isWaitingForData && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && currentMessage.message && (
+                    {(currentStep || !isWaitingForData) && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
-                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                            {renderTextWithMarkdown(
+                                finalDisplayText, 
+                                currentMessage.message || (currentStep?.content || currentStep?.text || ''), 
+                                finalIsTyping
+                            )}
                         </div>
                     )}
 
@@ -178,7 +201,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                     e.stopPropagation(); // 阻止事件冒泡到消息容器
                                     onNextMessage();
                                 }}
-                                disabled={isWaitingForData}
+                                disabled={shouldDisableButton}
                             >
                                 <IoArrowDownCircleOutline />
                             </button>

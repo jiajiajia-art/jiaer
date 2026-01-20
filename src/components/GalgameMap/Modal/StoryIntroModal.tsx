@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import styles from './StoryIntroModal.module.css';
-import { useStoryTyping } from '../../hooks/story/useStoryTyping';
-import type { AllGameData } from '../../api/worldInteraction/mapWorldData.type';
-import { getImageUrl } from '../../utils/constants';
+import { useStoryTyping } from '../../../hooks/story/useStoryTyping';
+import type { AllGameData } from '../../../api/worldInteraction/mapWorldData.type';
+import { getImageUrl } from '../../../utils/constants';
 
 interface StoryIntroModalProps {
     isOpen: boolean;

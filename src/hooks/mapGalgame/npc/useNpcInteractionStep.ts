@@ -1,19 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { authFetch } from "../../api/base";
-import { HOST_ADDRESS } from "../../config";
-import { useAuthStore } from "../../store/useAuthStore";
+import { authFetch } from "../../../api/base";
+import { HOST_ADDRESS } from "../../../config";
+import { useAuthStore } from "../../../store/useAuthStore";
 import { toast } from "react-hot-toast";
-import payApi from "../../api/pay/payApi";
-import { auth } from "../../api/account/authApi";
-import { useStepStreamResponse } from "../story/useStepStreamResponse";
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from "../../utils/constants";
+import payApi from "../../../api/pay/payApi";
+import { auth } from "../../../api/account/authApi";
+import { useStepStreamResponse } from "../../story/useStepStreamResponse";
+import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from "../../../utils/constants";
 
 // 记录已经触发过初始交互的 session-event 组合，避免开发环境 StrictMode 下重复发送请求
 const startedEvents = new Set<string>();
 // 前5条历史消息免费
 const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
 
-interface UseWorldInteractionStepOptions {
+interface UseNpcInteractionStepOptions {
   sessionId: string | null;
   eventId: string | null;
   fileId: string | null;
@@ -21,13 +21,13 @@ interface UseWorldInteractionStepOptions {
   historyLength?: number;
 }
 
-export const useWorldInteractionStep = ({
+export const useNpcInteractionStep = ({
   sessionId,
   eventId,
   fileId,
   onMessagesClear,
   historyLength = 0,
-}: UseWorldInteractionStepOptions) => {
+}: UseNpcInteractionStepOptions) => {
   const [currentStep, setCurrentStep] = useState<any>(null);
   const [stepQueue, setStepQueue] = useState<any[]>([]);
   const [showNextButton, setShowNextButton] = useState(false);
@@ -120,6 +120,12 @@ export const useWorldInteractionStep = ({
 
     const shouldShowNext = step.type !== "choice";
     
+    console.log('[showStep] 设置当前步骤:', {
+      stepType: step.type,
+      stepContent: step.content?.substring(0, 50),
+      hasCharacter: !!step.character,
+      shouldShowNext,
+    });
     setCurrentStep(step);
     setIsWaitingForData(false);
     setSelectedOptionIndex(null);
@@ -153,6 +159,11 @@ export const useWorldInteractionStep = ({
     if (isProcessingStepRef.current) return;
 
     const nextStep = stepQueue[0];
+    console.log('[useWorldInteractionStep] 从队列取出步骤:', {
+      stepType: nextStep?.type,
+      queueLength: stepQueue.length,
+      hasCurrentStep: !!currentStep,
+    });
     isProcessingStepRef.current = true;
     setStepQueue((prev) => prev.slice(1));
 
@@ -168,6 +179,7 @@ export const useWorldInteractionStep = ({
       onBeforeRequest?: () => void;
       onSuccess?: (data: any) => void;
       onError?: (error: string) => void;
+      onFirstStep?: () => void; // 收到第一个步骤时的回调
     }) => {
       if (!sessionId || !eventId || !fileId) {
         options?.onError?.(
@@ -206,6 +218,10 @@ export const useWorldInteractionStep = ({
 
         if (response.ok) {
           await processStreamResponse(response, requestId, {
+            onErrorAfterAlert: (errorMessage) => {
+              // 流式响应中的错误，显示错误弹窗给用户
+              options?.onError?.(errorMessage);
+            },
             onData: (jsonData) => {
               // 记录 eventId（兼容 interaction / completedEvent / result.completedEvent）
               const evtId =
@@ -290,6 +306,9 @@ export const useWorldInteractionStep = ({
               options?.onSuccess?.(null);
             },
             onError: (err) => {
+              // 错误时清理 startedEvents，允许重试
+              const key = `${sessionId}-${eventId}`;
+              startedEvents.delete(key);
               setLoading(false);
               setIsWaitingForData(false);
               options?.onError?.(err);
@@ -297,9 +316,14 @@ export const useWorldInteractionStep = ({
             onFirstStep: () => {
               // 收到首个 step，表示有增量输出，关闭等待态
               setIsWaitingForData(false);
+              // 调用上层传入的 onFirstStep 回调
+              options?.onFirstStep?.();
             },
           });
         } else {
+          // 请求失败时清理 startedEvents，允许重试
+          const key = `${sessionId}-${eventId}`;
+          startedEvents.delete(key);
           const errorMsg = `请求失败: ${response.statusText}`;
           setLoading(false);
           setSelectedOptionIndex(null);
@@ -307,6 +331,9 @@ export const useWorldInteractionStep = ({
           options?.onError?.(errorMsg);
         }
       } catch (error) {
+        // 请求异常时清理 startedEvents，允许重试
+        const key = `${sessionId}-${eventId}`;
+        startedEvents.delete(key);
         const errorMsg = `请求错误: ${
           error instanceof Error ? error.message : "未知错误"
         }`;
@@ -397,6 +424,10 @@ export const useWorldInteractionStep = ({
 
         if (response.ok) {
           await processStreamResponse(response, requestId, {
+            onErrorAfterAlert: (errorMessage) => {
+              // 流式响应中的错误，显示错误弹窗给用户
+              options?.onError?.(errorMessage);
+            },
             onData: (jsonData) => {
               // 记录 eventId
               const evtId =
