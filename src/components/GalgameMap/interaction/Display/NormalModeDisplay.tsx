@@ -56,6 +56,23 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     onChoiceClick,
     onCustomInputSubmit,
 }) => {
+    const debugNext = useCallback((source: 'button' | 'container') => {
+        const nextFromQueue = stepQueue && stepQueue.length > 0 ? stepQueue[0] : undefined;
+        const pickText = (step: any) => step?.message ?? step?.content ?? step?.text ?? step?.data?.text ?? step?.data?.content;
+
+        console.groupCollapsed(`[NormalModeDisplay] next click (${source})`);
+        console.log('showNextButton:', showNextButton);
+        console.log('finalIsTyping:', finalIsTyping);
+        console.log('isAutoPlay:', isAutoPlay);
+        console.log('isWaitingForData:', isWaitingForData);
+        console.log('shouldDisableButton:', shouldDisableButton);
+        console.log('stepQueue length:', stepQueue?.length ?? 0);
+        console.log('currentStep:', currentStep);
+        console.log('currentMessage:', currentMessage);
+        console.log('next step (from queue):', nextFromQueue);
+        console.log('next step text:', pickText(nextFromQueue));
+        console.groupEnd();
+    }, [currentMessage, finalIsTyping, isAutoPlay]);
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
 
@@ -130,9 +147,16 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             const displayedPlainText = finalDisplayText ? extractPlainText(finalDisplayText) : '';
                             const isTextComplete = originalPlainText.length > 0 && 
                                 displayedPlainText.length >= originalPlainText.length;
+                            console.log("是否允许点击:", {
+                                isTextComplete,
+                                originalPlainText,
+                                displayedPlainText,
+                            });
+                            
                             
                             // 只有在文本完整时才允许点击（非自动模式下）
                             if (isTextComplete) {
+                                debugNext('container');
                                 onNextMessage();
                             }
                         }
@@ -199,6 +223,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.nextButton}
                                 onClick={(e) => {
                                     e.stopPropagation(); // 阻止事件冒泡到消息容器
+                                    debugNext('button');
                                     onNextMessage();
                                 }}
                                 disabled={shouldDisableButton}

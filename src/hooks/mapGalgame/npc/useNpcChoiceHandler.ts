@@ -61,13 +61,14 @@ export function useNpcChoiceHandler({
     }, [sessionId, eventId, setHasPendingRequest]);
 
     const handleChoiceClick = useCallback(
-        (option: { text: string; optionId?: string }) => {
+        (option: { text: string; optionId?: string; isCustomInput?: boolean }) => {
             if (choiceInFlightRef.current || hasPendingRequest || stepHandlers.isWaitingForData) {
                 return;
             }
             choiceInFlightRef.current = true;
             setCompletedSteps([]);
 
+            const isCustomInput = option.isCustomInput === true;
             let optionId: string | undefined = option.optionId;
             let optionIndex = -1;
 
@@ -122,7 +123,11 @@ export function useNpcChoiceHandler({
                 return;
             }
 
-            const finalOptionIndex = optionIndex >= 0 ? optionIndex : -1;
+            const finalOptionIndex = isCustomInput
+                ? -1
+                : optionIndex >= 0
+                    ? optionIndex
+                    : 0;
 
             // 记录最后一次请求
             if (onLastRequestRecord) {

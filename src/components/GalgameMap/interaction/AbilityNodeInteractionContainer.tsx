@@ -138,22 +138,48 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
     return null;
   }, [gameStarted, stepHandlers.currentStep, worldSetting]);
 
+  // 追踪当前步骤的唯一标识，用于检测步骤变化（避免闪动/确保打字效果在 step 切换时重置）
+  const currentStepKey = useMemo(() => {
+    if (stepHandlers.currentStep) {
+      return (
+        stepHandlers.currentStep.id ||
+        stepHandlers.currentStep.content ||
+        JSON.stringify(stepHandlers.currentStep)
+      );
+    }
+    return null;
+  }, [stepHandlers.currentStep]);
+
   // 打字效果
   const plainTextForTyping = useMemo(() => {
-    if (currentMessage && currentMessage.type !== 'choice') {
+    if (currentMessage && currentMessage.type !== 'choice' && currentStepKey) {
       return extractPlainText(currentMessage.message);
     }
     return '';
-  }, [currentMessage]);
+  }, [currentMessage, currentStepKey]);
 
   const { displayedText, isTyping } = useStoryTyping({
     text: plainTextForTyping,
-    enabled: currentMessage && currentMessage.type !== 'choice' && gameStarted && !!plainTextForTyping,
+    enabled:
+      currentMessage &&
+      currentMessage.type !== 'choice' &&
+      gameStarted &&
+      !!plainTextForTyping &&
+      !!currentStepKey,
     speed: 60,
   });
 
-  const finalDisplayText = gameStarted ? displayedText : (currentMessage?.message || '');
-  const finalIsTyping = isTyping;
+  // 确定最终显示的文本：等待数据且没有 step 时保持为空，避免“闪一下完整文本”
+  const finalDisplayText =
+    stepHandlers.isWaitingForData && !stepHandlers.currentStep
+      ? ''
+      : gameStarted && currentStepKey
+      ? displayedText
+      : currentMessage && currentMessage.type !== 'choice' && !gameStarted
+      ? currentMessage.message
+      : '';
+
+  const finalIsTyping = stepHandlers.isWaitingForData && !stepHandlers.currentStep ? false : isTyping;
 
   // 处理功能性NPC交互
   useEffect(() => {

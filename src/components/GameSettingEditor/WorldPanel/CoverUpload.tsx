@@ -115,7 +115,16 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                 />
                 {coverPreview ? (
                     <div className={styles.coverPreviewContainer}>
-                        <img src={addImageTimestamp(getImageUrl(coverPreview))} alt="封面预览" className={styles.coverPreview} />
+                        <img 
+                            src={
+                                // 如果是本地预览（base64），直接使用；否则使用服务器URL（需要添加前缀和时间戳）
+                                coverPreview.startsWith('data:image/') 
+                                    ? coverPreview 
+                                    : addImageTimestamp(getImageUrl(coverPreview))
+                            } 
+                            alt="封面预览" 
+                            className={styles.coverPreview} 
+                        />
                         <div className={styles.coverActions}>
                             <button
                                 type="button"

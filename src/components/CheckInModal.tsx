@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './CheckInModal.module.css';
 import { toast } from 'react-hot-toast';
 import { auth } from '../api/account/authApi';
@@ -10,18 +10,31 @@ interface CheckInModalProps {
 }
 
 const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false);
+
     if (!isOpen) return null;
 
     const handleCheckIn = async () => {
-        const response = await auth.checkIn();
-        if (response.data.success) {
-            toast.success(`签到成功，获得${CHECK_IN_REWARD_POINTS}积分`);
-            setTimeout(() => {
-                onClose();
-            }, 1000);
-        } else {
-            const errorMessage = response.data.message || '签到失败';
-            toast.error(errorMessage);
+        if (isLoading) return;
+
+        setIsLoading(true);
+
+        try {
+            const response = await auth.checkIn();
+            
+            if (response.data.success) {
+                toast.success(`签到成功，获得${CHECK_IN_REWARD_POINTS}积分`);
+                setTimeout(() => {
+                    onClose();
+                }, 1000);
+            } else {
+                const errorMessage = response.data.message || '签到失败';
+                toast.error(errorMessage);
+            }
+        } catch (error) {
+            toast.error('签到请求失败');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -52,14 +65,16 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
                     <button
                         className={styles.checkInModalCancelBtn}
                         onClick={onClose}
+                        disabled={isLoading}
                     >
                         稍后
                     </button>
                     <button
                         className={styles.checkInModalCheckInBtn}
                         onClick={handleCheckIn}
+                        disabled={isLoading}
                     >
-                        立即签到
+                        {isLoading ? '签到中...' : '立即签到'}
                     </button>
                 </div>
             </div>
@@ -68,4 +83,3 @@ const CheckInModal: React.FC<CheckInModalProps> = ({ isOpen, onClose }) => {
 };
 
 export default CheckInModal;
-

@@ -336,13 +336,15 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                 console.warn('解析拖拽数据失败:', error);
             }
 
+            const newZIndex = placedNormalNPCs.length + placedFunctionalNPCs.length + 1;
+
             if (functionalNPCData) {
                 const newNPC: PlacedNPC = {
                     id: `functional_npc_${Date.now()}`,
                     x: relativeX,
                     y: relativeY,
                     scale: DEFAULT_SCALE,
-                    zIndex: DEFAULT_Z_INDEX,
+                    zIndex: newZIndex,
                     nodeId: functionalNPCData.nodeId || '',
                     imagePath: functionalNPCData.imagePath,
                     type: functionalNPCData.type || 'illustration',
@@ -360,7 +362,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
                     x: relativeX,
                     y: relativeY,
                     scale: DEFAULT_SCALE,
-                    zIndex: DEFAULT_Z_INDEX,
+                    zIndex: newZIndex,
                     nodeId: '',
                     type: 'illustration',
                     authorNote: '',
@@ -369,7 +371,7 @@ export const useSubSceneTab = ({ subScenes, sceneSetting, isActive, abilityNodeS
             }
             setDraggingNPCId(null);
         },
-        [placedNormalNPCs.length, placedFunctionalNPCs.length]
+        [placedNormalNPCs, placedFunctionalNPCs]
     );
 
     const handleDragOver = useCallback((e: React.DragEvent) => {

@@ -320,6 +320,8 @@ const StoryModal: React.FC<StoryModalProps> = ({
     }, [sessionId, handleMissionStreamResponse]);
 
     const handleStartGame = useCallback(async () => {
+        setGameStarted(true);
+
         if (fileId && RECORD_CONVERSION) {
             statisticsApi.addConversion({
                 fileId: fileId,
@@ -328,7 +330,6 @@ const StoryModal: React.FC<StoryModalProps> = ({
                 console.error('记录游戏统计失败:', error);
             });
         }
-        setGameStarted(true);
 
         await stepHandlers.handleStreamAction('开始游戏', {
             onBeforeRequest: () => {

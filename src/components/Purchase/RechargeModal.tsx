@@ -273,7 +273,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 placeholder="请输入金额"
                                 value={customAmount}
                                 onChange={handleCustomAmountChange}
-                                maxLength={4}
+                                maxLength={10}
                             />
                         </div>
                         {inputError && (

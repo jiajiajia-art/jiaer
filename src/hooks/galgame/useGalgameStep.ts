@@ -96,6 +96,7 @@ export const useGalgameStep = ({
         options?: {
             onBeforeRequest?: () => void;
             onSuccess?: () => void;
+            onFirstStep?: () => void;
             onError?: (error: string) => void;
         }
     ) => {
@@ -143,6 +144,7 @@ export const useGalgameStep = ({
                         }
                     },
                     onError: options?.onError,
+                    onFirstStep: options?.onFirstStep,
                     onErrorAfterAlert: onErrorAfterAlert
                 });
             } else {
@@ -191,17 +193,22 @@ export const useGalgameStep = ({
         const effectiveHistory = Math.max(localHistoryLength, historyLength);
         const nextHistory = effectiveHistory + 2; // 一次交互通常对应 user+assistant 两条
 
-        // 前 N 回免费，达到阈值（含）之后需要扣除积分
-        if (effectiveHistory >= FREE_ROUNDS_THRESHOLD) {
-            if (user?.user.points && user.user.points > OPTION_COST) {
-                await reducePoints("option");
-            } else {
+        const needPoints = OPTION_COST;
+        const shouldCharge = effectiveHistory >= FREE_ROUNDS_THRESHOLD;
+        if (shouldCharge) {
+            if (!user?.user.points || user.user.points <= needPoints) {
                 toast.error("积分不足");
                 setIsWaitingForData(false);
                 setSelectedOptionIndex(null);
                 return;
             }
         }
+        let didDeduct = false;
+        const tryDeductOnce = async () => {
+            if (!shouldCharge || didDeduct) return;
+            didDeduct = true;
+            await reducePoints("option");
+        };
 
         // 本地先行 +2，让前端提示即时生效
         setLocalHistoryLength(nextHistory);
@@ -213,6 +220,12 @@ export const useGalgameStep = ({
                 setLocalHistoryLength((prev) => Math.max(prev, historyLength, effectiveHistory));
                 setIsWaitingForData(false);
                 setSelectedOptionIndex(null);
+            },
+            onFirstStep: async () => {
+                await tryDeductOnce();
+            },
+            onSuccess: async () => {
+                await tryDeductOnce();
             }
         });
     }, [handleStreamAction, user?.user.points, historyLength, localHistoryLength]);
@@ -229,16 +242,21 @@ export const useGalgameStep = ({
         const effectiveHistory = Math.max(localHistoryLength, historyLength);
         const nextHistory = effectiveHistory + 2;
 
-        // 前 N 回免费，达到阈值（含）之后需要扣除积分
-        if (effectiveHistory >= FREE_ROUNDS_THRESHOLD) {
-            if (user?.user.points && user.user.points > INPUT_COST) {
-                await reducePoints("selfDefined");
-            } else {
+        const needPoints = INPUT_COST;
+        const shouldCharge = effectiveHistory >= FREE_ROUNDS_THRESHOLD;
+        if (shouldCharge) {
+            if (!user?.user.points || user.user.points <= needPoints) {
                 toast.error("积分不足");
                 setIsWaitingForData(false);
                 return;
             }
         }
+        let didDeduct = false;
+        const tryDeductOnce = async () => {
+            if (!shouldCharge || didDeduct) return;
+            didDeduct = true;
+            await reducePoints("selfDefined");
+        };
 
         // 本地先行 +2，让前端提示即时生效
         setLocalHistoryLength(nextHistory);
@@ -249,6 +267,12 @@ export const useGalgameStep = ({
                 // 失败回滚到已知的最大值，避免虚增
                 setLocalHistoryLength((prev) => Math.max(prev, historyLength, effectiveHistory));
                 setIsWaitingForData(false);
+            },
+            onFirstStep: async () => {
+                await tryDeductOnce();
+            },
+            onSuccess: async () => {
+                await tryDeductOnce();
             }
         });
     }, [handleStreamAction, user?.user.points, historyLength, localHistoryLength]);

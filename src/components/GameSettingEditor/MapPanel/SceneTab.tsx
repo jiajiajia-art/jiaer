@@ -645,7 +645,7 @@ const SceneTab = forwardRef<SceneTabRef, SceneTabProps>(({
                 <button
                     className={sharedStyles.confirmBtn}
                     onClick={handleSaveSubScenePositions}
-                    disabled={placedSubScenes.length === 0 || !fileId}
+                    // disabled={placedSubScenes.length === 0 || !fileId}
                 >
                     确认保存子场景位置
                 </button>

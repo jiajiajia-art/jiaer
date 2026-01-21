@@ -15,6 +15,7 @@ import RpgGame from './page/RpgGame';
 import UploadProgressModal from './components/GameSettingEditor/DocumentUpload/UploadProgressModal';
 import CustomIF from './page/CustomIF';
 import CustomIFCreate from './page/CustomIFCreate';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
           <Route path="/customif/:appId" element={<CustomIF />} />
         </Route>
       </Routes>
+      <ScrollToTop />
       <UploadProgressModal />
     </BrowserRouter>
   )

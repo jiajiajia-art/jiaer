@@ -385,17 +385,23 @@ export const useNpcInteractionStep = ({
       const effectiveHistory = Math.max(localHistoryLength, historyLength);
       const nextHistory = effectiveHistory + 2; // 一次交互约等于 user+assistant 两条
 
-      if (effectiveHistory >= FREE_INTERACTIONS_THRESHOLD) {
-        const isCustomInput = optionIndex === -1;
-        const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
+      const isCustomInput = optionIndex === -1;
+      const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
+      const shouldCharge = effectiveHistory >= FREE_INTERACTIONS_THRESHOLD;
 
+      if (shouldCharge) {
         if (!user?.user.points || user.user.points <= needPoints) {
           toast.error("积分不足");
           return;
         }
-
-        await reducePoints(isCustomInput ? "selfDefined" : "option");
       }
+
+      let didDeduct = false;
+      const tryDeductOnce = async () => {
+        if (!shouldCharge || didDeduct) return;
+        didDeduct = true;
+        await reducePoints(isCustomInput ? "selfDefined" : "option");
+      };
 
       // 本地先行 +2，让前端提示即时生效
       setLocalHistoryLength(nextHistory);
@@ -507,17 +513,19 @@ export const useNpcInteractionStep = ({
                 });
               }
             },
-            onSuccess: () => {
+            onSuccess: async () => {
+              await tryDeductOnce();
               setLoading(false);
               options?.onSuccess?.(null);
             },
             onError: (err) => {
               options?.onError?.(err);
             },
-            onFirstStep: () => {
+            onFirstStep: async () => {
               // 流一旦有输出，通知上层可以清除 pending 状态
               options?.onFirstStep?.();
               setIsWaitingForData(false);
+              await tryDeductOnce();
             },
           });
         } else {

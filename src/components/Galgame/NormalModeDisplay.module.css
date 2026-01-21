@@ -1,7 +1,7 @@
 .messageContainer {
     flex: 1;
     width: 100%;
-    min-height: 240px;
+    min-height: 350px;
     height: auto;
     overflow-y: hidden;
     overflow-x: hidden;

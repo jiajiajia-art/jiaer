@@ -305,27 +305,37 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     latestHistory,
   ]);
 
-  // 打字效果
+  // 追踪当前步骤的唯一标识，用于检测步骤变化
+  const currentStepKey = useMemo(() => {
+    if (stepHandlers.currentStep) {
+      return stepHandlers.currentStep.id || stepHandlers.currentStep.content || JSON.stringify(stepHandlers.currentStep);
+    }
+    return null;
+  }, [stepHandlers.currentStep]);
+
+  // 打字效果 - 只有在有新消息且不是选择时才启用
   const plainTextForTyping = useMemo(() => {
-    if (currentMessage && currentMessage.type !== 'choice') {
+    if (currentMessage && currentMessage.type !== 'choice' && currentStepKey) {
       return extractPlainText(currentMessage.message);
     }
     return '';
-  }, [currentMessage]);
+  }, [currentMessage, currentStepKey]);
 
+  // 使用步骤唯一标识作为打字效果的 key，确保步骤变化时重新开始
   const { displayedText, isTyping } = useStoryTyping({
     text: plainTextForTyping,
-    enabled: currentMessage && currentMessage.type !== 'choice' && gameStarted && !!plainTextForTyping,
+    enabled: currentMessage && currentMessage.type !== 'choice' && gameStarted && !!plainTextForTyping && !!currentStepKey,
     speed: 60,
   });
 
+  // 确定最终显示的文本：始终使用打字效果的输出，避免显示完整消息
   const finalDisplayText =
     (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep
       ? ''
-      : gameStarted
-      ? displayedText
-      : currentMessage && currentMessage.type !== 'choice'
-      ? currentMessage.message
+      : gameStarted && currentStepKey
+      ? displayedText // 有步骤时，始终使用打字效果的输出（即使为空也是正确的）
+      : currentMessage && currentMessage.type !== 'choice' && !gameStarted
+      ? currentMessage.message // 仅在没有开始游戏时显示完整消息
       : '';
 
   const finalIsTyping =
@@ -343,7 +353,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
 
   // 处理选择
   const handleChoiceClick = useCallback(
-    (option: { text: string; optionId?: string }) => {
+    (option: { text: string; optionId?: string; isCustomInput?: boolean }) => {
       if (refs.current.choiceInFlight || hasPendingRequest || stepHandlers.isWaitingForData) {
         return;
       }
@@ -353,6 +363,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       refs.current.previousStep = null;
       refs.current.previousIsTyping = false;
 
+      const isCustomInput = option.isCustomInput === true;
       let optionId: string | undefined = option.optionId;
       let optionIndex = -1;
 
@@ -387,7 +398,11 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
         return;
       }
 
-      const finalOptionIndex = optionIndex >= 0 ? optionIndex : -1;
+      const finalOptionIndex = isCustomInput
+        ? -1
+        : optionIndex >= 0
+          ? optionIndex
+          : 0; // 未匹配到但明确是选项则默认视为选项
       refs.current.lastRequest = { type: 'choice', optionId, optionIndex: finalOptionIndex };
 
       // 记录请求开始
@@ -440,7 +455,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   const handleCustomInputSubmit = useCallback(
     (customText: string) => {
       if (!customText.trim()) return;
-      handleChoiceClick({ text: customText, optionId: customText.trim() });
+      handleChoiceClick({ text: customText, optionId: customText.trim(), isCustomInput: true });
     },
     [handleChoiceClick]
   );

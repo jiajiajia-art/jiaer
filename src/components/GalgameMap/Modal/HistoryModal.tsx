@@ -1,5 +1,6 @@
 import styles from './HistoryModal.module.css';
 import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
+import ColoredMarkdownText from '../../Galgame/ColoredMarkdownText';
 
 interface HistoryModalProps {
     visible: boolean;
@@ -35,15 +36,18 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                     {interactions.map((interaction: any, idx: number) => {
                         const isAbilityNode = interaction.type === 'ability_node_interaction';
                         const isNpcDialogue = interaction.type === 'npc_dialogue';
-                        
+                        const isPlayerChoice = interaction.type === 'player_choice';
+
                         // 根据类型获取不同的数据源
-                        const steps = isAbilityNode 
+                        const steps = isAbilityNode
                             ? (interaction.narrative || [])
-                            : (interaction.narrativeSteps || []);
+                            : isPlayerChoice
+                                ? (interaction.npcResponse || [])
+                                : (interaction.narrativeSteps || []);
 
                         return (
-                            <div 
-                                key={idx} 
+                            <div
+                                key={idx}
                                 className={`${styles.block} ${isAbilityNode ? styles.blockAbilityNode : ''}`}
                             >
                                 <div className={styles.blockHeader}>
@@ -59,7 +63,12 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                                                 NPC对话
                                             </span>
                                         )}
-                                        
+                                        {isPlayerChoice && (
+                                            <span className={styles.typeTagNpc}>
+                                                玩家选择
+                                            </span>
+                                        )}
+
                                         {/* 功能性NPC的头部信息 */}
                                         {isAbilityNode && (
                                             <>
@@ -76,7 +85,7 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                                                 )}
                                             </>
                                         )}
-                                        
+
                                         {/* NPC对话的头部信息 */}
                                         {isNpcDialogue && (
                                             <>
@@ -105,6 +114,20 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
 
                                 <div className={styles.body}>
                                     <div className={styles.timeline}>
+                                        {/* 玩家选择：先显示玩家选择 */}
+                                        {isPlayerChoice && interaction.selectedOption && (
+                                            <div className={styles.timelineItem}>
+                                                <div className={styles.timelineDotPlayer} />
+                                                <div className={styles.timelineContent}>
+                                                    <div className={styles.playerChoiceLabel}>
+                                                        你的选择
+                                                    </div>
+                                                    <div className={styles.playerChoiceText}>
+                                                        {interaction.selectedOption.text}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         {/* 功能性NPC：先显示选择的操作 */}
                                         {isAbilityNode && interaction.selectedAction && (
                                             <div className={styles.timelineItem}>
@@ -131,7 +154,8 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                                                 <div className={styles.timelineContent}>
                                                     {step.type === 'narration' && (
                                                         <div className={styles.narration}>
-                                                            {step.content}
+                                                            <ColoredMarkdownText text={step.content} />
+                                                            {/* {step.content} */}
                                                         </div>
                                                     )}
                                                     {step.type === 'dialogue' && (
@@ -140,7 +164,8 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                                                                 {step.speakerName || interaction.npcName}
                                                             </div>
                                                             <div className={styles.dialogueText}>
-                                                                {step.content}
+                                                                <ColoredMarkdownText text={step.content} />
+                                                                {/* {step.content} */}
                                                             </div>
                                                         </div>
                                                     )}
@@ -170,20 +195,7 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                                             </div>
                                         ))}
 
-                                        {/* NPC对话显示玩家选择（在最后） */}
-                                        {isNpcDialogue && interaction.type === 'player_choice' && interaction.selectedOption && (
-                                            <div className={styles.timelineItem}>
-                                                <div className={styles.timelineDotPlayer} />
-                                                <div className={styles.timelineContent}>
-                                                    <div className={styles.playerChoiceLabel}>
-                                                        你的选择
-                                                    </div>
-                                                    <div className={styles.playerChoiceText}>
-                                                        {interaction.selectedOption.text}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+
                                     </div>
                                 </div>
                             </div>
