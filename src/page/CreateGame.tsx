@@ -436,6 +436,20 @@ const CreateGame: React.FC = () => {
     };
 
     const editGame = () => {
+        // 优先根据服务端引擎类型做分流（支持自定义游戏）
+        const engine = (gameDetail?.engine || '').toUpperCase();
+        if (engine === 'CUSTOM') {
+            const appId = gameDetail?.customAppId || gameDetail?.file_id;
+            if (!appId) {
+                alert('缺少自定义 AppID，无法编辑');
+                return;
+            }
+            // 方案A：跳转到自定义游戏“创建/管理”页面（编辑模式）
+            navigate(`/customif/create?appId=${encodeURIComponent(appId)}`);
+            return;
+        }
+
+        // 兼容历史逻辑：按版本选择编辑器
         if(gameDetail?.version == 'old') {
             setShowForm(true);
         } else if(gameDetail?.version == 'map-plugin-version') {
