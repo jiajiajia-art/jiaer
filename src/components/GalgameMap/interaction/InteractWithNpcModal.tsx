@@ -142,12 +142,19 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
   }, [currentSubsceneId, gameData, eventData, selectedSubscene]);
 
   const currentNpcObject = useMemo(() => {
-    if (!gameData?.npcSetting?.npcs || !eventData?.npc?.id) return null;
     if (attributesViewType === 'player') {
-      return gameData.worldSetting?.player;
+      return gameData?.worldSetting?.player || null;
     }
-    return (gameData.npcSetting.npcs as any[]).find((n) => n.id === eventData.npc.id) || null;
-  }, [gameData, eventData, attributesViewType]);
+    
+    if (currentMessage?.npcId && gameData?.npcSetting?.npcs) {
+      const npcFromMessage = (gameData.npcSetting.npcs as any[]).find((n) => n.id === currentMessage.npcId);
+      if (npcFromMessage) {
+        return npcFromMessage;
+      }
+    }
+    
+    return null;
+  }, [gameData, eventData, attributesViewType, currentMessage]);
 
   const handleContinue = useCallback(async () => {
     setSelectedSubscene(null);

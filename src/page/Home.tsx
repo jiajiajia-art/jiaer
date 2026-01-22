@@ -19,13 +19,21 @@ const Home: React.FC = () => {
     const [allGames, setAllGames] = useState<UserGameData[]>([]);
     const [isLoadingSpecial, setIsLoadingSpecial] = useState(true);
     const [isLoadingAll, setIsLoadingAll] = useState(true);
+    const [isLoadingMoreSpecial, setIsLoadingMoreSpecial] = useState(false);
+    const [isLoadingMoreAll, setIsLoadingMoreAll] = useState(false);
+    const [hasMoreSpecial, setHasMoreSpecial] = useState(true);
+    const [hasMoreAll, setHasMoreAll] = useState(true);
+    const [specialPage, setSpecialPage] = useState(0);
+    const [allPage, setAllPage] = useState(0);
     const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuthStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const hasCheckedInSessionRef = useRef(false);
-
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+    const isLoadingRef = useRef(false);
     const navigator = useNavigate();
 
     // 轮播数据（使用前3个游戏作为轮播内容）
@@ -102,49 +110,177 @@ const Home: React.FC = () => {
         };
     }, [showGameModal]);
 
-    // 加载游戏列表数据
-    const loadLibraryData = useCallback(async () => {
-        try {
-            // 获取限时优惠游戏（前8个，有特殊价格的）
+    // 加载限时优惠数据
+    const loadSpecialGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {
+        const MAX_RETRIES = 1;
+        const RETRY_DELAY = 1000;
+        const PAGE_SIZE = 8;
+        const offset = page * PAGE_SIZE;
+
+        if (isInitial) {
             setIsLoadingSpecial(true);
-            const specialResponse = await libraryDataApi.getGameData('with-discount', {
-                limit: '8',
+        } else {
+            setIsLoadingMoreSpecial(true);
+        }
+
+        try {
+            const response = await libraryDataApi.getGameData('with-discount', {
+                limit: String(PAGE_SIZE),
+                offset: String(offset)
             });
 
-            if (specialResponse.data.success && specialResponse.data.data) {
-                setFileMetas(specialResponse.data.data);
+            if (response.data.success && response.data.data) {
+                const newGames = response.data.data;
+                if (isInitial) {
+                    setFileMetas(newGames);
+                } else {
+                    setFileMetas(prev => [...prev, ...newGames]);
+                }
+                
+                // 如果返回的数据少于 PAGE_SIZE，说明没有更多了
+                setHasMoreSpecial(newGames.length === PAGE_SIZE);
+                if (newGames.length > 0) {
+                    setSpecialPage(page + 1); // 页码递增
+                }
             } else {
-                console.error('获取限时优惠游戏列表失败:', specialResponse.data);
+                throw new Error('获取限时优惠游戏列表失败');
+            }
+        } catch (error) {
+            console.error('获取限时优惠游戏列表失败:', error);
+            if (retryCount < MAX_RETRIES) {
+                setTimeout(() => {
+                    loadSpecialGames(page, isInitial, retryCount + 1);
+                }, RETRY_DELAY);
+            } else if (isInitial) {
                 setFileMetas([]);
             }
+        } finally {
             setIsLoadingSpecial(false);
-
-            // 获取全部游戏（更多数据，用于全部游戏模块）
-            setIsLoadingAll(true);
-            const allResponse = await libraryDataApi.getGameData('no-discount', {
-                limit: '40',
-            });
-
-            if (allResponse.data.success && allResponse.data.data) {
-                setAllGames(allResponse.data.data);
-            } else {
-                console.error('获取全部游戏列表失败:', allResponse.data);
-                setAllGames([]);
-            }
-            setIsLoadingAll(false);
-        } catch (error) {
-            console.error('获取游戏列表错误:', error);
-            setFileMetas([]);
-            setAllGames([]);
-            setIsLoadingSpecial(false);
-            setIsLoadingAll(false);
+            setIsLoadingMoreSpecial(false);
         }
     }, []);
 
+    // 加载全部游戏数据
+    const loadAllGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {
+        const MAX_RETRIES = 1;
+        const RETRY_DELAY = 1000;
+        const PAGE_SIZE = 12;
+        const offset = page * PAGE_SIZE;
+
+        if (isInitial) {
+            setIsLoadingAll(true);
+        } else {
+            setIsLoadingMoreAll(true);
+        }
+
+        try {
+            const response = await libraryDataApi.getGameData('no-discount', {
+                limit: String(PAGE_SIZE),
+                offset: String(offset)
+            });
+
+            if (response.data.success && response.data.data) {
+                const newGames = response.data.data;
+                if (isInitial) {
+                    setAllGames(newGames);
+                } else {
+                    setAllGames(prev => [...prev, ...newGames]);
+                }
+                
+                // 如果返回的数据少于 PAGE_SIZE，说明没有更多了
+                setHasMoreAll(newGames.length === PAGE_SIZE);
+                if (newGames.length > 0) {
+                    setAllPage(page + 1); // 页码递增
+                }
+            } else {
+                throw new Error('获取全部游戏列表失败');
+            }
+        } catch (error) {
+            console.error('获取全部游戏列表失败:', error);
+            if (retryCount < MAX_RETRIES) {
+                setTimeout(() => {
+                    loadAllGames(page, isInitial, retryCount + 1);
+                }, RETRY_DELAY);
+            } else if (isInitial) {
+                setAllGames([]);
+            }
+        } finally {
+            setIsLoadingAll(false);
+            setIsLoadingMoreAll(false);
+        }
+    }, []);
+
+    // 初始加载
+    const loadLibraryData = useCallback(async () => {
+        // 防止重复加载
+        if (isLoadingRef.current) {
+            return;
+        }
+        isLoadingRef.current = true;
+
+        setSpecialPage(0);
+        setAllPage(0);
+        setHasMoreSpecial(true);
+        setHasMoreAll(true);
+        await Promise.allSettled([
+            loadSpecialGames(0, true),
+            loadAllGames(0, true)
+        ]);
+        
+        isLoadingRef.current = false;
+    }, []);
+
+    // 加载更多限时优惠
+    const loadMoreSpecial = useCallback(() => {
+        if (!isLoadingMoreSpecial && hasMoreSpecial) {
+            loadSpecialGames(specialPage, false);
+        }
+    }, [isLoadingMoreSpecial, hasMoreSpecial, specialPage, loadSpecialGames]);
+
+    // 加载更多全部游戏
+    const loadMoreAll = useCallback(() => {
+        if (!isLoadingMoreAll && hasMoreAll) {
+            loadAllGames(allPage, false);
+        }
+    }, [isLoadingMoreAll, hasMoreAll, allPage, loadAllGames]);
+
     // 使用 libraryDataApi 获取游戏列表数据
     useEffect(() => {
+        isLoadingRef.current = false;
         loadLibraryData();
-    }, [user?.user.id, loadLibraryData]);
+    }, [user?.user.id]);
+
+    // 滚动加载更多：使用 Intersection Observer
+    useEffect(() => {
+        if (!loadMoreTriggerRef.current) return;
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (entry.isIntersecting) {
+                    // 优先加载全部游戏（因为它在页面下方）
+                    if (hasMoreAll && !isLoadingMoreAll) {
+                        loadMoreAll();
+                    } else if (hasMoreSpecial && !isLoadingMoreSpecial) {
+                        loadMoreSpecial();
+                    }
+                }
+            },
+            {
+                root: null,
+                rootMargin: '200px', // 提前200px开始加载
+                threshold: 0.1
+            }
+        );
+
+        observerRef.current.observe(loadMoreTriggerRef.current);
+
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
+    }, [hasMoreAll, hasMoreSpecial, isLoadingMoreAll, isLoadingMoreSpecial, loadMoreAll, loadMoreSpecial]);
 
     // 购买后软刷新：只更新本地列表中的对应游戏数据
     const handleGameUpdated = useCallback((updatedGame: UserGameData) => {
@@ -233,9 +369,9 @@ const Home: React.FC = () => {
                                                                         showGameDetail(item.game)
                                                                     }
                                                                 >
-                                                                    <img 
-                                                                    src={`${import.meta.env.BASE_URL}data/assets/home/开始游戏.png`} 
-                                                                    alt="开始游戏"  />
+                                                                    <img
+                                                                        src={`${import.meta.env.BASE_URL}data/assets/home/开始游戏.png`}
+                                                                        alt="开始游戏" />
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -278,16 +414,23 @@ const Home: React.FC = () => {
                                 }}
                             >
                                 更多
-                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
                         {isLoadingSpecial ? (
                             <GameGridSkeleton count={8} />
                         ) : (
-                            <GameGrid
-                                games={fileMetas}
-                                onGameClick={showGameDetail}
-                            />
+                            <>
+                                <GameGrid
+                                    games={fileMetas}
+                                    onGameClick={showGameDetail}
+                                />
+                                {isLoadingMoreSpecial && (
+                                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                                        <GameGridSkeleton count={8} />
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -297,8 +440,8 @@ const Home: React.FC = () => {
                             <div className={styles.sectionTitle}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/全部游戏.png`} alt="全部游戏" />
                             </div>
-                            <img src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} className={styles.sectionDivider} alt="" /> 
-                           <button
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} className={styles.sectionDivider} alt="" />
+                            <button
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                                 onClick={() => {
@@ -306,18 +449,35 @@ const Home: React.FC = () => {
                                 }}
                             >
                                 更多
-                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
                         {isLoadingAll ? (
                             <GameGridSkeleton count={8} />
                         ) : (
-                            <GameGrid
-                                games={allGames}
-                                onGameClick={showGameDetail}
-                            />
+                            <>
+                                <GameGrid
+                                    games={allGames}
+                                    onGameClick={showGameDetail}
+                                />
+                                {isLoadingMoreAll && (
+                                    <div style={{ padding: '20px', textAlign: 'center' }}>
+                                        <GameGridSkeleton count={8} />
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
+
+                    {/* 滚动加载触发器 */}
+                    <div
+                        ref={loadMoreTriggerRef}
+                        style={{
+                            height: '1px',
+                            marginTop: '20px',
+                            visibility: (hasMoreSpecial || hasMoreAll) ? 'visible' : 'hidden'
+                        }}
+                    />
                 </div>
             </div>
 

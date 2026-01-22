@@ -190,16 +190,22 @@ const SceneView: React.FC<SceneViewProps> = ({
                                 });
                                 const isEventLocation = eventData?.subscene?.id === subscene.id;
 
+                                // 根据容器大小动态计算icon大小，保持合适的比例
+                                // 基础尺寸（414px）下icon为50px，约12%的容器宽度
+                                // 由于容器保持414px固定尺寸，icon大小也保持固定比例
+                                const iconSize = (canvasWidth / 16) * 0.12; // 容器宽度的12%，转换为rem
+                                const iconOffset = iconSize / 2; // 偏移量为icon大小的一半
+
                                 return (
                                     <div
                                         key={subscene.id}
                                         className={styles.subsceneNode}
                                         style={{
                                             position: 'absolute',
-                                            left: position.x - 25,
-                                            top: position.y - 25,
-                                            width: 50,
-                                            height: 50,
+                                            left: `${position.x - iconOffset * 16}px`, // 转换为px用于精确定位
+                                            top: `${position.y - iconOffset * 16}px`,
+                                            width: `${iconSize}rem`,
+                                            height: `${iconSize}rem`,
                                         }}
                                         onClick={() => handleSubsceneClick(subscene)}
                                     >

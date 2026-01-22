@@ -11,6 +11,7 @@ export interface Message {
     characterImage?: string;
     characterPosition?: 'left' | 'right';
     options?: Array<{ id: number; text: string; optionId?: string }>;
+    npcId?: string;
 }
 
 export interface ModalState {
@@ -80,6 +81,7 @@ export const convertStepToMessage = (
             characterName,
             characterImage,
             characterPosition: isPlayer ? 'right' : 'left',
+            npcId: isPlayer ? undefined : (step.npcId || step.speakerId),
         };
     } else if (step.type === 'choice') {
         const options = step.options?.map((opt: any, index: number) => {

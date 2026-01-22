@@ -469,7 +469,7 @@ const GalgameMap = () => {
       const response = await worldEditor.getAttributes(sessionId);
 
       if (response.data.success) {
-        const { player, npc: npcs } = response.data;
+        const { player, npcs } = response.data;
 
         // 更新 gameData 中的 player 和 npcs
         setGameData((prevData) => {
@@ -499,7 +499,10 @@ const GalgameMap = () => {
                   return existingNpc;
                 })
               : prevData.npcSetting.npcs;
-
+            // console.log("更新后获取的属性", updatedNpcs);
+            console.log("更新后获取的player", response);
+            console.log("更新后获取的npc", npcs);
+            
           return {
             ...prevData,
             worldSetting: {

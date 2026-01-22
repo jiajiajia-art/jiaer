@@ -259,6 +259,6 @@ export interface NpcUpdateAttributesRequest {
 export interface GetAttributesResponse {
   success: boolean;
   player: PlayerCharacter;
-  npc: NPC[];
+  npcs: NPC[];
   sessionId: string;
 }

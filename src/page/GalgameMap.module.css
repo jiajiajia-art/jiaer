@@ -12,8 +12,8 @@
 
 .mapContainer {
     position: relative;
-    width: 414px;
-    height: 896px;
+    width: 25.875rem; /* 414px - 基础尺寸（手机） */
+    height: 56rem; /* 896px - 基础尺寸（手机） */
     max-width: 100%;
     max-height: 100vh;
     background-color: #ffffff;
@@ -29,32 +29,32 @@
 
 .topButtonsContainer {
     position: absolute;
-    top: 10px;
-    right: 20px;
+    top: 0.625rem; /* 10px */
+    right: 1.25rem; /* 20px */
     z-index: 2000; /* 确保在 INTERACT_NPC 视图之上显示 */
     display: flex;
-    gap: 12px;
+    gap: 0.75rem; /* 12px */
     align-items: center;
 }
 
 
 .topButtonsContainerAligned {
-    top: 16px;
+    top: 1rem; /* 16px */
 }
 
 .buttonItem {
     flex-shrink: 0;
-    width: 42px;
-    height: 42px;
+    width: 2.625rem; /* 42px */
+    height: 2.625rem; /* 42px */
     background: rgba(37, 37, 37, 0.341);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 12px;
+    backdrop-filter: blur(0.625rem); /* 10px */
+    -webkit-backdrop-filter: blur(0.625rem); /* 10px */
+    border-radius: 0.75rem; /* 12px */
     transform: rotate(45deg);
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 0.0625rem solid rgba(255, 255, 255, 0.2); /* 1px */
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1); /* 0 2px 8px */
     transition: all 0.3s ease;
 }
 
@@ -65,7 +65,7 @@
 .buttonItemActive {
     background: rgba(251, 70, 85, 0.3);
     border-color: rgba(251, 70, 85, 0.5);
-    box-shadow: 0 2px 12px rgba(251, 70, 85, 0.3);
+    box-shadow: 0 0.125rem 0.75rem rgba(251, 70, 85, 0.3); /* 0 2px 12px */
 }
 
 .buttonItem .buttonInner {
@@ -73,9 +73,9 @@
     height: 100%;
     padding: 0;
     border: none;
-    border-radius: 12px;
+    border-radius: 0.75rem; /* 12px */
     color: #fff;
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     cursor: pointer;
     transition: all 0.3s ease;
     background: transparent;
@@ -83,7 +83,7 @@
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.125rem; /* 2px */
     position: relative;
     transform: rotate(-45deg);
     outline: none;
@@ -92,8 +92,8 @@
 
 .buttonItem .buttonInner img,
 .buttonItem .buttonInner svg {
-    width: 16px;
-    height: 16px;
+    width: 1rem; /* 16px */
+    height: 1rem; /* 16px */
     object-fit: contain;
     display: block;
     flex-shrink: 0;
@@ -101,7 +101,7 @@
 
 .buttonItem .buttonInner span {
     font-weight: 600;
-    font-size: 9px;
+    font-size: 0.5625rem; /* 9px */
     text-align: center;
     line-height: 1.2;
     white-space: nowrap;
@@ -113,23 +113,23 @@
 }
 
 .errorState h2 {
-    margin-bottom: 10px;
+    margin-bottom: 0.625rem; /* 10px */
     color: var(--primary);
 }
 
 .errorState p {
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem; /* 20px */
     color: #666;
 }
 
 .errorState button {
-    padding: 10px 30px;
+    padding: 0.625rem 1.875rem; /* 10px 30px */
     background: var(--primary);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 0.375rem; /* 6px */
     cursor: pointer;
-    font-size: 14px;
+    font-size: 0.875rem; /* 14px */
     transition: background 0.3s;
 }
 
@@ -139,9 +139,10 @@
 
 @media (min-width: 1024px) {
     .mapContainer {
-        border-radius: 20px;
-        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
-        border: 1px solid rgba(0, 0, 0, 0.06);
+        /* 保持固定尺寸，使用 scale 来放大显示，确保 rem 和 px 协调 */
+        border-radius: 1.25rem; /* 20px */
+        box-shadow: 0 1rem 2.25rem rgba(0, 0, 0, 0.18); /* 0 16px 36px */
+        border: 0.0625rem solid rgba(0, 0, 0, 0.06); /* 1px */
     }
 }
 
@@ -194,7 +195,7 @@
 
 /* 悬停时只添加发光效果，放大效果移到内部元素 */
 .sceneNode:hover {
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+    filter: drop-shadow(0 0 0.5rem rgba(255, 255, 255, 0.5)); /* 0 0 8px */
     z-index: 10;
 }
 
@@ -215,17 +216,17 @@
 
 /* 圆形头像 - 尺寸缩小 */
 .sceneThumb {
-    width: 60px;
-    height: 60px;
+    width: 3.75rem; /* 60px */
+    height: 3.75rem; /* 60px */
     border-radius: 50%; /* 纯圆形 */
     position: relative;
     z-index: 2;
     
     /* 边框样式 */
-    border: 2px solid #e8eaef;
+    border: 0.125rem solid #e8eaef; /* 2px */
     box-shadow: 
-        0 4px 10px rgba(0, 0, 0, 0.18),
-        inset 0 0 6px rgba(0, 0, 0, 0.2);
+        0 0.25rem 0.625rem rgba(0, 0, 0, 0.18), /* 0 4px 10px */
+        inset 0 0 0.375rem rgba(0, 0, 0, 0.2); /* inset 0 0 6px */
     
     background: #f4f6fa;
     overflow: hidden;
@@ -236,8 +237,8 @@
 .sceneNode:hover .sceneThumb {
     border-color: #fff;
     box-shadow: 
-        0 0 0 2px rgba(255, 255, 255, 0.5),
-        0 6px 14px rgba(0, 0, 0, 0.2);
+        0 0 0 0.125rem rgba(255, 255, 255, 0.5), /* 0 0 0 2px */
+        0 0.375rem 0.875rem rgba(0, 0, 0, 0.2); /* 0 6px 14px */
 }
 
 .sceneThumb img {
@@ -248,18 +249,18 @@
 
 /* 场景名称 - 字体缩小 */
 .sceneName {
-    margin-top: 2px;
+    margin-top: 0.125rem; /* 2px */
     z-index: 3;
     color: #fff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
+    padding: 0.125rem 0.5rem; /* 2px 8px */
+    border-radius: 0.625rem; /* 10px */
+    font-size: 0.6875rem; /* 11px */
     font-weight: 600;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    border: 0.0625rem solid rgba(0, 0, 0, 0.08); /* 1px */
+    box-shadow: 0 0.125rem 0.375rem rgba(0,0,0,0.12); /* 0 2px 6px */
     white-space: nowrap;
     text-align: center;
-    max-width: 100px;
+    max-width: 6.25rem; /* 100px */
     overflow: hidden;
     text-overflow: ellipsis;
     transition: background-color 0.3s, color 0.3s;

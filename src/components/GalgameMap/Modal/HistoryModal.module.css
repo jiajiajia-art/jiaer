@@ -13,8 +13,8 @@
     width: 100%;
     height: 100%;
     background: rgba(10, 10, 20, 0.96);
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 1.125rem 2.8125rem rgba(0, 0, 0, 0.8); /* 0 18px 45px */
+    border: 0.0625rem solid rgba(255, 255, 255, 0.06); /* 1px */
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -22,16 +22,16 @@
 }
 
 .header {
-    padding: 16px 24px;
+    padding: 1rem 1.5rem; /* 16px 24px */
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 0.0625rem solid rgba(255, 255, 255, 0.06); /* 1px */
     background: linear-gradient(90deg, rgba(255, 99, 132, 0.15), transparent);
 }
 
 .title {
-    font-size: 18px;
+    font-size: 1.125rem; /* 18px */
     font-weight: 600;
     letter-spacing: 0.03em;
 }
@@ -41,8 +41,8 @@
     background: transparent;
     color: #aaa;
     cursor: pointer;
-    font-size: 18px;
-    padding: 4px 8px;
+    font-size: 1.125rem; /* 18px */
+    padding: 0.25rem 0.5rem; /* 4px 8px */
     border-radius: 999px;
     transition: all 0.15s ease-out;
 }
@@ -53,22 +53,22 @@
 }
 
 .content {
-    padding: 16px 20px 20px;
+    padding: 1rem 1.25rem 1.25rem; /* 16px 20px 20px */
     overflow-y: auto;
 }
 
 .empty {
-    padding: 40px 0;
+    padding: 2.5rem 0; /* 40px 0 */
     text-align: center;
     color: #999;
 }
 
 .block {
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-bottom: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem; /* 12px */
+    padding: 1rem 1.125rem; /* 16px 18px */
+    margin-bottom: 0.875rem; /* 14px */
+    border: 0.0625rem solid rgba(255, 255, 255, 0.1); /* 1px */
     transition: all 0.2s ease;
 }
 
@@ -79,7 +79,7 @@
 
 /* 功能性NPC交互的特殊样式 */
 .blockAbilityNode {
-    border-left: 3px solid rgba(154, 208, 255, 0.6);
+    border-left: 0.1875rem solid rgba(154, 208, 255, 0.6); /* 3px */
     background: rgba(154, 208, 255, 0.03);
 }
 
@@ -92,15 +92,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 0.625rem; /* 10px */
 }
 
 .blockMeta {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 0.25rem; /* 4px */
     align-items: center;
-    font-size: 13px;
+    font-size: 0.8125rem; /* 13px */
     color: #ddd;
 }
 
@@ -127,43 +127,43 @@
 }
 
 .time {
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     color: #888;
 }
 
 .body {
-    margin-top: 4px;
+    margin-top: 0.25rem; /* 4px */
 }
 
 .timeline {
     position: relative;
-    padding-left: 12px;
+    padding-left: 0.75rem; /* 12px */
 }
 
 .timeline::before {
     content: "";
     position: absolute;
-    left: 4px;
+    left: 0.25rem; /* 4px */
     top: 0;
     bottom: 0;
-    width: 2px;
+    width: 0.125rem; /* 2px */
     background: linear-gradient(to bottom, rgba(255, 255, 255, 0.18), transparent);
 }
 
 .timelineItem {
     display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 0.625rem; /* 10px */
+    margin-bottom: 0.625rem; /* 10px */
     position: relative;
 }
 
 .timelineDot,
 .timelineDotPlayer,
 .timelineDotAbility {
-    width: 8px;
-    height: 8px;
+    width: 0.5rem; /* 8px */
+    height: 0.5rem; /* 8px */
     border-radius: 50%;
-    margin-top: 5px;
+    margin-top: 0.3125rem; /* 5px */
     flex-shrink: 0;
     position: relative;
     z-index: 1;
@@ -171,43 +171,43 @@
 
 .timelineDot {
     background: linear-gradient(135deg, #fff, #f3f3f3);
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 0 0.1875rem rgba(255, 255, 255, 0.05); /* 0 0 0 3px */
 }
 
 .timelineDotPlayer {
     background: linear-gradient(135deg, #ff6b99, #ffb199);
-    box-shadow: 0 0 0 3px rgba(255, 107, 153, 0.1);
+    box-shadow: 0 0 0 0.1875rem rgba(255, 107, 153, 0.1); /* 0 0 0 3px */
 }
 
 .timelineDotAbility {
     background: linear-gradient(135deg, #9ad0ff, #6bb5ff);
-    box-shadow: 0 0 0 3px rgba(154, 208, 255, 0.1);
+    box-shadow: 0 0 0 0.1875rem rgba(154, 208, 255, 0.1); /* 0 0 0 3px */
 }
 
 .timelineContent {
     flex: 1;
-    font-size: 13px;
+    font-size: 0.8125rem; /* 13px */
     line-height: 1.6;
 }
 
 .narration {
     color: #ddd;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 8px 12px;
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.5rem 0.75rem; /* 8px 12px */
 }
 
 .dialogue {
     background: rgba(0, 0, 0, 0.4);
-    border-radius: 8px;
-    padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.5rem 0.75rem; /* 8px 12px */
+    border: 0.0625rem solid rgba(255, 255, 255, 0.2); /* 1px */
 }
 
 .dialogueName {
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     color: #ff99c8;
-    margin-bottom: 2px;
+    margin-bottom: 0.125rem; /* 2px */
 }
 
 .dialogueText {
@@ -216,107 +216,107 @@
 
 .choice {
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 6px 10px 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.375rem 0.625rem 0.5rem; /* 6px 10px 8px */
+    border: 0.0625rem solid rgba(255, 255, 255, 0.05); /* 1px */
 }
 
 .choiceTitle {
-    font-size: 13px;
+    font-size: 0.8125rem; /* 13px */
     font-weight: 600;
     color: #ffd4e5;
-    margin-bottom: 2px;
+    margin-bottom: 0.125rem; /* 2px */
 }
 
 .choiceDesc {
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     color: #ccc;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem; /* 4px */
 }
 
 .choiceOptions {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0.25rem; /* 4px */
 }
 
 .choiceOption {
-    font-size: 12px;
-    padding: 4px 6px;
-    border-radius: 6px;
+    font-size: 0.75rem; /* 12px */
+    padding: 0.25rem 0.375rem; /* 4px 6px */
+    border-radius: 0.375rem; /* 6px */
     background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border: 0.0625rem dashed rgba(255, 255, 255, 0.1); /* 1px */
     color: #f5f5f5;
 }
 
 .playerChoiceLabel {
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     color: #ff99c8;
-    margin-bottom: 2px;
+    margin-bottom: 0.125rem; /* 2px */
 }
 
 .playerChoiceText {
-    font-size: 13px;
+    font-size: 0.8125rem; /* 13px */
     color: #fef2f7;
     background: rgba(255, 153, 200, 0.08);
-    border-radius: 8px;
-    padding: 6px 10px;
-    border: 1px solid rgba(255, 153, 200, 0.35);
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.375rem 0.625rem; /* 6px 10px */
+    border: 0.0625rem solid rgba(255, 153, 200, 0.35); /* 1px */
 }
 
 /* 类型标签 */
 .typeTag {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 0.125rem 0.5rem; /* 2px 8px */
+    border-radius: 0.25rem; /* 4px */
+    font-size: 0.6875rem; /* 11px */
     font-weight: 600;
     background: rgba(154, 208, 255, 0.2);
     color: #9ad0ff;
-    border: 1px solid rgba(154, 208, 255, 0.4);
-    margin-right: 6px;
+    border: 0.0625rem solid rgba(154, 208, 255, 0.4); /* 1px */
+    margin-right: 0.375rem; /* 6px */
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03125rem; /* 0.5px */
 }
 
 .typeTagNpc {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    padding: 0.125rem 0.5rem; /* 2px 8px */
+    border-radius: 0.25rem; /* 4px */
+    font-size: 0.6875rem; /* 11px */
     font-weight: 600;
     background: rgba(255, 153, 200, 0.2);
     color: #ff99c8;
-    border: 1px solid rgba(255, 153, 200, 0.4);
-    margin-right: 6px;
+    border: 0.0625rem solid rgba(255, 153, 200, 0.4); /* 1px */
+    margin-right: 0.375rem; /* 6px */
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03125rem; /* 0.5px */
 }
 
 /* 功能性NPC操作显示 */
 .actionLabel {
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     color: #9ad0ff;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem; /* 4px */
     font-weight: 500;
 }
 
 .actionText {
     background: rgba(154, 208, 255, 0.08);
-    border-radius: 8px;
-    padding: 8px 12px;
-    border: 1px solid rgba(154, 208, 255, 0.25);
+    border-radius: 0.5rem; /* 8px */
+    padding: 0.5rem 0.75rem; /* 8px 12px */
+    border: 0.0625rem solid rgba(154, 208, 255, 0.25); /* 1px */
 }
 
 .actionNameText {
-    font-size: 13px;
+    font-size: 0.8125rem; /* 13px */
     font-weight: 600;
     color: #9ad0ff;
-    margin-bottom: 4px;
+    margin-bottom: 0.25rem; /* 4px */
 }
 
 .actionDesc {
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px */
     color: #ddd;
     line-height: 1.5;
 }
@@ -332,6 +332,6 @@
     }
 
     .header {
-        padding-top: calc(16px + env(safe-area-inset-top, 0px));
+        padding-top: calc(1rem + env(safe-area-inset-top, 0px)); /* calc(16px + env(...)) */
     }
 }
