@@ -90,17 +90,20 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
             // 尝试从子场景的 npcs_slots 中获取位置信息
             let position: [number, number] = [0.5, 0.5];
             let zoom = 1;
+            let layer = 0;
             if (currentSubScene?.npcs_slots && currentSubScene.npcs_slots.length > 0) {
                 const firstSlot = currentSubScene.npcs_slots[0];
                 if (firstSlot.position) {
                     position = firstSlot.position;
                     zoom = firstSlot.zoom ?? 1;
+                    layer = firstSlot.layer ?? 0;
                 }
             }
             return {
                 npc,
                 position,
                 zoom,
+                layer,
             };
         }
         
@@ -211,6 +214,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                 transform: `translate(-50%, -50%) scale(${getRelatedNpc!.zoom})`,
                                 transformOrigin: 'center center',
                                 cursor: 'pointer',
+                                zIndex: getRelatedNpc!.layer ?? 0,
                             }}
                             onClick={() => {
                                 // 普通NPC点击，切换到普通NPC交互视图

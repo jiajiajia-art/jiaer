@@ -155,6 +155,41 @@ const GalgameMap = () => {
     prevViewRef.current = currentView;
   }, [currentView, fetchWorldInteractionHistory]);
 
+  // 兜底：避免 currentView 与依赖数据（selectedSubscene/selectedScene/gameData）不同步导致“没有任何主视图渲染”的假白屏
+  useEffect(() => {
+    const validViews: MapViewState[] = [
+      MapViewState.STORY_INTRO,
+      MapViewState.WORLD_MAP,
+      MapViewState.SCENE_VIEW,
+      MapViewState.SUBSCENE_MODAL,
+      MapViewState.INTERACT_NPC_NORMAL,
+      MapViewState.INTERACT_NPC_ABILITY,
+    ];
+
+    // currentView 不合法：回到世界地图
+    if (!validViews.includes(currentView)) {
+      setCurrentView(MapViewState.WORLD_MAP);
+      return;
+    }
+
+    // 需要依赖场景数据的视图，如果数据缺失则回到世界地图
+    if (currentView === MapViewState.SCENE_VIEW && !selectedScene) {
+      setCurrentView(MapViewState.WORLD_MAP);
+      return;
+    }
+    if (
+      (currentView === MapViewState.SUBSCENE_MODAL ||
+        currentView === MapViewState.INTERACT_NPC_NORMAL ||
+        currentView === MapViewState.INTERACT_NPC_ABILITY) &&
+      !selectedSubscene
+    ) {
+      setCurrentView(MapViewState.WORLD_MAP);
+      return;
+    }
+
+    // WORLD_MAP 依赖 gameData：如果 gameData 还没加载，外层会显示 FullPageLoading，不需要额外处理
+  }, [currentView, selectedScene, selectedSubscene, setCurrentView]);
+
   // 组件卸载时清理音乐播放
   useEffect(() => {
     return () => {
@@ -233,7 +268,6 @@ const GalgameMap = () => {
       ) {
         return;
       }
-
 
       try {
         const activeEventsResponse = await interactionApi.getActiveEvents(
@@ -499,10 +533,7 @@ const GalgameMap = () => {
                   return existingNpc;
                 })
               : prevData.npcSetting.npcs;
-            // console.log("更新后获取的属性", updatedNpcs);
-            console.log("更新后获取的player", response);
-            console.log("更新后获取的npc", npcs);
-            
+
           return {
             ...prevData,
             worldSetting: {

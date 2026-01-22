@@ -9,7 +9,7 @@ import WorldPanel, { type WorldPanelRef } from '../components/GameSettingEditor/
 import Sidebar from '../components/GameSettingEditor/Sidebar';
 import MapPanel, { type MapPanelRef } from '../components/GameSettingEditor/MapPanel/MapPanel';
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
-import ObjectsPanel, { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
+import { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
 import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
@@ -142,9 +142,10 @@ const GameSettingsEditor = () => {
         functionalNPCsPanelRef.current = node;
     }, []);
 
-    const setObjectsPanelRef = useCallback((node: ObjectsPanelRef | null) => {
-        objectsPanelRef.current = node;
-    }, []);
+    // TODO: 物品面板暂时禁用
+    // const setObjectsPanelRef = useCallback((node: ObjectsPanelRef | null) => {
+    //     objectsPanelRef.current = node;
+    // }, []);
 
     const setCharactersPanelRef = useCallback((node: CharactersPanelRef | null) => {
         charactersPanelRef.current = node;
@@ -423,8 +424,8 @@ const GameSettingsEditor = () => {
                     </section>
                 )}
 
-                {/* 只在 worldInteraction 模式下显示物品编辑面板 */}
-                {mode === 'worldInteraction' && (
+                {/* TODO: 物品面板暂时禁用 */}
+                {/* {mode === 'worldInteraction' && (
                     <section
                         className={`${styles.panel} ${activePanel === 'objects' ? styles.active : ''}`}
                         id="objects"
@@ -433,19 +434,9 @@ const GameSettingsEditor = () => {
                             ref={setObjectsPanelRef}
                             fileId={fileId}
                             mode={mode || 'worldInteraction'}
-                            // objects={
-                            //     mode === 'worldInteraction' && gameData && 'items' in gameData
-                            //         ? (gameData as any).items || []
-                            //         : []
-                            // }
-                            // onDataChange={async () => {
-                            //     if (fileId) {
-                            //         await fetchEditorData(fileId);
-                            //     }
-                            // }}
                         />
                     </section>
-                )}
+                )} */}
 
                 {/* 编辑器全局加载遮罩（获取游戏文件 / 刷新数据时） */}
                 {isLoadingData && (

@@ -8,6 +8,9 @@ const getGameDataApi = {
     getGameData: (type: string, data: PublicGameRequest) => {
         return api.get<UserGameResponse>(`/auth/games/public/${type}`, { params: data });
     },
+    getCarouselData: () => {
+        return api.get<UserGameResponse>(`/auth/games/featured`);
+    },
     getGameDetail: (data: GameDetailRequest) => {
         return api.get<GameDetailResponse>(`/auth/games/info`, { params: data });
     },

@@ -50,7 +50,6 @@
     align-items: center;
     justify-content: center;
     pointer-events: auto; /* NPC图片可以有点击事件 */
-    z-index: 10; /* NPC在最上层 */
     cursor: pointer;
 }
 
@@ -141,7 +140,6 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    z-index: 5; /* 在背景层之上，但在普通NPC层之下 */
 }
 
 /* 功能性NPC容器 */

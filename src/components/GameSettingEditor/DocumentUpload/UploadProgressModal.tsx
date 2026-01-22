@@ -1,11 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUploadStore } from '../../../store/uploadStore';
 import styles from './UploadProgressModal.module.css';
 
 const UploadProgressModal: React.FC = () => {
     const { jobs, showProgressModal, setShowProgressModal, isMinimized, setIsMinimized, removeJob } = useUploadStore();
+    const [currentTime, setCurrentTime] = useState(Date.now()); // 用于每秒更新时间显示
     
     const jobList = Object.values(jobs);
+    
+    // 每秒更新时间，确保时间显示实时更新
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 1000);
+        
+        return () => clearInterval(interval);
+    }, []);
     
     // 如果没有任务，不显示
     if (jobList.length === 0) return null;
@@ -48,7 +58,7 @@ const UploadProgressModal: React.FC = () => {
     };
     
     const formatTime = (timestamp: number) => {
-        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        const seconds = Math.floor((currentTime - timestamp) / 1000);
         if (seconds < 60) return `${seconds}秒`;
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;

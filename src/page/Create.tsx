@@ -23,6 +23,7 @@ import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../utils/constants';
 import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
+import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
@@ -30,6 +31,7 @@ const Create: React.FC = () => {
     const { clearAll } = useGameStore();
     const navigate = useNavigate();
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    const [isLoadingMyGames, setIsLoadingMyGames] = useState<boolean>(true);
     const [stats, setStats] = useState({
         totalCreated: 0,
         totalViews: 0,
@@ -72,13 +74,19 @@ const Create: React.FC = () => {
         if (!user?.user?.id) {
             return;
         }
+        setIsLoadingMyGames(true);
         try {
             const response = await getGameDataApi.getUserData({ limit: 100 });
             if (response.data.success && response.data.data) {
                 setFileMetas(response.data.data);
+            } else {
+                setFileMetas([]);
             }
         } catch (error) {
             console.error('获取我的游戏列表错误:', error);
+            setFileMetas([]);
+        } finally {
+            setIsLoadingMyGames(false);
         }
     };
 
@@ -474,7 +482,9 @@ const Create: React.FC = () => {
                             </button>
                         </div>
 
-                        {publishedGames.length == 0 ? (
+                        {isLoadingMyGames ? (
+                            <GameGridSkeleton count={8} />
+                        ) : publishedGames.length === 0 ? (
                             <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
                                 暂无发布作品
                             </div>
@@ -509,7 +519,9 @@ const Create: React.FC = () => {
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
-                        {draftGames.length == 0 ? (
+                        {isLoadingMyGames ? (
+                            <GameGridSkeleton count={8} />
+                        ) : draftGames.length === 0 ? (
                             <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
                                 开始创作你的第一个作品吧
                             </div>

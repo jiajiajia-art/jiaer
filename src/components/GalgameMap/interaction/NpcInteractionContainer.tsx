@@ -23,6 +23,7 @@ import type { AllGameData } from '../../../api/worldInteraction/mapWorldData.typ
 import type { GetWorldInteractionHistoryResponse } from '../../../api/worldInteraction/interactionApi.type';
 import interactionApi from '../../../api/worldInteraction/interactionApi';
 
+// ==================== 类型定义 ====================
 interface NpcInteractionContainerProps {
   sessionId: string | null;
   eventId: string | null;
@@ -31,20 +32,22 @@ interface NpcInteractionContainerProps {
   worldInteractionHistory: GetWorldInteractionHistoryResponse | null;
   isTextMode?: boolean;
   isAutoPlay?: boolean;
-  onAutoPlayChange?: (value: boolean) => void; // 当遇到选择时通知父组件关闭自动播放
+  onAutoPlayChange?: (value: boolean) => void;
   onUpdateAttributes?: () => Promise<void>;
   onRefreshEventData?: (sessionId: string, gameData: any) => Promise<void>;
   onContinue?: () => void;
-  onCancel?: (restoreFn: () => Promise<void>) => void; // 取消请求时的回调，传递恢复函数
-  onRetry?: (retryFn: () => void) => void; // 重试请求时的回调，传递重试函数
-  onCurrentMessageChange?: (message: Message | null) => void; // 当前消息变化时的回调，用于显示立绘
-  setTimeoutModal?: (value: { visible: boolean; message: string }) => void; // 设置超时弹窗
-  setErrorModal?: (value: { visible: boolean; message: string }) => void; // 设置错误弹窗
+  onCancel?: (restoreFn: () => Promise<void>) => void;
+  onRetry?: (retryFn: () => void) => void;
+  onCurrentMessageChange?: (message: Message | null) => void;
+  setTimeoutModal?: (value: { visible: boolean; message: string }) => void;
+  setErrorModal?: (value: { visible: boolean; message: string }) => void;
 }
 
+// ==================== 常量 ====================
 const AUTO_PLAY_DELAY_MS = 2000;
 const CACHE_CLEANUP_DELAY_MS = 3000;
 
+// ==================== 组件 ====================
 const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   sessionId,
   eventId,
@@ -63,36 +66,41 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   setTimeoutModal,
   setErrorModal,
 }) => {
+  // ==================== Props 和基础变量 ====================
   const worldSetting = gameData?.worldSetting || null;
+
+  // ==================== 状态管理 ====================
   const [gameStarted, setGameStarted] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<any[]>([]);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const [pendingRequestForPoll, setPendingRequestForPoll] = useState<any>(null);
   const [latestHistory, setLatestHistory] = useState<GetWorldInteractionHistoryResponse | null>(worldInteractionHistory);
 
+  // ==================== Refs ====================
   const refs = useRef({
     previousStep: null as any,
     previousIsTyping: false,
     isRestoringFromCache: false,
     choiceInFlight: false,
     lastRequest: null as any,
-    isChoiceRequest: false, // 标记是否是选择选项后的请求
+    isChoiceRequest: false,
   });
-
   const refreshTimerRef = useRef<number | null>(null);
   const hasCleanedCacheRef = useRef<boolean>(false);
+  const restorePendingRequestRef = useRef(false);
+  const prevStepKeyRef = useRef<string | null>(null);
+  const prevStepKeyForTextModalRef = useRef<string | null>(null);
 
-  // 请求管理器（弹窗逻辑由父组件处理，这里只提供回调）
+  // ==================== Hooks 初始化 ====================
   const streamRequestManager = useNpcStreamRequestManager({
     sessionId,
     eventId,
     setHasPendingRequest,
     setPendingRequestForPoll,
-    setTimeoutModal: setTimeoutModal || (() => {}), // 由父组件处理
-    setErrorModal: setErrorModal || (() => {}), // 由父组件处理
+    setTimeoutModal: setTimeoutModal || (() => {}),
+    setErrorModal: setErrorModal || (() => {}),
   });
 
-  // 步骤处理器
   const stepHandlers = useNpcInteractionStep({
     sessionId,
     eventId,
@@ -102,11 +110,10 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       setCompletedSteps([]);
       refs.current.previousStep = null;
       refs.current.previousIsTyping = false;
-      refs.current.isChoiceRequest = false; // 清除消息时重置标记
+      refs.current.isChoiceRequest = false;
     },
   });
 
-  // 重试处理器
   const retryHandler = useNpcRetryHandler({
     stepHandlers: {
       handleInteract: stepHandlers.handleInteract,
@@ -116,139 +123,8 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     setTimeoutModal: setTimeoutModal || (() => {}),
   });
 
-  // 页面刷新后恢复未完成的请求
-  const restorePendingRequestRef = useRef(false);
-  useEffect(() => {
-    if (!sessionId || !eventId || restorePendingRequestRef.current) return;
-    restorePendingRequestRef.current = true;
-    const restoredRequest = streamRequestManager.restorePendingRequest();
-    if (restoredRequest) {
-      setGameStarted(true);
-    }
-  }, [sessionId, eventId, streamRequestManager]);
-
-  // 初始化
-  useNpcInteractionInit({
-    sessionId,
-    eventId,
-    gameData,
-    fileId,
-    gameStarted,
-    setGameStarted,
-    setLatestHistory,
-    setHasPendingRequest,
-    setPendingRequestForPoll,
-    setTimeoutModal: setTimeoutModal || (() => {}), // 由父组件处理
-    setErrorModal: setErrorModal || (() => {}), // 由父组件处理
-    stepHandlers: {
-      setCurrentStep: stepHandlers.setCurrentStep,
-      setStepQueue: stepHandlers.setStepQueue,
-      setShowNextButton: stepHandlers.setShowNextButton,
-      handleInteract: stepHandlers.handleInteract,
-    },
-    resetCompletedSteps: () => {
-      setCompletedSteps([]);
-      refs.current.previousStep = null;
-      refs.current.previousIsTyping = false;
-    },
-    setRestoringFromCache: (value) => {
-      refs.current.isRestoringFromCache = value;
-    },
-    onUpdateAttributes,
-    onRefreshEventData,
-    setLastRequest: (request) => {
-      refs.current.lastRequest = request;
-    },
-    onRequestStart: () => {
-      streamRequestManager.recordRequestStart({
-        type: 'interact',
-        timestamp: Date.now(),
-      });
-      // 记录最后一次请求，用于重试
-      retryHandler.recordLastRequest({ type: 'interact' });
-    },
-    onRequestComplete: () => {
-      streamRequestManager.recordRequestComplete();
-    },
-    onRequestError: (error) => {
-      streamRequestManager.recordRequestError(error, true);
-    },
-    clearRequestTimeout: () => {
-      streamRequestManager.clearRequestTimeout();
-    },
-  });
-
-  // 历史轮询
-  const handlePollMatchFound = useCallback(
-    async (matchedSteps: any[]) => {
-      if (!matchedSteps.length) return;
-      const [first, ...rest] = matchedSteps;
-      setCompletedSteps([]);
-      refs.current.previousStep = null;
-      refs.current.previousIsTyping = false;
-      stepHandlers.setCurrentStep(first || null);
-      stepHandlers.setStepQueue(rest || []);
-      stepHandlers.setShowNextButton(first?.type !== 'choice');
-      setHasPendingRequest(false);
-      const storageKeys = getStorageKeys(sessionId, eventId);
-      if (storageKeys.pendingRequest) {
-        safeRemoveLocalStorage(storageKeys.pendingRequest);
-      }
-    },
-    [setHasPendingRequest, stepHandlers, sessionId, eventId]
-  );
-
-  const handlePollTimeout = useCallback(() => {
-    setHasPendingRequest(false);
-    setPendingRequestForPoll(null);
-    // 轮询超时，显示超时弹窗（支持重发）
-    if (setTimeoutModal) {
-      setTimeoutModal({
-        visible: true,
-        message: '轮询超时，未能获取到历史记录。请重试或取消。',
-      });
-    }
-  }, [setTimeoutModal]);
-
-  // 轮询错误处理（网络错误等）
-  const handlePollError = useCallback((error: string) => {
-    setHasPendingRequest(false);
-    setPendingRequestForPoll(null);
-    // 轮询错误，显示错误弹窗（支持重发）
-    if (setErrorModal) {
-      setErrorModal({
-        visible: true,
-        message: error || '轮询请求失败，请检查网络连接后重试。',
-      });
-    }
-  }, [setErrorModal]);
-
-  const handlePollEnd = useCallback(async () => {
-    setPendingRequestForPoll(null);
-    if (sessionId) {
-      try {
-        const response = await interactionApi.getWorldInteractionHistory(sessionId);
-        if (response.data?.success) {
-          setLatestHistory(response.data);
-        }
-      } catch (error) {
-        console.error('[NpcInteractionContainer] 获取历史记录失败:', error);
-      }
-    }
-  }, [sessionId]);
-
-  useHistoryPolling({
-    sessionId,
-    eventId,
-    pendingRequest: pendingRequestForPoll,
-    onHistoryUpdate: setLatestHistory,
-    onMatchFound: handlePollMatchFound,
-    onTimeout: handlePollTimeout,
-    onError: handlePollError,
-    onPollEnd: handlePollEnd,
-  });
-
-  // 当前消息
+  // ==================== 数据计算（useMemo）====================
+  // 历史选择消息
   const historyChoiceMessage: Message | null = useMemo(() => {
     if (!latestHistory || !latestHistory.interactions.length) return null;
     const last = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
@@ -271,6 +147,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     };
   }, [latestHistory, worldSetting]);
 
+  // 当前消息
   const currentMessage = useMemo((): Message => {
     if (gameStarted && stepHandlers.currentStep && stepHandlers.currentStep.type) {
       const converted = convertStepToMessage(stepHandlers.currentStep, worldSetting);
@@ -305,7 +182,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     latestHistory,
   ]);
 
-  // 追踪当前步骤的唯一标识，用于检测步骤变化
+  // 当前步骤的唯一标识
   const currentStepKey = useMemo(() => {
     if (stepHandlers.currentStep) {
       return stepHandlers.currentStep.id || stepHandlers.currentStep.content || JSON.stringify(stepHandlers.currentStep);
@@ -313,7 +190,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     return null;
   }, [stepHandlers.currentStep]);
 
-  // 打字效果 - 只有在有新消息且不是选择时才启用
+  // 打字效果的纯文本
   const plainTextForTyping = useMemo(() => {
     if (currentMessage && currentMessage.type !== 'choice' && currentStepKey) {
       return extractPlainText(currentMessage.message);
@@ -321,27 +198,144 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     return '';
   }, [currentMessage, currentStepKey]);
 
-  // 使用步骤唯一标识作为打字效果的 key，确保步骤变化时重新开始
+  // 打字效果
   const { displayedText, isTyping } = useStoryTyping({
     text: plainTextForTyping,
     enabled: currentMessage && currentMessage.type !== 'choice' && gameStarted && !!plainTextForTyping && !!currentStepKey,
     speed: 60,
   });
 
-  // 确定最终显示的文本：始终使用打字效果的输出，避免显示完整消息
-  const finalDisplayText =
-    (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep
+  // 最终显示的文本
+  const finalDisplayText = useMemo(() => {
+    const isStepChanged = currentStepKey !== prevStepKeyRef.current;
+        if (isStepChanged) {
+      prevStepKeyRef.current = currentStepKey;
+      return '';
+    }
+
+    if (displayedText.length > plainTextForTyping.length && plainTextForTyping.length > 0) {
+      return '';
+    }
+
+    return (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep
       ? ''
       : gameStarted && currentStepKey
-      ? displayedText // 有步骤时，始终使用打字效果的输出（即使为空也是正确的）
+      ? displayedText
       : currentMessage && currentMessage.type !== 'choice' && !gameStarted
-      ? currentMessage.message // 仅在没有开始游戏时显示完整消息
+      ? currentMessage.message
       : '';
+  }, [
+    currentStepKey,
+    displayedText,
+    plainTextForTyping,
+    stepHandlers.isWaitingForData,
+    stepHandlers.currentStep,
+    hasPendingRequest,
+    gameStarted,
+    currentMessage,
+  ]);
 
   const finalIsTyping =
     (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep ? false : isTyping;
 
-  // 处理下一步
+  // 文本模式数据
+  const allStepsForTextModal = useMemo(() => {
+    let validSteps = completedSteps.filter((s) => s && s.type);
+    if (stepHandlers.currentStep?.type) {
+      const exists = validSteps.some(
+        (s) => s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
+      );
+      if (!exists) {
+        validSteps = [...validSteps, stepHandlers.currentStep];
+      }
+    }
+    if (validSteps.length === 0 && latestHistory?.interactions?.length) {
+      const lastInteraction = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
+      if (lastInteraction.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
+        validSteps = [...lastInteraction.narrativeSteps];
+      }
+    }
+    const choiceIndices = validSteps.map((step, index) => (step?.type === 'choice' ? index : -1)).filter((idx) => idx >= 0);
+    if (choiceIndices.length > 1) {
+      for (let i = choiceIndices.length - 2; i >= 0; i--) {
+        validSteps.splice(choiceIndices[i], 1);
+      }
+    }
+    return validSteps;
+  }, [completedSteps, stepHandlers.currentStep, latestHistory]);
+
+  const currentStepIndex = useMemo(() => {
+    if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
+      const index = allStepsForTextModal.findIndex(
+        (s) => s && s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
+      );
+      if (index >= 0) return index;
+    }
+    if (allStepsForTextModal.length > 0) {
+      return allStepsForTextModal.length - 1;
+    }
+    return -1;
+  }, [allStepsForTextModal, stepHandlers.currentStep]);
+
+  const textModalDisplayText = useMemo(() => {
+    // 检测步骤切换，如果切换了但 displayedText 还没重置，返回空字符串
+    const isStepChanged = currentStepKey !== prevStepKeyForTextModalRef.current;
+    if (isStepChanged) {
+      prevStepKeyForTextModalRef.current = currentStepKey;
+      // 如果 displayedText 还有内容，说明是上一个步骤的文本，立即清空
+      if (displayedText.length > 0) {
+        return '';
+      }
+    }
+
+    // 如果 displayedText 的长度大于新的 plainTextForTyping，说明是上一个步骤的文本，返回空字符串
+    if (displayedText.length > plainTextForTyping.length && plainTextForTyping.length > 0) {
+      return '';
+    }
+
+    if (
+      stepHandlers.currentStep &&
+      stepHandlers.currentStep.type !== 'choice' &&
+      currentMessage &&
+      currentMessage.type !== 'choice' &&
+      isTyping &&
+      displayedText.length > 0
+    ) {
+      const originalText = currentMessage.message || '';
+      const currentPlainLength = displayedText.length;
+      if (currentPlainLength > 0) {
+        return truncateTextWithTags(originalText, currentPlainLength);
+      }
+    }
+    return '';
+  }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping, currentStepKey, plainTextForTyping]);
+
+  // 是否显示继续按钮
+  const shouldShowContinueButton = useMemo(() => {
+    const queueEmpty = !stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0;
+    const isChoiceStep = stepHandlers.currentStep?.type === 'choice';
+    const isShowingChoiceUI = currentMessage?.type === 'choice';
+    if (isChoiceStep || isShowingChoiceUI) return false;
+    return (
+      !stepHandlers.isWaitingForData &&
+      !finalIsTyping &&
+      !hasPendingRequest &&
+      gameStarted &&
+      queueEmpty &&
+      !stepHandlers.showNextButton
+    );
+  }, [
+    stepHandlers.stepQueue,
+    stepHandlers.isWaitingForData,
+    stepHandlers.showNextButton,
+    stepHandlers.currentStep,
+    currentMessage?.type,
+    finalIsTyping,
+    hasPendingRequest,
+    gameStarted,
+  ]);
+
+  // ==================== 事件处理（useCallback）====================
   const handleNextMessage = useCallback(() => {
     if (gameStarted && stepHandlers.showNextButton) {
       if (stepHandlers.stepQueue && stepHandlers.stepQueue.length === 0) {
@@ -351,14 +345,13 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     }
   }, [gameStarted, stepHandlers]);
 
-  // 处理选择
   const handleChoiceClick = useCallback(
     (option: { text: string; optionId?: string; isCustomInput?: boolean }) => {
       if (refs.current.choiceInFlight || hasPendingRequest || stepHandlers.isWaitingForData) {
         return;
       }
       refs.current.choiceInFlight = true;
-      refs.current.isChoiceRequest = true; // 标记这是选择选项后的请求
+      refs.current.isChoiceRequest = true;
       setCompletedSteps([]);
       refs.current.previousStep = null;
       refs.current.previousIsTyping = false;
@@ -402,17 +395,15 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
         ? -1
         : optionIndex >= 0
           ? optionIndex
-          : 0; // 未匹配到但明确是选项则默认视为选项
+          : 0;
       refs.current.lastRequest = { type: 'choice', optionId, optionIndex: finalOptionIndex };
 
-      // 记录请求开始
       streamRequestManager.recordRequestStart({
         type: 'choice',
         optionId,
         optionIndex: finalOptionIndex,
         timestamp: Date.now(),
       });
-      // 记录最后一次请求，用于重试
       retryHandler.recordLastRequest({ type: 'choice', optionId, optionIndex: finalOptionIndex });
 
       stepHandlers
@@ -420,7 +411,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
           onSuccess: async () => {
             streamRequestManager.recordRequestComplete();
             refs.current.choiceInFlight = false;
-            refs.current.isChoiceRequest = false; // 请求成功后重置标记
+            refs.current.isChoiceRequest = false;
             const eventCompleted = await streamRequestManager.checkEventCompletion();
             if (eventCompleted) {
               console.log('[NpcInteractionContainer] Event 已完成，但前端状态未更新');
@@ -448,10 +439,9 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
           refs.current.choiceInFlight = false;
         });
     },
-    [hasPendingRequest, stepHandlers, currentMessage, sessionId, gameData, streamRequestManager, onUpdateAttributes, onRefreshEventData]
+    [hasPendingRequest, stepHandlers, currentMessage, sessionId, gameData, streamRequestManager, retryHandler, onUpdateAttributes, onRefreshEventData]
   );
 
-  // 处理自定义输入
   const handleCustomInputSubmit = useCallback(
     (customText: string) => {
       if (!customText.trim()) return;
@@ -460,6 +450,180 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     [handleChoiceClick]
   );
 
+  const handlePollMatchFound = useCallback(
+    async (matchedSteps: any[]) => {
+      if (!matchedSteps.length) return;
+      const [first, ...rest] = matchedSteps;
+      setCompletedSteps([]);
+      refs.current.previousStep = null;
+      refs.current.previousIsTyping = false;
+      stepHandlers.setCurrentStep(first || null);
+      stepHandlers.setStepQueue(rest || []);
+      stepHandlers.setShowNextButton(first?.type !== 'choice');
+      setHasPendingRequest(false);
+      const storageKeys = getStorageKeys(sessionId, eventId);
+      if (storageKeys.pendingRequest) {
+        safeRemoveLocalStorage(storageKeys.pendingRequest);
+      }
+    },
+    [setHasPendingRequest, stepHandlers, sessionId, eventId]
+  );
+
+  const handlePollTimeout = useCallback(() => {
+    setHasPendingRequest(false);
+    setPendingRequestForPoll(null);
+    if (setTimeoutModal) {
+      setTimeoutModal({
+        visible: true,
+        message: '轮询超时，未能获取到历史记录。请重试或取消。',
+      });
+    }
+  }, [setTimeoutModal]);
+
+  const handlePollError = useCallback((error: string) => {
+    setHasPendingRequest(false);
+    setPendingRequestForPoll(null);
+    if (setErrorModal) {
+      setErrorModal({
+        visible: true,
+        message: error || '轮询请求失败，请检查网络连接后重试。',
+      });
+    }
+  }, [setErrorModal]);
+
+  const handlePollEnd = useCallback(async () => {
+    setPendingRequestForPoll(null);
+    if (sessionId) {
+      try {
+        const response = await interactionApi.getWorldInteractionHistory(sessionId);
+        if (response.data?.success) {
+          setLatestHistory(response.data);
+        }
+      } catch (error) {
+        console.error('[NpcInteractionContainer] 获取历史记录失败:', error);
+      }
+    }
+  }, [sessionId]);
+
+  const restoreToLastStep = useCallback(async () => {
+    if (!refs.current.isChoiceRequest) {
+      stepHandlers.setCurrentStep(null);
+      stepHandlers.setStepQueue([]);
+      stepHandlers.setShowNextButton(false);
+      setHasPendingRequest(false);
+      setPendingRequestForPoll(null);
+      setGameStarted(false);
+      setCompletedSteps([]);
+      refs.current.previousStep = null;
+      refs.current.previousIsTyping = false;
+      return;
+    }
+
+    if (!sessionId || !latestHistory?.interactions?.length) {
+      return;
+    }
+
+    try {
+      const response = await interactionApi.getWorldInteractionHistory(sessionId);
+      if (response.data?.success) {
+        const updatedHistory = response.data;
+        setLatestHistory(updatedHistory);
+
+        const lastInteraction = updatedHistory.interactions[updatedHistory.interactions.length - 1] as any;
+        if (lastInteraction?.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
+          for (let i = lastInteraction.narrativeSteps.length - 1; i >= 0; i--) {
+            const step = lastInteraction.narrativeSteps[i];
+            if (step && step.type && step.type !== 'choice') {
+              stepHandlers.setCurrentStep(step);
+              stepHandlers.setStepQueue([]);
+              stepHandlers.setShowNextButton(false);
+              setHasPendingRequest(false);
+              setPendingRequestForPoll(null);
+              setGameStarted(true);
+              refs.current.isChoiceRequest = false;
+              break;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[NpcInteractionContainer] 恢复最后一个step失败:', error);
+    }
+  }, [sessionId, latestHistory, stepHandlers]);
+
+  // ==================== 副作用（useEffect）====================
+  // 页面刷新后恢复未完成的请求
+  useEffect(() => {
+    if (!sessionId || !eventId || restorePendingRequestRef.current) return;
+    restorePendingRequestRef.current = true;
+    const restoredRequest = streamRequestManager.restorePendingRequest();
+    if (restoredRequest) {
+      setGameStarted(true);
+    }
+  }, [sessionId, eventId, streamRequestManager]);
+
+  // 初始化
+  useNpcInteractionInit({
+    sessionId,
+    eventId,
+    gameData,
+    fileId,
+    gameStarted,
+    setGameStarted,
+    setLatestHistory,
+    setHasPendingRequest,
+    setPendingRequestForPoll,
+    setTimeoutModal: setTimeoutModal || (() => {}),
+    setErrorModal: setErrorModal || (() => {}),
+    stepHandlers: {
+      setCurrentStep: stepHandlers.setCurrentStep,
+      setStepQueue: stepHandlers.setStepQueue,
+      setShowNextButton: stepHandlers.setShowNextButton,
+      handleInteract: stepHandlers.handleInteract,
+    },
+    resetCompletedSteps: () => {
+      setCompletedSteps([]);
+      refs.current.previousStep = null;
+      refs.current.previousIsTyping = false;
+    },
+    setRestoringFromCache: (value) => {
+      refs.current.isRestoringFromCache = value;
+    },
+    onUpdateAttributes,
+    onRefreshEventData,
+    setLastRequest: (request) => {
+      refs.current.lastRequest = request;
+    },
+    onRequestStart: () => {
+      streamRequestManager.recordRequestStart({
+        type: 'interact',
+        timestamp: Date.now(),
+      });
+      retryHandler.recordLastRequest({ type: 'interact' });
+    },
+    onRequestComplete: () => {
+      streamRequestManager.recordRequestComplete();
+    },
+    onRequestError: (error) => {
+      streamRequestManager.recordRequestError(error, true);
+    },
+    clearRequestTimeout: () => {
+      streamRequestManager.clearRequestTimeout();
+    },
+  });
+
+  // 历史轮询
+  useHistoryPolling({
+    sessionId,
+    eventId,
+    pendingRequest: pendingRequestForPoll,
+    onHistoryUpdate: setLatestHistory,
+    onMatchFound: handlePollMatchFound,
+    onTimeout: handlePollTimeout,
+    onError: handlePollError,
+    onPollEnd: handlePollEnd,
+  });
+
   // 自动播放
   useEffect(() => {
     if (!isAutoPlay || !gameStarted) return;
@@ -467,7 +631,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     if (finalIsTyping) return;
     if (!stepHandlers.showNextButton) return;
     if (currentMessage?.type === 'choice') {
-      // 遇到选择时，通知父组件关闭自动播放
       onAutoPlayChange?.(false);
       return;
     }
@@ -479,7 +642,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     }, AUTO_PLAY_DELAY_MS);
 
     return () => clearTimeout(autoPlayTimer);
-  }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage]);
+  }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, onAutoPlayChange]);
 
   // 缓存清理
   useEffect(() => {
@@ -550,119 +713,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     refs.current.previousIsTyping = isTyping;
   }, [stepHandlers.currentStep, isTyping]);
 
-  // 计算文本模式数据
-  const allStepsForTextModal = useMemo(() => {
-    let validSteps = completedSteps.filter((s) => s && s.type);
-    if (stepHandlers.currentStep?.type) {
-      const exists = validSteps.some(
-        (s) => s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
-      );
-      if (!exists) {
-        validSteps = [...validSteps, stepHandlers.currentStep];
-      }
-    }
-    if (validSteps.length === 0 && latestHistory?.interactions?.length) {
-      const lastInteraction = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
-      if (lastInteraction.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
-        validSteps = [...lastInteraction.narrativeSteps];
-      }
-    }
-    const choiceIndices = validSteps.map((step, index) => (step?.type === 'choice' ? index : -1)).filter((idx) => idx >= 0);
-    if (choiceIndices.length > 1) {
-      for (let i = choiceIndices.length - 2; i >= 0; i--) {
-        validSteps.splice(choiceIndices[i], 1);
-      }
-    }
-    return validSteps;
-  }, [completedSteps, stepHandlers.currentStep, latestHistory]);
-
-  const currentStepIndex = useMemo(() => {
-    if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
-      const index = allStepsForTextModal.findIndex(
-        (s) => s && s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
-      );
-      if (index >= 0) return index;
-    }
-    if (allStepsForTextModal.length > 0) {
-      return allStepsForTextModal.length - 1;
-    }
-    return -1;
-  }, [allStepsForTextModal, stepHandlers.currentStep]);
-
-  const textModalDisplayText = useMemo(() => {
-    if (
-      stepHandlers.currentStep &&
-      stepHandlers.currentStep.type !== 'choice' &&
-      currentMessage &&
-      currentMessage.type !== 'choice' &&
-      isTyping &&
-      displayedText.length > 0
-    ) {
-      const originalText = currentMessage.message || '';
-      const currentPlainLength = displayedText.length;
-      if (currentPlainLength > 0) {
-        return truncateTextWithTags(originalText, currentPlainLength);
-      }
-    }
-    return '';
-  }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
-
-  // 恢复到最后一个step（取消请求时使用）
-  const restoreToLastStep = useCallback(async () => {
-    // 只有在选择选项后的请求才恢复到历史记录的最后一条
-    // 初始交互时，直接重置状态
-    if (!refs.current.isChoiceRequest) {
-      // 初始交互取消：直接重置状态
-      stepHandlers.setCurrentStep(null);
-      stepHandlers.setStepQueue([]);
-      stepHandlers.setShowNextButton(false);
-      setHasPendingRequest(false);
-      setPendingRequestForPoll(null);
-      setGameStarted(false);
-      setCompletedSteps([]);
-      refs.current.previousStep = null;
-      refs.current.previousIsTyping = false;
-      return;
-    }
-
-    // 选择选项后的请求取消：恢复到当前交互的最后一个step
-    if (!sessionId || !latestHistory?.interactions?.length) {
-      return;
-    }
-
-    try {
-      // 刷新历史记录
-      const response = await interactionApi.getWorldInteractionHistory(sessionId);
-      if (response.data?.success) {
-        const updatedHistory = response.data;
-        setLatestHistory(updatedHistory);
-
-        // 找到最后一个交互的最后一个非choice step
-        const lastInteraction = updatedHistory.interactions[updatedHistory.interactions.length - 1] as any;
-        if (lastInteraction?.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
-          // 从后往前找最后一个非choice的step
-          for (let i = lastInteraction.narrativeSteps.length - 1; i >= 0; i--) {
-            const step = lastInteraction.narrativeSteps[i];
-            if (step && step.type && step.type !== 'choice') {
-              // 设置当前step
-              stepHandlers.setCurrentStep(step);
-              stepHandlers.setStepQueue([]);
-              stepHandlers.setShowNextButton(false);
-              // setIsWaitingForData 不在 stepHandlers 中，通过重置状态来清除等待状态
-              setHasPendingRequest(false);
-              setPendingRequestForPoll(null);
-              setGameStarted(true);
-              refs.current.isChoiceRequest = false; // 重置标记
-              break;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('[NpcInteractionContainer] 恢复最后一个step失败:', error);
-    }
-  }, [sessionId, latestHistory, stepHandlers]);
-
   // 暴露恢复函数和重试函数给父组件
   useEffect(() => {
     if (onCancel) {
@@ -683,51 +733,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     }
   }, [onCurrentMessageChange, currentMessage]);
 
-  // 判断是否显示继续按钮
-  const shouldShowContinueButton = useMemo(() => {
-    const queueEmpty = !stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0;
-    const isChoiceStep = stepHandlers.currentStep?.type === 'choice';
-    const isShowingChoiceUI = currentMessage?.type === 'choice';
-    if (isChoiceStep || isShowingChoiceUI) return false;
-    return (
-      !stepHandlers.isWaitingForData &&
-      !finalIsTyping &&
-      !hasPendingRequest &&
-      gameStarted &&
-      queueEmpty &&
-      !stepHandlers.showNextButton
-    );
-  }, [
-    stepHandlers.stepQueue,
-    stepHandlers.isWaitingForData,
-    stepHandlers.showNextButton,
-    stepHandlers.currentStep,
-    currentMessage?.type,
-    finalIsTyping,
-    hasPendingRequest,
-    gameStarted,
-  ]);
-
-  // // 测试按钮：触发超时弹窗
-  // const handleTestTimeout = useCallback(() => {
-  //   if (setTimeoutModal) {
-  //     setTimeoutModal({
-  //       visible: true,
-  //       message: TIMEOUT_MESSAGES.INTERACT,
-  //     });
-  //   }
-  // }, [setTimeoutModal]);
-
-  // // 测试按钮：触发错误弹窗
-  // const handleTestError = useCallback(() => {
-  //   if (setErrorModal) {
-  //     setErrorModal({
-  //       visible: true,
-  //       message: '这是一个测试错误消息，用于测试错误弹窗的重试和取消功能。',
-  //     });
-  //   }
-  // }, [setErrorModal]);
-
+  // ==================== 渲染 ====================
   return (
     <>
       <StreamOutputContainer
@@ -755,54 +761,8 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
           继续游戏
         </button>
       )}
-      {/* 测试按钮：仅在开发环境显示 */}
-      {/* {import.meta.env.DEV && (
-        <div style={{
-          position: 'fixed',
-          bottom: '100px',
-          right: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          zIndex: 9999,
-        }}>
-          <button
-            onClick={handleTestTimeout}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#ff9800',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 'bold',
-            }}
-            title="测试超时弹窗"
-          >
-            测试超时
-          </button>
-          <button
-            onClick={handleTestError}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 'bold',
-            }}
-            title="测试错误弹窗"
-          >
-            测试错误
-          </button>
-        </div>
-      )} */}
     </>
   );
 };
 
 export default NpcInteractionContainer;
-

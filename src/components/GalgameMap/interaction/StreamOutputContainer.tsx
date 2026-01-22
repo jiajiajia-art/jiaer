@@ -61,7 +61,7 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
   onChoiceClick,
   onCustomInputSubmit,
 }) => {
-  // 普通模式
+  // 普通模式  
   if (!isTextMode) {
     return (
       <NormalModeDisplay

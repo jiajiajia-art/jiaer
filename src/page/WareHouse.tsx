@@ -10,7 +10,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 20;
 
 const WareHouse: React.FC = () => {
     const [games, setGames] = useState<UserGameData[]>([]);
@@ -172,7 +172,7 @@ const WareHouse: React.FC = () => {
             <div className={styles.mainContent}>
                 <div className={styles.main}>
                     {isLoading ? (
-                        <GameGridSkeleton count={8} />
+                        <GameGridSkeleton count={12} />
                     ) : (
                         <>
                             <GameGrid

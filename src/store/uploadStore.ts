@@ -23,7 +23,7 @@ interface UploadState {
     isMinimized: boolean;
     
     // Actions
-    addJob: (jobId: string, fileName: string) => void;
+    addJob: (jobId: string, fileName: string, startTime?: number) => void;
     updateJob: (jobId: string, updates: Partial<UploadJob>) => void;
     removeJob: (jobId: string) => void;
     setShowProgressModal: (show: boolean) => void;
@@ -39,7 +39,7 @@ export const useUploadStore = create<UploadState>((set, get) => ({
     showProgressModal: false,
     isMinimized: false,
     
-    addJob: (jobId: string, fileName: string) => {
+    addJob: (jobId: string, fileName: string, startTime?: number) => {
         set((state) => ({
             jobs: {
                 ...state.jobs,
@@ -51,7 +51,7 @@ export const useUploadStore = create<UploadState>((set, get) => ({
                     progress: 0,
                     stage: '上传中',
                     error: null,
-                    startTime: Date.now(),
+                    startTime: startTime || Date.now(), // 使用传入的开始时间，如果没有则使用当前时间
                     updatedAt: null,
                 },
             },

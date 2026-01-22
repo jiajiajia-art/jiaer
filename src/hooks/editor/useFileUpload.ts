@@ -49,9 +49,10 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
     const startPollingUploadStatus = useCallback((
         jobId: string,
         fileName: string,
-        dataMode: string
+        dataMode: string,
+        startTime?: number // 可选的上传开始时间
     ) => {
-        addJob(jobId, fileName);
+        addJob(jobId, fileName, startTime); // 直接传递开始时间给 addJob
         
         let delay = 1000;
         const maxDelay = 5000;
@@ -167,6 +168,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
     }, [mode, addJob, updateJob, removeJob, setFileId, setIsParsed, setIsPreset, onUploadComplete]);
 
     const handleFileUpload = useCallback(async (file: File): Promise<boolean> => {
+        const uploadStartTime = Date.now(); // 记录上传开始时间
         try {
             let uploadResponse;
             
@@ -211,7 +213,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 });
             }
             
-            startPollingUploadStatus(jobId, file.name, mode || 'visual');
+            startPollingUploadStatus(jobId, file.name, mode || 'visual', uploadStartTime);
             
             return true;
         } catch (error) {
@@ -262,8 +264,9 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
             }
             
             // 使用相同的轮询机制
+            const generateStartTime = Date.now(); // 记录生成开始时间
             console.log('[一句话生成] 开始轮询，jobId:', jobId);
-            startPollingUploadStatus(jobId, `生成游戏：${idea.substring(0, 20)}...`, 'visual');
+            startPollingUploadStatus(jobId, `生成游戏：${idea.substring(0, 20)}...`, 'visual', generateStartTime);
             
             return true;
         } catch (error) {

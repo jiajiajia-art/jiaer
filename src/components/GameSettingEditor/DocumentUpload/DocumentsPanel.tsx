@@ -136,8 +136,10 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     };
 
     const currentJob = getCurrentJob();
-    const progress = currentJob?.progress || 0;
-    const stage = currentJob?.stage || '';
+    // 如果正在解析但没有 jobId（还在上传中），显示上传状态
+    const isUploading = isParsing && !currentJob && uploadedFile;
+    const progress = currentJob?.progress ?? 0; // 还没拿到 jobId 时保持 0%，避免“假进度”
+    const stage = currentJob?.stage || (isUploading ? '正在上传文件...' : '');
     const apiError = currentJob?.status === 'failed' ? (currentJob.error || '文件上传或解析失败，请重试') : null;
 
     // 定义解析步骤
@@ -269,7 +271,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         <p className={styles.errorText}>{apiError}</p>
                     )}
 
-                    {isParsing && !apiError && currentJob && (
+                    {(isParsing || isUploading) && !apiError && (
                         <div className={styles.progressSection}>
                             {/* 进度百分比和阶段 */}
                             <div className={styles.progressHeader}>

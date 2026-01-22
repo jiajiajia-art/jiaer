@@ -35,17 +35,18 @@ const Home: React.FC = () => {
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
     const isLoadingRef = useRef(false);
     const navigator = useNavigate();
+    const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
 
     // 轮播数据（使用前3个游戏作为轮播内容）
-    const carouselItems = useMemo(() => {
-        return fileMetas.slice(0, 3).map(meta => ({
-            id: meta.file_id || meta.id,
-            title: meta.title || '未命名游戏',
-            description: meta.description || '一段精彩的冒险故事等待着你...',
-            cover: meta.cover_url ? getImageUrl(meta.cover_url) : `${import.meta.env.BASE_URL}data/gameCover/image.png`,
-            game: meta
-        }));
-    }, [fileMetas]);
+    // const carouselItems = useMemo(() => {
+    //     return fileMetas.slice(0, 3).map(meta => ({
+    //         id: meta.file_id || meta.id,
+    //         title: meta.title || '未命名游戏',
+    //         description: meta.description || '一段精彩的冒险故事等待着你...',
+    //         cover: meta.cover_url ? getImageUrl(meta.cover_url) : `${import.meta.env.BASE_URL}data/gameCover/image.png`,
+    //         game: meta
+    //     }));
+    // }, [fileMetas]);
 
     // 监听用户登出，重置检查状态
     useEffect(() => {
@@ -210,6 +211,13 @@ const Home: React.FC = () => {
         }
     }, []);
 
+    const loadCarouselData = useCallback(async () => {
+        const response = await libraryDataApi.getCarouselData();
+        if (response.data.success && response.data.data) {
+            setCarouselItems(response.data.data);
+        }
+    }, []);
+
     // 初始加载
     const loadLibraryData = useCallback(async () => {
         // 防止重复加载
@@ -223,10 +231,10 @@ const Home: React.FC = () => {
         setHasMoreSpecial(true);
         setHasMoreAll(true);
         await Promise.allSettled([
+            loadCarouselData(),
             loadSpecialGames(0, true),
-            loadAllGames(0, true)
+            loadAllGames(0, true),
         ]);
-        
         isLoadingRef.current = false;
     }, []);
 
@@ -331,6 +339,7 @@ const Home: React.FC = () => {
             }, 5000);
         }
     };
+
     return (
         <div className={styles.pageRoot}>
             {/* 顶部固定导航 */}
@@ -355,7 +364,7 @@ const Home: React.FC = () => {
                                                     <div key={imageId} className={styles.carouselSlide}>
                                                         <div className={styles.carouselImage}>
                                                             <img
-                                                                src={getImageUrl(item.cover)}
+                                                                src={getImageUrl(item.cover_url)}
                                                                 alt={item.title}
                                                             />
                                                         </div>
@@ -366,7 +375,7 @@ const Home: React.FC = () => {
                                                                 <button
                                                                     className={styles.carouselStartBtn}
                                                                     onClick={() =>
-                                                                        showGameDetail(item.game)
+                                                                        showGameDetail(item)
                                                                     }
                                                                 >
                                                                     <img

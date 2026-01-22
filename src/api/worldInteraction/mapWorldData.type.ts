@@ -43,6 +43,7 @@ export interface SubScene {
     npcs_slots?: {
         position: [number, number];
         zoom: number;
+        layer?: number;
     }[];
     abilityNodes?: string[]; 
 }
