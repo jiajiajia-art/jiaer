@@ -60,7 +60,7 @@
 /* 地图内容区域 */
 .mapContent {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;

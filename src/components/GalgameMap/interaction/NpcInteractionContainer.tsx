@@ -85,11 +85,10 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     lastRequest: null as any,
     isChoiceRequest: false,
   });
+  const restorePendingRequestRef = useRef(false);
+  const prevStepKeyForTextModalRef = useRef<string | null>(null);
   const refreshTimerRef = useRef<number | null>(null);
   const hasCleanedCacheRef = useRef<boolean>(false);
-  const restorePendingRequestRef = useRef(false);
-  const prevStepKeyRef = useRef<string | null>(null);
-  const prevStepKeyForTextModalRef = useRef<string | null>(null);
 
   // ==================== Hooks 初始化 ====================
   const streamRequestManager = useNpcStreamRequestManager({
@@ -206,34 +205,14 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   });
 
   // 最终显示的文本
-  const finalDisplayText = useMemo(() => {
-    const isStepChanged = currentStepKey !== prevStepKeyRef.current;
-        if (isStepChanged) {
-      prevStepKeyRef.current = currentStepKey;
-      return '';
-    }
-
-    if (displayedText.length > plainTextForTyping.length && plainTextForTyping.length > 0) {
-      return '';
-    }
-
-    return (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep
+  const finalDisplayText =
+    (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep
       ? ''
       : gameStarted && currentStepKey
       ? displayedText
       : currentMessage && currentMessage.type !== 'choice' && !gameStarted
       ? currentMessage.message
       : '';
-  }, [
-    currentStepKey,
-    displayedText,
-    plainTextForTyping,
-    stepHandlers.isWaitingForData,
-    stepHandlers.currentStep,
-    hasPendingRequest,
-    gameStarted,
-    currentMessage,
-  ]);
 
   const finalIsTyping =
     (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep ? false : isTyping;
@@ -242,11 +221,27 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   const allStepsForTextModal = useMemo(() => {
     let validSteps = completedSteps.filter((s) => s && s.type);
     if (stepHandlers.currentStep?.type) {
-      const exists = validSteps.some(
+      // 检测步骤切换：如果 currentStepKey 变化了，说明是新步骤
+      const isStepChanged = currentStepKey !== prevStepKeyForTextModalRef.current;
+      if (isStepChanged) {
+        prevStepKeyForTextModalRef.current = currentStepKey;
+      }
+      
+      // 查找是否已存在相同内容的步骤
+      const existingIndex = validSteps.findIndex(
         (s) => s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
       );
-      if (!exists) {
-        validSteps = [...validSteps, stepHandlers.currentStep];
+      
+      if (existingIndex < 0) {
+        // 新步骤：如果步骤刚切换或正在打字，插入空 content，避免显示完整文本导致闪烁
+        // useStoryTyping 已使用 useLayoutEffect 同步清空，但数组插入时仍需确保 content 为空
+        const shouldUseEmptyContent = isStepChanged || isTyping;
+        
+        const stepToAdd = shouldUseEmptyContent
+          ? { ...stepHandlers.currentStep, content: '' } // 插入空内容，避免闪烁
+          : stepHandlers.currentStep;
+        
+        validSteps = [...validSteps, stepToAdd];
       }
     }
     if (validSteps.length === 0 && latestHistory?.interactions?.length) {
@@ -262,7 +257,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       }
     }
     return validSteps;
-  }, [completedSteps, stepHandlers.currentStep, latestHistory]);
+  }, [completedSteps, stepHandlers.currentStep, latestHistory, currentStepKey, isTyping, displayedText, plainTextForTyping]);
 
   const currentStepIndex = useMemo(() => {
     if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
@@ -278,21 +273,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   }, [allStepsForTextModal, stepHandlers.currentStep]);
 
   const textModalDisplayText = useMemo(() => {
-    // 检测步骤切换，如果切换了但 displayedText 还没重置，返回空字符串
-    const isStepChanged = currentStepKey !== prevStepKeyForTextModalRef.current;
-    if (isStepChanged) {
-      prevStepKeyForTextModalRef.current = currentStepKey;
-      // 如果 displayedText 还有内容，说明是上一个步骤的文本，立即清空
-      if (displayedText.length > 0) {
-        return '';
-      }
-    }
-
-    // 如果 displayedText 的长度大于新的 plainTextForTyping，说明是上一个步骤的文本，返回空字符串
-    if (displayedText.length > plainTextForTyping.length && plainTextForTyping.length > 0) {
-      return '';
-    }
-
     if (
       stepHandlers.currentStep &&
       stepHandlers.currentStep.type !== 'choice' &&
@@ -308,7 +288,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       }
     }
     return '';
-  }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping, currentStepKey, plainTextForTyping]);
+  }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
 
   // 是否显示继续按钮
   const shouldShowContinueButton = useMemo(() => {
@@ -386,7 +366,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       }
 
       if (!optionId) {
-        console.error('无法找到选项或 optionId:', { option, optionIndex, optionId });
         refs.current.choiceInFlight = false;
         return;
       }
@@ -412,10 +391,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
             streamRequestManager.recordRequestComplete();
             refs.current.choiceInFlight = false;
             refs.current.isChoiceRequest = false;
-            const eventCompleted = await streamRequestManager.checkEventCompletion();
-            if (eventCompleted) {
-              console.log('[NpcInteractionContainer] Event 已完成，但前端状态未更新');
-            }
             if (sessionId && gameData && onRefreshEventData) {
               await onRefreshEventData(sessionId, gameData);
             }
@@ -500,7 +475,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
           setLatestHistory(response.data);
         }
       } catch (error) {
-        console.error('[NpcInteractionContainer] 获取历史记录失败:', error);
+        // 获取历史记录失败（静默处理，不影响主流程）
       }
     }
   }, [sessionId]);
@@ -547,7 +522,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
         }
       }
     } catch (error) {
-      console.error('[NpcInteractionContainer] 恢复最后一个step失败:', error);
+      // 恢复最后一个step失败（静默处理，不影响主流程）
     }
   }, [sessionId, latestHistory, stepHandlers]);
 

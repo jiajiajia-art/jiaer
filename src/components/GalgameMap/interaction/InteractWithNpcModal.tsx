@@ -13,7 +13,7 @@ import { useGameStore } from '../../../store/gameStore';
 import { useMapGalgameStore, MapViewState } from '../../../store/mapGalgameStore';
 import { useMapMusicPlayer } from '../../../hooks/mapGalgame/common/useMapMusicPlayer';
 import { useRefreshEventData } from '../../../hooks/mapGalgame/common/useRefreshEventData';
-import { getImageUrls, type Message } from '../../../hooks/mapGalgame/common/interactionUtils';
+import { getImageUrls, getStorageKeys, safeRemoveLocalStorage, type Message } from '../../../hooks/mapGalgame/common/interactionUtils';
 import { useCharacterAnimation } from '../../../hooks/galgame/useCharacterAnimation';
 import { useCharacterContainerClassName } from '../../../hooks/galgame/useCharacterContainerClassName';
 import NpcInteractionContainer from './NpcInteractionContainer';
@@ -157,6 +157,13 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
   }, [gameData, eventData, attributesViewType, currentMessage]);
 
   const handleContinue = useCallback(async () => {
+    if (sessionId && eventId) {
+      const storageKeys = getStorageKeys(sessionId, eventId);
+      safeRemoveLocalStorage(storageKeys.allSteps);
+      safeRemoveLocalStorage(storageKeys.incomplete);
+      safeRemoveLocalStorage(storageKeys.pendingRequest);
+    }
+
     setSelectedSubscene(null);
     setSelectedScene(null);
     setPendingAction(null);
@@ -167,7 +174,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
         console.error('[InteractWithNpcModal] 刷新事件数据失败:', error);
       });
     }
-  }, [sessionId, gameData, setSelectedSubscene, setSelectedScene, setPendingAction, setCurrentView, refreshEventData]);
+  }, [sessionId, eventId, gameData, setSelectedSubscene, setSelectedScene, setPendingAction, setCurrentView, refreshEventData]);
 
   const refreshHistory = useCallback(async () => {
     if (!sessionId) return;
@@ -332,6 +339,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
                 gameData={gameData}
                 pendingAction={pendingAction}
                 isTextMode={isTextMode}
+                isAutoPlay={isAutoPlay}
                 onUpdateAttributes={onUpdateAttributes}
                 onRefreshEventData={refreshEventData}
                 onContinue={handleContinue}
@@ -341,6 +349,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
                 onRetry={(retryFn) => {
                   retryRequestRef.current = retryFn;
                 }}
+                onAutoPlayChange={setIsAutoPlay}
                 setTimeoutModal={handleSetTimeoutModal}
                 setErrorModal={handleSetErrorModal}
               />

@@ -41,7 +41,7 @@
 /* 场景内容区域 */
 .sceneContent {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;

@@ -242,8 +242,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     const lastStepIsChoice = lastStep?.type === 'choice';
     
     const showMainLoader = isWaitingForData && (steps.length === 0 || lastStepIsChoice);
-    
-    const showDotLoader = isWaitingForData && steps.length > 0 && !isTyping && !lastStepIsChoice;
 
     return (
         <div className={`${styles.textModeContainer} ${noPaddingBottom ? styles.noPaddingBottom : ''}`}>
@@ -286,17 +284,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                             />
                         );
                     })}
-
-                    {/* Step 之间的间隙：三点加载 */}
-                    {showDotLoader && (
-                        <div className={styles.inlineLoadingWrapper}>
-                            <div className={styles.inlineLoader}>
-                                <div className={styles.loaderDot}></div>
-                                <div className={styles.loaderDot}></div>
-                                <div className={styles.loaderDot}></div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             )}
         </div>

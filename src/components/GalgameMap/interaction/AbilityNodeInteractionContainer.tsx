@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAbilityNodeInteractionStep } from '../../../hooks/mapGalgame/abilityNode/useAbilityNodeInteractionStep';
 import { useAbilityNodeStreamRequestManager } from '../../../hooks/mapGalgame/abilityNode/useAbilityNodeStreamRequestManager';
 import { useStoryTyping } from '../../../hooks/story/useStoryTyping';
-import { extractPlainText } from '../../../utils/textUtils';
+import { extractPlainText, truncateTextWithTags } from '../../../utils/textUtils';
 import { convertStepToMessage } from '../../../hooks/mapGalgame/common/interactionUtils';
 import StreamOutputContainer from './StreamOutputContainer';
 import styles from './ContinueButton.module.css';
@@ -21,11 +21,13 @@ interface AbilityNodeInteractionContainerProps {
   gameData: AllGameData | null;
   pendingAction: { nodeId: string; actionId: string };
   isTextMode?: boolean;
+  isAutoPlay?: boolean; // 自动播放状态
   onUpdateAttributes?: () => Promise<void>;
   onRefreshEventData?: (sessionId: string, gameData: any) => Promise<void>;
   onContinue?: () => void;
   onCancel?: (restoreFn: () => void) => void; // 取消请求时的回调，传递恢复函数
   onRetry?: (retryFn: () => void) => void; // 重试请求时的回调，传递重试函数
+  onAutoPlayChange?: (isAutoPlay: boolean) => void; // 自动播放状态变化回调
   setTimeoutModal?: (value: { visible: boolean; message: string }) => void; // 设置超时弹窗
   setErrorModal?: (value: { visible: boolean; message: string }) => void; // 设置错误弹窗
 }
@@ -36,18 +38,27 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
   gameData,
   pendingAction,
   isTextMode = false,
+  isAutoPlay = false,
   onUpdateAttributes,
   onRefreshEventData,
   onContinue,
   onCancel,
   onRetry,
+  onAutoPlayChange,
   setTimeoutModal,
   setErrorModal,
 }) => {
   const worldSetting = gameData?.worldSetting || null;
   const [gameStarted, setGameStarted] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState<any[]>([]); // 保存已完成的步骤，用于文本模式显示历史
   const processedPendingActionRef = useRef<{ nodeId: string; actionId: string } | null>(null);
   const currentNodeIdRef = useRef<string | null>(null);
+  const prevStepKeyForTextModalRef = useRef<string | null>(null); // 用于追踪步骤切换
+  const prevStepRef = useRef<any>(null); // 用于追踪上一个步骤
+  const prevIsTypingRef = useRef<boolean>(false); // 用于追踪上一个打字状态
+  
+  // 自动播放延迟时间（毫秒）
+  const AUTO_PLAY_DELAY_MS = 2000;
 
   // 请求管理器（功能性NPC专用，不包含轮询）
   const streamRequestManager = useAbilityNodeStreamRequestManager({
@@ -260,13 +271,55 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
     void fetchAndProcessStream();
   }, [pendingAction, sessionId, stepHandlers, streamRequestManager, gameData, onUpdateAttributes, onRefreshEventData]);
 
-  // 计算文本模式数据（功能性NPC简化版，不保存历史）
-  const allStepsForTextModal = useMemo(() => {
-    if (stepHandlers.currentStep?.type) {
-      return [stepHandlers.currentStep];
+  // 当步骤完成时，添加到 completedSteps（用于文本模式显示历史）
+  useEffect(() => {
+    const currentStep = stepHandlers.currentStep;
+    const prevStep = prevStepRef.current;
+    if (prevStep && currentStep !== prevStep && !isTyping) {
+      setCompletedSteps((prev) => {
+        const exists = prev.some((s) => s && s.type === prevStep.type && s.content === prevStep.content);
+        return exists ? prev : [...prev, prevStep];
+      });
     }
-    return [];
-  }, [stepHandlers.currentStep]);
+    prevStepRef.current = currentStep;
+    prevIsTypingRef.current = isTyping;
+  }, [stepHandlers.currentStep, isTyping]);
+
+  // 计算文本模式数据（包含历史步骤）
+  const allStepsForTextModal = useMemo(() => {
+    let validSteps = completedSteps.filter((s) => s && s.type);
+    if (stepHandlers.currentStep?.type) {
+      // 检测步骤切换：如果 currentStepKey 变化了，说明是新步骤
+      const isStepChanged = currentStepKey !== prevStepKeyForTextModalRef.current;
+      if (isStepChanged) {
+        prevStepKeyForTextModalRef.current = currentStepKey;
+      }
+      
+      // 查找是否已存在相同内容的步骤
+      const existingIndex = validSteps.findIndex(
+        (s) => s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
+      );
+      
+      if (existingIndex < 0) {
+        // 新步骤：如果步骤刚切换或正在打字，插入空 content，避免显示完整文本导致闪烁
+        const shouldUseEmptyContent = isStepChanged || isTyping || (displayedText.length > plainTextForTyping.length && plainTextForTyping.length > 0);
+        
+        const stepToAdd = shouldUseEmptyContent
+          ? { ...stepHandlers.currentStep, content: '' } // 插入空内容，避免闪烁
+          : stepHandlers.currentStep;
+        
+        validSteps = [...validSteps, stepToAdd];
+      }
+    }
+    // 处理 choice 步骤：如果有多个 choice，只保留最后一个
+    const choiceIndices = validSteps.map((step, index) => (step?.type === 'choice' ? index : -1)).filter((idx) => idx >= 0);
+    if (choiceIndices.length > 1) {
+      for (let i = choiceIndices.length - 2; i >= 0; i--) {
+        validSteps.splice(choiceIndices[i], 1);
+      }
+    }
+    return validSteps;
+  }, [completedSteps, stepHandlers.currentStep, currentStepKey, isTyping, displayedText, plainTextForTyping]);
 
   const currentStepIndex = useMemo(() => {
     if (stepHandlers.currentStep && stepHandlers.currentStep.type) {
@@ -290,7 +343,11 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
       isTyping &&
       displayedText.length > 0
     ) {
-      return currentMessage.message || '';
+      const originalText = currentMessage.message || '';
+      const currentPlainLength = displayedText.length;
+      if (currentPlainLength > 0) {
+        return truncateTextWithTags(originalText, currentPlainLength);
+      }
     }
     return '';
   }, [stepHandlers.currentStep, currentMessage, displayedText, isTyping]);
@@ -301,6 +358,26 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
       stepHandlers.handleNextMessage();
     }
   }, [gameStarted, stepHandlers]);
+
+  // 自动播放
+  useEffect(() => {
+    if (!isAutoPlay || !gameStarted) return;
+    if (stepHandlers.isWaitingForData) return;
+    if (finalIsTyping) return;
+    if (!stepHandlers.showNextButton) return;
+    if (currentMessage?.type === 'choice') {
+      onAutoPlayChange?.(false);
+      return;
+    }
+
+    const autoPlayTimer = setTimeout(() => {
+      if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
+        handleNextMessage();
+      }
+    }, AUTO_PLAY_DELAY_MS);
+
+    return () => clearTimeout(autoPlayTimer);
+  }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, onAutoPlayChange]);
 
   // TODO:处理选择（功能性NPC暂不支持选择，后端接口未实现）
   const handleChoiceClick = useCallback(
@@ -318,7 +395,6 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
 
   // 取消操作：只关闭弹窗，保留当前显示的状态
   const restoreToLastStep = useCallback(() => {
-    // 清除错误和超时弹窗
     setErrorModal?.({ visible: false, message: '' });
     setTimeoutModal?.({ visible: false, message: '' });
   }, [setErrorModal, setTimeoutModal]);
@@ -360,30 +436,13 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
     gameStarted,
   ]);
 
-  // 开发环境测试按钮（仅用于测试超时和错误弹窗）
-  // const isDev = import.meta.env.DEV;
-  // const handleTestTimeout = useCallback(() => {
-  //   if (setTimeoutModal) {
-  //     setTimeoutModal({
-  //       visible: true,
-  //       message: TIMEOUT_MESSAGES.ABILITY_NODE,
-  //     });
-  //   }
-  // }, [setTimeoutModal]);
-  
-  // const handleTestError = useCallback(() => {
-  //   if (setErrorModal) {
-  //     setErrorModal({
-  //       visible: true,
-  //       message: '测试错误：这是模拟的错误消息',
-  //     });
-  //   }
-  // }, [setErrorModal]);
+
 
   return (
     <>
       <StreamOutputContainer
         isTextMode={isTextMode}
+        isAutoPlay={isAutoPlay}
         currentMessage={currentMessage}
         finalDisplayText={finalDisplayText}
         finalIsTyping={finalIsTyping}
@@ -394,7 +453,8 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
         showNextButton={stepHandlers.showNextButton}
         currentStep={stepHandlers.currentStep}
         selectedOptionIndex={null}
-        historyLength={0}
+        stepQueue={stepHandlers.stepQueue}
+        historyLength={completedSteps.length}
         worldSetting={worldSetting}
         onNextMessage={handleNextMessage}
         onChoiceClick={handleChoiceClick}
@@ -405,46 +465,8 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
           继续游戏
         </button>
       )}
-      {/* 开发环境测试按钮 */}
-      {/* {isDev && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          display: 'flex',
-          gap: '10px',
-          zIndex: 9999,
-        }}>
-          <button
-            onClick={handleTestTimeout}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#ff9800',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-            }}
-          >
-            测试超时弹窗
-          </button>
-          <button
-            onClick={handleTestError}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-            }}
-          >
-            测试错误弹窗
-          </button>
-        </div>
-      )} */}
+    
+
     </>
   );
 };

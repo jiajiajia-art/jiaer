@@ -16,7 +16,6 @@ const Attributes: React.FC<AttributesProps> = ({ npc, player, visible, onClose }
     const target = npc || player;
     const name = npc ? npc.name : (player ? player.name : '');
     const visibleAttributes = Object.entries(target?.attributes || {}).filter(([, attr]) => attr.visible === true);
-    console.log('会渲染的npc可见属性', visibleAttributes);
 
     return (
         <div className={styles.overlay} onClick={onClose}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Home.module.css';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';

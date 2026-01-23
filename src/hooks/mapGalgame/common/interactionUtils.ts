@@ -207,4 +207,3 @@ export const safeRemoveLocalStorage = (key: string | null): boolean => {
         return false;
     }
 };
-

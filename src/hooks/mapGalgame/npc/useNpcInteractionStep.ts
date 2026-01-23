@@ -119,13 +119,6 @@ export const useNpcInteractionStep = ({
     if (!step) return;
 
     const shouldShowNext = step.type !== "choice";
-    
-    console.log('[showStep] 设置当前步骤:', {
-      stepType: step.type,
-      stepContent: step.content?.substring(0, 50),
-      hasCharacter: !!step.character,
-      shouldShowNext,
-    });
     setCurrentStep(step);
     setIsWaitingForData(false);
     setSelectedOptionIndex(null);
