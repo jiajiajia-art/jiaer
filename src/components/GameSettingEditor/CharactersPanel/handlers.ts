@@ -423,19 +423,15 @@ export const createHandlers = (ctx: HandlersContext) => {
 
                 // 如果是玩家图片，更新 portrait 或 variations
                 if (type === 'player' && !isAddingNew) {
-                    const { image: playerImage, images: playerImages } = parseResponse.extractPlayerImage(response.data, mode);
-                    const processedPlayerImage = playerImage ? getImageUrl(playerImage) : undefined;
-                    const processedPlayerImages = playerImages ? Object.fromEntries(
-                        Object.entries(playerImages).map(([key, value]) => [key, getImageUrl(value)])
-                    ) : undefined;
+                const { image: playerImage, images: playerImages } = parseResponse.extractPlayerImage(response.data, mode);
 
                     if (variant === 'base') {
-                        const newPortrait = processedPlayerImages?.base || processedPlayerImage;
+                        const newPortrait = (playerImages && playerImages.base) || playerImage;
                         if (newPortrait) {
                             setCharacterData(prev =>
                                 prev.map(char =>
                                     char.id === 'player'
-                                        ? { ...char, portrait: withCacheBust(newPortrait) }
+                                        ? { ...char, portrait: newPortrait } // 存原始路径，展示时再处理
                                         : char
                                 )
                             );
@@ -447,7 +443,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                         }
                     } else {
                         // 差分图片
-                        const variantImg = processedPlayerImages?.[variant] || processedPlayerImage;
+                        const variantImg = (playerImages && playerImages[variant]) || playerImage;
                         if (variantImg) {
                             setCharacterData(prev =>
                                 prev.map(char => {
@@ -458,14 +454,14 @@ export const createHandlers = (ctx: HandlersContext) => {
                                         const newVariations = [...char.variations];
                                         newVariations[existingVarIndex] = {
                                             ...newVariations[existingVarIndex],
-                                            img: withCacheBust(variantImg),
+                                            img: variantImg, // 存原始路径
                                         };
                                         return { ...char, variations: newVariations };
                                     } else {
                                         const newVar: Variation = {
                                             id: `v-${Date.now()}`,
                                             label: variant,
-                                            img: withCacheBust(variantImg),
+                                            img: variantImg,
                                             type: variant,
                                         };
                                         return { ...char, variations: [...char.variations, newVar] };
@@ -485,8 +481,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
                     const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
                     if (imageData?.imagePath) {
-                        const processedImagePath = getImageUrl(imageData.imagePath);
-                        const imageUrl = withCacheBust(processedImagePath);
+                        const imageUrl = imageData.imagePath; // 原始路径
                         
                         if (variant === 'base') {
                             updateCharacterImage(targetCharacterId, imageUrl, 'base');
@@ -542,8 +537,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 // 首先尝试提取 base 图片数据
                 const imageData = parseResponse.extractNpcImage(response.data, mode, 'base');
                 if (imageData?.imagePath) {
-                    const processedImagePath = getImageUrl(imageData.imagePath);
-                    const imageUrl = withCacheBust(processedImagePath);
+                    const imageUrl = imageData.imagePath; // 原始路径
                     updateCharacterImage(npc.id, imageUrl, 'base');
                 } else {
                     // 如果无法直接提取图片数据，尝试从响应中获取完整的NPC数据
@@ -570,12 +564,11 @@ export const createHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 toast.success('主角图片重新生成成功');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
-                const processedImageUrl = newImageUrl ? getImageUrl(newImageUrl) : undefined;
 
-                if (processedImageUrl) {
+                if (newImageUrl) {
                     setCharacterData(prev => prev.map(char =>
                         char.id === 'player'
-                            ? { ...char, portrait: withCacheBust(processedImageUrl) }
+                            ? { ...char, portrait: newImageUrl } // 存原始路径
                             : char
                     ));
                 } else {
@@ -710,6 +703,37 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
+    // 删除差分图片
+    const deleteVariationImage = async (variation: Variation, currentCharacter: Character | null) => {
+        if (!fileId || !variation || !currentCharacter) {
+            toast.error('缺少必要数据，无法删除差分');
+            return;
+        }
+        if (currentCharacter.id === 'player') {
+            toast.error('暂不支持删除主角差分');
+            return;
+        }
+
+        try {
+            const response = await api.deleteVariantImage(fileId, currentCharacter.id, variation.label);
+            if (response.data?.success) {
+                setCharacterData(prev => prev.map(char => {
+                    if (char.id !== currentCharacter.id) return char;
+                    return {
+                        ...char,
+                        variations: char.variations.filter(v => v.id !== variation.id),
+                    };
+                }));
+                toast.success('差分删除成功');
+            } else {
+                toast.error('删除差分失败');
+            }
+        } catch (error) {
+            console.error('删除差分失败:', error);
+            toast.error('删除差分失败，请稍后重试');
+        }
+    };
+
     // 批量生成所有NPC图片
     const generateAllNpcImages = async (npcCostPoints: number | null) => {
         if (!fileId) {
@@ -785,6 +809,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         regenerateNpcImage,
         regeneratePlayerImage,
         regenerateVariationImage,
+        deleteVariationImage,
         generateAllNpcImages,
         openNpcCostModal,
         updateCharacterFromResponse,

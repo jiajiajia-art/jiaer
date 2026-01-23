@@ -3,18 +3,17 @@ import styles from './SceneList.module.css';
 import { RiDeleteBin5Line, RiArrowDownSLine, RiArrowRightSLine } from 'react-icons/ri';
 import type { LocalScene } from './handlers';
 import type { WorldSubScene } from '../editorCompat';
-import { getSceneById, isWorldScene } from '../editorCompat';
-import { addImageTimestamp, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
+import { DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { getImageUrl } from '../../../utils/constants';
 
 interface SceneListProps {
     sceneData: LocalScene[];
+    subsceneDataBySceneId?: Record<string, WorldSubScene[]>;
     activeSceneId: string;
     activeSubsceneId: string | null;
     mode: string;
-    gameData: any;
     onSceneClick: (sceneId: string) => void;
-    onSubsceneClick: (sceneId: string, subsceneId: string, subscene: WorldSubScene) => void;
+    onSubsceneClick: (sceneId: string, subsceneId: string) => void;
     onDeleteClick: (sceneId: string, e: React.MouseEvent) => void;
     onSubsceneDeleteClick: (sceneId: string, subsceneId: string, e: React.MouseEvent) => void;
     onAddNewScene: () => void;
@@ -23,10 +22,10 @@ interface SceneListProps {
 
 const SceneList: React.FC<SceneListProps> = ({
     sceneData,
+    subsceneDataBySceneId,
     activeSceneId,
     activeSubsceneId,
     mode,
-    gameData,
     onSceneClick,
     onSubsceneClick,
     onDeleteClick,
@@ -55,12 +54,10 @@ const SceneList: React.FC<SceneListProps> = ({
             </div>
             <div className={styles.sceneList}>
                 {sceneData.map((scene) => {
-                    const originalScene = mode === 'worldInteraction'
-                        ? getSceneById(gameData, scene.id)
-                        : null;
-                    const subscenes: WorldSubScene[] = isWorldScene(originalScene as any) 
-                        ? (originalScene?.subscenes || []) 
-                        : [];
+                    const subscenes: WorldSubScene[] =
+                        mode === 'worldInteraction'
+                            ? (subsceneDataBySceneId?.[scene.id] || [])
+                            : [];
 
                     return (
                         <React.Fragment key={scene.id}>
@@ -129,20 +126,20 @@ const SceneList: React.FC<SceneListProps> = ({
                                             <article
                                                 key={subId}
                                                 className={`${styles.sceneRow} ${styles.subsceneRowCard} ${isActiveSub ? styles.active : ''}`}
-                                                onClick={() => onSubsceneClick(scene.id, subId, sub)}
+                                                onClick={() => onSubsceneClick(scene.id, subId)}
                                             >
                                                 <div
                                                     className={`${styles.sceneThumb} ${!sub.image ? styles.empty : ''}`}
                                                     style={{ 
-                                                        backgroundImage: `url('${sub.image ? addImageTimestamp(getImageUrl(sub.image)) : DEFAULT_WORLD_MAP_IMAGE}')` 
+                                                        backgroundImage: `url('${sub.image ? getImageUrl(sub.image) : DEFAULT_WORLD_MAP_IMAGE}')` 
                                                     }}
                                                 >
                                                     {!sub.image && <span>待生成或上传</span>}
                                                 </div>
                                                 <div className={styles.sceneMeta}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <strong>{sub.name || '未命名子场景'}</strong>
+                                                    <div className={styles.subsceneTitleRow}>
+                                                        <div className={styles.subsceneTitleLeft}>
+                                                            <strong className={styles.subsceneName}>{sub.name || '未命名子场景'}</strong>
                                                             <span className={styles.subsceneTag}>子场景</span>
                                                         </div>
                                                         <button
@@ -168,5 +165,5 @@ const SceneList: React.FC<SceneListProps> = ({
     );
 };
 
-export default SceneList;
+export default React.memo(SceneList);
 

@@ -151,6 +151,10 @@ export const createApiHelpers = (mode: string) => {
             });
         },
 
+        deleteVariantImage: async (fileId: string, npcId: string, variant: string) => {
+            return EditorApi.deleteVariantImage(fileId, npcId, variant);
+        },
+
         // 下载图片
         downloadImage: async (fileId: string, type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', name: string, variant?: string) => {
             const pluginType = isWorldInteraction ? 'world-interaction' : 'visual';

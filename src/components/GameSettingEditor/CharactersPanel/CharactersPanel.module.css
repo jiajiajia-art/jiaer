@@ -228,6 +228,45 @@
     transform: scale(0.95);
 }
 
+/* 差分缩略图上的小图标按钮（下载 / 删除） */
+.variationDownloadButton,
+.variationDeleteButton {
+    position: absolute;
+    top: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+.variationDownloadButton {
+    right: 6px;
+}
+
+.variationDeleteButton {
+    right: 36px;
+}
+
+.variationDownloadButton:hover,
+.variationDeleteButton:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.05);
+}
+
+.variationDownloadButton:active,
+.variationDeleteButton:active {
+    transform: scale(0.95);
+}
+
 /* 表单布局 */
 .formGrid {
     display: grid;

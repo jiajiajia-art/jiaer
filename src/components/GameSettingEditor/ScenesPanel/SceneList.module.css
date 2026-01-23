@@ -187,5 +187,32 @@
     color: var(--primary);
     font-size: 0.7rem;
     margin-left: 4px;
+    flex-shrink: 0;
+}
+
+/* 子场景标题行：长标题不挤压右侧按钮/标签 */
+.subsceneTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+}
+
+.subsceneTitleLeft {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0; /* 关键：允许内部文本省略号 */
+    flex: 1;
+}
+
+.subsceneName {
+    min-width: 0; /* 关键：允许省略号生效 */
+    flex: 1;
+}
+
+.deleteButton {
+    flex-shrink: 0;
 }
 

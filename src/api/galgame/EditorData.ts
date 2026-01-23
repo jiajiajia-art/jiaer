@@ -148,6 +148,8 @@ const EditorApi = {
         api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npcId}/variant`, data, {
             timeout: 180000,
         }),
+    deleteVariantImage: (fileId:string, npcId:string, variant:string) =>
+        api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/npcs/${npcId}/image/${variant}`),
     calculateScenePoints: (fileId: string) =>
         api.post<CalculatePointsResponse>(`/visual/images/generate-scenes/calculate-points`, {
             fileId: fileId,

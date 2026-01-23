@@ -1,7 +1,7 @@
 import React from 'react';
 import sidebarStyles from './CharactersSidebar.module.css';
 import sharedStyles from './CharactersPanel.module.css';
-import { getImageUrl } from '../../../utils/constants';
+import { withCacheBust } from './utils';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { Character } from './types';
 
@@ -60,7 +60,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                     >
                         <div
                             className={sidebarStyles.characterThumb}
-                            style={{ backgroundImage: character.portrait ? `url('${getImageUrl(character.portrait)}')` : 'none' }}
+                            style={{ backgroundImage: character.portrait ? `url('${withCacheBust(character.portrait)}')` : 'none' }}
                         />
                         <div className={sidebarStyles.characterMeta}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>

@@ -49,6 +49,7 @@ const GalgameMap = () => {
   const { fileId, sessionId } = useGameStore();
   const [gameData, setGameData] = useState<AllGameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingHistory, setIsCheckingHistory] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const [worldInteractionHistory, setWorldInteractionHistory] =
     useState<GetWorldInteractionHistoryResponse>();
@@ -120,8 +121,10 @@ const GalgameMap = () => {
 
   const fetchWorldInteractionHistory = useCallback(async () => {
     if (!sessionId) {
+      setIsCheckingHistory(false);
       return;
     }
+    setIsCheckingHistory(true);
     try {
       const response = await interactionApi.getWorldInteractionHistory(
         sessionId
@@ -132,6 +135,8 @@ const GalgameMap = () => {
       }
     } catch (error) {
       console.error("获取历史记录失败:", error);
+    } finally {
+      setIsCheckingHistory(false);
     }
   }, [sessionId]);
 
@@ -214,6 +219,8 @@ const GalgameMap = () => {
     let cancelled = false;
 
     const syncEventState = async () => {
+      // 如果正在检查历史记录，等待完成
+      if (isCheckingHistory) return;
       if (!sessionId || !gameData || !worldInteractionHistory) return;
 
       const hasHistory = worldInteractionHistory.interactions.length > 0;
@@ -331,6 +338,7 @@ const GalgameMap = () => {
     setCurrentView,
     setEventData,
     clearState,
+    isCheckingHistory,
   ]);
 
   const getMapWorldData = useCallback(async () => {
@@ -629,7 +637,8 @@ const GalgameMap = () => {
     }
   };
 
-  if (isLoading) {
+  // 在加载游戏数据或检查历史记录时，显示加载状态
+  if (isLoading || isCheckingHistory) {
     return (
       <FullPageLoading
         rootClassName={styles.page}
@@ -641,7 +650,6 @@ const GalgameMap = () => {
   return (
     <div className={styles.page} ref={containerRef}>
       <div className={styles.mapContainer}>
-        {/* 音乐控制按钮和Player属性按钮 - 在所有视图中显示 */}
         {gameData && (
           <div
             className={`${styles.topButtonsContainer} ${

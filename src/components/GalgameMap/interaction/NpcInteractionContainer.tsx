@@ -292,6 +292,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
 
   // 是否显示继续按钮
   const shouldShowContinueButton = useMemo(() => {
+    if (!stepHandlers.currentStep) return false;
     const queueEmpty = !stepHandlers.stepQueue || stepHandlers.stepQueue.length === 0;
     const isChoiceStep = stepHandlers.currentStep?.type === 'choice';
     const isShowingChoiceUI = currentMessage?.type === 'choice';

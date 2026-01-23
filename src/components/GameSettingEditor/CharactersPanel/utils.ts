@@ -15,36 +15,29 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
     return data.npcSetting.npcs || [];
 }
 
-// 为图片 URL 添加时间戳，避免缓存导致的旧图显示
+// 为展示用图片 URL 添加时间戳，避免缓存导致的旧图显示（仅用于渲染，不写入后端或 state）
+// 为避免切换/重渲染时反复刷新同一图片，这里对同一个原始 URL 复用同一个 cb 值
+const cacheBustMap = new Map<string, string>();
+
 export const withCacheBust = (url?: string | null) => {
     if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
-        const isDefaultImage = url.includes('defaultNpc.png') || 
-                          url.includes('defaultScene.png') || 
-                          url.includes('defaultMap.png') ||
-                          url.startsWith(import.meta.env.BASE_URL);
-    
-    const processedUrl = isDefaultImage || url.startsWith('http://') || url.startsWith('https://') 
-        ? url 
-        : getImageUrl(url);
-    
-    if (!processedUrl) return '';
-    const separator = processedUrl.includes('?') ? '&' : '?';
-    return `${processedUrl}${separator}cb=${Date.now()}`;
-};
 
-// 清理 URL 中的 cb 参数，用于传递给后端 API
-export const removeCacheBust = (url?: string | null): string => {
-    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
-    const urlStr = url.toString();
-    if (!urlStr.includes('cb=')) {
-        return urlStr;
-    }
-    const [baseUrl, queryString] = urlStr.split('?');
-    if (!queryString) {
-        return urlStr;
-    }
-    const params = queryString.split('&').filter(param => !param.startsWith('cb='));
-    return params.length > 0 ? `${baseUrl}?${params.join('&')}` : baseUrl;
+    const processedUrl =
+        url.startsWith('http://') || url.startsWith('https://')
+            ? url
+            : getImageUrl(url);
+
+    if (!processedUrl) return '';
+
+    if (processedUrl.includes('cb=')) return processedUrl;
+
+    const existing = cacheBustMap.get(processedUrl);
+    if (existing) return existing;
+
+    const separator = processedUrl.includes('?') ? '&' : '?';
+    const busted = `${processedUrl}${separator}cb=${Date.now()}`;
+    cacheBustMap.set(processedUrl, busted);
+    return busted;
 };
 
 // 拆分 variant 键名（格式：type_value）为 type 和 value
@@ -91,7 +84,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
                 return {
                     id: `v${idx}`,
                     label: parsed.value, // value 作为 label
-                    img: withCacheBust(img),
+                    img,                 // 保持原始路径，展示时再处理
                     type: parsed.type,   // type 作为 type
                 };
             }
@@ -99,7 +92,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
             return {
                 id: `v${idx}`,
                 label: key,
-                img: withCacheBust(img),
+                img, // 保持原始路径，展示时再处理
                 type: key,
             };
         });
@@ -177,7 +170,7 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
         personality: npc.personality ? [npc.personality] : [],
         speech: npc.tone || '',
         appearance: npc.appearance || '',
-        portrait: portrait ? withCacheBust(portrait) : '',
+        portrait: portrait || '',
         background: npc.description || '',
         relationships: npcRelationship ? [{
             id: 'r1',
@@ -205,7 +198,7 @@ export const playerToCharacter = (player: any): Character => {
         personality: player?.personality ? [player.personality] : [],
         speech: player?.tone || '',
         appearance: player?.appearance || '',
-        portrait: portrait ? withCacheBust(portrait) : '',
+        portrait: portrait || '',
         background: '',
         relationships: [],
         variations: imagesToVariations(imagesObject),

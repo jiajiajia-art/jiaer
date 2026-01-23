@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import styles from './CharactersPanel.module.css';
-import { IMAGE_GENERATION_COST, getImageUrl } from '../../../utils/constants';
+import { IMAGE_GENERATION_COST } from '../../../utils/constants';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
+import { RiDeleteBin5Line } from 'react-icons/ri';
+import { withCacheBust } from './utils';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
@@ -78,6 +80,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [pendingVariationForGenerate, setPendingVariationForGenerate] = useState<{ variation: Variation; character: Character } | null>(null);
     const attributePanelRef = useRef<CharacterAttributesPanelRef>(null);
     const originalCharacterDataRef = useRef<Character[]>([]);
+    const [deleteVariationModalOpen, setDeleteVariationModalOpen] = useState(false);
+    const [pendingVariationToDelete, setPendingVariationToDelete] = useState<{ variation: Variation; character: Character } | null>(null);
 
     // 未保存修改相关状态
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -548,7 +552,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
         }
         setHasUnsavedChanges(false);
-        onDataChange?.();
+        // onDataChange?.();
     };
 
     // 删除角色
@@ -860,7 +864,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div
                                 className={styles.portraitLarge}
                                 style={{
-                                    backgroundImage: currentCharacter.portrait ? `url('${getImageUrl(currentCharacter.portrait)}')` : 'none',
+                                    backgroundImage: currentCharacter.portrait ? `url('${withCacheBust(currentCharacter.portrait)}')` : 'none',
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
@@ -1002,7 +1006,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                 <div key={variation.id} className={styles.variationCard}>
                                                     <div
                                                         className={`${styles.variationThumb} ${!variation.img ? styles.empty : ''}`}
-                                                        style={variation.img ? { backgroundImage: `url('${getImageUrl(variation.img)}')` } : {}}
+                                                        style={variation.img ? { backgroundImage: `url('${withCacheBust(variation.img)}')` } : {}}
                                                     >
                                                         {/* 加载效果 */}
                                                         {isGeneratingVariation && generatingVariationId === variation.id && (
@@ -1012,18 +1016,33 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                             </div>
                                                         )}
                                                         {/* 下载按钮 */}
-                                                        {variation.img && currentCharacter.id !== 'player' && (
-                                                            <button
-                                                                className={styles.downloadButton}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const variantType = variation.label;
-                                                                    handleDownloadImage('npcs', currentCharacter.id, variantType);
-                                                                }}
-                                                                title="下载图片"
-                                                            >
-                                                                <MdDownload size={16} />
-                                                            </button>
+                                                        { currentCharacter.id !== 'player' && (
+                                                            <>
+                                                                <button
+                                                                    className={styles.variationDeleteButton}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (!handlers) return;
+                                                                        setPendingVariationToDelete({ variation, character: currentCharacter });
+                                                                        setDeleteVariationModalOpen(true);
+                                                                    }}
+                                                                    title="删除差分"
+                                                                    disabled={isGeneratingVariation && generatingVariationId === variation.id}
+                                                                >
+                                                                    <RiDeleteBin5Line size={14} />
+                                                                </button>
+                                                                <button
+                                                                    className={styles.variationDownloadButton}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const variantType = variation.label;
+                                                                        handleDownloadImage('npcs', currentCharacter.id, variantType);
+                                                                    }}
+                                                                    title="下载图片"
+                                                                >
+                                                                    <MdDownload size={14} />
+                                                                </button>
+                                                            </>
                                                         )}
                                                         {!variation.img && !isGeneratingVariation && <span className={styles.mutedSmall}>等待图片</span>}
                                                     </div>
@@ -1294,6 +1313,29 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 message={`本次生成差分图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
+            />
+
+            {/* 差分删除确认弹窗 */}
+            <ConfirmModal
+                isOpen={deleteVariationModalOpen}
+                onConfirm={async () => {
+                    if (pendingVariationToDelete && handlers) {
+                        await handlers.deleteVariationImage(
+                            pendingVariationToDelete.variation,
+                            pendingVariationToDelete.character
+                        );
+                    }
+                    setDeleteVariationModalOpen(false);
+                    setPendingVariationToDelete(null);
+                }}
+                onCancel={() => {
+                    setDeleteVariationModalOpen(false);
+                    setPendingVariationToDelete(null);
+                }}
+                title="删除差分"
+                message="删除后差分图片不可恢复，请谨慎操作！"
+                confirmButtonText="确认删除"
+                cancelButtonText="我再想想"
             />
 
             {isGeneratingNpcImages && (
