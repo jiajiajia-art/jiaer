@@ -7,7 +7,7 @@ import type { NPC } from '../../../api/galgame/EditorData.type';
 import type { NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { Character, Variation } from './types';
 import { DEFAULT_NPC_PORTRAIT } from './types';
-import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
+import { getPlayerImageUrl } from '../../../utils/constants';
 
 // 辅助函数：获取 npcs（兼容两种模式）
 export function getNpcs(data: AllGameData | WorldInteractionGameData) {
@@ -15,30 +15,8 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
     return data.npcSetting.npcs || [];
 }
 
-// 为展示用图片 URL 添加时间戳，避免缓存导致的旧图显示（仅用于渲染，不写入后端或 state）
-// 为避免切换/重渲染时反复刷新同一图片，这里对同一个原始 URL 复用同一个 cb 值
-const cacheBustMap = new Map<string, string>();
-
-export const withCacheBust = (url?: string | null) => {
-    if (!url || url === 'null' || url === 'undefined' || url.trim() === '') return '';
-
-    const processedUrl =
-        url.startsWith('http://') || url.startsWith('https://')
-            ? url
-            : getImageUrl(url);
-
-    if (!processedUrl) return '';
-
-    if (processedUrl.includes('cb=')) return processedUrl;
-
-    const existing = cacheBustMap.get(processedUrl);
-    if (existing) return existing;
-
-    const separator = processedUrl.includes('?') ? '&' : '?';
-    const busted = `${processedUrl}${separator}cb=${Date.now()}`;
-    cacheBustMap.set(processedUrl, busted);
-    return busted;
-};
+// 重新导出图片缓存管理函数
+export { withCacheBust, bumpCacheBust } from '../../../utils/imageCache';
 
 // 拆分 variant 键名（格式：type_value）为 type 和 value
 export const parseVariantKey = (key: string): { type: string; value: string } | null => {

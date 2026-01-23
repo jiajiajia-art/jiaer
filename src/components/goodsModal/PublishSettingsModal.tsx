@@ -3,7 +3,8 @@ import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
-import { addImageTimestamp, getImageUrl } from '../../utils/constants';
+import { getImageUrl } from '../../utils/constants';
+import { addImageTimestamp } from '../../utils/imageCache';
 
 interface PublishSettingsModalProps {
     isOpen: boolean;

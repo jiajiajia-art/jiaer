@@ -74,6 +74,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [storyStructure, setStoryStructure] = useState<StoryStructure | null>(null);
     const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
     const [isGeneratingStory, setIsGeneratingStory] = useState<boolean>(false);
+    const [generationProgress, setGenerationProgress] = useState<number>(0);
+    const [generationStage, setGenerationStage] = useState<string>('');
     const [advancedError, setAdvancedError] = useState<string | null>(null);
     const [storyPrompt, setStoryPrompt] = useState<string>('');
 
@@ -579,6 +581,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
                 console.log('[故事结构生成轮询] jobId:', jobId, 'status:', statusData.status, 'progress:', statusData.progress, 'stage:', statusData.stage);
 
+                // 更新进度和阶段信息
+                if (statusData.progress !== undefined) {
+                    setGenerationProgress(statusData.progress);
+                }
+                if (statusData.stage) {
+                    setGenerationStage(statusData.stage);
+                }
+
                 if (
                     statusData.status === 'running' ||
                     statusData.status === 'queued' ||
@@ -606,6 +616,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                             
                             stopStoryPolling();
                             setIsGeneratingStory(false);
+                            setGenerationProgress(0);
+                            setGenerationStage('');
                             setAdvancedError(null);
                             
                             if (newStoryStructure) {
@@ -630,6 +642,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                     // 任务失败
                     stopStoryPolling();
                     setIsGeneratingStory(false);
+                    setGenerationProgress(0);
+                    setGenerationStage('');
                     const errorMsg = statusData.error || '故事结构生成失败，请重试';
                     toast.error(errorMsg);
                     setAdvancedError(errorMsg);
@@ -637,6 +651,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                     // 任务不存在
                     stopStoryPolling();
                     setIsGeneratingStory(false);
+                    setGenerationProgress(0);
+                    setGenerationStage('');
                     const errorMsg = '故事结构生成任务不存在或已回收，请重试';
                     toast.error(errorMsg);
                     setAdvancedError(errorMsg);
@@ -645,6 +661,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 console.error('轮询故事结构生成状态失败:', error);
                 stopStoryPolling();
                 setIsGeneratingStory(false);
+                setGenerationProgress(0);
+                setGenerationStage('');
                 const errorMsg = error instanceof Error ? error.message : '轮询故事结构生成状态失败';
                 toast.error(errorMsg);
                 setAdvancedError(errorMsg);
@@ -687,6 +705,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         try {
             setIsGeneratingStory(true);
+            setGenerationProgress(0);
+            setGenerationStage('初始化中...');
             setAdvancedError(null);
             
             // 发起生成请求
@@ -697,6 +717,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 toast.error('生成故事结构失败，请稍后重试');
                 setAdvancedError('生成故事结构失败，请稍后重试');
                 setIsGeneratingStory(false);
+                setGenerationProgress(0);
+                setGenerationStage('');
                 return;
             }
 
@@ -711,6 +733,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 console.log('[故事结构生成] 同步返回结果', resData);
                 
                 setIsGeneratingStory(false);
+                setGenerationProgress(0);
+                setGenerationStage('');
                 
                 if (newStoryStructure) {
                     setStoryStructure(newStoryStructure);
@@ -723,12 +747,16 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 toast.error('生成故事结构失败，请稍后重试');
                 setAdvancedError('生成故事结构失败，请稍后重试');
                 setIsGeneratingStory(false);
+                setGenerationProgress(0);
+                setGenerationStage('');
             }
         } catch (error) {
             console.error('生成故事结构失败:', error);
             toast.error('生成故事结构失败，请稍后重试');
             setAdvancedError('生成故事结构失败，请稍后重试');
             setIsGeneratingStory(false);
+            setGenerationProgress(0);
+            setGenerationStage('');
         }
     }, [currentFileId, storyPrompt, startStoryPolling, stopStoryPolling]);
 
@@ -790,33 +818,23 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 )}
 
                 {/* Tab 内容 */}
-                <div className={styles.tabContent}>
+                <div className={`${styles.tabContent} ${isGeneratingStory && mode === 'visual' && activeTab === 'advanced' ? styles.tabContentGenerating : ''}`}>
                     {mode === 'visual' && activeTab === 'advanced' ? (
-                        <>
-                            <StoryStructureAdvanced
-                                fileId={currentFileId}
-                                storyStructure={storyStructure}
-                                setStoryStructure={setStoryStructure}
-                                dynamicEntries={dynamicEntries}
-                                setDynamicEntries={setDynamicEntries}
-                                storyPrompt={storyPrompt}
-                                setStoryPrompt={setStoryPrompt}
-                                isGeneratingStory={isGeneratingStory}
-                                advancedError={advancedError}
-                                onGenerate={handleGenerateStoryStructure}
-                                canGenerate={!!currentFileId}
-                            />
-                            {isGeneratingStory && (
-                                <div className={styles.tabLoadingOverlay}>
-                                    <div className={styles.tabLoadingContent}>
-                                        <div className={styles.tabLoadingSpinner} />
-                                        <div className={styles.tabLoadingText}>
-                                            正在生成故事结构和动态条目，请稍候…
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </>
+                        <StoryStructureAdvanced
+                            fileId={currentFileId}
+                            storyStructure={storyStructure}
+                            setStoryStructure={setStoryStructure}
+                            dynamicEntries={dynamicEntries}
+                            setDynamicEntries={setDynamicEntries}
+                            storyPrompt={storyPrompt}
+                            setStoryPrompt={setStoryPrompt}
+                            isGeneratingStory={isGeneratingStory}
+                            generationProgress={generationProgress}
+                            generationStage={generationStage}
+                            advancedError={advancedError}
+                            onGenerate={handleGenerateStoryStructure}
+                            canGenerate={!!currentFileId}
+                        />
                     ) : (
                         <>
                             <WorldSettingForm

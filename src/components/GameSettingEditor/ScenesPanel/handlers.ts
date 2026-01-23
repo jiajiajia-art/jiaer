@@ -12,7 +12,8 @@ import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { User } from '../../../api/account/auth.type';
 import { auth } from '../../../api/account/authApi';
-import { addImageTimestamp, getImageUrl } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
+import { withCacheBust, bumpCacheBust } from '../../../utils/imageCache';
 
 export interface LocalScene {
     id: string;
@@ -154,7 +155,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 打开新增场景
     const openAddNewPanel = () => {
         const newScene: LocalScene = {
             id: `temp-${Date.now()}`,
@@ -171,7 +171,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setActiveSubsceneDraft(null);
     };
 
-    // 取消新增
     const cancelAddNew = () => {
         setIsAddingNew(false);
         setNewSceneData(null);
@@ -618,6 +617,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                                 return { ...(prev || {}), [activeSceneId]: next };
                             });
                         }
+                        // 手动刷新缓存，强制浏览器重新加载图片
+                        bumpCacheBust(newImageUrl);
                     } else if (activeSubsceneDraft?.image) {
                         const baseUrl = activeSubsceneDraft.image.split('?')[0];
                         setActiveSubsceneDraft(prev => prev ? {
@@ -671,6 +672,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                             ? { ...s, image: nextPath }
                             : s
                     ));
+                    // 手动刷新缓存，强制浏览器重新加载图片
+                    bumpCacheBust(nextPath);
                 }
             } else {
                 toast.error('上传场景图片失败');
@@ -745,6 +748,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                                 return { ...(prev || {}), [activeSceneId]: next };
                             });
                         }
+                        // 手动刷新缓存，强制浏览器重新加载图片
+                        bumpCacheBust(imagePath);
                     } else if (activeSubsceneDraft?.image) {
                         const baseUrl = activeSubsceneDraft.image.split('?')[0];
                         setActiveSubsceneDraft(prev => prev ? {
@@ -769,6 +774,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                                 ? { ...s, image: imagePath }
                                 : s
                         ));
+                        // 手动刷新缓存，强制浏览器重新加载图片
+                        bumpCacheBust(imagePath);
                     } else {
                         setSceneData(prev => prev.map(s => {
                             if (s.id === scene.id && s.image) {
@@ -825,7 +832,9 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 toast.success('大地图生成成功');
                 if (response.data.imagePath) {
                     const processedImagePath = getImageUrl(response.data.imagePath);
-                    setWorldMapImageOverride(addImageTimestamp(processedImagePath));
+                    setWorldMapImageOverride(withCacheBust(processedImagePath));
+                    // 手动刷新缓存，强制浏览器重新加载图片
+                    bumpCacheBust(response.data.imagePath);
                 }
                 // 不在此处触发全量刷新（避免确认后立刻刷新 document）
             } else {

@@ -21,6 +21,8 @@ interface StoryStructureAdvancedProps {
     storyPrompt: string;
     setStoryPrompt: (value: string) => void;
     isGeneratingStory: boolean;
+    generationProgress: number;
+    generationStage: string;
     advancedError: string | null;
     onGenerate: () => void;
     canGenerate: boolean;
@@ -35,6 +37,8 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
     storyPrompt,
     setStoryPrompt,
     isGeneratingStory,
+    generationProgress,
+    generationStage,
     advancedError,
     onGenerate,
     canGenerate,
@@ -439,7 +443,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
     };
 
     return (
-        <div className={styles.advancedContent}>
+        <div className={`${styles.advancedContent} ${isGeneratingStory ? styles.advancedContentGenerating : ''}`}>
             <div className={styles.advancedHeader}>
                 <div>
                     <h3 className={styles.advancedTitle}>故事结构 · 高级引导</h3>
@@ -462,6 +466,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                         type="button"
                         className={worldPanelStyles.ghostSmall}
                         onClick={() => setShowPrompt(true)}
+                        disabled={isGeneratingStory}
                     >
                         重新生成 story-structure
                     </button>
@@ -483,8 +488,27 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                             value={storyPrompt}
                             onChange={(e) => setStoryPrompt(e.target.value)}
                             placeholder="Describe your desired phase structure in natural language, e.g. number of phases, when conflicts rise, where endings branch..."
+                            disabled={isGeneratingStory}
                         />
                     </label>
+                </div>
+            )}
+
+            {isGeneratingStory && (
+                <div className={styles.generationProgress}>
+                    <div className={styles.progressSpinner}>
+                        <div className={styles.spinnerCircle}></div>
+                    </div>
+                    <div className={styles.progressInfo}>
+                        <div className={styles.progressText}>
+                            {generationStage || '正在生成故事结构和动态条目...'}
+                        </div>
+                        {generationProgress > 0 && (
+                            <div className={styles.progressPercent}>
+                                {Math.round(generationProgress)}%
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -492,6 +516,8 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                 <p className={worldPanelStyles.errorText}>{advancedError}</p>
             )}
 
+            {!isGeneratingStory && (
+                <>
             {/* 子 Tab：story-structure / dynamicEntries */}
             <div className={styles.subTabRow}>
                 <div className={styles.subTabGroup}>
@@ -1319,6 +1345,8 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                         </div>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

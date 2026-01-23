@@ -4,7 +4,8 @@ import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { getImageUrl, IMAGE_GENERATION_COST, addImageTimestamp } from '../../../utils/constants';
+import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { addImageTimestamp } from '../../../utils/imageCache';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
 

@@ -6,10 +6,9 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Character, Variation } from './types';
 import type { NPC } from '../../../api/galgame/EditorData.type';
-import { npcToCharacter, playerToCharacter, withCacheBust, parseVariantKey } from './utils';
+import { npcToCharacter, playerToCharacter, parseVariantKey, bumpCacheBust } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
-import { getImageUrl } from '../../../utils/constants';
 import type { User } from '../../../api/account/auth.type';
 import { auth } from '../../../api/account/authApi';
 
@@ -431,10 +430,12 @@ export const createHandlers = (ctx: HandlersContext) => {
                             setCharacterData(prev =>
                                 prev.map(char =>
                                     char.id === 'player'
-                                        ? { ...char, portrait: newPortrait } // 存原始路径，展示时再处理
+                                        ? { ...char, portrait: newPortrait }
                                         : char
                                 )
                             );
+                            // 手动刷新缓存，强制浏览器重新加载图片
+                            bumpCacheBust(newPortrait);
                         } else {
                             // 如果无法提取图片数据，触发数据刷新以获取最新数据
                             if (onDataChange) {
@@ -456,6 +457,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                                             ...newVariations[existingVarIndex],
                                             img: variantImg, // 存原始路径
                                         };
+                                        bumpCacheBust(variantImg);
                                         return { ...char, variations: newVariations };
                                     } else {
                                         const newVar: Variation = {
@@ -485,6 +487,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                         
                         if (variant === 'base') {
                             updateCharacterImage(targetCharacterId, imageUrl, 'base');
+                            bumpCacheBust(imageUrl);
                         } else {
                             // 上传图片时，直接使用原有的 variant（不拆分）
                             // 从当前状态中获取 type 信息用于更新本地状态
@@ -502,6 +505,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                             });
                             
                             updateCharacterImage(targetCharacterId, imageUrl, finalValue, finalType);
+                            bumpCacheBust(imageUrl);
                         }
                     } else {
                         // 如果无法提取图片数据，使用后端返回的完整数据进行更新
@@ -539,6 +543,8 @@ export const createHandlers = (ctx: HandlersContext) => {
                 if (imageData?.imagePath) {
                     const imageUrl = imageData.imagePath; // 原始路径
                     updateCharacterImage(npc.id, imageUrl, 'base');
+                    // 手动刷新缓存，强制浏览器重新加载图片
+                    bumpCacheBust(imageUrl);
                 } else {
                     // 如果无法直接提取图片数据，尝试从响应中获取完整的NPC数据
                     updateCharacterFromResponse(response.data, npc.id);
@@ -571,6 +577,8 @@ export const createHandlers = (ctx: HandlersContext) => {
                             ? { ...char, portrait: newImageUrl } // 存原始路径
                             : char
                     ));
+                    // 手动刷新缓存，强制浏览器重新加载图片
+                    bumpCacheBust(newImageUrl);
                 } else {
                     // 如果无法提取图片数据，触发数据刷新以获取最新数据
                     if (onDataChange) {
@@ -631,8 +639,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 );
                 
                 if (imageData?.imagePath) {
-                    const processedImagePath = getImageUrl(imageData.imagePath);
-                    const imageUrl = withCacheBust(processedImagePath);
+                    const imageUrl = imageData.imagePath; // 只存原始路径，展示层再加前缀/时间戳
                     
                     // 从 variantKey（格式：type_value）中解析 type 和 value
                     let finalType = variation.type || 'expression';
@@ -677,6 +684,8 @@ export const createHandlers = (ctx: HandlersContext) => {
                                 type: finalType,    // 更新 type
                                 description: variation.description,
                             };
+                            // 手动刷新缓存，强制浏览器重新加载图片
+                            bumpCacheBust(imageUrl);
                             return { ...char, variations: newVariations };
                         } else {
                             const newVar: Variation = {

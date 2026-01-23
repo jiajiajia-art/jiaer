@@ -3,7 +3,8 @@ import styles from './FunctionalNPCList.module.css';
 import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { AbilityNode } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { addImageTimestamp, getImageUrl } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
+import { addImageTimestamp } from '../../../utils/imageCache';
 
 interface FunctionalNPCListProps {
     abilityNodes: AbilityNode[];

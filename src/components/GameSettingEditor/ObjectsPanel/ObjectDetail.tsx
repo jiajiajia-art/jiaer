@@ -3,7 +3,8 @@ import styles from './ObjectDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
-import { getImageUrl, IMAGE_GENERATION_COST, addImageTimestamp, normalizeIcon as normalizeIconUtil } from '../../../utils/constants';
+import { getImageUrl, IMAGE_GENERATION_COST, normalizeIcon as normalizeIconUtil } from '../../../utils/constants';
+import { addImageTimestamp } from '../../../utils/imageCache';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
 

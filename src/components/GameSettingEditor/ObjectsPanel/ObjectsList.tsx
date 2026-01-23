@@ -3,7 +3,8 @@ import styles from './ObjectsList.module.css';
 import sharedStyles from './shared.module.css';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
-import { addImageTimestamp, getImageUrl, normalizeIcon } from '../../../utils/constants';
+import { getImageUrl, normalizeIcon } from '../../../utils/constants';
+import { addImageTimestamp } from '../../../utils/imageCache';
 
 interface ObjectsListProps {
     objects: ObjectItem[];

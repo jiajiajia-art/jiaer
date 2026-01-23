@@ -3,7 +3,8 @@ import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
 import styles from './WorldPanel.module.css';
-import { addImageTimestamp, getImageUrl } from '../../../utils/constants';
+import { getImageUrl } from '../../../utils/constants';
+import { addImageTimestamp } from '../../../utils/imageCache';
 
 interface CoverUploadProps {
     fileId?: string;
