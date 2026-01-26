@@ -19,7 +19,7 @@ import SceneList from './SceneList';
 import WorldMapCard from './WorldMapCard';
 import SceneDetailActions from './SceneDetailActions';
 import { DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
-import { withCacheBust } from '../../../utils/imageCache';
+import { withCacheBust, extractImageExtension } from '../../../utils/imageCache';
 import { useAuthStore } from '../../../store/useAuthStore';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
@@ -428,10 +428,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         }
         setActiveSceneId(sceneId);
         setActiveSubsceneId(subsceneId);
-
+        
         const subscene = subsceneDataBySceneId[sceneId]?.find(s => (s.id || s.name) === subsceneId);
         const processedSubsceneImage = subscene?.image ? getImageUrl(subscene.image as any) : '';
-
+        
         setActiveSubsceneDraft({
             id: subsceneId,
             name: subscene?.name || '未命名子场景',
@@ -476,19 +476,33 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const handleDownloadImage = useCallback(async (
         type: 'npcs' | 'scenes' | 'subscenes' | 'worldMap', 
         id: string, 
-        variant?: string
+        variantOrImagePath?: string,
+        imagePath?: string
     ) => {
         if (!fileId || !sceneApi) {
             toast.error('缺少必要数据，无法下载');
             return;
         }
 
+
+        let variant: string | undefined;
+        let finalImagePath: string | undefined;
+        
+        if (type === 'scenes' || type === 'subscenes') {
+            finalImagePath = variantOrImagePath;
+        } else {
+            variant = variantOrImagePath;
+            finalImagePath = imagePath;
+        }
+
         try {
-            const response = await sceneApi.downloadImage(fileId, type, id, variant);
+            const response = await sceneApi.downloadImage(fileId, type, id, variant, finalImagePath);
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            const fileName = variant ? `${id}_${variant}.png` : `${id}.png`;
+            
+            const extension = extractImageExtension(finalImagePath);
+            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
             link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();

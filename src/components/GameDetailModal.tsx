@@ -232,17 +232,8 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 default: return undefined;
             }
         };
-        // 旧版 version 兜底：new→galgame，old→story，map-plugin-version→world
-        const mapVersionToEngine = (version?: string) => {
-            switch (version) {
-                case 'new': return 'galgame' as const;
-                case 'old': return 'story' as const;
-                case 'map-plugin-version': return 'world' as const;
-                default: return undefined;
-            }
-        };
 
-        const normalized = mapServerEngine(currentGame.engine) || mapVersionToEngine(currentGame.version);
+        const normalized = mapServerEngine(currentGame.engine) || currentGame.game_tags;
         if (!normalized) {
             alert('未知的游戏类型，无法创建会话');
             return;
@@ -255,7 +246,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return;
         }
 
-        if (normalized === 'galgame') {
+        if (normalized === 'TXT') {
             setFileId(fileId);
             setIsPreset(currentGame.is_preset == 1);
             const sessionId = await createGalgameSession(fileId);
@@ -263,7 +254,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return;
         }
 
-        if (normalized === 'story') {
+        if (normalized === 'RPG') {
             setFileId(fileId);
             setIsPreset(currentGame.is_preset == 1);
             const sessionId = await createSession(fileId);
@@ -271,7 +262,7 @@ const GameDetailModal: React.FC<GameDetailModalProps> = ({
             return;
         }
 
-        if (normalized === 'world') {
+        if (normalized === 'AVG') {
             setFileId(fileId);
             const sessionId = await createMapWorldSession(fileId);
             if (sessionId) { setSessionId(sessionId); navigate('/galgameMap'); }

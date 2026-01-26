@@ -22,7 +22,6 @@ export interface UserGameData {
     avatarUrl: string;
     total_pv_count?: number;
     paid?: boolean;
-    version: string;
     game_tags: string;
     is_preset: number;
     // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）

@@ -16,7 +16,7 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
 }
 
 // 重新导出图片缓存管理函数
-export { withCacheBust, bumpCacheBust } from '../../../utils/imageCache';
+export { withCacheBust, bumpCacheBust, extractImageExtension } from '../../../utils/imageCache';
 
 // 拆分 variant 键名（格式：type_value）为 type 和 value
 export const parseVariantKey = (key: string): { type: string; value: string } | null => {

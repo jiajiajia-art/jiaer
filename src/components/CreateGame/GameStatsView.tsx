@@ -68,19 +68,11 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 default: return undefined;
             }
         };
-        // 版本到引擎的兜底映射（仅当 engine 缺失时启用，保持兼容）
-        const mapVersionToEngine = (version?: string) => {
-            switch (version) {
-                case 'new': return 'galgame' as const;
-                case 'old': return 'story' as const;
-                case 'map-plugin-version': return 'world' as const;
-                default: return undefined;
-            }
-        };
+
 
         setIsLoading(true);
         try {
-            const normalized = mapServerEngine(gameDetail?.engine) || mapVersionToEngine(gameDetail?.version);
+            const normalized = mapServerEngine(gameDetail?.engine) || gameDetail?.game_tags;
             if (!normalized) {
                 alert('未知的游戏类型，无法创建会话');
                 return { sessionId: null, redirectUrl: '' };
@@ -96,7 +88,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 return { sessionId: null, redirectUrl: `/customif/${appId}` };
             }
 
-            if (normalized === 'galgame') {
+            if (normalized === 'TXT') {
                 const response = await createGalgameSessionApi.createGalgameEditSession({ fileId });
                 if (response.data.success) {
                     const sessionId = response.data.data.session;
@@ -106,7 +98,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 return { sessionId: null, redirectUrl: '' };
             }
 
-            if (normalized === 'story') {
+            if (normalized === 'RPG') {
                 const response = await createSessionApi.getSession({ fileId });
                 if (response.data.success) {
                     const data = response.data.data;
@@ -117,7 +109,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 return { sessionId: null, redirectUrl: '' };
             }
 
-            if (normalized === 'world') {
+            if (normalized === 'AVG') {
                 const response = await createWorldSessionApi.createWorldEditSession({ fileId });
                 if (response.data.success) {
                     const sessionId = response.data.session.sessionId;

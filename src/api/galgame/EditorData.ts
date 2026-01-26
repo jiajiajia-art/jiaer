@@ -20,6 +20,7 @@ import type {
     GenerateStoryStructureResponse,
 } from "./EditorData.type";
 import type { Scene } from "./getGalgamePreset.type";
+import { extractImageExtension } from "../../utils/imageCache";
 
 const EditorApi = {
     generateGameFromIdea: (idea:string) => {
@@ -158,17 +159,20 @@ const EditorApi = {
         api.post<CalculatePointsResponse>(`/visual/images/generate-npcs/calculate-points`, {
             fileId: fileId,
         }),
-    downloadImage: (pluginType:string, fileId:string, type:string, name: string, variant?: string) =>{
+    downloadImage: (pluginType:string, fileId:string, type:string, name: string, variant?: string, imagePath?: string) =>{
         // Player 类型：/players/base.png（不需要 name）
         // NPC 类型：/npcs/{name}/base.png（需要 name）
         // 场景类型：/scenes/{name}.png（不需要 variant）
+        
+        const extension = extractImageExtension(imagePath);
+        
         let url: string;
         if (type === 'players' && variant) {
-            url = `/images/${pluginType}/${fileId}/${type}/${variant}.png`;
+            url = `/images/${pluginType}/${fileId}/${type}/${variant}${extension}`;
         } else if (type === 'npcs' && variant) {
-            url = `/images/${pluginType}/${fileId}/${type}/${name}/${variant}.png`;
+            url = `/images/${pluginType}/${fileId}/${type}/${name}/${variant}${extension}`;
         } else {
-            url = `/images/${pluginType}/${fileId}/${type}/${name}.png`;
+            url = `/images/${pluginType}/${fileId}/${type}/${name}${extension}`;
         }
         return api.get<Blob>(url, {
             responseType: 'blob',

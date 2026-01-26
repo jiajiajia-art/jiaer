@@ -240,6 +240,32 @@
     line-height: 1.4;
 }
 
+.fieldHintItalic {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.5);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* 字数限制表单容器 */
+.outputLengthContainer {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.outputLengthField {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.outputLengthLabel {
+    font-size: 0.875rem;
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 4px;
+}
+
 .errorText {
     color: var(--primary);
     font-size: 0.85rem;

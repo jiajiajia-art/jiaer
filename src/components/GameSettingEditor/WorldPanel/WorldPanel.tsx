@@ -62,6 +62,9 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [opening, setOpening] = useState<string>('');
     const [openingPlot, setOpeningPlot] = useState<string>('');
     const [playerRole, setPlayerRole] = useState<string>('');
+    const [targetOutputLength, setTargetOutputLength] = useState<number | undefined>(undefined);
+    const [minOutputLength, setMinOutputLength] = useState<number | undefined>(undefined);
+    const [maxOutputLength, setMaxOutputLength] = useState<number | undefined>(undefined);
     
     const [toneValue, setToneValue] = useState<string>('');
     const [storylines, setStorylines] = useState<StoryLine[]>([]);
@@ -164,6 +167,18 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setPlayerRole(playerRoleText);
         setOpening(ws.preamble || '');
         setOpeningPlot(ws.initialPlot || '');
+        
+        // 设置 llmConfig 相关字段
+        const llmConfig = (ws as any).llmConfig;
+        if (llmConfig) {
+            setTargetOutputLength(llmConfig.targetOutputLength);
+            setMinOutputLength(llmConfig.minOutputLength);
+            setMaxOutputLength(llmConfig.maxOutputLength);
+        } else {
+            setTargetOutputLength(undefined);
+            setMinOutputLength(undefined);
+            setMaxOutputLength(undefined);
+        }
 
         // 同步故事结构与动态事件（仅 visual 模式）
         if (mode === 'visual') {
@@ -385,6 +400,12 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         if (mode === 'visual') {
             const currentPlayer = player || { name: '', gender: '', appearance: '' };
+            const llmConfig = (targetOutputLength !== undefined || minOutputLength !== undefined || maxOutputLength !== undefined) ? {
+                targetOutputLength,
+                minOutputLength,
+                maxOutputLength,
+            } : undefined;
+            
             return {
                 ...gameData.worldSetting,
                 title: titleVal,
@@ -397,6 +418,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 keyEvents: keyEvents,
                 dynamicEntries: dynamicEntries,
                 player: currentPlayer, // 直接使用后端返回的 player 数据
+                llmConfig,
             } as VisualWorldSetting;
         } else {
             // worldInteraction 模式：将世界规则行映射到 Theme（string[]）
@@ -433,7 +455,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 player: worldPlayer, // 直接使用后端返回的 player 数据
             } as unknown as WorldWorldSetting;
         }
-    }, [title, tagline, era, worldRules, opening, openingPlot, storylines, toneValue, gameData, mode, dynamicEntries]);
+    }, [title, tagline, era, worldRules, opening, openingPlot, storylines, toneValue, gameData, mode, dynamicEntries, targetOutputLength, minOutputLength, maxOutputLength]);
     
     // 将 getFullWorldSettingData 保存到 ref 中，供 hook 使用
     getFullWorldSettingDataRef.current = getFullWorldSettingData;
@@ -488,6 +510,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             const origTheme = orig.Theme || [];
             if (hasLen(fullTheme) && JSON.stringify(fullTheme) !== JSON.stringify(origTheme)) {
                 diff.Theme = fullTheme;
+            }
+
+            // llmConfig 字段比较
+            const fullLlmConfig = full.llmConfig;
+            const origLlmConfig = orig.llmConfig;
+            if (JSON.stringify(fullLlmConfig || {}) !== JSON.stringify(origLlmConfig || {})) {
+                diff.llmConfig = fullLlmConfig;
             }
 
             // player 字段不参与比较（只读字段，用户在 WorldPanel 中无法修改）
@@ -838,6 +867,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                     ) : (
                         <>
                             <WorldSettingForm
+                                mode={mode}
                                 title={title}
                                 tagline={tagline}
                                 era={era}
@@ -845,12 +875,18 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 playerRole={playerRole}
                                 opening={opening}
                                 openingPlot={openingPlot}
+                                targetOutputLength={targetOutputLength}
+                                minOutputLength={minOutputLength}
+                                maxOutputLength={maxOutputLength}
                                 onTitleChange={setTitle}
                                 onTaglineChange={setTagline}
                                 onEraChange={setEra}
                                 onWorldRulesChange={setWorldRules}
                                 onOpeningChange={setOpening}
                                 onOpeningPlotChange={setOpeningPlot}
+                                onTargetOutputLengthChange={setTargetOutputLength}
+                                onMinOutputLengthChange={setMinOutputLength}
+                                onMaxOutputLengthChange={setMaxOutputLength}
                             />
 
                             <StorylinesSection

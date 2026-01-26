@@ -450,9 +450,9 @@ const CreateGame: React.FC = () => {
         }
 
         // 兼容历史逻辑：按版本选择编辑器
-        if(gameDetail?.version == 'old') {
+        if(gameDetail?.game_tags == 'RPG') {
             setShowForm(true);
-        } else if(gameDetail?.version == 'map-plugin-version') {
+        } else if(gameDetail?.game_tags == 'AVG') {
             setFileId(gameId)
             navigate(`/gameSettingsEditor?mode=worldInteraction`);
         } else {

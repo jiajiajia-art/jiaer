@@ -8,7 +8,7 @@ import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../ap
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
 import { RiDeleteBin5Line } from 'react-icons/ri';
-import { withCacheBust } from './utils';
+import { withCacheBust, extractImageExtension } from './utils';
 import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
@@ -756,19 +756,22 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     // 下载图片
-    const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string) => {
+    const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string, imagePath?: string) => {
         if (!fileId || !api) {
             toast.error('缺少必要数据，无法下载');
             return;
         }
 
         try {
-            const response = await api.downloadImage(fileId, type, id, variant);
+            const response = await api.downloadImage(fileId, type, id, variant, imagePath);
             // 创建下载链接
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            const fileName = variant ? `${id}_${variant}.png` : `${id}.png`;
+            
+            let extension = extractImageExtension(imagePath);
+            
+            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
             link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
@@ -878,9 +881,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (currentCharacter.id === 'player') {
-                                                handleDownloadImage('players', '', 'base');
+                                                handleDownloadImage('players', '', 'base', currentCharacter.portrait);
                                             } else {
-                                                handleDownloadImage('npcs', currentCharacter.id, 'base');
+                                                handleDownloadImage('npcs', currentCharacter.id, 'base', currentCharacter.portrait);
                                             }
                                         }}
                                         title="下载图片"
@@ -1036,7 +1039,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         const variantType = variation.label;
-                                                                        handleDownloadImage('npcs', currentCharacter.id, variantType);
+                                                                        handleDownloadImage('npcs', currentCharacter.id, variantType, variation.img);
                                                                     }}
                                                                     title="下载图片"
                                                                 >

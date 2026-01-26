@@ -2,6 +2,7 @@ import React from 'react';
 import styles from './WorldPanel.module.css';
 
 interface WorldSettingFormProps {
+    mode: 'visual' | 'worldInteraction';
     title: string;
     tagline: string;
     era: string;
@@ -9,15 +10,22 @@ interface WorldSettingFormProps {
     playerRole: string;
     opening: string;
     openingPlot: string;
+    targetOutputLength?: number;
+    minOutputLength?: number;
+    maxOutputLength?: number;
     onTitleChange: (value: string) => void;
     onTaglineChange: (value: string) => void;
     onEraChange: (value: string) => void;
     onWorldRulesChange: (value: string) => void;
     onOpeningChange: (value: string) => void;
     onOpeningPlotChange: (value: string) => void;
+    onTargetOutputLengthChange: (value: number | undefined) => void;
+    onMinOutputLengthChange: (value: number | undefined) => void;
+    onMaxOutputLengthChange: (value: number | undefined) => void;
 }
 
 const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
+    mode,
     title,
     tagline,
     era,
@@ -25,12 +33,18 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     playerRole,
     opening,
     openingPlot,
+    targetOutputLength,
+    minOutputLength,
+    maxOutputLength,
     onTitleChange,
     onTaglineChange,
     onEraChange,
     onWorldRulesChange,
     onOpeningChange,
     onOpeningPlotChange,
+    onTargetOutputLengthChange,
+    onMinOutputLengthChange,
+    onMaxOutputLengthChange,
 }) => {
     return (
         <>
@@ -86,7 +100,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
             <div className={styles.formRow}>
                 <div className={styles.fieldHeader}>
                     <span className={styles.fieldLabel}>玩家身份</span>
-                    <span className={styles.fieldHint} style={{ color: 'rgba(0, 0, 0, 0.5)', fontStyle: 'italic' }}>
+                    <span className={styles.fieldHintItalic}>
                         玩家信息需要在"角色设定"面板中修改
                     </span>
                 </div>
@@ -123,6 +137,56 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     onChange={(e) => onOpeningPlotChange(e.target.value)}
                 />
             </div>
+
+            {
+                mode === 'visual' && (
+                    <div className={styles.formRow}>
+                        <div className={styles.fieldHeader}>
+                            <span className={styles.fieldLabel}>模型输出字数限制</span>
+                        </div>
+                        <div className={styles.outputLengthContainer}>
+                            <div className={styles.outputLengthField}>
+                                <label className={styles.outputLengthLabel}>最短</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={minOutputLength ?? ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                                        onMinOutputLengthChange(isNaN(value as number) ? undefined : value);
+                                    }}
+                                    placeholder="最短字数"
+                                />
+                            </div>
+                            <div className={styles.outputLengthField}>
+                                <label className={styles.outputLengthLabel}>目标</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={targetOutputLength ?? ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                                        onTargetOutputLengthChange(isNaN(value as number) ? undefined : value);
+                                    }}
+                                    placeholder="目标字数"
+                                />
+                            </div>
+                            <div className={styles.outputLengthField}>
+                                <label className={styles.outputLengthLabel}>最长</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={maxOutputLength ?? ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                                        onMaxOutputLengthChange(isNaN(value as number) ? undefined : value);
+                                    }}
+                                    placeholder="最长字数"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
         </>
     );
 };

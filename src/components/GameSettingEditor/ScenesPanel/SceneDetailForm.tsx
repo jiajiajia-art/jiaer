@@ -21,7 +21,7 @@ interface SceneDetailFormProps {
     onUploadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRequestRegenerate: (scene: LocalScene) => void;
     onFieldChange: (field: keyof LocalScene, value: string) => void;
-    onDownloadImage?: (type: 'scenes' | 'subscenes', id: string) => void;
+    onDownloadImage?: (type: 'scenes' | 'subscenes', id: string, imagePath?: string) => void;
     sceneType?: 'scenes' | 'subscenes';
 }
 
@@ -80,7 +80,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                         className={styles.downloadButton}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDownloadImage(sceneType, scene.id);
+                            onDownloadImage(sceneType, scene.id, scene.image);
                         }}
                         title="下载图片"
                     >
