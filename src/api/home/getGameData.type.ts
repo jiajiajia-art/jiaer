@@ -28,6 +28,7 @@ export interface UserGameData {
     // RPG → story, TXT → galgame, AVG → world, CUSTOM → customif
     engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM';
     customAppId?: string;
+    needDeleted: boolean;
 }
 
 export interface UserGameResponse {

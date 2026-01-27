@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
@@ -14,7 +14,20 @@ interface GameGridProps {
 
 const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }) => {
     const location = useLocation();
+    const navigate = useNavigate();
     const isCreatePage = location.pathname === '/create';
+    
+    const handleGameClick = (game: UserGameData) => {
+        if (onGameClick) {
+            onGameClick(game);
+        } else {
+            // 默认行为：导航到详情页
+            const gameId = game.file_id || game.id;
+            if (gameId) {
+                navigate(`/game/${gameId}`);
+            }
+        }
+    };
     if (games.length === 0) {
         return (
             <div className={styles.emptyState}>
@@ -42,7 +55,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                 <div
                     className={styles.goodsCard}
                     key={meta.id}
-                    onClick={() => onGameClick?.(meta)}
+                    onClick={() => handleGameClick(meta)}
                 >
                     <div className={styles.goodsImg}>
                         <img

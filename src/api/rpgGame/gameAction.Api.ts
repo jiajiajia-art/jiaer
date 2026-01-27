@@ -40,7 +40,7 @@ export interface GameLikeRequest {
 export interface GameLikeResponse {
     fileId: string;
     likeCount: number;
-    isLike: boolean;
+    isLiked: boolean;
     message: string;
 }
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Home.module.css';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
-import GameDetailModal from '../components/GameDetailModal';
 import GameGrid from '../components/GameGrid';
 import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
@@ -14,7 +13,6 @@ import CheckInModal from '../components/CheckInModal';
 import { getImageUrl } from '../utils/constants';
 
 const Home: React.FC = () => {
-    const [showGameModal, setShowGameModal] = useState(false);
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [allGames, setAllGames] = useState<UserGameData[]>([]);
     const [isLoadingSpecial, setIsLoadingSpecial] = useState(true);
@@ -25,7 +23,6 @@ const Home: React.FC = () => {
     const [hasMoreAll, setHasMoreAll] = useState(true);
     const [specialPage, setSpecialPage] = useState(0);
     const [allPage, setAllPage] = useState(0);
-    const [selectedGameMeta, setSelectedGameMeta] = useState<UserGameData | null>(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useAuthStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -36,17 +33,6 @@ const Home: React.FC = () => {
     const isLoadingRef = useRef(false);
     const navigator = useNavigate();
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
-
-    // 轮播数据（使用前3个游戏作为轮播内容）
-    // const carouselItems = useMemo(() => {
-    //     return fileMetas.slice(0, 3).map(meta => ({
-    //         id: meta.file_id || meta.id,
-    //         title: meta.title || '未命名游戏',
-    //         description: meta.description || '一段精彩的冒险故事等待着你...',
-    //         cover: meta.cover_url ? getImageUrl(meta.cover_url) : `${import.meta.env.BASE_URL}data/gameCover/image.png`,
-    //         game: meta
-    //     }));
-    // }, [fileMetas]);
 
     // 监听用户登出，重置检查状态
     useEffect(() => {
@@ -81,35 +67,13 @@ const Home: React.FC = () => {
         }
     }, [user?.user?.id]);
 
-    /**
-     * 显示游戏详情（从后端数据）
-     */
-    const showGameDetail = (meta: UserGameData) => {
-        setSelectedGameMeta(meta);
-        setShowGameModal(true);
+    // 导航到游戏详情页
+    const navigateToGameDetail = (game: UserGameData) => {
+        const gameId = game.file_id || game.id;
+        if (gameId) {
+            navigator(`/game/${gameId}`);
+        }
     };
-
-    /**
-     * 关闭弹窗
-     */
-    const closeModal = () => {
-        setShowGameModal(false);
-        setSelectedGameMeta(null);
-    };
-
-    // ESC键关闭弹窗
-    useEffect(() => {
-        const handleEscKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (showGameModal) setShowGameModal(false);
-            }
-        };
-
-        document.addEventListener('keydown', handleEscKey);
-        return () => {
-            document.removeEventListener('keydown', handleEscKey);
-        };
-    }, [showGameModal]);
 
     // 加载限时优惠数据
     const loadSpecialGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {
@@ -290,26 +254,6 @@ const Home: React.FC = () => {
         };
     }, [hasMoreAll, hasMoreSpecial, isLoadingMoreAll, isLoadingMoreSpecial, loadMoreAll, loadMoreSpecial]);
 
-    // 购买后软刷新：只更新本地列表中的对应游戏数据
-    const handleGameUpdated = useCallback((updatedGame: UserGameData) => {
-        const updatedId = updatedGame.file_id || updatedGame.id;
-        if (!updatedId) return;
-
-        const matchById = (game: UserGameData) => {
-            const id = game.file_id || game.id;
-            return id === updatedId;
-        };
-
-        setFileMetas((prev) =>
-            prev.map((g) => (matchById(g) ? { ...g, ...updatedGame } : g))
-        );
-        setAllGames((prev) =>
-            prev.map((g) => (matchById(g) ? { ...g, ...updatedGame } : g))
-        );
-        setSelectedGameMeta((prev) =>
-            prev && matchById(prev) ? { ...prev, ...updatedGame } : prev
-        );
-    }, []);
 
     // 自动轮播
     useEffect(() => {
@@ -375,7 +319,7 @@ const Home: React.FC = () => {
                                                                 <button
                                                                     className={styles.carouselStartBtn}
                                                                     onClick={() =>
-                                                                        showGameDetail(item)
+                                                                        navigateToGameDetail(item)
                                                                     }
                                                                 >
                                                                     <img
@@ -432,7 +376,6 @@ const Home: React.FC = () => {
                             <>
                                 <GameGrid
                                     games={fileMetas}
-                                    onGameClick={showGameDetail}
                                 />
                                 {isLoadingMoreSpecial && (
                                     <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -467,7 +410,6 @@ const Home: React.FC = () => {
                             <>
                                 <GameGrid
                                     games={allGames}
-                                    onGameClick={showGameDetail}
                                 />
                                 {isLoadingMoreAll && (
                                     <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -491,15 +433,6 @@ const Home: React.FC = () => {
             </div>
 
             <FooterArea />
-
-            {selectedGameMeta && (
-                <GameDetailModal
-                    isOpen={showGameModal}
-                    game={selectedGameMeta}
-                    onClose={closeModal}
-                    onGameUpdated={handleGameUpdated}
-                />
-            )}
 
             {/* 签到提示弹窗 */}
             <CheckInModal

@@ -3,7 +3,6 @@ import styles from './WareHouse.module.css';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import GameGrid from '../components/GameGrid';
-import GameDetailModal from '../components/GameDetailModal';
 import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { useAuthStore } from '../store/useAuthStore';
@@ -22,8 +21,6 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
     const [page, setPage] = useState(0);
-    const [showGameModal, setShowGameModal] = useState(false);
-    const [selectedGame, setSelectedGame] = useState<UserGameData | null>(null);
     const { user } = useAuthStore();
     const isSpecialLibrary = variant === 'special';
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -114,31 +111,6 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
         };
     }, [loadMore]);
 
-    // 显示游戏详情
-    const showGameDetail = (game: UserGameData) => {
-        setSelectedGame(game);
-        setShowGameModal(true);
-    };
-
-    // 关闭弹窗
-    const closeModal = () => {
-        setShowGameModal(false);
-        setSelectedGame(null);
-    };
-
-    // ESC键关闭弹窗
-    useEffect(() => {
-        const handleEscKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                if (showGameModal) setShowGameModal(false);
-            }
-        };
-
-        document.addEventListener('keydown', handleEscKey);
-        return () => {
-            document.removeEventListener('keydown', handleEscKey);
-        };
-    }, [showGameModal]);
     
     return (
         <div className={styles.pageRoot}>
@@ -152,7 +124,6 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
                         <>
                             <GameGrid
                                 games={games}
-                                onGameClick={showGameDetail}
                             />
                             {isLoadingMore && (
                                 <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -173,28 +144,6 @@ const Library: React.FC<LibraryProps> = ({ variant = 'all' }) => {
             </div>
 
             <FooterArea />
-
-            {selectedGame && (
-                <GameDetailModal
-                    isOpen={showGameModal}
-                    game={selectedGame}
-                    onClose={closeModal}
-                    onGameUpdated={(updatedGame) => {
-                        const updatedId = updatedGame.file_id || updatedGame.id;
-                        if (!updatedId) return;
-
-                        setGames((prev) =>
-                            prev.map((g) =>
-                                (g.file_id || g.id) === updatedId ? { ...g, ...updatedGame } : g
-                            )
-                        );
-
-                        setSelectedGame((prev) =>
-                            prev && (prev.file_id || prev.id) === updatedId ? { ...prev, ...updatedGame } : prev
-                        );
-                    }}
-                />
-            )}
 
             <MobileBottomNav />
         </div>

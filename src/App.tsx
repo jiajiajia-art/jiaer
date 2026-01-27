@@ -15,6 +15,7 @@ import RpgGame from './page/RpgGame';
 import UploadProgressModal from './components/GameSettingEditor/DocumentUpload/UploadProgressModal';
 import CustomIF from './page/CustomIF';
 import CustomIFCreate from './page/CustomIFCreate';
+import GameDetail from './page/GameDetail';
 import ScrollToTop from './components/ScrollToTop';
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
         <Route path="/home" element={<Home />} />
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
+        <Route path="/game/:fileId" element={<GameDetail />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/rpgGame" element={<RpgGame />} />
           <Route path="/create" element={<Create />} />
