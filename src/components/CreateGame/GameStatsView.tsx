@@ -61,9 +61,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         // 服务端 engine 优先：RPG/TXT/AVG/CUSTOM → 统一为内部 key
         const mapServerEngine = (engine?: string) => {
             switch ((engine || '').toUpperCase()) {
-                case 'RPG': return 'story' as const;
-                case 'TXT': return 'galgame' as const;
-                case 'AVG': return 'world' as const;
                 case 'CUSTOM': return 'customif' as const;
                 default: return undefined;
             }

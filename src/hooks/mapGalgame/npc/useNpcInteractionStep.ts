@@ -152,13 +152,18 @@ export const useNpcInteractionStep = ({
     if (isProcessingStepRef.current) return;
 
     const nextStep = stepQueue[0];
-    console.log('[useWorldInteractionStep] 从队列取出步骤:', {
+    console.log('[队列处理] 从队列取出步骤:', {
       stepType: nextStep?.type,
       queueLength: stepQueue.length,
       hasCurrentStep: !!currentStep,
+      isWaitingForData,
     });
     isProcessingStepRef.current = true;
-    setStepQueue((prev) => prev.slice(1));
+    setStepQueue((prev) => {
+      const newQueue = prev.slice(1);
+      console.log('[队列处理] 队列更新后长度:', newQueue.length);
+      return newQueue;
+    });
 
     void (async () => {
       await showStep(nextStep);

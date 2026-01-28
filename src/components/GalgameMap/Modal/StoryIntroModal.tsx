@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import styles from './StoryIntroModal.module.css';
-import { useStoryTyping } from '../../../hooks/story/useStoryTyping';
+// import { useStoryTyping } from '../../../hooks/story/useStoryTyping';
 import type { AllGameData } from '../../../api/worldInteraction/mapWorldData.type';
 import { getImageUrl } from '../../../utils/constants';
 
@@ -25,16 +25,16 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     const preamble = gameData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
     // 修改：只有当 worldMapImage 存在且不是默认图片时才添加 '/dummy'
     const worldMapImage = gameData?.worldSetting?.worldMapImage;
-    
-    const backgroundImage = worldMapImage 
+
+    const backgroundImage = worldMapImage
         ? (worldMapImage.includes('defaultScene.png') ? worldMapImage : `${worldMapImage}/dummy`)
         : DEFAULT_SCENE_IMAGE;
 
-    const { displayedText, isTyping } = useStoryTyping({
-        text: preamble,
-        enabled: isOpen && !!preamble,
-        speed: 50
-    });
+    // const { displayedText, isTyping } = useStoryTyping({
+    //     text: preamble,
+    //     enabled: isOpen && !!preamble,
+    //     speed: 50
+    // });
 
     const backgroundImageUrl = useMemo(() => {
         if (!backgroundImage) return null;
@@ -63,26 +63,25 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                 </div>
                 <div className={styles.modalBody}>
                     <div className={styles.preambleText}>
-                        {displayedText}
-                        {isTyping && <span className={styles.cursor}></span>}
+                        {/* {displayedText}
+                        {isTyping && <span className={styles.cursor}></span>} */}
+                        {preamble}
                     </div>
                 </div>
                 <div className={styles.modalFooter}>
-                    {!isTyping &&
-                        <button
-                            className={styles.startButton}
-                            onClick={onStartGame}
-                            disabled={isDistributingEvent || isTyping}
-                        >
-                            {isDistributingEvent ?
-                                <div className={styles.loading}>
-                                    <span className={styles.loadingDot}></span>
-                                    <span className={styles.loadingDot}></span>
-                                    <span className={styles.loadingDot}></span>
-                                </div>
-                                : '开始游戏'}
-                        </button>
-                    }
+                    <button
+                        className={styles.startButton}
+                        onClick={onStartGame}
+                        disabled={isDistributingEvent}
+                    >
+                        {isDistributingEvent ?
+                            <div className={styles.loading}>
+                                <span className={styles.loadingDot}></span>
+                                <span className={styles.loadingDot}></span>
+                                <span className={styles.loadingDot}></span>
+                            </div>
+                            : '开始游戏'}
+                    </button>
                 </div>
             </div>
         </div>

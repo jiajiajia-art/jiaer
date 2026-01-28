@@ -15,10 +15,9 @@ import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../utils/constants';
-import Navbar from '../components/Layout/Navbar';
-import MobileBottomNav from '../components/Layout/MobileBottomNav';
-import FooterArea from '../components/Layout/FooterArea';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
+import { IoChevronBack } from 'react-icons/io5';
+import AuthModal from '../components/AuthModal';
 
 // 常量
 const LIKE_DEBOUNCE_DELAY = 300;
@@ -43,6 +42,7 @@ const GameDetail: React.FC = () => {
 
     // Hooks
     const { user } = useAuthStore();
+    const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { setFileId, setSessionId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
 
     // 状态
@@ -67,7 +67,8 @@ const GameDetail: React.FC = () => {
     // 检查用户是否登录
     const checkAuth = () => {
         if (!userId) {
-            authModalStore.getState().setIsAuthModalOpen(true);
+            // 未登录时打开全局登录弹窗
+            setIsAuthModalOpen(true);
             return false;
         }
         return true;
@@ -205,9 +206,6 @@ const GameDetail: React.FC = () => {
         // engine 映射：RPG→story，TXT→galgame，AVG→world，CUSTOM→customif
         const mapServerEngine = (engine?: string) => {
             switch ((engine || '').toUpperCase()) {
-                case 'RPG': return 'story' as const;
-                case 'TXT': return 'galgame' as const;
-                case 'AVG': return 'world' as const;
                 case 'CUSTOM': return 'customif' as const;
                 default: return undefined;
             }
@@ -404,15 +402,32 @@ const GameDetail: React.FC = () => {
         };
     }, [game?.cover_url]);
 
+    const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+    const handleBack = () => {
+        if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate('/home');
+        }
+    };
+
+    const handleShare = () => {
+        if (!canNativeShare) return;
+        navigator.share({
+            title: game?.title || '游戏',
+            text: game?.description || '',
+            url: window.location.href,
+        }).catch(() => { });
+    };
+
     if (isLoading) {
         return (
-            <div className={styles.pageContainer}>
-                <Navbar />
+            <div className={styles.fullscreenOverlay}>
                 <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
                     <p>加载中...</p>
                 </div>
-                <MobileBottomNav />
             </div>
         );
     }
@@ -420,14 +435,12 @@ const GameDetail: React.FC = () => {
     if (!game) {
         return (
             <div className={styles.pageContainer}>
-                <Navbar />
                 <div className={styles.errorContainer}>
                     <p>游戏不存在</p>
                     <button onClick={() => navigate('/home')} className={styles.backButton}>
                         返回首页
                     </button>
                 </div>
-                <MobileBottomNav />
             </div>
         );
     }
@@ -440,7 +453,30 @@ const GameDetail: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            <Navbar />
+            {/* 顶部悬浮栏 */}
+            <div className={styles.topBar}>
+                <div className={styles.topBarContent}>
+                <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
+                    <IoChevronBack />
+                </button>
+                <div className={styles.topActions}>
+                    <button
+                        className={styles.topDeleteButton}
+                        onClick={() => {
+                            if (!checkAuth()) return;
+                            setIsConfirmModalOpen(true);
+                        }}
+                    >
+                        删除存档
+                    </button>
+                    {canNativeShare && (
+                        <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
+                            <FaRegShareFromSquare />
+                        </button>
+                    )}
+                </div>
+                </div>
+            </div>
 
             {/* 英雄区域（封面图） */}
             <div className={styles.heroSection} style={heroStyle}></div>
@@ -456,6 +492,18 @@ const GameDetail: React.FC = () => {
                                     <h1 className={styles.gameTitle}>
                                         {game.title || '未命名游戏'}
                                     </h1>
+                                    <button
+                                        className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline}`}
+                                        onClick={handleLike}
+                                        disabled={isLikeLoading}
+                                        aria-label="点赞"
+                                    >
+                                        <img
+                                            src={`${import.meta.env.BASE_URL}data/assets/gameDetail/${isLiked ? '点赞' : '未点赞'}.png`}
+                                            alt="点赞"
+                                        />
+                                        <span>{likeCount || 0}</span>
+                                    </button>
                                 </div>
                                 <div className={styles.gameMeta}>
                                     <span className={styles.gameType}>{game.game_tags}</span>
@@ -480,45 +528,6 @@ const GameDetail: React.FC = () => {
                                         {game.author_name || '未知作者'}
                                     </span>
                                 </div>
-                            </div>
-
-                            {/* 点赞和分享按钮位于右侧 */}
-                            <div className={styles.actionBar}>
-                                <button
-                                    className={styles.deleteButton}
-                                    onClick={() => setIsConfirmModalOpen(true)}
-                                >
-                                    删除存档
-                                </button>
-                                <button
-                                    className={`${styles.likeButton} ${isLiked ? styles.liked : ''}`}
-                                    onClick={handleLike}
-                                    disabled={isLikeLoading}
-                                >
-                                    <img
-                                        src={`${import.meta.env.BASE_URL}data/assets/gameDetail/${isLiked ? '点赞' : '未点赞'}.png`}
-                                        alt="点赞"
-                                    />
-                                    <span>{likeCount || 0}</span>
-                                </button>
-                                <button
-                                    className={styles.shareButton}
-                                    onClick={() => {
-                                        if (navigator.share) {
-                                            navigator.share({
-                                                title: game.title || '游戏',
-                                                text: game.description || '',
-                                                url: window.location.href,
-                                            }).catch(() => { });
-                                        } else {
-                                            navigator.clipboard.writeText(window.location.href);
-                                            toast.success('链接已复制到剪贴板');
-                                        }
-                                    }}
-                                >
-                                    <FaRegShareFromSquare />
-                                    分享
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -589,9 +598,6 @@ const GameDetail: React.FC = () => {
                 </div>
             </div>
 
-            <FooterArea />
-            <MobileBottomNav />
-
             {/* 模态框 */}
             <ConfirmModal
                 isOpen={isConfirmModalOpen}
@@ -620,6 +626,11 @@ const GameDetail: React.FC = () => {
                 message="游戏已更新，如在游戏中遇到问题，建议删除存档解决。"
                 confirmButtonText="继续游戏"
                 cancelButtonText="取消"
+            />
+            {/* 登录弹窗（当前详情页也挂一份，确保能在本页触发显示） */}
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
             />
         </div>
     );

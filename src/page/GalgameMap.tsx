@@ -426,7 +426,6 @@ const GalgameMap = () => {
         };
 
         setGameData(worldFormatData);
-        console.log("获取地图世界数据成功");
       }
     } catch (error) {
       console.error("获取地图世界数据失败:", error);

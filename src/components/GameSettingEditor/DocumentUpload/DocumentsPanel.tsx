@@ -31,6 +31,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const isVisualMode = mode === 'visual' || !mode; // 默认为 visual 模式
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [failedJobSnapshot, setFailedJobSnapshot] = useState<{
+        fileName?: string;
+        progress: number;
+        stage: string;
+        error: string;
+    } | null>(null);
     const { jobs } = useUploadStore();
     const currentJobRef = useRef<string | null>(null);
 
@@ -38,6 +44,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         const file = event.target.files?.[0];
         if (file) {
             setUploadedFile(file);
+            setFailedJobSnapshot(null);
             onParsingStart();
             await onFileUpload(file);
         }
@@ -79,6 +86,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             }
             
             setUploadedFile(file);
+            setFailedJobSnapshot(null);
             onParsingStart();
             await onFileUpload(file);
         }
@@ -100,19 +108,23 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         if (currentJob) {
             currentJobRef.current = currentJob.jobId;
             if (currentJob.status === 'completed') {
+                setFailedJobSnapshot(null);
                 onParsingComplete();
             } else if (currentJob.status === 'failed') {
-                // 上传失败时，清空已上传的文档，让用户可以重新上传
-                setUploadedFile(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-                currentJobRef.current = null;
+                // 上传/解析失败：保留进度与阶段信息，展示失败提示（不让 UI 退回 0%）
+                setFailedJobSnapshot({
+                    fileName: currentJob.fileName,
+                    progress: currentJob.progress ?? 0,
+                    stage: currentJob.stage || '',
+                    error: currentJob.error || '文件上传或解析失败，请重试',
+                });
+                onParsingComplete();
             }
         }
     }, [jobs, uploadedFile, onParsingComplete]);
 
     const handleRetry = () => {
+        setFailedJobSnapshot(null);
         setUploadedFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
@@ -138,9 +150,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const currentJob = getCurrentJob();
     // 如果正在解析但没有 jobId（还在上传中），显示上传状态
     const isUploading = isParsing && !currentJob && uploadedFile;
-    const progress = currentJob?.progress ?? 0; // 还没拿到 jobId 时保持 0%，避免“假进度”
-    const stage = currentJob?.stage || (isUploading ? '正在上传文件...' : '');
-    const apiError = currentJob?.status === 'failed' ? (currentJob.error || '文件上传或解析失败，请重试') : null;
+    const progress = (currentJob?.progress ?? failedJobSnapshot?.progress) ?? 0; // 失败时沿用最后一次进度
+    const stage = currentJob?.stage || failedJobSnapshot?.stage || (isUploading ? '正在上传文件...' : '');
+    const apiError =
+        (currentJob?.status === 'failed'
+            ? (currentJob.error || '文件上传或解析失败，请重试')
+            : (failedJobSnapshot?.error || null));
 
     // 定义解析步骤
     const parseSteps = useMemo(() => [
@@ -268,7 +283,19 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     )}
 
                     {apiError && (
-                        <p className={styles.errorText}>{apiError}</p>
+                        <>
+                            <p className={styles.errorText}>上传失败：{apiError}</p>
+                            <div className={styles.progressSection}>
+                                <div className={styles.progressHeader}>
+                                    <span className={styles.progressPercentage}>
+                                        {Math.round(progress)}%
+                                    </span>
+                                    {stage && (
+                                        <span className={styles.progressStage}>{stage}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </>
                     )}
 
                     {(isParsing || isUploading) && !apiError && (

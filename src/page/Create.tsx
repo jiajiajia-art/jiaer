@@ -491,6 +491,11 @@ const Create: React.FC = () => {
                         ) : (
                             <GameGrid
                                 games={publishedGames}
+                                onGameClick={(game) => {
+                                    const gameId = game.file_id || game.id;
+                                    if (!gameId) return;
+                                    navigate(`/createGame?mode=stats&gameId=${gameId}`);
+                                }}
                                 renderActions={renderGameActions}
                             />
                         )}
@@ -528,6 +533,11 @@ const Create: React.FC = () => {
                         ) : (
                             <GameGrid
                                 games={draftGames}
+                                onGameClick={(game) => {
+                                    const gameId = game.file_id || game.id;
+                                    if (!gameId) return;
+                                    navigate(`/createGame?mode=stats&gameId=${gameId}`);
+                                }}
                                 renderActions={renderGameActions}
                             />
                         )}

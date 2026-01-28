@@ -99,6 +99,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                     layer = firstSlot.layer ?? 0;
                 }
             }
+
             return {
                 npc,
                 position,
@@ -230,7 +231,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                             }}
                         >
                             <img 
-                                src={getRelatedNpc!.npc.images?.base || ''} 
+                                src={getImageUrl(getRelatedNpc!.npc.images?.base || '')} 
                                 alt={getRelatedNpc!.npc.name}
                                 className={styles.npcImage}
                                 onError={(e) => {

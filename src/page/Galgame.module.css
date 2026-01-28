@@ -1,3 +1,4 @@
+
 .pageRoot {
     width: 100%;
     min-height: 100vh;
@@ -102,7 +103,7 @@
     object-position: bottom left;
     max-width: 100%; /* 确保不超过父容器 */
     max-height: 100%; /* 确保不超过父容器 */
-    margin-left: -15%; /* 从 -20% 调整为 -15%，更靠边 */
+    margin-left: -15%;
 }
 
 .characterSlideRight {
@@ -114,7 +115,7 @@
     object-position: bottom right;
     max-width: 100%; /* 确保不超过父容器 */
     max-height: 100%; /* 确保不超过父容器 */
-    margin-right: -15%; /* 从 -20% 调整为 -15%，更靠边 */
+    margin-right: -15%;
 }
 
 @keyframes fadeSlideInFromLeft {

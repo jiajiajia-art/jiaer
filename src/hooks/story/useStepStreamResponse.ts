@@ -166,6 +166,7 @@ export const useStepStreamResponse = ({
                         if (jsonData.type === 'step' && jsonData.step) {
                             const step = jsonData.step;
                             hasReceivedStep = true;
+                            console.log('step data:', step);
 
                             // 如果是第一个 step，触发回调（清除超时定时器）
                             if (!firstStepReceived) {
@@ -178,6 +179,11 @@ export const useStepStreamResponse = ({
                                     return prev;
                                 }
                                 const newQueue = [...prev, step];
+                                console.log('[流式接收] 单个step加入队列:', {
+                                    stepType: step?.type,
+                                    queueLength: newQueue.length,
+                                    requestId,
+                                });
                                 return newQueue;
                             });
 
@@ -201,6 +207,11 @@ export const useStepStreamResponse = ({
                                         return prev;
                                     }
                                     const newQueue = [...prev, ...jsonData.narrativeSteps];
+                                    console.log('[流式接收] narrativeSteps加入队列:', {
+                                        stepsCount: jsonData.narrativeSteps.length,
+                                        queueLength: newQueue.length,
+                                        requestId,
+                                    });
                                     return newQueue;
                                 });
                             }
