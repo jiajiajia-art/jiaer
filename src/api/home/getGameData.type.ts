@@ -29,6 +29,7 @@ export interface UserGameData {
     engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM';
     customAppId?: string;
     needDeleted: boolean;
+    display_cover_url: string;
 }
 
 export interface UserGameResponse {

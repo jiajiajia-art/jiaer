@@ -134,6 +134,7 @@ const Galgame = () => {
                     {controller.currentMessage.characterImage && !controller.isTextMode && (
                         <div className={getCharacterContainerClassName()}>
                             <img
+                                key={controller.currentMessage.characterImage}
                                 src={controller.currentMessage.characterImage}
                                 alt="角色立绘"
                                 className={styles.characterImage}

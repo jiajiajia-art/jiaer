@@ -117,9 +117,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     const renderTextWithMarkdown = useCallback((displayedPlainText: string, originalText: string, showCursor: boolean = false) => {
         if (!originalText) return null;
         
-        // 如果 displayedPlainText 为空，回退到显示完整的 originalText（与文本模式保持一致）
+        // 关键：切 step 的瞬间，打字机 hook 会先把 displayedPlainText 清空。
+        // 如果此时回退渲染完整 originalText，会出现“先闪一下完整文本 -> 再开始打字”的视觉闪烁。
+        // 因此：正在打字(showCursor=true)且 displayedPlainText 为空时，渲染空文本（仅保留光标）。
         if (!displayedPlainText) {
-            return <ColoredMarkdownText text={originalText} showCursor={showCursor} />;
+            return <ColoredMarkdownText text={showCursor ? '' : originalText} showCursor={showCursor} />;
         }
         
         // 使用 truncateTextWithTags 根据纯文本长度截取带颜色标签的文本

@@ -321,6 +321,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
           {currentMessage?.characterImage && !isTextMode && (
             <div className={getCharacterContainerClassName()}>
               <img
+                key={currentMessage.characterImage}
                 src={currentMessage.characterImage}
                 alt="角色立绘"
                 className={styles.characterImage}

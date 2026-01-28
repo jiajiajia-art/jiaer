@@ -3,7 +3,7 @@
  * 管理多个请求的流式输出（interact、选择选项、后续物品交互等）
  * 处理：请求状态、轮询、缓存恢复、刷新页面恢复等
  */
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { useNpcInteractionStep } from '../../../hooks/mapGalgame/npc/useNpcInteractionStep';
 import { useNpcStreamRequestManager } from '../../../hooks/mapGalgame/npc/useNpcStreamRequestManager';
 import { useHistoryPolling } from '../../../hooks/mapGalgame/useHistoryPolling';
@@ -13,6 +13,7 @@ import { useStoryTyping } from '../../../hooks/story/useStoryTyping';
 import { extractPlainText, truncateTextWithTags } from '../../../utils/textUtils';
 import {
   convertStepToMessage,
+  getPlayerImage,
   getStorageKeys,
   safeRemoveLocalStorage,
   type Message,
@@ -141,7 +142,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       type: 'choice',
       message: '请选择你的行动',
       options,
-      characterImage: undefined,
+      characterImage: getPlayerImage(worldSetting?.player?.images),
       characterPosition: 'right',
     };
   }, [latestHistory, worldSetting]);
@@ -703,7 +704,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   }, [onRetry, retryHandler.handleRetryRequest]);
 
   // 暴露当前消息给父组件（用于显示立绘）
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (onCurrentMessageChange) {
       onCurrentMessageChange(currentMessage);
     }

@@ -16,7 +16,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
     const location = useLocation();
     const navigate = useNavigate();
     const isCreatePage = location.pathname === '/create';
-    
+
     const handleGameClick = (game: UserGameData) => {
         if (onGameClick) {
             onGameClick(game);
@@ -42,7 +42,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
         }
         return (
             <span className={styles.priceValue}>
-                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon}/>
+                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
 
                 {amount}
             </span>
@@ -59,7 +59,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                 >
                     <div className={styles.goodsImg}>
                         <img
-                            src={getImageUrl(meta.cover_url) || `${import.meta.env.BASE_URL}data/events/welcome.png`}
+                            src={getImageUrl(meta.display_cover_url||meta.cover_url) || `${import.meta.env.BASE_URL}data/events/welcome.png`}
                             alt={meta.title || `剧情${idx + 1}`}
                         />
                         {isCreatePage && meta.game_tags && (
@@ -89,8 +89,8 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                         </div>
 
                         {renderActions ? (
-                            <div 
-                                className={styles.gameEditBtn} 
+                            <div
+                                className={styles.gameEditBtn}
                             >
                                 {renderActions(meta)}
                             </div>
@@ -104,7 +104,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                                     ) :
                                         <div className={styles.goodsPrice}>
                                             {
-                                                 meta.special_price_amount != null ? (
+                                                meta.special_price_amount != null ? (
                                                     <>
                                                         <div className={styles.goodsPriceText}>
                                                             {renderPriceValue(meta.price_amount)}
