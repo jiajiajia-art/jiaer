@@ -130,6 +130,29 @@
     transform: translateY(0);
 }
 
+/* 完成态操作区 */
+.actionRow{ display:flex; gap:10px; justify-content: center; align-items: center; }
+.primaryBtn{
+    background: #FB5B67;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.secondaryBtn{
+    background: transparent;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 /* 移动端适配 (768px以下) */
 @media (max-width: 768px) {
     .uploadOverlay {
@@ -171,4 +194,3 @@
         font-size: 14px;
     }
 }
-

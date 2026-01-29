@@ -31,6 +31,8 @@ function App() {
         }}
         toastOptions={{
           duration: 3000,
+          success: { duration: 2500 },
+          error: { duration: 8000 },
           style: {
             minWidth: '250px',
             textAlign: 'center',
