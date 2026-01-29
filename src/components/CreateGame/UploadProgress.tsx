@@ -6,6 +6,12 @@ interface UploadProgressProps {
     progress: number;
     progressText: string;
     onCancel: () => void;
+    // 可选：完成后不自动关闭，展示操作按钮
+    completed?: boolean;
+    primaryText?: string;
+    secondaryText?: string;
+    onPrimary?: () => void;
+    onSecondary?: () => void;
 }
 
 const UploadProgress: React.FC<UploadProgressProps> = ({
@@ -13,6 +19,11 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
     progress,
     progressText,
     onCancel,
+    completed = false,
+    primaryText = '确定',
+    secondaryText = '开始测试',
+    onPrimary,
+    onSecondary,
 }) => {
     if (!isOpen) return null;
 
@@ -39,18 +50,24 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
                     {progressText || '处理中...'}
                 </p>
 
-                {/* 取消按钮 */}
-                <button
-                    className={styles.cancelUploadBtn}
-                    onClick={onCancel}
-                    type="button"
-                >
-                    取消上传
-                </button>
+                {/* 操作区域 */}
+                {completed ? (
+                    <div className={styles.actionRow}>
+                        <button type="button" className={styles.secondaryBtn} onClick={onPrimary}>{primaryText}</button>
+                        <button type="button" className={styles.primaryBtn} onClick={onSecondary}>{secondaryText}</button>
+                    </div>
+                ) : (
+                    <button
+                        className={styles.cancelUploadBtn}
+                        onClick={onCancel}
+                        type="button"
+                    >
+                        取消上传
+                    </button>
+                )}
             </div>
         </div>
     );
 };
 
 export default UploadProgress;
-

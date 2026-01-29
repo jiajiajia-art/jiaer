@@ -148,6 +148,18 @@
   color: #737373;
 }
 
+/* 文件要求说明 */
+.noticeBox{
+  background: #F5F5F5;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #374151;
+}
+.noticeTitle{ font-weight: 700; margin: 0 0 6px 0; }
+.noticeList{ margin: 0; padding-left: 16px; color:#4b5563; font-size: 14px; }
+.noticeList li{ line-height: 1.6; }
+
 /* 上传模式分段按钮 */
 .seg {
   display: inline-flex;
@@ -184,6 +196,27 @@
   font-size: 13px;
   color: #555;
 }
+
+/* 新版卡片式上传选择 */
+.uploadGrid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; }
+.uploadCard{ background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px; cursor:pointer; transition: box-shadow .2s, border-color .2s; }
+.uploadCard:hover{ box-shadow: 0 8px 24px rgba(0,0,0,.07); border-color:#d1d5db; }
+.uploadCardActive{ border-color:#FB5B67; box-shadow: 0 8px 28px rgba(251,91,103,.15); }
+.cardHeader{ display:flex; align-items:center; gap:10px; }
+.cardIcon{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#F5F5F5; color:#FB5B67; font-size:20px; }
+.cardTitle{ font-weight:800; font-size:16px; color:#111827; }
+.cardDesc{ color:#6b7280; font-size:13px; }
+.dropZoneLarge{ border:2px dashed #d1d5db; border-radius:12px; padding:28px; background:#fafafa; color:#374151; text-align:left; min-height: 260px; display:flex; flex-direction:column; gap:10px; justify-content:center; }
+.dropZoneLarge.drag{ border-color:#FB5B67; background:#fff5f6; color:#b91c1c; }
+.dropHeading{ font-size:18px; font-weight:800; color:#111827; }
+.dropHint{ font-size:14px; color:#6b7280; }
+.dropList{ margin: 6px 0 0 16px; padding:0; font-size:14px; color:#4b5563; }
+.dropList li{ line-height:1.6; }
+.cardFooter{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.pickBtn{ border:1px solid #d1d5db; background:#fff; color:#374151; border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer; }
+.pickedText{ color:#4b5563; font-size:12px; }
+
+@media (max-width: 1080px){ .uploadGrid{ grid-template-columns: 1fr; } }
 
 .fileRowLine { display:flex; gap:10px; align-items:center; padding:4px 0; }
 .fileCheckbox { width:16px; height:16px; }

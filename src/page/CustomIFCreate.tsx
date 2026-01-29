@@ -5,10 +5,12 @@ import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './CustomIFCreate.module.css';
+import UploadProgress from '../components/CreateGame/UploadProgress';
+import toast from 'react-hot-toast';
 
 const CustomIFCreate: React.FC = () => {
-  const [title, setTitle] = useState('我的游戏');
-  const [version, setVersion] = useState('1.0.0');
+  const [title, setTitle] = useState('');
+  // 版本号已由服务端管理，无需前端填写
   const [manifestText, setManifestText] = useState('');
   const [creating, setCreating] = useState(false);
   const [appId, setAppId] = useState<string>('');
@@ -28,16 +30,55 @@ const CustomIFCreate: React.FC = () => {
     }
   }, [isEditMode, appIdFromQuery]);
 
-  // 上传模式：single（仅 index.html），zip（客户端解包后多文件），dir（选择目录 多文件）
-  type UploadMode = 'single' | 'zip' | 'dir';
-  const [mode, setMode] = useState<UploadMode>('single');
-  const zipRef = useRef<HTMLInputElement>(null);
-  const dirRef = useRef<HTMLInputElement>(null);
+  // 复用草稿 appId（创建模式下避免重复 create-empty）
+  const DRAFT_KEY = 'customif_draft_appId';
+  useEffect(() => {
+    if (!isEditMode && !appId) {
+      try {
+        const saved = localStorage.getItem(DRAFT_KEY);
+        if (saved) setAppId(saved);
+      } catch {}
+    }
+  }, [isEditMode, appId]);
+
+  // 简化：通过拖放自动识别来源类型（single/zip/dir）
+  type SourceType = 'single' | 'zip' | 'dir';
+  const [sourceType, setSourceType] = useState<SourceType>('single');
+  // 旧的 zip/dir 选择器删除；保留单文件选择器以支持点击选择
+  const singleRef = fileRef; // 语义别名：单文件 index.html 选择器
   type MultiItem = { path: string; file: File; selected: boolean };
   const [multiFiles, setMultiFiles] = useState<MultiItem[]>([]);
   const [multiStats, setMultiStats] = useState<{ count: number; bytes: number; selCount: number; selBytes: number }>({ count: 0, bytes: 0, selCount: 0, selBytes: 0 });
   const [entryPath, setEntryPath] = useState<string>('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [lastUploadOk, setLastUploadOk] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  // 上传进度与取消控制
+  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+  const progressTimerRef = useRef<number | null>(null);
+  const startAtRef = useRef<number | null>(null);
+
+  function startFakeProgress(max=90){
+    if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
+    startAtRef.current = Date.now();
+    setProgress(5);
+    setProgressText('上传中…');
+    const MAX_TIME = 20_000; // 20s 逼近 max
+    progressTimerRef.current = window.setInterval(()=>{
+      if (!startAtRef.current) return;
+      const elapsed = Date.now() - startAtRef.current;
+      const p = Math.min(5 + (elapsed / MAX_TIME) * (max - 5), max);
+      setProgress(p);
+    }, 120);
+  }
+  function stopFakeProgress(){
+    if (progressTimerRef.current) { window.clearInterval(progressTimerRef.current); progressTimerRef.current = null; }
+    startAtRef.current = null;
+  }
 
   function formatBytes(n:number){
     if(n<1024) return `${n} B`; if(n<1024*1024) return `${(n/1024).toFixed(1)} KB`; return `${(n/1024/1024).toFixed(1)} MB`; }
@@ -80,20 +121,7 @@ const CustomIFCreate: React.FC = () => {
     if (candidates.length === 1) setEntryPath(candidates[0]);
   }
 
-  // 目录上传：读取 webkitRelativePath
-  const handlePickDir = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    const items: MultiItem[] = [];
-    for(const f of files){
-      // @ts-ignore webkitRelativePath by browsers
-      const rel = (f as any).webkitRelativePath || f.name;
-      const path = normalizePath(rel);
-      if (!path) continue;
-      items.push({ path, file: f, selected: true });
-    }
-    setMultiFiles(items);
-    updateMultiStats(items);
-  };
+  // 目录上传（通过拖拽 DataTransferItem 递归读取）
 
   // ZIP 上传：动态加载 fflate 并解压
   async function ensureZipLib(){
@@ -105,9 +133,7 @@ const CustomIFCreate: React.FC = () => {
       document.head.appendChild(s);
     });
   }
-  const handlePickZip = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleZipFile(file: File){
     try {
       await ensureZipLib();
       const buf = new Uint8Array(await file.arrayBuffer());
@@ -123,12 +149,16 @@ const CustomIFCreate: React.FC = () => {
         const f = new File([u8], path.split('/').pop()||'file', { type: mime });
         list.push({ path, file: f, selected: true });
       }
+      setSourceType('zip');
       setMultiFiles(list);
       updateMultiStats(list);
     } catch (err:any) {
       setError('解压失败：' + (err?.message || err));
     }
-  };
+  }
+
+  // 大区域拖拽（ZIP 卡片）
+  // 新的统一拖拽处理见下方 onZoneDrop
 
   const toggleSelect = (idx:number, checked:boolean) => {
     setMultiFiles(prev => {
@@ -153,7 +183,7 @@ const CustomIFCreate: React.FC = () => {
     if (creating) return;
     try {
       // 校验输入
-      if (mode === 'single') {
+      if (sourceType === 'single') {
         const file = fileRef.current?.files?.[0]; if (!file) { setError('请上传 index.html'); return; }
       } else {
         if (multiFiles.length === 0) { setError('未选择任何文件'); return; }
@@ -162,21 +192,24 @@ const CustomIFCreate: React.FC = () => {
         if (entryPath && !sel.some(i=> i.path === entryPath)) { setError(`必须选择入口文件：${entryPath}`); return; }
       }
       setCreating(true);
+      setIsUploading(true);
+      setLastUploadOk(false);
+      startFakeProgress();
       let id = appIdFromQuery || appId;
       // 创建模式：先创建 App；编辑模式：直接使用已有 appId
-      if (!isEditMode) {
+      if (!isEditMode && !id) {
         const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ title: title || '我的游戏' }) });
         if (!resp.ok) throw new Error(await resp.text());
         const meta = await resp.json();
         id = meta?.appId || meta?.data?.appId || '';
         if (!id) throw new Error('服务端未返回 appId');
         setAppId(id);
+        try { localStorage.setItem(DRAFT_KEY, id); } catch {}
       }
       // 2) upload ui（根据模式构建表单）
       const fd = new FormData();
-      fd.append('version', version);
       if (manifestText.trim()) fd.append('manifest', manifestText);
-      if (mode === 'single'){
+      if (sourceType === 'single'){
         const file = fileRef.current?.files?.[0]!;
         const size = file.size || 0; if (size<=0) throw new Error('选择的 index.html 文件为空');
         fd.append('index', file, file.name || 'index.html');
@@ -190,14 +223,35 @@ const CustomIFCreate: React.FC = () => {
           fd.append('paths[]', it.path);
         }
       }
-      const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, { method:'POST', body: fd });
+      // fetch with abort support
+      abortRef.current = new AbortController();
+      const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, { method:'POST', body: fd, signal: abortRef.current.signal });
       if (!up.ok) throw new Error(await up.text());
       const upJson = await up.json();
       console.log('[CustomIF upload]', upJson);
-      const entry = upJson?.entry || upJson?.entryUrl || `/public/custom/apps/${id}/ui/${version}/index.html`;
+      const entry = upJson?.entry || upJson?.entryUrl || `/public/custom/apps/${id}/ui/index.html`;
       setEntryUrl(entry);
+      setLastUploadOk(true);
+      setProgressText('上传完成');
+      setProgress(100);
+      stopFakeProgress();
+      // 保持覆盖层不消失，展示操作按钮
+      setIsUploading(true);
+      toast.success('上传成功');
+      // 上传成功后清理草稿标记
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
     } catch (e:any) {
-      setError(String(e?.message || e));
+      // 尝试解析后端错误
+      let msg = String(e?.message || e);
+      try {
+        const j = JSON.parse(msg);
+        if (j?.message) msg = j.message;
+      } catch {}
+      setError(msg);
+      setLastUploadOk(false);
+      stopFakeProgress();
+      setIsUploading(false);
+      toast.error(msg || '上传失败', { duration: 8000 });
     } finally {
       setCreating(false);
       setConfirmOpen(false);
@@ -207,10 +261,29 @@ const CustomIFCreate: React.FC = () => {
   // 点击“创建并上传/上传新版本”时的入口（多文件需二次确认）
   const handleCreate = () => {
     setError('');
-    if (mode === 'single') return void doUpload();
+    if (sourceType === 'single') return void doUpload();
     if (multiFiles.length === 0) { setError('请先选择 ZIP 或目录'); return; }
     setConfirmOpen(true);
   };
+
+  // 取消上传
+  const handleCancelUpload = () => {
+    if (abortRef.current) { try { abortRef.current.abort(); } catch {} abortRef.current = null; }
+    stopFakeProgress();
+    setIsUploading(false);
+    setCreating(false);
+    setProgress(0);
+    setProgressText('');
+    toast('已取消上传', { duration: 4000 });
+  };
+
+  // 离开页提醒：正在上传或有未提交选择且未成功
+  useEffect(() => {
+    const needWarn = isUploading || (multiFiles.length>0 && !lastUploadOk);
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { if (needWarn){ e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isUploading, multiFiles.length, lastUploadOk]);
 
   return (
     <div className={styles.pageRoot}>
@@ -218,7 +291,7 @@ const CustomIFCreate: React.FC = () => {
       <div className={styles.mainContent}>
         <div className={styles.main}>
           <div className={styles.formSection}>
-            <h2 style={{margin:'0 0 6px'}}>{isEditMode ? '编辑自定义游戏（Custom IF）' : '创建自定义游戏（Custom IF）'}</h2>
+            <h2 style={{margin:'0 0 6px'}}>{isEditMode ? '编辑自定义游戏' : '创建自定义游戏'}</h2>
             {!isEditMode && (
               <div className={styles.formGroup}>
                 <label htmlFor="title">标题</label>
@@ -227,52 +300,66 @@ const CustomIFCreate: React.FC = () => {
                   className={styles.textInput}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="我的游戏"
                   autoComplete="off"
                 />
               </div>
             )}
 
-            <div className={styles.formGroup}>
-              <label htmlFor="version">版本号</label>
-              <input
-                id="version"
-                className={styles.textInput}
-                value={version}
-                onChange={(e) => setVersion(e.target.value)}
-                placeholder="1.0.0"
-                autoComplete="off"
-              />
-            </div>
+            {/* 版本号输入已移除：由服务端管理当前激活版本 */}
 
+            {/* 简化：单一大型拖放区域（支持 .zip / .html / 目录）且包含文件要求说明 */}
             <div className={styles.formGroup}>
-              <label>上传方式</label>
-              <div className={styles.fileRow}>
-                <div className={styles.seg}>
-                  <button type="button" className={`${styles.segBtn} ${mode==='single'?styles.segBtnActive:''}`} onClick={()=> setMode('single')}>单文件</button>
-                  <button type="button" className={`${styles.segBtn} ${mode==='zip'?styles.segBtnActive:''}`} onClick={()=> setMode('zip')}>ZIP 包</button>
-                  <button type="button" className={`${styles.segBtn} ${mode==='dir'?styles.segBtnActive:''}`} onClick={()=> setMode('dir')}>目录</button>
-                </div>
-                <div className={styles.hint}>单文件：只上传 index.html；ZIP/目录：一次上传所有资源。</div>
+              <label>上传</label>
+              <div className={`${styles.dropZoneLarge} ${dragOver? 'drag' : ''}`}
+                   onDragOver={(e)=>{e.preventDefault(); setDragOver(true);}}
+                   onDragLeave={(e)=>{e.preventDefault(); setDragOver(false);}}
+                   onDrop={async (e)=>{
+                     e.preventDefault(); setDragOver(false);
+                     const items = e.dataTransfer.items;
+                     if (items && items.length){
+                       // @ts-ignore
+                       const entry = items[0].webkitGetAsEntry && items[0].webkitGetAsEntry();
+                       if (entry && entry.isDirectory){
+                         // @ts-ignore
+                         const readDirEntry = async (en:any, prefix:string): Promise<any[]> => {
+                           const results: any[] = [];
+                           if (en.isFile){ await new Promise<void>(res=> en.file((file:any)=>{ results.push({ path: normalizePath(prefix + file.name), file, selected:true }); res(); })); }
+                           else if (en.isDirectory){ const reader = en.createReader(); await new Promise<void>(r=> reader.readEntries(async (ents:any[])=>{ for(const sub of ents){ const subList:any[]= await readDirEntry(sub, `${prefix}${en.name}/`); results.push(...subList);} r(); })); }
+                           return results;
+                         };
+                         const list = await readDirEntry(entry, '');
+                         setSourceType('dir'); setMultiFiles(list as any); updateMultiStats(list as any);
+                         return;
+                       }
+                     }
+                     const f = e.dataTransfer.files?.[0]; if (!f) return;
+                     const name = (f.name||'').toLowerCase();
+                     if (name.endsWith('.zip')) { await handleZipFile(f); }
+                     else if (name.endsWith('.html')) { setSourceType('single'); const dt = new DataTransfer(); dt.items.add(f); if (singleRef.current) singleRef.current.files = dt.files; }
+                     else { setError('仅支持拖入 .zip、.html 或文件夹'); }
+                   }}
+                   onClick={()=> singleRef.current?.click()}
+              >
+                <div className={styles.dropHeading}>上传自定义游戏</div>
+                <div className={styles.dropHint}>将 ZIP 包、index.html 或文件夹拖拽至此（或点击此区域选择文件）</div>
+                <ul className={styles.dropList}>
+                  <li>支持单index.html、ZIP包或文件夹方式上传。</li>
+                  <li>ZIP包或文件夹必须包含入口文件 <b>index.html</b>（ZIP 内根目录或唯一子目录下）。</li>
+                  <li>资源引用请使用<b>相对路径</b>（如 <code>./style.css</code>、<code>./data.json</code>）。</li>
+                  <li>大小建议：单文件 ≤ 10MB、总大小 ≤ 50MB。</li>
+                  <li>manifest配置（可选）：高级功能，有特殊需求请联系客服。</li>
+                </ul>
               </div>
             </div>
 
-            {mode === 'single' && (
-              <div className={styles.formGroup}>
-                <label htmlFor="index">index.html 文件</label>
-                <div className={styles.fileRow}>
-                  <input id="index" ref={fileRef} type="file" accept="text/html,.html" className={styles.fileInput} />
-                  <div className={styles.hint}>请选择你的自定义游戏入口文件 index.html</div>
-                </div>
-              </div>
-            )}
+            {/* 隐藏文件选择器（点击大区域触发） */}
+            <input id="index" ref={singleRef} type="file" accept="text/html,.html,.zip,application/zip" className={styles.fileInput} style={{display:'none'}} onChange={async (e)=>{ const f=e.target.files?.[0]; if(!f) return; const n=(f.name||'').toLowerCase(); if(n.endsWith('.zip')) await handleZipFile(f); else if(n.endsWith('.html')) { setSourceType('single'); } else setError('不支持的文件类型'); }} />
 
-            {mode === 'zip' && (
+            {sourceType === 'zip' && (
               <div className={styles.formGroup}>
-                <label htmlFor="zip">ZIP 包</label>
+                <label>文件清单（ZIP）</label>
                 <div className={styles.fileRow}>
-                  <input id="zip" ref={zipRef} type="file" accept=".zip,application/zip" className={styles.fileInput} onChange={handlePickZip} />
-                  <div className={styles.hint}>将包含 index.html 的构建目录打包为 .zip</div>
+                  <div className={styles.hint}>解压后默认全选；可取消不需要上传的文件。</div>
                   {multiFiles.length>0 && (
                     <>
                       <div className={styles.listActions}>
@@ -282,12 +369,18 @@ const CustomIFCreate: React.FC = () => {
                       <div className={styles.fileStats}>
                         共 {multiStats.count} 个文件（{formatBytes(multiStats.bytes)}），已选 {multiStats.selCount}（{formatBytes(multiStats.selBytes)}）{entryPath?`，入口：${entryPath}`:''}
                       </div>
+                      {multiFiles.filter(i=> /(^|\/)index\.html$/i.test(i.path)).length > 1 && (
+                        <div className={styles.hint}>检测到多个 index.html，请通过“设为入口”指定一个入口文件，并只勾选必要文件。</div>
+                      )}
                       <div className={styles.fileList}>
                         {multiFiles.map((it, idx)=> (
                           <div className={styles.fileRowLine} key={it.path}>
                             <input className={styles.fileCheckbox} type="checkbox" checked={it.selected} onChange={(ev)=> toggleSelect(idx, ev.target.checked)} />
                             <span className={styles.filePath}>{it.path}</span>
                             <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
+                            {/index\.html$/i.test(it.path) && (
+                              <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title="设为入口">设为入口</button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -297,13 +390,11 @@ const CustomIFCreate: React.FC = () => {
               </div>
             )}
 
-            {mode === 'dir' && (
+            {sourceType === 'dir' && (
               <div className={styles.formGroup}>
-                <label htmlFor="dir">选择目录</label>
+                <label>文件清单（目录）</label>
                 <div className={styles.fileRow}>
-                  {/* @ts-ignore webkitdirectory */}
-                  <input id="dir" ref={dirRef} type="file" className={styles.fileInput} onChange={handlePickDir} multiple webkitdirectory="true" />
-                  <div className={styles.hint}>选择包含 index.html 的目录（需现代浏览器）</div>
+                  <div className={styles.hint}>默认全选；可取消不需要上传的文件。</div>
                   {multiFiles.length>0 && (
                     <>
                       <div className={styles.listActions}>
@@ -313,12 +404,18 @@ const CustomIFCreate: React.FC = () => {
                       <div className={styles.fileStats}>
                         共 {multiStats.count} 个文件（{formatBytes(multiStats.bytes)}），已选 {multiStats.selCount}（{formatBytes(multiStats.selBytes)}）{entryPath?`，入口：${entryPath}`:''}
                       </div>
+                      {multiFiles.filter(i=> /(^|\/)index\.html$/i.test(i.path)).length > 1 && (
+                        <div className={styles.hint}>检测到多个 index.html，请通过“设为入口”指定一个入口文件，并只勾选必要文件。</div>
+                      )}
                       <div className={styles.fileList}>
                         {multiFiles.map((it, idx)=> (
                           <div className={styles.fileRowLine} key={it.path}>
                             <input className={styles.fileCheckbox} type="checkbox" checked={it.selected} onChange={(ev)=> toggleSelect(idx, ev.target.checked)} />
                             <span className={styles.filePath}>{it.path}</span>
                             <span className={styles.fileSize}>{formatBytes(it.file.size||0)}</span>
+                            {/index\.html$/i.test(it.path) && (
+                              <button type="button" className={styles.smallBtn} onClick={()=> setEntryPath(it.path)} title="设为入口">设为入口</button>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -355,9 +452,11 @@ const CustomIFCreate: React.FC = () => {
                 </button>
                 {(appId || appIdFromQuery) && (
                   <div className={styles.infoRow}>
-                    <button onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)} className={styles.secondaryBtn}>
-                      开始测试
-                    </button>
+                    {lastUploadOk && (
+                      <button onClick={() => navigate(`/customif/${appId || appIdFromQuery}`)} className={styles.secondaryBtn}>
+                        开始测试
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -366,12 +465,23 @@ const CustomIFCreate: React.FC = () => {
         </div>
       </div>
       <FooterArea />
+      <UploadProgress
+        isOpen={isUploading}
+        progress={progress}
+        progressText={progressText}
+        onCancel={handleCancelUpload}
+        completed={lastUploadOk && progress >= 100}
+        primaryText="确定"
+        secondaryText="开始测试"
+        onPrimary={() => { setIsUploading(false); }}
+        onSecondary={() => { const id = appId || appIdFromQuery; if (id) navigate(`/customif/${id}`); }}
+      />
       {confirmOpen && (
         <div className={styles.confirmOverlay}>
           <div className={styles.confirmCard}>
             <div className={styles.confirmHeader}>二次确认上传文件</div>
             <div className={styles.confirmBody}>
-              <div style={{marginBottom:8}}>将上传版本：<b>{version}</b>，已选 <b>{multiStats.selCount}</b> 个文件（{formatBytes(multiStats.selBytes)}）。{entryPath?`入口：${entryPath}`:''}</div>
+              <div style={{marginBottom:8}}>将上传已选 <b>{multiStats.selCount}</b> 个文件（{formatBytes(multiStats.selBytes)}）。{entryPath?`入口：${entryPath}`:''}</div>
               <div className={styles.fileList}>
                 {multiFiles.filter(i=> i.selected).map(it=> (
                   <div className={styles.fileRowLine} key={it.path}>

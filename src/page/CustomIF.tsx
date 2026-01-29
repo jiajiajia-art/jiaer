@@ -100,7 +100,15 @@ const CustomIF: React.FC = () => {
         }}
       >
         <button
-          onClick={() => navigate('/home')}
+          onClick={() => {
+            try {
+              // Prefer going back to the previous page; fallback to home if history is shallow
+              if (window.history.length > 1) navigate(-1);
+              else navigate('/home');
+            } catch {
+              navigate('/home');
+            }
+          }}
           title="返回首页"
           style={{
             display: 'inline-flex',
