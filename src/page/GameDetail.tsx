@@ -404,6 +404,10 @@ const GameDetail: React.FC = () => {
 
     const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
+    const normalizeNewlines = useCallback((text: string) => {
+        return (text ?? '').replaceAll('\\n', '\n').replaceAll('/n', '\n');
+    }, []);
+
     const handleBack = () => {
         if (window.history.length > 1) {
             navigate(-1);
@@ -456,25 +460,25 @@ const GameDetail: React.FC = () => {
             {/* 顶部悬浮栏 */}
             <div className={styles.topBar}>
                 <div className={styles.topBarContent}>
-                <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
-                    <IoChevronBack />
-                </button>
-                <div className={styles.topActions}>
-                    <button
-                        className={styles.topDeleteButton}
-                        onClick={() => {
-                            if (!checkAuth()) return;
-                            setIsConfirmModalOpen(true);
-                        }}
-                    >
-                        删除存档
+                    <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
+                        <IoChevronBack />
                     </button>
-                    {canNativeShare && (
-                        <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
-                            <FaRegShareFromSquare />
+                    <div className={styles.topActions}>
+                        <button
+                            className={styles.topDeleteButton}
+                            onClick={() => {
+                                if (!checkAuth()) return;
+                                setIsConfirmModalOpen(true);
+                            }}
+                        >
+                            删除存档
                         </button>
-                    )}
-                </div>
+                        {canNativeShare && (
+                            <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
+                                <FaRegShareFromSquare />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -534,10 +538,16 @@ const GameDetail: React.FC = () => {
 
                     {/* 描述 */}
                     <div className={styles.descriptionSection}>
-                        <p>{game.description || '暂无描述'}</p>
+                        <p>{normalizeNewlines(game.description || '暂无描述')}</p>
                     </div>
 
                     {/* 价格和操作按钮 */}
+                </div>
+            </div>
+
+            {/* 底部悬浮按钮栏 */}
+            <div className={styles.floatingActionBar}>
+                <div className={styles.floatingActionInner}>
                     <div className={styles.actionSection}>
                         {game.special_price_amount != null && (
                             <div className={styles.priceTopRow}>
@@ -555,46 +565,45 @@ const GameDetail: React.FC = () => {
                                 </div>
                             </div>
                         )}
-
-                        {game.paid ? (
-                            <button
-                                className={styles.startButton}
-                                onClick={handleStartGame}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <div className={styles.loading}>
-                                        <span className={styles.loadingDot}></span>
-                                        <span className={styles.loadingDot}></span>
-                                        <span className={styles.loadingDot}></span>
-                                    </div>
-                                ) : (
-                                    '开始游戏'
-                                )}
-                            </button>
-                        ) : (
-                            <button
-                                className={styles.purchaseButton}
-                                disabled={isPurchasing}
-                                onClick={() => {
-                                    if (!checkAuth() || isPurchasing) return;
-                                    if (game.special_price_amount == 0 && !game.paid) {
-                                        purchaseGame();
-                                    } else {
-                                        setIsPurchaseModalOpen(true);
-                                    }
-                                }}
-                            >
-                                {!isFreePrice && (
-                                    <img
-                                        src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
-                                        alt=""
-                                    />
-                                )}
-                                {isPurchasing ? '购买中...' : displayPrice}
-                            </button>
-                        )}
                     </div>
+                    {game.paid ? (
+                        <button
+                            className={styles.startButton}
+                            onClick={handleStartGame}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <div className={styles.loading}>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                </div>
+                            ) : (
+                                '开始游戏'
+                            )}
+                        </button>
+                    ) : (
+                        <button
+                            className={styles.purchaseButton}
+                            disabled={isPurchasing}
+                            onClick={() => {
+                                if (!checkAuth() || isPurchasing) return;
+                                if (game.special_price_amount == 0 && !game.paid) {
+                                    purchaseGame();
+                                } else {
+                                    setIsPurchaseModalOpen(true);
+                                }
+                            }}
+                        >
+                            {!isFreePrice && (
+                                <img
+                                    src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
+                                    alt=""
+                                />
+                            )}
+                            {isPurchasing ? '购买中...' : displayPrice}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -604,14 +613,14 @@ const GameDetail: React.FC = () => {
                 onConfirm={handleDeleteSession}
                 onCancel={() => setIsConfirmModalOpen(false)}
                 title="删除存档"
-                message="确认删除该游戏的存档吗？删除后无法恢复。"
+                message={normalizeNewlines("确认删除该游戏的存档吗？\\n删除后无法恢复。")}
             />
             <ConfirmModal
                 isOpen={isPurchaseModalOpen}
                 onConfirm={purchaseGame}
                 onCancel={() => setIsPurchaseModalOpen(false)}
                 title="购买游戏"
-                message={`确认花费 ${game.special_price_amount != null && game.special_price_amount > 0 ? game.special_price_amount : game.price_amount} 积分购买该游戏吗？`}
+                message={normalizeNewlines(`确认花费 ${game.special_price_amount != null && game.special_price_amount > 0 ? game.special_price_amount : game.price_amount} 积分购买该游戏吗？`)}
                 confirmButtonText="确认购买"
                 cancelButtonText="取消"
             />
@@ -623,7 +632,7 @@ const GameDetail: React.FC = () => {
                 }}
                 onCancel={() => setIsUpdateWarningModalOpen(false)}
                 title="游戏已更新"
-                message="游戏已更新，如在游戏中遇到问题，建议删除存档解决。"
+                message={normalizeNewlines("游戏已更新，如在游戏中遇到问题，建议删除存档解决。")}
                 confirmButtonText="继续游戏"
                 cancelButtonText="取消"
             />

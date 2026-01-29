@@ -9,12 +9,11 @@ interface GalgameHistoryModalProps {
     isOpen: boolean;
     history: HistoryWithId[];
     backgroundImage: string;
-    onClose: () => void;
     onRegenerate?: (messageIndex: number) => void;
     onEditSave?: (historyIndex: number, content: string) => Promise<boolean>;
 }
 
-const GalgameHistoryModal = ({ isOpen, history, onClose, onRegenerate, onEditSave, backgroundImage }: GalgameHistoryModalProps) => {
+const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgroundImage }: GalgameHistoryModalProps) => {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editContent, setEditContent] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
@@ -108,7 +107,6 @@ const GalgameHistoryModal = ({ isOpen, history, onClose, onRegenerate, onEditSav
              onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
                     <h2 className={styles.modalTitle}>历史记录</h2>
-                    <button className={styles.closeButton} onClick={onClose}>×</button>
                 </div>
                 <div className={styles.modalBody} ref={modalBodyRef}>
                     {history.length === 0 ? (

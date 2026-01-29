@@ -603,23 +603,28 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
 
   // 自动播放
   useEffect(() => {
-    if (!isAutoPlay || !gameStarted) return;
+    // 文本模式下始终自动播放，不受按钮控制
+    const shouldAutoPlay = isTextMode ? true : isAutoPlay;
+    
+    if (!shouldAutoPlay || !gameStarted) return;
     if (stepHandlers.isWaitingForData) return;
     if (finalIsTyping) return;
     if (!stepHandlers.showNextButton) return;
     if (currentMessage?.type === 'choice') {
-      onAutoPlayChange?.(false);
+      if (!isTextMode) {
+        onAutoPlayChange?.(false);
+      }
       return;
     }
 
     const autoPlayTimer = setTimeout(() => {
-      if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
+      if (shouldAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
         handleNextMessage();
       }
     }, AUTO_PLAY_DELAY_MS);
 
     return () => clearTimeout(autoPlayTimer);
-  }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, onAutoPlayChange]);
+  }, [isAutoPlay, isTextMode, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, onAutoPlayChange]);
 
   // 缓存清理
   useEffect(() => {

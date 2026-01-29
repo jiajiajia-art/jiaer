@@ -361,23 +361,29 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
 
   // 自动播放
   useEffect(() => {
-    if (!isAutoPlay || !gameStarted) return;
+    // 文本模式下始终自动播放，不受按钮控制
+    const shouldAutoPlay = isTextMode ? true : isAutoPlay;
+    
+    if (!shouldAutoPlay || !gameStarted) return;
     if (stepHandlers.isWaitingForData) return;
     if (finalIsTyping) return;
     if (!stepHandlers.showNextButton) return;
     if (currentMessage?.type === 'choice') {
-      onAutoPlayChange?.(false);
+      // 文本模式下遇到选项时不停用自动播放，只是暂停等待用户选择
+      if (!isTextMode) {
+        onAutoPlayChange?.(false);
+      }
       return;
     }
 
     const autoPlayTimer = setTimeout(() => {
-      if (isAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
+      if (shouldAutoPlay && !finalIsTyping && stepHandlers.showNextButton && currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
         handleNextMessage();
       }
     }, AUTO_PLAY_DELAY_MS);
 
     return () => clearTimeout(autoPlayTimer);
-  }, [isAutoPlay, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, onAutoPlayChange]);
+  }, [isAutoPlay, isTextMode, finalIsTyping, stepHandlers.showNextButton, stepHandlers.isWaitingForData, currentMessage?.type, gameStarted, handleNextMessage, onAutoPlayChange]);
 
   // TODO:处理选择（功能性NPC暂不支持选择，后端接口未实现）
   const handleChoiceClick = useCallback(

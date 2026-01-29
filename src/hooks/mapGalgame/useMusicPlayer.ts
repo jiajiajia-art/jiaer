@@ -17,6 +17,7 @@ export const useMusicPlayer = ({
 }: UseMusicPlayerOptions) => {
     const [isMusicPlaying, setIsMusicPlaying] = useState<boolean>(false);
     const [currentMusicUrl, setCurrentMusicUrl] = useState<string | null>(null);
+    const [volume, setVolume] = useState<number>(0.5);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const currentSceneIdRef = useRef<string | null>(null);
     const isLoadingMusicRef = useRef<boolean>(false);
@@ -84,7 +85,7 @@ export const useMusicPlayer = ({
 
                 const audio = new Audio(musicUrl);
                 audio.loop = true;
-                audio.volume = 0.5;
+                audio.volume = volume;
 
                 audioRef.current = audio;
                 setCurrentMusicUrl(musicUrl);
@@ -154,6 +155,21 @@ export const useMusicPlayer = ({
         }
     }, [isMusicPlaying, currentMusicUrl, currentScene, loadAndPlaySceneMusic]);
 
+    const setVolumeLevel = useCallback((newVolume: number) => {
+        const clamped = Math.max(0, Math.min(1, newVolume));
+        setVolume(clamped);
+        if (audioRef.current) {
+            audioRef.current.volume = clamped;
+        }
+    }, []);
+
+    // 同步音量到音频实例
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = volume;
+        }
+    }, [volume]);
+
     // 进入页面时，如果有场景音乐，默认播放
     useEffect(() => {
         if (!isLoading && currentScene?.id && currentScene?.soundtrack && !gameStarted) {
@@ -196,6 +212,8 @@ export const useMusicPlayer = ({
     return {
         isMusicPlaying,
         handleMusicToggle,
+        volume,
+        setVolume: setVolumeLevel,
     };
 };
 

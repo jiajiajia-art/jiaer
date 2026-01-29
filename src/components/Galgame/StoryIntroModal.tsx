@@ -53,19 +53,19 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                     </div>
                 </div>
                 <div className={styles.modalFooter}>
-                    <button
-                        className={styles.startButton}
-                        onClick={onStartGame}
+                        <button
+                            className={styles.startButton}
+                            onClick={onStartGame}
                         disabled={isLoading}
-                    >
-                        {isLoading ?
-                            <div className={styles.loading}>
-                                <span className={styles.loadingDot}></span>
-                                <span className={styles.loadingDot}></span>
-                                <span className={styles.loadingDot}></span>
-                            </div>
-                            : '开始游戏'}
-                    </button>
+                        >
+                            {isLoading ?
+                                <div className={styles.loading}>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                </div>
+                                : '开始游戏'}
+                        </button>
                 </div>
             </div>
         </div>

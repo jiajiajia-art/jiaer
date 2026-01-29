@@ -10,7 +10,7 @@ interface TextModalStep {
     speakerName?: string;
     characterName?: string;
     isPlayer?: boolean;
-    options?: Array<{ id: number; text: string }>;
+    options?: Array<{ id: number; text: string; isMain?: boolean }>;
     title?: string;
     description?: string;
 }
@@ -145,7 +145,7 @@ const MessageItem = memo<MessageItemProps>(({
                                 {step.options.map((opt) => (
                                     <div 
                                         key={opt.id} 
-                                        className={styles.optionItem}
+                                        className={`${styles.optionItem} ${opt.isMain ? styles.optionItemMain : ''}`}
                                         onClick={() => {
                                             if (onChoiceClick && !isTyping) {
                                                 onChoiceClick(opt);
@@ -154,9 +154,10 @@ const MessageItem = memo<MessageItemProps>(({
                                         style={{ 
                                             cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
                                         }}
-                                    >
-                                        <span className={styles.optionNumber}>{opt.id}</span>
-                                        <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
+                                        >
+                                        <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
+                                            {extractPlainText(opt.text)}
+                                        </span>
                                         {historyLength >= FREE_ROUNDS_THRESHOLD && (
                                             <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
                                         )}
@@ -224,13 +225,47 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     onCustomInputSubmit
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const shouldStickToBottomRef = useRef(true);
+    const hasInitialAutoScrolledRef = useRef(false);
 
-    // 自动滚动到底部
+    // 跟踪用户是否“贴底”（用户往上滚动阅读时不要强制拉回底部）
     useEffect(() => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
+        const el = messagesContainerRef.current;
+        if (!el) return;
+
+        const handleScroll = () => {
+            const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            shouldStickToBottomRef.current = distanceToBottom < 80; // 80px 阈值
+        };
+
+        // 初始化一次
+        handleScroll();
+        el.addEventListener('scroll', handleScroll, { passive: true });
+        return () => el.removeEventListener('scroll', handleScroll);
     }, []);
+
+    useEffect(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+
+        if (!hasInitialAutoScrolledRef.current) {
+            requestAnimationFrame(() => {
+                const el2 = messagesContainerRef.current;
+                if (!el2) return;
+                el2.scrollTop = el2.scrollHeight;
+                hasInitialAutoScrolledRef.current = true;
+            });
+            return;
+        }
+
+        if (!shouldStickToBottomRef.current) return;
+
+        requestAnimationFrame(() => {
+            const el2 = messagesContainerRef.current;
+            if (!el2) return;
+            el2.scrollTop = el2.scrollHeight;
+        });
+    }, [steps.length, currentStepIndex, currentDisplayText, isTyping, isWaitingForData]);
 
     const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
     const lastStepIsChoice = lastStep?.type === 'choice';

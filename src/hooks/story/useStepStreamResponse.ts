@@ -186,9 +186,6 @@ export const useStepStreamResponse = ({
                                 });
                                 return newQueue;
                             });
-
-                            // 注意：不在这里设置 setIsWaitingForData(false)
-                            // 等待 currentStep 被设置后再关闭等待态（由 showStep 函数负责）
                         }
 
                         // 处理完整数据（包含 narrativeSteps）

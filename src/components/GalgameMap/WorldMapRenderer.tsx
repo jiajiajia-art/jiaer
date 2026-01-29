@@ -3,8 +3,6 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import styles from './WorldMapRenderer.module.css';
 import type { AllGameData, Scene } from '../../api/worldInteraction/mapWorldData.type';
 import type { EventData } from '../../page/GalgameMap';
-import { IoMdCloseCircle } from 'react-icons/io';
-import { useNavigate } from 'react-router-dom';
 
 interface WorldMapRendererProps {
     gameData: AllGameData | null;
@@ -37,7 +35,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [isReady, setIsReady] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
-    const navigator = useNavigate();
 
     // 延迟加载和尺寸重试机制
     useEffect(() => {
@@ -170,14 +167,6 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
             }}
             ref={containerRef}
         >
-            {/* 关闭按钮 */}
-            <div className={styles.closeTitleBar}>
-                <div className={styles.backButton} onClick={() => {
-                    navigator('/home');
-                }}>
-                    <IoMdCloseCircle size={24} />
-                </div>
-            </div>
 
             {/* 显示加载遮罩直到准备就绪 */}
             {!isReady && (

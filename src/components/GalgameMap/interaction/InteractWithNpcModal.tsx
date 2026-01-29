@@ -11,7 +11,6 @@ import styles from './interactWithNpc.module.css';
 import { useAuthStore } from '../../../store/useAuthStore';
 import { useGameStore } from '../../../store/gameStore';
 import { useMapGalgameStore, MapViewState } from '../../../store/mapGalgameStore';
-import { useMapMusicPlayer } from '../../../hooks/mapGalgame/common/useMapMusicPlayer';
 import { useRefreshEventData } from '../../../hooks/mapGalgame/common/useRefreshEventData';
 import { getImageUrls, getStorageKeys, safeRemoveLocalStorage, type Message } from '../../../hooks/mapGalgame/common/interactionUtils';
 import { useCharacterAnimation } from '../../../hooks/galgame/useCharacterAnimation';
@@ -36,6 +35,8 @@ interface InteractWithNpcModalProps {
   pendingAction?: { nodeId: string; actionId: string } | null;
   currentSubsceneId?: string | null;
   onUpdateAttributes?: () => Promise<void>;
+  isSettingsOpen: boolean;
+  onSettingsToggle: () => void;
 }
 
 const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
@@ -45,6 +46,8 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
   pendingAction,
   currentSubsceneId,
   onUpdateAttributes,
+  isSettingsOpen,
+  onSettingsToggle,
 }) => {
   const { user } = useAuthStore();
   const sessionId = useGameStore((state) => state.sessionId);
@@ -56,7 +59,6 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
     setSelectedSubscene,
     setSelectedScene,
     setPendingAction,
-    currentView,
   } = useMapGalgameStore();
   const { refreshEventData } = useRefreshEventData();
 
@@ -84,14 +86,6 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
       setCurrentHistory(worldInteractionHistory);
     }
   }, [worldInteractionHistory]);
-
-  const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
-    fileId: fileId || null,
-    gameData,
-    currentView,
-    selectedSubscene,
-    eventData,
-  });
 
   const characterAnimation = useCharacterAnimation({
     message: currentMessage?.message,
@@ -189,8 +183,13 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
   }, [sessionId]);
 
   const handleHistoryClick = useCallback(() => {
-    setIsHistoryVisible(true);
-    refreshHistory();
+    setIsHistoryVisible((prev) => {
+      const next = !prev;
+      if (next) {
+        refreshHistory();
+      }
+      return next;
+    });
   }, [refreshHistory]);
 
   const handleSetTimeoutModal = useCallback((value: { visible: boolean; message: string }) => {
@@ -391,12 +390,19 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
             <GameControlBar
               userPoints={user?.user?.points}
               onHistoryClick={handleHistoryClick}
+              isHistoryActive={isHistoryVisible}
               isTextMode={isTextMode}
-              onTextModeToggle={() => setIsTextMode(!isTextMode)}
+              showTextModeButton={true}
+              showAutoPlayButton={true}
+              disableAutoPlay={isHistoryVisible}
+              onTextModeToggle={() => {
+                if (isHistoryVisible) setIsHistoryVisible(false);
+                setIsTextMode(!isTextMode);
+              }}
               isAutoPlay={isAutoPlay}
               onAutoPlayToggle={() => setIsAutoPlay(!isAutoPlay)}
-              isMusicPlaying={isMusicPlaying}
-              onMusicToggle={handleMusicToggle}
+              isSettingsOpen={isSettingsOpen}
+              onSettingsToggle={onSettingsToggle}
             />
           </div>
         </div>
@@ -407,6 +413,25 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
         visible={isHistoryVisible}
         onClose={() => setIsHistoryVisible(false)}
         history={currentHistory}
+        bottomBar={
+          <GameControlBar
+            userPoints={user?.user?.points}
+            onHistoryClick={handleHistoryClick}
+            isHistoryActive={isHistoryVisible}
+            isTextMode={isTextMode}
+            showTextModeButton={true}
+            showAutoPlayButton={true}
+            disableAutoPlay={true}
+            onTextModeToggle={() => {
+              setIsHistoryVisible(false);
+              setIsTextMode(!isTextMode);
+            }}
+            isAutoPlay={isAutoPlay}
+            onAutoPlayToggle={() => setIsAutoPlay(!isAutoPlay)}
+            isSettingsOpen={isSettingsOpen}
+            onSettingsToggle={onSettingsToggle}
+          />
+        }
       />
 
       {/* 属性弹窗 */}

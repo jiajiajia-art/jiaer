@@ -1,7 +1,7 @@
 /* 继续游戏按钮 - 浅白/浅灰磨砂感 */
 .continueButton {
     position: absolute;
-    bottom: max(1.25rem, env(safe-area-inset-bottom)); /* max(20px, env(...)) */
+    bottom: max(5rem, env(safe-area-inset-bottom)); /* max(20px, env(...)) */
     right: 1.25rem; /* 20px */
     display: flex;
     align-items: center;

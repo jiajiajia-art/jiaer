@@ -200,8 +200,6 @@ export const useGalgameController = () => {
         historyLength: history.length,
         onMessagesClear: () => {
             setInitialMessages([]);
-            resetDisplayedSteps();
-            // 清除本地存储的 allSteps，避免新请求时使用旧数据恢复
             try {
                 localStorage.removeItem(allStepsStorageKey);
                 console.log('[Galgame] 清除本地 allSteps，准备接收新数据');
@@ -622,17 +620,22 @@ export const useGalgameController = () => {
     }, []);
 
     useEffect(() => {
-        if (!isAutoPlay || !gameStarted) return;
+        // 文本模式下始终自动播放，不受按钮控制
+        const shouldAutoPlay = isTextMode ? true : isAutoPlay;
+        
+        if (!shouldAutoPlay || !gameStarted) return;
         if (stepHandlers.isWaitingForData) return;
         if (messageUtilsWithTyping.finalIsTyping) return;
         if (!stepHandlers.showNextButton) return;
         if (messageUtilsWithTyping.currentMessage?.type === 'choice') {
-            setIsAutoPlay(false);
+            if (!isTextMode) {
+                setIsAutoPlay(false);
+            }
             return;
         }
 
         const autoPlayTimer = setTimeout(() => {
-            if (isAutoPlay && !messageUtilsWithTyping.finalIsTyping && stepHandlers.showNextButton && messageUtilsWithTyping.currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
+            if (shouldAutoPlay && !messageUtilsWithTyping.finalIsTyping && stepHandlers.showNextButton && messageUtilsWithTyping.currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
                 handleNextMessage();
             }
         }, 1000);
@@ -640,14 +643,12 @@ export const useGalgameController = () => {
         return () => {
             clearTimeout(autoPlayTimer);
         };
-    }, [isAutoPlay, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage, isTextMode]);
+    }, [isAutoPlay, isTextMode, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
         if (!messageUtilsWithTyping.currentMessage || messageUtilsWithTyping.currentMessage.type !== 'choice' || !messageUtilsWithTyping.currentMessage.options) {
             return;
         }
-
-        resetDisplayedSteps();
 
         const optionIndex = messageUtilsWithTyping.currentMessage.options.findIndex((opt) => {
             return opt.text === option.text || opt.id === option.id;

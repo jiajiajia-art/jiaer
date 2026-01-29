@@ -6,9 +6,9 @@ export const AUTO_PLAY_DELAY_MS = 2000; // 2秒
 export const CACHE_CLEANUP_DELAY_MS = 3000; // 3秒
 
 export const TIMEOUT_MESSAGES = {
-  CHOICE: "AI 回应本次选择已超过 60 秒仍未返回，是否刷新页面重试？",
-  INTERACT: "AI 回应本次交互已超过 60 秒仍未返回，是否刷新页面重试？",
-  ABILITY_NODE: "功能性NPC交互请求已超过 60 秒仍未返回，是否刷新页面重试？",
+  CHOICE: "AI 回应本次选择已超过 60 秒仍未返回，是否刷新重试？",
+  INTERACT: "AI 回应本次交互已超过 60 秒仍未返回，是否刷新重试？",
+  ABILITY_NODE: "功能性NPC交互请求已超过 60 秒仍未返回，是否刷新重试？",
 };
 
 export const ERROR_MESSAGES = {

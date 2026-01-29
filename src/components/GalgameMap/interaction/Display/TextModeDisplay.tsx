@@ -78,12 +78,11 @@ const MessageItem = memo<MessageItemProps>(({
 
     // 计算要显示的文本
     const getDisplayText = () => {
-        // 只有当前步骤且正在打字时，才显示打字文本
-        // 打字完成后，应该显示完整内容，而不是部分文本
-        if (isCurrentStep && isTyping && currentDisplayText) {
-            return currentDisplayText;
+        // 当前步骤处于打字中：始终使用打字中的文本（即使刚开始还是空串）
+        // 这样可以避免"先整段闪一下再开始打字"的问题
+        if (isCurrentStep && isTyping) {
+            return currentDisplayText || '';
         }
-        // 否则显示完整内容（包括打字完成后的当前步骤）
         return step.content || '';
     };
 
@@ -157,10 +156,7 @@ const MessageItem = memo<MessageItemProps>(({
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
                                         {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
-                                            <div className={styles.choicePrice}>
-                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                                <span>{POINTS_CONFIG.option}</span>
-                                            </div>
+                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
                                         )}
                                     </div>
                                 ))}
@@ -171,10 +167,7 @@ const MessageItem = memo<MessageItemProps>(({
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
                                     {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
-                                        <div className={styles.choicePrice}>
-                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                            <span>{POINTS_CONFIG.custom}</span>
-                                        </div>
+                                        <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
                                     )}
                                 </div>
                                 <div className={styles.customInputWrapper}>
@@ -230,32 +223,70 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     noPaddingBottom = false
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const shouldStickToBottomRef = useRef(true);
+    const hasInitialAutoScrolledRef = useRef(false);
 
-    // 自动滚动到底部
+    // 跟踪用户是否“贴底”，避免用户向上滚动阅读时被强制拉回底部
     useEffect(() => {
-        if (messagesContainerRef.current) {
-            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        const el = messagesContainerRef.current;
+        if (!el) return;
+
+        const handleScroll = () => {
+            const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            shouldStickToBottomRef.current = distanceToBottom < 80; // 80px 阈值
+        };
+
+        handleScroll();
+        el.addEventListener('scroll', handleScroll, { passive: true });
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, []);
+
+
+    useEffect(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+
+        if (!hasInitialAutoScrolledRef.current) {
+            requestAnimationFrame(() => {
+                const el2 = messagesContainerRef.current;
+                if (!el2) return;
+                el2.scrollTop = el2.scrollHeight;
+                hasInitialAutoScrolledRef.current = true;
+            });
+            return;
         }
-    }, [steps]);
+
+        if (!shouldStickToBottomRef.current) return;
+
+        requestAnimationFrame(() => {
+            const el2 = messagesContainerRef.current;
+            if (!el2) return;
+            el2.scrollTop = el2.scrollHeight;
+        });
+    }, [steps.length, currentStepIndex, currentDisplayText, isTyping, isWaitingForData]);
 
     const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
     const lastStepIsChoice = lastStep?.type === 'choice';
     
     const showMainLoader = isWaitingForData && (steps.length === 0 || lastStepIsChoice);
+    
+    const showDotLoader = isWaitingForData && steps.length > 0 && !isTyping && !lastStepIsChoice;
 
     return (
         <div className={`${styles.textModeContainer} ${noPaddingBottom ? styles.noPaddingBottom : ''}`}>
             {steps.length === 0 && !isWaitingForData ? (
                 <div className={styles.emptyState}>暂无内容</div>
             ) : showMainLoader ? (
-                <div className={styles.loadingContainer}>
-                    <div className={styles.aiLoader}>
-                        <div className={styles.orbit}></div>
-                        <div className={styles.orbitInner}></div>
-                        <div className={styles.core}></div>
-                    </div>
-                    <div className={styles.statusText}>
-                        AI 推演中<span className={styles.dots}></span>
+                <div className={styles.messagesContainer} ref={messagesContainerRef}>
+                    <div className={styles.loadingContainer}>
+                        <div className={styles.aiLoader}>
+                            <div className={styles.orbit}></div>
+                            <div className={styles.orbitInner}></div>
+                            <div className={styles.core}></div>
+                        </div>
+                        <div className={styles.statusText}>
+                            AI 推演中<span className={styles.dots}></span>
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -284,6 +315,16 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                             />
                         );
                     })}
+                    
+                    {showDotLoader && (
+                        <div className={styles.inlineLoadingWrapper}>
+                            <div className={styles.inlineLoader}>
+                                <div className={styles.loaderDot}></div>
+                                <div className={styles.loaderDot}></div>
+                                <div className={styles.loaderDot}></div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

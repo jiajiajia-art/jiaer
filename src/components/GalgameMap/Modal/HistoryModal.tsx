@@ -1,3 +1,4 @@
+import React, { useEffect, useRef } from 'react';
 import styles from './HistoryModal.module.css';
 import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
 import ColoredMarkdownText from '../../Galgame/ColoredMarkdownText';
@@ -6,12 +7,27 @@ interface HistoryModalProps {
     visible: boolean;
     onClose: () => void;
     history: GetWorldInteractionHistoryResponse | null;
+    bottomBar?: React.ReactNode;
 }
 
-const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
+const HistoryModal = ({ visible, onClose, history, bottomBar }: HistoryModalProps) => {
     if (!visible) return null;
 
     const interactions = history?.interactions ?? [];
+    const contentRef = useRef<HTMLDivElement | null>(null);
+
+    // 打开历史时自动滚动到最底部
+    useEffect(() => {
+        if (!visible) return;
+        const el = contentRef.current;
+        if (!el) return;
+        // 使用 requestAnimationFrame 确保内容渲染完成
+        requestAnimationFrame(() => {
+            const el2 = contentRef.current;
+            if (!el2) return;
+            el2.scrollTop = el2.scrollHeight;
+        });
+    }, [visible, interactions.length]);
 
     return (
         <div className={styles.mask} onClick={onClose}>
@@ -21,12 +37,9 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
             >
                 <div className={styles.header}>
                     <div className={styles.title}>历史回顾</div>
-                    <button className={styles.closeBtn} onClick={onClose}>
-                        ✕
-                    </button>
                 </div>
 
-                <div className={styles.content}>
+                <div className={styles.content} ref={contentRef}>
                     {interactions.length === 0 && (
                         <div className={styles.empty}>
                             暂无历史记录
@@ -202,6 +215,8 @@ const HistoryModal = ({ visible, onClose, history }: HistoryModalProps) => {
                         );
                     })}
                 </div>
+
+                {bottomBar && <div className={styles.bottomBar}>{bottomBar}</div>}
             </div>
         </div>
     );

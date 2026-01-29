@@ -135,13 +135,16 @@ export const processGameTags = (content: string): string => {
         return text ? text.trim() : '';
     });
     
-    // 处理 DIALOGUE 标签 - 转换为 "说话人："内容""
-    result = result.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_match, speaker, text) => {
-        if (speaker && text) {
-            return `${speaker.trim()}："${text.trim()}"`;
+
+    result = result.replace(
+        /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
+        (_match, speaker, _meta, text) => {
+            if (speaker && text) {
+                return `${speaker.trim()}："${String(text).trim()}"`;
+            }
+            return text ? String(text).trim() : '';
         }
-        return text ? text.trim() : '';
-    });
+    );
     
     // 处理 TRANSITION 标签 - 保留内容
     result = result.replace(/\[TRANSITION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
@@ -157,12 +160,15 @@ export const processGameTags = (content: string): string => {
         // 移除内容中的 OPTION 标签（选项会在后面单独显示）
         let cleanedContent = innerContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
         // 处理内容中的其他标签
-        cleanedContent = cleanedContent.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_m: string, speaker: string, text: string) => {
-            if (speaker && text) {
-                return `${speaker.trim()}："${text.trim()}"`;
+        cleanedContent = cleanedContent.replace(
+            /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
+            (_m: string, speaker: string, _meta: string, text: string) => {
+                if (speaker && text) {
+                    return `${speaker.trim()}："${String(text).trim()}"`;
+                }
+                return text ? String(text).trim() : '';
             }
-            return text ? text.trim() : '';
-        });
+        );
         cleanedContent = cleanedContent.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_m: string, text: string) => {
             return text ? text.trim() : '';
         });

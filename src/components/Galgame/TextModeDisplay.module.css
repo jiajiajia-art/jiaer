@@ -6,7 +6,7 @@
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    padding-bottom: 5rem; /* 80px - galgame 页面：为底部按钮容器留出空间（按钮高度 42px + 上下 padding 24px + 安全边距） */
+    padding-bottom: 5rem;
 }
 
 /* 当父容器已有 padding-bottom 时（如 galgameMap），移除 TextModeDisplay 的 padding-bottom */
@@ -261,6 +261,11 @@
     line-height: 1.5;
     flex: 1;
     word-wrap: break-word;
+}
+
+/* 主选项（mainOption）样式：比普通选项更高亮 */
+.optionTextMain {
+    color: rgb(252 126 30 / 90%);
 }
 
 .pointsCost {

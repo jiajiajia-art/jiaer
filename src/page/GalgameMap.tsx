@@ -1,5 +1,6 @@
 // GalgameMap.tsx
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./GalgameMap.module.css";
 import { useGameStore } from "../store/gameStore";
 import WorldMapRenderer from "../components/GalgameMap/WorldMapRenderer";
@@ -26,13 +27,15 @@ import { useAuthStore } from "../store/useAuthStore";
 import NextRoundButton from "../components/GalgameMap/NextRoundButton";
 import { useMapMusicPlayer } from "../hooks/mapGalgame/common/useMapMusicPlayer";
 import { mapMusicManager } from "../utils/mapMusicManager";
-import { PiMusicNoteDuotone } from "react-icons/pi";
-import { MdOutlinePerson } from "react-icons/md";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { getImageUrl, getPlayerImageUrl } from "../utils/constants";
 import { useRefreshEventData } from "../hooks/mapGalgame/common/useRefreshEventData";
 import worldEditor from "../api/worldInteraction/worldEditor";
 import Attributes from "../components/GalgameMap/Plugin/Attributes";
+import GameControlBar from "../components/GalgameMap/interaction/GameControlBar";
+import HistoryModal from "../components/GalgameMap/Modal/HistoryModal";
+import SettingsModal from "../components/Galgame/SettingsModal";
+import { MdOutlinePerson } from "react-icons/md";
 
 export interface EventData {
   event: GameEvent;
@@ -46,6 +49,7 @@ const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面�
 const DEFAULT_WORLD_MAP_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultMap.png`;
 
 const GalgameMap = () => {
+  const navigate = useNavigate();
   const { fileId, sessionId } = useGameStore();
   const [gameData, setGameData] = useState<AllGameData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +79,7 @@ const GalgameMap = () => {
   const [isEndingRound, setIsEndingRound] = useState<boolean>(false);
   const hasTriedRestoreEventDataRef = useRef(false); // 标记是否已尝试恢复 eventData，避免重复请求
 
-  const { isMusicPlaying, handleMusicToggle } = useMapMusicPlayer({
+  const { isMusicPlaying, handleMusicToggle, volume, setVolume } = useMapMusicPlayer({
     fileId: fileId || null,
     gameData,
     currentView,
@@ -84,7 +88,10 @@ const GalgameMap = () => {
     eventData,
   });
 
-  // Player属性面板状态
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHistoryVisible, setIsHistoryVisible] = useState(false);
+
+  // Player属性面板状态（外层统一从底部按钮触发）
   const [isPlayerAttributesVisible, setIsPlayerAttributesVisible] = useState(false);
 
   // 当 sessionId 变化时，检查存储的 sessionId 是否匹配
@@ -139,6 +146,8 @@ const GalgameMap = () => {
       setIsCheckingHistory(false);
     }
   }, [sessionId]);
+
+  // 仅在 NPC 交互视图中使用历史按钮（逻辑放在 InteractWithNpcModal 内部），这里不再需要单独的 handler
 
   useEffect(() => {
     fetchWorldInteractionHistory();
@@ -342,7 +351,7 @@ const GalgameMap = () => {
   ]);
 
   const getMapWorldData = useCallback(async () => {
-    if (!sessionId) {
+    if (!fileId) {
       setIsLoading(false);
       return;
     }
@@ -350,11 +359,11 @@ const GalgameMap = () => {
     setIsLoading(true);
 
     try {
-      const response = await createWorldSessionApi.getWorldFilesBySession(
-        sessionId
+      const response = await createWorldSessionApi.getWorldFilesByFileId(
+        fileId
       );
-      if (response.data?.success && response.data.state) {
-        const state = response.data.state;
+      if (response.data?.success && response.data) {
+        const state = response.data;
 
         const processImage = (
           img: string | null | undefined,
@@ -376,15 +385,15 @@ const GalgameMap = () => {
         };
 
         const worldMapImage = processImage(
-          state.worldInfo?.worldMapImage,
+          state.worldSetting?.worldMapImage,
           DEFAULT_WORLD_MAP_IMAGE
         );
         const playerImagePath = processImage(
-          getPlayerImageUrl(state.worldInfo?.player, DEFAULT_NPC_IMAGE),
+          getPlayerImageUrl(state.worldSetting?.player, DEFAULT_NPC_IMAGE),
           DEFAULT_NPC_IMAGE
         );
 
-        const safeNpcs = (state.npcs || []).map((npc: any) => ({
+        const safeNpcs = (state.npcSetting?.npcs || []).map((npc: any) => ({
           ...npc,
           images: {
             ...npc.images,
@@ -392,7 +401,7 @@ const GalgameMap = () => {
           },
         }));
 
-        const safeScenes = (state.scenes || []).map((scene: any) => ({
+        const safeScenes = (state.sceneSetting?.scenes || []).map((scene: any) => ({
           ...scene,
           image: processImage(scene.image, DEFAULT_SCENE_IMAGE),
           subscenes: (scene.subscenes || []).map((sub: any) => ({
@@ -405,10 +414,10 @@ const GalgameMap = () => {
           success: true,
           fileId: state.fileId,
           worldSetting: {
-            ...state.worldInfo,
+            ...state.worldSetting,
             worldMapImage,
             player: {
-              ...state.worldInfo.player,
+              ...state.worldSetting.player,
               images: playerImagePath,
             },
           },
@@ -418,9 +427,9 @@ const GalgameMap = () => {
           sceneSetting: {
             scenes: safeScenes,
           },
-          abilityNodeSetting: state.abilityNodes
+          abilityNodeSetting: state.abilityNodeSetting
             ? {
-                abilityNodes: state.abilityNodes,
+                abilityNodes: state.abilityNodeSetting.abilityNodes,
               }
             : undefined,
         };
@@ -559,6 +568,14 @@ const GalgameMap = () => {
     }
   }, [sessionId, gameData]);
 
+  const handlePlayerAttributesClick = useCallback(async () => {
+    if (!gameData) return;
+    if (!isPlayerAttributesVisible) {
+      await updateGameAttributes();
+    }
+    setIsPlayerAttributesVisible((prev) => !prev);
+  }, [gameData, isPlayerAttributesVisible, updateGameAttributes]);
+
   const handleEndRound = async () => {
     if (!sessionId || !gameData) {
       console.error("缺少 sessionId 或 gameData");
@@ -649,49 +666,27 @@ const GalgameMap = () => {
   return (
     <div className={styles.page} ref={containerRef}>
       <div className={styles.mapContainer}>
-        {gameData && (
-          <div
-            className={`${styles.topButtonsContainer} ${
-              currentView === MapViewState.INTERACT_NPC_NORMAL || currentView === MapViewState.INTERACT_NPC_ABILITY
-                ? styles.topButtonsContainerAligned
-                : ""
-            }`}
-          >
-            {currentView !== MapViewState.INTERACT_NPC_NORMAL && 
-             currentView !== MapViewState.INTERACT_NPC_ABILITY && (
+        {/* 顶部 Player 按钮：仅在 NPC 交互视图显示，固定在最上方右侧 */}
+        {gameData &&
+          (currentView === MapViewState.INTERACT_NPC_NORMAL ||
+            currentView === MapViewState.INTERACT_NPC_ABILITY) && (
+            <div
+              className={`${styles.topButtonsContainer} ${styles.topButtonsContainerAligned}`}
+            >
               <div
                 className={`${styles.buttonItem} ${
-                  isMusicPlaying ? styles.buttonItemActive : ""
+                  isPlayerAttributesVisible ? styles.buttonItemActive : ""
                 }`}
-                onClick={handleMusicToggle}
+                onClick={handlePlayerAttributesClick}
                 style={{ cursor: "pointer" }}
               >
                 <div className={styles.buttonInner}>
-                  <PiMusicNoteDuotone />
-                  <span>音乐</span>
+                  <MdOutlinePerson />
+                  <span>玩家</span>
                 </div>
               </div>
-            )}
-            <div
-              className={`${styles.buttonItem} ${
-                isPlayerAttributesVisible ? styles.buttonItemActive : ""
-              }`}
-              onClick={async () => {
-                if (!isPlayerAttributesVisible) {
-                  // 打开时更新属性数据
-                  await updateGameAttributes();
-                }
-                setIsPlayerAttributesVisible(!isPlayerAttributesVisible);
-              }}
-              style={{ cursor: "pointer" }}
-            >
-              <div className={styles.buttonInner}>
-                <MdOutlinePerson />
-                <span>玩家</span>
-              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* 世界地图 - 只在世界地图视图时显示 */}
         {currentView === MapViewState.WORLD_MAP && gameData && (
@@ -766,6 +761,8 @@ const GalgameMap = () => {
               pendingAction={undefined}
               currentSubsceneId={selectedSubscene?.id || null}
               onUpdateAttributes={updateGameAttributes}
+              isSettingsOpen={isSettingsOpen}
+              onSettingsToggle={() => setIsSettingsOpen((p) => !p)}
             />
           )}
 
@@ -780,6 +777,8 @@ const GalgameMap = () => {
               pendingAction={pendingAction || undefined}
               currentSubsceneId={selectedSubscene?.id || null}
               onUpdateAttributes={updateGameAttributes}
+              isSettingsOpen={isSettingsOpen}
+              onSettingsToggle={() => setIsSettingsOpen((p) => !p)}
             />
           )}
 
@@ -792,6 +791,47 @@ const GalgameMap = () => {
             npc={null}
           />
         )}
+
+        {/* 全局历史弹窗（非交互视图使用） */}
+        <HistoryModal
+          visible={isHistoryVisible}
+          onClose={() => setIsHistoryVisible(false)}
+          history={worldInteractionHistory ?? null}
+          bottomBar={
+            <GameControlBar
+              userPoints={user?.user?.points}
+              showHistoryButton={false}
+              showPlayerButton={true}
+              isPlayerActive={isPlayerAttributesVisible}
+              onPlayerClick={handlePlayerAttributesClick}
+              isSettingsOpen={isSettingsOpen}
+              onSettingsToggle={() => setIsSettingsOpen((p) => !p)}
+            />
+          }
+        />
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onExitGame={() => navigate("/home")}
+          isMusicPlaying={isMusicPlaying}
+          onToggleMusic={handleMusicToggle}
+          volume={volume}
+          onVolumeChange={setVolume}
+        />
+
+        {currentView !== MapViewState.INTERACT_NPC_NORMAL &&
+          currentView !== MapViewState.INTERACT_NPC_ABILITY && (
+            <GameControlBar
+              userPoints={user?.user?.points}
+              showHistoryButton={false}
+              showPlayerButton={true}
+              isPlayerActive={isPlayerAttributesVisible}
+              onPlayerClick={handlePlayerAttributesClick}
+              isSettingsOpen={isSettingsOpen}
+              onSettingsToggle={() => setIsSettingsOpen((p) => !p)}
+            />
+          )}
       </div>
     </div>
   );

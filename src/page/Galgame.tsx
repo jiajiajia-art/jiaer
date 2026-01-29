@@ -2,10 +2,10 @@ import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
-import { PiMusicNoteDuotone } from "react-icons/pi";
 import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
+import { MdSettings } from "react-icons/md";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -13,27 +13,37 @@ import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterCon
 import { useMusicPlayer } from "../hooks/mapGalgame/useMusicPlayer";
 import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
+import SettingsModal from "../components/Galgame/SettingsModal";
 import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
-import { IoMdCloseCircle } from "react-icons/io";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
+import { useState } from "react";
 
 const Galgame = () => {
     const { user } = useAuthStore();
     const { fileId } = useGameStore();
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     
     // 使用统一的控制器 hook
     const controller = useGalgameController();
 
-    // 处理历史按钮点击
+    // 处理历史按钮点击（切换显示/隐藏）
     const handleHistoryClick = () => {
+        if (controller.showGalgameHistory) {
+            controller.setShowGalgameHistory(false);
+        } else {
         controller.refreshHistory();
         controller.setShowGalgameHistory(true);
+        }
     };
 
     // 处理文本模式切换
     const handleTextModeToggle = () => {
+        // 如果历史弹窗打开，先关闭它
+        if (controller.showGalgameHistory) {
+            controller.setShowGalgameHistory(false);
+        }
         const newTextMode = !controller.isTextMode;
         controller.setIsTextMode(newTextMode);
     };
@@ -61,7 +71,7 @@ const Galgame = () => {
         styles,
     });
 
-    const { isMusicPlaying, handleMusicToggle } = useMusicPlayer({
+    const { isMusicPlaying, handleMusicToggle, volume, setVolume } = useMusicPlayer({
         presetId: fileId || '',
         currentScene: controller.currentScene,
         gameStarted: controller.gameStarted,
@@ -118,15 +128,7 @@ const Galgame = () => {
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
-                    {/* Custom UI Host container (Shadow DOM will mount here) */}
                     <div id="custom-ui-root" className={styles.customUIRoot}></div>
-                    <button
-                        className={styles.exitButton}
-                        onClick={controller.handleExitGame}
-                        title="退出游戏"
-                    >
-                        <IoMdCloseCircle size={24} />
-                    </button>
                     <div className={`${styles.topHeader} ${controller.isTextMode ? styles.topHeaderTextMode : ''}`}>
                         <CiLocationOn />
                         <span>{controller.currentScene?.name}</span>
@@ -171,15 +173,16 @@ const Galgame = () => {
                                 isWaitingForData={controller.stepHandlers.isWaitingForData}
                                 historyLength={controller.stepHandlers.localHistoryLength ?? 0}
                                 onChoiceClick={(option) => {
-                                    controller.resetDisplayedSteps();
                                     controller.handleChoiceClick(option);
                                 }}
                                 onCustomInputSubmit={(value) => {
-                                    controller.resetDisplayedSteps();
                                     controller.handleCustomInputSubmit(value);
                                 }}
                             />
                         )}
+                    </div>
+                    
+                    {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
                         <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
                                 <div className={styles.buttonInner}>
@@ -187,7 +190,8 @@ const Galgame = () => {
                                     <span>{user?.user?.points}</span>
                                 </div>
                             </div>
-                            <div className={styles.buttonItem}
+                        <div 
+                            className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
                                 onClick={handleHistoryClick}
                             >
                                 <div className={styles.buttonInner}>
@@ -206,9 +210,9 @@ const Galgame = () => {
                                 </div>
                             </div>
                             <div
-                                className={`${styles.buttonItem} ${controller.isAutoPlay ? styles.buttonItemActive : ''}`}
-                                onClick={controller.handleAutoPlayToggle}
-                                style={{ cursor: 'pointer' }}
+                            className={`${styles.buttonItem} ${controller.isAutoPlay ? styles.buttonItemActive : ''} ${controller.isTextMode || controller.showGalgameHistory ? styles.buttonItemDisabled : ''}`}
+                            onClick={controller.isTextMode || controller.showGalgameHistory ? undefined : controller.handleAutoPlayToggle}
+                            style={{ cursor: controller.isTextMode || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
                                     <MdOutlineAutoStories />
@@ -216,14 +220,13 @@ const Galgame = () => {
                                 </div>
                             </div>
                             <div
-                                className={`${styles.buttonItem} ${isMusicPlaying ? styles.buttonItemActive : ''}`}
-                                onClick={handleMusicToggle}
+                            className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
+                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
-                                    <PiMusicNoteDuotone />
-                                    <span>音乐</span>
-                                </div>
+                                <MdSettings />
+                                <span>设置</span>
                             </div>
                         </div>
                     </div>
@@ -238,10 +241,20 @@ const Galgame = () => {
                     <GalgameHistoryModal
                         isOpen={controller.showGalgameHistory}
                         history={controller.history}
-                        onClose={() => controller.setShowGalgameHistory(false)}
                         backgroundImage={controller.backgroundImage}
                         onRegenerate={handleRegenerate}
                         onEditSave={controller.editHistory}
+                    />
+
+                    {/* 设置弹窗放在 mainContent 内，确保限制在容器内 */}
+                    <SettingsModal
+                        isOpen={isSettingsOpen}
+                        onClose={() => setIsSettingsOpen(false)}
+                        onExitGame={controller.handleExitGame}
+                        isMusicPlaying={isMusicPlaying}
+                        onToggleMusic={handleMusicToggle}
+                        volume={volume}
+                        onVolumeChange={setVolume}
                     />
 
                     {/* 请求超时弹窗 */}

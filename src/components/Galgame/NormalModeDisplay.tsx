@@ -14,7 +14,7 @@ interface Message {
     characterName?: string;
     characterImage?: string;
     characterPosition?: 'left' | 'right';
-    options?: Array<{ id: number; text: string }>;
+    options?: Array<{ id: number; text: string; isMain?: boolean }>;
 }
 
 interface StepHandlers {
@@ -106,7 +106,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
             {currentMessage?.type !== 'choice' && (
                 <div
                     className={styles.messageContainer}
-                    onClick={() => {
+                    onClick={(e) => {
+                        const clickedButton = (e.target as HTMLElement).closest(`.${styles.nextButtonContainer}`);
+                        if (clickedButton) {
+                            return;
+                        }
                         if (showNextButton && !finalIsTyping && !isAutoPlay) {
                             onNextMessage();
                         }
@@ -155,7 +159,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         <div className={styles.nextButtonContainer}>
                             <button
                                 className={styles.nextButton}
-                                onClick={onNextMessage}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onNextMessage();
+                                }}
                                 disabled={isWaitingForData}
                             >
                                 <IoArrowDownCircleOutline />
@@ -170,10 +177,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     {currentMessage.options.map((option) => (
                         <div
                             key={option.id}
-                            className={styles.choiceOption}
+                            className={`${styles.choiceOption} ${option.isMain ? styles.choiceOptionMain : ''}`}
                             onClick={() => onChoiceClick(option)}
                         >
-                            <span className={styles.choiceText}>
+                            <span className={`${styles.choiceText} ${option.isMain ? styles.choiceTextMain : ''}`}>
                                 {extractPlainText(option.text)}
                             </span>
                             {historyLength >= FREE_ROUNDS_THRESHOLD && (

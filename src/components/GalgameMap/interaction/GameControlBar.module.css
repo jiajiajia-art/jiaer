@@ -4,16 +4,24 @@
   left: 0;
   right: 0;
   width: 100%;
-  padding: 0.75rem 1rem; /* 12px 16px */
+  padding: 1rem; /* 12px 16px */
   padding-right: 6.25rem; /* 100px */
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); /* max(12px, env(...)) */
   display: flex;
   gap: 1.25rem; /* 20px */
   overflow-x: auto;
-  z-index: 200;
+  z-index: 3100; /* 提到最上层，确保在设置/历史弹窗之上可见 */
   box-sizing: border-box;
   -ms-overflow-style: none;
   scrollbar-width: none;
+  /* 底部黑色渐变：防止亮背景下按钮看不见 */
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.72) 0%,
+    rgba(0, 0, 0, 0.4) 65%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: auto;
 }
 
 .buttonContainer::-webkit-scrollbar {
@@ -44,6 +52,24 @@
   background: rgba(251, 70, 85, 0.3);
   border-color: rgba(251, 70, 85, 0.5);
   box-shadow: 0 0.125rem 0.75rem rgba(251, 70, 85, 0.3); /* 0 2px 12px */
+}
+
+.buttonItemDisabled {
+  pointer-events: none;
+  /* 禁用状态下恢复为普通按钮样式，不使用激活状态的红色 */
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.buttonItemDisabled .buttonInner {
+  cursor: not-allowed;
+}
+
+.buttonItemDisabled .buttonInner span,
+.buttonItemDisabled .buttonInner svg {
+  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .buttonItem .buttonInner {

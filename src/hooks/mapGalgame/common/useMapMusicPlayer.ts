@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import MapWorldData from '../../../api/worldInteraction/mapWorldData';
 import type { AllGameData, Scene } from '../../../api/worldInteraction/mapWorldData.type';
 import type { MapViewState } from '../../../store/mapGalgameStore';
@@ -31,6 +31,7 @@ export const useMapMusicPlayer = ({
     const { isMusicPlaying, setMusicPlaying } = useMapGalgameStore();
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const lastSceneIdRef = useRef<string | null>(null); // 记录上次的场景 ID，用于检测场景变化
+    const [volume, setVolume] = useState<number>(0.5); // 0..1
     
     // 同步本地 ref 和全局管理器
     useEffect(() => {
@@ -212,7 +213,7 @@ export const useMapMusicPlayer = ({
 
                 const audio = new Audio(musicUrl);
                 audio.loop = true;
-                audio.volume = 0.5;
+                audio.volume = volume;
 
                 console.log('创建音频元素:', {
                     src: audio.src.substring(0, 50) + '...',
@@ -287,8 +288,25 @@ export const useMapMusicPlayer = ({
                 audioRef.current = null;
             }
         },
-        [fileId, isMusicPlaying, setMusicPlaying]
+        [fileId, isMusicPlaying, setMusicPlaying, volume]
     );
+
+    const handleVolumeChange = useCallback((newVolume: number) => {
+        const clamped = Math.max(0, Math.min(1, newVolume));
+        setVolume(clamped);
+        const audio = mapMusicManager.getAudio();
+        if (audio) {
+            audio.volume = clamped;
+        }
+    }, []);
+
+    // 音量变化时同步到当前音频（兜底：外部直接 setVolume 也能生效）
+    useEffect(() => {
+        const audio = mapMusicManager.getAudio();
+        if (audio) {
+            audio.volume = Math.max(0, Math.min(1, volume));
+        }
+    }, [volume]);
 
     const handleMusicToggle = useCallback(async () => {
         if (isMusicPlaying) {
@@ -382,6 +400,8 @@ export const useMapMusicPlayer = ({
     return {
         isMusicPlaying,
         handleMusicToggle,
+        volume,
+        setVolume: handleVolumeChange,
     };
 };
 

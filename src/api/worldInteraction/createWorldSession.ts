@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { CreateWorldEditSessionRequest, CreateWorldSessionResponse, GetWorldFilesBySessionResponse } from "./createWorldSession.type";
+import type { CreateWorldEditSessionRequest, CreateWorldSessionResponse, GetAVGFilesResponse, GetWorldFilesBySessionResponse } from "./createWorldSession.type";
 import { useMapGalgameStore } from "../../store/mapGalgameStore";
 
 export interface CreateWorldSessionRequest {
@@ -20,8 +20,8 @@ const createWorldSessionApi = {
         
         return response;
     },
-    getWorldFilesBySession: (sessionId: string) =>
-        api.get<GetWorldFilesBySessionResponse>(`/world-interaction/session/${sessionId}`),
+    getWorldFilesByFileId: (fielId: string) =>
+        api.get<GetAVGFilesResponse>(`/world-interaction/document/${fielId}`),
     createWorldEditSession: ({fileId}: {fileId: string}) =>
         api.post<CreateWorldEditSessionRequest>(`/world-interaction/session/create`, {fileId}),
 }

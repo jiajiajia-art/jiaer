@@ -1,4 +1,4 @@
-import type { AbilityNode, PlayerCharacter } from "./worldInteractionApi.type";
+import type { AbilityNode, PlayerCharacter, SceneSetting } from "./worldInteractionApi.type";
 
 export interface CreateWorldSessionResponse {
   success: true;
@@ -161,6 +161,7 @@ interface GameState {
   eventHistory: any[]; // 根据实际情况可以进一步定义
 }
 
+
 export interface GetWorldFilesBySessionResponse {
   success: boolean;
   state: GameState;
@@ -181,5 +182,20 @@ export interface CreateWorldEditSessionRequest {
       image: string;
     };
     player: Player;
+  };
+}
+
+export interface GetAVGFilesResponse {
+  success: boolean;
+  fileId: string;
+  worldSetting: WorldInfo;
+  npcSetting:{ 
+    npcs: NPC[];
+  };
+  sceneSetting: {
+    scenes: Scene[];
+  };
+  abilityNodeSetting: {
+    abilityNodes: AbilityNode[];
   };
 }
