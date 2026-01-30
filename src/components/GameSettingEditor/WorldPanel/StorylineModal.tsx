@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import styles from './WorldPanel.module.css';
+import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+
+// 字数限制配置
+const STORYLINE_WORD_LIMITS = {
+    tag: 20,
+    content: 400,
+} as const;
 
 export interface StoryLine {
     id: string;
@@ -30,6 +37,12 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
     const [content, setContent] = useState('');
     const [index, setIndex] = useState<number>(defaultIndex);
     const [indexInput, setIndexInput] = useState<string>(String(defaultIndex)); // 用于输入框的临时字符串值，允许清空
+
+    // 字数统计和限制
+    const tagWords = useWordCount(tag);
+    const contentWords = useWordCount(content);
+    const tagLimit = useWordLimit(STORYLINE_WORD_LIMITS.tag, setTag);
+    const contentLimit = useWordLimit(STORYLINE_WORD_LIMITS.content, setContent);
 
     useEffect(() => {
         if (visible) {
@@ -119,11 +132,16 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
                     </div>
                     <div className={styles.formGroup}>
                         <label>
-                            <span>标签 <span className={styles.required}>*</span></span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                <span>标签 <span className={styles.required}>*</span></span>
+                                <span className={styles.wordCounter}>
+                                    {tagWords}/{STORYLINE_WORD_LIMITS.tag}
+                                </span>
+                            </div>
                             <input
                                 type="text"
                                 value={tag}
-                                onChange={(e) => setTag(e.target.value)}
+                                {...tagLimit}
                                 placeholder="例如：阶段 1、第一章、关键转折点"
                                 autoFocus
                             />
@@ -131,11 +149,16 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
                     </div>
                     <div className={styles.formGroup}>
                         <label>
-                            <span>内容</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                <span>内容</span>
+                                <span className={styles.wordCounter}>
+                                    {contentWords}/{STORYLINE_WORD_LIMITS.content}
+                                </span>
+                            </div>
                             <textarea
                                 rows={6}
                                 value={content}
-                                onChange={(e) => setContent(e.target.value)}
+                                {...contentLimit}
                                 placeholder="描述关键剧情走向..."
                             />
                         </label>

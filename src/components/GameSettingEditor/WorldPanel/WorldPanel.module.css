@@ -247,6 +247,12 @@
     line-height: 1.4;
 }
 
+.wordCounter {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.45);
+}
+
 /* 字数限制表单容器 */
 .outputLengthContainer {
     display: flex;

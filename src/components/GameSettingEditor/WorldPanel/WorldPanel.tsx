@@ -58,7 +58,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [title, setTitle] = useState<string>('');
     const [tagline, setTagline] = useState<string>('');
     const [era, setEra] = useState<string>('');
-    const [worldRules, setWorldRules] = useState<string>('');
     const [opening, setOpening] = useState<string>('');
     const [openingPlot, setOpeningPlot] = useState<string>('');
     const [playerRole, setPlayerRole] = useState<string>('');
@@ -139,18 +138,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 // worldSetting 没变化，不需要做任何事情
                 return;
             }
-        } 
-
-        let worldRulesText = '';
-        if (mode === 'visual' && 'WorldRules' in ws && ws.WorldRules) {
-            worldRulesText = Object.entries(ws.WorldRules)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join('\n');
-        } else if (mode === 'worldInteraction' && 'WorldRules' in ws && (ws as any).WorldRules) {
-            const wr = (ws as any).WorldRules as Record<string, string>;
-            worldRulesText = Object.entries(wr)
-                .map(([key, value]) => key === value ? value : `${key}: ${value}`)
-                .join('\n');
         }
 
         const player = getPlayer(gameData);
@@ -163,7 +150,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setTitle(ws.title || '');
         setTagline(ws.summary || '');
         setEra(ws.background || '');
-        setWorldRules(worldRulesText);
         setPlayerRole(playerRoleText);
         setOpening(ws.preamble || '');
         setOpeningPlot(ws.initialPlot || '');
@@ -234,12 +220,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }));
     };
 
-    /**
-     * 处理故事线的字段修改
-     * @param id - 故事线ID
-     * @param key - 要修改的字段（tag/content/index）
-     * @param value - 新值
-     */
     const handleStorylineChange = (id: string, key: 'tag' | 'content' | 'index', value: string | number) => {
         setStorylines(prev => {
             if (key === 'index') {
@@ -362,31 +342,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const titleVal = title;
         const taglineVal = tagline;
         const eraVal = era;
-        const worldRulesVal = worldRules;
         const openingVal = opening;
         const openingPlotVal = openingPlot;
-
-        // 解析世界规则：支持 "key: value" 形式（视觉模式）和 "每行一条规则" 形式（worldInteraction 模式）
-        const parsedWorldRules: { [key: string]: string } = {};
-        const worldRulesLines: string[] = [];
-        if (worldRulesVal) {
-            worldRulesVal.split('\n').forEach((line: string) => {
-                const trimmedLine = line.trim();
-                if (!trimmedLine) return;
-                const colonIndex = trimmedLine.indexOf(':');
-                if (colonIndex > 0) {
-                    const key = trimmedLine.substring(0, colonIndex).trim();
-                    const value = trimmedLine.substring(colonIndex + 1).trim();
-                    if (key && value) {
-                        parsedWorldRules[key] = value;
-                        worldRulesLines.push(`${key}: ${value}`);
-                    }
-                } else {
-                    parsedWorldRules[trimmedLine] = trimmedLine;
-                    worldRulesLines.push(trimmedLine);
-                }
-            });
-        }
 
         // playerRole 字段是只读的，用户无法修改，所以直接使用后端返回的 player 数据
         const player = getPlayer(gameData);
@@ -414,14 +371,12 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 preamble: openingVal,
                 initialPlot: openingPlotVal,
                 literary: toneValue ?? '',
-                WorldRules: parsedWorldRules,
                 keyEvents: keyEvents,
                 dynamicEntries: dynamicEntries,
                 player: currentPlayer, // 直接使用后端返回的 player 数据
                 llmConfig,
             } as VisualWorldSetting;
         } else {
-            // worldInteraction 模式：将世界规则行映射到 Theme（string[]）
             // playerRole 字段是只读的，直接使用后端返回的 player 数据
             const worldPlayer = player ? {
                 name: player.name || '',
@@ -450,12 +405,10 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 initialPlot: openingPlotVal,
                 literary: toneValue ?? '',
                 keyEvents: keyEvents,
-                Theme: worldRulesLines,
-                WorldRules: parsedWorldRules,
                 player: worldPlayer, // 直接使用后端返回的 player 数据
             } as unknown as WorldWorldSetting;
         }
-    }, [title, tagline, era, worldRules, opening, openingPlot, storylines, toneValue, gameData, mode, dynamicEntries, targetOutputLength, minOutputLength, maxOutputLength]);
+    }, [title, tagline, era, opening, openingPlot, storylines, toneValue, gameData, mode, dynamicEntries, targetOutputLength, minOutputLength, maxOutputLength]);
     
     // 将 getFullWorldSettingData 保存到 ref 中，供 hook 使用
     getFullWorldSettingDataRef.current = getFullWorldSettingData;
@@ -473,8 +426,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         // 辅助函数：归一化字符串比较
         const isStrDiff = (a: any, b: any) => (a || '') !== (b || '');
-        // 辅助函数：判断是否非空
-        const hasKeys = (obj: any) => obj && Object.keys(obj).length > 0;
         const hasLen = (arr: any) => arr && arr.length > 0;
 
         if (mode === 'visual') {
@@ -488,12 +439,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             if (isStrDiff(full.preamble, orig.preamble)) diff.preamble = full.preamble;
             if (isStrDiff(full.initialPlot, orig.initialPlot)) diff.initialPlot = full.initialPlot;
             if (isStrDiff(full.literary, orig.literary)) diff.literary = full.literary;
-
-            // 复杂字段：仅在“当前非空”且“发生变化”时包含
-            const fullWorldRules = full.WorldRules || {};
-            if (hasKeys(fullWorldRules) && JSON.stringify(fullWorldRules) !== JSON.stringify(orig.WorldRules || {})) {
-                diff.WorldRules = fullWorldRules;
-            }
 
             const fullKeyEvents = full.keyEvents || [];
             if (hasLen(fullKeyEvents) && JSON.stringify(fullKeyEvents) !== JSON.stringify(orig.keyEvents || [])) {
@@ -545,11 +490,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 diff.Theme = fullTheme;
             }
 
-            const fullWorldRules = (full as any).WorldRules ?? {};
-            if (hasKeys(fullWorldRules) && JSON.stringify(fullWorldRules) !== JSON.stringify((orig as any).WorldRules || {})) {
-                (diff as any).WorldRules = fullWorldRules;
-            }
-
             return Object.keys(diff).length > 0 ? diff : null;
         }
     }, [getFullWorldSettingData, gameData, mode]);
@@ -562,7 +502,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const worldSettingDiff = getWorldSettingData();
         const hasChanges = worldSettingDiff !== null;
         setHasUnsavedChanges(hasChanges);
-    }, [title, tagline, era, worldRules, opening, openingPlot, storylines, toneValue, storyStructure, dynamicEntries, gameData, mode, getWorldSettingData, setHasUnsavedChanges]);
+    }, [title, tagline, era, opening, openingPlot, storylines, toneValue, storyStructure, dynamicEntries, gameData, mode, getWorldSettingData, setHasUnsavedChanges]);
 
     useEffect(() => {
         if (onGetData) {
@@ -871,7 +811,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 title={title}
                                 tagline={tagline}
                                 era={era}
-                                worldRules={worldRules}
                                 playerRole={playerRole}
                                 opening={opening}
                                 openingPlot={openingPlot}
@@ -881,7 +820,6 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 onTitleChange={setTitle}
                                 onTaglineChange={setTagline}
                                 onEraChange={setEra}
-                                onWorldRulesChange={setWorldRules}
                                 onOpeningChange={setOpening}
                                 onOpeningPlotChange={setOpeningPlot}
                                 onTargetOutputLengthChange={setTargetOutputLength}

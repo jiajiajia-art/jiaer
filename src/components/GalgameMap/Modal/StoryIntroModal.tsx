@@ -22,19 +22,12 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     if (!isOpen) return null;
 
     const title = gameData?.worldSetting?.title || '故事';
-    const preamble = gameData?.worldSetting?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
-    // 修改：只有当 worldMapImage 存在且不是默认图片时才添加 '/dummy'
+    const initialPlot = gameData?.worldSetting?.initialPlot || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
     const worldMapImage = gameData?.worldSetting?.worldMapImage;
 
     const backgroundImage = worldMapImage
         ? (worldMapImage.includes('defaultScene.png') ? worldMapImage : `${worldMapImage}/dummy`)
         : DEFAULT_SCENE_IMAGE;
-
-    // const { displayedText, isTyping } = useStoryTyping({
-    //     text: preamble,
-    //     enabled: isOpen && !!preamble,
-    //     speed: 50
-    // });
 
     const backgroundImageUrl = useMemo(() => {
         if (!backgroundImage) return null;
@@ -42,7 +35,6 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
         if (backgroundImage.startsWith('http') || backgroundImage.includes('defaultScene.png')) {
             return backgroundImage;
         }
-        // 其他情况（相对路径）使用工具函数处理，加上host地址
         return getImageUrl(backgroundImage);
     }, [backgroundImage]);
 
@@ -65,7 +57,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                     <div className={styles.preambleText}>
                         {/* {displayedText}
                         {isTyping && <span className={styles.cursor}></span>} */}
-                        {preamble}
+                        {initialPlot}
                     </div>
                 </div>
                 <div className={styles.modalFooter}>
