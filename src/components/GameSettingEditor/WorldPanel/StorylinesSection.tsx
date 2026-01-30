@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { MdArrowDropDown } from 'react-icons/md';
 import styles from './WorldPanel.module.css';
+import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+
+// 字数限制配置
+const STORYLINE_WORD_LIMITS = {
+    tag: 20,
+    content: 400,
+} as const;
 
 export interface StoryLine {
     id: string;
@@ -20,6 +27,50 @@ interface StorylinesSectionProps {
     onStorylineChange: (id: string, key: 'tag' | 'content' | 'index', value: string | number) => void;
     onRemoveStoryline: (id: string) => void;
 }
+
+// 故事线单项组件（内部管理字数限制）
+const StorylineItem: React.FC<{
+    line: StoryLine;
+    onStorylineChange: (id: string, key: 'tag' | 'content' | 'index', value: string | number) => void;
+}> = ({ line, onStorylineChange }) => {
+    const tagWords = useWordCount(line.tag);
+    const contentWords = useWordCount(line.content);
+    const tagLimit = useWordLimit(STORYLINE_WORD_LIMITS.tag, (value) => onStorylineChange(line.id, 'tag', value));
+    const contentLimit = useWordLimit(STORYLINE_WORD_LIMITS.content, (value) => onStorylineChange(line.id, 'content', value));
+
+    return (
+        <div className={styles.storylineContent}>
+            <div className={styles.storylineMeta}>
+                <label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <span>标签</span>
+                        <span className={styles.wordCounter}>
+                            {tagWords}/{STORYLINE_WORD_LIMITS.tag}
+                        </span>
+                    </div>
+                    <input
+                        type="text"
+                        value={line.tag}
+                        {...tagLimit}
+                    />
+                </label>
+            </div>
+            <label className={styles.wide}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <span>内容</span>
+                    <span className={styles.wordCounter}>
+                        {contentWords}/{STORYLINE_WORD_LIMITS.content}
+                    </span>
+                </div>
+                <textarea
+                    rows={3}
+                    value={line.content}
+                    {...contentLimit}
+                />
+            </label>
+        </div>
+    );
+};
 
 const StorylinesSection: React.FC<StorylinesSectionProps> = ({
     storylines,
@@ -128,26 +179,10 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                                             className={styles.orderInput}
                                         />
                                     </label>
-                                    <div className={styles.storylineContent}>
-                                        <div className={styles.storylineMeta}>
-                                            <label>
-                                                <span>标签</span>
-                                                <input
-                                                    type="text"
-                                                    value={line.tag}
-                                                    onChange={(e) => onStorylineChange(line.id, 'tag', e.target.value)}
-                                                />
-                                            </label>
-                                        </div>
-                                        <label className={styles.wide}>
-                                            <span>内容</span>
-                                            <textarea
-                                                rows={3}
-                                                value={line.content}
-                                                onChange={(e) => onStorylineChange(line.id, 'content', e.target.value)}
-                                            />
-                                        </label>
-                                    </div>
+                                    <StorylineItem
+                                        line={line}
+                                        onStorylineChange={onStorylineChange}
+                                    />
                                     <button
                                         className={styles.ghostTiny}
                                         onClick={() => onRemoveStoryline(line.id)}

@@ -21,7 +21,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     if (!isOpen) return null;
 
     const title = presetData?.world?.title || '故事';
-    const preamble = presetData?.world?.preamble || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
+    const initialPlot = presetData?.world?.initialPlot || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
     const playerImage = presetData?.scenes.scenes[0]?.image || presetData?.scenes.scenes[0]?.images;
 
     const playerImageUrl = useMemo(() => {
@@ -49,7 +49,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                 </div>
                 <div className={styles.modalBody}>
                     <div className={styles.preambleText}>
-                        {preamble}
+                        {initialPlot}
                     </div>
                 </div>
                 <div className={styles.modalFooter}>

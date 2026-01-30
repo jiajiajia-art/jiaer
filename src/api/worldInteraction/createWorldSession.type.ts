@@ -1,4 +1,4 @@
-import type { AbilityNode, PlayerCharacter, SceneSetting } from "./worldInteractionApi.type";
+import type { AbilityNode, PlayerCharacter } from "./worldInteractionApi.type";
 
 export interface CreateWorldSessionResponse {
   success: true;

@@ -1,5 +1,5 @@
 import { api } from "../base";
-import type { CreateWorldEditSessionRequest, CreateWorldSessionResponse, GetAVGFilesResponse, GetWorldFilesBySessionResponse } from "./createWorldSession.type";
+import type { CreateWorldEditSessionRequest, CreateWorldSessionResponse, GetAVGFilesResponse } from "./createWorldSession.type";
 import { useMapGalgameStore } from "../../store/mapGalgameStore";
 
 export interface CreateWorldSessionRequest {
