@@ -17,6 +17,7 @@ const CustomIFCreate: React.FC = () => {
   const [, setEntryUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const dirRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -44,6 +45,15 @@ const CustomIFCreate: React.FC = () => {
   // 简化：通过拖放自动识别来源类型（single/zip/dir）
   type SourceType = 'single' | 'zip' | 'dir';
   const [sourceType, setSourceType] = useState<SourceType>('single');
+  const changeSourceType = (t: SourceType) => {
+    setError('');
+    setSourceType(t);
+    // 切换类型时重置，避免混淆
+    setSingleFile(null);
+    setMultiFiles([]);
+    setEntryPath('');
+    setMultiStats({ count: 0, bytes: 0, selCount: 0, selBytes: 0 });
+  };
   // 旧的 zip/dir 选择器删除；保留单文件选择器以支持点击选择
   const singleRef = fileRef; // 语义别名：单文件 index.html 选择器
   type MultiItem = { path: string; file: File; selected: boolean };
@@ -53,6 +63,7 @@ const CustomIFCreate: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [lastUploadOk, setLastUploadOk] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [singleFile, setSingleFile] = useState<File | null>(null);
 
   // 上传进度与取消控制
   const [isUploading, setIsUploading] = useState(false);
@@ -184,7 +195,8 @@ const CustomIFCreate: React.FC = () => {
     try {
       // 校验输入
       if (sourceType === 'single') {
-        const file = fileRef.current?.files?.[0]; if (!file) { setError('请上传 index.html'); return; }
+        const file = singleFile || fileRef.current?.files?.[0];
+        if (!file) { setError('请上传 index.html'); return; }
       } else {
         if (multiFiles.length === 0) { setError('未选择任何文件'); return; }
         const sel = multiFiles.filter(i=> i.selected);
@@ -210,7 +222,7 @@ const CustomIFCreate: React.FC = () => {
       const fd = new FormData();
       if (manifestText.trim()) fd.append('manifest', manifestText);
       if (sourceType === 'single'){
-        const file = fileRef.current?.files?.[0]!;
+        const file = (singleFile || fileRef.current?.files?.[0])!;
         const size = file.size || 0; if (size<=0) throw new Error('选择的 index.html 文件为空');
         fd.append('index', file, file.name || 'index.html');
       } else {
@@ -310,7 +322,15 @@ const CustomIFCreate: React.FC = () => {
             {/* 简化：单一大型拖放区域（支持 .zip / .html / 目录）且包含文件要求说明 */}
             <div className={styles.formGroup}>
               <label>上传</label>
-              <div className={`${styles.dropZoneLarge} ${dragOver? 'drag' : ''}`}
+              <div className={styles.uploaderColumn}>
+                {/* 文件类型选择器：切换后渲染对应的上传区域与校验 */}
+                <div className={styles.seg}>
+                  <button type="button" className={`${styles.segBtn} ${sourceType==='single' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('single')}>单文件 HTML</button>
+                  <button type="button" className={`${styles.segBtn} ${sourceType==='zip' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('zip')}>ZIP 包</button>
+                  <button type="button" className={`${styles.segBtn} ${sourceType==='dir' ? styles.segBtnActive : ''}`} onClick={()=> changeSourceType('dir')}>文件夹</button>
+                </div>
+
+                <div className={`${styles.dropZoneLarge} ${dragOver? 'drag' : ''}`}
                    onDragOver={(e)=>{e.preventDefault(); setDragOver(true);}}
                    onDragLeave={(e)=>{e.preventDefault(); setDragOver(false);}}
                    onDrop={async (e)=>{
@@ -327,33 +347,61 @@ const CustomIFCreate: React.FC = () => {
                            else if (en.isDirectory){ const reader = en.createReader(); await new Promise<void>(r=> reader.readEntries(async (ents:any[])=>{ for(const sub of ents){ const subList:any[]= await readDirEntry(sub, `${prefix}${en.name}/`); results.push(...subList);} r(); })); }
                            return results;
                          };
-                         const list = await readDirEntry(entry, '');
-                         setSourceType('dir'); setMultiFiles(list as any); updateMultiStats(list as any);
-                         return;
-                       }
+                          const list = await readDirEntry(entry, '');
+                          // 切到目录模式并直接设置清单，避免因切换类型时清空列表的竞态
+                          setSourceType('dir');
+                          setSingleFile(null);
+                          setMultiFiles(list as any);
+                          updateMultiStats(list as any);
+                          return;
+                        }
                      }
                      const f = e.dataTransfer.files?.[0]; if (!f) return;
                      const name = (f.name||'').toLowerCase();
-                     if (name.endsWith('.zip')) { await handleZipFile(f); }
-                     else if (name.endsWith('.html')) { setSourceType('single'); const dt = new DataTransfer(); dt.items.add(f); if (singleRef.current) singleRef.current.files = dt.files; }
+                     if (name.endsWith('.zip')) { setSingleFile(null); await handleZipFile(f); }
+                     else if (name.endsWith('.html')) { changeSourceType('single'); setSingleFile(f); const dt = new DataTransfer(); dt.items.add(f); if (singleRef.current) singleRef.current.files = dt.files; }
                      else { setError('仅支持拖入 .zip、.html 或文件夹'); }
                    }}
-                   onClick={()=> singleRef.current?.click()}
-              >
-                <div className={styles.dropHeading}>上传自定义游戏</div>
-                <div className={styles.dropHint}>将 ZIP 包、index.html 或文件夹拖拽至此（或点击此区域选择文件）</div>
-                <ul className={styles.dropList}>
-                  <li>支持单index.html、ZIP包或文件夹方式上传。</li>
-                  <li>ZIP包或文件夹必须包含入口文件 <b>index.html</b>（ZIP 内根目录或唯一子目录下）。</li>
-                  <li>资源引用请使用<b>相对路径</b>（如 <code>./style.css</code>、<code>./data.json</code>）。</li>
-                  <li>大小建议：单文件 ≤ 10MB、总大小 ≤ 50MB。</li>
-                  <li>manifest配置（可选）：高级功能，有特殊需求请联系客服。</li>
-                </ul>
+                   onClick={(e)=>{
+                     const target = e.target as HTMLElement;
+                     // 避免点击底部按钮时再次触发
+                     if (target.closest(`.${styles.cardFooter}`)) return;
+                     if (sourceType === 'single') { if (singleRef.current){ singleRef.current.accept = 'text/html,.html'; singleRef.current.click(); } }
+                     else if (sourceType === 'zip') { if (singleRef.current){ singleRef.current.accept = '.zip,application/zip'; singleRef.current.click(); } }
+                     else if (sourceType === 'dir') { dirRef.current?.click(); }
+                   }}
+                >
+                  <div className={styles.dropHeading}>上传自定义游戏</div>
+                  <div className={styles.dropHint}>将 ZIP 包、index.html 或文件夹拖拽至此，或点击此处选择</div>
+                  <ul className={styles.dropList}>
+                    <li>支持单index.html、ZIP包或文件夹方式上传。</li>
+                    <li>ZIP包或文件夹必须包含入口文件 <b>index.html</b>（ZIP 内根目录或唯一子目录下）。</li>
+                    <li>资源引用请使用<b>相对路径</b>（如 <code>./style.css</code>、<code>./data.json</code>）。</li>
+                    <li>大小建议：单文件 ≤ 10MB、总大小 ≤ 50MB。</li>
+                    <li>manifest配置（可选）：高级功能，有特殊需求请联系客服。</li>
+                  </ul>
+                </div>
               </div>
             </div>
 
             {/* 隐藏文件选择器（点击大区域触发） */}
-            <input id="index" ref={singleRef} type="file" accept="text/html,.html,.zip,application/zip" className={styles.fileInput} style={{display:'none'}} onChange={async (e)=>{ const f=e.target.files?.[0]; if(!f) return; const n=(f.name||'').toLowerCase(); if(n.endsWith('.zip')) await handleZipFile(f); else if(n.endsWith('.html')) { setSourceType('single'); } else setError('不支持的文件类型'); }} />
+            <input id="index" ref={singleRef} type="file" accept="text/html,.html,.zip,application/zip" className={styles.fileInput} style={{display:'none'}} onChange={async (e)=>{ const input=e.currentTarget; const f=e.target.files?.[0]; if(!f){ input.value=''; return; } const n=(f.name||'').toLowerCase(); if(n.endsWith('.zip')) { setSingleFile(null); await handleZipFile(f); } else if(n.endsWith('.html')) { changeSourceType('single'); setSingleFile(f); } else setError('不支持的文件类型'); input.value=''; }} />
+            {/** 目录选择器（支持选择文件夹） */}
+            {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
+            {/* @ts-ignore webkitdirectory 非标准属性，主流浏览器支持 */}
+            <input ref={dirRef} type="file" multiple webkitdirectory="true" style={{display:'none'}} onChange={(e)=>{
+              const files = Array.from(e.target.files || []);
+              if (!files.length) return;
+              const list = files.map((f:any)=> ({ path: normalizePath(f.webkitRelativePath || f.name), file: f as File, selected: true }));
+              // 切到目录模式并直接设置清单，避免因切换类型时清空列表的竞态
+              setSourceType('dir');
+              setSingleFile(null);
+              setMultiFiles(list);
+              updateMultiStats(list);
+              const candidates = list.filter(i=> /(^|\/)index\.html$/i.test(i.path)).map(i=> i.path);
+              if (candidates.length === 1) setEntryPath(candidates[0]);
+              (e.currentTarget as HTMLInputElement).value = '';
+            }} />
 
             {sourceType === 'zip' && (
               <div className={styles.formGroup}>
@@ -386,6 +434,22 @@ const CustomIFCreate: React.FC = () => {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+            )}
+
+            {sourceType === 'single' && singleFile && (
+              <div className={styles.formGroup}>
+                <label>文件清单（单文件）</label>
+                <div className={styles.fileRow}>
+                  <div className={styles.fileStats}>已选择 1 个文件：{singleFile.name}（{formatBytes(singleFile.size||0)}）</div>
+                  <div className={styles.fileList}>
+                    <div className={styles.fileRowLine}>
+                      <span className={styles.filePath}>index.html</span>
+                      <span className={styles.fileSize}>{formatBytes(singleFile.size||0)}</span>
+                      <button type="button" className={styles.smallBtn} onClick={()=> { if (singleRef.current){ singleRef.current.accept='text/html,.html'; singleRef.current.click(); } }}>重新选择</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

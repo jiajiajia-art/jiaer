@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './ObjectsPanel.module.css';
 import ObjectsList from './ObjectsList';
 import ObjectDetail from './ObjectDetail';
-import ConfirmModal from '../../GoodsModal/ConfirmModal';
-import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
+import ConfirmModal from '../../goodsModal/ConfirmModal';
+import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
@@ -487,4 +487,3 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
 ObjectsPanel.displayName = 'ObjectsPanel';
 
 export default ObjectsPanel;
-

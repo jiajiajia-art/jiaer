@@ -21,8 +21,8 @@ import SceneDetailActions from './SceneDetailActions';
 import { DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust, extractImageExtension } from '../../../utils/imageCache';
 import { useAuthStore } from '../../../store/useAuthStore';
-import ConfirmModal from '../../GoodsModal/ConfirmModal';
-import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
+import ConfirmModal from '../../goodsModal/ConfirmModal';
+import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 

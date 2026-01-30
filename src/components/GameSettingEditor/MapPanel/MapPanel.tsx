@@ -7,7 +7,7 @@ import SceneTab, { type SceneTabRef } from './SceneTab';
 import MapTab, { type MapTabRef } from './MapTab';
 import MapWorldData from '../../../api/worldInteraction/mapWorldData';
 import type { AbilityNodeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
-import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
+import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 
 export interface MapPanelRef {

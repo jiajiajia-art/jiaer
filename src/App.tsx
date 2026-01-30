@@ -17,6 +17,7 @@ import CustomIF from './page/CustomIF';
 import CustomIFCreate from './page/CustomIFCreate';
 import GameDetail from './page/GameDetail';
 import ScrollToTop from './components/ScrollToTop';
+import Analytics from './page/Analytics';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />
         <Route element={<ProtectedRoute />}>
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/rpgGame" element={<RpgGame />} />
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
