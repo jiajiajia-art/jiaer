@@ -1,6 +1,14 @@
 import React from 'react';
 import styles from './AttributeDetailForm.module.css';
 import type { AttributeConfig, AttributeTarget } from './types';
+import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+
+const WORD_LIMITS = {
+    key: 20,
+    displayName: 10,
+    description: 100,
+    formula: 200,
+} as const;
 
 interface AttributeDetailFormProps {
     formState: Partial<AttributeConfig> | null;
@@ -13,8 +21,18 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
     onChange,
     onSave,
 }) => {
+    // 字数统计
+    const keyWords = useWordCount(formState?.key ?? '');
+    const displayNameWords = useWordCount(formState?.displayName ?? '');
+    const descriptionWords = useWordCount(formState?.description ?? '');
+    const formulaWords = useWordCount(formState?.formula ?? '');
 
-    
+    // 字数限制处理
+    const keyLimit = useWordLimit(WORD_LIMITS.key, (value) => onChange({ key: value }));
+    const displayNameLimit = useWordLimit(WORD_LIMITS.displayName, (value) => onChange({ displayName: value }));
+    const descriptionLimit = useWordLimit(WORD_LIMITS.description, (value) => onChange({ description: value }));
+    const formulaLimit = useWordLimit(WORD_LIMITS.formula, (value) => onChange({ formula: value }));
+
     if (!formState) {
         return (
             <div className={styles.rightCard}>
@@ -55,12 +73,15 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                         <span className={styles.labelMain}>
                             Key（唯一） <span className={styles.required}>*</span>
                         </span>
+                        <span className={styles.wordCounter}>
+                            {keyWords}/{WORD_LIMITS.key}
+                        </span>
                     </div>
                     <input
                         className={styles.input}
                         placeholder="如 stamina"
                         value={formState.key ?? ''}
-                        onChange={(e) => onChange({ key: e.target.value })}
+                        {...keyLimit}
                     />
                 </div>
 
@@ -69,27 +90,37 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
                         <span className={styles.labelMain}>
                             显示名称 <span className={styles.required}>*</span>
                         </span>
+                        <span className={styles.wordCounter}>
+                            {displayNameWords}/{WORD_LIMITS.displayName}
+                        </span>
                     </div>
                     <input
                         className={styles.input}
                         placeholder="例如：体力 / 情绪"
                         value={formState.displayName ?? ''}
-                        onChange={(e) => onChange({ displayName: e.target.value })}
+                        {...displayNameLimit}
                     />
                 </div>
 
                 <div className={`${styles.field} ${styles.formRowFull}`}>
                     <div className={styles.labelRow}>
-                        <span className={styles.labelMain}>
-                            描述 <span className={styles.required}>*</span>
-                        </span>
-                        <span>用于拼接到 Prompt 中，说明属性含义</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <div>
+                                <span className={styles.labelMain}>
+                                    描述 <span className={styles.required}>*</span>
+                                </span>
+                                <span>用于拼接到 Prompt 中，说明属性含义</span>
+                            </div>
+                            <span className={styles.wordCounter}>
+                                {descriptionWords}/{WORD_LIMITS.description}
+                            </span>
+                        </div>
                     </div>
                     <textarea
                         className={styles.textarea}
                         placeholder="属性含义说明，用于引导模型如何理解和使用该属性。"
                         value={formState.description ?? ''}
-                        onChange={(e) => onChange({ description: e.target.value })}
+                        {...descriptionLimit}
                     />
                 </div>
 
@@ -125,14 +156,21 @@ const AttributeDetailForm: React.FC<AttributeDetailFormProps> = ({
 
                 <div className={`${styles.field} ${styles.formRowFull}`}>
                     <div className={styles.labelRow}>
-                        <span className={styles.labelMain}>公式 / 计算方式（可选）</span>
-                        <span>示例：基础值 + 消耗 × 恢复</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <div>
+                                <span className={styles.labelMain}>公式 / 计算方式（可选）</span>
+                                <span>示例：基础值 + 消耗 × 恢复</span>
+                            </div>
+                            <span className={styles.wordCounter}>
+                                {formulaWords}/{WORD_LIMITS.formula}
+                            </span>
+                        </div>
                     </div>
                     <textarea
                         className={styles.textarea}
                         placeholder="可选：填写简单的文字公式，帮助系统和自己回忆该属性的增减逻辑。"
                         value={formState.formula ?? ''}
-                        onChange={(e) => onChange({ formula: e.target.value })}
+                        {...formulaLimit}
                     />
                 </div>
             </div>

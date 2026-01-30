@@ -249,8 +249,9 @@
 
 .wordCounter {
     margin-left: auto;
-    font-size: 0.75rem;
-    color: rgba(0, 0, 0, 0.45);
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.35);
 }
 
 /* 字数限制表单容器 */

@@ -4,6 +4,13 @@ import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
 import { IMAGE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust } from '../../../utils/imageCache';
+import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+
+// 字数限制配置
+const SCENE_WORD_LIMITS = {
+    name: 10,
+    desc: 200,
+} as const;
 
 interface BgmItem {
     id: string;
@@ -61,6 +68,14 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     
     const showDisabledMessage = disabled && disabledMessage;
     const isDisabled = disabled || isGeneratingForThisScene;
+
+    // 字数统计
+    const nameWords = useWordCount(scene.name ?? '');
+    const descWords = useWordCount(scene.desc ?? '');
+
+    // 字数限制处理
+    const nameLimit = useWordLimit(SCENE_WORD_LIMITS.name, (value) => onFieldChange('name', value));
+    const descLimit = useWordLimit(SCENE_WORD_LIMITS.desc, (value) => onFieldChange('desc', value));
 
     return (
         <>
@@ -139,19 +154,29 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
 
             <div className={styles.formGrid}>
                 <label>
-                    <span>场景名称</span>
+                    <div className={styles.labelRowWithCounter}>
+                        <span>场景名称</span>
+                        <span className={styles.wordCounter}>
+                            {nameWords}/{SCENE_WORD_LIMITS.name}
+                        </span>
+                    </div>
                     <input
                         type="text"
                         value={scene.name}
-                        onChange={(e) => onFieldChange('name', e.target.value)}
+                        {...nameLimit}
                     />
                 </label>
                 <label className={styles.wide}>
-                    <span>场景描述</span>
+                    <div className={styles.labelRowWithCounter}>
+                        <span>场景描述</span>
+                        <span className={styles.wordCounter}>
+                            {descWords}/{SCENE_WORD_LIMITS.desc}
+                        </span>
+                    </div>
                     <textarea
                         rows={3}
                         value={scene.desc}
-                        onChange={(e) => onFieldChange('desc', e.target.value)}
+                        {...descLimit}
                     />
                 </label>
                 <label>
