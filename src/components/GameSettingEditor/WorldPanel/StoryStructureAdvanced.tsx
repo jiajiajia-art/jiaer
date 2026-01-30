@@ -4,7 +4,7 @@ import styles from './StoryStructureAdvanced.module.css';
 import worldPanelStyles from './WorldPanel.module.css';
 import EditorApi from '../../../api/galgame/EditorData';
 import { toast } from 'react-hot-toast';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { MdArrowDropDown } from 'react-icons/md';
 
 const parseCommaSeparated = (value: string): string[] =>

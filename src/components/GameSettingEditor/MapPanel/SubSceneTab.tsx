@@ -20,7 +20,7 @@ import { getImageUrl } from '../../../utils/constants';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import type { NpcSlot, FunctionalNpcPatch } from '../../../api/worldInteraction/worldEditor.type';
 import toast from 'react-hot-toast';
-import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 
 interface SubSceneTabProps {
     subScenes: SubScene[];

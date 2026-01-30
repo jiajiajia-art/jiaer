@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } 
 import styles from './FunctionalNPCsPanel.module.css';
 import FunctionalNPCList from './FunctionalNPCList';
 import FunctionalNPCDetail from './FunctionalNPCDetail';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
-import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNodeSetting, AbilityNode } from '../../../api/worldInteraction/worldInteractionApi.type';
 import worldEditor from '../../../api/worldInteraction/worldEditor';

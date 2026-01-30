@@ -6,7 +6,7 @@ import type { AttributeConfig, AttributeTarget } from './types';
 import type { AttributeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { convertAttributeSettingToConfigs } from './attributeDataUtils';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { useGameStore } from '../../../store/gameStore';
 import { useUnsavedChanges } from '../../../hooks/editor/useUnsavedChanges';

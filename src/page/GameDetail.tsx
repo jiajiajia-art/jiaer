@@ -9,7 +9,7 @@ import createSessionApi from '../api/createGame/createSessionApi';
 import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
-import ConfirmModal from '../components/goodsModal/ConfirmModal';
+import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import toast from 'react-hot-toast';
 import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
