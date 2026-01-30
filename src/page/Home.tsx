@@ -31,6 +31,9 @@ const Home: React.FC = () => {
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
     const isLoadingRef = useRef(false);
+    const isLoadingMoreSpecialRef = useRef(false);
+    const isLoadingMoreAllRef = useRef(false);
+    const lastUserIdRef = useRef<string | number | undefined>(undefined);
     const navigator = useNavigate();
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
 
@@ -85,6 +88,10 @@ const Home: React.FC = () => {
         if (isInitial) {
             setIsLoadingSpecial(true);
         } else {
+            if (isLoadingMoreSpecialRef.current) {
+                return;
+            }
+            isLoadingMoreSpecialRef.current = true;
             setIsLoadingMoreSpecial(true);
         }
 
@@ -122,6 +129,7 @@ const Home: React.FC = () => {
         } finally {
             setIsLoadingSpecial(false);
             setIsLoadingMoreSpecial(false);
+            isLoadingMoreSpecialRef.current = false;
         }
     }, []);
 
@@ -135,6 +143,10 @@ const Home: React.FC = () => {
         if (isInitial) {
             setIsLoadingAll(true);
         } else {
+            if (isLoadingMoreAllRef.current) {
+                return;
+            }
+            isLoadingMoreAllRef.current = true;
             setIsLoadingMoreAll(true);
         }
 
@@ -172,6 +184,7 @@ const Home: React.FC = () => {
         } finally {
             setIsLoadingAll(false);
             setIsLoadingMoreAll(false);
+            isLoadingMoreAllRef.current = false;
         }
     }, []);
 
@@ -189,6 +202,8 @@ const Home: React.FC = () => {
             return;
         }
         isLoadingRef.current = true;
+        isLoadingMoreSpecialRef.current = false;
+        isLoadingMoreAllRef.current = false;
 
         setSpecialPage(0);
         setAllPage(0);
@@ -200,40 +215,50 @@ const Home: React.FC = () => {
             loadAllGames(0, true),
         ]);
         isLoadingRef.current = false;
-    }, []);
+    }, [loadCarouselData, loadSpecialGames, loadAllGames]);
 
     // 加载更多限时优惠
     const loadMoreSpecial = useCallback(() => {
-        if (!isLoadingMoreSpecial && hasMoreSpecial) {
+        if (!isLoadingMoreSpecialRef.current && !isLoadingMoreSpecial && hasMoreSpecial) {
             loadSpecialGames(specialPage, false);
         }
     }, [isLoadingMoreSpecial, hasMoreSpecial, specialPage, loadSpecialGames]);
 
     // 加载更多全部游戏
     const loadMoreAll = useCallback(() => {
-        if (!isLoadingMoreAll && hasMoreAll) {
+        if (!isLoadingMoreAllRef.current && !isLoadingMoreAll && hasMoreAll) {
             loadAllGames(allPage, false);
         }
     }, [isLoadingMoreAll, hasMoreAll, allPage, loadAllGames]);
 
     // 使用 libraryDataApi 获取游戏列表数据
     useEffect(() => {
-        isLoadingRef.current = false;
-        loadLibraryData();
-    }, [user?.user.id]);
+        const currentUserId = user?.user?.id;
+        if (currentUserId !== lastUserIdRef.current) {
+            lastUserIdRef.current = currentUserId;
+            if (currentUserId) {
+                isLoadingRef.current = false;
+                loadLibraryData();
+            }
+        }
+    }, [user?.user?.id, loadLibraryData]);
 
     // 滚动加载更多：使用 Intersection Observer
     useEffect(() => {
         if (!loadMoreTriggerRef.current) return;
 
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+        }
+
         observerRef.current = new IntersectionObserver(
             (entries) => {
                 const entry = entries[0];
                 if (entry.isIntersecting) {
-                    // 优先加载全部游戏（因为它在页面下方）
-                    if (hasMoreAll && !isLoadingMoreAll) {
+                    // 使用 ref 检查，避免闭包问题导致的重复请求
+                    if (hasMoreAll && !isLoadingMoreAllRef.current && !isLoadingMoreAll) {
                         loadMoreAll();
-                    } else if (hasMoreSpecial && !isLoadingMoreSpecial) {
+                    } else if (hasMoreSpecial && !isLoadingMoreSpecialRef.current && !isLoadingMoreSpecial) {
                         loadMoreSpecial();
                     }
                 }

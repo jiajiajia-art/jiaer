@@ -8,7 +8,10 @@ import SceneView from "../components/GalgameMap/SceneView";
 import type {
   AllGameData,
   Scene,
+  SubScene,
 } from "../api/worldInteraction/mapWorldData.type";
+import type { GetAVGFilesResponse } from "../api/worldInteraction/createWorldSession.type";
+import type { NPC as WINPC } from "../api/worldInteraction/worldInteractionApi.type";
 import StoryIntroModal from "../components/GalgameMap/Modal/StoryIntroModal";
 import SubSceneModal from "../components/GalgameMap/SubSceneModal";
 import InteractWithNpcModal from "../components/GalgameMap/interaction/InteractWithNpcModal";
@@ -393,7 +396,7 @@ const GalgameMap = () => {
           DEFAULT_NPC_IMAGE
         );
 
-        const safeNpcs = (state.npcSetting?.npcs || []).map((npc: any) => ({
+        const safeNpcs = (state.npcSetting?.npcs || []).map((npc: GetAVGFilesResponse['npcSetting']['npcs'][0]) => ({
           ...npc,
           images: {
             ...npc.images,
@@ -401,10 +404,10 @@ const GalgameMap = () => {
           },
         }));
 
-        const safeScenes = (state.sceneSetting?.scenes || []).map((scene: any) => ({
+        const safeScenes = (state.sceneSetting?.scenes || []).map((scene: GetAVGFilesResponse['sceneSetting']['scenes'][0]) => ({
           ...scene,
           image: processImage(scene.image, DEFAULT_SCENE_IMAGE),
-          subscenes: (scene.subscenes || []).map((sub: any) => ({
+          subscenes: (scene.subscenes || []).map((sub: SubScene) => ({
             ...sub,
             image: processImage(sub.image, DEFAULT_WORLD_MAP_IMAGE),
           })),
@@ -483,10 +486,8 @@ const GalgameMap = () => {
         setCurrentView(MapViewState.WORLD_MAP);
         addConversion();
       }
-    } catch (error: any) {
-      const errorMessage =
-      error.response.data.error || "分发事件失败，请稍后重试";
-      alert("分发事件失败: " + errorMessage);
+    } catch (error) {
+      alert("分发事件失败: " + error);
       console.error("分发事件失败:", error);
       setIsDistributingEvent(false);
     }
@@ -538,7 +539,7 @@ const GalgameMap = () => {
             npcs && Array.isArray(npcs)
               ? prevData.npcSetting.npcs.map((existingNpc) => {
                   const updatedNpc = npcs.find(
-                    (n: any) => n.id === existingNpc.id
+                    (n: WINPC) => n.id === existingNpc.id
                   );
                   if (updatedNpc) {
                     return {
@@ -787,7 +788,7 @@ const GalgameMap = () => {
           <Attributes
             visible={isPlayerAttributesVisible}
             onClose={() => setIsPlayerAttributesVisible(false)}
-            player={(gameData.worldSetting?.player as any) || null}
+            player={gameData.worldSetting?.player || null}
             npc={null}
           />
         )}

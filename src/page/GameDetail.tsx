@@ -167,10 +167,15 @@ const GameDetail: React.FC = () => {
                 toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
                 return null;
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('❌ Galgame Session 创建错误:', error);
-            const errorMessage = error.response?.data?.message || error.message || '创建游戏失败，请稍后重试';
-            toast.error(errorMessage);
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string } } };
+                const errorMessage = axiosError.response?.data?.message || '创建游戏失败，请稍后重试';
+                toast.error(errorMessage);
+            } else {
+                toast.error('创建游戏失败，请稍后重试');
+            }
             return null;
         } finally {
             setIsLoading(false);

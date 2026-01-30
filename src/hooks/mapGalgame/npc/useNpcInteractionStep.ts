@@ -189,6 +189,7 @@ export const useNpcInteractionStep = ({
       onSuccess?: (data: any) => void;
       onError?: (error: string) => void;
       onFirstStep?: () => void; // 收到第一个步骤时的回调
+      isRetry?: boolean; // 是否是重试请求
     }) => {
       if (!sessionId || !eventId || !fileId) {
         options?.onError?.(
@@ -199,7 +200,12 @@ export const useNpcInteractionStep = ({
 
       try {
         const key = `${sessionId}-${eventId}`;
-        if (startedEvents.has(key)) {
+        // 如果是重试请求，先清理旧的标记，允许重试
+        if (options?.isRetry && startedEvents.has(key)) {
+          startedEvents.delete(key);
+        }
+        // 检查是否已有进行中的请求（非重试时）
+        if (!options?.isRetry && startedEvents.has(key)) {
           return;
         }
         startedEvents.add(key);

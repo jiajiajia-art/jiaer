@@ -9,6 +9,7 @@ import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '../utils/constants';
+import type { User } from '../api/account/auth.type';
 
 const Profile: React.FC = () => {
     const { user, logout, updateUser } = useAuthStore();
@@ -28,9 +29,8 @@ const Profile: React.FC = () => {
         try {
             const response = await auth.getUserInfo();
             if (response.data.success && response.data.data) {
-                updateUser(response.data.data);
-                // 假设邀请码在用户数据中
-                const userData = response.data.data as any;
+                const userData: User = response.data.data;
+                updateUser(userData);
                 if (userData.inviteCode) {
                     setInviteCode(userData.inviteCode);
                 }
@@ -83,15 +83,14 @@ const Profile: React.FC = () => {
             } else {
                 toast.error(response.data.message || '操作失败');
             }
-        } catch (error: any) {
-            // 多种方式获取错误信息
-            const errorMessage = 
-                error.response?.data?.message ||
-                error.data?.message ||
-                error.message ||
-                '提交邀请码失败';
-                
-            toast.error(errorMessage);
+        } catch (error: unknown) {
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string } } };
+                const errorMessage = axiosError.response?.data?.message || '提交邀请码失败';
+                toast.error(errorMessage);
+            } else {
+                toast.error('提交邀请码失败');
+            }
         }
     };
 

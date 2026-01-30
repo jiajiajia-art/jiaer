@@ -222,10 +222,10 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         });
     };
 
-    const handleDynamicEntryChange = (
+    const handleDynamicEntryChange = <K extends keyof DynamicEntry>(
         id: string,
-        key: keyof DynamicEntry,
-        value: any,
+        key: K,
+        value: DynamicEntry[K],
     ) => {
         setDynamicEntries(prev =>
             prev.map(entry =>
@@ -315,7 +315,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         const phase = storyStructure?.phases.find(p => p.id === phaseId);
         if (!phase) return;
         try {
-            await EditorApi.updateStoryPhase(fileId, phaseId, phase as any);
+            await EditorApi.updateStoryPhase(fileId, phaseId, phase);
             toast.success('章节已保存');
         } catch (e) {
             console.error('保存章节失败', e);
@@ -331,7 +331,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         const entry = dynamicEntries.find(e => e.id === id);
         if (!entry) return;
         try {
-            await EditorApi.updateDynamicEntry(fileId, id, entry as any);
+            await EditorApi.updateDynamicEntry(fileId, id, entry);
             toast.success('动态条目已保存');
         } catch (e) {
             console.error('保存动态条目失败', e);
@@ -351,7 +351,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         const tempId = `tmp-${Date.now()}`;
         const activeFlagsArr = parseCommaSeparated(newPhase.activeFlags);
 
-        const phasePayload: any = {
+        const phasePayload: StoryStructure['phases'][number] & { activeFlags?: string[] } = {
             id: tempId,
             name: newPhase.name.trim(),
             description: newPhase.description.trim(),
@@ -422,7 +422,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
         };
         setDynamicEntries(prev => [...prev, entryPayload]);
         try {
-            await EditorApi.addDynamicEntry(fileId, entryPayload as any);
+            await EditorApi.addDynamicEntry(fileId, entryPayload);
             toast.success('动态条目已新增');
             setIsAddDynamicModalOpen(false);
             setNewDynamic({

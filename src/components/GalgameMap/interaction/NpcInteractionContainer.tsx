@@ -122,6 +122,12 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     },
     setErrorModal: setErrorModal || (() => { }),
     setTimeoutModal: setTimeoutModal || (() => { }),
+    onRetryInteractStart: () => {
+      streamRequestManager.recordRequestStart({
+        type: 'interact',
+        timestamp: Date.now(),
+      });
+    },
   });
 
   // ==================== 数据计算（useMemo）====================
