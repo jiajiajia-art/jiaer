@@ -16,6 +16,7 @@ import {
   getPlayerImage,
   getStorageKeys,
   safeRemoveLocalStorage,
+  truncateStepsAfterChoice,
   type Message,
 } from '../../../hooks/mapGalgame/common/interactionUtils';
 import StreamOutputContainer from './StreamOutputContainer';
@@ -97,8 +98,8 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     eventId,
     setHasPendingRequest,
     setPendingRequestForPoll,
-    setTimeoutModal: setTimeoutModal || (() => {}),
-    setErrorModal: setErrorModal || (() => {}),
+    setTimeoutModal: setTimeoutModal || (() => { }),
+    setErrorModal: setErrorModal || (() => { }),
   });
 
   const stepHandlers = useNpcInteractionStep({
@@ -119,28 +120,39 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       handleInteract: stepHandlers.handleInteract,
       handleChoiceOption: stepHandlers.handleChoiceOption,
     },
-    setErrorModal: setErrorModal || (() => {}),
-    setTimeoutModal: setTimeoutModal || (() => {}),
+    setErrorModal: setErrorModal || (() => { }),
+    setTimeoutModal: setTimeoutModal || (() => { }),
   });
 
   // ==================== 数据计算（useMemo）====================
   // 历史选择消息
   const historyChoiceMessage: Message | null = useMemo(() => {
     if (!latestHistory || !latestHistory.interactions.length) return null;
+
     const last = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
     if (last.type !== 'npc_dialogue') return null;
-    if (!last.narrativeSteps || !Array.isArray(last.narrativeSteps) || last.narrativeSteps.length === 0) return null;
-    const lastStep = last.narrativeSteps[last.narrativeSteps.length - 1];
-    if (!lastStep || !lastStep.options || !Array.isArray(lastStep.options)) return null;
-    const options = lastStep.options.map((opt: any, index: number) => ({
+
+    if (!last.narrativeSteps || !Array.isArray(last.narrativeSteps) || last.narrativeSteps.length === 0) {
+      return null;
+    }
+
+    const choiceIndex = last.narrativeSteps.findIndex((step: any) => step.type === 'choice');
+    if (choiceIndex === -1) return null;
+    const choiceStep = last.narrativeSteps[choiceIndex];
+    if (!choiceStep || !choiceStep.options || !Array.isArray(choiceStep.options)) {
+      return null;
+    }
+
+    const options = choiceStep.options.map((opt: any, index: number) => ({
       id: index + 1,
       text: opt.text,
       optionId: opt.optionId,
     }));
+
     return {
       id: Date.now(),
       type: 'choice',
-      message: '请选择你的行动',
+      message: choiceStep.title || '请选择你的行动',
       options,
       characterImage: getPlayerImage(worldSetting?.player?.images),
       characterPosition: 'right',
@@ -162,8 +174,9 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     if (gameStarted && latestHistory?.interactions?.length) {
       const lastInteraction = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
       if (lastInteraction.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
-        for (let i = lastInteraction.narrativeSteps.length - 1; i >= 0; i--) {
-          const step = lastInteraction.narrativeSteps[i];
+        const truncatedSteps = truncateStepsAfterChoice(lastInteraction.narrativeSteps);
+        for (let i = truncatedSteps.length - 1; i >= 0; i--) {
+          const step = truncatedSteps[i];
           if (step && step.type && step.type !== 'choice') {
             const converted = convertStepToMessage(step, worldSetting);
             if (converted) return converted;
@@ -210,10 +223,10 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep
       ? ''
       : gameStarted && currentStepKey
-      ? displayedText
-      : currentMessage && currentMessage.type !== 'choice' && !gameStarted
-      ? currentMessage.message
-      : '';
+        ? displayedText
+        : currentMessage && currentMessage.type !== 'choice' && !gameStarted
+          ? currentMessage.message
+          : '';
 
   const finalIsTyping =
     (stepHandlers.isWaitingForData || hasPendingRequest) && !stepHandlers.currentStep ? false : isTyping;
@@ -227,30 +240,35 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       if (isStepChanged) {
         prevStepKeyForTextModalRef.current = currentStepKey;
       }
-      
+
       // 查找是否已存在相同内容的步骤
       const existingIndex = validSteps.findIndex(
         (s) => s.type === stepHandlers.currentStep.type && s.content === stepHandlers.currentStep.content
       );
-      
+
       if (existingIndex < 0) {
         // 新步骤：如果步骤刚切换或正在打字，插入空 content，避免显示完整文本导致闪烁
         // useStoryTyping 已使用 useLayoutEffect 同步清空，但数组插入时仍需确保 content 为空
         const shouldUseEmptyContent = isStepChanged || isTyping;
-        
+
         const stepToAdd = shouldUseEmptyContent
           ? { ...stepHandlers.currentStep, content: '' } // 插入空内容，避免闪烁
           : stepHandlers.currentStep;
-        
+
         validSteps = [...validSteps, stepToAdd];
       }
     }
     if (validSteps.length === 0 && latestHistory?.interactions?.length) {
       const lastInteraction = latestHistory.interactions[latestHistory.interactions.length - 1] as any;
       if (lastInteraction.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
-        validSteps = [...lastInteraction.narrativeSteps];
+        // 从历史数据恢复时，截断 choice 之后的步骤
+        validSteps = truncateStepsAfterChoice(lastInteraction.narrativeSteps);
       }
     }
+    
+    // 截断 choice 之后的步骤（确保文本模式不显示 choice 之后的步骤）
+    validSteps = truncateStepsAfterChoice(validSteps);
+    
     const choiceIndices = validSteps.map((step, index) => (step?.type === 'choice' ? index : -1)).filter((idx) => idx >= 0);
     if (choiceIndices.length > 1) {
       for (let i = choiceIndices.length - 2; i >= 0; i--) {
@@ -430,7 +448,11 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   const handlePollMatchFound = useCallback(
     async (matchedSteps: any[]) => {
       if (!matchedSteps.length) return;
-      const [first, ...rest] = matchedSteps;
+      
+      // 截断 choice 之后的步骤
+      const truncatedSteps = truncateStepsAfterChoice(matchedSteps);
+      
+      const [first, ...rest] = truncatedSteps;
       setCompletedSteps([]);
       refs.current.previousStep = null;
       refs.current.previousIsTyping = false;
@@ -508,8 +530,10 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
 
         const lastInteraction = updatedHistory.interactions[updatedHistory.interactions.length - 1] as any;
         if (lastInteraction?.type === 'npc_dialogue' && Array.isArray(lastInteraction.narrativeSteps)) {
-          for (let i = lastInteraction.narrativeSteps.length - 1; i >= 0; i--) {
-            const step = lastInteraction.narrativeSteps[i];
+          // 截断 choice 之后的步骤
+          const truncatedSteps = truncateStepsAfterChoice(lastInteraction.narrativeSteps);
+          for (let i = truncatedSteps.length - 1; i >= 0; i--) {
+            const step = truncatedSteps[i];
             if (step && step.type && step.type !== 'choice') {
               stepHandlers.setCurrentStep(step);
               stepHandlers.setStepQueue([]);
@@ -550,8 +574,8 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     setLatestHistory,
     setHasPendingRequest,
     setPendingRequestForPoll,
-    setTimeoutModal: setTimeoutModal || (() => {}),
-    setErrorModal: setErrorModal || (() => {}),
+    setTimeoutModal: setTimeoutModal || (() => { }),
+    setErrorModal: setErrorModal || (() => { }),
     stepHandlers: {
       setCurrentStep: stepHandlers.setCurrentStep,
       setStepQueue: stepHandlers.setStepQueue,
@@ -605,7 +629,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
   useEffect(() => {
     // 文本模式下始终自动播放，不受按钮控制
     const shouldAutoPlay = isTextMode ? true : isAutoPlay;
-    
+
     if (!shouldAutoPlay || !gameStarted) return;
     if (stepHandlers.isWaitingForData) return;
     if (finalIsTyping) return;

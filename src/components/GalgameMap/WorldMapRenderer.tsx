@@ -17,8 +17,7 @@ const buildMainBackground = (gameData: AllGameData | null | undefined) => {
 
     if (worldMapImage) {
         const isLocalStatic = worldMapImage.startsWith(import.meta.env.BASE_URL);
-        // 本地静态资源：直接用原始路径；后端接口路径：追加 /dummy 走缩略图
-        return isLocalStatic ? worldMapImage : `${worldMapImage}/dummy`;
+        return isLocalStatic ? worldMapImage : `${worldMapImage}`;
     }
     if (firstSceneImage) return firstSceneImage;
     return '';

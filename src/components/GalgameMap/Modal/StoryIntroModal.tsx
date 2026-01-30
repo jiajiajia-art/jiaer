@@ -26,7 +26,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     const worldMapImage = gameData?.worldSetting?.worldMapImage;
 
     const backgroundImage = worldMapImage
-        ? (worldMapImage.includes('defaultScene.png') ? worldMapImage : `${worldMapImage}/dummy`)
+        ? (worldMapImage.includes('defaultScene.png') ? worldMapImage : `${worldMapImage}`)
         : DEFAULT_SCENE_IMAGE;
 
     const backgroundImageUrl = useMemo(() => {

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -178,6 +179,19 @@ export const useStepStreamResponse = ({
                                 if (currentRequestId.current !== requestId) {
                                     return prev;
                                 }
+                                
+                                // 检查队列中是否已有 choice 步骤
+                                const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                if (hasChoice) {
+                                    return prev;
+                                }
+                                
+                                // 如果当前步骤是 choice，直接添加
+                                if (step?.type === 'choice') {
+                                    const newQueue = [...prev, step];
+                                    return newQueue;
+                                }
+                                
                                 const newQueue = [...prev, step];
                                 console.log('[流式接收] 单个step加入队列:', {
                                     stepType: step?.type,
@@ -203,9 +217,22 @@ export const useStepStreamResponse = ({
                                     if (currentRequestId.current !== requestId) {
                                         return prev;
                                     }
-                                    const newQueue = [...prev, ...jsonData.narrativeSteps];
+                                    
+                                    // 检查队列中是否已有 choice 步骤
+                                    const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                    if (hasChoice) {
+                                        return prev;
+                                    }
+                                    
+                                    const truncatedSteps = truncateStepsAfterChoice(jsonData.narrativeSteps);
+                                    
+                                    // 如果截断后的步骤数组中有 choice，且队列中还没有 choice，则只添加 choice 及其之前的步骤
+                                    const newSteps = truncatedSteps;
+                                    const newQueue = [...prev, ...newSteps];
+                                    
                                     console.log('[流式接收] narrativeSteps加入队列:', {
-                                        stepsCount: jsonData.narrativeSteps.length,
+                                        originalCount: jsonData.narrativeSteps.length,
+                                        truncatedCount: newSteps.length,
                                         queueLength: newQueue.length,
                                         requestId,
                                     });
@@ -294,6 +321,17 @@ export const useStepStreamResponse = ({
                             if (currentRequestId.current !== requestId) {
                                 return prev;
                             }
+                            const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                            if (hasChoice) {
+                                return prev;
+                            }
+                            
+                            // 如果当前步骤是 choice，直接添加
+                            if (jsonData.step?.type === 'choice') {
+                                return [...prev, jsonData.step];
+                            }
+                            
+                            // 普通步骤，正常添加
                             return [...prev, jsonData.step];
                         });
                     }
@@ -309,7 +347,14 @@ export const useStepStreamResponse = ({
                             if (currentRequestId.current !== requestId) {
                                 return prev;
                             }
-                            return [...prev, ...jsonData.narrativeSteps];
+                            
+                            const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                            if (hasChoice) {
+                                return prev;
+                            }
+                            
+                            const truncatedSteps = truncateStepsAfterChoice(jsonData.narrativeSteps);
+                            return [...prev, ...truncatedSteps];
                         });
                     }
                 } catch (e) {

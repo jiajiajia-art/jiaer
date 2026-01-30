@@ -131,7 +131,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         const isLocalStatic = worldMapImage.startsWith(import.meta.env.BASE_URL);
         if (isLocalStatic) return withCacheBust(worldMapImage);
         const processedUrl = getImageUrl(worldMapImage);
-        return processedUrl ? withCacheBust(`${processedUrl}/dummy`) : DEFAULT_WORLD_MAP_IMAGE;
+        return processedUrl ? withCacheBust(`${processedUrl}`) : DEFAULT_WORLD_MAP_IMAGE;
     }, [worldMapImage]);
 
     const activeScene = sceneData.length > 0 

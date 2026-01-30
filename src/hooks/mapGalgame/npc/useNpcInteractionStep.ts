@@ -7,6 +7,7 @@ import payApi from "../../../api/pay/payApi";
 import { auth } from "../../../api/account/authApi";
 import { useStepStreamResponse } from "../../story/useStepStreamResponse";
 import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from "../../../utils/constants";
+import { truncateStepsAfterChoice } from "../common/interactionUtils";
 
 // 记录已经触发过初始交互的 session-event 组合，避免开发环境 StrictMode 下重复发送请求
 const startedEvents = new Set<string>();
@@ -108,7 +109,17 @@ export const useNpcInteractionStep = ({
           if (currentRequestId.current !== requestId) {
             return prev;
           }
-          return [...prev, ...steps];
+          
+          // 检查队列中是否已有 choice 步骤
+          const hasChoice = prev.some((s: any) => s?.type === 'choice');
+          if (hasChoice) {
+            // 如果队列中已有 choice，不再添加后续步骤
+            return prev;
+          }
+          
+          // 截断 choice 之后的步骤
+          const truncatedSteps = truncateStepsAfterChoice(steps);
+          return [...prev, ...truncatedSteps];
         });
       }
     },
