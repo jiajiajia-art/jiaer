@@ -25,8 +25,8 @@ import SettingModal from '../components/Rpg/SettingModal';
 import AlertModal from '../components/AlertModal';
 import changeSceneApi from '../api/rpgGame/changeSenceAPi';
 import MissionsModal from '../components/Rpg/MissionsModal';
-import StoryModal from '../components/storyModal/StoryModal';
-import GameIntroOverlay from '../components/storyModal/GameIntroOverlay';
+import StoryModal from '../components/RPGStoryModal/StoryModal';
+import GameIntroOverlay from '../components/RPGStoryModal/GameIntroOverlay';
 import { authFetch } from '../api/base';
 
 const RgpGame: React.FC = () => {
