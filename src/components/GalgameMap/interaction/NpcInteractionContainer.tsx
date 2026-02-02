@@ -106,7 +106,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     sessionId,
     eventId,
     fileId,
-    historyLength: latestHistory?.interactions.length ?? 0,
     onMessagesClear: () => {
       setCompletedSteps([]);
       refs.current.previousStep = null;
@@ -762,7 +761,6 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
         currentStep={stepHandlers.currentStep}
         selectedOptionIndex={stepHandlers.selectedOptionIndex}
         stepQueue={stepHandlers.stepQueue}
-        historyLength={stepHandlers.localHistoryLength ?? latestHistory?.interactions.length ?? 0}
         worldSetting={worldSetting}
         onNextMessage={handleNextMessage}
         onChoiceClick={handleChoiceClick}

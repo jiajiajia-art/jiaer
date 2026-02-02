@@ -26,7 +26,7 @@ interface TextModeDisplayProps {
     onCustomInputSubmit?: (value: string) => void;
 }
 
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
+import { OPTION_COST, INPUT_COST } from '../../utils/constants';
 
 // 积分消耗配置
 const POINTS_CONFIG = {
@@ -34,8 +34,7 @@ const POINTS_CONFIG = {
     custom: INPUT_COST,
 };
 
-// 前5条历史消息免费
-const FREE_ROUNDS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD * 2; // 每回2条消息
+// 现在不再按历史条数判断是否收费，统一按固定积分展示
 
 interface MessageItemProps {
     step: TextModalStep;
@@ -53,8 +52,7 @@ const MessageItem = memo<MessageItemProps>(({
     step, 
     isCurrentStep, 
     currentDisplayText, 
-    isTyping, 
-    historyLength,
+    isTyping,
     isWaitingForData,
     onChoiceClick, 
     onCustomInputSubmit 
@@ -158,9 +156,7 @@ const MessageItem = memo<MessageItemProps>(({
                                         <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
                                             {extractPlainText(opt.text)}
                                         </span>
-                                        {historyLength >= FREE_ROUNDS_THRESHOLD && (
-                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
-                                        )}
+                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
                                     </div>
                                 ))}
                             </div>
@@ -169,9 +165,7 @@ const MessageItem = memo<MessageItemProps>(({
                             <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
-                                    {historyLength >= FREE_ROUNDS_THRESHOLD && (
-                                        <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
-                                    )}
+                                    <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
                                 </div>
                                 <div className={styles.customInputWrapper}>
                                     <input

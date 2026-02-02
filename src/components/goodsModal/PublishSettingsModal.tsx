@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
@@ -9,7 +9,7 @@ import { addImageTimestamp } from '../../utils/imageCache';
 interface PublishSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onPublish: (price: number | null, isFree: boolean) => void;
+    onPublish: () => void;
     fileId?: string;
     coverUrl?: string;
     onCoverUploaded?: () => void;
@@ -23,9 +23,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     coverUrl,
     onCoverUploaded,
 }) => {
-    const [price, setPrice] = useState<string>('0');
-    const [isFree, setIsFree] = useState(false);
-    
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
@@ -58,15 +55,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     if (!isOpen) return null;
 
     const handleSubmit = () => {
-        const priceValue = isFree ? null : (price ? parseFloat(price) : null);
-        onPublish(priceValue, isFree);
-    };
-
-    const handleFreeChange = (checked: boolean) => {
-        setIsFree(checked);
-        if (checked) {
-            setPrice('');
-        }
+        onPublish();
     };
 
     // 封面上传相关处理函数
@@ -150,31 +139,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 <p className={styles.coverErrorText}>{coverError}</p>
                             )}
                         </div>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="price" className={styles.label}>价格（积分）</label>
-                            <input
-                                type="number"
-                                id="price"
-                                value={price}
-                                onChange={(e) => setPrice(e.target.value)}
-                                placeholder="请输入价格"
-                                min="0"
-                                step="0.01"
-                                className={styles.priceInput}
-                            />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>
-                            <span className={styles.checkboxLabel}>免费游戏</span>
-                                <input
-                                    type="checkbox"
-                                    checked={isFree}
-                                    onChange={(e) => handleFreeChange(e.target.checked)}
-                                    className={styles.freeCheckbox}
-                                />
-                            </label>
-                        </div>
-
                         <div className={styles.buttonGroup}>
                             <button className={styles.publishBtn} onClick={handleSubmit}>
                                 发布

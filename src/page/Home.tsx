@@ -34,6 +34,7 @@ const Home: React.FC = () => {
     const isLoadingMoreSpecialRef = useRef(false);
     const isLoadingMoreAllRef = useRef(false);
     const lastUserIdRef = useRef<string | number | undefined>(undefined);
+    const hasInitializedRef = useRef(false);
     const navigator = useNavigate();
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
 
@@ -109,7 +110,6 @@ const Home: React.FC = () => {
                     setFileMetas(prev => [...prev, ...newGames]);
                 }
                 
-                // 如果返回的数据少于 PAGE_SIZE，说明没有更多了
                 setHasMoreSpecial(newGames.length === PAGE_SIZE);
                 if (newGames.length > 0) {
                     setSpecialPage(page + 1); // 页码递增
@@ -210,12 +210,11 @@ const Home: React.FC = () => {
         setHasMoreSpecial(true);
         setHasMoreAll(true);
         await Promise.allSettled([
-            loadCarouselData(),
             loadSpecialGames(0, true),
             loadAllGames(0, true),
         ]);
         isLoadingRef.current = false;
-    }, [loadCarouselData, loadSpecialGames, loadAllGames]);
+    }, [loadSpecialGames, loadAllGames]);
 
     // 加载更多限时优惠
     const loadMoreSpecial = useCallback(() => {
@@ -231,15 +230,20 @@ const Home: React.FC = () => {
         }
     }, [isLoadingMoreAll, hasMoreAll, allPage, loadAllGames]);
 
-    // 使用 libraryDataApi 获取游戏列表数据
+    // 加载轮播图数据（无论是否登录都加载）
+    useEffect(() => {
+        loadCarouselData();
+    }, [loadCarouselData]);
+
+    // 使用 libraryDataApi 获取游戏列表数据（无论是否登录都加载）
     useEffect(() => {
         const currentUserId = user?.user?.id;
-        if (currentUserId !== lastUserIdRef.current) {
+        // 如果用户ID发生变化，或者首次加载
+        if (currentUserId !== lastUserIdRef.current || !hasInitializedRef.current) {
             lastUserIdRef.current = currentUserId;
-            if (currentUserId) {
-                isLoadingRef.current = false;
-                loadLibraryData();
-            }
+            hasInitializedRef.current = true;
+            isLoadingRef.current = false;
+            loadLibraryData();
         }
     }, [user?.user?.id, loadLibraryData]);
 
@@ -265,7 +269,7 @@ const Home: React.FC = () => {
             },
             {
                 root: null,
-                rootMargin: '200px', // 提前200px开始加载
+                rootMargin: '200px',
                 threshold: 0.1
             }
         );

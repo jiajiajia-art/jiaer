@@ -460,7 +460,6 @@ const AbilityNodeInteractionContainer: React.FC<AbilityNodeInteractionContainerP
         currentStep={stepHandlers.currentStep}
         selectedOptionIndex={null}
         stepQueue={stepHandlers.stepQueue}
-        historyLength={completedSteps.length}
         worldSetting={worldSetting}
         onNextMessage={handleNextMessage}
         onChoiceClick={handleChoiceClick}

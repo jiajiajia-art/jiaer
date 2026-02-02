@@ -16,9 +16,10 @@ export interface ApiConfig {
 const REFRESH_URL = '/auth/refresh';
 
 /**
- * 判断 accessToken 是否即将过期
+ * 判断 accessToken 是否即将过期或已过期
  * @param token accessToken
  * @param bufferSeconds 提前刷新时间（秒），默认 120 秒
+ * @returns true 表示 token 已过期或即将过期（剩余时间 < bufferSeconds），需要刷新
  */
 const isTokenNearExpiry = (token?: string, bufferSeconds = 120): boolean => {
   if (!token) {
@@ -28,9 +29,10 @@ const isTokenNearExpiry = (token?: string, bufferSeconds = 120): boolean => {
     const decoded = jwtDecode(token) as { exp: number };
     const now = Date.now() / 1000;
     const timeLeft = decoded.exp - now;
+    // 如果剩余时间小于 bufferSeconds（包括已过期的情况，timeLeft < 0），返回 true
     return timeLeft < bufferSeconds;
   } catch {
-    return true;
+    return true; // 解码失败，视为需要刷新
   }
 };
 
@@ -57,13 +59,15 @@ const refreshAccessToken = async (): Promise<string> => {
       throw new Error('Invalid refresh response data');
     }
     
+    // 更新 token 和 refreshToken，同时会将 isAuthenticated 设置为 true
     updateToken(data.token, data.refreshToken);
 
+    // 如果后端返回了新的用户信息，也一并更新
     if (data.user) {
       updateUser(data.user);
     }
 
-    console.log('[Auth] Token refreshed successfully:', data.token);
+    console.log('[Auth] Token refreshed successfully, new token stored in localStorage');
     return data.token;
   } catch (err) {
     console.error('[Auth] Failed to refresh token:', err);
@@ -90,25 +94,51 @@ export const createApi = (config?: ApiConfig): AxiosInstance => {
    */
   instance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      let token = useAuthStore.getState().user?.token;
+      const { user } = useAuthStore.getState();
+      let token = user?.token;
 
+      // 如果没有 token，但有 refreshToken，尝试刷新
+      if (!token && user?.refreshToken) {
+        console.log('[API] Token 不存在但 refreshToken 存在，尝试刷新 token');
+        try {
+          if (!refreshPromise) {
+            refreshPromise = refreshAccessToken()
+              .finally(() => {
+                refreshPromise = null;
+              });
+          }
+          token = await refreshPromise;
+        } catch (error) {
+          console.error('[API] 刷新 token 失败:', error);
+          delete config.headers.Authorization;
+          return config;
+        }
+      }
+
+      // 如果既没有 token 也没有 refreshToken，可能是注册/登录请求
       if (!token) {
         console.log('[API] 没有 token，继续请求（可能是注册/登录请求）');
         delete config.headers.Authorization;
         return config;
       }
 
-      // 如果 token 即将过期，触发刷新
+      // 如果 token 即将过期或已过期，触发刷新
       if (isTokenNearExpiry(token)) {
         if (!refreshPromise) {
-          console.log('token即将过期，刷新token');
+          console.log('[API] Token 即将过期或已过期，刷新 token');
           // 防止多个请求同时刷新
           refreshPromise = refreshAccessToken()
             .finally(() => {
               refreshPromise = null;
             });
         }
-        token = await refreshPromise;
+        try {
+          token = await refreshPromise;
+        } catch (error) {
+          console.error('[API] 刷新 token 失败:', error);
+          delete config.headers.Authorization;
+          return config;
+        }
       }
 
       // 将最新 token 加到请求头
@@ -179,17 +209,35 @@ export const api = createApi();
  * @returns 有效的 token 或 null
  */
 const getValidToken = async (): Promise<string | null> => {
-  let token = useAuthStore.getState().user?.token;
+  const { user } = useAuthStore.getState();
+  let token = user?.token;
+
+  // 如果没有 token，但有 refreshToken，尝试刷新
+  if (!token && user?.refreshToken) {
+    console.log('[Fetch] Token 不存在但 refreshToken 存在，尝试刷新 token');
+    try {
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken()
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
+      token = await refreshPromise;
+    } catch (error) {
+      console.error('[Fetch] Token refresh failed:', error);
+      return null;
+    }
+  }
 
   if (!token) {
     console.log('[Fetch] No token found, skipping Authorization header.');
     return null;
   }
 
-  // 如果 token 即将过期，触发刷新
+  // 如果 token 即将过期或已过期，触发刷新
   if (isTokenNearExpiry(token)) {
     if (!refreshPromise) {
-      console.log('[Fetch] Token即将过期，刷新token');
+      console.log('[Fetch] Token 即将过期或已过期，刷新 token');
       refreshPromise = refreshAccessToken()
         .finally(() => {
           refreshPromise = null;

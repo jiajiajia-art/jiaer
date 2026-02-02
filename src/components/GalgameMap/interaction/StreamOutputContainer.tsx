@@ -30,7 +30,6 @@ interface StreamOutputContainerProps {
   currentStep: any;
   selectedOptionIndex: number | null;
   stepQueue?: any[]; // 步骤队列
-  historyLength: number;
   
   // 世界设置（用于转换步骤格式）
   worldSetting: any | null;
@@ -55,7 +54,6 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
   currentStep,
   selectedOptionIndex,
   stepQueue,
-  historyLength,
   worldSetting,
   onNextMessage,
   onChoiceClick,
@@ -77,7 +75,6 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
           stepQueue,
         }}
         isAutoPlay={isAutoPlay}
-        historyLength={historyLength}
         onNextMessage={onNextMessage}
         onChoiceClick={onChoiceClick}
         onCustomInputSubmit={onCustomInputSubmit}
@@ -93,7 +90,6 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
       currentDisplayText={textModalDisplayText}
       isTyping={finalIsTyping}
       isWaitingForData={isWaitingForData}
-      historyLength={historyLength}
       onChoiceClick={onChoiceClick}
       onCustomInputSubmit={onCustomInputSubmit}
       noPaddingBottom={true}

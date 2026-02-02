@@ -2,15 +2,12 @@ import React, { useEffect, useRef, memo, useState } from 'react';
 import { extractPlainText } from '../../../../utils/textUtils';
 import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
 import styles from '../../../Galgame/TextModeDisplay.module.css';
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../../../utils/constants';
+import { OPTION_COST, INPUT_COST } from '../../../../utils/constants';
 
 const POINTS_CONFIG = {
     option: OPTION_COST,
     custom: INPUT_COST,
 };
-
-// 与扣积分逻辑保持一致：达到阈值（含）开始收费
-const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
 
 interface TextModalStep {
     id: string;
@@ -30,7 +27,6 @@ interface TextModeDisplayProps {
     currentDisplayText: string;
     isTyping: boolean;
     isWaitingForData: boolean;
-    historyLength: number;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
     noPaddingBottom?: boolean; // 当父容器已有 padding-bottom 时，设置为 true 以移除 TextModeDisplay 的 padding-bottom
@@ -42,7 +38,6 @@ interface MessageItemProps {
     isCurrentStep: boolean;
     currentDisplayText: string;
     isTyping: boolean;
-    historyLength: number;
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
@@ -53,7 +48,6 @@ const MessageItem = memo<MessageItemProps>(({
     isCurrentStep, 
     currentDisplayText, 
     isTyping,
-    historyLength,
     isWaitingForData,
     onChoiceClick, 
     onCustomInputSubmit 
@@ -155,9 +149,7 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
-                                        {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
-                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
-                                        )}
+                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
                                     </div>
                                 ))}
                             </div>
@@ -166,9 +158,7 @@ const MessageItem = memo<MessageItemProps>(({
                             <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
-                                    {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
-                                        <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
-                                    )}
+                                    <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
                                 </div>
                                 <div className={styles.customInputWrapper}>
                                     <input
@@ -217,7 +207,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     currentDisplayText,
     isTyping,
     isWaitingForData,
-    historyLength,
     onChoiceClick,
     onCustomInputSubmit,
     noPaddingBottom = false
@@ -301,18 +290,17 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                         }
                         
                         return (
-                            <MessageItem
-                                key={step.id}
-                                step={step}
-                                index={index}
-                                isCurrentStep={isCurrent}
-                                currentDisplayText={isCurrent ? currentDisplayText : ''}
-                                isTyping={isCurrent ? isTyping : false}
-                                historyLength={historyLength}
-                                isWaitingForData={isWaitingForData}
-                                onChoiceClick={onChoiceClick}
-                                onCustomInputSubmit={onCustomInputSubmit}
-                            />
+                                <MessageItem
+                                    key={step.id}
+                                    step={step}
+                                    index={index}
+                                    isCurrentStep={isCurrent}
+                                    currentDisplayText={isCurrent ? currentDisplayText : ''}
+                                    isTyping={isCurrent ? isTyping : false}
+                                    isWaitingForData={isWaitingForData}
+                                    onChoiceClick={onChoiceClick}
+                                    onCustomInputSubmit={onCustomInputSubmit}
+                                />
                         );
                     })}
                     

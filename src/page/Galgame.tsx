@@ -59,7 +59,6 @@ const Galgame = () => {
         });
     };
 
-    // UI 相关的 hooks
     const characterAnimation = useCharacterAnimation({
         message: controller.currentMessage?.message,
         messageType: controller.currentMessage?.type,
@@ -157,7 +156,7 @@ const Galgame = () => {
                                         selectedOptionIndex: controller.stepHandlers.selectedOptionIndex,
                                     }}
                                     isAutoPlay={controller.isAutoPlay}
-                                    historyLength={controller.stepHandlers.localHistoryLength ?? 0}
+                                    historyLength={controller.history.length}
                                     onNextMessage={controller.handleNextMessage}
                                     onChoiceClick={controller.handleChoiceClick}
                                     onCustomInputSubmit={(value) => controller.handleCustomInputSubmit(value)}
@@ -165,20 +164,20 @@ const Galgame = () => {
                             </>
                         )}
                         {!controller.showGalgameHistory && controller.isTextMode && (
-                            <TextModeDisplay
-                                steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
-                                currentStepIndex={controller.currentStepIndex}
-                                currentDisplayText={controller.textModalDisplayText}
-                                isTyping={controller.finalIsTyping}
-                                isWaitingForData={controller.stepHandlers.isWaitingForData}
-                                historyLength={controller.stepHandlers.localHistoryLength ?? 0}
-                                onChoiceClick={(option) => {
-                                    controller.handleChoiceClick(option);
-                                }}
-                                onCustomInputSubmit={(value) => {
-                                    controller.handleCustomInputSubmit(value);
-                                }}
-                            />
+                                <TextModeDisplay
+                                    steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
+                                    currentStepIndex={controller.currentStepIndex}
+                                    currentDisplayText={controller.textModalDisplayText}
+                                    isTyping={controller.finalIsTyping}
+                                    isWaitingForData={controller.stepHandlers.isWaitingForData}
+                                    historyLength={controller.history.length}
+                                    onChoiceClick={(option) => {
+                                        controller.handleChoiceClick(option);
+                                    }}
+                                    onCustomInputSubmit={(value) => {
+                                        controller.handleCustomInputSubmit(value);
+                                    }}
+                                />
                         )}
                     </div>
                     

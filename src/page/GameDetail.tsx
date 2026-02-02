@@ -275,7 +275,6 @@ const GameDetail: React.FC = () => {
             return;
         }
 
-        // 否则直接开始游戏
         await startGameInternal();
     };
 
@@ -554,8 +553,6 @@ const GameDetail: React.FC = () => {
                     <div className={styles.descriptionSection}>
                         <p>{normalizeNewlines(game.description || '暂无描述')}</p>
                     </div>
-
-                    {/* 价格和操作按钮 */}
                 </div>
             </div>
 

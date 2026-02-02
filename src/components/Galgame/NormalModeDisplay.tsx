@@ -3,7 +3,7 @@ import styles from './NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
+import { OPTION_COST, INPUT_COST } from '../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -41,8 +41,7 @@ const POINTS_CONFIG = {
     custom: INPUT_COST,
 };
 
-// 与 Galgame 文本模式一致：每回 2 条消息
-const FREE_ROUNDS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD * 2;
+// 不再按历史条数判断是否收费，统一按固定积分展示
 
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
@@ -50,7 +49,6 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     finalIsTyping,
     stepHandlers,
     isAutoPlay,
-    historyLength,
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
@@ -183,12 +181,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={`${styles.choiceText} ${option.isMain ? styles.choiceTextMain : ''}`}>
                                 {extractPlainText(option.text)}
                             </span>
-                            {historyLength >= FREE_ROUNDS_THRESHOLD && (
-                                <div className={styles.choicePrice}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>{POINTS_CONFIG.option}</span>
-                                </div>
-                            )}
+                            <div className={styles.choicePrice}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                <span>{POINTS_CONFIG.option}</span>
+                            </div>
                         </div>
                     ))}
                     {!showCustomInput ? (
@@ -214,12 +210,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                {historyLength >= FREE_ROUNDS_THRESHOLD && (
-                                    <div className={styles.choicePrice}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                        <span>{POINTS_CONFIG.custom}</span>
-                                    </div>
-                                )}
+                                <div className={styles.choicePrice}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                    <span>{POINTS_CONFIG.custom}</span>
+                                </div>
                             </button>
                         </div>
                     )}

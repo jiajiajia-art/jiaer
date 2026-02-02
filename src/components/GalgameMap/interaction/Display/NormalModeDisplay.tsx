@@ -3,7 +3,7 @@ import styles from '../../../../components/Galgame/NormalModeDisplay.module.css'
 import { extractPlainText, truncateTextWithTags } from '../../../../utils/textUtils';
 import ColoredMarkdownText from '../../../Galgame/ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../../../utils/constants';
+import { OPTION_COST, INPUT_COST } from '../../../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -31,7 +31,6 @@ interface NormalModeDisplayProps {
     finalIsTyping: boolean;
     stepHandlers: StepHandlers;
     isAutoPlay: boolean;
-    historyLength: number;
     onNextMessage: () => void;
     onChoiceClick: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit: (value: string) => void;
@@ -42,16 +41,12 @@ const POINTS_CONFIG = {
     custom: INPUT_COST,
 };
 
-// 与扣积分逻辑保持一致：达到阈值（含）开始收费
-const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
-
 const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
     finalDisplayText,
     finalIsTyping,
     stepHandlers,
     isAutoPlay,
-    historyLength,
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
@@ -248,12 +243,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
-                            {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
-                                <div className={styles.choicePrice}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>{POINTS_CONFIG.option}</span>
-                                </div>
-                            )}
+                            <div className={styles.choicePrice}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                <span>{POINTS_CONFIG.option}</span>
+                            </div>
                         </div>
                     ))}
                     {!showCustomInput ? (
@@ -284,12 +277,10 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                {historyLength >= FREE_INTERACTIONS_THRESHOLD && (
-                                    <div className={styles.choicePrice}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                        <span>{POINTS_CONFIG.custom}</span>
-                                    </div>
-                                )}
+                                <div className={styles.choicePrice}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                    <span>{POINTS_CONFIG.custom}</span>
+                                </div>
                             </button>
                         </div>
                     )}

@@ -3,23 +3,19 @@ import { authFetch } from "../../../api/base";
 import { HOST_ADDRESS } from "../../../config";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { toast } from "react-hot-toast";
-import payApi from "../../../api/pay/payApi";
-import { auth } from "../../../api/account/authApi";
 import { useStepStreamResponse } from "../../story/useStepStreamResponse";
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from "../../../utils/constants";
+import { OPTION_COST, INPUT_COST } from "../../../utils/constants";
 import { truncateStepsAfterChoice } from "../common/interactionUtils";
+import { auth } from "../../../api/account/authApi";
 
 // 记录已经触发过初始交互的 session-event 组合，避免开发环境 StrictMode 下重复发送请求
 const startedEvents = new Set<string>();
-// 前5条历史消息免费
-const FREE_INTERACTIONS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD;
 
 interface UseNpcInteractionStepOptions {
   sessionId: string | null;
   eventId: string | null;
   fileId: string | null;
   onMessagesClear?: () => void;
-  historyLength?: number;
 }
 
 export const useNpcInteractionStep = ({
@@ -27,7 +23,6 @@ export const useNpcInteractionStep = ({
   eventId,
   fileId,
   onMessagesClear,
-  historyLength = 0,
 }: UseNpcInteractionStepOptions) => {
   const [currentStep, setCurrentStep] = useState<any>(null);
   const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -37,8 +32,6 @@ export const useNpcInteractionStep = ({
   );
   const [isWaitingForData, setIsWaitingForData] = useState(false);
   const [loading, setLoading] = useState(false);
-  // 本地历史计数（即时显示扣分，不依赖接口刷新）
-  const [localHistoryLength, setLocalHistoryLength] = useState(historyLength);
 
   const currentRequestId = useRef(0);
   const currentStepRef = useRef<any>(null);
@@ -48,7 +41,11 @@ export const useNpcInteractionStep = ({
 
   const { user, updateUser } = useAuthStore();
 
-  // 获取最新用户信息
+  // 同步 currentStep 到 ref
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
+
   const getUserInfo = useCallback(async () => {
     try {
       const response = await auth.getUserInfo();
@@ -56,36 +53,9 @@ export const useNpcInteractionStep = ({
         updateUser(response.data.data);
       }
     } catch (error) {
-      console.error("获取用户信息错误:", error);
+      console.error("[WorldInteraction] 获取用户信息错误:", error);
     }
   }, [updateUser]);
-
-  // 世界交互扣积分：type 为 "option" 或 "selfDefined"
-  const reducePoints = useCallback(
-    async (type: "option" | "selfDefined") => {
-      if (!fileId) return;
-      const response = await payApi.optionPoints({ 
-        type,
-        fileId: fileId
-      });
-      if (response.data.success) {
-        await getUserInfo();
-        return response.data.data;
-      }
-      return null;
-    },
-    [getUserInfo]
-  );
-
-  // 同步 currentStep 到 ref
-  useEffect(() => {
-    currentStepRef.current = currentStep;
-  }, [currentStep]);
-
-  // 同步后端历史长度到本地计数（取较大值，避免回退）
-  useEffect(() => {
-    setLocalHistoryLength((prev) => Math.max(prev, historyLength));
-  }, [historyLength]);
 
   // 复用通用的流式 step 解析器
   const { processStreamResponse } = useStepStreamResponse({
@@ -316,9 +286,11 @@ export const useNpcInteractionStep = ({
                 });
               }
             },
-            onSuccess: () => {
+            onSuccess: async () => {
               setLoading(false);
               options?.onSuccess?.(null);
+              // 初始交互成功后，刷新一次用户信息（例如积分）
+              await getUserInfo();
             },
             onError: (err) => {
               // 错误时清理 startedEvents，允许重试
@@ -397,29 +369,13 @@ export const useNpcInteractionStep = ({
         return;
       }
 
-      const effectiveHistory = Math.max(localHistoryLength, historyLength);
-      const nextHistory = effectiveHistory + 2; // 一次交互约等于 user+assistant 两条
-
       const isCustomInput = optionIndex === -1;
       const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
-      const shouldCharge = effectiveHistory >= FREE_INTERACTIONS_THRESHOLD;
-
-      if (shouldCharge) {
-        if (!user?.user.points || user.user.points <= needPoints) {
-          toast.error("积分不足");
-          return;
-        }
+      // 仅前端校验是否有足够积分，不再在这里调用扣积分接口，实际扣费由后端处理
+      if (!user?.user.points || user.user.points < needPoints) {
+        toast.error("积分不足");
+        return;
       }
-
-      let didDeduct = false;
-      const tryDeductOnce = async () => {
-        if (!shouldCharge || didDeduct) return;
-        didDeduct = true;
-        await reducePoints(isCustomInput ? "selfDefined" : "option");
-      };
-
-      // 本地先行 +2，让前端提示即时生效
-      setLocalHistoryLength(nextHistory);
 
       setSelectedOptionIndex(optionIndex);
       setIsWaitingForData(true);
@@ -529,9 +485,9 @@ export const useNpcInteractionStep = ({
               }
             },
             onSuccess: async () => {
-              await tryDeductOnce();
               setLoading(false);
               options?.onSuccess?.(null);
+              await getUserInfo();
             },
             onError: (err) => {
               options?.onError?.(err);
@@ -540,7 +496,6 @@ export const useNpcInteractionStep = ({
               // 流一旦有输出，通知上层可以清除 pending 状态
               options?.onFirstStep?.();
               setIsWaitingForData(false);
-              await tryDeductOnce();
             },
           });
         } else {
@@ -552,10 +507,6 @@ export const useNpcInteractionStep = ({
           error instanceof Error ? error.message : "未知错误"
         }`;
         options?.onError?.(errorMsg);
-        // 失败回滚到已知最大值，避免虚增
-        setLocalHistoryLength((prev) =>
-          Math.max(prev, historyLength, effectiveHistory)
-        );
       } finally {
         setLoading(false);
         setIsWaitingForData(false);
@@ -564,12 +515,9 @@ export const useNpcInteractionStep = ({
     },
     [
       sessionId,
-      historyLength,
       user?.user.points,
-      localHistoryLength,
       processNarrativeSteps,
       showStep,
-      reducePoints,
     ]
   );
 
@@ -580,7 +528,6 @@ export const useNpcInteractionStep = ({
     selectedOptionIndex,
     isWaitingForData,
     loading,
-    localHistoryLength,
     handleInteract,
     handleNextStep,
     handleChoiceOption,

@@ -2,16 +2,14 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStepStreamResponse } from '../story/useStepStreamResponse';
 import { authFetch } from '../../api/base';
 import { HOST_ADDRESS } from '../../config';
-import payApi from '../../api/pay/payApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import { toast } from 'react-hot-toast';
+import { OPTION_COST, INPUT_COST } from '../../utils/constants';
 import { auth } from '../../api/account/authApi';
-import { useGameStore } from '../../store/gameStore';
-import { OPTION_COST, INPUT_COST, HISTORY_MESSAGE_THRESHOLD } from '../../utils/constants';
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
-    historyLength?: number; // 历史消息长度，用于判断是否免费
+    historyLength?: number;
     onMessagesClear?: () => void;
     // 后端流式返回 complete 时携带的 allSteps
     onCompleteAllSteps?: (steps: any[]) => void;
@@ -19,12 +17,9 @@ interface UseGalgameStepOptions {
     onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
 }
 
-// 前5条历史消息免费（每回2条消息，共10条）
-const FREE_ROUNDS_THRESHOLD = HISTORY_MESSAGE_THRESHOLD * 2;
-
 export const useGalgameStep = ({ 
     sessionId, 
-    historyLength = 0,
+    // historyLength 当前未使用，仅为兼容旧调用签名
     onMessagesClear,
     onCompleteAllSteps,
     onStreamComplete,
@@ -36,24 +31,28 @@ export const useGalgameStep = ({
     const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
     const [isWaitingForData, setIsWaitingForData] = useState(false);
     const [loading, setLoading] = useState(false);
-    // 本地历史计数（用于即时显示扣分提示，避免依赖接口刷新）
-    const [localHistoryLength, setLocalHistoryLength] = useState(historyLength);
     
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
     const { user, updateUser } = useAuthStore();
-    const { fileId } = useGameStore();
 
     // 同步 currentStep 到 ref
     useEffect(() => {
         currentStepRef.current = currentStep;
     }, [currentStep]);
 
-    // 同步后端历史长度到本地计数（取较大值，避免回退）
-    useEffect(() => {
-        setLocalHistoryLength((prev) => Math.max(prev, historyLength));
-    }, [historyLength]);
+    // 刷新用户信息（用于在流式请求完全成功后更新积分等）
+    const getUserInfo = useCallback(async () => {
+        try {
+            const response = await auth.getUserInfo();
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+            }
+        } catch (error) {
+            console.error('[Galgame] 获取用户信息错误:', error);
+        }
+    }, [updateUser]);
 
     const { processStreamResponse } = useStepStreamResponse({
         setStepQueue,
@@ -98,6 +97,7 @@ export const useGalgameStep = ({
             onSuccess?: () => void;
             onFirstStep?: () => void;
             onError?: (error: string) => void;
+            deduct?: boolean;
         }
     ) => {
         if (!sessionId) {
@@ -118,13 +118,17 @@ export const useGalgameStep = ({
             onMessagesClear?.();
             options?.onBeforeRequest?.();
 
-            // Galgame 专用接口
+            const requestBody: any = { action };
+            if (options?.deduct) {
+                requestBody.deduct = true;
+            }
+
             const response = await authFetch(
                 `${HOST_ADDRESS}/api/visual/session/${sessionId}/action/stream`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action })
+                    body: JSON.stringify(requestBody)
                 }
             );
 
@@ -142,6 +146,7 @@ export const useGalgameStep = ({
                                 console.error('流式结束回调执行失败:', e);
                             }
                         }
+                        await getUserInfo();
                     },
                     onError: options?.onError,
                     onFirstStep: options?.onFirstStep,
@@ -190,45 +195,22 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
 
-        const effectiveHistory = Math.max(localHistoryLength, historyLength);
-        const nextHistory = effectiveHistory + 2; // 一次交互通常对应 user+assistant 两条
-
         const needPoints = OPTION_COST;
-        const shouldCharge = effectiveHistory >= FREE_ROUNDS_THRESHOLD;
-        if (shouldCharge) {
-            if (!user?.user.points || user.user.points <= needPoints) {
-                toast.error("积分不足");
-                setIsWaitingForData(false);
-                setSelectedOptionIndex(null);
-                return;
-            }
+        if (!user?.user.points || user.user.points < needPoints) {
+            toast.error("积分不足");
+            setIsWaitingForData(false);
+            setSelectedOptionIndex(null);
+            return;
         }
-        let didDeduct = false;
-        const tryDeductOnce = async () => {
-            if (!shouldCharge || didDeduct) return;
-            didDeduct = true;
-            await reducePoints("option");
-        };
-
-        // 本地先行 +2，让前端提示即时生效
-        setLocalHistoryLength(nextHistory);
 
         await handleStreamAction(option.text, {
             onError: (error) => {
                 console.error('❌ 选择处理错误:', error);
-                // 失败回滚到已知的最大值，避免虚增
-                setLocalHistoryLength((prev) => Math.max(prev, historyLength, effectiveHistory));
                 setIsWaitingForData(false);
                 setSelectedOptionIndex(null);
             },
-            onFirstStep: async () => {
-                await tryDeductOnce();
-            },
-            onSuccess: async () => {
-                await tryDeductOnce();
-            }
         });
-    }, [handleStreamAction, user?.user.points, historyLength, localHistoryLength]);
+    }, [handleStreamAction, user?.user.points]);
 
     // 处理输入框发送
     const handleChoiceSend = useCallback(async (inputText: string) => {
@@ -239,43 +221,21 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
         
-        const effectiveHistory = Math.max(localHistoryLength, historyLength);
-        const nextHistory = effectiveHistory + 2;
-
         const needPoints = INPUT_COST;
-        const shouldCharge = effectiveHistory >= FREE_ROUNDS_THRESHOLD;
-        if (shouldCharge) {
-            if (!user?.user.points || user.user.points <= needPoints) {
-                toast.error("积分不足");
-                setIsWaitingForData(false);
-                return;
-            }
+        if (!user?.user.points || user.user.points < needPoints) {
+            toast.error("积分不足");
+            setIsWaitingForData(false);
+            return;
         }
-        let didDeduct = false;
-        const tryDeductOnce = async () => {
-            if (!shouldCharge || didDeduct) return;
-            didDeduct = true;
-            await reducePoints("selfDefined");
-        };
-
-        // 本地先行 +2，让前端提示即时生效
-        setLocalHistoryLength(nextHistory);
 
         await handleStreamAction(inputText, {
             onError: (error) => {
                 console.error('❌ 输入发送错误:', error);
-                // 失败回滚到已知的最大值，避免虚增
-                setLocalHistoryLength((prev) => Math.max(prev, historyLength, effectiveHistory));
                 setIsWaitingForData(false);
             },
-            onFirstStep: async () => {
-                await tryDeductOnce();
-            },
-            onSuccess: async () => {
-                await tryDeductOnce();
-            }
+            deduct: true,
         });
-    }, [handleStreamAction, user?.user.points, historyLength, localHistoryLength]);
+    }, [handleStreamAction, user?.user.points]);
 
     // 处理重新生成
     const handleRegenerate = useCallback(async (
@@ -327,6 +287,8 @@ export const useGalgameStep = ({
                                 console.error('流式结束回调执行失败:', e);
                             }
                         }
+                        // 重新生成成功后也刷新一次用户信息
+                        await getUserInfo();
                     },
                     onError: options?.onError,
                     onErrorAfterAlert: onErrorAfterAlert
@@ -348,31 +310,6 @@ export const useGalgameStep = ({
         }
     }, [sessionId, processStreamResponse, onMessagesClear]);
 
-    const reducePoints = useCallback(async (type: "option" | "selfDefined") => {
-        if (!fileId) return;
-        const response = await payApi.optionPoints({ 
-            type,
-            fileId: fileId
-         });
-        if (response.data.success) {
-            getUserInfo();
-            
-            return response.data.data;
-        }
-        return null;
-    }, []);
-
-    const getUserInfo = async () => {
-        try {
-            const response = await auth.getUserInfo();
-            if (response.data.success && response.data.data) {
-                updateUser(response.data.data);
-            }
-        } catch (error) {
-            console.error('获取用户信息错误:', error);
-        }
-    };
-
     return {
         currentStep,
         stepQueue,
@@ -380,7 +317,6 @@ export const useGalgameStep = ({
         selectedOptionIndex,
         isWaitingForData,
         loading,
-        localHistoryLength,
         handleStreamAction,
         handleNextStep,
         handleChoiceOption,
