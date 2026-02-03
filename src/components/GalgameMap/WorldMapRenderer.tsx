@@ -243,6 +243,7 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                                         src={scene.image}
                                                         className={styles.nodeImage}
                                                         useCanvas={true}
+                                                        style={{ objectFit: 'cover', objectPosition: 'center' }}
                                                         onError={() => {
                                                             const container = document.querySelector<HTMLDivElement>(
                                                                 `.${styles.nodeText}`

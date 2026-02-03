@@ -8,7 +8,7 @@ import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { getImageUrl, getPlayerImageUrl } from "../../utils/constants";
+import { getImageUrl, getPlayerImageUrl, DEFAULT_SCENE_IMAGE } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
@@ -116,6 +116,8 @@ export const useGalgameController = () => {
                             const historyResponse = await getGalgamePresetApi.getGalgameHistory(sessionId);
                             if (historyResponse.data?.success && historyResponse.data.visitedScenes) {
                                 const visitedScenes = historyResponse.data.visitedScenes;
+                                console.log(visitedScenes);
+                                
                                 if (Array.isArray(visitedScenes) && visitedScenes.length > 0) {
                                     const lastSceneId = visitedScenes[visitedScenes.length - 1];
                                     if (lastSceneId && typeof lastSceneId === 'string') {
@@ -136,14 +138,30 @@ export const useGalgameController = () => {
                     
                     setCurrentScene(initialScene);
 
-                    const sceneImagePath = initialScene.image || initialScene.images;
-                    const sceneImageUrl = getImageUrl(sceneImagePath as string);
-                    console.log(sceneImageUrl);
-                    if (sceneImageUrl) {
-                        setBackgroundImage(sceneImageUrl);
-                    } else {
-                        setBackgroundImage('https://img1.baidu.com/it/u=728753041,714041801&fm=253&app=138&f=JPEG?w=889&h=500');
+                    // 优先使用当前场景自己的图片
+                    let sceneImagePath: string | undefined =
+                        (initialScene as any).image || (initialScene as any).images;
+
+                    // 如果当前场景没有配置图片，则回退到第一个有图片的场景
+                    if (!sceneImagePath) {
+                        const sceneWithImage = scenes.find(
+                            (s: any) => typeof s.image === 'string' && s.image
+                        );
+                        if (sceneWithImage) {
+                            sceneImagePath = (sceneWithImage as any).image as string;
+                        }
                     }
+
+                    let sceneImageUrl = sceneImagePath
+                        ? getImageUrl(sceneImagePath)
+                        : '';
+
+                    // 最后兜底：如果还是拿不到有效图片，用内置默认场景图
+                    if (!sceneImageUrl) {
+                        sceneImageUrl = DEFAULT_SCENE_IMAGE;
+                    }
+
+                    setBackgroundImage(sceneImageUrl);
                 }
             }
         } catch (error) {

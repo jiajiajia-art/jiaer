@@ -11,7 +11,7 @@ import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
 import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import toast from 'react-hot-toast';
-import payApi from '../api/pay/payApi';
+// import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../utils/constants';
@@ -51,9 +51,7 @@ const GameDetail: React.FC = () => {
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
-    const [isPurchasing, setIsPurchasing] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
 
     // Refs
@@ -349,68 +347,6 @@ const GameDetail: React.FC = () => {
     };
 
     // 价格相关计算：统一处理原价 / 特价 / 免费
-    const { effectivePrice, isFreeGame, hasSpecialDiscount } = useMemo(() => {
-        if (!game) {
-            return {
-                effectivePrice: 0,
-                isFreeGame: true,
-                hasSpecialDiscount: false,
-            };
-        }
-
-        const basePrice = game.price_amount ?? 0;
-        const specialPrice = game.special_price_amount;
-
-        // 有效特价：大于 0 且低于原价（如果有原价）
-        const hasSpecial = specialPrice > 0 && (game.price_amount == null || specialPrice < basePrice);
-        const finalPrice = hasSpecial ? specialPrice : basePrice;
-
-        return {
-            effectivePrice: finalPrice,
-            isFreeGame: finalPrice === 0,
-            hasSpecialDiscount: hasSpecial,
-        };
-    }, [game]);
-
-    // 处理购买游戏
-    const purchaseGame = async () => {
-        if (!checkAuth()) return;
-        if (!fileId || !userId) return;
-        if (isPurchasing) return;
-
-        if (!game) return;
-
-        if (!isFreeGame) {
-            const userPoints = user?.user.points ?? 0;
-            if (userPoints < effectivePrice) {
-                toast.error('积分不足');
-                return;
-            }
-        }
-
-        try {
-            setIsPurchasing(true);
-            const response = await payApi.purchasePoints({
-                fileId,
-            });
-            if (response.data.success) {
-                toast.success(isFreeGame ? '免费游戏已解锁' : '购买成功');
-                setIsPurchaseModalOpen(false);
-                // 只更新本地状态，标记为已购买
-                setGame({
-                    ...game,
-                    paid: true,
-                });
-            } else {
-                toast.error(response.data.message || '购买失败');
-            }
-        } catch (error) {
-            console.error('购买失败:', error);
-        } finally {
-            setIsPurchasing(false);
-        }
-    };
-
     // 计算样式
     const heroStyle = useMemo(() => {
         if (!game?.cover_url) return {};
@@ -466,7 +402,6 @@ const GameDetail: React.FC = () => {
         );
     }
 
-    const displayPrice = isFreeGame ? '免费' : `${effectivePrice}`;
 
     return (
         <div className={styles.pageContainer}>
@@ -559,62 +494,23 @@ const GameDetail: React.FC = () => {
             {/* 底部悬浮按钮栏 */}
             <div className={styles.floatingActionBar}>
                 <div className={styles.floatingActionInner}>
-                    <div className={styles.actionSection}>
-                        {hasSpecialDiscount && (
-                            <div className={styles.priceTopRow}>
-                                <div className={styles.priceLabel}>
-                                    <span className={styles.specialLabel}>限时特惠</span>
-                                    {game.price_amount && game.price_amount > 0 && (
-                                        <span className={styles.originalPrice}>
-                                            <img
-                                                src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                                                alt=""
-                                            />
-                                            {game.price_amount}
-                                        </span>
-                                    )}
-                                </div>
+                    <div className={styles.actionSection} />
+                    {/* 统一只显示开始游戏按钮 */}
+                    <button
+                        className={styles.startButton}
+                        onClick={handleStartGame}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <div className={styles.loading}>
+                                <span className={styles.loadingDot}></span>
+                                <span className={styles.loadingDot}></span>
+                                <span className={styles.loadingDot}></span>
                             </div>
-                        )}
-                    </div>
-                        {game.paid ? (
-                            <button
-                                className={styles.startButton}
-                                onClick={handleStartGame}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <div className={styles.loading}>
-                                        <span className={styles.loadingDot}></span>
-                                        <span className={styles.loadingDot}></span>
-                                        <span className={styles.loadingDot}></span>
-                                    </div>
-                                ) : (
-                                    '开始游戏'
-                                )}
-                            </button>
                         ) : (
-                            <button
-                                className={styles.purchaseButton}
-                                disabled={isPurchasing}
-                                onClick={() => {
-                                    if (!checkAuth() || isPurchasing) return;
-                                if (isFreeGame) {
-                                        purchaseGame();
-                                    } else {
-                                        setIsPurchaseModalOpen(true);
-                                    }
-                                }}
-                            >
-                            {!isFreeGame && (
-                                    <img
-                                        src={`${import.meta.env.BASE_URL}data/assets/金币.png`}
-                                        alt=""
-                                    />
-                                )}
-                            {isPurchasing ? (isFreeGame ? '解锁中...' : '购买中...') : displayPrice}
-                            </button>
+                            '开始游戏'
                         )}
+                    </button>
                 </div>
             </div>
 
@@ -626,15 +522,7 @@ const GameDetail: React.FC = () => {
                 title="删除存档"
                 message={normalizeNewlines("确认删除该游戏的存档吗？\\n删除后无法恢复。")}
             />
-            <ConfirmModal
-                isOpen={isPurchaseModalOpen}
-                onConfirm={purchaseGame}
-                onCancel={() => setIsPurchaseModalOpen(false)}
-                title="购买游戏"
-                message={normalizeNewlines(`确认花费 ${effectivePrice} 积分购买该游戏吗？`)}
-                confirmButtonText="确认购买"
-                cancelButtonText="取消"
-            />
+            
             <ConfirmModal
                 isOpen={isUpdateWarningModalOpen}
                 onConfirm={async () => {

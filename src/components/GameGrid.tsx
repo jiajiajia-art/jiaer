@@ -34,18 +34,6 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
         );
     }
 
-    const renderPriceValue = (amount?: number | null) => {
-        if (amount == null || amount == 0) {
-            return '免费';
-        }
-        return (
-            <span className={styles.priceValue}>
-                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
-
-                {amount}
-            </span>
-        );
-    };
 
     return (
         <div className={styles.grid4}>
@@ -89,39 +77,13 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                         </div>
 
                         {renderActions ? (
-                            <div
-                                className={styles.gameEditBtn}
-                            >
+                            <div className={styles.gameEditBtn}>
                                 {renderActions(meta)}
                             </div>
                         ) : (
-                            <>
-                                {
-                                    meta.paid ? (
-                                        <div className={styles.gameEditBtn}>
-                                            <button className={styles.startGameBtn}>开始游戏</button>
-                                        </div>
-                                    ) :
-                                        <div className={styles.goodsPrice}>
-                                            {
-                                                meta.special_price_amount != null ? (
-                                                    <>
-                                                        <div className={styles.goodsPriceText}>
-                                                            {renderPriceValue(meta.price_amount)}
-                                                        </div>
-                                                        <div className={styles.specialPriceText}>
-                                                            {renderPriceValue(meta.special_price_amount)}
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div className={styles.normalPriceText}>
-                                                        {renderPriceValue(meta.price_amount)}
-                                                    </div>
-                                                )
-                                            }
-                                        </div>
-                                }
-                            </>
+                            <div className={styles.goodsPrice}>
+                                <button className={styles.startGameBtn}>开始游戏</button>
+                            </div>
                         )}
                     </div>
                 </div>

@@ -161,7 +161,7 @@
 }
 
 .startGameBtn {
-    font-size: 18px!important;
+    font-size: 16px!important;
     color: #FFFFFF;
     cursor: pointer;
 }
@@ -169,7 +169,7 @@
 .goodsPrice button {
     background-color: transparent;
     font-size: 18px;
-    font-weight: 600 !important;
+    /* font-weight: 600 !important; */
     color: #fff;
     cursor: pointer;
 }
