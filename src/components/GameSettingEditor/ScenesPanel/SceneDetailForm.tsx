@@ -4,7 +4,7 @@ import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
 import { IMAGE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust } from '../../../utils/imageCache';
-import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
 // 字数限制配置
 const SCENE_WORD_LIMITS = {

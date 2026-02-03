@@ -25,6 +25,8 @@ import type { AllGameData } from '../../../api/worldInteraction/mapWorldData.typ
 import type { GetWorldInteractionHistoryResponse } from '../../../api/worldInteraction/interactionApi.type';
 import interactionApi from '../../../api/worldInteraction/interactionApi';
 import GameControlBar from './GameControlBar';
+import GameBackgroundRenderer from '../../Galgame/GameBackgroundRenderer';
+import GameImageRenderer from '../../Galgame/GameImageRenderer';
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 
@@ -258,17 +260,24 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
         <div
           className={styles.mainContent}
           style={{
-            backgroundImage: isTextMode
-              ? 'none'
-              : backgroundImage
-              ? `url("${backgroundImage}")`
-              : `url("${DEFAULT_SCENE_IMAGE}")`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
+            position: 'relative',
             backgroundColor: '#000',
           }}
         >
+          {!isTextMode && (
+            <GameBackgroundRenderer
+              src={backgroundImage || DEFAULT_SCENE_IMAGE}
+              useCanvas={true}
+              transitionDuration={300}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
           {/* 顶部标题栏 */}
           <div
             className={`${styles.topHeader} ${isTextMode ? styles.topHeaderTextMode : ''}`}
@@ -319,11 +328,11 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
           {/* 角色立绘 */}
           {currentMessage?.characterImage && !isTextMode && (
             <div className={getCharacterContainerClassName()}>
-              <img
+              <GameImageRenderer
                 key={currentMessage.characterImage}
                 src={currentMessage.characterImage}
-                alt="角色立绘"
                 className={styles.characterImage}
+                useCanvas={true}
               />
             </div>
           )}

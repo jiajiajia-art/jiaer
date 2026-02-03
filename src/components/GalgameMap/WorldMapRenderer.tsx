@@ -3,6 +3,8 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import styles from './WorldMapRenderer.module.css';
 import type { AllGameData, Scene } from '../../api/worldInteraction/mapWorldData.type';
 import type { EventData } from '../../page/GalgameMap';
+import GameBackgroundRenderer from '../Galgame/GameBackgroundRenderer';
+import GameImageRenderer from '../Galgame/GameImageRenderer';
 
 interface WorldMapRendererProps {
     gameData: AllGameData | null;
@@ -158,14 +160,26 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
         <div
             className={styles.mapContainer}
             style={{
-                backgroundImage: backgroundImage ? `url("${backgroundImage}")` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
                 position: 'relative',
+                overflow: 'hidden',
             }}
             ref={containerRef}
         >
+            {/* 背景使用游戏级 Canvas 渲染，复用解码后的 ImageBitmap */}
+            {backgroundImage && (
+                <GameBackgroundRenderer
+                    src={backgroundImage}
+                    useCanvas={true}
+                    transitionDuration={300}
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        pointerEvents: 'none',
+                    }}
+                />
+            )}
 
             {/* 显示加载遮罩直到准备就绪 */}
             {!isReady && (
@@ -221,20 +235,20 @@ const WorldMapRenderer: React.FC<WorldMapRendererProps> = ({
                                         }}
                                         onClick={() => handleSceneClick(scene)}
                                     >
-                                        {/* 场景图片 */}
+                                        {/* 场景图片（使用 Canvas 渲染，复用缓存的 ImageBitmap） */}
                                         <div className={styles.nodeImageContainer}>
                                             {scene.image ? (
                                                 <>
-                                                    <img
+                                                    <GameImageRenderer
                                                         src={scene.image}
-                                                        alt={scene.name}
                                                         className={styles.nodeImage}
-                                                        onError={(e) => {
-                                                            const target = e.target as HTMLImageElement;
-                                                            target.style.display = 'none';
-                                                            const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
-                                                            if (fallback) {
-                                                                fallback.style.display = 'flex';
+                                                        useCanvas={true}
+                                                        onError={() => {
+                                                            const container = document.querySelector<HTMLDivElement>(
+                                                                `.${styles.nodeText}`
+                                                            );
+                                                            if (container) {
+                                                                container.style.display = 'flex';
                                                             }
                                                         }}
                                                     />

@@ -8,7 +8,7 @@ import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
-import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
 // 字数限制配置
 const FUNCTIONAL_NPC_WORD_LIMITS = {

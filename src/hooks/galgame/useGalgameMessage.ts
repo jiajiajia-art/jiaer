@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { HOST_ADDRESS } from "../../config";
 import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
-import { getPlayerImageUrl } from "../../utils/constants";
+import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
 
 export interface Message {
     id: number;
@@ -48,17 +47,14 @@ export const useGalgameMessage = (
             let characterImage: string | undefined;
 
             if (step.activeImage) {
-                characterImage = step.activeImage.startsWith('http')
-                    ? step.activeImage
-                    : `${HOST_ADDRESS}${step.activeImage}`;
+                // 使用统一的 getImageUrl 处理 URL
+                characterImage = getImageUrl(step.activeImage);
             }
 
             if (step.isPlayer) {
-                const playerImageUrl = getPlayerImageUrl(worldSetting?.player);
-                if (playerImageUrl) {
-                    characterImage = playerImageUrl.startsWith('http')
-                        ? playerImageUrl
-                        : `${HOST_ADDRESS}${playerImageUrl}`;
+                const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+                if (playerImagePath) {
+                    characterImage = getImageUrl(playerImagePath);
                 }
             }
 
@@ -100,11 +96,10 @@ export const useGalgameMessage = (
                 : (step.description || '请选择你的行动');
 
             let characterImage: string | undefined;
-            const playerImageUrl = getPlayerImageUrl(worldSetting?.player);
-            if (playerImageUrl) {
-                characterImage = playerImageUrl.startsWith('http')
-                    ? playerImageUrl
-                    : `${HOST_ADDRESS}${playerImageUrl}`;
+            const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+            if (playerImagePath) {
+                // 使用统一的 getImageUrl 处理 URL
+                characterImage = getImageUrl(playerImagePath);
             }
 
             return {

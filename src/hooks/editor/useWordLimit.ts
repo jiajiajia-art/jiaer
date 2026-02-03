@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { limitByWords, countWords } from '../utils/wordLimit';
+import { limitByWords, countWords } from '../../utils/wordLimit';
 
 /**
  * 字数限制 Hook

@@ -157,8 +157,8 @@ export const processGameTags = (content: string): string => {
         if (title) {
             choiceText += `【${title.trim()}】\n`;
         }
-        // 移除内容中的 OPTION 标签（选项会在后面单独显示）
-        let cleanedContent = innerContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
+        let cleanedContent = innerContent.replace(/\[MAIN_OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
+        cleanedContent = cleanedContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
         // 处理内容中的其他标签
         cleanedContent = cleanedContent.replace(
             /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
@@ -181,8 +181,19 @@ export const processGameTags = (content: string): string => {
         return title ? `【${title.trim()}】\n` : '';
     });
     
-    // 处理 OPTION 标签（转换为选项列表格式）
+    // 处理 MAIN_OPTION 和 OPTION 标签（转换为选项列表格式）
+    const mainOptions: string[] = [];
     const options: string[] = [];
+    
+    // 先提取 MAIN_OPTION（主选项，需要优先显示）
+    result = result.replace(/\[MAIN_OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
+        if (text) {
+            mainOptions.push(text.trim());
+        }
+        return '';
+    });
+    
+    // 再提取 OPTION（普通选项）
     result = result.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
         if (text) {
             options.push(text.trim());
@@ -198,11 +209,21 @@ export const processGameTags = (content: string): string => {
     // 清理多余的换行和空格
     result = result.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
     
-    // 如果有选项，添加到末尾
-    if (options.length > 0) {
+    // 如果有选项，添加到末尾（主选项优先显示）
+    if (mainOptions.length > 0 || options.length > 0) {
         result += '\n\n选项：\n';
-        options.forEach((opt, index) => {
-            result += `${index + 1}. ${opt}\n`;
+        let optionIndex = 1;
+        
+        // 先显示主选项（标记为推荐）
+        mainOptions.forEach((opt) => {
+            result += `${optionIndex}. 【推荐】${opt}\n`;
+            optionIndex++;
+        });
+        
+        // 再显示普通选项
+        options.forEach((opt) => {
+            result += `${optionIndex}. ${opt}\n`;
+            optionIndex++;
         });
     }
     

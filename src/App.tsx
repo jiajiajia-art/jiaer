@@ -1,5 +1,5 @@
 import './App.css'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Home from './page/Home';
 import Create from './page/Create';
@@ -17,28 +17,7 @@ import CustomIFCreate from './page/CustomIFCreate';
 import GameDetail from './page/GameDetail';
 import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
-import { useEffect } from 'react';
-
-const RouteReporter: React.FC = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    const fullPath = location.pathname + location.search + location.hash;
-
-    // 挂到全局变量，方便壳子直接读取
-    (window as any).__APP_ROUTE__ = fullPath;
-
-    // 1）如果运行在微信小程序环境，通过 wx.miniProgram.postMessage 通知外层 web-view
-    const wxGlobal = (window as any).wx;
-
-    wxGlobal.miniProgram.postMessage({
-      data: { url: fullPath },
-    });
-  
-  }, [location]);
-
-  return null;
-};
+import RouteReporter from './components/RouteReporter';
 
 function App() {
   return (
@@ -71,7 +50,6 @@ function App() {
         <Route path="/game/:fileId" element={<GameDetail />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
-          {/* <Route path="/rpgGame" element={<RpgGame />} /> */}
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />

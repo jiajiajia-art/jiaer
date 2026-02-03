@@ -8,6 +8,8 @@ import type { AbilityNode } from '../../api/worldInteraction/worldInteractionApi
 import { getImageUrl } from '../../utils/constants';
 import EventDisplayModal from './Plugin/EventDisplayModal';
 import { useGameStore } from '../../store/gameStore';
+import GameBackgroundRenderer from '../Galgame/GameBackgroundRenderer';
+import GameImageRenderer from '../Galgame/GameImageRenderer';
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 const DEFAULT_NPC_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultNpc.png`;
@@ -186,12 +188,12 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
 
     return (
         <div className={styles.container}>
-            {/* 背景层 */}
-            <div 
+            {/* 背景层：使用游戏级 Canvas 渲染 */}
+            <GameBackgroundRenderer
+                src={displayData.image || DEFAULT_SCENE_IMAGE}
+                useCanvas={true}
+                transitionDuration={300}
                 className={styles.backgroundLayer}
-                style={{
-                    backgroundImage: displayData.image ? `url("${displayData.image}")` : DEFAULT_SCENE_IMAGE,
-                }}
             />
             
             {/* 内容层 */}
@@ -230,14 +232,11 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                 setCurrentView(MapViewState.INTERACT_NPC_NORMAL);
                             }}
                         >
-                            <img 
-                                src={getImageUrl(getRelatedNpc!.npc.images?.base || '')} 
-                                alt={getRelatedNpc!.npc.name}
-                                className={styles.npcImage}
-                                onError={(e) => {
-                                    (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
-                                }}
-                            />
+                                <GameImageRenderer
+                                    src={getImageUrl(getRelatedNpc!.npc.images?.base || DEFAULT_NPC_IMAGE)}
+                                    className={styles.npcImage}
+                                    useCanvas={true}
+                                />
                             <img 
                                 src={`${import.meta.env.BASE_URL}/data/assets/任务.png`} 
                                 alt="任务" 
@@ -295,10 +294,9 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                             {abilityNode.name}
                                         </div>
                                     ) : isIllustration && abilityNode.imagePath ? (
-                                        // 立绘型NPC：显示图片
-                                        <img
-                                            src={getImageUrl(abilityNode.imagePath)}
-                                            alt={abilityNode.authorNote || '功能性NPC'}
+                                        // 立绘型NPC：显示图片（使用 Canvas 渲染）
+                                        <GameImageRenderer
+                                            src={getImageUrl(abilityNode.imagePath || DEFAULT_NPC_IMAGE)}
                                             className={styles.functionalNPCImage}
                                             style={{
                                                 width: '100px',
@@ -306,9 +304,7 @@ const SubSceneModal: React.FC<SubSceneModalProps> = ({
                                                 objectFit: 'contain',
                                                 filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7))',
                                             }}
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = DEFAULT_NPC_IMAGE;
-                                            }}
+                                            useCanvas={true}
                                         />
                                     ) : null}
                                 </div>

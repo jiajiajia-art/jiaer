@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './AttributeDetailForm.module.css';
 import type { AttributeConfig, AttributeTarget } from './types';
-import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
 const WORD_LIMITS = {
     key: 20,

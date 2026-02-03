@@ -18,6 +18,8 @@
     justify-content: center;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .titleText {
@@ -45,6 +47,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .sceneCanvas {

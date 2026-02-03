@@ -19,6 +19,8 @@ import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState } from "react";
+import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
+import GameImageRenderer from "../components/Galgame/GameImageRenderer";
 
 const Galgame = () => {
     const { user } = useAuthStore();
@@ -117,13 +119,18 @@ const Galgame = () => {
                 <div
                     className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}`}
                     style={{
-                        backgroundImage: controller.isTextMode ? 'none' : controller.backgroundImage ? `url(${controller.backgroundImage})` : 'none',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundColor: controller.isTextMode ? '#000' : 'transparent'
+                        backgroundColor: controller.isTextMode ? '#000' : 'transparent',
+                        position: 'relative',
                     }}
                 >
+                    {!controller.isTextMode && (
+                        <GameBackgroundRenderer
+                            src={controller.backgroundImage}
+                            className={styles.gameBackground}
+                            useCanvas={true}
+                            transitionDuration={300}
+                        />
+                    )}
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
@@ -134,11 +141,11 @@ const Galgame = () => {
                     </div>
                     {controller.currentMessage.characterImage && !controller.isTextMode && (
                         <div className={getCharacterContainerClassName()}>
-                            <img
+                            <GameImageRenderer
                                 key={controller.currentMessage.characterImage}
                                 src={controller.currentMessage.characterImage}
-                                alt="角色立绘"
                                 className={styles.characterImage}
+                                useCanvas={true}
                             />
                         </div>
                     )}

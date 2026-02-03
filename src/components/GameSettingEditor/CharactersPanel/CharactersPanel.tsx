@@ -21,7 +21,7 @@ import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
 import CharactersSidebar from './CharactersSidebar';
-import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
