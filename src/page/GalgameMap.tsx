@@ -39,6 +39,9 @@ import GameControlBar from "../components/GalgameMap/interaction/GameControlBar"
 import HistoryModal from "../components/GalgameMap/Modal/HistoryModal";
 import SettingsModal from "../components/Galgame/SettingsModal";
 import { MdOutlinePerson } from "react-icons/md";
+import GameAction from "../api/rpgGame/gameAction";
+import toast from "react-hot-toast";
+import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 
 export interface EventData {
   event: GameEvent;
@@ -96,6 +99,47 @@ const GalgameMap = () => {
 
   // Player属性面板状态（外层统一从底部按钮触发）
   const [isPlayerAttributesVisible, setIsPlayerAttributesVisible] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  // 退出/删除统一回到上一个页面（或兜底首页）
+  const navigateBackSafe = () => {
+    try {
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        navigate('/home');
+      }
+    } catch {
+      navigate('/home');
+    }
+  };
+
+  const handleDeleteSessionInGame = async () => {
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteSession = async () => {
+    const userId = user?.user?.id;
+    if (!userId || !fileId) {
+      toast.error('无法删除存档：缺少用户或游戏信息');
+      return;
+    }
+
+    try {
+      const response = await GameAction.deletGameSession({ fileId });
+      if (response.data.success) {
+        toast.success('删除成功');
+        navigateBackSafe();
+      } else {
+        toast.error(response.data.message || '删除失败');
+      }
+    } catch (error) {
+      console.error('删除存档失败:', error);
+      toast.error('删除失败，请稍后重试');
+    } finally {
+      setIsDeleteConfirmOpen(false);
+    }
+  };
 
   // 当 sessionId 变化时，检查存储的 sessionId 是否匹配
   useEffect(() => {
@@ -814,11 +858,22 @@ const GalgameMap = () => {
         <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
-          onExitGame={() => navigate("/home")}
+          onExitGame={navigateBackSafe}
+          onDeleteSession={handleDeleteSessionInGame}
           isMusicPlaying={isMusicPlaying}
           onToggleMusic={handleMusicToggle}
           volume={volume}
           onVolumeChange={setVolume}
+        />
+
+        <GameConfirmModal
+          isOpen={isDeleteConfirmOpen}
+          onConfirm={handleConfirmDeleteSession}
+          onCancel={() => setIsDeleteConfirmOpen(false)}
+          title="删除存档"
+          message={"确认删除该游戏的存档吗？删除后无法恢复。"}
+          confirmText="确认删除"
+          cancelText="取消"
         />
 
         {currentView !== MapViewState.INTERACT_NPC_NORMAL &&

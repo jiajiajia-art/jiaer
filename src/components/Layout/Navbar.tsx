@@ -8,15 +8,7 @@ import { getImageUrl } from '../../utils/constants';
 
 const isWebViewEnv = (): boolean => {
     const win = window as any;
-    if (win.__wxjs_environment === 'miniprogram') return true;
-    if (win.__mpWx?.miniProgram) return true;
-    if (win.wx?.miniProgram) return true;
-    if (win.jWeixin) return true;
-
-    const ua = navigator.userAgent || '';
-    if (/miniprogram/i.test(ua)) return true;
-
-    return false;
+    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
 const Navbar: React.FC = () => {

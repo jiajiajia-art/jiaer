@@ -52,7 +52,6 @@ const GameDetail: React.FC = () => {
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'replays'>('details');
 
@@ -327,27 +326,6 @@ const GameDetail: React.FC = () => {
         };
     }, []);
 
-    // 处理删除存档
-    const handleDeleteSession = async () => {
-        if (!checkAuth()) return;
-        if (!fileId || !userId) return;
-        try {
-            const response = await GameAction.deletGameSession({
-                fileId,
-            });
-            if (response.data.success) {
-                toast.success('删除成功');
-                fetchGameDetail();
-            } else {
-                toast.error(response.data.message || '删除失败');
-            }
-        } catch (error) {
-            console.error('删除存档失败:', error);
-        } finally {
-            setIsConfirmModalOpen(false);
-        }
-    };
-
     // 价格相关计算：统一处理原价 / 特价 / 免费
     // 计算样式
     const heroStyle = useMemo(() => {
@@ -407,28 +385,19 @@ const GameDetail: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            {/* 顶部悬浮栏 */}
+            {/* 顶部悬浮栏：仅返回 & 分享 */}
             <div className={styles.topBar}>
                 <div className={styles.topBarContent}>
-                <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
-                    <IoChevronBack />
-                </button>
-                <div className={styles.topActions}>
-                    <button
-                        className={styles.topDeleteButton}
-                        onClick={() => {
-                            if (!checkAuth()) return;
-                            setIsConfirmModalOpen(true);
-                        }}
-                    >
-                        删除存档
+                    <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
+                        <IoChevronBack />
                     </button>
-                    {canNativeShare && (
-                        <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
-                            <FaRegShareFromSquare />
-                        </button>
-                    )}
-                </div>
+                    <div className={styles.topActions}>
+                        {canNativeShare && (
+                            <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
+                                <FaRegShareFromSquare />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -541,14 +510,6 @@ const GameDetail: React.FC = () => {
             </div>
 
             {/* 模态框 */}
-            <ConfirmModal
-                isOpen={isConfirmModalOpen}
-                onConfirm={handleDeleteSession}
-                onCancel={() => setIsConfirmModalOpen(false)}
-                title="删除存档"
-                message={normalizeNewlines("确认删除该游戏的存档吗？\\n删除后无法恢复。")}
-            />
-            
             <ConfirmModal
                 isOpen={isUpdateWarningModalOpen}
                 onConfirm={async () => {
