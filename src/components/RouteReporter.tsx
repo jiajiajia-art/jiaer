@@ -4,6 +4,8 @@ import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../utils/constants';
 import getGameDataApi from '../api/home/getGameData';
 import { cropImageUrlToAspectDataUrl } from '../utils/imageCrop';
+import { useAuthStore } from '../store/useAuthStore';
+import { auth } from '../api/account/authApi';
 
 type MessageData = { url: string; coverImage?: string; title?: string };
 
@@ -81,6 +83,85 @@ export const RouteReporter: React.FC = () => {
   const { gameDetail, fileId: storeFileId } = useGameStore();
   const [localGameDetail, setLocalGameDetail] = useState<typeof gameDetail>(null);
   const lastSentSignatureRef = useRef<string>('');
+  const { updateToken, updateUser, user: authUser } = useAuthStore();
+  const tokenProcessedRef = useRef<Set<string>>(new Set());
+
+  // 处理 URL 中的 token 参数（小程序场景）
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tokenFromUrl = searchParams.get('token');
+
+    if (!tokenFromUrl || tokenFromUrl.trim() === '') {
+      return;
+    }
+
+    if (authUser?.token === tokenFromUrl) {
+      return;
+    }
+
+    if (tokenProcessedRef.current.has(tokenFromUrl)) {
+      return;
+    }
+
+    tokenProcessedRef.current.add(tokenFromUrl);
+
+    // 限制 tokenProcessedRef 的大小，避免内存泄漏（只保留最近 10 个）
+    if (tokenProcessedRef.current.size > 10) {
+      const firstToken = Array.from(tokenProcessedRef.current)[0];
+      tokenProcessedRef.current.delete(firstToken);
+    }
+
+    console.log('[RouteReporter] 检测到 URL 中的 token，开始处理...');
+
+    // 存储 token
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      // 用户已登录，更新 token（保留原有的 refreshToken）
+      updateToken(tokenFromUrl);
+    } else {
+      // 用户未登录，需要先创建一个基础用户对象
+      // 由于 updateToken 需要 user 存在，我们需要先创建一个临时用户对象
+      useAuthStore.setState({
+        user: {
+          token: tokenFromUrl,
+          refreshToken: '', // 小程序可能不提供 refreshToken
+          user: {
+            id: 0,
+            userId: '',
+            name: '',
+            phoneNumber: '',
+            role: '',
+            createTime: '',
+            lastLoginTime: null,
+            email: '',
+            nickname: '',
+            avatarUrl: '',
+            points: 0,
+            inviteCode: '',
+            hasSignedIn: false,
+          },
+        },
+        isAuthenticated: true,
+      });
+    }
+
+    // 调用获取用户信息接口
+    auth
+      .getUserInfo()
+      .then((response) => {
+        if (response.data?.data) {
+          const userInfo = response.data.data;
+          console.log('[RouteReporter] 成功获取用户信息:', userInfo);
+          // 更新用户信息
+          updateUser(userInfo);
+        }
+      })
+      .catch((error) => {
+        console.error('[RouteReporter] 获取用户信息失败:', error);
+        // 如果获取用户信息失败，清除已处理的标记，允许重试
+        tokenProcessedRef.current.delete(tokenFromUrl);
+      });
+  }, [location.search, updateToken, updateUser, authUser?.token]);
 
   useEffect(() => {
     const fullPath = location.pathname + location.search + location.hash;

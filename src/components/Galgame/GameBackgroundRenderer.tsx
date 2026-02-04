@@ -104,9 +104,16 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
               }
             }
           });
+        } else {
+          // bitmap 为 null，说明图片加载失败或 CORS 不允许 Canvas 渲染
+          // 设置 currentSrc，让 CSS background-image 兜底显示
+          setCurrentSrc(src);
+          setIsTransitioning(false);
         }
       } catch (error) {
         console.error('[GameBackgroundRenderer] Failed to load background:', error);
+        // 即使出错，也设置 currentSrc，让 CSS background-image 兜底显示
+        setCurrentSrc(src);
         setIsTransitioning(false);
       }
     };
@@ -276,6 +283,12 @@ export const GameBackgroundRenderer: React.FC<GameBackgroundRendererProps> = ({
       ref={containerRef}
       className={`${styles.container} ${className}`}
       style={{
+        // 即使 Canvas 渲染失败，仍然用 CSS 背景兜底显示图片
+        // 使用 currentSrc || src，确保即使 currentSrc 还没更新也能显示
+        backgroundImage: (currentSrc || src) ? `url(${currentSrc || src})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         ...style,
         opacity: isTransitioning ? 0 : 1,
       }}

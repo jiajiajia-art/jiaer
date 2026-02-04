@@ -31,12 +31,14 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false); // 标记是否使用 <img> 标签兜底
   const [currentSrc, setCurrentSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!src || src === 'null' || src === 'undefined' || src.trim() === '') {
       setIsLoading(false);
       setHasError(false);
+      setUseFallback(false);
       setCurrentSrc(null);
       return;
     }
@@ -46,6 +48,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
     const loadImage = async () => {
       setIsLoading(true);
       setHasError(false);
+      setUseFallback(false); // 重置兜底标记
       setCurrentSrc(src);
 
       try {
@@ -117,12 +120,20 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
             }
           }
         } else {
+          // bitmap 为 null，说明图片加载失败或 CORS 不允许 Canvas 渲染
+          // 回退到 <img> 标签显示（至少能显示图片，虽然不能用于 Canvas）
+          // 注意：currentSrc 在开始时就已经设置了，这里只需要设置错误状态和兜底标记
+          setUseFallback(true); // 标记使用 <img> 标签兜底
           setHasError(true);
           setIsLoading(false);
-          onError?.(new Error('Failed to load image'));
+          // 不调用 onError，因为图片实际上可能已经加载成功了（只是不能用于 Canvas）
+          // onError?.(new Error('Failed to load image'));
         }
       } catch (error) {
         if (!cancelled) {
+          // 出错时设置错误状态，让 <img> 标签能显示
+          // 注意：currentSrc 在开始时就已经设置了
+          setUseFallback(true); // 标记使用 <img> 标签兜底
           setHasError(true);
           setIsLoading(false);
           const err = error instanceof Error ? error : new Error('Unknown error');
@@ -192,18 +203,18 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
           ref={canvasRef}
           className={styles.canvas}
           style={{
-            display: (!isLoading && !hasError) ? 'block' : 'none',
-            visibility: (!isLoading && !hasError) ? 'visible' : 'hidden',
+            display: (!isLoading && !hasError && !useFallback) ? 'block' : 'none',
+            visibility: (!isLoading && !hasError && !useFallback) ? 'visible' : 'hidden',
             width: '100%',
             height: '100%',
             objectFit: 'contain',
             ...style,
           }}
         />
-        {hasError && currentSrc && (
+        {useFallback && (currentSrc || src) && (
           <img
             ref={imgRef}
-            src={currentSrc}
+            src={currentSrc || src || undefined}
             alt=""
             className={`${styles.fallbackImage} ${className}`}
             style={{
@@ -215,7 +226,8 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
             }}
             onLoad={() => {
               setIsLoading(false);
-              setHasError(false);
+              // 使用兜底时，不要清除 useFallback，保持 <img> 标签显示
+              // setHasError(false); // 不设置，保持 useFallback 为 true
               onLoad?.();
             }}
             onError={() => {

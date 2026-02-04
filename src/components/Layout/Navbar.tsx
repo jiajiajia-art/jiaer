@@ -6,6 +6,19 @@ import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { IoSearch } from 'react-icons/io5';
 import { getImageUrl } from '../../utils/constants';
 
+const isWebViewEnv = (): boolean => {
+    const win = window as any;
+    if (win.__wxjs_environment === 'miniprogram') return true;
+    if (win.__mpWx?.miniProgram) return true;
+    if (win.wx?.miniProgram) return true;
+    if (win.jWeixin) return true;
+
+    const ua = navigator.userAgent || '';
+    if (/miniprogram/i.test(ua)) return true;
+
+    return false;
+};
+
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -71,7 +84,7 @@ const Navbar: React.FC = () => {
                     <img src={`${import.meta.env.BASE_URL}data/assets/LOGO2.png`} alt="logo" />
                 </div>
                 <div className={styles.navLinks}>
-                    <div 
+                    <div
                         className={`${styles.navLink} ${activeNav === '首页' ? styles.navLinkActive : ''}`}
                         onClick={() => navigate('/home')}
                     >
@@ -111,15 +124,17 @@ const Navbar: React.FC = () => {
                     </div>
                     {isAuthenticated ? (
                         <div className={styles.avatarContainer}>
-                            <div 
+                            <div
                                 className={styles.avatar}
-                                onClick={() => setShowUserMenu(!showUserMenu)}
-                            >
+                                onClick={() => {
+                                    if (isWebViewEnv()) return;
+                                    setShowUserMenu(!showUserMenu);
+                                }}                            >
                                 <img src={getImageUrl(user?.user.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`} alt="" />
                             </div>
-                            {showUserMenu && (
+                            {showUserMenu && !isWebViewEnv() && (
                                 <div className={styles.userMenu}>
-                                    <button 
+                                    <button
                                         className={styles.logoutBtn}
                                         onClick={() => {
                                             logout();
@@ -132,8 +147,8 @@ const Navbar: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <button 
-                            className={styles.loginBtn} 
+                        <button
+                            className={styles.loginBtn}
                             onClick={() => setIsAuthModalOpen(true)}
                         >
                             登录
