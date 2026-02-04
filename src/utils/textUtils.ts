@@ -663,15 +663,21 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
         }
     }
     
-    // 如果有 CHOICE 块，添加 choice 步骤
-    if (choiceBlocks.length > 0) {
-        const lastChoice = choiceBlocks[choiceBlocks.length - 1];
-        let description = lastChoice.innerContent;
-        
-        // 移除描述中的 OPTION 标签（使用更精确的正则）
+    // 如果提取到了 OPTION，则添加一个 choice 步骤（不再强依赖 CHOICE 块）
+    if (options.length > 0) {
+        let description = '';
+        if (choiceBlocks.length > 0) {
+            const lastChoice = choiceBlocks[choiceBlocks.length - 1];
+            description = lastChoice.innerContent || '';
+        } else {
+            // 无 CHOICE 包裹时，直接将正文清理为描述
+            const { cleanedText } = cleanHistoryMessage(content);
+            description = cleanedText || '';
+        }
+
+        // 去掉描述中的 OPTION 标签
         description = description.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
-        
-        // 处理描述中的其他标签
+        // 处理对话/旁白标签为可读文本
         description = description.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_m: string, speaker: string, text: string) => {
             if (speaker && text) {
                 return `${speaker.trim()}："${text.trim()}"`;
@@ -682,23 +688,15 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
             return text ? text.trim() : '';
         });
         description = description.trim();
-        
-        // 确保 options 数组不为空
-        const choiceOptions = options.length > 0 
-            ? options.map((opt, idx) => ({
-                id: idx + 1,
-                text: opt
-            }))
-            : [];
-        
-        console.log('parseHistoryToSteps - choice 步骤 options:', choiceOptions);
-        
+
+        const choiceOptions = options.map((opt, idx) => ({ id: idx + 1, text: opt }));
+
         steps.push({
             id: `history-choice-${stepIndex++}`,
             type: 'choice',
             content: '',
-            title: lastChoice.title,
-            description: description,
+            title: choiceBlocks.length > 0 ? choiceBlocks[choiceBlocks.length - 1].title : undefined,
+            description,
             options: choiceOptions
         });
     }

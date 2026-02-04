@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils';
+import { cleanHistoryMessage } from '../../utils/textUtils';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -31,6 +32,63 @@ export const useStepStreamResponse = ({
     onMissionFlag,
     onCompleteAllSteps,
 }: UseStepStreamResponseOptions) => {
+
+    // 从文本中提取 MAIN_OPTION / OPTION 列表
+    const extractOptionsFromText = useCallback((text: string): { mainOptions: string[]; options: string[] } => {
+        const mainOptions: string[] = [];
+        const options: string[] = [];
+        if (!text) return { mainOptions, options };
+
+        const mainOptionRegex = /\[MAIN_OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
+        const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
+
+        const collect = (raw: string | undefined | null, target: string[]) => {
+            let optionText = raw?.trim() || '';
+            if (!optionText) return;
+            const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
+            if (quotedMatch && quotedMatch[1]) {
+                optionText = quotedMatch[1];
+            } else {
+                optionText = optionText.replace(/^["']|["']$/g, '');
+            }
+            if (optionText && !target.includes(optionText)) target.push(optionText);
+        };
+
+        let m: RegExpExecArray | null;
+        mainOptionRegex.lastIndex = 0;
+        while ((m = mainOptionRegex.exec(text)) !== null) collect(m[1], mainOptions);
+        optionRegex.lastIndex = 0;
+        while ((m = optionRegex.exec(text)) !== null) collect(m[1], options);
+
+        return { mainOptions, options };
+    }, []);
+
+    // 将包含 [OPTION: ...] 的文本型 step 转换为 choice step
+    const toChoiceIfHasOptions = useCallback((rawStep: any): any => {
+        if (!rawStep || rawStep.type === 'choice') return rawStep;
+        // 统一取文案字段
+        const content: string | undefined = rawStep.content || rawStep.text || rawStep.message;
+        if (!content || typeof content !== 'string') return rawStep;
+
+        // 仅根据 [OPTION: ...] 判断是否存在选项，不依赖 [CHOICE]/[END_CHOICE]
+        try {
+            const { options, cleanedText } = cleanHistoryMessage(content);
+            const { mainOptions } = extractOptionsFromText(content);
+            if (Array.isArray(options) && options.length > 0) {
+                return {
+                    type: 'choice',
+                    // 可选：尝试保留 title，但不依赖其存在
+                    title: undefined,
+                    description: cleanedText || '',
+                    mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
+                    options: options.map((t) => t),
+                };
+            }
+        } catch (e) {
+            // 忽略解析错误，保持原样
+        }
+        return rawStep;
+    }, [extractOptionsFromText]);
 
     const notifyMissionFlag = useCallback(() => {
         if (!onMissionFlag) return;
@@ -80,8 +138,21 @@ export const useStepStreamResponse = ({
         let buffer = '';
         let hasReceivedStep = false;
         let firstStepReceived = false;
+        // 累积顶层 response 字段（某些后端只流式返回拼接文本，不包含 step/narrativeSteps）
+        let aggregatedResponse = '';
+        let choiceEmittedFromResponse = false;
         try {
             let missionFlagged = false;
+            const isDuplicateStep = (prev: any[], incoming: any): boolean => {
+                if (!incoming) return false;
+                const last = prev[prev.length - 1];
+                if (!last) return false;
+                if (last.type !== incoming.type) return false;
+                const lastText = last?.content || last?.text || last?.message || '';
+                const newText = incoming?.content || incoming?.text || incoming?.message || '';
+                if (!lastText || !newText) return false;
+                return lastText === newText;
+            };
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -89,6 +160,34 @@ export const useStepStreamResponse = ({
                 if (done) {
                     // 流式响应结束
                     if (!hasReceivedStep) {
+                        // 兜底：如果累计的 response 文本里有 [OPTION]，在结束时生成一个 choice
+                        if (!choiceEmittedFromResponse && aggregatedResponse) {
+                            try {
+                                const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
+                                const { mainOptions } = extractOptionsFromText(aggregatedResponse);
+                                if (Array.isArray(opts) && opts.length > 0) {
+                                    choiceEmittedFromResponse = true;
+                                    hasReceivedStep = true;
+                                    if (!firstStepReceived) {
+                                        firstStepReceived = true;
+                                        options?.onFirstStep?.();
+                                    }
+                                    setStepQueue(prev => {
+                                        if (currentRequestId.current !== requestId) return prev;
+                                        const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                        if (hasChoice) return prev;
+                                        const choiceStep = {
+                                            type: 'choice',
+                                            title: undefined,
+                                            description: cleanedText || '',
+                                            mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
+                                            options: opts.map((t: string) => t),
+                                        };
+                                        return [...prev, choiceStep];
+                                    });
+                                }
+                            } catch {}
+                        }
                         // 如果没有收到任何 step，说明响应为空或立即结束
                         // 注意：这里不会调用 onFirstStep，所以超时定时器不会被清除
                         // 如果设置了超时定时器，它会在超时后触发
@@ -131,6 +230,38 @@ export const useStepStreamResponse = ({
                             notifyMissionFlag();
                         }
 
+                        // 如果只返回了累计 response 文本，尝试基于 [OPTION: ...] 直接生成 choice
+                        if (typeof (jsonData as any).response === 'string' && (jsonData as any).response.length > 0) {
+                            aggregatedResponse += String((jsonData as any).response);
+                            if (!choiceEmittedFromResponse) {
+                                try {
+                                const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
+                                const { mainOptions } = extractOptionsFromText(aggregatedResponse);
+                                if (Array.isArray(opts) && opts.length > 0) {
+                                        choiceEmittedFromResponse = true;
+                                        hasReceivedStep = true;
+                                        if (!firstStepReceived) {
+                                            firstStepReceived = true;
+                                            options?.onFirstStep?.();
+                                        }
+                                        setStepQueue(prev => {
+                                            if (currentRequestId.current !== requestId) return prev;
+                                            const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                            if (hasChoice) return prev;
+                                        const choiceStep = {
+                                            type: 'choice',
+                                            title: undefined,
+                                            description: cleanedText || '',
+                                            mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
+                                            options: opts.map((t: string) => t),
+                                        };
+                                            return [...prev, choiceStep];
+                                        });
+                                    }
+                                } catch {}
+                            }
+                        }
+
                         if (jsonData.type === 'error') {
                             let errorMessage = jsonData.error || jsonData.message || '发生错误';
                             
@@ -165,7 +296,8 @@ export const useStepStreamResponse = ({
 
                         // 处理 step 类型的数据（增量 step）
                         if (jsonData.type === 'step' && jsonData.step) {
-                            const step = jsonData.step;
+                            // 如果 step 文本中包含 [OPTION: ...]，则转换为 choice，避免依赖其它包裹标签
+                            const step = toChoiceIfHasOptions(jsonData.step);
                             hasReceivedStep = true;
                             console.log('step data:', step);
 
@@ -192,7 +324,8 @@ export const useStepStreamResponse = ({
                                     return newQueue;
                                 }
                                 
-                                const newQueue = [...prev, step];
+                                // 避免连续重复的相同步骤（常见于 step + narrativeSteps 重复）
+                                const newQueue = isDuplicateStep(prev, step) ? prev : [...prev, step];
                                 console.log('[流式接收] 单个step加入队列:', {
                                     stepType: step?.type,
                                     queueLength: newQueue.length,
@@ -224,11 +357,17 @@ export const useStepStreamResponse = ({
                                         return prev;
                                     }
                                     
-                                    const truncatedSteps = truncateStepsAfterChoice(jsonData.narrativeSteps);
+                                    // 逐个转换 narrativeSteps，若包含 [OPTION] 则生成为 choice
+                                    const mapped = jsonData.narrativeSteps.map((s: any) => toChoiceIfHasOptions(s));
+                                    const truncatedSteps = truncateStepsAfterChoice(mapped);
                                     
                                     // 如果截断后的步骤数组中有 choice，且队列中还没有 choice，则只添加 choice 及其之前的步骤
                                     const newSteps = truncatedSteps;
-                                    const newQueue = [...prev, ...newSteps];
+                                    // 逐一追加，避免与结尾元素重复
+                                    let newQueue = prev;
+                                    for (const s of newSteps) {
+                                        newQueue = isDuplicateStep(newQueue, s) ? newQueue : [...newQueue, s];
+                                    }
                                     
                                     console.log('[流式接收] narrativeSteps加入队列:', {
                                         originalCount: jsonData.narrativeSteps.length,
@@ -274,6 +413,38 @@ export const useStepStreamResponse = ({
                     if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
                         missionFlagged = true;
                         notifyMissionFlag();
+                    }
+
+                    // 缓冲区结尾也尝试从 response 聚合文本中解析选项
+                    if (typeof (jsonData as any).response === 'string' && (jsonData as any).response.length > 0) {
+                        aggregatedResponse += String((jsonData as any).response);
+                        if (!choiceEmittedFromResponse) {
+                            try {
+                                const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
+                                const { mainOptions } = extractOptionsFromText(aggregatedResponse);
+                                if (Array.isArray(opts) && opts.length > 0) {
+                                    choiceEmittedFromResponse = true;
+                                    hasReceivedStep = true;
+                                    if (!firstStepReceived) {
+                                        firstStepReceived = true;
+                                        options?.onFirstStep?.();
+                                    }
+                                    setStepQueue(prev => {
+                                        if (currentRequestId.current !== requestId) return prev;
+                                        const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                        if (hasChoice) return prev;
+                                        const choiceStep = {
+                                            type: 'choice',
+                                            title: undefined,
+                                            description: cleanedText || '',
+                                            mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
+                                            options: opts.map((t: string) => t),
+                                        };
+                                        return [...prev, choiceStep];
+                                    });
+                                }
+                            } catch {}
+                        }
                     }
 
                     // 处理顶层的 error 类型
@@ -326,13 +497,14 @@ export const useStepStreamResponse = ({
                                 return prev;
                             }
                             
-                            // 如果当前步骤是 choice，直接添加
-                            if (jsonData.step?.type === 'choice') {
-                                return [...prev, jsonData.step];
+                            // 如果当前步骤（或转换后）是 choice，直接添加
+                            const step = toChoiceIfHasOptions(jsonData.step);
+                            if (step?.type === 'choice') {
+                                return [...prev, step];
                             }
                             
-                            // 普通步骤，正常添加
-                            return [...prev, jsonData.step];
+                            // 普通步骤，正常添加（去重）
+                            return isDuplicateStep(prev, step) ? prev : [...prev, step];
                         });
                     }
                     if (jsonData.type === 'data' && jsonData.narrativeSteps && Array.isArray(jsonData.narrativeSteps)) {
@@ -353,8 +525,13 @@ export const useStepStreamResponse = ({
                                 return prev;
                             }
                             
-                            const truncatedSteps = truncateStepsAfterChoice(jsonData.narrativeSteps);
-                            return [...prev, ...truncatedSteps];
+                            const mapped = jsonData.narrativeSteps.map((s: any) => toChoiceIfHasOptions(s));
+                            const truncatedSteps = truncateStepsAfterChoice(mapped);
+                            let merged = prev;
+                            for (const s of truncatedSteps) {
+                                merged = isDuplicateStep(merged, s) ? merged : [...merged, s];
+                            }
+                            return merged;
                         });
                     }
                 } catch (e) {
