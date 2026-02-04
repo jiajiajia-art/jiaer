@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
 import { useGalgameStep } from "./useGalgameStep";
@@ -12,6 +12,7 @@ import { getImageUrl, getPlayerImageUrl } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
+import replayApi from "../../api/galgame/replay";
 
 export type { Message } from "./useGalgameMessage";
 
@@ -19,6 +20,12 @@ export const useGalgameController = () => {
     const { user } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    // 回放模式检测
+    const replayId = searchParams.get('replayId');
+    const mode = searchParams.get('mode');
+    const isReplay = useMemo(() => mode === 'replay' && !!replayId, [mode, replayId]);
 
     // 存储完整 allSteps 的 key（按 sessionId 隔离）
     const allStepsStorageKey = useMemo(() => {
@@ -38,6 +45,7 @@ export const useGalgameController = () => {
     const [showGalgameHistory, setShowGalgameHistory] = useState<boolean>(false);
     const [isTextMode, setIsTextMode] = useState<boolean>(false);
     const [completedSteps, setCompletedSteps] = useState<any[]>([]);
+    const [replayFinished, setReplayFinished] = useState<boolean>(false);
     const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
     const [errorModalVisible, setErrorModalVisible] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
@@ -51,6 +59,7 @@ export const useGalgameController = () => {
     const lastRefreshRequestIdRef = useRef<number>(0);
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
+    const lastAutoResendRef = useRef<{ content: string; ts: number } | null>(null);
 
     const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
@@ -111,7 +120,7 @@ export const useGalgameController = () => {
                     let initialScene = scenes[0];
                     
                     // 直接从历史数据获取 visitedScenes 的最后一个值，而不是使用 hook
-                    if (sessionId) {
+                    if (!isReplay && sessionId) {
                         try {
                             const historyResponse = await getGalgamePresetApi.getGalgameHistory(sessionId);
                             if (historyResponse.data?.success && historyResponse.data.visitedScenes) {
@@ -152,12 +161,12 @@ export const useGalgameController = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, sessionId]);
+    }, [fileId, sessionId, isReplay]);
 
     useEffect(() => {
         presetDataLoadedRef.current = false;
         loadPresetData();
-    }, [fileId]);
+    }, [fileId, isReplay]);
 
     // 根据场景 ID 更新场景和背景图
     const updateSceneFromId = useCallback((sceneId: string | null) => {
@@ -225,6 +234,12 @@ export const useGalgameController = () => {
             setErrorMessage(errorMsg);
             setErrorModalVisible(true);
         },
+        isReplay,
+        onExhausted: () => {
+            if (isReplay) {
+                setReplayFinished(true);
+            }
+        }
     });
 
     // 请求超时检测（60秒）
@@ -291,11 +306,53 @@ export const useGalgameController = () => {
         stepHandlers.currentStep
     );
 
+    // 回放模式：拉取回放 steps 并注入到队列
+    useEffect(() => {
+        const run = async () => {
+            if (!isReplay || !replayId) return;
+            try {
+                setIsLoading(true);
+                const resp = await replayApi.getReplayAllSteps(replayId);
+                const steps = Array.isArray(resp.data?.allSteps) ? resp.data.allSteps : [];
+                // 回放模式：始终隐藏玩家台词（用户侧输入）
+                const filteredSteps = steps.filter((s: any) => !(s && s.type === 'dialogue' && (s.isPlayer === true || s.is_player === true)));
+                if (filteredSteps.length === 0) {
+                    toast.error('回放内容为空');
+                    return;
+                }
+
+                setShowStoryIntro(false);
+                setGameStarted(true);
+                setReplayFinished(false);
+                setInitialMessages([]);
+
+                const [first, ...rest] = filteredSteps;
+                stepHandlers.setCurrentStep(first || null);
+                stepHandlers.setStepQueue(rest || []);
+                stepHandlers.setShowNextButton(first?.type !== 'choice');
+
+                const firstScene = filteredSteps.find((s: any) => s && s.type === 'scene_change' && (s.sceneId || s.sceneImage));
+                if (firstScene && firstScene.sceneImage) {
+                    const sceneImageUrl = getImageUrl(firstScene.sceneImage);
+                    if (sceneImageUrl) setBackgroundImage(sceneImageUrl);
+                }
+            } catch (e) {
+                console.error('[Replay] 获取回放步骤失败:', e);
+                toast.error('加载回放失败');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        void run();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isReplay, replayId]);
+
     useEffect(() => {
         previousIsTypingRef.current = isTyping;
     }, [isTyping]);
 
     const refreshHistoryAfterTyping = useCallback(async () => {
+        if (isReplay) return; // 回放模式不刷新历史
         const currentRequestId = stepHandlers.currentRequestId?.current || 0;
         if (lastRefreshRequestIdRef.current === currentRequestId) {
             return;
@@ -328,7 +385,7 @@ export const useGalgameController = () => {
         refreshHistory().catch((error) => {
             console.error('[Galgame] 刷新历史数据失败:', error);
         });
-    }, [isTyping, refreshHistory, stepHandlers]);
+    }, [isReplay, isTyping, refreshHistory, stepHandlers]);
 
     useEffect(() => {
         refreshHistoryAfterTypingRef.current = refreshHistoryAfterTyping;
@@ -357,13 +414,18 @@ export const useGalgameController = () => {
     }, [stepHandlers.currentStep, updateSceneFromId]);
 
     useEffect(() => {
+        if (isReplay) {
+            setShowStoryIntro(false);
+            return;
+        }
         if (gameStarted && stepHandlers.currentStep && showStoryIntro) {
             setShowStoryIntro(false);
         }
-    }, [gameStarted, stepHandlers.currentStep, showStoryIntro]);
+    }, [isReplay, gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
     // 处理历史记录
     const processHistoryRecord = useCallback(() => {
+        if (isReplay) return; // 回放模式不处理“历史驱动”的自动重发
         // 如果正在等待新数据，不处理历史记录，避免覆盖新请求的数据
         if (stepHandlers.isWaitingForData) {
             return;
@@ -377,7 +439,13 @@ export const useGalgameController = () => {
             const lastMessage = history[history.length - 1];
 
             if (lastMessage.role === 'user' && lastMessage.content) {
-                if (!stepHandlers.isWaitingForData) {
+                // 防重复：相同内容在短时间内不重复自动重发
+                const now = Date.now();
+                const prev = lastAutoResendRef.current;
+                const sameContent = prev && prev.content === lastMessage.content;
+                const withinWindow = prev && (now - prev.ts) < 5000; // 5s窗口
+                if (!stepHandlers.isWaitingForData && !(sameContent && withinWindow)) {
+                    lastAutoResendRef.current = { content: lastMessage.content, ts: now };
                     stepHandlers.handleStreamAction(lastMessage.content, {
                         onError: (error) => {
                             console.error('自动重发用户消息失败:', error);
@@ -420,7 +488,7 @@ export const useGalgameController = () => {
                     setCompletedSteps(historySteps);
 
                     const choiceStep = historySteps.find(s => s.type === 'choice');
-                    if (choiceStep && choiceStep.options && choiceStep.options.length > 0) {
+                    if (choiceStep && (choiceStep as any).options && (choiceStep as any).options.length > 0) {
                         const choiceData = extractChoiceFromHistory(content);
                         const choiceMessage = createChoiceMessage(choiceData);
                         if (choiceMessage) {
@@ -467,7 +535,7 @@ export const useGalgameController = () => {
                 }
             }
         }
-    }, [historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrlCallback, createChoiceMessage]);
+    }, [isReplay, historyLoading, presetData, history, worldSetting, stepHandlers, allStepsStorageKey, resetDisplayedSteps, getPlayerImageUrlCallback, createChoiceMessage]);
 
     useEffect(() => {
         if (historyLoading || !presetData) return;
@@ -715,6 +783,8 @@ export const useGalgameController = () => {
     }, [allStepsStorageKey, navigate]);
 
     return {
+        isReplay,
+        replayFinished,
         isLoading,
         backgroundImage,
         currentScene,
@@ -754,4 +824,3 @@ export const useGalgameController = () => {
         resetDisplayedSteps,
     };
 };
-

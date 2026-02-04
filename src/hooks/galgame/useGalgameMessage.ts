@@ -193,37 +193,37 @@ export const useGalgameMessage = (
                     };
                 }
 
-                if (step.type === 'choice') {
-                    const rawMainOptions = Array.isArray(step.mainOptions)
-                        ? step.mainOptions
-                        : (step.mainOption ? [step.mainOption] : []);
+        if (step.type === 'choice') {
+            const rawMainOptions = Array.isArray(step.mainOptions)
+                ? step.mainOptions
+                : (step.mainOption ? [step.mainOption] : []);
 
-                    const mainOptions =
-                        rawMainOptions.map((opt: any, idx: number) => ({
-                            id: idx + 1,
-                            text: typeof opt === 'string' ? opt : (opt.text || opt),
-                            isMain: true as const,
-                        })) || [];
+            const mainOptions =
+                rawMainOptions.map((opt: any, idx: number) => ({
+                    id: idx + 1,
+                    text: typeof opt === 'string' ? opt : (opt.text || opt),
+                    isMain: true as const,
+                })) || [];
 
-                    const startId = mainOptions.length + 1;
+            const startId = mainOptions.length + 1;
 
-                    const rawOptions = step.options || [];
-                    const normalOptions =
-                        rawOptions.map((opt: any, idx: number) => ({
-                            id: startId + idx,
-                            text: typeof opt === 'string' ? opt : (opt.text || opt),
-                            isMain: false as const,
-                        })) || [];
+            const rawOptions = step.options || [];
+            const normalOptions =
+                rawOptions.map((opt: any, idx: number) => ({
+                    id: startId + idx,
+                    text: typeof opt === 'string' ? opt : (opt.text || opt),
+                    isMain: false as const,
+                })) || [];
 
-                    const options = [...mainOptions, ...normalOptions];
+            const options = [...mainOptions, ...normalOptions];
 
-                    return {
-                        ...baseStep,
-                        title: step.title,
-                        description: step.description,
-                        options,
-                    };
-                }
+            return {
+                ...baseStep,
+                title: step.title,
+                description: step.description,
+                options,
+            };
+        }
 
                 return baseStep;
             });
@@ -257,4 +257,3 @@ export const useGalgameMessage = (
         textModalDisplayText,
     };
 };
-

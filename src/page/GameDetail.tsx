@@ -18,6 +18,7 @@ import { getImageUrl } from '../utils/constants';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
 import { IoChevronBack } from 'react-icons/io5';
 import AuthModal from '../components/AuthModal';
+import ReplayList from '../components/Galgame/ReplayList';
 
 // 常量
 const LIKE_DEBOUNCE_DELAY = 300;
@@ -55,6 +56,7 @@ const GameDetail: React.FC = () => {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'details' | 'replays'>('details');
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -545,10 +547,32 @@ const GameDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 描述 */}
-                    <div className={styles.descriptionSection}>
-                        <p>{normalizeNewlines(game.description || '暂无描述')}</p>
+                    {/* 详情 / 回放 切换 */}
+                    <div style={{ marginTop: 12, borderBottom: '1px solid #eee' }}>
+                        <div style={{ display: 'flex', gap: 16 }}>
+                            <button
+                              onClick={() => setActiveTab('details')}
+                              className={activeTab === 'details' ? styles.tabActive : styles.tab}
+                              style={{ padding: '8px 0', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                            >详情</button>
+                            <button
+                              onClick={() => setActiveTab('replays')}
+                              className={activeTab === 'replays' ? styles.tabActive : styles.tab}
+                              style={{ padding: '8px 0', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                            >回放列表</button>
+                        </div>
                     </div>
+
+                    {/* 内容 */}
+                    {activeTab === 'details' ? (
+                        <div className={styles.descriptionSection}>
+                            <p>{normalizeNewlines(game.description || '暂无描述')}</p>
+                        </div>
+                    ) : (
+                        <div style={{ marginTop: 12 }}>
+                            {fileId && <ReplayList fileId={fileId} />}
+                        </div>
+                    )}
 
                     {/* 价格和操作按钮 */}
                 </div>

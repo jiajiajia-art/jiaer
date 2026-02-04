@@ -17,6 +17,9 @@ interface UseGalgameStepOptions {
     onCompleteAllSteps?: (steps: any[]) => void;
     onStreamComplete?: () => void;
     onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
+    // 回放模式：用于结束时不再显示“AI 推演中”并可通知业务层
+    isReplay?: boolean;
+    onExhausted?: () => void;
 }
 
 // 前5条历史消息免费（每回2条消息，共10条）
@@ -29,6 +32,8 @@ export const useGalgameStep = ({
     onCompleteAllSteps,
     onStreamComplete,
     onErrorAfterAlert,
+    isReplay = false,
+    onExhausted,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -170,7 +175,13 @@ export const useGalgameStep = ({
             if (prev.length === 0) {
                 setCurrentStep(null);
                 setShowNextButton(false);
-                setIsWaitingForData(true);
+                if (isReplay) {
+                    // 回放模式下，播放完毕不应再进入等待流式的状态
+                    setIsWaitingForData(false);
+                    try { onExhausted && onExhausted(); } catch {}
+                } else {
+                    setIsWaitingForData(true);
+                }
                 return prev;
             }
 
@@ -182,7 +193,7 @@ export const useGalgameStep = ({
             })();
             return rest;
         });
-    }, [showStep]);
+    }, [showStep, isReplay, onExhausted]);
 
     // 处理选择选项
     const handleChoiceOption = useCallback(async (option: { text: string; nextId: string }, optionIndex: number) => {
@@ -393,4 +404,3 @@ export const useGalgameStep = ({
         setStepQueue
     };
 };
-

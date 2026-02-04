@@ -321,6 +321,10 @@
     white-space: pre-line;
 }
 
+/* Tabs */
+.tab { color: rgba(0,0,0,0.6); font-weight: 600; border-bottom: 2px solid transparent; }
+.tabActive { color: #1a1a1a; font-weight: 700; border-bottom: 2px solid var(--primary); }
+
 /* ==================== 操作区域（价格和按钮） ==================== */
 .actionSection {
     padding: 1.5rem 0 0;

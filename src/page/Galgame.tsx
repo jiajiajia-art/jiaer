@@ -6,6 +6,7 @@ import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
 import { MdSettings } from "react-icons/md";
+import { FaRegShareFromSquare } from "react-icons/fa6";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -19,11 +20,15 @@ import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState } from "react";
+import ShareReplayModal from "../components/Galgame/ShareReplayModal";
+import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
+import replayApi from "../api/galgame/replay";
 
 const Galgame = () => {
     const { user } = useAuthStore();
-    const { fileId } = useGameStore();
+    const { fileId, sessionId } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
     
     // 使用统一的控制器 hook
     const controller = useGalgameController();
@@ -77,6 +82,25 @@ const Galgame = () => {
         gameStarted: controller.gameStarted,
         isLoading: controller.isLoading,
     });
+
+    const canShareReplay = !controller.isReplay && !!sessionId && !controller.stepHandlers.isWaitingForData;
+
+    const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public'|'unlisted'|'private' }) => {
+        if (!sessionId || !fileId) {
+            toast.error('未找到会话或游戏信息');
+            return;
+        }
+        try {
+            const resp = await replayApi.createFromSession({ sessionId, fileId, title, description, visibility });
+            if (resp.data?.success) {
+                toast.success('回放已创建，可在“回放列表”查看');
+            } else {
+                toast.error('创建回放失败');
+            }
+        } catch (e) {
+            toast.error('创建回放失败');
+        }
+    };
 
 
     const renderErrorModal = (
@@ -190,15 +214,17 @@ const Galgame = () => {
                                     <span>{user?.user?.points}</span>
                                 </div>
                             </div>
-                        <div 
-                            className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
-                                onClick={handleHistoryClick}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <BiHistory />
-                                    <span>历史</span>
+                        {!controller.isReplay && (
+                            <div 
+                                className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
+                                    onClick={handleHistoryClick}
+                                >
+                                    <div className={styles.buttonInner}>
+                                        <BiHistory />
+                                        <span>历史</span>
+                                    </div>
                                 </div>
-                            </div>
+                        )}
                             <div
                                 className={`${styles.buttonItem} ${controller.isTextMode ? styles.buttonItemActive : ''}`}
                                 onClick={handleTextModeToggle}
@@ -219,6 +245,18 @@ const Galgame = () => {
                                     <span>自动</span>
                                 </div>
                             </div>
+                            {!controller.isReplay && (
+                            <div
+                                className={`${styles.buttonItem} ${!canShareReplay ? styles.buttonItemDisabled : ''}`}
+                                onClick={!canShareReplay ? undefined : () => setIsShareOpen(true)}
+                                style={{ cursor: !canShareReplay ? 'not-allowed' : 'pointer' }}
+                            >
+                                <div className={styles.buttonInner}>
+                                    <FaRegShareFromSquare />
+                                    <span>分享回放</span>
+                                </div>
+                            </div>
+                            )}
                             <div
                             className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -232,7 +270,7 @@ const Galgame = () => {
                     </div>
 
                     <StoryIntroModal
-                        isOpen={controller.showStoryIntro}
+                        isOpen={controller.isReplay ? false : controller.showStoryIntro}
                         presetData={controller.presetData}
                         onStartGame={controller.handleStartGame}
                         isLoading={controller.isStartingGame}
@@ -242,8 +280,8 @@ const Galgame = () => {
                         isOpen={controller.showGalgameHistory}
                         history={controller.history}
                         backgroundImage={controller.backgroundImage}
-                        onRegenerate={handleRegenerate}
-                        onEditSave={controller.editHistory}
+                        onRegenerate={controller.isReplay ? undefined : handleRegenerate}
+                        onEditSave={controller.isReplay ? undefined : controller.editHistory}
                     />
 
                     {/* 设置弹窗放在 mainContent 内，确保限制在容器内 */}
@@ -299,6 +337,32 @@ const Galgame = () => {
                                 }
                             },
                         }
+                    )}
+
+                    {/* 分享回放弹窗 */}
+                    <ShareReplayModal
+                        isOpen={isShareOpen}
+                        onClose={() => setIsShareOpen(false)}
+                        onSubmit={handleShareReplay}
+                        defaultTitle={controller.presetData?.world?.title ? `${controller.presetData.world.title} · 回放` : '我的回放'}
+                    />
+
+                    {/* 回放结束提示（退出按钮） */}
+                    {controller.isReplay && controller.replayFinished && (
+                        <div className={replayModalStyles.endMask}>
+                            <div className={replayModalStyles.endCard}>
+                                <div className={replayModalStyles.endHeader}>
+                                    <div className={replayModalStyles.endTitle}>回放已结束</div>
+                                </div>
+                                <div className={replayModalStyles.endBody}>感谢观看</div>
+                                <div className={replayModalStyles.endFooter}>
+                                    <button
+                                      className={`${replayModalStyles.btn} ${replayModalStyles.btnSecondary}`}
+                                      onClick={controller.handleExitGame}
+                                    >退出</button>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                 </div>
