@@ -207,3 +207,22 @@ export const safeRemoveLocalStorage = (key: string | null): boolean => {
         return false;
     }
 };
+
+// ==================== 步骤截断工具 ====================
+
+/**
+ * 截断 choice 之后的步骤
+ * 当遇到 choice 类型的步骤时，返回包含 choice 在内的步骤，但不包含 choice 之后的步骤
+ */
+export const truncateStepsAfterChoice = (steps: any[]): any[] => {
+    if (!Array.isArray(steps) || steps.length === 0) {
+        return steps;
+    }
+    
+    const choiceIndex = steps.findIndex((step: any) => step?.type === 'choice');
+    if (choiceIndex === -1) {
+        return steps;
+    }
+    
+    return steps.slice(0, choiceIndex + 1);
+};

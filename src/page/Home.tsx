@@ -31,6 +31,10 @@ const Home: React.FC = () => {
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
     const isLoadingRef = useRef(false);
+    const isLoadingMoreSpecialRef = useRef(false);
+    const isLoadingMoreAllRef = useRef(false);
+    const lastUserIdRef = useRef<string | number | undefined>(undefined);
+    const hasInitializedRef = useRef(false);
     const navigator = useNavigate();
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
 
@@ -85,6 +89,10 @@ const Home: React.FC = () => {
         if (isInitial) {
             setIsLoadingSpecial(true);
         } else {
+            if (isLoadingMoreSpecialRef.current) {
+                return;
+            }
+            isLoadingMoreSpecialRef.current = true;
             setIsLoadingMoreSpecial(true);
         }
 
@@ -102,7 +110,6 @@ const Home: React.FC = () => {
                     setFileMetas(prev => [...prev, ...newGames]);
                 }
                 
-                // 如果返回的数据少于 PAGE_SIZE，说明没有更多了
                 setHasMoreSpecial(newGames.length === PAGE_SIZE);
                 if (newGames.length > 0) {
                     setSpecialPage(page + 1); // 页码递增
@@ -122,6 +129,7 @@ const Home: React.FC = () => {
         } finally {
             setIsLoadingSpecial(false);
             setIsLoadingMoreSpecial(false);
+            isLoadingMoreSpecialRef.current = false;
         }
     }, []);
 
@@ -135,6 +143,10 @@ const Home: React.FC = () => {
         if (isInitial) {
             setIsLoadingAll(true);
         } else {
+            if (isLoadingMoreAllRef.current) {
+                return;
+            }
+            isLoadingMoreAllRef.current = true;
             setIsLoadingMoreAll(true);
         }
 
@@ -172,6 +184,7 @@ const Home: React.FC = () => {
         } finally {
             setIsLoadingAll(false);
             setIsLoadingMoreAll(false);
+            isLoadingMoreAllRef.current = false;
         }
     }, []);
 
@@ -189,58 +202,74 @@ const Home: React.FC = () => {
             return;
         }
         isLoadingRef.current = true;
+        isLoadingMoreSpecialRef.current = false;
+        isLoadingMoreAllRef.current = false;
 
         setSpecialPage(0);
         setAllPage(0);
         setHasMoreSpecial(true);
         setHasMoreAll(true);
         await Promise.allSettled([
-            loadCarouselData(),
             loadSpecialGames(0, true),
             loadAllGames(0, true),
         ]);
         isLoadingRef.current = false;
-    }, []);
+    }, [loadSpecialGames, loadAllGames]);
 
     // 加载更多限时优惠
     const loadMoreSpecial = useCallback(() => {
-        if (!isLoadingMoreSpecial && hasMoreSpecial) {
+        if (!isLoadingMoreSpecialRef.current && !isLoadingMoreSpecial && hasMoreSpecial) {
             loadSpecialGames(specialPage, false);
         }
     }, [isLoadingMoreSpecial, hasMoreSpecial, specialPage, loadSpecialGames]);
 
     // 加载更多全部游戏
     const loadMoreAll = useCallback(() => {
-        if (!isLoadingMoreAll && hasMoreAll) {
+        if (!isLoadingMoreAllRef.current && !isLoadingMoreAll && hasMoreAll) {
             loadAllGames(allPage, false);
         }
     }, [isLoadingMoreAll, hasMoreAll, allPage, loadAllGames]);
 
-    // 使用 libraryDataApi 获取游戏列表数据
+    // 加载轮播图数据（无论是否登录都加载）
     useEffect(() => {
-        isLoadingRef.current = false;
-        loadLibraryData();
-    }, [user?.user.id]);
+        loadCarouselData();
+    }, [loadCarouselData]);
+
+    // 使用 libraryDataApi 获取游戏列表数据（无论是否登录都加载）
+    useEffect(() => {
+        const currentUserId = user?.user?.id;
+        // 如果用户ID发生变化，或者首次加载
+        if (currentUserId !== lastUserIdRef.current || !hasInitializedRef.current) {
+            lastUserIdRef.current = currentUserId;
+            hasInitializedRef.current = true;
+            isLoadingRef.current = false;
+            loadLibraryData();
+        }
+    }, [user?.user?.id, loadLibraryData]);
 
     // 滚动加载更多：使用 Intersection Observer
     useEffect(() => {
         if (!loadMoreTriggerRef.current) return;
 
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+        }
+
         observerRef.current = new IntersectionObserver(
             (entries) => {
                 const entry = entries[0];
                 if (entry.isIntersecting) {
-                    // 优先加载全部游戏（因为它在页面下方）
-                    if (hasMoreAll && !isLoadingMoreAll) {
+                    // 使用 ref 检查，避免闭包问题导致的重复请求
+                    if (hasMoreAll && !isLoadingMoreAllRef.current && !isLoadingMoreAll) {
                         loadMoreAll();
-                    } else if (hasMoreSpecial && !isLoadingMoreSpecial) {
+                    } else if (hasMoreSpecial && !isLoadingMoreSpecialRef.current && !isLoadingMoreSpecial) {
                         loadMoreSpecial();
                     }
                 }
             },
             {
                 root: null,
-                rootMargin: '200px', // 提前200px开始加载
+                rootMargin: '200px',
                 threshold: 0.1
             }
         );

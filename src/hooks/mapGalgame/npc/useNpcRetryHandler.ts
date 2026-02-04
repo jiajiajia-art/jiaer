@@ -14,6 +14,8 @@ interface UseRetryHandlerOptions {
         handleInteract: (options?: {
             onSuccess?: () => void;
             onError?: (error: string) => void;
+            onFirstStep?: () => void;
+            isRetry?: boolean;
         }) => void;
         handleChoiceOption: (
             optionId: string,
@@ -26,12 +28,14 @@ interface UseRetryHandlerOptions {
     };
     setErrorModal: (value: { visible: boolean; message: string }) => void;
     setTimeoutModal: (value: { visible: boolean; message: string }) => void;
+    onRetryInteractStart?: () => void; // 重试初始交互时的回调，用于记录请求开始
 }
 
 export function useNpcRetryHandler({
     stepHandlers,
     setErrorModal,
     setTimeoutModal,
+    onRetryInteractStart,
 }: UseRetryHandlerOptions) {
     const lastRequestRef = useRef<LastRequest>(null);
 
@@ -42,9 +46,18 @@ export function useNpcRetryHandler({
     const handleRetryRequest = useCallback(() => {
         const lastRequest = lastRequestRef.current;
         
-        if (!lastRequest) {
-            // 如果没有记录最后一次请求，可能是初始交互，尝试调用 handleInteract
+        // 重试初始交互请求的逻辑（无论是否有 lastRequest 记录）
+        const retryInteract = () => {
+            console.log('[useNpcRetryHandler] 重试初始交互请求');
+            // 先记录请求开始（用于超时检测和状态管理）
+            if (onRetryInteractStart) {
+                onRetryInteractStart();
+            }
+            // 记录最后一次请求类型
+            recordLastRequest({ type: 'interact' });
+            // 调用 handleInteract
             stepHandlers.handleInteract({
+                isRetry: true, // 标记为重试请求
                 onSuccess: () => {
                     setErrorModal({ visible: false, message: '' });
                     setTimeoutModal({ visible: false, message: '' });
@@ -56,6 +69,10 @@ export function useNpcRetryHandler({
                     });
                 },
             });
+        };
+
+        if (!lastRequest) {
+            retryInteract();
             return;
         }
 
@@ -75,20 +92,9 @@ export function useNpcRetryHandler({
             });
         } else if (lastRequest.type === 'interact') {
             // 重试初始交互请求
-            stepHandlers.handleInteract({
-                onSuccess: () => {
-                    setErrorModal({ visible: false, message: '' });
-                    setTimeoutModal({ visible: false, message: '' });
-                },
-                onError: (error) => {
-                    setErrorModal({
-                        visible: true,
-                        message: error || ERROR_MESSAGES.RETRY_FAILED,
-                    });
-                },
-            });
+            retryInteract();
         }
-    }, [stepHandlers, setErrorModal, setTimeoutModal]);
+    }, [stepHandlers, setErrorModal, setTimeoutModal, onRetryInteractStart, recordLastRequest]);
 
     return {
         handleRetryRequest,

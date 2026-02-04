@@ -157,8 +157,8 @@ export const processGameTags = (content: string): string => {
         if (title) {
             choiceText += `【${title.trim()}】\n`;
         }
-        // 移除内容中的 OPTION 标签（选项会在后面单独显示）
-        let cleanedContent = innerContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
+        let cleanedContent = innerContent.replace(/\[MAIN_OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
+        cleanedContent = cleanedContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
         // 处理内容中的其他标签
         cleanedContent = cleanedContent.replace(
             /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
@@ -181,8 +181,19 @@ export const processGameTags = (content: string): string => {
         return title ? `【${title.trim()}】\n` : '';
     });
     
-    // 处理 OPTION 标签（转换为选项列表格式）
+    // 处理 MAIN_OPTION 和 OPTION 标签（转换为选项列表格式）
+    const mainOptions: string[] = [];
     const options: string[] = [];
+    
+    // 先提取 MAIN_OPTION（主选项，需要优先显示）
+    result = result.replace(/\[MAIN_OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
+        if (text) {
+            mainOptions.push(text.trim());
+        }
+        return '';
+    });
+    
+    // 再提取 OPTION（普通选项）
     result = result.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
         if (text) {
             options.push(text.trim());
@@ -198,11 +209,21 @@ export const processGameTags = (content: string): string => {
     // 清理多余的换行和空格
     result = result.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
     
-    // 如果有选项，添加到末尾
-    if (options.length > 0) {
+    // 如果有选项，添加到末尾（主选项优先显示）
+    if (mainOptions.length > 0 || options.length > 0) {
         result += '\n\n选项：\n';
-        options.forEach((opt, index) => {
-            result += `${index + 1}. ${opt}\n`;
+        let optionIndex = 1;
+        
+        // 先显示主选项（标记为推荐）
+        mainOptions.forEach((opt) => {
+            result += `${optionIndex}. 【推荐】${opt}\n`;
+            optionIndex++;
+        });
+        
+        // 再显示普通选项
+        options.forEach((opt) => {
+            result += `${optionIndex}. ${opt}\n`;
+            optionIndex++;
         });
     }
     
@@ -398,17 +419,21 @@ export const extractChoiceFromHistory = (text: string): {
         title = titleMatch[1].trim();
     }
     
-    // 提取所有 OPTION
+    // 提取所有 MAIN_OPTION / OPTION
     // 支持多种格式：
-    // 1. [OPTION: "内容"]
-    // 2. [OPTION: 内容]
-    // 3. [OPTION: 文本："内容"]
-    const options: string[] = [];
+    // 1. [MAIN_OPTION: "内容"] / [OPTION: "内容"]
+    // 2. [MAIN_OPTION: 内容] / [OPTION: 内容]
+    // 3. [MAIN_OPTION: 文本："内容"] / [OPTION: 文本："内容"]
+    const mainOptions: string[] = [];
+    const normalOptions: string[] = [];
+
+    const mainOptionRegex = /\[MAIN_OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
     const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
-    let optionMatch;
-    while ((optionMatch = optionRegex.exec(text)) !== null) {
-        let optionText = optionMatch[1]?.trim() || '';
-        
+
+    const collectOption = (raw: string | undefined | null, target: string[]) => {
+        let optionText = raw?.trim() || '';
+        if (!optionText) return;
+
         // 如果包含引号，提取引号内的内容
         const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
         if (quotedMatch && quotedMatch[1]) {
@@ -417,11 +442,23 @@ export const extractChoiceFromHistory = (text: string): {
             // 如果没有引号格式，移除可能的引号
             optionText = optionText.replace(/^["']|["']$/g, '');
         }
-        
-        if (optionText && !options.includes(optionText)) {
-            options.push(optionText);
+
+        if (optionText && !target.includes(optionText)) {
+        target.push(optionText);
         }
+    };
+
+    let mainMatch;
+    while ((mainMatch = mainOptionRegex.exec(text)) !== null) {
+        collectOption(mainMatch[1], mainOptions);
     }
+
+    let optionMatch;
+    while ((optionMatch = optionRegex.exec(text)) !== null) {
+        collectOption(optionMatch[1], normalOptions);
+    }
+
+    const options: string[] = [...mainOptions, ...normalOptions];
     
     console.log('extractChoiceFromHistory - 提取的 options:', options);
     
@@ -525,32 +562,46 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
         contentWithoutChoice = contentWithoutChoice.replace(block.match, '');
     });
     
-    // 提取所有 OPTION（从整个 content 中提取，因为 OPTION 可能在 CHOICE 块内）
+    // 提取所有 MAIN_OPTION / OPTION（从整个 content 中提取，因为它们可能在 CHOICE 块内）
     // 支持多种格式：
-    // 1. [OPTION: "内容"]
-    // 2. [OPTION: 内容]
-    // 3. [OPTION: 文本："内容"]
+    // 1. [MAIN_OPTION: "内容"] / [OPTION: "内容"]
+    // 2. [MAIN_OPTION: 内容] / [OPTION: 内容]
+    // 3. [MAIN_OPTION: 文本："内容"] / [OPTION: 文本："内容"]
+    const mainOptions: string[] = [];
+    const normalOptions: string[] = [];
+
+    const mainOptionRegex = /\[MAIN_OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
     const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
-    const options: string[] = [];
-    let optionMatch;
-    // 重置正则的 lastIndex
-    optionRegex.lastIndex = 0;
-    while ((optionMatch = optionRegex.exec(content)) !== null) {
-        let optionText = optionMatch[1]?.trim() || '';
-        
-        // 如果包含引号，提取引号内的内容
+
+    const collectOption = (raw: string | undefined | null, target: string[]) => {
+        let optionText = raw?.trim() || '';
+        if (!optionText) return;
+
         const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
         if (quotedMatch && quotedMatch[1]) {
             optionText = quotedMatch[1];
         } else {
-            // 如果没有引号格式，移除可能的引号
             optionText = optionText.replace(/^["']|["']$/g, '');
         }
-        
-        if (optionText && !options.includes(optionText)) {
-            options.push(optionText);
+
+        if (optionText && !target.includes(optionText)) {
+            target.push(optionText);
         }
+    };
+
+    let mainMatch;
+    mainOptionRegex.lastIndex = 0;
+    while ((mainMatch = mainOptionRegex.exec(content)) !== null) {
+        collectOption(mainMatch[1], mainOptions);
     }
+
+    let optionMatch;
+    optionRegex.lastIndex = 0;
+    while ((optionMatch = optionRegex.exec(content)) !== null) {
+        collectOption(optionMatch[1], normalOptions);
+    }
+
+    const options: string[] = [...mainOptions, ...normalOptions];
     
     console.log('parseHistoryToSteps - 提取的 options:', options);
     

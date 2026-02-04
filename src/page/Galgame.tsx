@@ -20,6 +20,8 @@ import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState } from "react";
+import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
+import GameImageRenderer from "../components/Galgame/GameImageRenderer";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
@@ -64,7 +66,6 @@ const Galgame = () => {
         });
     };
 
-    // UI 相关的 hooks
     const characterAnimation = useCharacterAnimation({
         message: controller.currentMessage?.message,
         messageType: controller.currentMessage?.type,
@@ -142,13 +143,18 @@ const Galgame = () => {
                 <div
                     className={`${styles.mainContent} ${characterAnimation === 'injury' ? styles.worldInjury : ''}`}
                     style={{
-                        backgroundImage: controller.isTextMode ? 'none' : controller.backgroundImage ? `url(${controller.backgroundImage})` : 'none',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundColor: controller.isTextMode ? '#000' : 'transparent'
+                        backgroundColor: controller.isTextMode ? '#000' : 'transparent',
+                        position: 'relative',
                     }}
                 >
+                    {!controller.isTextMode && (
+                        <GameBackgroundRenderer
+                            src={controller.backgroundImage}
+                            className={styles.gameBackground}
+                            useCanvas={true}
+                            transitionDuration={300}
+                        />
+                    )}
                     {characterAnimation === 'injury' && (
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
@@ -159,11 +165,11 @@ const Galgame = () => {
                     </div>
                     {controller.currentMessage.characterImage && !controller.isTextMode && (
                         <div className={getCharacterContainerClassName()}>
-                            <img
+                            <GameImageRenderer
                                 key={controller.currentMessage.characterImage}
                                 src={controller.currentMessage.characterImage}
-                                alt="角色立绘"
                                 className={styles.characterImage}
+                                useCanvas={true}
                             />
                         </div>
                     )}
@@ -181,7 +187,7 @@ const Galgame = () => {
                                         selectedOptionIndex: controller.stepHandlers.selectedOptionIndex,
                                     }}
                                     isAutoPlay={controller.isAutoPlay}
-                                    historyLength={controller.stepHandlers.localHistoryLength ?? 0}
+                                    historyLength={controller.history.length}
                                     onNextMessage={controller.handleNextMessage}
                                     onChoiceClick={controller.handleChoiceClick}
                                     onCustomInputSubmit={(value) => controller.handleCustomInputSubmit(value)}
@@ -189,20 +195,20 @@ const Galgame = () => {
                             </>
                         )}
                         {!controller.showGalgameHistory && controller.isTextMode && (
-                            <TextModeDisplay
-                                steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
-                                currentStepIndex={controller.currentStepIndex}
-                                currentDisplayText={controller.textModalDisplayText}
-                                isTyping={controller.finalIsTyping}
-                                isWaitingForData={controller.stepHandlers.isWaitingForData}
-                                historyLength={controller.stepHandlers.localHistoryLength ?? 0}
-                                onChoiceClick={(option) => {
-                                    controller.handleChoiceClick(option);
-                                }}
-                                onCustomInputSubmit={(value) => {
-                                    controller.handleCustomInputSubmit(value);
-                                }}
-                            />
+                                <TextModeDisplay
+                                    steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
+                                    currentStepIndex={controller.currentStepIndex}
+                                    currentDisplayText={controller.textModalDisplayText}
+                                    isTyping={controller.finalIsTyping}
+                                    isWaitingForData={controller.stepHandlers.isWaitingForData}
+                                    historyLength={controller.history.length}
+                                    onChoiceClick={(option) => {
+                                        controller.handleChoiceClick(option);
+                                    }}
+                                    onCustomInputSubmit={(value) => {
+                                        controller.handleCustomInputSubmit(value);
+                                    }}
+                                />
                         )}
                     </div>
                     

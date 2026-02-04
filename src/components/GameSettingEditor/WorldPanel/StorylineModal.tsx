@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './WorldPanel.module.css';
-import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
 // 字数限制配置
 const STORYLINE_WORD_LIMITS = {

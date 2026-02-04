@@ -21,7 +21,7 @@ import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../utils/constants';
-import ConfirmModal from '../components/goodsModal/ConfirmModal';
+import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 
@@ -40,17 +40,16 @@ const Create: React.FC = () => {
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
-    const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false); // 控制移动端提示弹窗
-    const [isEditingName, setIsEditingName] = useState(false); // 控制修改昵称弹窗
+    const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
+    const [isEditingName, setIsEditingName] = useState(false);
     const [editName, setEditName] = useState('');
     const [isUpdatingName, setIsUpdatingName] = useState(false);
     const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
-    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false); // 控制结算弹窗
-    const [isSettling, setIsSettling] = useState(false); // 控制结算中状态
-    const [isPDFModalOpen, setIsPDFModalOpen] = useState(false); // 控制PDF模板指引弹窗
+    const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [isSettling, setIsSettling] = useState(false);
+    const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 将游戏数据分类为已发布和未发布
     const { publishedGames, draftGames } = useMemo(() => {
         const published: UserGameData[] = [];
         const drafts: UserGameData[] = [];
@@ -109,7 +108,6 @@ const Create: React.FC = () => {
         }
     };
 
-
     const getUserInfo = async () => {
         try {
             const response = await auth.getUserInfo();
@@ -127,17 +125,14 @@ const Create: React.FC = () => {
         getUserInfo();
     }, [user?.user.id]);
 
-    // 渲染操作按钮
     const renderGameActions = (game: UserGameData) => {
-        // 检查 is_public 的值（0 表示未发布，1 表示已发布）
         const isPublic = game.is_public === 1;
 
-        // 未发布或已发布，都跳转到编辑/数据页面
         return (
             <button
                 type="button"
                 onClick={(e) => {
-                    e.stopPropagation(); // 阻止事件冒泡到卡片
+                    e.stopPropagation();
                     if (!game.file_id) return;
                     navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
                 }}

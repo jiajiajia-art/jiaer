@@ -10,7 +10,7 @@ import Sidebar from '../components/GameSettingEditor/Sidebar';
 import MapPanel, { type MapPanelRef } from '../components/GameSettingEditor/MapPanel/MapPanel';
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
 import { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
-import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
+import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { useEditorData } from '../hooks/editor/useEditorData';
@@ -83,7 +83,7 @@ const GameSettingsEditor = () => {
             } else {
                 throw new Error('创建失败');
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('创建空游戏失败:', error);
             throw error;
         }
@@ -246,8 +246,8 @@ const GameSettingsEditor = () => {
         setActivePanel(panelId);
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel]);
 
-    const onPublishGame = useCallback(async (price: number | null, isFree: boolean) => {
-        await handlePublishGame(price, isFree);
+    const onPublishGame = useCallback(async () => {
+        await handlePublishGame();
         setShowPublishModal(false);
     }, [handlePublishGame]);
 

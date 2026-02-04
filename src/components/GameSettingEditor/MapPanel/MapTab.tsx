@@ -48,23 +48,21 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
     const initialPlacedScenesRef = useRef<PlacedScene[]>([]);
 
     // 地图 tab 使用的图片地址
-    const mapImageSources = useMemo(() => {
+    const mapImageBase = useMemo(() => {
         const rawBase = worldMapImageUrl || worldMapImage || null;
         if (!rawBase) {
-            return { dummy: null, base: null };
+            return null;
         }
         // 先使用 getImageUrl 处理路径（将相对路径转换为完整 URL）
-        const base = rawBase.startsWith('http://') || rawBase.startsWith('https://') || rawBase.startsWith(import.meta.env.BASE_URL)
+        return rawBase.startsWith('http://') || rawBase.startsWith('https://') || rawBase.startsWith(import.meta.env.BASE_URL)
             ? rawBase
             : getImageUrl(rawBase);
-        const dummy = base ? `${base}/dummy` : null;
-        return { dummy, base };
     }, [worldMapImageUrl, worldMapImage]);
 
     const currentMapSrc = useMemo(() => {
-        const baseSrc = mapImageSources.dummy || mapImageSources.base || DEFAULT_MAP_IMAGE;
+        const baseSrc = mapImageBase || DEFAULT_MAP_IMAGE;
         return worldMapImage ? addImageTimestamp(baseSrc) : baseSrc;
-    }, [mapImageSources, worldMapImage]);
+    }, [mapImageBase, worldMapImage]);
 
     // 同步后端返回的 worldMapImage 到本地状态
     useEffect(() => {
@@ -404,10 +402,6 @@ const MapTab = forwardRef<MapTabRef, MapTabProps>(({
                     }}
                     onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        if (mapImageSources.dummy && target.src.includes('/dummy') && mapImageSources.base) {
-                            target.src = mapImageSources.base;
-                            return;
-                        }
                         if (target.src !== DEFAULT_MAP_IMAGE) {
                             target.src = DEFAULT_MAP_IMAGE;
                             setWorldMapImageUrl(null);

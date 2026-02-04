@@ -1,13 +1,64 @@
 import React, { useState, useRef, useImperativeHandle } from 'react';
 import styles from './FunctionalNPCDetail.module.css';
 import sharedStyles from './shared.module.css';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+
+// 字数限制配置
+const FUNCTIONAL_NPC_WORD_LIMITS = {
+    authorNote: 20,
+    actionName: 20,
+    actionDescription: 100,
+} as const;
+
+// Action 字段组件（用于处理字数限制）
+interface ActionFieldProps {
+    action: Action;
+    field: 'name' | 'description';
+    label: string;
+    placeholder: string;
+    limit: number;
+    onChange: (value: string) => void;
+    isTextarea?: boolean;
+}
+
+const ActionField: React.FC<ActionFieldProps> = ({ action, field, label, placeholder, limit, onChange, isTextarea = false }) => {
+    const value = action[field] || '';
+    const wordCount = useWordCount(value);
+    const wordLimit = useWordLimit(limit, onChange);
+
+    return (
+        <label>
+            <div className={styles.labelRowWithCounter}>
+                <span>{label} <span className={sharedStyles.required}>*</span></span>
+                <span className={styles.wordCounter}>
+                    {wordCount}/{limit}
+                </span>
+            </div>
+            {isTextarea ? (
+                <textarea
+                    rows={2}
+                    value={value}
+                    {...wordLimit}
+                    placeholder={placeholder}
+                />
+            ) : (
+                <input
+                    type="text"
+                    value={value}
+                    {...wordLimit}
+                    placeholder={placeholder}
+                />
+            )}
+        </label>
+    );
+};
 
 interface FunctionalNPCDetailProps {
     node: AbilityNode | null;
@@ -207,8 +258,12 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
             return;
         }
 
-        // 如果是已保存的节点（有 node_id），调用 API 删除
-        if (node?.node_id && currentFileId) {
+        const isNewAction = !originalNodeRef.current?.actions?.some(
+            (originalAction) => originalAction.id === actionToDelete
+        );
+
+        // 只有已保存的action才需要调用API删除
+        if (!isNewAction && node?.node_id && currentFileId) {
             try {
                 const action = currentActions.find(a => a.id === actionToDelete);
                 if (action) {
@@ -230,7 +285,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
             }
         }
 
-        // 从表单中移除该 action
+        // 从表单中移除该 action（无论是新增的还是已保存的）
         setFormData(prev => ({
             ...prev,
             actions: (prev.actions || []).filter(action => action.id !== actionToDelete),
@@ -253,6 +308,12 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
             ),
         }));
     };
+
+    // 字数统计
+    const authorNoteWords = useWordCount(formData.authorNote ?? '');
+    
+    // 字数限制处理
+    const authorNoteLimit = useWordLimit(FUNCTIONAL_NPC_WORD_LIMITS.authorNote, (value) => handleFieldChange('authorNote', value));
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -501,11 +562,16 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                 <div className={styles.formSection}>
                     <div className={styles.formGroup}>
                         <label>
-                            <span>NPC名称 <span className={sharedStyles.required}>*</span></span>
+                            <div className={styles.labelRowWithCounter}>
+                                <span>NPC名称 <span className={sharedStyles.required}>*</span></span>
+                                <span className={styles.wordCounter}>
+                                    {authorNoteWords}/{FUNCTIONAL_NPC_WORD_LIMITS.authorNote}
+                                </span>
+                            </div>
                             <input
                                 type="text"
                                 value={formData.authorNote}
-                                onChange={(e) => handleFieldChange('authorNote', e.target.value)}
+                                {...authorNoteLimit}
                                 placeholder="输入NPC名称"
                             />
                         </label>
@@ -623,24 +689,23 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                             </button>
                                         </div>
                                         <div className={styles.optionFields}>
-                                            <label>
-                                                <span>功能名称 <span className={sharedStyles.required}>*</span></span>
-                                                <input
-                                                    type="text"
-                                                    value={action.name}
-                                                    onChange={(e) => handleActionChange(action.id, 'name', e.target.value)}
-                                                    placeholder="游戏端展示的功能名称"
-                                                />
-                                            </label>
-                                            <label>
-                                                <span>描述 <span className={sharedStyles.required}>*</span></span>
-                                                <textarea
-                                                    rows={2}
-                                                    value={action.description}
-                                                    onChange={(e) => handleActionChange(action.id, 'description', e.target.value)}
-                                                    placeholder="给大模型用的提示词"
-                                                />
-                                            </label>
+                                            <ActionField
+                                                action={action}
+                                                field="name"
+                                                label="功能名称"
+                                                placeholder="游戏端展示的功能名称"
+                                                limit={FUNCTIONAL_NPC_WORD_LIMITS.actionName}
+                                                onChange={(value) => handleActionChange(action.id, 'name', value)}
+                                            />
+                                            <ActionField
+                                                action={action}
+                                                field="description"
+                                                label="描述"
+                                                placeholder="给大模型用的提示词"
+                                                limit={FUNCTIONAL_NPC_WORD_LIMITS.actionDescription}
+                                                onChange={(value) => handleActionChange(action.id, 'description', value)}
+                                                isTextarea
+                                            />
                                         </div>
                                     </div>
                                 ))

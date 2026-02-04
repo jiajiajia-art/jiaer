@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
@@ -13,9 +13,7 @@ interface GameGridProps {
 }
 
 const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }) => {
-    const location = useLocation();
     const navigate = useNavigate();
-    const isCreatePage = location.pathname === '/create';
 
     const handleGameClick = (game: UserGameData) => {
         if (onGameClick) {
@@ -36,18 +34,6 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
         );
     }
 
-    const renderPriceValue = (amount?: number | null) => {
-        if (amount == null || amount == 0) {
-            return '免费';
-        }
-        return (
-            <span className={styles.priceValue}>
-                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
-
-                {amount}
-            </span>
-        );
-    };
 
     return (
         <div className={styles.grid4}>
@@ -59,23 +45,25 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                 >
                     <div className={styles.goodsImg}>
                         <img
-                            src={getImageUrl(meta.display_cover_url||meta.cover_url) || `${import.meta.env.BASE_URL}data/events/welcome.png`}
+                            src={getImageUrl(meta.display_cover_url || meta.cover_url) || `${import.meta.env.BASE_URL}data/events/welcome.png`}
                             alt={meta.title || `剧情${idx + 1}`}
                         />
-                        {isCreatePage && meta.game_tags && (
-                            <div className={styles.gameTag}>
-                                {meta.game_tags}
-                            </div>
-                        )}
                         <div className={styles.goodsInfo}>
-                            <div className={styles.goodsInfoItem}>
-                                <IoGameControllerOutline />
-                                {meta.total_pv_count}
+                            <div className={styles.goodsInfoLeft}>
+                                <div className={styles.goodsInfoItem}>
+                                    <IoGameControllerOutline />
+                                    {meta.total_pv_count}
+                                </div>
+                                <div className={styles.goodsInfoItem}>
+                                    <AiOutlineLike />
+                                    {meta.like_count || 0}
+                                </div>
                             </div>
-                            <div className={styles.goodsInfoItem}>
-                                <AiOutlineLike />
-                                {meta.like_count || 0}
-                            </div>
+                            {(meta.game_tags || (meta as any).engine) && (
+                                <div className={styles.goodsInfoTag} title={String(meta.game_tags || (meta as any).engine)}>
+                                    {String(meta.game_tags || (meta as any).engine)}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className={styles.goodsBody}>
@@ -89,39 +77,13 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                         </div>
 
                         {renderActions ? (
-                            <div
-                                className={styles.gameEditBtn}
-                            >
+                            <div className={styles.gameEditBtn}>
                                 {renderActions(meta)}
                             </div>
                         ) : (
-                            <>
-                                {
-                                    meta.paid ? (
-                                        <div className={styles.gameEditBtn}>
-                                            <button className={styles.startGameBtn}>开始游戏</button>
-                                        </div>
-                                    ) :
-                                        <div className={styles.goodsPrice}>
-                                            {
-                                                meta.special_price_amount != null ? (
-                                                    <>
-                                                        <div className={styles.goodsPriceText}>
-                                                            {renderPriceValue(meta.price_amount)}
-                                                        </div>
-                                                        <div className={styles.specialPriceText}>
-                                                            {renderPriceValue(meta.special_price_amount)}
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <div className={styles.normalPriceText}>
-                                                        {renderPriceValue(meta.price_amount)}
-                                                    </div>
-                                                )
-                                            }
-                                        </div>
-                                }
-                            </>
+                            <div className={styles.goodsPrice}>
+                                <button className={styles.startGameBtn}>开始游戏</button>
+                            </div>
                         )}
                     </div>
                 </div>

@@ -3,6 +3,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import styles from './SceneView.module.css';
 import type { Scene, SubScene } from '../../api/worldInteraction/mapWorldData.type';
 import type { EventData } from '../../page/GalgameMap';
+import GameBackgroundRenderer from '../Galgame/GameBackgroundRenderer';
+import GameImageRenderer from '../Galgame/GameImageRenderer';
 
 interface SceneViewProps {
     selectedScene: Scene | null;
@@ -140,14 +142,27 @@ const SceneView: React.FC<SceneViewProps> = ({
         <div
             className={styles.sceneViewContainer}
             style={{
-                backgroundImage: backgroundImage ? `url("${backgroundImage}")` : undefined,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
                 position: 'relative',
+                overflow: 'hidden',
             }}
             ref={containerRef}
         >
+            {/* 背景使用游戏级 Canvas 渲染，复用解码后的 ImageBitmap */}
+            {backgroundImage && (
+                <GameBackgroundRenderer
+                    src={backgroundImage}
+                    useCanvas={true}
+                    transitionDuration={300}
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        pointerEvents: 'none',
+                        zIndex: 0,
+                    }}
+                />
+            )}
             {/* 标题栏 */}
             <div className={styles.titleBar}>
                 <div className={styles.titleText} onClick={onBack}>
@@ -209,20 +224,21 @@ const SceneView: React.FC<SceneViewProps> = ({
                                         }}
                                         onClick={() => handleSubsceneClick(subscene)}
                                     >
-                                        {/* 子场景图片 */}
+                                        {/* 子场景图片（使用 Canvas 渲染，复用缓存的 ImageBitmap） */}
                                         <div className={styles.nodeImageContainer}>
                                             {subscene.image ? (
                                                 <>
-                                                    <img
+                                                    <GameImageRenderer
                                                         src={subscene.image}
-                                                        alt={subscene.name}
                                                         className={styles.nodeImage}
-                                                        onError={(e) => {
-                                                            const target = e.target as HTMLImageElement;
-                                                            target.style.display = 'none';
-                                                            const fallback = target.parentElement!.querySelector<HTMLDivElement>(`.${styles.nodeText}`);
-                                                            if (fallback) {
-                                                                fallback.style.display = 'flex';
+                                                        useCanvas={true}
+                                                        style={{ objectFit: 'cover', objectPosition: 'center' }}
+                                                        onError={() => {
+                                                            const container = document.querySelector<HTMLDivElement>(
+                                                                `.${styles.nodeText}`
+                                                            );
+                                                            if (container) {
+                                                                container.style.display = 'flex';
                                                             }
                                                         }}
                                                     />

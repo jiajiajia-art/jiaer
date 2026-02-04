@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import interactionApi from "../../../api/worldInteraction/interactionApi";
 import type { GetWorldInteractionHistoryResponse } from "../../../api/worldInteraction/interactionApi.type";
 import type { PendingRequest } from "../useHistoryPolling";
-import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage } from "../common/interactionUtils";
+import { getStorageKeys, safeGetLocalStorage, safeSetLocalStorage, safeRemoveLocalStorage, truncateStepsAfterChoice } from "../common/interactionUtils";
 import { REQUEST_TIMEOUT_MS, TIMEOUT_MESSAGES } from "../../../components/GalgameMap/interaction/constants";
 
 interface InitOptions {
@@ -139,7 +139,8 @@ export function useNpcInteractionInit(options: InitOptions): UseInteractionInitR
                         try {
                             const savedSteps = JSON.parse(raw);
                             if (Array.isArray(savedSteps) && savedSteps.length > 0) {
-                                const [first, ...rest] = savedSteps;
+                                const truncatedSteps = truncateStepsAfterChoice(savedSteps);
+                                const [first, ...rest] = truncatedSteps;
                                 
                                 hasInitializedRef.current = true;
                                 setRestoringFromCache(true);

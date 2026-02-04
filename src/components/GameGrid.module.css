@@ -34,7 +34,7 @@
     border-radius: 10px;
 }
 
-.gameTag {
+/* .gameTag {
     position: absolute;
     top: 8px;
     right: 8px;
@@ -47,19 +47,29 @@
     z-index: 2;
     white-space: nowrap;
     backdrop-filter: blur(4px);
-}
+} */
 
 .goodsInfo {
     width: 100%;
-    padding: 3px;
+    padding: 10px 5px 5px 5px;
     position: absolute;
     bottom: 0px;
     left: 0px;
     display: flex;
     gap: 12px;
     align-items: center;
+    justify-content: space-between;
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.00) 0%, #000000 100%);
     border-radius: 0 0 10px 10px;
+    min-height: 34px;
+    box-sizing: border-box;
+}
+
+.goodsInfoLeft {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
 }
 
 .goodsInfoItem {
@@ -69,6 +79,22 @@
     color: #FFFFFF;
     font-size: 14px;
     font-weight: 500;
+}
+
+.goodsInfoTag {
+    margin-left: auto;
+    max-width: 50%;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.2;
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    backdrop-filter: blur(4px);
 }
 
 .goodsInfoItem svg {
@@ -135,7 +161,7 @@
 }
 
 .startGameBtn {
-    font-size: 18px!important;
+    font-size: 16px!important;
     color: #FFFFFF;
     cursor: pointer;
 }
@@ -143,7 +169,7 @@
 .goodsPrice button {
     background-color: transparent;
     font-size: 18px;
-    font-weight: 600 !important;
+    /* font-weight: 600 !important; */
     color: #fff;
     cursor: pointer;
 }
@@ -306,6 +332,10 @@
         height: 100%;
         border-radius: 10px;
         object-fit: cover;
+    }
+
+    .goodsInfo {
+        gap: 6px;
     }
 
     .goodsBody {

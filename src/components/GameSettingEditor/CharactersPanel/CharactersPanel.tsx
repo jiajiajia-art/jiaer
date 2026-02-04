@@ -9,8 +9,8 @@ import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { withCacheBust, extractImageExtension } from './utils';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
-import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
+import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import SaveConfirmModal from '../../GoodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -21,6 +21,18 @@ import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
 import CharactersSidebar from './CharactersSidebar';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+
+// 字数限制配置
+const CHARACTER_WORD_LIMITS = {
+    name: 10,
+    gender: 2,
+    identity: 10,
+    personality: 100,
+    speech: 100,
+    appearance: 500,
+    background: 300,
+} as const;
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
@@ -357,6 +369,30 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
         setHasUnsavedChanges(true);
     };
+
+    // 字数统计
+    const nameWords = useWordCount(currentCharacter?.name ?? '');
+    const genderWords = useWordCount(currentCharacter?.gender ?? '');
+    const identityWords = useWordCount(currentCharacter?.identity ?? '');
+    const personalityWords = useWordCount(currentCharacter?.personality.join(' / ') ?? '');
+    const speechWords = useWordCount(currentCharacter?.speech ?? '');
+    const appearanceWords = useWordCount(currentCharacter?.appearance ?? '');
+    const backgroundWords = useWordCount(currentCharacter?.background ?? '');
+
+    // 字数限制处理
+    const nameLimit = useWordLimit(CHARACTER_WORD_LIMITS.name, (value) => handleFieldChange('name', value));
+    const genderLimit = useWordLimit(CHARACTER_WORD_LIMITS.gender, (value) => handleFieldChange('gender', value));
+    const identityLimit = useWordLimit(CHARACTER_WORD_LIMITS.identity, (value) => handleFieldChange('identity', value));
+    const speechLimit = useWordLimit(CHARACTER_WORD_LIMITS.speech, (value) => handleFieldChange('speech', value));
+    const appearanceLimit = useWordLimit(CHARACTER_WORD_LIMITS.appearance, (value) => handleFieldChange('appearance', value));
+    const backgroundLimit = useWordLimit(CHARACTER_WORD_LIMITS.background, (value) => handleFieldChange('background', value));
+    
+    // 性格标签特殊处理（需要分割后限制）
+    const personalityLimit = useWordLimit(CHARACTER_WORD_LIMITS.personality, (value) => {
+        const tags = value.split(/[，,\/、\s]+/).map(tag => tag.trim()).filter(Boolean);
+        updateField('personality', tags);
+        setHasUnsavedChanges(true);
+    });
 
     // 关系管理（统一处理新增和编辑模式）
     const addRelationship = () => {
@@ -928,11 +964,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             {/* 基础信息表单 */}
                             <div className={styles.formGrid}>
                                 <label>
-                                    <span>姓名{requiredFields.includes('name') && <span className={styles.required}>*</span>}</span>
+                                    <div className={styles.labelRowWithCounter}>
+                                        <span>姓名{requiredFields.includes('name') && <span className={styles.required}>*</span>}</span>
+                                        <span className={styles.wordCounter}>
+                                            {nameWords}/{CHARACTER_WORD_LIMITS.name}
+                                        </span>
+                                    </div>
                                     <input
                                         type="text"
                                         value={currentCharacter.name}
-                                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                                        {...nameLimit}
                                     />
                                 </label>
                                 <label>
@@ -944,44 +985,69 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     />
                                 </label>
                                 <label>
-                                    <span>性别 / 形体{requiredFields.includes('gender') && <span className={styles.required}>*</span>}</span>
+                                    <div className={styles.labelRowWithCounter}>
+                                        <span>性别 / 形体{requiredFields.includes('gender') && <span className={styles.required}>*</span>}</span>
+                                        <span className={styles.wordCounter}>
+                                            {genderWords}/{CHARACTER_WORD_LIMITS.gender}
+                                        </span>
+                                    </div>
                                     <input
                                         type="text"
                                         value={currentCharacter.gender}
-                                        onChange={(e) => handleFieldChange('gender', e.target.value)}
+                                        {...genderLimit}
                                     />
                                 </label>
                                 <label>
-                                    <span>身份 / 当前身份{requiredFields.includes('identity') && <span className={styles.required}>*</span>}</span>
+                                    <div className={styles.labelRowWithCounter}>
+                                        <span>身份 / 当前身份{requiredFields.includes('identity') && <span className={styles.required}>*</span>}</span>
+                                        <span className={styles.wordCounter}>
+                                            {identityWords}/{CHARACTER_WORD_LIMITS.identity}
+                                        </span>
+                                    </div>
                                     <input
                                         type="text"
                                         value={currentCharacter.identity}
-                                        onChange={(e) => handleFieldChange('identity', e.target.value)}
+                                        {...identityLimit}
                                     />
                                 </label>
                                 <label className={styles.wide}>
-                                    <span>性格标签</span>
+                                    <div className={styles.labelRowWithCounter}>
+                                        <span>性格标签</span>
+                                        <span className={styles.wordCounter}>
+                                            {personalityWords}/{CHARACTER_WORD_LIMITS.personality}
+                                        </span>
+                                    </div>
                                     <textarea
                                         rows={2}
                                         value={currentCharacter.personality.join(' / ')}
-                                        onChange={(e) => handleFieldChange('personality', e.target.value)}
+                                        {...personalityLimit}
                                         placeholder="输入性格标签，用 / 或 ，分隔"
                                     />
                                 </label>
                                 <label className={styles.wide}>
-                                    <span>口癖 / 语气{requiredFields.includes('speech') && <span className={styles.required}>*</span>}</span>
+                                    <div className={styles.labelRowWithCounter}>
+                                        <span>口癖 / 语气{requiredFields.includes('speech') && <span className={styles.required}>*</span>}</span>
+                                        <span className={styles.wordCounter}>
+                                            {speechWords}/{CHARACTER_WORD_LIMITS.speech}
+                                        </span>
+                                    </div>
                                     <textarea
                                         rows={3}
                                         value={currentCharacter.speech}
-                                        onChange={(e) => handleFieldChange('speech', e.target.value)}
+                                        {...speechLimit}
                                     />
                                 </label>
                                 <label className={styles.wide}>
-                                    <span>外貌描述 / Prompt{requiredFields.includes('appearance') && <span className={styles.required}>*</span>}</span>
+                                    <div className={styles.labelRowWithCounter}>
+                                        <span>外貌描述 / Prompt{requiredFields.includes('appearance') && <span className={styles.required}>*</span>}</span>
+                                        <span className={styles.wordCounter}>
+                                            {appearanceWords}/{CHARACTER_WORD_LIMITS.appearance}
+                                        </span>
+                                    </div>
                                     <textarea
                                         rows={3}
                                         value={currentCharacter.appearance}
-                                        onChange={(e) => handleFieldChange('appearance', e.target.value)}
+                                        {...appearanceLimit}
                                     />
                                 </label>
                             </div>
@@ -1123,11 +1189,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 {isBackgroundExpanded && (
                                     <div className={styles.formGrid}>
                                         <label className={styles.wide}>
-                                            <span>人物背景故事</span>
+                                            <div className={styles.labelRowWithCounter}>
+                                                <span>人物背景故事</span>
+                                                <span className={styles.wordCounter}>
+                                                    {backgroundWords}/{CHARACTER_WORD_LIMITS.background}
+                                                </span>
+                                            </div>
                                             <textarea
                                                 rows={4}
                                                 value={currentCharacter.background}
-                                                onChange={(e) => handleFieldChange('background', e.target.value)}
+                                                {...backgroundLimit}
                                             />
                                         </label>
                                         <label className={styles.wide}>

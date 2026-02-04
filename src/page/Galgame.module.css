@@ -20,6 +20,16 @@
     overflow: hidden;
 }
 
+.gameBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
 .topHeader {
     background: #37333480;
     padding: 0.625rem 1.25rem; /* 10px 20px */

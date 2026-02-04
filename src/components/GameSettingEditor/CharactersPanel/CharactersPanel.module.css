@@ -473,6 +473,20 @@
     margin-left: 2px;
 }
 
+.labelRowWithCounter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.wordCounter {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: rgba(0, 0, 0, 0.35);
+}
+
 /* 弹窗样式 */
 .modalOverlay {
     position: fixed;

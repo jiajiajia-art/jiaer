@@ -11,17 +11,18 @@ import Library from './page/Library';
 import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
-import RpgGame from './page/RpgGame';
 import UploadProgressModal from './components/GameSettingEditor/DocumentUpload/UploadProgressModal';
 import CustomIF from './page/CustomIF';
 import CustomIFCreate from './page/CustomIFCreate';
 import GameDetail from './page/GameDetail';
 import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
+import RouteReporter from './components/RouteReporter';
 
 function App() {
   return (
     <BrowserRouter basename='/funloom'>
+      <RouteReporter />
       <Toaster
         position="top-center"
         containerStyle={{
@@ -49,7 +50,6 @@ function App() {
         <Route path="/game/:fileId" element={<GameDetail />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/rpgGame" element={<RpgGame />} />
           <Route path="/create" element={<Create />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />

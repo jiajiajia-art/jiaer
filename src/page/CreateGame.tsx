@@ -10,8 +10,8 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import GameAction from '../api/rpgGame/gameAction';
-import PublishSettingsModal from '../components/goodsModal/PublishSettingsModal';
-import ConfirmModal from '../components/goodsModal/ConfirmModal';
+import PublishSettingsModal from '../components/GoodsModal/PublishSettingsModal';
+import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import GameForm, { type GameFormData } from '../components/CreateGame/GameForm';
 import GameStatsView from '../components/CreateGame/GameStatsView';
 import UploadProgress from '../components/CreateGame/UploadProgress';
@@ -395,15 +395,14 @@ const CreateGame: React.FC = () => {
         }
     };
 
-    // 发布游戏
-    const handlePublishGame = async (price: number | null, isFree: boolean) => {
+    // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
+    const handlePublishGame = async () => {
         if (!gameId) return;
 
         try {
-            const priceAmount = isFree ? 0 : (price || 0);
             const response = await GameAction.publishGame({
                 fileId: gameId,
-                priceAmount: priceAmount,
+                priceAmount: 0,
             });
 
             if (response.data.success) {
@@ -515,7 +514,6 @@ const CreateGame: React.FC = () => {
                             isDeleting={isDeleting}
                             onPublish={() => setShowPublishModal(true)}
                             onUnpublish={handleUnpublishGame}
-                            onPriceAdjust={() => setShowPriceModal(true)}
                         />
                     ) : (
                         <div className={styles.detailError}>未找到游戏信息</div>

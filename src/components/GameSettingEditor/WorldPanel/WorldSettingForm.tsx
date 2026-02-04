@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './WorldPanel.module.css';
-import { useWordLimit, useWordCount } from '../../../hooks/useWordLimit';
+import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
 interface WorldSettingFormProps {
     mode: 'visual' | 'worldInteraction';
