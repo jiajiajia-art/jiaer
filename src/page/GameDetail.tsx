@@ -66,10 +66,8 @@ const GameDetail: React.FC = () => {
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasRecordedViewRef = useRef(false);
-    const hasTrackedEnterRef = useRef(false);
     
-    // 使用 sessionStorage 防止页面刷新重复记录（同一会话内只记录一次）
-    const getEnterTrackingKey = (fileId: string) => `game_detail_enter_${fileId}`;
+    const lastTrackedLocationKeyRef = useRef<string | null>(null);
 
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
@@ -77,14 +75,11 @@ const GameDetail: React.FC = () => {
 
     // 解析进入详情页的来源
     const enterSource = useMemo(() => {
-        const stateSource = (location.state as any)?.source as
-            | 'link'
-            | 'main_page'
-            | 'search'
-            | 'other'
-            | undefined;
-        if (stateSource) {
-            return stateSource;
+        // 1. 优先看路由 state 中的 source（需要做合法值校验，避免传错值）
+        const rawStateSource = (location.state as any)?.source;
+        const stateSource = String(rawStateSource || '').toLowerCase();
+        if (stateSource === 'link' || stateSource === 'main_page' || stateSource === 'search' || stateSource === 'other') {
+            return stateSource as 'link' | 'main_page' | 'search' | 'other';
         }
 
         // 2. 其次看 URL query 中是否带有 from/source 参数
@@ -97,6 +92,26 @@ const GameDetail: React.FC = () => {
         // 3. 都没有时，认为是「外链 / 直接输入链接」进入
         return 'link' as const;
     }, [location.state, location.search]);
+
+    useEffect(() => {
+        if (!fileIdParam) return;
+
+        if (lastTrackedLocationKeyRef.current === location.key) return;
+        lastTrackedLocationKeyRef.current = location.key;
+
+        trackingApi
+            .enterGameDetail({
+                gameFileId: String(fileIdParam),
+                source: enterSource,
+            })
+            .catch((error) => {
+                console.error('记录进入游戏详情页失败:', error);
+                // 失败时允许下次进入同一个页面重试
+                if (lastTrackedLocationKeyRef.current === location.key) {
+                    lastTrackedLocationKeyRef.current = null;
+                }
+            });
+    }, [fileIdParam, enterSource, location.key]);
 
     // 用户进入游戏，用户来源
     const mapSourceForSession = useCallback((source: 'link' | 'main_page' | 'search' | 'other'): 'link' | 'game_detail' | 'history' | 'other' => {
@@ -149,29 +164,6 @@ const GameDetail: React.FC = () => {
                     }).catch((error) => {
                         console.error('添加浏览统计失败:', error);
                     });
-                }
-
-                // 记录进入游戏详情页的埋点（同一会话内只记录一次，防止刷新重复记录）
-                if (!hasTrackedEnterRef.current && fileId) {
-                    const trackingKey = getEnterTrackingKey(String(fileId));
-                    const hasTrackedInSession = sessionStorage.getItem(trackingKey);
-                    
-                    if (!hasTrackedInSession) {
-                        hasTrackedEnterRef.current = true;
-                        sessionStorage.setItem(trackingKey, 'true');
-                        trackingApi
-                            .enterGameDetail({
-                                gameFileId: String(fileId),
-                                source: enterSource,
-                            })
-                            .catch((error) => {
-                                console.error('记录进入游戏详情页失败:', error);
-                                sessionStorage.removeItem(trackingKey);
-                                hasTrackedEnterRef.current = false;
-                            });
-                    } else {
-                        hasTrackedEnterRef.current = true;
-                    }
                 }
             } else {
                 toast.error('游戏不存在');

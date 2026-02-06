@@ -187,7 +187,7 @@ const CreateGame: React.FC = () => {
         }
 
         // 按游戏类型选择编辑器
-        if(gameDetail?.game_tags == 'AVG') {
+        if (gameDetail?.game_tags == 'AVG') {
             setFileId(gameId)
             navigate(`/gameSettingsEditor?mode=worldInteraction`);
         } else {
@@ -227,31 +227,29 @@ const CreateGame: React.FC = () => {
     return (
         <div className={styles.pageRoot}>
             <Navbar />
-
-
-
-            {isStatsMode && (
-                <>
-                    {isLoadingDetail ? (
-                        <div className={styles.detailLoading}>加载游戏详情中...</div>
-                    ) : detailError ? (
-                        <div className={styles.detailError}>{detailError}</div>
-                    ) : gameDetail ? (
-                        <GameStatsView
-                            gameDetail={gameDetail}
-                            heroBackground={heroBackground}
-                            onEdit={() => editGame()}
-                            onDelete={handleDeleteGame}
-                            isDeleting={isDeleting}
-                            onPublish={() => setShowPublishModal(true)}
-                            onUnpublish={handleUnpublishGame}
-                        />
-                    ) : (
-                        <div className={styles.detailError}>未找到游戏信息</div>
-                    )}
-                </>
-            )}
-
+            <div className={styles.gameStatsWrapper}>
+                {isStatsMode && (
+                    <>
+                        {isLoadingDetail ? (
+                            <div className={styles.detailLoading}>加载游戏详情中...</div>
+                        ) : detailError ? (
+                            <div className={styles.detailError}>{detailError}</div>
+                        ) : gameDetail ? (
+                            <GameStatsView
+                                gameDetail={gameDetail}
+                                heroBackground={heroBackground}
+                                onEdit={() => editGame()}
+                                onDelete={handleDeleteGame}
+                                isDeleting={isDeleting}
+                                onPublish={() => setShowPublishModal(true)}
+                                onUnpublish={handleUnpublishGame}
+                            />
+                        ) : (
+                            <div className={styles.detailError}>未找到游戏信息</div>
+                        )}
+                    </>
+                )}
+            </div>
             <MobileBottomNav />
 
             {gameDetail && (

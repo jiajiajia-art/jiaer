@@ -75,7 +75,9 @@ const Home: React.FC = () => {
     const navigateToGameDetail = (game: UserGameData) => {
         const gameId = game.file_id || game.id;
         if (gameId) {
-            navigator(`/game/${gameId}`);
+            navigator(`/game/${gameId}`, {
+                state: { source: 'main_page' },
+            });
         }
     };
 

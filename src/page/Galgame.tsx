@@ -28,8 +28,6 @@ import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
-import { useTrackingStore } from "../store/trackingStore";
-import { trackingApi } from "../api/statistics/trackingApi";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
 
 const Galgame = () => {
@@ -39,8 +37,6 @@ const Galgame = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    const { started_at } = useTrackingStore();
-    
     // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
     useGameDurationTracking(fileId || undefined);
 
@@ -96,27 +92,8 @@ const Galgame = () => {
         isLoading: controller.isLoading,
     });
 
-    const handleEndGame = async () => {
-        // 注意：这个函数现在主要用于手动退出按钮
-        // 自动上报（页面隐藏/关闭）由 useGameDurationTracking hook 处理
-        if (started_at) {
-            const { hasReported, setHasReported } = useTrackingStore.getState();
-            // 如果已经通过自动上报上报过了，就不再重复上报
-            if (hasReported) {
-                return;
-            }
-            await trackingApi.analyticsEnd({
-                durationSeconds: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000),
-                gameFileId: fileId || undefined,
-            });
-            setHasReported(true);
-        }
-    };
-
     // 退出/删除统一回到上一个页面（或兜底首页）
     const navigateBackSafe = () => {
-        handleEndGame();
-
         if (window.history.length > 1) {
             navigate(-1);
         } else {
