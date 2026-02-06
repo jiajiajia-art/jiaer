@@ -3,6 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './MobileBottomNav.module.css';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 
+// 检测是否在微信小程序环境
+const isWebViewEnv = (): boolean => {
+    const win = window as any;
+    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+};
+
 type BottomNavKey = 'home' | 'create' | 'warehouse' | 'profile';
 
 const normalize = (path: string) => {
@@ -72,21 +78,27 @@ const MobileBottomNav: React.FC = () => {
                 break;
             case 'create':
                 if (!isAuthenticated) {
-                    setIsAuthModalOpen(true);
+                    if (!isWebViewEnv()) {
+                        setIsAuthModalOpen(true);
+                    }
                     return;
                 }
                 navigate('/create');
                 break;
             case 'warehouse':
                 if (!isAuthenticated) {
-                    setIsAuthModalOpen(true);
+                    if (!isWebViewEnv()) {
+                        setIsAuthModalOpen(true);
+                    }
                     return;
                 }
                 navigate('/warehouse');
                 break;
             case 'profile':
                 if (!isAuthenticated) {
-                    setIsAuthModalOpen(true);
+                    if (!isWebViewEnv()) {
+                        setIsAuthModalOpen(true);
+                    }
                     return;
                 }
                 navigate('/profile');

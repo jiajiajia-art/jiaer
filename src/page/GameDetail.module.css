@@ -17,14 +17,16 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 10;
+    z-index: 1000; /* 提高 z-index，确保在移动端也能显示 */
     padding: 0.75rem 1.25rem;
     color: #fff;
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.05) 100%);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px); /* Safari 兼容 */
     max-width: 1920px;
     width: 100%;
     margin: 0 auto;
+    pointer-events: auto; /* 确保可以点击 */
 }
 
 .topBarContent {
@@ -39,20 +41,25 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-shrink: 0; /* 防止被压缩 */
 }
 
 .backIconButton,
 .topIconButton {
-    display: inline-flex;
+    display: inline-flex !important; /* 强制显示 */
     align-items: center;
     justify-content: center;
     width: 2.25rem;
     height: 2.25rem;
+    min-width: 2.25rem; /* 防止被压缩 */
+    min-height: 2.25rem;
     background: rgba(62, 62, 62, 0.345);
     border: 1px solid rgba(255,255,255,0.3);
     border-radius: 999px;
     color: #fff;
     cursor: pointer;
+    flex-shrink: 0; /* 防止被压缩 */
+    -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
 }
 
 .backIconButton svg,

@@ -364,22 +364,34 @@ const CustomIFCreate: React.FC = () => {
                    }}
                    onClick={(e)=>{
                      const target = e.target as HTMLElement;
-                     // 避免点击底部按钮时再次触发
+                     // 整个红色虚线区域都可以点击触发上传
                      if (target.closest(`.${styles.cardFooter}`)) return;
                      if (sourceType === 'single') { if (singleRef.current){ singleRef.current.accept = 'text/html,.html'; singleRef.current.click(); } }
                      else if (sourceType === 'zip') { if (singleRef.current){ singleRef.current.accept = '.zip,application/zip'; singleRef.current.click(); } }
                      else if (sourceType === 'dir') { dirRef.current?.click(); }
                    }}
                 >
-                  <div className={styles.dropHeading}>上传自定义游戏</div>
-                  <div className={styles.dropHint}>将 ZIP 包、index.html 或文件夹拖拽至此，或点击此处选择</div>
-                  <ul className={styles.dropList}>
-                    <li>支持单index.html、ZIP包或文件夹方式上传。</li>
-                    <li>ZIP包或文件夹必须包含入口文件 <b>index.html</b>（ZIP 内根目录或唯一子目录下）。</li>
-                    <li>资源引用请使用<b>相对路径</b>（如 <code>./style.css</code>、<code>./data.json</code>）。</li>
-                    <li>大小建议：单文件 ≤ 10MB、总大小 ≤ 50MB。</li>
-                    <li>manifest配置（可选）：高级功能，有特殊需求请联系客服。</li>
-                  </ul>
+                  <div className={styles.dropZoneInner}>
+                    <div className={styles.dropContent}>
+                      <div className={styles.dropIconWrapper}>
+                        <svg className={styles.dropIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      </div>
+                      <div className={styles.dropHeading}>上传自定义游戏</div>
+                      <div className={styles.dropHint}>将 ZIP 包、index.html 或文件夹拖拽至此，或点击此处选择</div>
+                    </div>
+                  </div>
+
+                  <div className={styles.dropListWrapper}>
+                    <ul className={styles.dropList}>
+                      <li>支持单index.html、ZIP包或文件夹方式上传。</li>
+                      <li>ZIP包或文件夹必须包含入口文件 <b>index.html</b>（ZIP 内根目录或唯一子目录下）。</li>
+                      <li>资源引用请使用<b>相对路径</b>（如 <code>./style.css</code>、<code>./data.json</code>）。</li>
+                      <li>大小建议：单文件 ≤ 10MB、总大小 ≤ 50MB。</li>
+                      <li>manifest配置（可选）：高级功能，有特殊需求请联系客服。</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>

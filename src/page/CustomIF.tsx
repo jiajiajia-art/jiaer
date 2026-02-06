@@ -3,12 +3,17 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { CustomIFHostBridge } from '../custom/hostBridge';
+import { useTrackingStore } from '../store/trackingStore';
+import { trackingApi } from '../api/statistics/trackingApi';
+import { useGameDurationTracking } from '../hooks/useGameDurationTracking';
 
 type CreateSessionResp = {
   sessionId: string;
   version: string;
   entryUrl: string;
   manifestUrl?: string;
+  analyticsSessionId: string;
+  started_at: string;
 };
 
 const CustomIF: React.FC = () => {
@@ -20,7 +25,23 @@ const CustomIF: React.FC = () => {
   const [manifest, setManifest] = useState<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const bridgeRef = useRef<CustomIFHostBridge | null>(null);
+  const { started_at, setStartedAt } = useTrackingStore();
+  useGameDurationTracking(appId || undefined);
 
+  const handleEndGame = async () => {
+    if (started_at) {
+      const { hasReported, setHasReported } = useTrackingStore.getState();
+      if (hasReported) {
+        return;
+      }
+      await trackingApi.analyticsEnd({
+        durationSeconds: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000),
+        gameFileId: appId || undefined,
+      });
+      setHasReported(true);
+    }
+  };
+  
   const toAbsoluteUrl = (raw?: string) => {
     if (!raw) return '';
     // absolute
@@ -47,6 +68,9 @@ const CustomIF: React.FC = () => {
         const data = await resp.json() as CreateSessionResp;
         if (cancelled) return;
         setSession(data);
+        const startTime = new Date().toISOString();
+        setStartedAt(startTime);
+                        
         // 2) load manifest if provided
         if (data.manifestUrl) {
           try {
@@ -102,6 +126,7 @@ const CustomIF: React.FC = () => {
         <button
           onClick={() => {
             try {
+              handleEndGame();
               // Prefer going back to the previous page; fallback to home if history is shallow
               if (window.history.length > 1) navigate(-1);
               else navigate('/home');

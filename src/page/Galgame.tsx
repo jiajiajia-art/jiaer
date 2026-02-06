@@ -28,6 +28,9 @@ import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
+import { useTrackingStore } from "../store/trackingStore";
+import { trackingApi } from "../api/statistics/trackingApi";
+import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
 
 const Galgame = () => {
     const navigate = useNavigate();
@@ -36,7 +39,11 @@ const Galgame = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const { started_at } = useTrackingStore();
     
+    // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
+    useGameDurationTracking(fileId || undefined);
+
     // 使用统一的控制器 hook
     const controller = useGalgameController();
 
@@ -45,8 +52,8 @@ const Galgame = () => {
         if (controller.showGalgameHistory) {
             controller.setShowGalgameHistory(false);
         } else {
-        controller.refreshHistory();
-        controller.setShowGalgameHistory(true);
+            controller.refreshHistory();
+            controller.setShowGalgameHistory(true);
         }
     };
 
@@ -89,19 +96,34 @@ const Galgame = () => {
         isLoading: controller.isLoading,
     });
 
-    // 退出/删除统一回到上一个页面（或兜底首页）
-    const navigateBackSafe = () => {
-        try {
-            if (window.history.length > 1) {
-                navigate(-1);
-            } else {
-                navigate('/home');
+    const handleEndGame = async () => {
+        // 注意：这个函数现在主要用于手动退出按钮
+        // 自动上报（页面隐藏/关闭）由 useGameDurationTracking hook 处理
+        if (started_at) {
+            const { hasReported, setHasReported } = useTrackingStore.getState();
+            // 如果已经通过自动上报上报过了，就不再重复上报
+            if (hasReported) {
+                return;
             }
-        } catch {
-            navigate('/home');
+            await trackingApi.analyticsEnd({
+                durationSeconds: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000),
+                gameFileId: fileId || undefined,
+            });
+            setHasReported(true);
         }
     };
 
+    // 退出/删除统一回到上一个页面（或兜底首页）
+    const navigateBackSafe = () => {
+        handleEndGame();
+
+        if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate('/home');
+        }
+
+    };
     const handleDeleteSessionInGame = async () => {
         setIsDeleteConfirmOpen(true);
     };
@@ -131,7 +153,7 @@ const Galgame = () => {
 
     const canShareReplay = !controller.isReplay && !!sessionId && !controller.stepHandlers.isWaitingForData;
 
-    const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public'|'unlisted'|'private' }) => {
+    const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
         if (!sessionId || !fileId) {
             toast.error('未找到会话或游戏信息');
             return;
@@ -239,63 +261,63 @@ const Galgame = () => {
                             </>
                         )}
                         {!controller.showGalgameHistory && controller.isTextMode && (
-                                <TextModeDisplay
-                                    steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
-                                    currentStepIndex={controller.currentStepIndex}
-                                    currentDisplayText={controller.textModalDisplayText}
-                                    isTyping={controller.finalIsTyping}
-                                    isWaitingForData={controller.stepHandlers.isWaitingForData}
-                                    historyLength={controller.history.length}
-                                    onChoiceClick={(option) => {
-                                        controller.handleChoiceClick(option);
-                                    }}
-                                    onCustomInputSubmit={(value) => {
-                                        controller.handleCustomInputSubmit(value);
-                                    }}
-                                />
+                            <TextModeDisplay
+                                steps={controller.convertStepsToTextModalFormat(controller.allStepsForTextModal)}
+                                currentStepIndex={controller.currentStepIndex}
+                                currentDisplayText={controller.textModalDisplayText}
+                                isTyping={controller.finalIsTyping}
+                                isWaitingForData={controller.stepHandlers.isWaitingForData}
+                                historyLength={controller.history.length}
+                                onChoiceClick={(option) => {
+                                    controller.handleChoiceClick(option);
+                                }}
+                                onCustomInputSubmit={(value) => {
+                                    controller.handleCustomInputSubmit(value);
+                                }}
+                            />
                         )}
                     </div>
-                    
+
                     {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
-                        <div className={styles.buttonContainer}>
-                            <div className={styles.buttonItem}>
-                                <div className={styles.buttonInner}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                                    <span>{user?.user?.points}</span>
-                                </div>
+                    <div className={styles.buttonContainer}>
+                        <div className={styles.buttonItem}>
+                            <div className={styles.buttonInner}>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
+                                <span>{user?.user?.points}</span>
                             </div>
+                        </div>
                         {!controller.isReplay && (
-                            <div 
-                                className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
-                                    onClick={handleHistoryClick}
-                                >
-                                    <div className={styles.buttonInner}>
-                                        <BiHistory />
-                                        <span>历史</span>
-                                    </div>
-                                </div>
-                        )}
                             <div
-                                className={`${styles.buttonItem} ${controller.isTextMode ? styles.buttonItemActive : ''}`}
-                                onClick={handleTextModeToggle}
-                                style={{ cursor: 'pointer' }}
+                                className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
+                                onClick={handleHistoryClick}
                             >
                                 <div className={styles.buttonInner}>
-                                    <LuFileText />
-                                    <span>文本</span>
+                                    <BiHistory />
+                                    <span>历史</span>
                                 </div>
                             </div>
-                            <div
+                        )}
+                        <div
+                            className={`${styles.buttonItem} ${controller.isTextMode ? styles.buttonItemActive : ''}`}
+                            onClick={handleTextModeToggle}
+                            style={{ cursor: 'pointer' }}
+                        >
+                            <div className={styles.buttonInner}>
+                                <LuFileText />
+                                <span>文本</span>
+                            </div>
+                        </div>
+                        <div
                             className={`${styles.buttonItem} ${controller.isAutoPlay ? styles.buttonItemActive : ''} ${controller.isTextMode || controller.showGalgameHistory ? styles.buttonItemDisabled : ''}`}
                             onClick={controller.isTextMode || controller.showGalgameHistory ? undefined : controller.handleAutoPlayToggle}
                             style={{ cursor: controller.isTextMode || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <MdOutlineAutoStories />
-                                    <span>自动</span>
-                                </div>
+                        >
+                            <div className={styles.buttonInner}>
+                                <MdOutlineAutoStories />
+                                <span>自动</span>
                             </div>
-                            {!controller.isReplay && (
+                        </div>
+                        {!controller.isReplay && (
                             <div
                                 className={`${styles.buttonItem} ${!canShareReplay ? styles.buttonItemDisabled : ''}`}
                                 onClick={!canShareReplay ? undefined : () => setIsShareOpen(true)}
@@ -306,13 +328,13 @@ const Galgame = () => {
                                     <span>分享回放</span>
                                 </div>
                             </div>
-                            )}
-                            <div
+                        )}
+                        <div
                             className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <div className={styles.buttonInner}>
+                            style={{ cursor: 'pointer' }}
+                        >
+                            <div className={styles.buttonInner}>
                                 <MdSettings />
                                 <span>设置</span>
                             </div>
@@ -408,8 +430,8 @@ const Galgame = () => {
                                 <div className={replayModalStyles.endBody}>感谢观看</div>
                                 <div className={replayModalStyles.endFooter}>
                                     <button
-                                      className={`${replayModalStyles.btn} ${replayModalStyles.btnSecondary}`}
-                                      onClick={controller.handleExitGame}
+                                        className={`${replayModalStyles.btn} ${replayModalStyles.btnSecondary}`}
+                                        onClick={controller.handleExitGame}
                                     >退出</button>
                                 </div>
                             </div>
@@ -426,7 +448,6 @@ const Galgame = () => {
                         confirmText="确认删除"
                         cancelText="取消"
                     />
-
                 </div>
             </div>
         </>

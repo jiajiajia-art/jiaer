@@ -86,7 +86,9 @@ const Navbar: React.FC = () => {
                         className={`${styles.navLink} ${activeNav === '创作' ? styles.navLinkActive : ''}`}
                         onClick={() => {
                             if (!isAuthenticated) {
-                                setIsAuthModalOpen(true);
+                                if (!isWebViewEnv()) {
+                                    setIsAuthModalOpen(true);
+                                }
                                 return;
                             }
                             handleNavClick('创作')
@@ -98,7 +100,9 @@ const Navbar: React.FC = () => {
                         className={`${styles.navLink} ${activeNav === '仓库' ? styles.navLinkActive : ''}`}
                         onClick={() => {
                             if (!isAuthenticated) {
-                                setIsAuthModalOpen(true);
+                                if (!isWebViewEnv()) {
+                                    setIsAuthModalOpen(true);
+                                }
                                 return;
                             }
                             handleNavClick('仓库')
@@ -139,19 +143,26 @@ const Navbar: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        <button
-                            className={styles.loginBtn}
-                            onClick={() => setIsAuthModalOpen(true)}
-                        >
-                            登录
-                        </button>
-                    )}
+                        !isWebViewEnv() ? (
+                            <button
+                                className={styles.loginBtn}
+                                onClick={() => {
+                                    if (!isWebViewEnv()) {
+                                        setIsAuthModalOpen(true);
+                                    }
+                                }}
+                            >
+                                登录
+                            </button>
+                        ) : <></>)}
                 </div>
             </div>
-            <AuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
-            />
+            {!isWebViewEnv() && (
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                />
+            )}
         </div>
     );
 };

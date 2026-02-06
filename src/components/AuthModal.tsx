@@ -13,7 +13,17 @@ interface AuthModalProps {
 
 type AuthMode = 'login' | 'register' | 'reset';
 
+// 检测是否在微信小程序环境
+const isWebViewEnv = (): boolean => {
+    const win = window as any;
+    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+};
+
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
+    // 在微信小程序环境中不渲染
+    if (isWebViewEnv()) {
+        return null;
+    }
     const [mode, setMode] = useState<AuthMode>('login');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');

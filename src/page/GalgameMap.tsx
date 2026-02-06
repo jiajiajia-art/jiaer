@@ -42,6 +42,9 @@ import { MdOutlinePerson } from "react-icons/md";
 import GameAction from "../api/rpgGame/gameAction";
 import toast from "react-hot-toast";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
+import { useTrackingStore } from "../store/trackingStore";
+import { trackingApi } from "../api/statistics/trackingApi";
+import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
 
 export interface EventData {
   event: GameEvent;
@@ -100,9 +103,21 @@ const GalgameMap = () => {
   // Player属性面板状态（外层统一从底部按钮触发）
   const [isPlayerAttributesVisible, setIsPlayerAttributesVisible] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const { started_at } = useTrackingStore();
+  useGameDurationTracking(fileId || undefined);
+
+  const handleEndGame = async () => {
+    if (started_at) {
+      await trackingApi.analyticsEnd({
+        durationSeconds: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000),
+        gameFileId: fileId || undefined,
+      });
+    }
+  };
 
   // 退出/删除统一回到上一个页面（或兜底首页）
   const navigateBackSafe = () => {
+    handleEndGame();
     try {
       if (window.history.length > 1) {
         navigate(-1);
@@ -113,7 +128,7 @@ const GalgameMap = () => {
       navigate('/home');
     }
   };
-
+  
   const handleDeleteSessionInGame = async () => {
     setIsDeleteConfirmOpen(true);
   };

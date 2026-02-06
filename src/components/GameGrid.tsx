@@ -22,7 +22,9 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
             // 默认行为：导航到详情页
             const gameId = game.file_id || game.id;
             if (gameId) {
-                navigate(`/game/${gameId}`);
+                navigate(`/game/${gameId}`, {
+                    state: { source: 'main_page' },
+                });
             }
         }
     };
