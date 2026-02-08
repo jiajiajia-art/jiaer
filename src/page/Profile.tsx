@@ -11,6 +11,11 @@ import toast from 'react-hot-toast';
 import { getImageUrl } from '../utils/constants';
 import type { User } from '../api/account/auth.type';
 
+const isWebViewEnv = (): boolean => {
+    const win = window as any;
+    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+};
+
 const Profile: React.FC = () => {
     const { user, logout, updateUser } = useAuthStore();
     const navigate = useNavigate();
@@ -18,7 +23,7 @@ const Profile: React.FC = () => {
     const [inputInviteCode, setInputInviteCode] = useState('');
     const [showInputInviteCode, setShowInputInviteCode] = useState(false);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
-
+    
     const handleLogout = () => {
         logout();
         navigate('/home');
@@ -66,14 +71,14 @@ const Profile: React.FC = () => {
             toast.error('请输入邀请码');
             return;
         }
-    
+
         console.log('提交邀请码:', inputInviteCode);
-    
+
         try {
             const response = await auth.useInviteCode({ inviteCode: inputInviteCode });
             console.log('完整响应:', response);
             console.log('响应数据:', response.data);
-            
+
             if (response.data.success) {
                 toast.success('邀请码提交成功');
                 getUserInfo();
@@ -109,7 +114,7 @@ const Profile: React.FC = () => {
 
     const handleCheckIn = async () => {
         console.log("user?.hasSignedIn", user?.user?.hasSignedIn);
-        
+
         if (user?.user?.hasSignedIn) {
             toast.error('今日已签到');
             return;
@@ -157,7 +162,7 @@ const Profile: React.FC = () => {
                                 <div className={styles.functionTitle}>我的积分</div>
                                 <div className={styles.functionDesc}>当前积分：{user?.user?.points ?? 0}</div>
                             </div>
-                            <button 
+                            <button
                                 className={`${styles.functionButton} ${user?.user?.hasSignedIn ? styles.functionButtonSignedIn : styles.functionButtonCheckIn}`}
                                 onClick={handleCheckIn}
                                 disabled={user?.user?.hasSignedIn}
@@ -236,8 +241,8 @@ const Profile: React.FC = () => {
                                         }}
                                         autoFocus
                                     />
-                                    <button 
-                                        className={styles.functionButton} 
+                                    <button
+                                        className={styles.functionButton}
                                         onClick={handleSubmitInviteCode}
                                         onMouseDown={(e) => {
                                             e.preventDefault();
@@ -264,18 +269,23 @@ const Profile: React.FC = () => {
                         </div>
 
                         {/* 退出登录 */}
-                        <div className={styles.functionItem}>
-                            <div className={styles.functionIcon}>
-                                <RiLogoutCircleRLine />
-                            </div>
-                            <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>退出登录</div>
-                                <div className={styles.functionDesc}>退出当前账号</div>
-                            </div>
-                            <button className={styles.functionButton} onClick={handleLogout}>
-                                退出
-                            </button>
-                        </div>
+                        {
+                            !isWebViewEnv() && (
+
+                                <div className={styles.functionItem}>
+                                    <div className={styles.functionIcon}>
+                                        <RiLogoutCircleRLine />
+                                    </div>
+                                    <div className={styles.functionText}>
+                                        <div className={styles.functionTitle}>退出登录</div>
+                                        <div className={styles.functionDesc}>退出当前账号</div>
+                                    </div>
+                                    <button className={styles.functionButton} onClick={handleLogout}>
+                                        退出
+                                    </button>
+                                </div>
+                            )
+                        }
                     </div>
                 </div>
             </div>

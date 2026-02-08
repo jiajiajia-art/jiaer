@@ -23,35 +23,6 @@ export interface PlayerState {
     currency: { gold: number };
 }
 
-export interface Item {
-    id: string;
-    name?: string;
-    description?: string;
-    icon?: string;
-    quantity: number;
-    stackable?: boolean;
-    equippable?: boolean;
-    usable?: boolean;
-    slots?: string[];
-    effects?: Partial<PlayerStats>;
-}
-
-export interface EquipmentSlots {
-    head: Item | null;
-    body: Item | null;
-    legs: Item | null;
-    hands: Item | null;
-    feet: Item | null;
-    back: Item | null;
-    leftHand: Item | null;
-    rightHand: Item | null;
-}
-
-export interface InventoryState {
-    equipment: EquipmentSlots;
-    items: Item[];
-}
-
 // SceneNode 类型别名，兼容旧代码
 export type SceneNode = Scene;
 
@@ -78,11 +49,6 @@ interface GameState {
   player: PlayerData | null;
   setPlayer: (player: PlayerData | null) => void;
   updatePlayer: (updater: (player: PlayerData | null) => PlayerData | null) => void;
-
-  // 背包数据
-  inventory: Inventory | null;
-  setInventory: (inventory: Inventory | null) => void;
-  updateInventory: (updater: (inventory: Inventory | null) => Inventory | null) => void;
 
   // 物品定义
   items: Record<string, GameItem>;
@@ -152,10 +118,6 @@ export const useGameStore = create<GameState>()(
       setPlayer: (player) => set({ player }),
       updatePlayer: (updater) => set((state) => ({ player: updater(state.player) })),
 
-      // 背包数据
-      inventory: null,
-      setInventory: (inventory) => set({ inventory }),
-      updateInventory: (updater) => set((state) => ({ inventory: updater(state.inventory) })),
 
       // 物品定义
       items: {},
@@ -190,7 +152,6 @@ export const useGameStore = create<GameState>()(
         scenes: {},
         currentSceneId: '',
         player: null,
-        inventory: null,
         items: {},
         gameDetail: null,
         gameStarted: false,

@@ -3,12 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { CustomIFHostBridge } from '../custom/hostBridge';
+import { useTrackingStore } from '../store/trackingStore';
+import { useGameDurationTracking } from '../hooks/useGameDurationTracking';
 
 type CreateSessionResp = {
   sessionId: string;
   version: string;
   entryUrl: string;
   manifestUrl?: string;
+  analyticsSessionId: string;
+  started_at: string;
 };
 
 const CustomIF: React.FC = () => {
@@ -20,7 +24,9 @@ const CustomIF: React.FC = () => {
   const [manifest, setManifest] = useState<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const bridgeRef = useRef<CustomIFHostBridge | null>(null);
-
+  const { setStartedAt } = useTrackingStore();
+  useGameDurationTracking(appId || undefined);
+  
   const toAbsoluteUrl = (raw?: string) => {
     if (!raw) return '';
     // absolute
@@ -47,6 +53,9 @@ const CustomIF: React.FC = () => {
         const data = await resp.json() as CreateSessionResp;
         if (cancelled) return;
         setSession(data);
+        const startTime = new Date().toISOString();
+        setStartedAt(startTime);
+
         // 2) load manifest if provided
         if (data.manifestUrl) {
           try {

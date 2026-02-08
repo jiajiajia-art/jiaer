@@ -5,6 +5,7 @@ import { useMapGalgameStore } from "../../store/mapGalgameStore";
 export interface CreateWorldSessionRequest {
     presetId?: string;
     fileId?: string;
+    source?: 'link' | 'game_detail' | 'history' | 'other';
 }
 
 const createWorldSessionApi = {

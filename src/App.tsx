@@ -18,8 +18,11 @@ import GameDetail from './page/GameDetail';
 import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
+import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
 
 function App() {
+  usePlatformDurationTracking();
+
   return (
     <BrowserRouter basename='/funloom'>
       <RouteReporter />

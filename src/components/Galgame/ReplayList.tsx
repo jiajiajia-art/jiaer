@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import replayApi from '../../api/galgame/replay';
 import type { ReplaySummary } from '../../api/galgame/replay';
 import { useNavigate } from 'react-router-dom';

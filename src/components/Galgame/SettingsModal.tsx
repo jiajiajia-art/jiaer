@@ -5,6 +5,7 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onExitGame: () => void;
+  onDeleteSession?: () => void;
   isMusicPlaying: boolean;
   onToggleMusic: () => void;
   volume: number;
@@ -15,6 +16,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   onExitGame,
+  onDeleteSession,
   isMusicPlaying,
   onToggleMusic,
   volume,
@@ -70,6 +72,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           <div className={styles.buttonContainer}>
+            {onDeleteSession && (
+              <button
+                className={styles.dangerButton}
+                onClick={onDeleteSession}
+              >
+                <span>删除存档</span>
+              </button>
+            )}
             <button className={styles.dangerButton} onClick={onExitGame}>
               <span>退出游戏</span>
             </button>

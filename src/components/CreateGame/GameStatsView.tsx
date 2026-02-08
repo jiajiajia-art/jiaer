@@ -6,7 +6,6 @@ import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
 import { useAuthStore, authModalStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
-import createSessionApi from '../../api/createGame/createSessionApi';
 import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/rpgGame/gameAction';
 import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
@@ -93,17 +92,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 return { sessionId: null, redirectUrl: '' };
             }
 
-            if (normalized === 'RPG') {
-                const response = await createSessionApi.getSession({ fileId });
-                if (response.data.success) {
-                    const data = response.data.data;
-                    const sessionId = data?.session?.session_id || null;
-                    return { sessionId, redirectUrl: '/rpgGame' };
-                }
-                alert(response.data.message || '创建游戏失败，请重试');
-                return { sessionId: null, redirectUrl: '' };
-            }
-
             if (normalized === 'AVG') {
                 const response = await createWorldSessionApi.createWorldEditSession({ fileId });
                 if (response.data.success) {
@@ -130,7 +118,12 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
      */
     const handleStartGame = async () => {
         if (!user?.user.userId || !user?.user.id) {
-            authModalStore.getState().setIsAuthModalOpen(true);
+            // 检测是否在微信小程序环境
+            const win = window as any;
+            const isMiniProgram = String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+            if (!isMiniProgram) {
+                authModalStore.getState().setIsAuthModalOpen(true);
+            }
             return;
         }
 

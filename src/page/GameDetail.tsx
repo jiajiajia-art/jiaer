@@ -1,17 +1,15 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styles from './GameDetail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { useAuthStore, authModalStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/gameStore';
 import statisticsApi from '../api/statistics/statisticsApi';
-import createSessionApi from '../api/createGame/createSessionApi';
 import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
 import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import toast from 'react-hot-toast';
-// import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import betaWhitelistApi from '../api/galgame/betaWhitelist';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
@@ -20,6 +18,14 @@ import { FaRegShareFromSquare } from 'react-icons/fa6';
 import { IoChevronBack } from 'react-icons/io5';
 import AuthModal from '../components/AuthModal';
 import ReplayList from '../components/Galgame/ReplayList';
+import { useTrackingStore } from '../store/trackingStore';
+import { trackingApi } from '../api/statistics/trackingApi';
+
+// 检测是否在微信小程序环境
+const isWebViewEnv = (): boolean => {
+    const win = window as any;
+    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+};
 
 // 常量
 const LIKE_DEBOUNCE_DELAY = 300;
@@ -41,11 +47,13 @@ const checkIsLiked = (reaction: string | number | null | undefined): boolean => 
 const GameDetail: React.FC = () => {
     const { fileId: fileIdParam } = useParams<{ fileId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Hooks
     const { user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { setFileId, setSessionId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
+    const { setStartedAt } = useTrackingStore();
 
     // 状态
     const [isLoading, setIsLoading] = useState(true);
@@ -53,23 +61,75 @@ const GameDetail: React.FC = () => {
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'replays'>('details');
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasRecordedViewRef = useRef(false);
+    
+    const lastTrackedLocationKeyRef = useRef<string | null>(null);
 
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
 
+    // 解析进入详情页的来源
+    const enterSource = useMemo(() => {
+        // 1. 优先看路由 state 中的 source（需要做合法值校验，避免传错值）
+        const rawStateSource = (location.state as any)?.source;
+        const stateSource = String(rawStateSource || '').toLowerCase();
+        if (stateSource === 'link' || stateSource === 'main_page' || stateSource === 'search' || stateSource === 'other') {
+            return stateSource as 'link' | 'main_page' | 'search' | 'other';
+        }
+
+        // 2. 其次看 URL query 中是否带有 from/source 参数
+        const searchParams = new URLSearchParams(location.search);
+        const querySource = (searchParams.get('source') || searchParams.get('from') || '').toLowerCase();
+        if (querySource === 'link' || querySource === 'main_page' || querySource === 'search' || querySource === 'other') {
+            return querySource as 'link' | 'main_page' | 'search' | 'other';
+        }
+
+        // 3. 都没有时，认为是「外链 / 直接输入链接」进入
+        return 'link' as const;
+    }, [location.state, location.search]);
+
+    useEffect(() => {
+        if (!fileIdParam) return;
+
+        if (lastTrackedLocationKeyRef.current === location.key) return;
+        lastTrackedLocationKeyRef.current = location.key;
+
+        trackingApi
+            .enterGameDetail({
+                gameFileId: String(fileIdParam),
+                source: enterSource,
+            })
+            .catch((error) => {
+                console.error('记录进入游戏详情页失败:', error);
+                // 失败时允许下次进入同一个页面重试
+                if (lastTrackedLocationKeyRef.current === location.key) {
+                    lastTrackedLocationKeyRef.current = null;
+                }
+            });
+    }, [fileIdParam, enterSource, location.key]);
+
+    // 用户进入游戏，用户来源
+    const mapSourceForSession = useCallback((source: 'link' | 'main_page' | 'search' | 'other'): 'link' | 'game_detail' | 'history' | 'other' => {
+        if (source === 'link') {
+            return 'link';// 如果详情页是分享链接进入的，游戏界面也保持 'link'
+        }
+        // 从主页面、搜索等进入详情页，然后进入游戏，应该传递 'game_detail'
+        return 'game_detail';
+    }, []);
+
     // 检查用户是否登录
     const checkAuth = () => {
         if (!userId) {
-            // 未登录时打开全局登录弹窗
-            setIsAuthModalOpen(true);
+            // 未登录时打开全局登录弹窗（微信小程序环境不打开）
+            if (!isWebViewEnv()) {
+                setIsAuthModalOpen(true);
+            }
             return false;
         }
         return true;
@@ -126,33 +186,6 @@ const GameDetail: React.FC = () => {
         }
     }, [fileIdParam, fetchGameDetail]);
 
-    // 创建普通游戏会话
-    const createSession = async (fileId: string): Promise<string | null> => {
-        if (!fileId || !userId) {
-            return null;
-        }
-
-        setIsLoading(true);
-        try {
-            const response = await createSessionApi.getSession({
-                fileId,
-            });
-
-            if (response.data.success) {
-                return response.data.data?.session.session_id || null;
-            } else {
-                toast.error(response.data.message || '创建游戏失败，请重试');
-                return null;
-            }
-        } catch (error) {
-            console.error('❌ Session 创建错误:', error);
-            toast.error('创建游戏失败，请稍后重试');
-            return null;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     // 创建 Galgame 会话
     const createGalgameSession = async (presetId: string): Promise<string | null> => {
         if (!presetId || !userId) {
@@ -161,8 +194,13 @@ const GameDetail: React.FC = () => {
 
         setIsLoading(true);
         try {
-            const sessionResponse = await createGalgameSessionApi.createGalgamePlaySession({ presetId });
+            const sessionResponse = await createGalgameSessionApi.createGalgamePlaySession({ 
+                fileId: presetId,
+                source: mapSourceForSession(enterSource), // 映射并传递来源
+            });
             if (sessionResponse.data.success) {
+                const startTime = new Date().toISOString();
+                setStartedAt(startTime);
                 return sessionResponse.data.data.session.session_id;
             } else {
                 toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
@@ -188,8 +226,13 @@ const GameDetail: React.FC = () => {
             return null;
         }
         try {
-            const response = await createWorldSessionApi.createWorldPlaySession({ fileId: presetId });
+            const response = await createWorldSessionApi.createWorldPlaySession({ 
+                fileId: presetId, 
+                source: mapSourceForSession(enterSource),
+            });
             if (response.data.success) {
+                const startTime = new Date().toISOString();
+                setStartedAt(startTime);
                 return response.data.data.session.session_id;
             } else {
                 toast.error(response.data.message || '创建游戏失败，请重试');
@@ -256,16 +299,7 @@ const GameDetail: React.FC = () => {
             return;
         }
 
-        if (normalized === 'RPG') {
-            setFileId(fileId);
-            setIsPreset(game.is_preset == 1);
-            const sessionId = await createSession(fileId);
-            if (sessionId) {
-                setSessionId(sessionId);
-                navigate('/rpgGame');
-            }
-            return;
-        }
+
 
         if (normalized === 'AVG') {
             setFileId(fileId);
@@ -340,27 +374,6 @@ const GameDetail: React.FC = () => {
         };
     }, []);
 
-    // 处理删除存档
-    const handleDeleteSession = async () => {
-        if (!checkAuth()) return;
-        if (!fileId || !userId) return;
-        try {
-            const response = await GameAction.deletGameSession({
-                fileId,
-            });
-            if (response.data.success) {
-                toast.success('删除成功');
-                fetchGameDetail();
-            } else {
-                toast.error(response.data.message || '删除失败');
-            }
-        } catch (error) {
-            console.error('删除存档失败:', error);
-        } finally {
-            setIsConfirmModalOpen(false);
-        }
-    };
-
     // 价格相关计算：统一处理原价 / 特价 / 免费
     // 计算样式
     const heroStyle = useMemo(() => {
@@ -384,13 +397,46 @@ const GameDetail: React.FC = () => {
         }
     };
 
-    const handleShare = () => {
-        if (!canNativeShare) return;
-        navigator.share({
-            title: game?.title || '游戏',
-            text: game?.description || '',
-            url: window.location.href,
-        }).catch(() => { });
+    const handleShare = async () => {
+        // 优先使用原生分享 API
+        if (canNativeShare) {
+            try {
+                await navigator.share({
+                    title: game?.title || '游戏',
+                    text: game?.description || '',
+                    url: window.location.href,
+                });
+                return;
+            } catch (error) {
+                // 用户取消分享或其他错误，继续执行备用方案
+                if ((error as any)?.name !== 'AbortError') {
+                    console.log('原生分享失败，使用备用方案');
+                } else {
+                    return; // 用户取消，不执行备用方案
+                }
+            }
+        }
+
+        // 备用方案：复制链接到剪贴板
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast.success('链接已复制到剪贴板');
+        } catch (error) {
+            // 如果 clipboard API 也不可用，使用传统方法
+            const textArea = document.createElement('textarea');
+            textArea.value = window.location.href;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                toast.success('链接已复制到剪贴板');
+            } catch (err) {
+                toast.error('复制失败，请手动复制链接');
+            }
+            document.body.removeChild(textArea);
+        }
     };
 
     if (isLoading) {
@@ -420,28 +466,17 @@ const GameDetail: React.FC = () => {
 
     return (
         <div className={styles.pageContainer}>
-            {/* 顶部悬浮栏 */}
+            {/* 顶部悬浮栏：仅返回 & 分享 */}
             <div className={styles.topBar}>
                 <div className={styles.topBarContent}>
-                <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
-                    <IoChevronBack />
-                </button>
-                <div className={styles.topActions}>
-                    <button
-                        className={styles.topDeleteButton}
-                        onClick={() => {
-                            if (!checkAuth()) return;
-                            setIsConfirmModalOpen(true);
-                        }}
-                    >
-                        删除存档
+                    <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
+                        <IoChevronBack />
                     </button>
-                    {canNativeShare && (
+                    <div className={styles.topActions}>
                         <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
                             <FaRegShareFromSquare />
                         </button>
-                    )}
-                </div>
+                    </div>
                 </div>
             </div>
 
@@ -526,7 +561,6 @@ const GameDetail: React.FC = () => {
                         </div>
                     )}
 
-                    {/* 价格和操作按钮 */}
                 </div>
             </div>
 
@@ -534,7 +568,6 @@ const GameDetail: React.FC = () => {
             <div className={styles.floatingActionBar}>
                 <div className={styles.floatingActionInner}>
                     <div className={styles.actionSection} />
-                    {/* 统一只显示开始游戏按钮 */}
                     <button
                         className={styles.startButton}
                         onClick={handleStartGame}
@@ -555,14 +588,6 @@ const GameDetail: React.FC = () => {
 
             {/* 模态框 */}
             <ConfirmModal
-                isOpen={isConfirmModalOpen}
-                onConfirm={handleDeleteSession}
-                onCancel={() => setIsConfirmModalOpen(false)}
-                title="删除存档"
-                message={normalizeNewlines("确认删除该游戏的存档吗？\\n删除后无法恢复。")}
-            />
-            
-            <ConfirmModal
                 isOpen={isUpdateWarningModalOpen}
                 onConfirm={async () => {
                     setIsUpdateWarningModalOpen(false);
@@ -574,11 +599,13 @@ const GameDetail: React.FC = () => {
                 confirmButtonText="继续游戏"
                 cancelButtonText="取消"
             />
-            {/* 登录弹窗（当前详情页也挂一份，确保能在本页触发显示） */}
-            <AuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
-            />
+            {/* 登录弹窗（当前详情页也挂一份，确保能在本页触发显示，微信小程序环境不显示） */}
+            {!isWebViewEnv() && (
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                />
+            )}
         </div>
     );
 };
