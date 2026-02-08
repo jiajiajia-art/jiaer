@@ -1,0 +1,139 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.panelWrapper {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.panel {
+  position: relative;
+  width: 90vw;
+  max-width: 380px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    to bottom,
+    rgba(50, 50, 50, 0.2) 0%,
+    rgba(30, 30, 30, 0.2) 10%,
+    rgba(20, 20, 20, 0.2) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.43);
+  overflow: hidden;
+}
+
+.closeButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(114, 114, 114, 0.37);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.header {
+  padding: 12px 44px 0 12px;
+}
+
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 8px 0;
+}
+
+.refreshButton {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(60, 60, 60, 0.4);
+  cursor: pointer;
+}
+
+.refreshButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.tab {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(60, 60, 60, 0.4);
+  cursor: pointer;
+}
+
+.tabActive {
+  background: rgba(251, 70, 85, 0.3);
+  border-color: rgba(251, 70, 85, 0.5);
+  color: #fff;
+}
+
+.body {
+  padding: 12px;
+  color: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: auto;
+}
+
+.contentText {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.error {
+  padding: 12px;
+  margin: 10px 12px 0;
+  border-radius: 6px;
+  background: rgba(255, 80, 80, 0.15);
+  color: #ffdede;
+  font-size: 12px;
+  border: 1px solid rgba(255, 100, 100, 0.35);
+}
+

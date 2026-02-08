@@ -27,7 +27,7 @@ import GameAction from "../api/rpgGame/gameAction";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
-import ServerAttributesPanel from "../components/GalgameMap/Plugin/ServerAttributesPanel";
+import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
 import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
