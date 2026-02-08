@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import SaveConfirmModal from '../../components/GoodsModal/SaveConfirmModal';
+import SaveConfirmModal from '../../components/goodsModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 
 export interface UnsavedChangesRef {

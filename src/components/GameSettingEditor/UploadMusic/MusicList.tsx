@@ -4,7 +4,7 @@ import styles from './MusicList.module.css';
 import type { SceneApiHelpers } from '../ScenesPanel/apiHelpers';
 import { IoPauseCircleOutline, IoPlaySkipForwardCircleOutline } from 'react-icons/io5';
 import { MdDeleteOutline } from 'react-icons/md';
-import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import ConfirmModal from '../../goodsModal/ConfirmModal';
 
 export interface MusicItem {
     id: string;

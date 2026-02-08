@@ -8,7 +8,7 @@ import statisticsApi from '../api/statistics/statisticsApi';
 import GameAction from '../api/rpgGame/gameAction';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
-import ConfirmModal from '../components/GoodsModal/ConfirmModal';
+import ConfirmModal from '../components/goodsModal/ConfirmModal';
 import toast from 'react-hot-toast';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import betaWhitelistApi from '../api/galgame/betaWhitelist';

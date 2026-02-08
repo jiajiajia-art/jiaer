@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
 import styles from './ObjectDetail.module.css';
 import sharedStyles from './shared.module.css';
-import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import ConfirmModal from '../../goodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { getImageUrl, IMAGE_GENERATION_COST, normalizeIcon as normalizeIconUtil } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';

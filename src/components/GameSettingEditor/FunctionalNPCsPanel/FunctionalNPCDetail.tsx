@@ -1,7 +1,7 @@
 import React, { useState, useRef, useImperativeHandle } from 'react';
 import styles from './FunctionalNPCDetail.module.css';
 import sharedStyles from './shared.module.css';
-import ConfirmModal from '../../GoodsModal/ConfirmModal';
+import ConfirmModal from '../../goodsModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
