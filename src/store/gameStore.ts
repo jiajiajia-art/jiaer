@@ -106,6 +106,10 @@ interface GameState {
   volume: number;
   setVolume: (volume: number) => void;
 
+  // 实验功能开关（Galgame专用）
+  galgameBetaAttributes: boolean | null; // null 表示未检测
+  setGalgameBetaAttributes: (enabled: boolean | null) => void;
+
   clearAll: () => void;
 }
 
@@ -174,6 +178,10 @@ export const useGameStore = create<GameState>()(
       setIsPlaying: (isPlaying) => set({ isPlaying }),
       volume: 1,
       setVolume: (volume) => set({ volume }),
+
+      // 实验功能开关（不持久化）
+      galgameBetaAttributes: null,
+      setGalgameBetaAttributes: (enabled) => set({ galgameBetaAttributes: enabled }),
 
       clearAll: () => set({ 
         fileId: null, 

@@ -935,6 +935,17 @@
     white-space: nowrap;
 }
 
+/* 顶部右侧按钮容器（与底部按钮同样风格的按钮） */
+.topButtonsContainer {
+    position: absolute;
+    top: 1rem; /* 16px */
+    right: 1.25rem; /* 20px */
+    z-index: 3200;
+    display: flex;
+    gap: 0.75rem; /* 12px */
+    align-items: center;
+}
+
 .timeoutOverlay {
     position: fixed;
     inset: 0;

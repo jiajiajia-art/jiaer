@@ -5,7 +5,7 @@ import { useGameStore } from "../store/gameStore";
 import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
-import { MdSettings } from "react-icons/md";
+import { MdSettings, MdOutlineAssessment } from "react-icons/md";
 import { FaRegShareFromSquare } from "react-icons/fa6";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
@@ -19,21 +19,39 @@ import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import GameImageRenderer from "../components/Galgame/GameImageRenderer";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
+import ServerAttributesPanel from "../components/GalgameMap/Plugin/ServerAttributesPanel";
+import betaWhitelistApi from "../api/galgame/betaWhitelist";
 
 const Galgame = () => {
     const { user } = useAuthStore();
-    const { fileId, sessionId } = useGameStore();
+    const { fileId, sessionId, galgameBetaAttributes, setGalgameBetaAttributes } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
-    
+    const [isAttributesOpen, setIsAttributesOpen] = useState(false);
     // 使用统一的控制器 hook
     const controller = useGalgameController();
+    
+    // 刷新/直进页面时的兜底：如果未检测过白名单，则尝试拉取一次
+    useEffect(() => {
+        const run = async () => {
+            try {
+                if (!fileId) return;
+                if (galgameBetaAttributes !== null) return;
+                const resp = await betaWhitelistApi.get(fileId);
+                const enabled = !!resp.data?.whitelisted;
+                setGalgameBetaAttributes(enabled);
+            } catch {
+                setGalgameBetaAttributes(false);
+            }
+        };
+        run();
+    }, [fileId, galgameBetaAttributes, setGalgameBetaAttributes]);
 
     // 处理历史按钮点击（切换显示/隐藏）
     const handleHistoryClick = () => {
@@ -211,7 +229,22 @@ const Galgame = () => {
                                 />
                         )}
                     </div>
-                    
+                    {/* 顶部右侧：属性按钮（内测白名单） */}
+                    {galgameBetaAttributes && controller.gameStarted ? (
+                        <div className={styles.topButtonsContainer}>
+                            <div
+                                className={`${styles.buttonItem} ${isAttributesOpen ? styles.buttonItemActive : ''}`}
+                                onClick={() => setIsAttributesOpen((p) => !p)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className={styles.buttonInner}>
+                                    <MdOutlineAssessment />
+                                    <span>属性</span>
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
+
                     {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
                         <div className={styles.buttonContainer}>
                             <div className={styles.buttonItem}>
@@ -300,6 +333,14 @@ const Galgame = () => {
                         volume={volume}
                         onVolumeChange={setVolume}
                     />
+
+                    {/* 通用属性面板（服务端KV） */}
+                    {galgameBetaAttributes && controller.gameStarted ? (
+                        <ServerAttributesPanel
+                            isOpen={isAttributesOpen}
+                            onClose={() => setIsAttributesOpen(false)}
+                        />
+                    ) : null}
 
                     {/* 请求超时弹窗 */}
                     {renderErrorModal(

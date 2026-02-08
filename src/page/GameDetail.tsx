@@ -13,6 +13,7 @@ import ConfirmModal from '../components/GoodsModal/ConfirmModal';
 import toast from 'react-hot-toast';
 // import payApi from '../api/pay/payApi';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
+import betaWhitelistApi from '../api/galgame/betaWhitelist';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../utils/constants';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
@@ -235,6 +236,18 @@ const GameDetail: React.FC = () => {
         if (normalized === 'TXT') {
             setFileId(fileId);
             setIsPreset(game.is_preset == 1);
+
+            // 内测白名单：在开始游戏前检查
+            try {
+                const resp = await betaWhitelistApi.get(fileId);
+                const enabled = !!resp.data?.whitelisted;
+                useGameStore.getState().setGalgameBetaAttributes(enabled);
+            } catch (e) {
+                // 网络或接口错误，不影响开始游戏，默认关闭
+                useGameStore.getState().setGalgameBetaAttributes(false);
+                console.warn('[Beta] whitelist check failed, default disabled');
+            }
+
             const sessionId = await createGalgameSession(fileId);
             if (sessionId) {
                 setSessionId(sessionId);
