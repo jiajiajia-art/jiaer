@@ -21,6 +21,8 @@ interface WorldSettingFormProps {
     onTargetOutputLengthChange: (value: number | undefined) => void;
     onMinOutputLengthChange: (value: number | undefined) => void;
     onMaxOutputLengthChange: (value: number | undefined) => void;
+    openingError?: string;
+    openingPlotError?: string;
 }
 
 const WORD_LIMITS = {
@@ -50,6 +52,8 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     onTargetOutputLengthChange,
     onMinOutputLengthChange,
     onMaxOutputLengthChange,
+    openingError,
+    openingPlotError,
 }) => {
     // 字数统计
     const titleWords = useWordCount(title);
@@ -133,8 +137,10 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                 <div className={styles.fieldHeader}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <div>
-                            <span className={styles.fieldLabel}>开场白</span>
-                            <span className={styles.fieldHint}>用于玩家进入游戏时的第一段旁白，可随时微调语气。</span>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span className={styles.fieldLabel}>开场白<span className={styles.required}>*</span></span>
+                                <span className={styles.fieldHint}>用于玩家进入游戏时的第一段旁白，可随时微调语气。</span>
+                            </div>
                         </div>
                         <span className={styles.wordCounter}>
                             {openingWords}/{WORD_LIMITS.opening}
@@ -145,7 +151,11 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     rows={5}
                     value={opening}
                     {...openingLimit}
+                    className={openingError ? styles.errorInput : ''}
                 />
+                {openingError && (
+                    <div className={styles.errorMessage}>{openingError}</div>
+                )}
             </div>
 
             {/* 开场剧情 */}
@@ -153,8 +163,10 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                 <div className={styles.fieldHeader}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <div>
-                            <span className={styles.fieldLabel}>开场剧情</span>
-                            <span className={styles.fieldHint}>描述第一轮推演至玩家做出首个选择前的剧情骨架，用于引导 AI 理解节奏。</span>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <span className={styles.fieldLabel}>开场剧情<span className={styles.required}>*</span></span>
+                                <span className={styles.fieldHint}>描述第一轮推演至玩家做出首个选择前的剧情骨架，用于引导 AI 理解节奏。</span>
+                            </div>
                         </div>
                         <span className={styles.wordCounter}>
                             {openingPlotWords}/{WORD_LIMITS.openingPlot}
@@ -165,7 +177,11 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                     rows={5}
                     value={openingPlot}
                     {...openingPlotLimit}
+                    className={openingPlotError ? styles.errorInput : ''}
                 />
+                {openingPlotError && (
+                    <div className={styles.errorMessage}>{openingPlotError}</div>
+                )}
             </div>
 
             {

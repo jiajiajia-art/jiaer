@@ -24,6 +24,7 @@ interface TextModeDisplayProps {
     historyLength: number;
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
+    isFreeRound?: boolean;
 }
 
 import { OPTION_COST, INPUT_COST } from '../../utils/constants';
@@ -46,6 +47,7 @@ interface MessageItemProps {
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
+    isFreeRound?: boolean;
 }
 
 const MessageItem = memo<MessageItemProps>(({ 
@@ -55,7 +57,8 @@ const MessageItem = memo<MessageItemProps>(({
     isTyping,
     isWaitingForData,
     onChoiceClick, 
-    onCustomInputSubmit 
+    onCustomInputSubmit,
+    isFreeRound = false,
 }) => {
     const [customInput, setCustomInput] = useState('');
 
@@ -126,6 +129,8 @@ const MessageItem = memo<MessageItemProps>(({
             return null;
         }
 
+        const hasOptions = !!step.options && step.options.length > 0;
+
         return (
             <div className={styles.messageWrapper}>
                 <div className={styles.choiceBubble}>
@@ -137,57 +142,59 @@ const MessageItem = memo<MessageItemProps>(({
                             <ColoredMarkdownText text={step.description} />
                         </div>
                     )}
-                    {step.options && step.options.length > 0 && (
-                        <>
-                            <div className={styles.optionsList}>
-                                {step.options.map((opt) => (
-                                    <div 
-                                        key={opt.id} 
-                                        className={`${styles.optionItem} ${opt.isMain ? styles.optionItemMain : ''}`}
-                                        onClick={() => {
-                                            if (onChoiceClick && !isTyping) {
-                                                onChoiceClick(opt);
-                                            }
-                                        }}
-                                        style={{ 
-                                            cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
-                                        }}
-                                        >
-                                        <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
-                                            {extractPlainText(opt.text)}
-                                        </span>
+                    {hasOptions && (
+                        <div className={styles.optionsList}>
+                            {step.options!.map((opt) => (
+                                <div 
+                                    key={opt.id} 
+                                    className={`${styles.optionItem} ${opt.isMain ? styles.optionItemMain : ''}`}
+                                    onClick={() => {
+                                        if (onChoiceClick && !isTyping) {
+                                            onChoiceClick(opt);
+                                        }
+                                    }}
+                                    style={{ 
+                                        cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
+                                    }}
+                                >
+                                    <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
+                                        {extractPlainText(opt.text)}
+                                    </span>
+                                    {!isFreeRound && (
                                         <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
-                                    </div>
-                                ))}
-                            </div>
-                            
-                            {/* 自定义输入区域 */}
-                            <div className={styles.customInputSection}>
-                                <div className={styles.customInputHeader}>
-                                    <span>或者自定义输入</span>
-                                    <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                                    )}
                                 </div>
-                                <div className={styles.customInputWrapper}>
-                                    <input
-                                        type="text"
-                                        className={styles.customInput}
-                                        placeholder="输入你想说的话或行动..."
-                                        value={customInput}
-                                        onChange={(e) => setCustomInput(e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        disabled={isTyping}
-                                    />
-                                    <button 
-                                        className={styles.customInputButton}
-                                        onClick={handleCustomSubmit}
-                                        disabled={!customInput.trim() || isTyping}
-                                    >
-                                        发送
-                                    </button>
-                                </div>
-                            </div>
-                        </>
+                            ))}
+                        </div>
                     )}
+                    
+                    {/* 自定义输入区域：即使没有 options 也允许自定义输入 */}
+                    <div className={styles.customInputSection}>
+                        <div className={styles.customInputHeader}>
+                            <span>{hasOptions ? '或者自定义输入' : '自定义输入'}</span>
+                            {!isFreeRound && (
+                                <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                            )}
+                        </div>
+                        <div className={styles.customInputWrapper}>
+                            <input
+                                type="text"
+                                className={styles.customInput}
+                                placeholder="输入你想说的话或行动..."
+                                value={customInput}
+                                onChange={(e) => setCustomInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                disabled={isTyping}
+                            />
+                            <button 
+                                className={styles.customInputButton}
+                                onClick={handleCustomSubmit}
+                                disabled={!customInput.trim() || isTyping}
+                            >
+                                发送
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -216,7 +223,8 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     isWaitingForData,
     historyLength,
     onChoiceClick,
-    onCustomInputSubmit
+    onCustomInputSubmit,
+    isFreeRound = false,
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
@@ -295,6 +303,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 isWaitingForData={isWaitingForData}
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
+                                isFreeRound={isFreeRound}
                             />
                         );
                     })}

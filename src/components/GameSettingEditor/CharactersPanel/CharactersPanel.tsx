@@ -368,6 +368,15 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             updateField(field, value);
         }
         setHasUnsavedChanges(true);
+        
+        // 清除该字段的错误状态
+        if (fieldErrors[field as string]) {
+            setFieldErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[field as string];
+                return newErrors;
+            });
+        }
     };
 
     // 字数统计
@@ -557,12 +566,48 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     };
 
+    // 验证必填字段
+    const validateRequiredFields = (character: Character): boolean => {
+        const errors: { [key: string]: string } = {};
+        
+        if (!character.name || !character.name.trim()) {
+            errors.name = '姓名为必填字段，请填写后再提交';
+        }
+        if (!character.gender || !character.gender.trim()) {
+            errors.gender = '性别/形体为必填字段，请填写后再提交';
+        }
+        if (!character.identity || !character.identity.trim()) {
+            errors.identity = '身份/当前身份为必填字段，请填写后再提交';
+        }
+        if (!character.appearance || !character.appearance.trim()) {
+            errors.appearance = '外貌描述/Prompt为必填字段，请填写后再提交';
+        }
+        if (!character.speech || !character.speech.trim()) {
+            errors.speech = '口癖/语气为必填字段，请填写后再提交';
+        }
+        
+        setFieldErrors(errors);
+        
+        if (Object.keys(errors).length > 0) {
+            const firstError = Object.values(errors)[0];
+            toast.error(firstError);
+            return false;
+        }
+        
+        return true;
+    };
+
     // 确认修改/新增角色（统一处理）
     const confirmEdit = async () => {
         if (!handlers) return;
         const characterToSave = isAddingNew && newCharacterData
             ? newCharacterData
             : currentCharacter;
+        
+        // 验证必填字段
+        if (!validateRequiredFields(characterToSave)) {
+            return;
+        }
         
         // 先保存属性修改（如果有）
         if (attributePanelRef.current && attributePanelRef.current.hasChanges) {
@@ -588,6 +633,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
         }
         setHasUnsavedChanges(false);
+        setFieldErrors({}); // 清除错误状态
         // onDataChange?.();
     };
 
@@ -674,6 +720,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 必填字段列表（除了描述外的所有字段）
     const requiredFields = ['name', 'gender', 'identity', 'appearance', 'speech'];
+    
+    // 字段错误状态
+    const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
     const handleUploadVariationImage = async (variation: Variation, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -974,7 +1023,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         type="text"
                                         value={currentCharacter.name}
                                         {...nameLimit}
+                                        className={fieldErrors.name ? styles.errorInput : ''}
                                     />
+                                    {fieldErrors.name && (
+                                        <div className={styles.errorMessage}>{fieldErrors.name}</div>
+                                    )}
                                 </label>
                                 <label>
                                     <span>称呼 / 昵称</span>
@@ -995,7 +1048,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         type="text"
                                         value={currentCharacter.gender}
                                         {...genderLimit}
+                                        className={fieldErrors.gender ? styles.errorInput : ''}
                                     />
+                                    {fieldErrors.gender && (
+                                        <div className={styles.errorMessage}>{fieldErrors.gender}</div>
+                                    )}
                                 </label>
                                 <label>
                                     <div className={styles.labelRowWithCounter}>
@@ -1008,7 +1065,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         type="text"
                                         value={currentCharacter.identity}
                                         {...identityLimit}
+                                        className={fieldErrors.identity ? styles.errorInput : ''}
                                     />
+                                    {fieldErrors.identity && (
+                                        <div className={styles.errorMessage}>{fieldErrors.identity}</div>
+                                    )}
                                 </label>
                                 <label className={styles.wide}>
                                     <div className={styles.labelRowWithCounter}>
@@ -1035,7 +1096,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         rows={3}
                                         value={currentCharacter.speech}
                                         {...speechLimit}
+                                        className={fieldErrors.speech ? styles.errorInput : ''}
                                     />
+                                    {fieldErrors.speech && (
+                                        <div className={styles.errorMessage}>{fieldErrors.speech}</div>
+                                    )}
                                 </label>
                                 <label className={styles.wide}>
                                     <div className={styles.labelRowWithCounter}>
@@ -1048,7 +1113,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         rows={3}
                                         value={currentCharacter.appearance}
                                         {...appearanceLimit}
+                                        className={fieldErrors.appearance ? styles.errorInput : ''}
                                     />
+                                    {fieldErrors.appearance && (
+                                        <div className={styles.errorMessage}>{fieldErrors.appearance}</div>
+                                    )}
                                 </label>
                             </div>
 

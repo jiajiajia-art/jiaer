@@ -16,6 +16,7 @@ interface UseNpcInteractionStepOptions {
   eventId: string | null;
   fileId: string | null;
   onMessagesClear?: () => void;
+  playerChoiceCount?: number;
 }
 
 export const useNpcInteractionStep = ({
@@ -23,6 +24,7 @@ export const useNpcInteractionStep = ({
   eventId,
   fileId,
   onMessagesClear,
+  playerChoiceCount,
 }: UseNpcInteractionStepOptions) => {
   const [currentStep, setCurrentStep] = useState<any>(null);
   const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -40,6 +42,14 @@ export const useNpcInteractionStep = ({
   const [newEvent, setNewEvent] = useState<any>(null); // 存储新的事件数据
 
   const { user, updateUser } = useAuthStore();
+
+  // 玩家已选择次数（player_choice 数量），用于前几回合免费
+  const playerChoiceCountRef = useRef<number>(0);
+  useEffect(() => {
+    playerChoiceCountRef.current = (typeof playerChoiceCount === 'number' && playerChoiceCount >= 0)
+      ? playerChoiceCount
+      : 0;
+  }, [playerChoiceCount]);
 
   // 同步 currentStep 到 ref
   useEffect(() => {
@@ -354,6 +364,8 @@ export const useNpcInteractionStep = ({
     });
   }, [showStep]);
 
+  const FREE_ROUNDS = 5;
+
   const handleChoiceOption = useCallback(
     async (
       optionId: string,
@@ -370,11 +382,15 @@ export const useNpcInteractionStep = ({
       }
 
       const isCustomInput = optionIndex === -1;
+      const playerChoicesSoFar = playerChoiceCountRef.current || 0;
+      const isFreeRound = playerChoicesSoFar < FREE_ROUNDS;
       const needPoints = isCustomInput ? INPUT_COST : OPTION_COST;
-      // 仅前端校验是否有足够积分，不再在这里调用扣积分接口，实际扣费由后端处理
-      if (!user?.user.points || user.user.points < needPoints) {
-        toast.error("积分不足");
-        return;
+
+      if (!isFreeRound) {
+        if (!user?.user.points || user.user.points < needPoints) {
+          toast.error("积分不足");
+          return;
+        }
       }
 
       setSelectedOptionIndex(optionIndex);

@@ -72,6 +72,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [storylineError, setStorylineError] = useState<string>('');
     const [storylineModalVisible, setStorylineModalVisible] = useState<boolean>(false);
     const [editingStoryline, setEditingStoryline] = useState<StoryLine | null>(null);
+    const [openingError, setOpeningError] = useState<string>('');
+    const [openingPlotError, setOpeningPlotError] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
     const [storyStructure, setStoryStructure] = useState<StoryStructure | null>(null);
     const [dynamicEntries, setDynamicEntries] = useState<DynamicEntry[]>([]);
@@ -748,6 +750,26 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         className={styles.primary}
                         onClick={(e) => {
                             e.preventDefault();
+                            
+                            // 验证开场白
+                            const openingTrimmed = opening.trim();
+                            if (!openingTrimmed) {
+                                setOpeningError('开场白为必填字段，请填写后再提交');
+                                toast.error('开场白为必填字段，请填写后再提交');
+                                return;
+                            }
+                            setOpeningError('');
+                            
+                            // 验证开场剧情
+                            const openingPlotTrimmed = openingPlot.trim();
+                            if (!openingPlotTrimmed) {
+                                setOpeningPlotError('开场剧情为必填字段，请填写后再提交');
+                                toast.error('开场剧情为必填字段，请填写后再提交');
+                                return;
+                            }
+                            setOpeningPlotError('');
+                            
+                            // 验证故事线（世界交互模式）
                             if (isWorldInteractionMode && storylines.length === 0) {
                                 setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
                                 setIsStorylineExpanded(true);
@@ -755,6 +777,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 return;
                             }
                             setStorylineError('');
+                            
                             handleSubmit();
                         }}
                         disabled={!gameData || isSubmitting}
@@ -820,11 +843,23 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 onTitleChange={setTitle}
                                 onTaglineChange={setTagline}
                                 onEraChange={setEra}
-                                onOpeningChange={setOpening}
-                                onOpeningPlotChange={setOpeningPlot}
+                                onOpeningChange={(value) => {
+                                    setOpening(value);
+                                    if (openingError && value.trim()) {
+                                        setOpeningError('');
+                                    }
+                                }}
+                                onOpeningPlotChange={(value) => {
+                                    setOpeningPlot(value);
+                                    if (openingPlotError && value.trim()) {
+                                        setOpeningPlotError('');
+                                    }
+                                }}
                                 onTargetOutputLengthChange={setTargetOutputLength}
                                 onMinOutputLengthChange={setMinOutputLength}
                                 onMaxOutputLengthChange={setMaxOutputLength}
+                                openingError={openingError}
+                                openingPlotError={openingPlotError}
                             />
 
                             <StorylinesSection

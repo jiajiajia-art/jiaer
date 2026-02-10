@@ -30,6 +30,7 @@ interface TextModeDisplayProps {
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
     noPaddingBottom?: boolean; // 当父容器已有 padding-bottom 时，设置为 true 以移除 TextModeDisplay 的 padding-bottom
+    isFreeRound?: boolean;
 }
 
 interface MessageItemProps {
@@ -41,6 +42,7 @@ interface MessageItemProps {
     isWaitingForData: boolean;
     onChoiceClick?: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
+    isFreeRound?: boolean;
 }
 
 const MessageItem = memo<MessageItemProps>(({ 
@@ -50,7 +52,8 @@ const MessageItem = memo<MessageItemProps>(({
     isTyping,
     isWaitingForData,
     onChoiceClick, 
-    onCustomInputSubmit 
+    onCustomInputSubmit,
+    isFreeRound = false,
 }) => {
     const [customInput, setCustomInput] = useState('');
 
@@ -149,7 +152,9 @@ const MessageItem = memo<MessageItemProps>(({
                                     >
                                         <span className={styles.optionNumber}>{opt.id}</span>
                                         <span className={styles.optionText}>{extractPlainText(opt.text)}</span>
-                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                        {!isFreeRound && (
+                                            <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -158,7 +163,9 @@ const MessageItem = memo<MessageItemProps>(({
                             <div className={styles.customInputSection}>
                                 <div className={styles.customInputHeader}>
                                     <span>或者自定义输入</span>
-                                    <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                                    {!isFreeRound && (
+                                        <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                                    )}
                                 </div>
                                 <div className={styles.customInputWrapper}>
                                     <input
@@ -209,7 +216,8 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     isWaitingForData,
     onChoiceClick,
     onCustomInputSubmit,
-    noPaddingBottom = false
+    noPaddingBottom = false,
+    isFreeRound = false,
 }) => {
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
@@ -300,6 +308,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                     isWaitingForData={isWaitingForData}
                                     onChoiceClick={onChoiceClick}
                                     onCustomInputSubmit={onCustomInputSubmit}
+                                    isFreeRound={isFreeRound}
                                 />
                         );
                     })}

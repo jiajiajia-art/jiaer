@@ -63,6 +63,14 @@ export const useGalgameController = () => {
 
     const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
 
+    // 根据 assistant 消息数量计算当前是第几回合（用于前几回合免费 / UI 提示）
+    const assistantRoundCount = useMemo(() => {
+        return history.filter((h: any) => h.role === 'assistant').length;
+    }, [history]);
+
+    const FREE_ROUNDS = 5;
+    const isFreeRound = assistantRoundCount < FREE_ROUNDS;
+
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
         const imageUrl = getPlayerImageUrl(worldSetting?.player);
         return imageUrl ? getImageUrl(imageUrl) : undefined;
@@ -85,6 +93,31 @@ export const useGalgameController = () => {
             characterPosition: 'right' as const,
         };
     }, [getPlayerImageUrlCallback]);
+
+    // 兜底：如果一整串 steps 里没有任何 choice，就在末尾补一个空 choice，方便展示自定义输入
+    const ensureChoiceStep = useCallback((steps: any[]): any[] => {
+        if (!Array.isArray(steps) || steps.length === 0) return steps;
+        const hasChoiceWithOptions = steps.some(
+            (s: any) =>
+                s &&
+                s.type === 'choice' &&
+                Array.isArray(s.options) &&
+                s.options.length > 0
+        );
+        if (hasChoiceWithOptions) {
+            return steps;
+        }
+        return [
+            ...steps,
+            {
+                type: 'choice',
+                content: '',
+                title: undefined,
+                description: '',
+                options: [],
+            },
+        ];
+    }, []);
 
     const resetDisplayedSteps = useCallback(() => {
         setCompletedSteps([]);
@@ -224,7 +257,7 @@ export const useGalgameController = () => {
 
     const stepHandlers = useGalgameStep({
         sessionId,
-        historyLength: history.length,
+        historyLength: assistantRoundCount,
         onMessagesClear: () => {
             setInitialMessages([]);
             try {
@@ -307,10 +340,12 @@ export const useGalgameController = () => {
         stepHandlers.currentStep
     );
 
+    const typingSpeed = isTextMode ? 20 : 30;
+
     const { displayedText, isTyping } = useStoryTyping({
         text: messageUtils.plainTextForTyping,
         enabled: messageUtils.currentMessage && messageUtils.currentMessage.type !== 'choice' && gameStarted && !!messageUtils.plainTextForTyping,
-        speed: 60
+        speed: typingSpeed,
     });
 
     const messageUtilsWithTyping = useGalgameMessage(
@@ -481,12 +516,13 @@ export const useGalgameController = () => {
                     if (rawAllSteps) {
                         const savedSteps = JSON.parse(rawAllSteps);
                         if (Array.isArray(savedSteps) && savedSteps.length > 0) {
-                            console.log('[Galgame] 使用本地 allSteps 恢复，数量:', savedSteps.length);
+                            const restoredSteps = ensureChoiceStep(savedSteps);
+                            console.log('[Galgame] 使用本地 allSteps 恢复，数量:', restoredSteps.length);
                             setShowStoryIntro(false);
                             setGameStarted(true);
                             resetDisplayedSteps();
                             setInitialMessages([]);
-                            const [first, ...rest] = savedSteps;
+                            const [first, ...rest] = restoredSteps;
                             stepHandlers.setCurrentStep(first || null);
                             stepHandlers.setStepQueue(rest || []);
                             stepHandlers.setShowNextButton(first?.type !== 'choice');
@@ -497,15 +533,16 @@ export const useGalgameController = () => {
                     console.warn('[Galgame] 读取本地 allSteps 失败:', e);
                 }
 
-                const historySteps = parseHistoryToSteps(content);
-                const hasChoiceInHistory = historySteps.some(
+                const rawHistorySteps = parseHistoryToSteps(content);
+                const historySteps = ensureChoiceStep(rawHistorySteps);
+                const hasChoiceInHistory = rawHistorySteps.some(
                     (s: any) => s && s.type === 'choice' && s.options && s.options.length > 0
                 );
 
                 if (historySteps.length > 0) {
                     setCompletedSteps(historySteps);
 
-                    const choiceStep = historySteps.find(s => s.type === 'choice');
+                    const choiceStep = historySteps.find(s => s.type === 'choice' && s.options && s.options.length > 0);
                     if (choiceStep && (choiceStep as any).options && (choiceStep as any).options.length > 0) {
                         const choiceData = extractChoiceFromHistory(content);
                         const choiceMessage = createChoiceMessage(choiceData);
@@ -840,5 +877,6 @@ export const useGalgameController = () => {
         handleRetryLastRequest,
         handleExitGame,
         resetDisplayedSteps,
+        isFreeRound,
     };
 };

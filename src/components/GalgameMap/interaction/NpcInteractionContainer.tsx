@@ -102,6 +102,14 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
     setErrorModal: setErrorModal || (() => { }),
   });
 
+  const playerChoiceCount = useMemo(() => {
+    const interactions = latestHistory?.interactions || [];
+    return interactions.filter((it: any) => it && it.type === 'player_choice').length;
+  }, [latestHistory]);
+
+  const FREE_ROUNDS = 5;
+  const isFreeRound = playerChoiceCount < FREE_ROUNDS;
+
   const stepHandlers = useNpcInteractionStep({
     sessionId,
     eventId,
@@ -112,6 +120,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
       refs.current.previousIsTyping = false;
       refs.current.isChoiceRequest = false;
     },
+    playerChoiceCount,
   });
 
   const retryHandler = useNpcRetryHandler({
@@ -765,6 +774,7 @@ const NpcInteractionContainer: React.FC<NpcInteractionContainerProps> = ({
         onNextMessage={handleNextMessage}
         onChoiceClick={handleChoiceClick}
         onCustomInputSubmit={handleCustomInputSubmit}
+        isFreeRound={isFreeRound}
       />
       {shouldShowContinueButton && onContinue && (
         <button onClick={onContinue} className={styles.continueButton}>

@@ -10,6 +10,8 @@ interface UseStepStreamResponseOptions {
     onMissionFlag?: () => void | Promise<void>;
     // 完整 steps（allSteps）回调，用于在 type: 'complete' 时一次性拿到所有 step
     onCompleteAllSteps?: (steps: any[]) => void;
+    // 是否启用「无 choice 时自动补一个空 choice」的兜底逻辑（仅 Galgame 需要，世界交互不启用）
+    enableFallbackEmptyChoice?: boolean;
 }
 
 interface ProcessStepStreamResponseOptions {
@@ -31,6 +33,7 @@ export const useStepStreamResponse = ({
     currentRequestId,
     onMissionFlag,
     onCompleteAllSteps,
+    enableFallbackEmptyChoice = false,
 }: UseStepStreamResponseOptions) => {
 
     // 从文本中提取 MAIN_OPTION / OPTION 列表
@@ -383,7 +386,44 @@ export const useStepStreamResponse = ({
                         // 处理 complete 事件，携带 allSteps（后端已完全生成的步骤列表）
                         if (jsonData.type === 'complete' && Array.isArray(jsonData.allSteps)) {
                             try {
-                                onCompleteAllSteps?.(jsonData.allSteps);
+                                let finalAllSteps = jsonData.allSteps;
+
+                                // 仅在显式开启时（Galgame）才做「无 choice 自动补空 choice」的兜底
+                                if (enableFallbackEmptyChoice) {
+                                    // 如果整段剧情里没有任何带 options 的 choice，则在末尾补一个空选项的 choice
+                                    const hasChoiceWithOptions = finalAllSteps.some(
+                                        (s: any) =>
+                                            s &&
+                                            s.type === 'choice' &&
+                                            Array.isArray(s.options) &&
+                                            s.options.length > 0
+                                    );
+
+                                    if (!hasChoiceWithOptions) {
+                                        const syntheticChoice = {
+                                            type: 'choice',
+                                            title: undefined,
+                                            // 对于兜底空 choice，不再重复上一条叙述，交给前端用固定文案或仅展示自定义输入
+                                            description: '',
+                                            mainOptions: [],
+                                            options: [],
+                                        };
+
+                                        finalAllSteps = [...finalAllSteps, syntheticChoice];
+
+                                        // 同时往队列里塞入这个空 choice，保证前端能停在“选择/自定义输入”界面
+                                        setStepQueue((prev) => {
+                                            if (currentRequestId.current !== requestId) return prev;
+                                            const hasChoiceInQueue = prev.some(
+                                                (s: any) => s && s.type === 'choice'
+                                            );
+                                            if (hasChoiceInQueue) return prev;
+                                            return [...prev, syntheticChoice];
+                                        });
+                                    }
+                                }
+
+                                onCompleteAllSteps?.(finalAllSteps);
                             } catch (e) {
                                 console.warn('onCompleteAllSteps 回调执行失败:', e);
                             }

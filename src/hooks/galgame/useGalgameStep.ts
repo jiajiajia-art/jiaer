@@ -22,7 +22,7 @@ interface UseGalgameStepOptions {
 
 export const useGalgameStep = ({ 
     sessionId, 
-    // historyLength 当前未使用，仅为兼容旧调用签名
+    historyLength,
     onMessagesClear,
     onCompleteAllSteps,
     onStreamComplete,
@@ -41,6 +41,12 @@ export const useGalgameStep = ({
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
     const { user, updateUser } = useAuthStore();
+
+    // 记录历史中 assistant 回合数，用于前几回合免费
+    const historyLengthRef = useRef<number>(historyLength ?? 0);
+    useEffect(() => {
+        historyLengthRef.current = historyLength ?? 0;
+    }, [historyLength]);
 
     // 同步 currentStep 到 ref
     useEffect(() => {
@@ -67,6 +73,8 @@ export const useGalgameStep = ({
         // Galgame 不需要 mission 检测
         onMissionFlag: undefined,
         onCompleteAllSteps,
+        // Galgame 需要在没有 choice 时兜底补一个空 choice，便于展示自定义输入
+        enableFallbackEmptyChoice: true,
     });
 
     const showStep = useCallback(async (step: any) => {
@@ -200,18 +208,25 @@ export const useGalgameStep = ({
         });
     }, [showStep, isReplay, onExhausted]);
 
+    const FREE_ROUNDS = 5;
+
     // 处理选择选项
     const handleChoiceOption = useCallback(async (option: { text: string; nextId: string }, optionIndex: number) => {
         setSelectedOptionIndex(optionIndex);
         setIsWaitingForData(true);
         setShowNextButton(false);
 
-        const needPoints = OPTION_COST;
-        if (!user?.user.points || user.user.points < needPoints) {
-            toast.error("积分不足");
-            setIsWaitingForData(false);
-            setSelectedOptionIndex(null);
-            return;
+        const assistantRounds = historyLengthRef.current || 0;
+        const isFreeRound = assistantRounds < FREE_ROUNDS;
+
+        if (!isFreeRound) {
+            const needPoints = OPTION_COST;
+            if (!user?.user.points || user.user.points < needPoints) {
+                toast.error("积分不足");
+                setIsWaitingForData(false);
+                setSelectedOptionIndex(null);
+                return;
+            }
         }
 
         await handleStreamAction(option.text, {
@@ -232,11 +247,16 @@ export const useGalgameStep = ({
         setIsWaitingForData(true);
         setShowNextButton(false);
         
-        const needPoints = INPUT_COST;
-        if (!user?.user.points || user.user.points < needPoints) {
-            toast.error("积分不足");
-            setIsWaitingForData(false);
-            return;
+        const assistantRounds = historyLengthRef.current || 0;
+        const isFreeRound = assistantRounds < FREE_ROUNDS;
+
+        if (!isFreeRound) {
+            const needPoints = INPUT_COST;
+            if (!user?.user.points || user.user.points < needPoints) {
+                toast.error("积分不足");
+                setIsWaitingForData(false);
+                return;
+            }
         }
 
         await handleStreamAction(inputText, {

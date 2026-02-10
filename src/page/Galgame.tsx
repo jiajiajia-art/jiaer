@@ -253,6 +253,7 @@ const Galgame = () => {
                                     onNextMessage={controller.handleNextMessage}
                                     onChoiceClick={controller.handleChoiceClick}
                                     onCustomInputSubmit={(value) => controller.handleCustomInputSubmit(value)}
+                                    isFreeRound={controller.isFreeRound}
                                 />
                             </>
                         )}
@@ -270,6 +271,7 @@ const Galgame = () => {
                                 onCustomInputSubmit={(value) => {
                                     controller.handleCustomInputSubmit(value);
                                 }}
+                                isFreeRound={controller.isFreeRound}
                             />
                         )}
                     </div>

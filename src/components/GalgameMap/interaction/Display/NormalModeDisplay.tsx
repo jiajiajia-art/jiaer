@@ -34,6 +34,7 @@ interface NormalModeDisplayProps {
     onNextMessage: () => void;
     onChoiceClick: (option: { id: number | string; text: string; optionId?: string }) => void;
     onCustomInputSubmit: (value: string) => void;
+    isFreeRound?: boolean;
 }
 
 const POINTS_CONFIG = {
@@ -50,6 +51,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
+    isFreeRound = false,
 }) => {
     const debugNext = useCallback((source: 'button' | 'container') => {
         const nextFromQueue = stepQueue && stepQueue.length > 0 ? stepQueue[0] : undefined;
@@ -243,10 +245,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             <span className={styles.choiceText}>
                                 {extractPlainText(option.text)}
                             </span>
-                            <div className={styles.choicePrice}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                <span>{POINTS_CONFIG.option}</span>
-                            </div>
+                            {!isFreeRound && (
+                                <div className={styles.choicePrice}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                    <span>{POINTS_CONFIG.option}</span>
+                                </div>
+                            )}
                         </div>
                     ))}
                     {!showCustomInput ? (
@@ -277,10 +281,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                <div className={styles.choicePrice}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>{POINTS_CONFIG.custom}</span>
-                                </div>
+                                {!isFreeRound && (
+                                    <div className={styles.choicePrice}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                        <span>{POINTS_CONFIG.custom}</span>
+                                    </div>
+                                )}
                             </button>
                         </div>
                     )}

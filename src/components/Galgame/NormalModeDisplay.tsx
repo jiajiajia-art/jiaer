@@ -34,6 +34,7 @@ interface NormalModeDisplayProps {
     onNextMessage: () => void;
     onChoiceClick: (option: { id: number; text: string }) => void;
     onCustomInputSubmit: (value: string) => void;
+    isFreeRound?: boolean;
 }
 
 const POINTS_CONFIG = {
@@ -52,9 +53,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     onNextMessage,
     onChoiceClick,
     onCustomInputSubmit,
+    isFreeRound = false,
 }) => {
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
+    // 是否强制展示当前 step 的完整文本（用于点击跳过打字机效果）
+    const [forceShowFullText, setForceShowFullText] = useState(false);
 
     const { isWaitingForData, currentStep, showNextButton } = stepHandlers;
 
@@ -80,12 +84,15 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
         }
     }, [handleCustomInputSubmit]);
 
+    // step / 消息切换时重置一些本地状态
     useEffect(() => {
         if (currentMessage?.type !== 'choice') {
             setShowCustomInput(false);
             setCustomInputValue('');
         }
-    }, [currentMessage?.type]);
+        // 每当当前消息变化时，取消“强制全显”状态
+        setForceShowFullText(false);
+    }, [currentMessage?.type, currentMessage?.id, currentMessage?.message]);
 
     // 渲染带颜色标签和 Markdown 的文本
     // 使用统一的 truncateTextWithTags 截取带颜色标签的文本
@@ -109,7 +116,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         if (clickedButton) {
                             return;
                         }
-                        if (showNextButton && !finalIsTyping && !isAutoPlay) {
+                        // 如果当前还在打字中，优先跳过打字机，立刻展示完整文本
+                        if (finalIsTyping && !forceShowFullText) {
+                            setForceShowFullText(true);
+                            return;
+                        }
+                        if (showNextButton && !isAutoPlay) {
                             onNextMessage();
                         }
                     }}
@@ -130,7 +142,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     {!isWaitingForData && currentMessage && currentMessage.type === 'narration' && currentMessage.message && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
-                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                            {renderTextWithMarkdown(
+                                forceShowFullText ? extractPlainText(currentMessage.message) : finalDisplayText,
+                                currentMessage.message,
+                                finalIsTyping && !forceShowFullText
+                            )}
                         </div>
                     )}
 
@@ -140,7 +156,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 <div className={styles.characterName}>{currentMessage.characterName}</div>
                                 <div className={styles.characterDivider}></div>
                                 <div className={styles.characterText}>
-                                    {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                                    {renderTextWithMarkdown(
+                                        forceShowFullText ? extractPlainText(currentMessage.message) : finalDisplayText,
+                                        currentMessage.message,
+                                        finalIsTyping && !forceShowFullText
+                                    )}
                                 </div>
                             </div>
                         </>
@@ -149,11 +169,15 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                     {!isWaitingForData && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && currentMessage.message && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
-                            {renderTextWithMarkdown(finalDisplayText, currentMessage.message, finalIsTyping)}
+                            {renderTextWithMarkdown(
+                                forceShowFullText ? extractPlainText(currentMessage.message) : finalDisplayText,
+                                currentMessage.message,
+                                finalIsTyping && !forceShowFullText
+                            )}
                         </div>
                     )}
 
-                    {showNextButton && !finalIsTyping && !isAutoPlay && (
+                    {showNextButton && (!finalIsTyping || forceShowFullText) && !isAutoPlay && (
                         <div className={styles.nextButtonContainer}>
                             <button
                                 className={styles.nextButton}
@@ -170,23 +194,29 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 </div>
             )}
 
-            {currentMessage && currentMessage.type === 'choice' && currentMessage.options && currentMessage.options.length > 0 && !isWaitingForData && (
+            {currentMessage && currentMessage.type === 'choice' && !isWaitingForData && (
                 <div className={styles.choiceContainer}>
-                    {currentMessage.options.map((option) => (
-                        <div
-                            key={option.id}
-                            className={`${styles.choiceOption} ${option.isMain ? styles.choiceOptionMain : ''}`}
-                            onClick={() => onChoiceClick(option)}
-                        >
-                            <span className={`${styles.choiceText} ${option.isMain ? styles.choiceTextMain : ''}`}>
-                                {extractPlainText(option.text)}
-                            </span>
-                            <div className={styles.choicePrice}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                <span>{POINTS_CONFIG.option}</span>
-                            </div>
-                        </div>
-                    ))}
+                    {currentMessage.options && currentMessage.options.length > 0 && (
+                        <>
+                            {currentMessage.options.map((option) => (
+                                <div
+                                    key={option.id}
+                                    className={`${styles.choiceOption} ${option.isMain ? styles.choiceOptionMain : ''}`}
+                                    onClick={() => onChoiceClick(option)}
+                                >
+                                    <span className={`${styles.choiceText} ${option.isMain ? styles.choiceTextMain : ''}`}>
+                                        {extractPlainText(option.text)}
+                                    </span>
+                                    {!isFreeRound && (
+                                        <div className={styles.choicePrice}>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                            <span>{POINTS_CONFIG.option}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </>
+                    )}
                     {!showCustomInput ? (
                         <div
                             className={styles.customInputText}
@@ -210,10 +240,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
-                                <div className={styles.choicePrice}>
-                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
-                                    <span>{POINTS_CONFIG.custom}</span>
-                                </div>
+                                {!isFreeRound && (
+                                    <div className={styles.choicePrice}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />
+                                        <span>{POINTS_CONFIG.custom}</span>
+                                    </div>
+                                )}
                             </button>
                         </div>
                     )}

@@ -294,6 +294,13 @@
     font-weight: 500;
 }
 
+.formGrid label span .required,
+.detailBlock label span .required,
+.relationshipRow label span .required {
+    color: var(--primary) !important;
+    margin-left: 4px;
+}
+
 .formGrid input,
 .formGrid textarea,
 .detailBlock input,
@@ -470,7 +477,33 @@
 /* 必填标识 */
 .required {
     color: var(--primary);
-    margin-left: 2px;
+    margin-left: 4px;
+}
+
+/* 确保必填标识在 label span 中也能正确显示红色 */
+.formGrid label span .required,
+.detailBlock label span .required,
+.relationshipRow label span .required,
+.modalBody label span .required {
+    color: var(--primary) !important;
+}
+
+/* 错误样式 */
+.errorInput {
+    border-color: #e03d4b !important;
+    background: #fff5f5 !important;
+}
+
+.errorInput:focus {
+    border-color: #e03d4b !important;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.15) !important;
+}
+
+.errorMessage {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #e03d4b;
+    line-height: 1.4;
 }
 
 .labelRowWithCounter {

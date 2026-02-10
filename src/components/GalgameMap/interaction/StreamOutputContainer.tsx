@@ -38,6 +38,7 @@ interface StreamOutputContainerProps {
   onNextMessage: () => void;
   onChoiceClick: (option: { id: number | string; text: string; optionId?: string }) => void;
   onCustomInputSubmit: (value: string) => void;
+  isFreeRound?: boolean;
 }
 
 const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
@@ -58,6 +59,7 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
   onNextMessage,
   onChoiceClick,
   onCustomInputSubmit,
+  isFreeRound = false,
 }) => {
 
   // 普通模式  
@@ -78,6 +80,7 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
         onNextMessage={onNextMessage}
         onChoiceClick={onChoiceClick}
         onCustomInputSubmit={onCustomInputSubmit}
+        isFreeRound={isFreeRound}
       />
     );
   }
@@ -93,6 +96,7 @@ const StreamOutputContainer: React.FC<StreamOutputContainerProps> = ({
       onChoiceClick={onChoiceClick}
       onCustomInputSubmit={onCustomInputSubmit}
       noPaddingBottom={true}
+      isFreeRound={isFreeRound}
     />
   );
 };

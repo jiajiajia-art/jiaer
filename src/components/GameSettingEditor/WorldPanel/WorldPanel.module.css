@@ -339,6 +339,24 @@
     line-height: 1.6;
 }
 
+/* 错误样式 */
+.errorInput {
+    border-color: #e03d4b !important;
+    background: #fff5f5 !important;
+}
+
+.errorInput:focus {
+    border-color: #e03d4b !important;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.15) !important;
+}
+
+.errorMessage {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #e03d4b;
+    line-height: 1.4;
+}
+
 /* 故事线区块 */
 .storylineSection {
     border-top: 1px solid rgba(0, 0, 0, 0.08);
