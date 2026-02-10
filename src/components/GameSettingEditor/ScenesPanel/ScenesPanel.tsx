@@ -21,10 +21,10 @@ import SceneDetailActions from './SceneDetailActions';
 import { DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust, extractImageExtension } from '../../../utils/imageCache';
 import { useAuthStore } from '../../../store/useAuthStore';
-import SaveConfirmModal from '../../goodsModal/SaveConfirmModal';
+import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
+import ConfirmModal from '../../CommonModal/ConfirmModal';
 
 interface BgmItem {
     id: string;

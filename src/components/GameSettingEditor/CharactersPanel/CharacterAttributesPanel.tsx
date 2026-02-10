@@ -3,7 +3,7 @@ import styles from './CharacterAttributesPanel.module.css';
 import type { AttributeSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { getCharacterAttributes, getAvailableAttributes } from './characterAttributeUtils';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
-import ConfirmModal from '../../goodsModal/ConfirmModal';
+import ConfirmModal from '../../CommonModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import { MdArrowDropDown } from 'react-icons/md';
 

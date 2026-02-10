@@ -21,7 +21,7 @@ import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { getImageUrl } from '../utils/constants';
-import ConfirmModal from '../components/goodsModal/ConfirmModal';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 
