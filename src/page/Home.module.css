@@ -421,11 +421,20 @@
     .carouselContainer {
         width: 100vw;
         height: 360px;
+        overflow: hidden;
+    }
+
+    .carouselImage {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
     }
 
     .carouselImage img {
-        object-fit: fill;
-        aspect-ratio: 16/9;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* 保持比例，填满容器，超出部分裁剪 */
+        object-position: center; /* 从中间裁剪，避免只看到一侧 */
     }
 
     .carouselContent {
