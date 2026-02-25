@@ -20,6 +20,7 @@ export interface UserGameData {
     dislike_count: number;
     reaction: string;
     avatarUrl: string;
+    total_uv_count?: number;
     total_pv_count?: number;
     paid?: boolean;
     game_tags: string;

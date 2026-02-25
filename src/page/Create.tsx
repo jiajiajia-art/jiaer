@@ -37,6 +37,7 @@ const Create: React.FC = () => {
         totalViews: 0,
         totalClicks: 0,
         totalAmount: 0,
+        totalSettleAmount: 0,
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
@@ -101,6 +102,7 @@ const Create: React.FC = () => {
                     totalViews: response.data.data.pv ?? 0,
                     totalClicks: response.data.data.uv ?? 0,
                     totalAmount: response.data.data.totalAmount ?? 0,
+                    totalSettleAmount: (response.data.data.uv ?? 0) * 5 || 0
                 });
             }
         } catch (error) {
@@ -426,7 +428,7 @@ const Create: React.FC = () => {
                                 <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                        <span>总收益</span>
+                                        <span>积分总收益</span>
                                     </div>
                                     {stats.totalAmount > 0 && (
                                         <button
@@ -448,6 +450,15 @@ const Create: React.FC = () => {
                                     )}
                                 </div>
                                 <div className={styles.statValue}>{stats.totalAmount}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                        <span>结算总收益</span>
+                                    </div>
+                                </div>
+                                <div className={styles.statValue}>{stats.totalSettleAmount}</div>
                             </div>
                         </div>
                     </div>
@@ -486,6 +497,7 @@ const Create: React.FC = () => {
                         ) : (
                             <GameGrid
                                 games={publishedGames}
+                                primaryStat="uv"
                                 onGameClick={(game) => {
                                     const gameId = game.file_id || game.id;
                                     if (!gameId) return;

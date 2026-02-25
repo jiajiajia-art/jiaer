@@ -4,15 +4,18 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
+import { RiMoneyCnyCircleLine } from "react-icons/ri";
 import { getImageUrl } from '../utils/constants';
 
 interface GameGridProps {
     games: UserGameData[];
     onGameClick?: (game: UserGameData) => void;
     renderActions?: (game: UserGameData) => React.ReactNode;
+    /** 统计显示模式：'uv' 用钱币 + total_uv_count，'pv' 用游戏手柄 + total_pv_count */
+    primaryStat?: 'uv' | 'pv';
 }
 
-const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }) => {
+const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions, primaryStat = 'pv' }) => {
     const navigate = useNavigate();
 
     const handleGameClick = (game: UserGameData) => {
@@ -39,7 +42,13 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
 
     return (
         <div className={styles.grid4}>
-            {games.map((meta, idx) => (
+            {games.map((meta, idx) => {
+                const primaryValue = primaryStat === 'pv'
+                    ? (meta.total_pv_count ?? 0)
+                    : (meta.total_uv_count ?? 0);
+                const PrimaryIcon = primaryStat === 'pv' ? IoGameControllerOutline : RiMoneyCnyCircleLine;
+
+                return (
                 <div
                     className={styles.goodsCard}
                     key={meta.id}
@@ -53,8 +62,8 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                         <div className={styles.goodsInfo}>
                             <div className={styles.goodsInfoLeft}>
                                 <div className={styles.goodsInfoItem}>
-                                    <IoGameControllerOutline />
-                                    {meta.total_pv_count}
+                                    <PrimaryIcon />
+                                    {primaryValue}
                                 </div>
                                 <div className={styles.goodsInfoItem}>
                                     <AiOutlineLike />
@@ -89,7 +98,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions }
                         )}
                     </div>
                 </div>
-            ))}
+            )})}
         </div>
     );
 };
