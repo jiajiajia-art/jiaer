@@ -77,7 +77,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 className={styles.dangerButton}
                 onClick={onDeleteSession}
               >
-                <span>删除存档</span>
+                <span>重新开始</span>
               </button>
             )}
             <button className={styles.dangerButton} onClick={onExitGame}>

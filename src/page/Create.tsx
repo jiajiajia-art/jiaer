@@ -413,14 +413,14 @@ const Create: React.FC = () => {
                             <div className={styles.statBox}>
                                 <div className={styles.statLabel}>
                                     <IoEye />
-                                    <span>总浏览量</span>
+                                    <span>作品访问次数</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalViews}</div>
                             </div>
                             <div className={styles.statBox}>
                                 <div className={styles.statLabel}>
                                     <TbHandClick />
-                                    <span>总点击</span>
+                                    <span>作品访问人数</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalClicks}</div>
                             </div>

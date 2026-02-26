@@ -4,6 +4,7 @@ import type { HistoryWithId } from '../../hooks/galgame/useGalgameHistory';
 import { processGameTags } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './GalgameHistoryModal.module.css';
+import { logVisualButtonClick } from "../../api/statistics/scriptButtonEvent";
 
 interface GalgameHistoryModalProps {
     isOpen: boolean;
@@ -65,11 +66,13 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
     const handleRegenerate = (itemIndex: number) => {
         if (onRegenerate) {
             const messageIndex = getMessageIndex(itemIndex + 1);
+            logVisualButtonClick("history_regenerate");
             onRegenerate(messageIndex);
         }
     };
 
     const handleStartEdit = (index: number, originalContent: string) => {
+        logVisualButtonClick("history_edit");
         setEditingIndex(index);
         setEditContent(originalContent);
     };

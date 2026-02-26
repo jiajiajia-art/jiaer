@@ -31,6 +31,7 @@ import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
 import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
+import { logVisualButtonClick } from "../api/statistics/scriptButtonEvent";
 
 const Galgame = () => {
     const navigate = useNavigate();
@@ -64,6 +65,7 @@ const Galgame = () => {
 
     // 处理历史按钮点击（切换显示/隐藏）
     const handleHistoryClick = () => {
+        logVisualButtonClick('history');
         if (controller.showGalgameHistory) {
             controller.setShowGalgameHistory(false);
         } else {
@@ -74,6 +76,7 @@ const Galgame = () => {
 
     // 处理文本模式切换
     const handleTextModeToggle = () => {
+        logVisualButtonClick('text');
         // 如果历史弹窗打开，先关闭它
         if (controller.showGalgameHistory) {
             controller.setShowGalgameHistory(false);
@@ -84,6 +87,7 @@ const Galgame = () => {
 
     // 处理重新生成
     const handleRegenerate = (messageIndex: number) => {
+        logVisualButtonClick('history_regenerate');
         controller.setShowGalgameHistory(false);
         controller.resetDisplayedSteps();
         controller.stepHandlers.handleRegenerate(messageIndex, {
@@ -125,6 +129,7 @@ const Galgame = () => {
     };
 
     const handleConfirmDeleteSession = async () => {
+        logVisualButtonClick("settings_restart");
         const userId = user?.user?.id;
         if (!userId || !fileId) {
             toast.error('无法删除存档：缺少用户或游戏信息');
@@ -150,6 +155,7 @@ const Galgame = () => {
     const canShareReplay = !controller.isReplay && !!sessionId && !controller.stepHandlers.isWaitingForData;
 
     const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
+        logVisualButtonClick('share_replay_create');
         if (!sessionId || !fileId) {
             toast.error('未找到会话或游戏信息');
             return;
@@ -323,7 +329,14 @@ const Galgame = () => {
                         </div>
                         <div
                             className={`${styles.buttonItem} ${controller.isAutoPlay ? styles.buttonItemActive : ''} ${controller.isTextMode || controller.showGalgameHistory ? styles.buttonItemDisabled : ''}`}
-                            onClick={controller.isTextMode || controller.showGalgameHistory ? undefined : controller.handleAutoPlayToggle}
+                            onClick={
+                                controller.isTextMode || controller.showGalgameHistory
+                                    ? undefined
+                                    : () => {
+                                          logVisualButtonClick("auto");
+                                          controller.handleAutoPlayToggle();
+                                      }
+                            }
                             style={{ cursor: controller.isTextMode || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
                         >
                             <div className={styles.buttonInner}>
@@ -334,7 +347,14 @@ const Galgame = () => {
                         {!controller.isReplay && (
                             <div
                                 className={`${styles.buttonItem} ${!canShareReplay ? styles.buttonItemDisabled : ''}`}
-                                onClick={!canShareReplay ? undefined : () => setIsShareOpen(true)}
+                                onClick={
+                                    !canShareReplay
+                                        ? undefined
+                                        : () => {
+                                              logVisualButtonClick("share_replay");
+                                              setIsShareOpen(true);
+                                          }
+                                }
                                 style={{ cursor: !canShareReplay ? 'not-allowed' : 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
@@ -345,7 +365,9 @@ const Galgame = () => {
                         )}
                         <div
                             className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
-                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                            onClick={() => {
+                                setIsSettingsOpen(!isSettingsOpen);
+                            }}
                             style={{ cursor: 'pointer' }}
                         >
                             <div className={styles.buttonInner}>
@@ -371,16 +393,19 @@ const Galgame = () => {
                     />
 
                     {/* 设置弹窗放在 mainContent 内，确保限制在容器内 */}
-                    <SettingsModal
-                        isOpen={isSettingsOpen}
-                        onClose={() => setIsSettingsOpen(false)}
-                        onExitGame={navigateBackSafe}
-                        onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
-                        isMusicPlaying={isMusicPlaying}
-                        onToggleMusic={handleMusicToggle}
-                        volume={volume}
-                        onVolumeChange={setVolume}
-                    />
+                        <SettingsModal
+                            isOpen={isSettingsOpen}
+                            onClose={() => setIsSettingsOpen(false)}
+                            onExitGame={navigateBackSafe}
+                            onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
+                            isMusicPlaying={isMusicPlaying}
+                            onToggleMusic={() => {
+                                logVisualButtonClick("settings_toggle_bgm");
+                                handleMusicToggle();
+                            }}
+                            volume={volume}
+                            onVolumeChange={setVolume}
+                        />
 
                     {/* 通用属性面板（服务端KV） */}
                     {galgameBetaAttributes && controller.gameStarted ? (
@@ -465,9 +490,9 @@ const Galgame = () => {
                         isOpen={isDeleteConfirmOpen}
                         onConfirm={handleConfirmDeleteSession}
                         onCancel={() => setIsDeleteConfirmOpen(false)}
-                        title="删除存档"
-                        message="确认删除该游戏的存档吗？删除后无法恢复。"
-                        confirmText="确认删除"
+                        title="重新开始"
+                        message="确认重新开始该游戏吗？重新开始后无法恢复。"
+                        confirmText="确认重新开始"
                         cancelText="取消"
                     />
                 </div>

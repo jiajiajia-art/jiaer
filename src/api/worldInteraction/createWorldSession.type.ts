@@ -14,6 +14,7 @@ export interface CreateWorldSessionResponse {
       started_at: string;
       ended_at: string;
       is_deleted: number;
+      hasAttributes?: boolean;
     };
     initFilesPath: string | null;
     sessionDataSync: {
@@ -21,7 +22,7 @@ export interface CreateWorldSessionResponse {
       bucket: string;
       prefix: string;
       destRoot: string;
-    };
+    } | null;
   };
 }
 // export interface CreateWorldSessionResponse {

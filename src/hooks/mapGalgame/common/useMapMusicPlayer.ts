@@ -5,6 +5,7 @@ import type { MapViewState } from '../../../store/mapGalgameStore';
 import type { EventData } from '../../../page/GalgameMap';
 import { useMapGalgameStore } from '../../../store/mapGalgameStore';
 import { mapMusicManager } from '../../../utils/mapMusicManager';
+import { logWorldButtonClick } from "../../../api/statistics/scriptButtonEvent";
 
 interface UseMapMusicPlayerOptions {
     fileId: string | null;
@@ -309,6 +310,7 @@ export const useMapMusicPlayer = ({
     }, [volume]);
 
     const handleMusicToggle = useCallback(async () => {
+        logWorldButtonClick("settings_toggle_bgm");
         if (isMusicPlaying) {
             const audio = mapMusicManager.getAudio();
             if (audio) {

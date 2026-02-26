@@ -27,6 +27,7 @@ import interactionApi from '../../../api/worldInteraction/interactionApi';
 import GameControlBar from './GameControlBar';
 import GameBackgroundRenderer from '../../Galgame/GameBackgroundRenderer';
 import GameImageRenderer from '../../Galgame/GameImageRenderer';
+import { logWorldButtonClick } from "../../../api/statistics/scriptButtonEvent";
 
 const DEFAULT_SCENE_IMAGE = `${import.meta.env.BASE_URL}data/assets/创作界面切图/defaultScene.png`;
 
@@ -185,6 +186,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
   }, [sessionId]);
 
   const handleHistoryClick = useCallback(() => {
+    logWorldButtonClick("history");
     setIsHistoryVisible((prev) => {
       const next = !prev;
       if (next) {

@@ -29,6 +29,10 @@ interface useMapGalgameState {
     // 存储的 sessionId（用于比对，确保恢复的数据属于当前会话）
     storedSessionId: string | null;
     setStoredSessionId: (sessionId: string | null) => void;
+
+    // 当前会话是否包含属性数据（由后端在创建 session 时告知）
+    hasAttributes: boolean | null;
+    setHasAttributes: (has: boolean | null) => void;
     
     // 事件完成标志（用于同步显示"开启下一回合"按钮）
     eventCompleted: boolean;
@@ -74,6 +78,9 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             // 存储的 sessionId（用于比对）
             storedSessionId: null,
             setStoredSessionId: (sessionId: string | null) => set({ storedSessionId: sessionId }),
+
+            hasAttributes: null,
+            setHasAttributes: (has: boolean | null) => set({ hasAttributes: has }),
             
             eventCompleted: false,
             setEventCompleted: (completed: boolean) => set({ eventCompleted: completed }),
@@ -102,6 +109,7 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
             clearState: () => set({
                 eventData: null,
                 storedSessionId: null,
+                hasAttributes: null,
                 eventCompleted: false,
                 isTypingInInteractNpc: false,
                 currentView: MapViewState.WORLD_MAP,
@@ -125,6 +133,7 @@ export const useMapGalgameStore = create<useMapGalgameState>()(
                 selectedSubscene: state.selectedSubscene,
                 selectedScene: state.selectedScene,
                 storedSessionId: state.storedSessionId,
+                hasAttributes: state.hasAttributes,
             }),
         }
     )

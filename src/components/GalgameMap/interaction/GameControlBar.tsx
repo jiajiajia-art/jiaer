@@ -3,6 +3,7 @@ import { BiHistory } from 'react-icons/bi';
 import { LuFileText } from 'react-icons/lu';
 import { MdOutlineAutoStories, MdSettings, MdOutlinePerson } from 'react-icons/md';
 import styles from './GameControlBar.module.css';
+import { logWorldButtonClick } from "../../../api/statistics/scriptButtonEvent";
 
 interface GameControlBarProps {
   // 积分显示
@@ -92,7 +93,10 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
             isHistoryActive ? styles.buttonItemActive : ''
           }`}
           style={{ cursor: 'pointer' }}
-          onClick={onHistoryClick}
+          onClick={() => {
+            logWorldButtonClick("history");
+            onHistoryClick();
+          }}
         >
           <div className={styles.buttonInner}>
             <BiHistory />
@@ -107,7 +111,10 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
           className={`${styles.buttonItem} ${
             isTextMode ? styles.buttonItemActive : ''
           }`}
-          onClick={onTextModeToggle}
+          onClick={() => {
+            logWorldButtonClick("text");
+            onTextModeToggle();
+          }}
           style={{ cursor: 'pointer' }}
         >
           <div className={styles.buttonInner}>
@@ -123,7 +130,14 @@ const GameControlBar: React.FC<GameControlBarProps> = ({
           className={`${styles.buttonItem} ${
             isAutoPlay ? styles.buttonItemActive : ''
           } ${autoPlayDisabled ? styles.buttonItemDisabled : ''}`}
-          onClick={autoPlayDisabled ? undefined : onAutoPlayToggle}
+          onClick={
+            autoPlayDisabled
+              ? undefined
+              : () => {
+                  logWorldButtonClick("auto");
+                  onAutoPlayToggle();
+                }
+          }
           style={{ cursor: autoPlayDisabled ? 'not-allowed' : 'pointer' }}
         >
           <div className={styles.buttonInner}>

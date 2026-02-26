@@ -11,14 +11,15 @@ export interface CreateWorldSessionRequest {
 const createWorldSessionApi = {
     createWorldPlaySession: async (data: CreateWorldSessionRequest) => {
         const response = await api.post<CreateWorldSessionResponse>(`/worldInteraction/session/create`, data);
-        
         // 创建 session 成功后，清理状态
         if (response.data?.success) {
-            const { clearState } = useMapGalgameStore.getState();
+            const { clearState, setHasAttributes } = useMapGalgameStore.getState();
             clearState();
+            const hasAttributes =
+                response.data.data?.session?.hasAttributes === true;
+            setHasAttributes(hasAttributes);
             console.log('[WorldInteraction] 创建新 session，已清理状态');
         }
-        
         return response;
     },
     getWorldFilesByFileId: (fielId: string) =>

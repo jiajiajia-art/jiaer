@@ -43,6 +43,7 @@ import GameAction from "../api/rpgGame/gameAction";
 import toast from "react-hot-toast";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
+import { logWorldButtonClick } from "../api/statistics/scriptButtonEvent";
 
 export interface EventData {
   event: GameEvent;
@@ -78,6 +79,7 @@ const GalgameMap = () => {
     setStoredSessionId,
     clearState,
     pendingAction,
+    hasAttributes,
   } = useMapGalgameStore();
   const { user } = useAuthStore();
   const { refreshEventData } = useRefreshEventData();
@@ -121,6 +123,7 @@ const GalgameMap = () => {
   };
 
   const handleConfirmDeleteSession = async () => {
+    logWorldButtonClick("settings_restart");
     const userId = user?.user?.id;
     if (!userId || !fileId) {
       toast.error('无法删除存档：缺少用户或游戏信息');
@@ -561,6 +564,10 @@ const GalgameMap = () => {
     if (!sessionId || !gameData) {
       return;
     }
+    // 当前会话没有属性数据时，直接跳过接口调用
+    if (hasAttributes === false) {
+      return;
+    }
 
     try {
       const response = await worldEditor.getAttributes(sessionId);
@@ -613,15 +620,18 @@ const GalgameMap = () => {
     } catch (error) {
       console.error("[GalgameMap] ❌ 更新属性失败:", error);
     }
-  }, [sessionId, gameData]);
+  }, [sessionId, gameData, hasAttributes]);
 
   const handlePlayerAttributesClick = useCallback(async () => {
+    if (hasAttributes === false) {
+      return;
+    }
     if (!gameData) return;
     if (!isPlayerAttributesVisible) {
       await updateGameAttributes();
     }
     setIsPlayerAttributesVisible((prev) => !prev);
-  }, [gameData, isPlayerAttributesVisible, updateGameAttributes]);
+  }, [gameData, isPlayerAttributesVisible, updateGameAttributes, hasAttributes]);
 
   const handleEndRound = async () => {
     if (!sessionId || !gameData) {
@@ -714,7 +724,7 @@ const GalgameMap = () => {
     <div className={styles.page} ref={containerRef}>
       <div className={styles.mapContainer}>
         {/* 顶部 Player 按钮：仅在 NPC 交互视图显示，固定在最上方右侧 */}
-        {gameData &&
+        {gameData && hasAttributes !== false &&
           (currentView === MapViewState.INTERACT_NPC_NORMAL ||
             currentView === MapViewState.INTERACT_NPC_ABILITY) && (
             <div
@@ -830,7 +840,7 @@ const GalgameMap = () => {
           )}
 
         {/* Player属性面板 - 全局显示 */}
-        {gameData && (
+        {gameData && hasAttributes !== false && (
           <Attributes
             visible={isPlayerAttributesVisible}
             onClose={() => setIsPlayerAttributesVisible(false)}
@@ -848,9 +858,9 @@ const GalgameMap = () => {
             <GameControlBar
               userPoints={user?.user?.points}
               showHistoryButton={false}
-              showPlayerButton={true}
+              showPlayerButton={hasAttributes !== false}
               isPlayerActive={isPlayerAttributesVisible}
-              onPlayerClick={handlePlayerAttributesClick}
+              onPlayerClick={hasAttributes !== false ? handlePlayerAttributesClick : undefined}
               isSettingsOpen={isSettingsOpen}
               onSettingsToggle={() => setIsSettingsOpen((p) => !p)}
             />
@@ -872,9 +882,9 @@ const GalgameMap = () => {
           isOpen={isDeleteConfirmOpen}
           onConfirm={handleConfirmDeleteSession}
           onCancel={() => setIsDeleteConfirmOpen(false)}
-          title="删除存档"
-          message={"确认删除该游戏的存档吗？删除后无法恢复。"}
-          confirmText="确认删除"
+          title="重新开始"
+          message={"确认重新开始该游戏吗？重新开始后无法恢复。"}
+          confirmText="确认重新开始"
           cancelText="取消"
         />
 
@@ -883,9 +893,9 @@ const GalgameMap = () => {
             <GameControlBar
               userPoints={user?.user?.points}
               showHistoryButton={false}
-              showPlayerButton={true}
+              showPlayerButton={hasAttributes !== false}
               isPlayerActive={isPlayerAttributesVisible}
-              onPlayerClick={handlePlayerAttributesClick}
+              onPlayerClick={hasAttributes !== false ? handlePlayerAttributesClick : undefined}
               isSettingsOpen={isSettingsOpen}
               onSettingsToggle={() => setIsSettingsOpen((p) => !p)}
             />
