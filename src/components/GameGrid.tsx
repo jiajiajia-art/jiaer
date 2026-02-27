@@ -13,9 +13,17 @@ interface GameGridProps {
     renderActions?: (game: UserGameData) => React.ReactNode;
     /** 统计显示模式：'uv' 用钱币 + total_uv_count，'pv' 用游戏手柄 + total_pv_count */
     primaryStat?: 'uv' | 'pv';
+    isIncentive?: boolean;
 }
 
-const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions, primaryStat = 'pv' }) => {
+const 
+GameGrid: React.FC<GameGridProps> = ({
+    games,
+    onGameClick,
+    renderActions,
+    primaryStat = 'pv',
+    isIncentive = false,
+}) => {
     const navigate = useNavigate();
 
     const handleGameClick = (game: UserGameData) => {
@@ -43,10 +51,15 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions, 
     return (
         <div className={styles.grid4}>
             {games.map((meta, idx) => {
-                const primaryValue = primaryStat === 'pv'
-                    ? (meta.total_pv_count ?? 0)
-                    : (meta.total_uv_count ?? 0);
-                const PrimaryIcon = primaryStat === 'pv' ? IoGameControllerOutline : RiMoneyCnyCircleLine;
+                const showUvWithMoney = primaryStat === 'uv' && isIncentive;
+
+                const primaryValue = showUvWithMoney
+                    ? (meta.total_uv_count ?? 0)
+                    : (meta.total_pv_count ?? 0);
+
+                const PrimaryIcon = showUvWithMoney
+                    ? RiMoneyCnyCircleLine
+                    : IoGameControllerOutline;
 
                 return (
                 <div
@@ -70,11 +83,11 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions, 
                                     {meta.like_count || 0}
                                 </div>
                             </div>
-                            {(meta.game_tags || (meta as any).engine) && (
+                            {/* {(meta.game_tags || (meta as any).engine) && (
                                 <div className={styles.goodsInfoTag} title={String(meta.game_tags || (meta as any).engine)}>
                                     {String(meta.game_tags || (meta as any).engine)}
                                 </div>
-                            )}
+                            )} */}
                         </div>
                     </div>
                     <div className={styles.goodsBody}>
@@ -87,7 +100,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions, 
                             )}
                         </div>
 
-                        {renderActions ? (
+                        {/* {renderActions ? (
                             <div className={styles.gameEditBtn}>
                                 {renderActions(meta)}
                             </div>
@@ -95,7 +108,7 @@ const GameGrid: React.FC<GameGridProps> = ({ games, onGameClick, renderActions, 
                             <div className={styles.goodsPrice}>
                                 <button className={styles.startGameBtn}>开始游戏</button>
                             </div>
-                        )}
+                        )} */}
                     </div>
                 </div>
             )})}

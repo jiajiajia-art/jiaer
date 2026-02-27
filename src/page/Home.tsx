@@ -384,7 +384,7 @@ const Home: React.FC = () => {
                     </div>
 
                     {/* 限时优惠模块 */}
-                    <div className={styles.shopSection}>
+                    {/* <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/限时优惠.png`} alt="限时优惠" />
@@ -415,11 +415,11 @@ const Home: React.FC = () => {
                                 )}
                             </>
                         )}
-                    </div>
+                    </div> */}
 
                     {/* 全部游戏模块 */}
                     <div className={styles.shopSection}>
-                        <div className={styles.sectionHeader}>
+                        {/* <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/全部游戏.png`} alt="全部游戏" />
                             </div>
@@ -434,7 +434,7 @@ const Home: React.FC = () => {
                                 更多
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
-                        </div>
+                        </div> */}
                         {isLoadingAll ? (
                             <GameGridSkeleton count={8} />
                         ) : (

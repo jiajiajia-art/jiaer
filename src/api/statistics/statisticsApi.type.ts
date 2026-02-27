@@ -27,4 +27,5 @@ export interface GameTotalStatsResponse {
     likeCount: number;
     Count: number;
     totalAmount: number;
+    isIncentive: boolean;
 }

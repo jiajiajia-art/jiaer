@@ -38,6 +38,7 @@ const Create: React.FC = () => {
         totalClicks: 0,
         totalAmount: 0,
         totalSettleAmount: 0,
+        isIncentive: false,
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
@@ -102,7 +103,8 @@ const Create: React.FC = () => {
                     totalViews: response.data.data.pv ?? 0,
                     totalClicks: response.data.data.uv ?? 0,
                     totalAmount: response.data.data.totalAmount ?? 0,
-                    totalSettleAmount: (response.data.data.uv ?? 0) * 5 || 0
+                    totalSettleAmount: (response.data.data.uv ?? 0) * 5 || 0,
+                    isIncentive: response.data.data.isIncentive ?? false,
                 });
             }
         } catch (error) {
@@ -451,15 +453,17 @@ const Create: React.FC = () => {
                                 </div>
                                 <div className={styles.statValue}>{stats.totalAmount}</div>
                             </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                        <span>结算总收益</span>
+                            {stats.isIncentive && (
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                            <span>结算总收益</span>
+                                        </div>
                                     </div>
+                                    <div className={styles.statValue}>{stats.totalSettleAmount}</div>
                                 </div>
-                                <div className={styles.statValue}>{stats.totalSettleAmount}</div>
-                            </div>
+                            )}
                         </div>
                     </div>
 
@@ -498,6 +502,7 @@ const Create: React.FC = () => {
                             <GameGrid
                                 games={publishedGames}
                                 primaryStat="uv"
+                                isIncentive={stats.isIncentive}
                                 onGameClick={(game) => {
                                     const gameId = game.file_id || game.id;
                                     if (!gameId) return;
