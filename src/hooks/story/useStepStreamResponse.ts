@@ -66,30 +66,42 @@ export const useStepStreamResponse = ({
         return { mainOptions, options };
     }, []);
 
-    // 将包含 [OPTION: ...] 的文本型 step 转换为 choice step
+    // 将包含 [OPTION: ...] 的文本内容转换为 choice step
+    // 注意：某些后端会直接返回 type: 'choice'，但把选项仍然写在 content 文本里（没有显式的 options 数组）。
+    // 之前这里遇到 type === 'choice' 会直接 return rawStep，导致未能从文本中解析出 [OPTION]。
+    // 现在的策略：
+    //  - 如果已有有效的 options 数组（length > 0），则保持原样；
+    //  - 否则，无论类型为何，都尝试从 content 中提取 [OPTION]，成功则补全为标准的 choice 结构。
     const toChoiceIfHasOptions = useCallback((rawStep: any): any => {
-        if (!rawStep || rawStep.type === 'choice') return rawStep;
+        if (!rawStep) return rawStep;
+
+        // 已有有效选项则不处理
+        if (rawStep.type === 'choice' && Array.isArray(rawStep.options) && rawStep.options.length > 0) {
+            return rawStep;
+        }
+
         // 统一取文案字段
         const content: string | undefined = rawStep.content || rawStep.text || rawStep.message;
         if (!content || typeof content !== 'string') return rawStep;
 
-        // 仅根据 [OPTION: ...] 判断是否存在选项，不依赖 [CHOICE]/[END_CHOICE]
         try {
             const { options, cleanedText } = cleanHistoryMessage(content);
             const { mainOptions } = extractOptionsFromText(content);
-            if (Array.isArray(options) && options.length > 0) {
+            // 最大兼容性：只要存在完整 [OPTION: ...] 就解析；但当数量 > 5 时，视为异常不转换
+            if (Array.isArray(options) && options.length > 0 && options.length <= 5) {
                 return {
                     type: 'choice',
-                    // 可选：尝试保留 title，但不依赖其存在
+                    // 无视 title，提高兼容性
                     title: undefined,
                     description: cleanedText || '',
                     mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
                     options: options.map((t) => t),
                 };
             }
-        } catch (e) {
+        } catch {
             // 忽略解析错误，保持原样
         }
+
         return rawStep;
     }, [extractOptionsFromText]);
 
@@ -168,7 +180,7 @@ export const useStepStreamResponse = ({
                             try {
                                 const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
                                 const { mainOptions } = extractOptionsFromText(aggregatedResponse);
-                                if (Array.isArray(opts) && opts.length > 0) {
+                                if (Array.isArray(opts) && opts.length > 0 && opts.length <= 5) {
                                     choiceEmittedFromResponse = true;
                                     hasReceivedStep = true;
                                     if (!firstStepReceived) {
@@ -240,7 +252,7 @@ export const useStepStreamResponse = ({
                                 try {
                                 const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
                                 const { mainOptions } = extractOptionsFromText(aggregatedResponse);
-                                if (Array.isArray(opts) && opts.length > 0) {
+                                if (Array.isArray(opts) && opts.length > 0 && opts.length <= 5) {
                                         choiceEmittedFromResponse = true;
                                         hasReceivedStep = true;
                                         if (!firstStepReceived) {
@@ -251,13 +263,13 @@ export const useStepStreamResponse = ({
                                             if (currentRequestId.current !== requestId) return prev;
                                             const hasChoice = prev.some((s: any) => s?.type === 'choice');
                                             if (hasChoice) return prev;
-                                        const choiceStep = {
-                                            type: 'choice',
+                                            const choiceStep = {
+                                                type: 'choice',
                                             title: undefined,
-                                            description: cleanedText || '',
-                                            mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
-                                            options: opts.map((t: string) => t),
-                                        };
+                                                description: cleanedText || '',
+                                                mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
+                                                options: opts.map((t: string) => t),
+                                            };
                                             return [...prev, choiceStep];
                                         });
                                     }
@@ -462,30 +474,30 @@ export const useStepStreamResponse = ({
                             try {
                                 const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
                                 const { mainOptions } = extractOptionsFromText(aggregatedResponse);
-                                if (Array.isArray(opts) && opts.length > 0) {
-                                    choiceEmittedFromResponse = true;
-                                    hasReceivedStep = true;
-                                    if (!firstStepReceived) {
-                                        firstStepReceived = true;
-                                        options?.onFirstStep?.();
+                                if (Array.isArray(opts) && opts.length > 0 && opts.length <= 5) {
+                                        choiceEmittedFromResponse = true;
+                                        hasReceivedStep = true;
+                                        if (!firstStepReceived) {
+                                            firstStepReceived = true;
+                                            options?.onFirstStep?.();
+                                        }
+                                        setStepQueue(prev => {
+                                            if (currentRequestId.current !== requestId) return prev;
+                                            const hasChoice = prev.some((s: any) => s?.type === 'choice');
+                                            if (hasChoice) return prev;
+                                    const choiceStep = {
+                                        type: 'choice',
+                                        title: undefined,
+                                        description: cleanedText || '',
+                                        mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
+                                        options: opts.map((t: string) => t),
+                                    };
+                                            return [...prev, choiceStep];
+                                        });
                                     }
-                                    setStepQueue(prev => {
-                                        if (currentRequestId.current !== requestId) return prev;
-                                        const hasChoice = prev.some((s: any) => s?.type === 'choice');
-                                        if (hasChoice) return prev;
-                                        const choiceStep = {
-                                            type: 'choice',
-                                            title: undefined,
-                                            description: cleanedText || '',
-                                            mainOptions: mainOptions.length > 0 ? mainOptions : undefined,
-                                            options: opts.map((t: string) => t),
-                                        };
-                                        return [...prev, choiceStep];
-                                    });
-                                }
-                            } catch {}
+                                } catch {}
+                            }
                         }
-                    }
 
                     // 处理顶层的 error 类型
                     if (jsonData.type === 'error') {

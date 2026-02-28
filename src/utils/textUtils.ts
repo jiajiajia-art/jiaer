@@ -411,15 +411,8 @@ export const extractChoiceFromHistory = (text: string): {
         }
     }
     
-    // 提取 title（CHOICE 标签中的内容）
-    let title = '';
-    const choiceTitleRegex = /\[CHOICE:\s*([^\]]*)\]/i;
-    const titleMatch = text.match(choiceTitleRegex);
-    if (titleMatch && titleMatch[1]) {
-        title = titleMatch[1].trim();
-    }
-    
-    // 提取所有 MAIN_OPTION / OPTION
+    // 无视 title：不再依赖/提取 CHOICE 标签中的标题内容
+// 提取所有 MAIN_OPTION / OPTION
     // 支持多种格式：
     // 1. [MAIN_OPTION: "内容"] / [OPTION: "内容"]
     // 2. [MAIN_OPTION: 内容] / [OPTION: 内容]
@@ -463,7 +456,7 @@ export const extractChoiceFromHistory = (text: string): {
     console.log('extractChoiceFromHistory - 提取的 options:', options);
     
     // 如果没有选项，返回 null
-    if (options.length === 0) {
+    if (options.length === 0 || options.length > 5) {
         return null;
     }
     
@@ -516,7 +509,8 @@ export const extractChoiceFromHistory = (text: string): {
     }
     
     return {
-        title: title || '',
+        // 无视 title，提高兼容性
+        title: '',
         text: choiceText,
         options
     };
@@ -664,7 +658,7 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
     }
     
     // 如果提取到了 OPTION，则添加一个 choice 步骤（不再强依赖 CHOICE 块）
-    if (options.length > 0) {
+    if (options.length > 0 && options.length <= 5) {
         let description = '';
         if (choiceBlocks.length > 0) {
             const lastChoice = choiceBlocks[choiceBlocks.length - 1];
@@ -695,11 +689,12 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
             id: `history-choice-${stepIndex++}`,
             type: 'choice',
             content: '',
-            title: choiceBlocks.length > 0 ? choiceBlocks[choiceBlocks.length - 1].title : undefined,
+            title: undefined,
             description,
             options: choiceOptions
         });
     }
     
     return steps;
-};
+};// 无视 title：不再依赖/提取 CHOICE 标签中的标题内容
+
