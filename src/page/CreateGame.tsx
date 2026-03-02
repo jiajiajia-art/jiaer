@@ -134,13 +134,14 @@ const CreateGame: React.FC = () => {
     };
 
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
-    const handlePublishGame = async () => {
+    const handlePublishGame = async (description?: string) => {
         if (!gameId) return;
 
         try {
             const response = await GameAction.publishGame({
                 fileId: gameId,
                 priceAmount: 0,
+                description: description ?? '',
             });
 
             if (response.data.success) {

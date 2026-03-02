@@ -13,9 +13,11 @@ import CheckInModal from '../components/CheckInModal';
 import { getImageUrl } from '../utils/constants';
 
 const Home: React.FC = () => {
-    const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    //const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    const [,setFileMetas] = useState<UserGameData[]>([]);
     const [allGames, setAllGames] = useState<UserGameData[]>([]);
-    const [isLoadingSpecial, setIsLoadingSpecial] = useState(true);
+    //const [isLoadingSpecial, setIsLoadingSpecial] = useState(true);
+    const [,setIsLoadingSpecial] = useState(true);
     const [isLoadingAll, setIsLoadingAll] = useState(true);
     const [isLoadingMoreSpecial, setIsLoadingMoreSpecial] = useState(false);
     const [isLoadingMoreAll, setIsLoadingMoreAll] = useState(false);

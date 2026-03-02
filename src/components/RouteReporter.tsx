@@ -172,6 +172,7 @@ export const RouteReporter: React.FC = () => {
           user: {
             id: 0,
             userId: '',
+            userCode: '',
             name: '',
             phoneNumber: '',
             role: '',
