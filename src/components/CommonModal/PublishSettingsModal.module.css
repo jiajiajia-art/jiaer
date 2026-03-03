@@ -280,6 +280,50 @@
     margin: 8px 0 0 0;
 }
 
+/* 游戏简介描述框 */
+.descriptionFormGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+}
+
+.descriptionInput {
+    width: 100%;
+    min-height: 120px;
+    padding: 16px 20px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    font-size: 16px;
+    background: #fafafa;
+    color: #333;
+    outline: none;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.descriptionInput::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.descriptionInput:focus {
+    border-color: #B69B74;
+    background: #fff;
+}
+
+.descriptionMetaRow {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.descriptionCount {
+    font-size: 0.85rem;
+    color: rgba(0, 0, 0, 0.5);
+}
+
 /* 移动端适配 (768px以下) */
 @media (max-width: 768px) {
     .modal {

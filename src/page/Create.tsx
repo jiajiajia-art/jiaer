@@ -9,7 +9,7 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
-import { MdEdit } from 'react-icons/md';
+import { MdEdit, MdContentCopy } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
@@ -129,25 +129,38 @@ const Create: React.FC = () => {
         getUserInfo();
     }, [user?.user.id]);
 
-    const renderGameActions = (game: UserGameData) => {
-        const isPublic = game.is_public === 1;
+    // 暂时隐藏
+    // const renderGameActions = (game: UserGameData) => {
+    //     const isPublic = game.is_public === 1;
 
-        return (
-            <button
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    if (!game.file_id) return;
-                    navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
-                }}
-            >
-                {isPublic ? '查看数据' : '继续编辑'}
-            </button>
-        );
-    };
+    //     return (
+    //         <button
+    //             type="button"
+    //             onClick={(e) => {
+    //                 e.stopPropagation();
+    //                 if (!game.file_id) return;
+    //                 navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
+    //             }}
+    //         >
+    //             {isPublic ? '查看数据' : '继续编辑'}
+    //         </button>
+    //     );
+    // };
 
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
+    const userCode = user?.user?.userCode;
+
+    const handleCopyUserCode = async () => {
+        if (!userCode) return;
+        try {
+            await navigator.clipboard.writeText(userCode);
+            toast.success('Kuran号已复制');
+        } catch (error) {
+            console.error('复制 Kuran号 失败:', error);
+            toast.error('复制失败，请稍后重试');
+        }
+    };
 
     const handleStartEditName = () => {
         if (!user) {
@@ -364,6 +377,19 @@ const Create: React.FC = () => {
                                         <MdEdit />
                                     </button>
                                 </div>
+                                {userCode && (
+                                    <div className={styles.userCode}>
+                                        <span className={styles.userCodeText}>Kuran号：{userCode}</span>
+                                        <button
+                                            type="button"
+                                            className={styles.userCodeCopyButton}
+                                            onClick={handleCopyUserCode}
+                                            title="复制Kuran号"
+                                        >
+                                            <MdContentCopy />
+                                        </button>
+                                    </div>
+                                )}
                                 <div className={styles.userCredit}>
                                     <span className={styles.userPoints}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
@@ -508,7 +534,6 @@ const Create: React.FC = () => {
                                     if (!gameId) return;
                                     navigate(`/createGame?mode=stats&gameId=${gameId}`);
                                 }}
-                                renderActions={renderGameActions}
                             />
                         )}
                     </div>
@@ -550,7 +575,6 @@ const Create: React.FC = () => {
                                     if (!gameId) return;
                                     navigate(`/createGame?mode=stats&gameId=${gameId}`);
                                 }}
-                                renderActions={renderGameActions}
                             />
                         )}
                     </div>

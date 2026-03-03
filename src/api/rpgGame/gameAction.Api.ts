@@ -3,6 +3,7 @@ import type { UserGameData } from "../home/getGameData.type";
 export interface PublishGameRequest {
     fileId: string;
     priceAmount: number;
+    description: string;
 }
 
 export interface PublishGameResponse {

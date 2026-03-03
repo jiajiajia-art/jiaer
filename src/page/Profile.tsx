@@ -8,6 +8,7 @@ import Navbar from '../components/Layout/Navbar';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup } from 'react-icons/md';
 import toast from 'react-hot-toast';
+import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
 import type { User } from '../api/account/auth.type';
 
@@ -103,14 +104,6 @@ const Profile: React.FC = () => {
         setShowJoinGroupModal(true);
     };
 
-    const handleCopyGroupNumber = () => {
-        const groupNumber = '905065897';
-        navigator.clipboard.writeText(groupNumber);
-        toast.success('QQ群号已复制');
-        setTimeout(() => {
-            setShowJoinGroupModal(false);
-        }, 3000);
-    };
 
     const handleCheckIn = async () => {
         console.log("user?.hasSignedIn", user?.user?.hasSignedIn);
@@ -291,46 +284,8 @@ const Profile: React.FC = () => {
             </div>
             <MobileBottomNav />
 
-            {/* 加入用户群弹窗 */}
-            {showJoinGroupModal && (
-                <div className={styles.groupModalOverlay} onClick={() => setShowJoinGroupModal(false)}>
-                    <div className={styles.groupModalContent} onClick={(e) => e.stopPropagation()}>
-                        {/* 图片 */}
-                        <div className={styles.groupModalImage}>
-                            <img
-                                src={`${import.meta.env.BASE_URL}data/assets/QQ1.png`}
-                                alt="QQ群"
-                                onError={(e) => {
-                                    // 如果图片加载失败，使用默认图片
-                                    (e.target as HTMLImageElement).src = `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
-                                }}
-                            />
-                        </div>
-
-                        {/* 文字内容 */}
-                        <div className={styles.groupModalText}>
-                            点击复制QQ群号，加入用户交流群
-                            <span className={styles.groupNumber}>905065897</span>
-                        </div>
-
-                        {/* 按钮区域 */}
-                        <div className={styles.groupModalButtons}>
-                            <button
-                                className={styles.groupModalCancelBtn}
-                                onClick={() => setShowJoinGroupModal(false)}
-                            >
-                                取消
-                            </button>
-                            <button
-                                className={styles.groupModalCopyBtn}
-                                onClick={handleCopyGroupNumber}
-                            >
-                                复制
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* 加入用户群弹窗（复用组件，双二维码、仅取消按钮） */}
+            <JoinGroupModal isOpen={showJoinGroupModal} onClose={() => setShowJoinGroupModal(false)} />
         </div>
     );
 };

@@ -10,12 +10,15 @@ import { useAuthStore } from '../store/useAuthStore';
 import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
+import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
 
 const Home: React.FC = () => {
-    const [, setFileMetas] = useState<UserGameData[]>([]);
+    //const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
+    const [,setFileMetas] = useState<UserGameData[]>([]);
     const [allGames, setAllGames] = useState<UserGameData[]>([]);
-    const [, setIsLoadingSpecial] = useState(true);
+    //const [isLoadingSpecial, setIsLoadingSpecial] = useState(true);
+    const [,setIsLoadingSpecial] = useState(true);
     const [isLoadingAll, setIsLoadingAll] = useState(true);
     const [isLoadingMoreSpecial, setIsLoadingMoreSpecial] = useState(false);
     const [isLoadingMoreAll, setIsLoadingMoreAll] = useState(false);
@@ -37,6 +40,7 @@ const Home: React.FC = () => {
     const hasInitializedRef = useRef(false);
     const navigator = useNavigate();
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
+    const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
 
     // 监听用户登出，重置检查状态
     useEffect(() => {
@@ -47,6 +51,22 @@ const Home: React.FC = () => {
         }
     }, [user?.user?.id]);
 
+    // 首登弹窗：加入用户群（仅首次登录显示一次）
+    useEffect(() => {
+        const uid = user?.user?.id;
+        if (!uid) return;
+
+        const localKey = 'joinGroupModalShown_' + uid;
+        const sessionKey = 'joinGroupModalWillShow_' + uid;
+
+        const hasShown = localStorage.getItem(localKey) === 'true';
+        const alreadyPlanned = sessionStorage.getItem(sessionKey) === 'true';
+
+        if (!hasShown && !alreadyPlanned) {
+            sessionStorage.setItem(sessionKey, 'true'); // 告知其他 effect：本次先显示入群弹窗
+            setShowJoinGroupModal(true);
+        }
+    }, [user?.user?.id]);
     // 只在登录后检查一次签到弹窗（使用 sessionStorage 记录本次会话）
     useEffect(() => {
         if (!user?.user?.id || hasCheckedInSessionRef.current || user?.user?.hasSignedIn) {
@@ -315,6 +335,25 @@ const Home: React.FC = () => {
         }
     };
 
+    // 关闭加入群弹窗；记录已展示；必要时跟进弹签到
+    const handleCloseJoinGroupModal = () => {
+        setShowJoinGroupModal(false);
+        const uid = user?.user?.id;
+        if (!uid) return;
+        const localKey = 'joinGroupModalShown_' + uid;
+        localStorage.setItem(localKey, 'true');
+
+        // 如果今天还没签到，且本会话尚未弹过签到，则补弹签到
+        const today = new Date().toDateString();
+        const checkInKey = 'checkIn_' + uid + '_' + today;
+        const isCheckedIn = localStorage.getItem(checkInKey) === today;
+        const checkInSessionKey = 'checkInModalChecked';
+        const hasCheckInModalShownThisSession = sessionStorage.getItem(checkInSessionKey);
+        if (!isCheckedIn && !hasCheckInModalShownThisSession) {
+            sessionStorage.setItem(checkInSessionKey, 'true');
+            setShowCheckInModal(true);
+        }
+    };
     return (
         <div className={styles.pageRoot}>
             {/* 顶部固定导航 */}
@@ -466,6 +505,8 @@ const Home: React.FC = () => {
             <FooterArea />
 
             {/* 签到提示弹窗 */}
+            {/* 加群提示弹窗（首次登录） */}
+            <JoinGroupModal isOpen={showJoinGroupModal} onClose={handleCloseJoinGroupModal} />
             <CheckInModal
                 isOpen={showCheckInModal}
                 onClose={() => setShowCheckInModal(false)}

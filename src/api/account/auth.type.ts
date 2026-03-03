@@ -3,6 +3,7 @@ export interface User {
   name: string;
   id: number;
   userId: string;
+  userCode: string;
   phoneNumber: string;
   role: string;
   createTime: string;

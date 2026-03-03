@@ -16,6 +16,11 @@ const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
 
+const isMiniProgramEnv = (): boolean => {
+    const win = window as any;
+    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+};
+
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge }) => {
     const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
     const [customAmount, setCustomAmount] = useState<string>('');
@@ -133,7 +138,36 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
         setIsLoading(true);
         try {
-            if (onRecharge) {
+            if (isMiniProgramEnv()) {
+                const response = await payApi.createMiniOrder({ amount });
+                const data = response.data;
+                if (data.code === 200 && data.data) {
+                    const { outTradeNo, payParams } = data.data;
+                    setOrderId(outTradeNo);
+
+                    const wx = (window as any).wx || (window as any).jWeixin;
+                    if (wx && typeof wx.requestPayment === 'function') {
+                        wx.requestPayment({
+                            ...payParams,
+                            success: () => {
+                                setPaymentStatus('success');
+                                setPollingError('');
+                            },
+                            fail: () => {
+                                setPaymentStatus('failed');
+                                setPollingError('支付未完成，请重试或稍后查看账户。');
+                            },
+                        });
+                    } else {
+                        console.error('wx.requestPayment 不可用');
+                        setPaymentStatus('failed');
+                        setPollingError('当前环境不支持微信支付，请稍后重试。');
+                    }
+                } else {
+                    setPaymentStatus('failed');
+                    setPollingError(data.message || '发起微信支付失败，请重试。');
+                }
+            } else if (onRecharge) {
                 const result = await onRecharge(amount);
                 const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
                 if (result && qrDataUrl) {
@@ -146,6 +180,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         } catch (error) {
             console.error('充值失败:', error);
+            setPaymentStatus('failed');
+            setPollingError('发起支付请求失败，请稍后重试。');
         } finally {
             setIsLoading(false);
         }

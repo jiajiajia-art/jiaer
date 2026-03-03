@@ -10,7 +10,6 @@ import { getImageUrl } from '../utils/constants';
 interface GameGridProps {
     games: UserGameData[];
     onGameClick?: (game: UserGameData) => void;
-    renderActions?: (game: UserGameData) => React.ReactNode;
     /** 统计显示模式：'uv' 用钱币 + total_uv_count，'pv' 用游戏手柄 + total_pv_count */
     primaryStat?: 'uv' | 'pv';
     isIncentive?: boolean;

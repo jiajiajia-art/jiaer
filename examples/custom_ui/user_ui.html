@@ -1,0 +1,67 @@
+<style>
+  .chat-fab {
+    position: static;
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: #07c160; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; cursor: pointer;
+    margin: 16px 16px 0 0; box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    pointer-events: auto; z-index: 1700;
+  }
+  .social-window { position: absolute; top:64px; right:16px; width:360px; height:560px; background:#111; color:#fff; border-radius:16px; overflow:hidden; box-shadow:0 12px 28px rgba(0,0,0,.35); display:none; pointer-events:auto; z-index:1710; }
+  .social-window.open { display:block; }
+  .wx-header { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 14px; background:#1f2937; }
+  .wx-title { font-weight:700; }
+  .wx-actions button, .wx-header button { background:transparent; border:none; color:#fff; font-size:16px; cursor:pointer; }
+  .wx-tabs { display:flex; height:40px; background:#161b22; }
+  .wx-tab { flex:1; display:flex; align-items:center; justify-content:center; font-size:14px; opacity:.8; cursor:pointer; }
+  .wx-tab.active { opacity:1; font-weight:600; border-bottom:2px solid #07c160; }
+  .wx-list { height: calc(100% - 96px); overflow:auto; padding:8px 0; background:#0b0f14; }
+  .wx-item { display:flex; gap:10px; padding:10px 14px; align-items:center; cursor:pointer; }
+  .wx-item:hover { background: rgba(255,255,255,.06); }
+  .wx-avatar { width:40px; height:40px; border-radius:8px; background:#374151; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .wx-meta { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .wx-name { font-weight:600; font-size:14px; }
+  .wx-last { font-size:12px; opacity:.8; }
+  .wx-empty { padding: 14px; opacity:.6; font-size: 13px; }
+</style>
+
+<div class="chat-fab" id="openSocial" title="打开社交">聊</div>
+
+<div class="social-window" id="social">
+  <div class="wx-header">
+    <button id="wxClose">←</button>
+    <div class="wx-title">消息</div>
+    <div class="wx-actions"><button id="wxNew">＋</button></div>
+  </div>
+  <div class="wx-tabs">
+    <div class="wx-tab active">微信</div>
+    <div class="wx-tab">通讯录</div>
+    <div class="wx-tab">发现</div>
+    <div class="wx-tab">我</div>
+  </div>
+  <div class="wx-list" id="wxList">
+    <div class="wx-item"><div class="wx-avatar">A</div><div class="wx-meta"><div class="wx-name">阿明</div><div class="wx-last">在吗？今晚有空吗</div></div></div>
+    <div class="wx-item"><div class="wx-avatar">B</div><div class="wx-meta"><div class="wx-name">北桥</div><div class="wx-last">明早 9:30 见</div></div></div>
+    <div class="wx-item"><div class="wx-avatar">C</div><div class="wx-meta"><div class="wx-name">程序猿小C</div><div class="wx-last">已发送一个文件给你</div></div></div>
+    <div class="wx-item"><div class="wx-avatar">D</div><div class="wx-meta"><div class="wx-name">岛风</div><div class="wx-last">[图片]</div></div></div>
+    <div class="wx-item"><div class="wx-avatar">E</div><div class="wx-meta"><div class="wx-name">ECHO</div><div class="wx-last">收到</div></div></div>
+    <div class="wx-empty">以上为演示数据，可按需替换为实时会话列表。</div>
+  </div>
+</div>
+
+<script>
+  const root = (window.__CUSTOM_UI_SHADOW__) ||
+               (document.currentScript && document.currentScript.getRootNode && document.currentScript.getRootNode()) ||
+               (document.querySelector('#custom-ui-root') && document.querySelector('#custom-ui-root').shadowRoot) ||
+               document;
+  const $ = (sel) => root.querySelector(sel);
+
+  $('#openSocial')?.addEventListener('click', () => {
+    const s = $('#social'); if (s) s.classList.add('open');
+  });
+  $('#wxClose')?.addEventListener('click', () => {
+    const s = $('#social'); if (s) s.classList.remove('open');
+  });
+</script>

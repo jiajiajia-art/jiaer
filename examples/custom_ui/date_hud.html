@@ -1,0 +1,44 @@
+<style>
+  .date-hud { position: fixed; top: 50px; left: 16px; min-width: 180px; padding: 8px 12px; border-radius: 12px; background: rgba(0,0,0,.55); color:#fff; font-size: 13px; display:flex; align-items:center; gap:10px; pointer-events:auto; z-index:1700; backdrop-filter: blur(6px); }
+  .date-hud .dot { width:6px; height:6px; border-radius:50%; background:#07c160; }
+  .date-hud .place { font-weight:700; }
+  .date-hud .date { opacity:.9; }
+</style>
+
+<div class="date-hud">
+  <div class="dot"></div>
+  <div class="place" id="hudPlace">-</div>
+  <div class="date" id="hudDate">--/-- --:--</div>
+  <!-- 可根据需要添加图标/按钮；尽量保持尺寸紧凑，不遮挡宿主按钮 -->
+</div>
+
+<script>
+  const root = (window.__CUSTOM_UI_SHADOW__) ||
+               (document.currentScript && document.currentScript.getRootNode && document.currentScript.getRootNode()) ||
+               (document.querySelector('#custom-ui-root') && document.querySelector('#custom-ui-root').shadowRoot) ||
+               document;
+  const $ = (sel) => root.querySelector(sel);
+
+  function updatePlace(state) {
+    const name = state?.scene?.name || '-';
+    const el = $('#hudPlace'); if (el) el.textContent = name;
+  }
+  function updateTime() {
+    const d = new Date();
+    const s = `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')} `+
+              `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    const el = $('#hudDate'); if (el) el.textContent = s;
+  }
+
+  try {
+    const api = window.gameAPI;
+    if (api) {
+      updatePlace(api.getState ? api.getState() : {});
+      api.on && api.on('stateChange', updatePlace);
+    }
+  } catch(e) {}
+
+  updateTime();
+  setInterval(updateTime, 60 * 1000);
+</script>
+

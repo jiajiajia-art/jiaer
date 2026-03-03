@@ -9,7 +9,7 @@ import { addImageTimestamp } from '../../utils/imageCache';
 interface PublishSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onPublish: () => void;
+    onPublish: (description: string) => void;
     fileId?: string;
     coverUrl?: string;
     onCoverUploaded?: () => void;
@@ -23,10 +23,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     coverUrl,
     onCoverUploaded,
 }) => {
+    const DESCRIPTION_MAX_LENGTH = 300;
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
     const [coverError, setCoverError] = useState<string | null>(null);
+    const [description, setDescription] = useState<string>('');
 
     const uploadCover = useCallback(async (file: File) => {
         if (!fileId) {
@@ -55,7 +57,24 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     if (!isOpen) return null;
 
     const handleSubmit = () => {
-        onPublish();
+        // 必填校验：封面图片
+        if (!coverPreview) {
+            toast.error('请上传封面图片');
+            return;
+        }
+
+        // 必填校验：游戏简介
+        const trimmed = description.trim();
+        if (!trimmed) {
+            toast.error('请填写游戏简介');
+            return;
+        }
+        if (trimmed.length > DESCRIPTION_MAX_LENGTH) {
+            toast.error(`简介不能超过 ${DESCRIPTION_MAX_LENGTH} 字`);
+            return;
+        }
+
+        onPublish(trimmed);
     };
 
     // 封面上传相关处理函数
@@ -138,6 +157,21 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             {coverError && (
                                 <p className={styles.coverErrorText}>{coverError}</p>
                             )}
+                        </div>
+                        <div className={styles.descriptionFormGroup}>
+                            <label className={styles.label}>游戏简介</label>
+                            <textarea
+                                className={styles.descriptionInput}
+                                placeholder={`请输入描述（不超过${DESCRIPTION_MAX_LENGTH}字符）`}
+                                value={description}
+                                maxLength={DESCRIPTION_MAX_LENGTH}
+                                onChange={(e) => setDescription(e.target.value)}
+                            />
+                            <div className={styles.descriptionMetaRow}>
+                                <span className={styles.descriptionCount}>
+                                    {description.length}/{DESCRIPTION_MAX_LENGTH}
+                                </span>
+                            </div>
                         </div>
                         <div className={styles.buttonGroup}>
                             <button className={styles.publishBtn} onClick={handleSubmit}>

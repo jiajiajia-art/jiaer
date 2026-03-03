@@ -14,7 +14,7 @@ interface UseEditorSessionOptions {
 
 interface UseEditorSessionReturn {
     createGalgameSession: () => Promise<string | null>;
-    handlePublishGame: () => Promise<void>;
+    handlePublishGame: (description?: string) => Promise<void>;
 }
 
 export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): UseEditorSessionReturn => {
@@ -61,13 +61,14 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
     }, [user?.user?.id, fileId, navigate, setFileId, setSessionId, setIsPreset, mode]);
 
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
-    const handlePublishGame = useCallback(async (): Promise<void> => {
+    const handlePublishGame = useCallback(async (description?: string): Promise<void> => {
         if (!fileId) return;
 
         try {
             const response = await GameAction.publishGame({
                 fileId: fileId,
                 priceAmount: 0,
+                description: description ?? '',
             });
 
             if (response.data.success) {

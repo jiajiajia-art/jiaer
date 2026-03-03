@@ -17,6 +17,23 @@ export interface CheckPayStatusResponse {
     data: string;
 }
 
+export interface MiniPayParams {
+    timeStamp: string;
+    nonceStr: string;
+    package: string;
+    signType: string;
+    paySign: string;
+}
+
+export interface MiniPayResponse {
+    code: number;
+    message: string;
+    data: {
+        outTradeNo: string;
+        payParams: MiniPayParams;
+    };
+}
+
 export interface PurchasePointsRequest {
     fileId: string;
 }

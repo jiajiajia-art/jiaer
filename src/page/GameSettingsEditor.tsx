@@ -246,8 +246,8 @@ const GameSettingsEditor = () => {
         setActivePanel(panelId);
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel]);
 
-    const onPublishGame = useCallback(async () => {
-        await handlePublishGame();
+    const onPublishGame = useCallback(async (description?: string) => {
+        await handlePublishGame(description);
         setShowPublishModal(false);
     }, [handlePublishGame]);
 
