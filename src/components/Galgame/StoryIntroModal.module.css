@@ -1,26 +1,37 @@
 .modalOverlay {
+    /* Full-screen cover overlay across all breakpoints */
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     width: 100%;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
+    height: 100%;
+    z-index: 4000;
     animation: fadeIn 0.3s ease-out;
+    /* Fallback color so UI doesn't flash through while bg image loads */
+    background: #000;
+    /* Prevent underlying page scroll; inner content manages its own */
+    overflow: hidden;
 }
 
+
 .modalContent {
-    width: 25.875rem; /* 414px */
-    height: 56rem; /* 896px */
+    /* Always fill the viewport so the background image covers the whole screen */
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height for mobile browsers */
+    max-width: 100vw;
+    max-height: 100vh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 1.25rem; /* 20px */
+    /* Base padding */
     padding: 2.5rem 1.875rem 1.875rem 1.875rem; /* 40px 30px 30px 30px */
+    /* Add safe-area insets on top of the base padding across devices */
+    padding-top: calc(2.5rem + env(safe-area-inset-top));
+    padding-right: calc(1.875rem + env(safe-area-inset-right));
+    padding-bottom: calc(1.875rem + env(safe-area-inset-bottom));
+    padding-left: calc(1.875rem + env(safe-area-inset-left));
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
@@ -31,6 +42,11 @@
     text-align: center;
     margin-bottom: 3.125rem; /* 50px */
     z-index: 1;
+    /* Keep content readable width while bg is full-screen */
+    max-width: 25.875rem; /* 414px */
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .modalTitle {
@@ -43,10 +59,14 @@
 }
 
 .modalBody {
-    min-height: 18.75rem; /* 300px */
+    /* Fixed-ish preamble area; keep Start button position consistent */
+    flex: 0 0 auto;
+    height: clamp(12rem, 42vh, 24rem);
     display: flex;
     align-items: start;
     justify-content: center;
+    /* readable width */
+    max-width: 25.875rem; /* 414px */
     width: 100%;
     margin: 0 auto;
     z-index: 1;
@@ -69,16 +89,25 @@
     word-break: break-word;
     max-width: 43.75rem; /* 700px */
     min-height: 5rem; /* 80px */
-    max-height: 24.5rem; /* 392px */
+    /* Scroll inside the preamble area */
+    height: 100%;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
 }
 
 .modalFooter {
     flex-shrink: 0;
-    padding: 1.5rem 1.25rem 0 1.25rem; /* 24px 20px 0 20px */
+    /* Fallback first, then safe-area aware bottom padding */
+    padding: 1.5rem 1.25rem 1.25rem 1.25rem; /* 24px 20px 20px 20px */
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
     display: flex;
     justify-content: center;
+    /* readable width */
+    max-width: 25.875rem; /* 414px */
     width: 100%;
+    margin-left: auto;
+    margin-right: auto;
     z-index: 1;
 }
 
@@ -173,10 +202,9 @@
 }
 
 @media (max-width: 768px) {
-    .modalContent {
-        width: 100vw;
-        height: 100vh;
-        padding: 1.875rem 1.25rem 1.25rem 1.25rem; /* 30px 20px 20px 20px */
+    /* Mobile font/padding tweaks only (full-screen is base now) */
+    .modalHeader {
+        margin-bottom: 1rem;
     }
 
     .modalTitle {
@@ -191,7 +219,8 @@
     }
 
     .modalFooter {
-        padding: 1.25rem 1rem 0 1rem; /* 20px 16px 0 16px */
+        padding: 1.25rem 1rem 1rem 1rem; /* 20px 16px 16px 16px */
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom));
     }
 
     .startButton {

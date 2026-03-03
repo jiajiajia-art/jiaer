@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { CustomIFHostBridge } from '../custom/hostBridge';
@@ -17,7 +17,6 @@ type CreateSessionResp = {
 
 const CustomIF: React.FC = () => {
   const { appId } = useParams();
-  const navigate = useNavigate();
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [session, setSession] = useState<CreateSessionResp | null>(null);
@@ -26,7 +25,7 @@ const CustomIF: React.FC = () => {
   const bridgeRef = useRef<CustomIFHostBridge | null>(null);
   const { setStartedAt } = useTrackingStore();
   useGameDurationTracking(appId || undefined);
-  
+
   const toAbsoluteUrl = (raw?: string) => {
     if (!raw) return '';
     // absolute
@@ -98,43 +97,6 @@ const CustomIF: React.FC = () => {
         // 让 iframe 与外层容器尺寸一致
         style={{ display: 'block', width: '100%', height: '100%', border: 'none', background: '#000' }}
       />
-
-      {/* 顶部左上角回退按钮（悬浮于 iframe 之上） */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 12,
-          left: 12,
-          zIndex: 1000,
-        }}
-      >
-        <button
-          onClick={() => {
-            try {
-              // Prefer going back to the previous page; fallback to home if history is shallow
-              if (window.history.length > 1) navigate(-1);
-              else navigate('/home');
-            } catch {
-              navigate('/home');
-            }
-          }}
-          title="返回首页"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '8px 10px',
-            borderRadius: 8,
-            border: '1px solid rgba(148,163,184,0.4)',
-            background: 'rgba(15,23,42,0.7)',
-            color: '#e5e7eb',
-            cursor: 'pointer',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <span style={{ fontSize: 16, lineHeight: 1, transform: 'translateY(-1px)' }}>←</span>
-        </button>
-      </div>
     </div>
   );
 };

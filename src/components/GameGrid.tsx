@@ -20,7 +20,6 @@ const
 GameGrid: React.FC<GameGridProps> = ({
     games,
     onGameClick,
-    renderActions,
     primaryStat = 'pv',
     isIncentive = false,
 }) => {
