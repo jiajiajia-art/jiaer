@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
+import toast from 'react-hot-toast';
 
 interface RechargeModalProps {
     isOpen: boolean;
@@ -19,6 +20,52 @@ const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
 const isMiniProgramEnv = (): boolean => {
     const win = window as any;
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+};
+
+type MiniPayParams = {
+    timeStamp: string;
+    nonceStr: string;
+    package: string;
+    signType: string;
+    paySign: string;
+};
+
+const invokeWeixinPay = (payParams: MiniPayParams): Promise<'ok' | 'cancel' | 'fail'> => {
+    const win = window as any;
+
+    const doInvoke = () =>
+        new Promise<'ok' | 'cancel' | 'fail'>((resolve) => {
+            const bridge = win.WeixinJSBridge;
+            if (!bridge?.invoke) {
+                resolve('fail');
+                return;
+            }
+
+            bridge.invoke('getBrandWCPayRequest', payParams, (res: any) => {
+                const msg = String(res?.err_msg || '');
+                if (msg.includes(':ok')) resolve('ok');
+                else if (msg.includes(':cancel')) resolve('cancel');
+                else resolve('fail');
+            });
+        });
+
+    if (win.WeixinJSBridge?.invoke) {
+        return doInvoke();
+    }
+
+    return new Promise<'ok' | 'cancel' | 'fail'>((resolve) => {
+        const onReady = async () => {
+            document.removeEventListener('WeixinJSBridgeReady', onReady);
+            resolve(await doInvoke());
+        };
+        document.addEventListener('WeixinJSBridgeReady', onReady, false);
+
+        // 兜底：如果一直等不到 Ready，就认为失败，避免“没反应”
+        window.setTimeout(() => {
+            document.removeEventListener('WeixinJSBridgeReady', onReady);
+            resolve('fail');
+        }, 3000);
+    });
 };
 
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge }) => {
@@ -139,6 +186,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         setIsLoading(true);
         try {
             if (isMiniProgramEnv()) {
+                setPaymentStatus('polling');
+                setPollingError('');
                 const response = await payApi.createMiniOrder({ amount });
                 const data = response.data;
                 if (data.code === 200 && data.data) {
@@ -150,18 +199,33 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         wx.requestPayment({
                             ...payParams,
                             success: () => {
+                                toast.success('已调起微信支付，请在微信完成支付');
                                 setPaymentStatus('success');
-                                setPollingError('');
                             },
                             fail: () => {
+                                toast.error('支付未完成或已取消');
                                 setPaymentStatus('failed');
                                 setPollingError('支付未完成，请重试或稍后查看账户。');
                             },
                         });
+                        return;
                     } else {
-                        console.error('wx.requestPayment 不可用');
-                        setPaymentStatus('failed');
-                        setPollingError('当前环境不支持微信支付，请稍后重试。');
+                        // WebView 场景（小程序 / 微信内置浏览器）更常用 WeixinJSBridge
+                        const result = await invokeWeixinPay(payParams);
+                        if (result === 'ok') {
+                            toast.success('已调起微信支付，请在微信完成支付');
+                            setPaymentStatus('success');
+                            setPollingError('');
+                        } else if (result === 'cancel') {
+                            toast.error('支付已取消');
+                            setPaymentStatus('failed');
+                            setPollingError('支付已取消。');
+                        } else {
+                            console.error('wx.requestPayment / WeixinJSBridge 均不可用');
+                            toast.error('未能调起微信支付，请确认在微信内打开');
+                            setPaymentStatus('failed');
+                            setPollingError('未能调起微信支付，请确认在微信/小程序内打开后重试。');
+                        }
                     }
                 } else {
                     setPaymentStatus('failed');
@@ -339,6 +403,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     >
                         {isLoading ? '处理中...' : `确认充值 ￥${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
                     </button>
+                    {!qrCodeUrl && paymentStatus === 'polling' && isMiniProgramEnv() && (
+                        <div className={styles.amountHint} style={{ marginTop: 10 }}>
+                            <span>正在调起微信支付...</span>
+                        </div>
+                    )}
+                    {!qrCodeUrl && paymentStatus === 'failed' && pollingError && (
+                        <div className={styles.amountHint} style={{ marginTop: 10 }}>
+                            <span className={styles.errorText}>{pollingError}</span>
+                        </div>
+                    )}
                 </form>
             </div>
         </div>
