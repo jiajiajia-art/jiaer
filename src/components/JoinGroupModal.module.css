@@ -19,8 +19,8 @@
 .content {
   background: #fff;
   border-radius: 16px;
-  width: 92%;
-  max-width: 480px;
+  /* 让弹窗在不同屏幕下自适应，同时为两列留出空间 */
+  width: min(92vw, 620px);
   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
   animation: slideUp 0.25s ease-out;
   padding: 24px 20px 20px 20px;
@@ -41,28 +41,30 @@
 }
 
 .qrRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  /* 固定为横排两列，不换行 */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
   gap: 16px;
   margin-bottom: 16px;
-  flex-wrap: wrap;
 }
 
 .qrBox {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 180px;
-  max-width: 42vw;
+  width: 100%;
+  max-width: 280px; /* 防止过宽 */
 }
 
 .qrBox img {
   width: 100%;
-  max-width: 180px;
-  border-radius: 8px;
+  height: auto;
+  aspect-ratio: 1 / 1; /* 保持正方形 */
   object-fit: contain;
-  aspect-ratio: 1 / 1; /* keep square */
+  max-height: 36vh; /* 避免超出屏幕高度 */
+  border-radius: 8px;
   background: #f8f8f8;
 }
 
@@ -93,9 +95,10 @@
 .cancelBtn:active { transform: translateY(0); }
 
 @media (max-width: 768px) {
-  .content { width: 95%; padding: 20px 14px 16px 14px; }
+  .content { width: min(95vw, 560px); padding: 20px 14px 16px 14px; }
   .title { font-size: 16px; margin-bottom: 12px; }
   .qrRow { gap: 12px; margin-bottom: 12px; }
-  .qrBox { width: 44vw; max-width: none; }
-  .qrBox img { max-width: none; }
+  /* 依旧保持两列横排，缩放占比自适应 */
+  .qrBox { max-width: none; }
+  .qrBox img { max-height: 34vh; }
 }
