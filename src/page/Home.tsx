@@ -73,6 +73,12 @@ const Home: React.FC = () => {
             return;
         }
 
+        // 如果本次会话计划先展示入群弹窗，则本次不弹签到
+        const joinSessionKey = 'joinGroupModalWillShow_' + (user?.user?.id || '');
+        if (sessionStorage.getItem(joinSessionKey) === 'true') {
+            return;
+        }
+
         const sessionKey = 'checkInModalChecked';
         const hasCheckedInSession = sessionStorage.getItem(sessionKey);
 
