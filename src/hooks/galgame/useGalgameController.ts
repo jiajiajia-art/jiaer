@@ -68,7 +68,7 @@ export const useGalgameController = () => {
         return history.filter((h: any) => h.role === 'assistant').length;
     }, [history]);
 
-    const FREE_ROUNDS = 5;
+    const FREE_ROUNDS = 30;
     const isFreeRound = assistantRoundCount < FREE_ROUNDS;
 
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
@@ -78,7 +78,7 @@ export const useGalgameController = () => {
 
     const createChoiceMessage = useCallback((choiceData: ReturnType<typeof extractChoiceFromHistory>) => {
         if (!choiceData) return null;
-        
+
         return {
             id: Date.now(),
             type: 'choice' as const,

@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './CustomIFCreate.module.css';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import toast from 'react-hot-toast';
+import getGameDataApi from '../api/home/getGameData';
 
 const CustomIFCreate: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -29,6 +30,25 @@ const CustomIFCreate: React.FC = () => {
     if (isEditMode) {
       setAppId(appIdFromQuery);
     }
+  }, [isEditMode, appIdFromQuery]);
+
+  useEffect(() => {
+    const loadGameTitle = async () => {
+      if (!isEditMode || !appIdFromQuery) return;
+      try {
+        const resp = await getGameDataApi.getGameDetail({ fileId: appIdFromQuery });
+        const data = resp.data?.data;
+        if (data && typeof data.title === 'string') {
+          setTitle(data.title);
+        }
+      } catch (error) {
+        console.error('加载游戏信息失败:', error);
+        // 失败时不打断流程，仅提示
+        toast.error('加载游戏标题失败，请稍后重试');
+      }
+    };
+
+    void loadGameTitle();
   }, [isEditMode, appIdFromQuery]);
 
   // 复用草稿 appId（创建模式下避免重复 create-empty）
@@ -304,7 +324,6 @@ const CustomIFCreate: React.FC = () => {
         <div className={styles.main}>
           <div className={styles.formSection}>
             <h2 style={{margin:'0 0 6px'}}>{isEditMode ? '编辑自定义游戏' : '创建自定义游戏'}</h2>
-            {!isEditMode && (
               <div className={styles.formGroup}>
                 <label htmlFor="title">标题</label>
                 <input
@@ -315,7 +334,6 @@ const CustomIFCreate: React.FC = () => {
                   autoComplete="off"
                 />
               </div>
-            )}
 
             {/* 版本号输入已移除：由服务端管理当前激活版本 */}
 

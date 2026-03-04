@@ -193,44 +193,28 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 if (data.code === 200 && data.data) {
                     const { outTradeNo, payParams } = data.data;
                     setOrderId(outTradeNo);
-
-                    const wx = (window as any).wx || (window as any).jWeixin;
-                    if (wx && typeof wx.requestPayment === 'function') {
-                        wx.requestPayment({
-                            ...payParams,
-                            success: () => {
-                                toast.success('已调起微信支付，请在微信完成支付');
-                                setPaymentStatus('success');
-                            },
-                            fail: () => {
-                                toast.error('支付未完成或已取消');
-                                setPaymentStatus('failed');
-                                setPollingError('支付未完成，请重试或稍后查看账户。');
+                    // 只负责发消息，不拉起支付
+                    const mp = (window as any).wx?.miniProgram;
+                    if (mp && typeof mp.postMessage === 'function') {
+                        mp.postMessage({
+                            data: {
+                                type: 'PAY',
+                                payload: {
+                                    outTradeNo,
+                                    payParams,
+                                },
                             },
                         });
-                        return;
+                        toast.success('已发起支付，请在微信完成');
                     } else {
-                        // WebView 场景（小程序 / 微信内置浏览器）更常用 WeixinJSBridge
-                        const result = await invokeWeixinPay(payParams);
-                        if (result === 'ok') {
-                            toast.success('已调起微信支付，请在微信完成支付');
-                            setPaymentStatus('success');
-                            setPollingError('');
-                        } else if (result === 'cancel') {
-                            toast.error('支付已取消');
-                            setPaymentStatus('failed');
-                            setPollingError('支付已取消。');
-                        } else {
-                            console.error('wx.requestPayment / WeixinJSBridge 均不可用');
-                            toast.error('未能调起微信支付，请确认在微信内打开');
-                            setPaymentStatus('failed');
-                            setPollingError('未能调起微信支付，请确认在微信/小程序内打开后重试。');
-                        }
+                        toast.error('当前小程序环境不支持支付，请稍后重试');
                     }
                 } else {
                     setPaymentStatus('failed');
                     setPollingError(data.message || '发起微信支付失败，请重试。');
                 }
+                setIsLoading(false);
+                return;
             } else if (onRecharge) {
                 const result = await onRecharge(amount);
                 const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);

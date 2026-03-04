@@ -5,7 +5,8 @@ import { useGameStore } from "../store/gameStore";
 import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
-import { MdSettings, MdOutlineAssessment } from "react-icons/md";
+//import { MdSettings, MdOutlineAssessment } from "react-icons/md";
+import { MdSettings } from "react-icons/md";
 import { FaRegShareFromSquare } from "react-icons/fa6";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
@@ -27,7 +28,7 @@ import GameAction from "../api/rpgGame/gameAction";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
-import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
+// import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
 import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
@@ -39,7 +40,7 @@ const Galgame = () => {
     const { fileId, sessionId, galgameBetaAttributes, setGalgameBetaAttributes } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
-    const [isAttributesOpen, setIsAttributesOpen] = useState(false);
+    // const [isAttributesOpen, setIsAttributesOpen] = useState(false);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
     useGameDurationTracking(fileId || undefined);
@@ -282,7 +283,7 @@ const Galgame = () => {
                         )}
                     </div>
                     {/* 顶部右侧：属性按钮（内测白名单） */}
-                    {galgameBetaAttributes && controller.gameStarted ? (
+                    {/* {galgameBetaAttributes && controller.gameStarted ? (
                         <div className={styles.topButtonsContainer}>
                             <div
                                 className={`${styles.buttonItem} ${isAttributesOpen ? styles.buttonItemActive : ''}`}
@@ -295,7 +296,7 @@ const Galgame = () => {
                                 </div>
                             </div>
                         </div>
-                    ) : null}
+                    ) : null} */}
 
 
                     {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
@@ -351,9 +352,9 @@ const Galgame = () => {
                                     !canShareReplay
                                         ? undefined
                                         : () => {
-                                              logVisualButtonClick("share_replay");
-                                              setIsShareOpen(true);
-                                          }
+                                            logVisualButtonClick("share_replay");
+                                            setIsShareOpen(true);
+                                        }
                                 }
                                 style={{ cursor: !canShareReplay ? 'not-allowed' : 'pointer' }}
                             >
@@ -408,12 +409,12 @@ const Galgame = () => {
                         />
 
                     {/* 通用属性面板（服务端KV） */}
-                    {galgameBetaAttributes && controller.gameStarted ? (
+                    {/* {galgameBetaAttributes && controller.gameStarted ? (
                         <ServerAttributesPanel
                             isOpen={isAttributesOpen}
                             onClose={() => setIsAttributesOpen(false)}
                         />
-                    ) : null}
+                    ) : null} */}
 
                     {/* 请求超时弹窗 */}
                     {renderErrorModal(
