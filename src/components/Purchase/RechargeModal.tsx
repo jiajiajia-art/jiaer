@@ -2,6 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
+import toast from 'react-hot-toast';
+
+interface WechatMiniProgram {
+    postMessage: (data: Record<string, unknown>) => void;
+    navigateTo: (options: { url: string }) => void;
+}
+
+interface WindowWithWx extends Window {
+    wx?: {
+        miniProgram?: WechatMiniProgram;
+    };
+    __wxjs_environment?: string;
+}
 
 interface RechargeModalProps {
     isOpen: boolean;
@@ -17,11 +30,62 @@ const POLL_TIMEOUT_MS = 2 * 60 * 1000;
 const COUNTDOWN_SECONDS = POLL_TIMEOUT_MS / 1000;
 
 const isMiniProgramEnv = (): boolean => {
-    const win = window as any;
+    const win = window as WindowWithWx;
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
+// type MiniPayParams = {
+//     timeStamp: string;
+//     nonceStr: string;
+//     package: string;
+//     signType: string;
+//     paySign: string;
+// };
+
+// const invokeWeixinPay = (payParams: MiniPayParams): Promise<'ok' | 'cancel' | 'fail'> => {
+//     const win = window as any;
+
+//     const doInvoke = () =>
+//         new Promise<'ok' | 'cancel' | 'fail'>((resolve) => {
+//             const bridge = win.WeixinJSBridge;
+//             if (!bridge?.invoke) {
+//                 resolve('fail');
+//                 return;
+//             }
+
+//             bridge.invoke('getBrandWCPayRequest', payParams, (res: any) => {
+//                 const msg = String(res?.err_msg || '');
+//                 if (msg.includes(':ok')) resolve('ok');
+//                 else if (msg.includes(':cancel')) resolve('cancel');
+//                 else resolve('fail');
+//             });
+//         });
+
+//     if (win.WeixinJSBridge?.invoke) {
+//         return doInvoke();
+//     }
+
+//     return new Promise<'ok' | 'cancel' | 'fail'>((resolve) => {
+//         const onReady = async () => {
+//             document.removeEventListener('WeixinJSBridgeReady', onReady);
+//             resolve(await doInvoke());
+//         };
+//         document.addEventListener('WeixinJSBridgeReady', onReady, false);
+
+//         // 兜底：如果一直等不到 Ready，就认为失败，避免“没反应”
+//         window.setTimeout(() => {
+//             document.removeEventListener('WeixinJSBridgeReady', onReady);
+//             resolve('fail');
+//         }, 3000);
+//     });
+// };
+
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge }) => {
+    const closeAndReload = useCallback(() => {
+        onClose();
+        window.location.reload();
+    }, [onClose]);
+
     const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
     const [customAmount, setCustomAmount] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
@@ -139,34 +203,30 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         setIsLoading(true);
         try {
             if (isMiniProgramEnv()) {
+                setPaymentStatus('polling');
+                setPollingError('');
                 const response = await payApi.createMiniOrder({ amount });
                 const data = response.data;
                 if (data.code === 200 && data.data) {
                     const { outTradeNo, payParams } = data.data;
                     setOrderId(outTradeNo);
+                    // 只负责发消息，不拉起支付
+                    const mp = (window as WindowWithWx).wx?.miniProgram;
+                    if (mp && typeof mp.postMessage === 'function') {
+                        const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
 
-                    const wx = (window as any).wx || (window as any).jWeixin;
-                    if (wx && typeof wx.requestPayment === 'function') {
-                        wx.requestPayment({
-                            ...payParams,
-                            success: () => {
-                                setPaymentStatus('success');
-                                setPollingError('');
-                            },
-                            fail: () => {
-                                setPaymentStatus('failed');
-                                setPollingError('支付未完成，请重试或稍后查看账户。');
-                            },
+                        mp.navigateTo({
+                            url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
                         });
+                        toast.success('正在跳转支付页面...');
                     } else {
-                        console.error('wx.requestPayment 不可用');
-                        setPaymentStatus('failed');
-                        setPollingError('当前环境不支持微信支付，请稍后重试。');
+                        toast.error('当前小程序环境不支持支付，请稍后重试');
                     }
-                } else {
                     setPaymentStatus('failed');
                     setPollingError(data.message || '发起微信支付失败，请重试。');
                 }
+                setIsLoading(false);
+                return;
             } else if (onRecharge) {
                 const result = await onRecharge(amount);
                 const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
@@ -207,7 +267,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     return;
                 }
 
-            } catch (error) {
+            } catch {
                 setPollingError('查询支付状态失败，稍后自动重试...');
             }
 
@@ -257,7 +317,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     useEffect(() => {
         const handleEscKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen) {
-                onClose();
+                closeAndReload();
             }
         };
 
@@ -265,7 +325,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         return () => {
             document.removeEventListener('keydown', handleEscKey);
         };
-    }, [isOpen, onClose]);
+    }, [isOpen, closeAndReload]);
 
     if (!isOpen) return null;
 
@@ -273,9 +333,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const currentPoints = currentAmount ? calculatePoints(currentAmount) : 0;
 
     const formContent = (
-        <div className={styles.modalOverlay} onClick={onClose}>
+        <div className={styles.modalOverlay} onClick={closeAndReload}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={onClose}>
+                <button type="button" className={styles.closeBtn} onClick={closeAndReload}>
                     ×
                 </button>
 
@@ -345,9 +405,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     );
 
     const qrContent = (
-        <div className={styles.modalOverlay} onClick={onClose}>
+        <div className={styles.modalOverlay} onClick={closeAndReload}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={onClose}>
+                <button type="button" className={styles.closeBtn} onClick={closeAndReload}>
                     ×
                 </button>
                 <div className={styles.qrSection}>
@@ -367,7 +427,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     )}
                     <div className={styles.qrActions}>
                         {paymentStatus === 'success' && (
-                            <button type="button" className={styles.qrActionBtn} onClick={onClose}>
+                            <button type="button" className={styles.qrActionBtn} onClick={closeAndReload}>
                                 完成
                             </button>
                         )}

@@ -68,7 +68,7 @@ export const useGalgameController = () => {
         return history.filter((h: any) => h.role === 'assistant').length;
     }, [history]);
 
-    const FREE_ROUNDS = 5;
+    const FREE_ROUNDS = 30;
     const isFreeRound = assistantRoundCount < FREE_ROUNDS;
 
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
