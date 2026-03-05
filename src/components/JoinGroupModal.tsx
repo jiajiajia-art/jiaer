@@ -11,8 +11,8 @@ interface JoinGroupModalProps {
 const JoinGroupModal: React.FC<JoinGroupModalProps> = ({ isOpen, onClose, qqQrSrc, wechatQrSrc }) => {
   if (!isOpen) return null;
 
-  const qqSrc = qqQrSrc || import.meta.env.BASE_URL + "data/assets/group/qr_qq.png";
-  const wxSrc = wechatQrSrc || import.meta.env.BASE_URL + "data/assets/group/qr_wechat.png";
+  const qqSrc = qqQrSrc || import.meta.env.BASE_URL + "data/assets/group/qr_qq.jpeg";
+  const wxSrc = wechatQrSrc || import.meta.env.BASE_URL + "data/assets/group/qr_wx.jpeg";
 
   const handleImageClick = (src: string) => {
     if (typeof window === "undefined") return;
