@@ -43,3 +43,153 @@
 - HTTP：`{ code: string, message: string }`
 - SSE：在数据流中追加 `data: {"error": {"code":"...","message":"..."}}` 或直接终止，由客户端以 HTTP 状态判定
 
+## 6) 自定义游戏扩展接口：日志 / KV / 积分
+
+以下接口均以登录态中的 `userId` 为主体，并校验 `sessionId` 与 `{appId}` 绑定关系。错误返回统一使用 `{ code:string, message:string }`。
+
+### 6.1 日志记录接口
+
+- 接口：`POST /api/custom/apps/{appId}/logs`
+- 请求体：
+  ```json
+  {
+    "sessionId": "sess_xxx",
+    "level": "info",
+    "event": "stage_clear",
+    "message": "第三关完成",
+    "data": { "stageId": 3, "score": 12345 },
+    "time": "2026-03-06T10:20:30.000Z"
+  }
+  ```
+- 响应：
+  ```json
+  { "success": true }
+  ```
+- 建议：限制单条日志体积（如 data JSON 不超过 2KB），并自动补充 `userId`、`ip`、`ua`、`analyticsSessionId` 等字段用于审计。
+
+### 6.2 KV 存取接口（底层 Key-Value）
+
+KV 以 `(userId, appId, scope, namespace, key)` 为主键，值为 JSON 文本。
+
+#### 6.2.1 读取 KV
+
+- 接口：`POST /api/custom/apps/{appId}/kv/get`
+- 请求体：
+  ```json
+  {
+    "scope": "user",
+    "namespace": "game",
+    "sessionId": "sess_xxx",
+    "keys": ["progress", "flags"],
+    "prefix": null,
+    "limit": 32
+  }
+  ```
+  - `scope`：`user` 或 `session`。当为 `session` 时必须提供 `sessionId`。
+  - `keys` / `prefix` 二选一；`prefix` 适合按前缀批量读取。
+- 响应：
+  ```json
+  {
+    "success": true,
+    "data": {
+      "scope": "user",
+      "namespace": "game",
+      "values": {
+        "progress": { "chapter": 3, "checkpoint": "forest" },
+        "flags": { "secretUnlocked": true }
+      }
+    }
+  }
+  ```
+
+#### 6.2.2 写入 KV
+
+- 接口：`POST /api/custom/apps/{appId}/kv/set`
+- 请求体：
+  ```json
+  {
+    "scope": "user",
+    "namespace": "game",
+    "sessionId": "sess_xxx",
+    "items": [
+      { "key": "progress", "value": { "chapter": 3, "checkpoint": "forest" } },
+      { "key": "flags", "value": { "secretUnlocked": true } }
+    ]
+  }
+  ```
+- 响应（示例）：
+  ```json
+  {
+    "success": true,
+    "data": {
+      "scope": "user",
+      "namespace": "game",
+      "values": {
+        "progress": { "chapter": 3, "checkpoint": "forest" },
+        "flags": { "secretUnlocked": true }
+      }
+    }
+  }
+  ```
+
+#### 6.2.3 删除 KV
+
+- 接口：`POST /api/custom/apps/{appId}/kv/delete`
+- 请求体：
+  ```json
+  {
+    "scope": "user",
+    "namespace": "game",
+    "sessionId": "sess_xxx",
+    "keys": ["progress", "flags"]
+  }
+  ```
+- 响应：
+  ```json
+  {
+    "success": true,
+    "data": { "deleted": ["progress", "flags"] }
+  }
+  ```
+
+- 限制建议：
+  - key 长度不超过 128，推荐字符集 `[a-zA-Z0-9._-]`。
+  - 单个 value 序列化后不超过 8KB，总 KV 存储（按 `(userId, appId, scope, namespace)` 维度）不超过 128KB。
+  - 单次请求 items/keys 数量不超过 32。
+
+### 6.3 积分支付接口
+
+- 接口：`POST /api/custom/apps/{appId}/points/pay`
+- 请求体：
+  ```json
+  {
+    "sessionId": "sess_xxx",
+    "amount": 20,
+    "reason": "unlock-chapter",
+    "metadata": { "chapterId": "ch03" },
+    "dryRun": false,
+    "idempotencyKey": "points_1719999999999"
+  }
+  ```
+- 响应（成功）：
+  ```json
+  {
+    "success": true,
+    "consumed": 20,
+    "balance": 120,
+    "txnId": "txn_abc123"
+  }
+  ```
+- 响应（积分不足）：
+  ```json
+  {
+    "success": false,
+    "code": "INSUFFICIENT_POINTS",
+    "message": "积分不足",
+    "balance": 5
+  }
+  ```
+- 实现要点：
+  - 根据登录态识别 `userId`，并检查该用户是否允许在 `{appId}` 下消费积分。
+  - 使用 `idempotencyKey` 做幂等，避免前端刷新 / 重试造成重复扣费。
+  - 建议在账务系统中记录清晰的渠道和用途（如 `channel: 'custom_if'`, `reason`, `metadata`），便于对账与审计。

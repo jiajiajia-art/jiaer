@@ -62,3 +62,111 @@
 - 体积：控制包体积；资源路径相对 index.html；版本号语义化。
 - 体验：在 `ai:request-error` 后提供重试按钮；在 `ai:request-complete` 后滚动到输出末尾。
 
+## 扩展功能：日志 / KV 存储 / 积分支付
+
+在基础 `ai:*` 协议之外，自定义 UI 还可以通过以下消息与宿主交互：
+
+### 1. 记录日志
+
+- UI → 宿主：
+  - `log:write` `{ level?:'debug'|'info'|'warn'|'error', event:string, message?:string, data?:any, time?:string }`
+    - 示例：
+      ```js
+      parent.postMessage({
+        type: 'log:write',
+        payload: {
+          level: 'info',
+          event: 'stage_clear',
+          message: '第三关完成',
+          data: { stageId: 3, score: 12345 },
+        },
+      }, '*');
+      ```
+- 宿主 → UI：
+  - `log:ack` `{ ok:boolean, code?:string, message?:string }`（可选，表示写入结果）
+
+### 2. KV 存取记录（底层 Key-Value）
+
+KV 用于存放通用状态（例如存档、进度、解锁标记等），不绑定任何业务语义。
+
+- UI → 宿主：
+  - `kv:get` `{ requestId, scope?:'user'|'session', namespace?:string, keys?:string[], prefix?:string, limit?:number }`
+    - `scope`：`user` 表示 `(userId, appId)` 级别；`session` 表示绑定当前会话。
+    - `namespace`：可选逻辑分组，如 `'game'` / `'ui'`。
+    - `keys` 或 `prefix` 二选一。
+  - `kv:set` `{ requestId, scope?, namespace?, items: Array<{ key:string; value:any; ttlSeconds?:number }> }`
+  - `kv:delete` `{ requestId, scope?, namespace?, keys:string[] }`
+- 宿主 → UI：
+  - `kv:result` `{ requestId, success:boolean, op:'get'|'set'|'delete', code?:string, message?:string, kv?:{ scope, namespace?, values:Record<string,any> } }`
+
+示例：读取并保存进度：
+
+```js
+// 读取进度
+const getId = 'kv_get_' + Date.now();
+parent.postMessage({
+  type: 'kv:get',
+  payload: { requestId: getId, scope: 'user', namespace: 'game', keys: ['progress', 'flags'] },
+}, '*');
+
+window.addEventListener('message', (e) => {
+  const { type, payload } = e.data || {};
+  if (type === 'kv:result' && payload.requestId === getId && payload.success && payload.kv) {
+    const { values } = payload.kv;
+    console.log('当前进度:', values.progress);
+  }
+});
+
+// 保存进度
+const setId = 'kv_set_' + Date.now();
+parent.postMessage({
+  type: 'kv:set',
+  payload: {
+    requestId: setId,
+    scope: 'user',
+    namespace: 'game',
+    items: [
+      { key: 'progress', value: { chapter: 3, checkpoint: 'forest' } },
+      { key: 'flags', value: { secretUnlocked: true } },
+    ],
+  },
+}, '*');
+```
+
+### 3. 支付积分（积分消费）
+
+- UI → 宿主：
+  - `points:pay` `{ requestId, amount:number, reason?:string, metadata?:any, dryRun?:boolean }`
+    - `amount`：本次需要扣除的积分。
+    - `reason` / `metadata`：描述用途，如 `{ reason:'unlock-chapter', metadata:{ chapterId:'ch03' } }`。
+    - `dryRun:true` 表示只试算不扣费。
+- 宿主 → UI：
+  - `points:result` `{ requestId, success:boolean, consumed?:number, balance?:number, code?:string, message?:string, txnId?:string }`
+
+示例：尝试扣除 20 积分解锁关卡：
+
+```js
+const payId = 'points_' + Date.now();
+parent.postMessage({
+  type: 'points:pay',
+  payload: {
+    requestId: payId,
+    amount: 20,
+    reason: 'unlock-chapter',
+    metadata: { chapterId: 'ch03' },
+  },
+}, '*');
+
+window.addEventListener('message', (e) => {
+  const { type, payload } = e.data || {};
+  if (type === 'points:result' && payload.requestId === payId) {
+    if (payload.success) {
+      console.log('扣费成功，当前积分余额：', payload.balance);
+    } else {
+      alert(payload.message || '积分扣除失败');
+    }
+  }
+});
+```
+
+> 注意：自定义 UI 不应直接访问平台后端 `/api/*`，所有日志、存储、积分操作都必须通过以上 postMessage 协议交给宿主代为处理。

@@ -1,6 +1,6 @@
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
-import type { UIToHostMessage, HostToUIMessage, CustomIFSessionInfo, ChatMessage } from './types';
+import type { UIToHostMessage, HostToUIMessage, CustomIFSessionInfo, ChatMessage, CustomIFLogPayload, CustomIFKVGetPayload, CustomIFKVSetPayload, CustomIFKVDeletePayload, CustomIFPointsPayPayload } from './types';
 import { readOpenAIStream } from './sse';
 
 // Bridge between parent (host) and iframe UI for Custom IF
@@ -79,6 +79,26 @@ export class CustomIFHostBridge {
       this.regenerate(idx).catch(err => this.post({ type:'ai:request-error', payload:{ requestId: crypto.randomUUID(), code:'REGEN', message:String(err?.message||err) } }));
       return;
     }
+    if (data.type === 'log:write'){
+      this.handleLogWrite(data.payload as CustomIFLogPayload).catch(() => {});
+      return;
+    }
+    if (data.type === 'kv:get'){
+      this.handleKVGet(data.payload as CustomIFKVGetPayload).catch(() => {});
+      return;
+    }
+    if (data.type === 'kv:set'){
+      this.handleKVSet(data.payload as CustomIFKVSetPayload).catch(() => {});
+      return;
+    }
+    if (data.type === 'kv:delete'){
+      this.handleKVDelete(data.payload as CustomIFKVDeletePayload).catch(() => {});
+      return;
+    }
+    if (data.type === 'points:pay'){
+      this.handlePointsPay(data.payload as CustomIFPointsPayPayload).catch(() => {});
+      return;
+    }
   }
 
   private resolveModel(){
@@ -125,6 +145,265 @@ export class CustomIFHostBridge {
     this.post({ type:'ai:message', payload:{ requestId, finalText: acc, finishReason: 'stop' } });
     this.post({ type:'ai:request-complete', payload:{ requestId, headers: { 'X-Session-Id': resp.headers.get('X-Session-Id') } } });
     this.controllers.delete(requestId);
+  }
+
+  private async handleLogWrite(payload: CustomIFLogPayload){
+    const body = {
+      sessionId: this.session.sessionId,
+      level: payload.level || 'info',
+      event: payload.event,
+      message: payload.message,
+      data: payload.data,
+      time: payload.time,
+    };
+    try {
+      const url = `${HOST_ADDRESS}/api/custom/apps/${this.session.appId}/logs`;
+      const resp = await authFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) {
+        let code = 'HTTP_ERROR';
+        let message = `HTTP ${resp.status}`;
+        try {
+          const j = await resp.json();
+          if (j && typeof j.code === 'string') code = j.code;
+          if (j && typeof j.message === 'string') message = j.message;
+        } catch {}
+        this.post({ type: 'log:ack', payload: { ok: false, code, message } });
+      } else {
+        this.post({ type: 'log:ack', payload: { ok: true } });
+      }
+    } catch (err: any) {
+      this.post({ type: 'log:ack', payload: { ok: false, code: 'NETWORK_ERROR', message: String(err?.message || err) } });
+    }
+  }
+
+  private async handleKVGet(payload: CustomIFKVGetPayload){
+    const requestId = payload.requestId || crypto.randomUUID();
+    const scope = payload.scope || 'user';
+    const body: any = {
+      scope,
+      namespace: payload.namespace,
+      sessionId: this.session.sessionId,
+      keys: payload.keys,
+      prefix: payload.prefix,
+      limit: payload.limit,
+    };
+    try {
+      const url = `${HOST_ADDRESS}/api/custom/apps/${this.session.appId}/kv/get`;
+      const resp = await authFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json: any = await resp.json().catch(() => ({}));
+      if (!resp.ok || json?.success === false) {
+        this.post({
+          type: 'kv:result',
+          payload: {
+            requestId,
+            success: false,
+            op: 'get',
+            code: json?.code || 'HTTP_ERROR',
+            message: json?.message || resp.statusText,
+          },
+        });
+        return;
+      }
+      const data = json?.data || {};
+      const values = data.values && typeof data.values === 'object' ? data.values : {};
+      const retScope = (data.scope as any) || scope;
+      const ns = typeof data.namespace === 'string' ? data.namespace : payload.namespace;
+      this.post({
+        type: 'kv:result',
+        payload: {
+          requestId,
+          success: true,
+          op: 'get',
+          kv: { scope: retScope, namespace: ns, values },
+        },
+      });
+    } catch (err: any) {
+      this.post({
+        type: 'kv:result',
+        payload: {
+          requestId,
+          success: false,
+          op: 'get',
+          code: 'NETWORK_ERROR',
+          message: String(err?.message || err),
+        },
+      });
+    }
+  }
+
+  private async handleKVSet(payload: CustomIFKVSetPayload){
+    const requestId = payload.requestId || crypto.randomUUID();
+    const scope = payload.scope || 'user';
+    const body: any = {
+      scope,
+      namespace: payload.namespace,
+      sessionId: this.session.sessionId,
+      items: payload.items || [],
+    };
+    try {
+      const url = `${HOST_ADDRESS}/api/custom/apps/${this.session.appId}/kv/set`;
+      const resp = await authFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json: any = await resp.json().catch(() => ({}));
+      if (!resp.ok || json?.success === false) {
+        this.post({
+          type: 'kv:result',
+          payload: {
+            requestId,
+            success: false,
+            op: 'set',
+            code: json?.code || 'HTTP_ERROR',
+            message: json?.message || resp.statusText,
+          },
+        });
+        return;
+      }
+      const data = json?.data || {};
+      const valuesFromServer = data.values && typeof data.values === 'object' ? data.values : undefined;
+      const values = valuesFromServer || Object.fromEntries((payload.items || []).map(i => [i.key, i.value]));
+      const retScope = (data.scope as any) || scope;
+      const ns = typeof data.namespace === 'string' ? data.namespace : payload.namespace;
+      this.post({
+        type: 'kv:result',
+        payload: {
+          requestId,
+          success: true,
+          op: 'set',
+          kv: { scope: retScope, namespace: ns, values },
+        },
+      });
+    } catch (err: any) {
+      this.post({
+        type: 'kv:result',
+        payload: {
+          requestId,
+          success: false,
+          op: 'set',
+          code: 'NETWORK_ERROR',
+          message: String(err?.message || err),
+        },
+      });
+    }
+  }
+
+  private async handleKVDelete(payload: CustomIFKVDeletePayload){
+    const requestId = payload.requestId || crypto.randomUUID();
+    const scope = payload.scope || 'user';
+    const body: any = {
+      scope,
+      namespace: payload.namespace,
+      sessionId: this.session.sessionId,
+      keys: payload.keys || [],
+    };
+    try {
+      const url = `${HOST_ADDRESS}/api/custom/apps/${this.session.appId}/kv/delete`;
+      const resp = await authFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json: any = await resp.json().catch(() => ({}));
+      if (!resp.ok || json?.success === false) {
+        this.post({
+          type: 'kv:result',
+          payload: {
+            requestId,
+            success: false,
+            op: 'delete',
+            code: json?.code || 'HTTP_ERROR',
+            message: json?.message || resp.statusText,
+          },
+        });
+        return;
+      }
+      this.post({
+        type: 'kv:result',
+        payload: {
+          requestId,
+          success: true,
+          op: 'delete',
+        },
+      });
+    } catch (err: any) {
+      this.post({
+        type: 'kv:result',
+        payload: {
+          requestId,
+          success: false,
+          op: 'delete',
+          code: 'NETWORK_ERROR',
+          message: String(err?.message || err),
+        },
+      });
+    }
+  }
+
+  private async handlePointsPay(payload: CustomIFPointsPayPayload){
+    const requestId = payload.requestId || crypto.randomUUID();
+    const body: any = {
+      sessionId: this.session.sessionId,
+      amount: payload.amount,
+      reason: payload.reason,
+      metadata: payload.metadata,
+      dryRun: !!payload.dryRun,
+      idempotencyKey: requestId,
+    };
+    try {
+      const url = `${HOST_ADDRESS}/api/custom/apps/${this.session.appId}/points/pay`;
+      const resp = await authFetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json: any = await resp.json().catch(() => ({}));
+      const success = json && typeof json.success === 'boolean' ? json.success : resp.ok;
+      if (!success) {
+        this.post({
+          type: 'points:result',
+          payload: {
+            requestId,
+            success: false,
+            consumed: json?.consumed,
+            balance: json?.balance,
+            code: json?.code || 'HTTP_ERROR',
+            message: json?.message || resp.statusText,
+            txnId: json?.txnId,
+          },
+        });
+        return;
+      }
+      this.post({
+        type: 'points:result',
+        payload: {
+          requestId,
+          success: true,
+          consumed: json?.consumed,
+          balance: json?.balance,
+          txnId: json?.txnId,
+        },
+      });
+    } catch (err: any) {
+      this.post({
+        type: 'points:result',
+        payload: {
+          requestId,
+          success: false,
+          code: 'NETWORK_ERROR',
+          message: String(err?.message || err),
+        },
+      });
+    }
   }
 
   private async regenerate(historyIndex: number){
