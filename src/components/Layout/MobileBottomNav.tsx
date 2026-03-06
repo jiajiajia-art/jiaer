@@ -9,7 +9,7 @@ const isWebViewEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-type BottomNavKey = 'home' | 'create' | 'warehouse' | 'profile';
+type BottomNavKey = 'home' | 'profile';
 
 const normalize = (path: string) => {
     const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -29,18 +29,6 @@ const navItems: Array<{
         label: '商城',
         iconInactive: 'data/assets/切图/首页02.png',
         iconActive: 'data/assets/切图/首页01.png',
-    },
-    {
-        key: 'create',
-        label: '创作',
-        iconInactive: 'data/assets/切图/创作02.png',
-        iconActive: 'data/assets/切图/创作01.png',
-    },
-    {
-        key: 'warehouse',
-        label: '仓库',
-        iconInactive: 'data/assets/切图/仓库02.png',
-        iconActive: 'data/assets/切图/仓库01.png',
     },
     {
         key: 'profile',
@@ -64,8 +52,6 @@ const MobileBottomNav: React.FC = () => {
     const currentPath = normalize(location.pathname);
 
     const activeKey = useMemo<BottomNavKey>(() => {
-        if (currentPath.startsWith('/create')) return 'create';
-        if (currentPath.startsWith('/warehouse')) return 'warehouse';
         if (currentPath.startsWith('/home')) return 'home';
         if (currentPath.startsWith('/profile')) return 'profile';
         return 'home';
@@ -75,24 +61,6 @@ const MobileBottomNav: React.FC = () => {
         switch (key) {
             case 'home':
                 navigate('/home');
-                break;
-            case 'create':
-                if (!isAuthenticated) {
-                    if (!isWebViewEnv()) {
-                        setIsAuthModalOpen(true);
-                    }
-                    return;
-                }
-                navigate('/create');
-                break;
-            case 'warehouse':
-                if (!isAuthenticated) {
-                    if (!isWebViewEnv()) {
-                        setIsAuthModalOpen(true);
-                    }
-                    return;
-                }
-                navigate('/warehouse');
                 break;
             case 'profile':
                 if (!isAuthenticated) {

@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
 import { auth } from '../api/account/authApi';
+import payApi from '../api/pay/payApi';
 import Navbar from '../components/Layout/Navbar';
+import RechargeModal from '../components/Purchase/RechargeModal';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
-import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup } from 'react-icons/md';
+import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup, MdEdit, MdContentCopy } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
@@ -24,6 +26,30 @@ const Profile: React.FC = () => {
     const [inputInviteCode, setInputInviteCode] = useState('');
     const [showInputInviteCode, setShowInputInviteCode] = useState(false);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+
+    // 积分充值相关状态
+    const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+
+    // 昵称编辑相关状态
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editName, setEditName] = useState('');
+    const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+    // 头像上传相关状态
+    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 移动端判断
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+    // 监听窗口大小变化
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     
     const handleLogout = () => {
         logout();
@@ -52,6 +78,18 @@ const Profile: React.FC = () => {
 
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
+    const userCode = user?.user?.userCode;
+
+    const handleCopyUserCode = async () => {
+        if (!userCode) return;
+        try {
+            await navigator.clipboard.writeText(userCode);
+            toast.success('Kuran号已复制');
+        } catch (error) {
+            console.error('复制 Kuran号 失败:', error);
+            toast.error('复制失败，请稍后重试');
+        }
+    };
 
     const handleWatchAd = () => {
         // TODO: 实现观看广告逻辑
@@ -119,6 +157,103 @@ const Profile: React.FC = () => {
         }
     };
 
+    // 昵称编辑相关函数
+    const handleStartEditName = () => {
+        if (!user) {
+            toast.error('请先登录');
+            return;
+        }
+        setEditName(userName === '未设置' ? '' : userName);
+        setIsEditingName(true);
+    };
+
+    const handleCancelEditName = () => {
+        setIsEditingName(false);
+        setEditName('');
+    };
+
+    const handleConfirmEditName = async () => {
+        const newName = editName.trim();
+        if (!newName) {
+            toast.error('昵称不能为空');
+            return;
+        }
+        if (newName === userName) {
+            setIsEditingName(false);
+            return;
+        }
+
+        try {
+            setIsUpdatingName(true);
+            const response = await auth.updateUserInfo(newName);
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+                toast.success('昵称修改成功');
+                setIsEditingName(false);
+            } else {
+                toast.error(response.data.message || '昵称修改失败');
+            }
+        } catch (error) {
+            console.error('修改昵称失败:', error);
+            toast.error('昵称修改失败，请稍后重试');
+        } finally {
+            setIsUpdatingName(false);
+        }
+    };
+
+    // 头像上传相关函数
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('请选择图片文件');
+            return;
+        }
+
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            toast.error('图片大小不能超过 5MB');
+            return;
+        }
+
+        try {
+            setIsUpdatingAvatar(true);
+            const response = await auth.updateUserAvatar(file);
+            if (response.data.success && response.data.data) {
+                await getUserInfo();
+                toast.success('头像更新成功');
+            } else {
+                toast.error(response.data.message || '头像更新失败');
+            }
+        } catch (error) {
+            console.error('更新头像失败:', error);
+            toast.error('头像更新失败，请稍后重试');
+        } finally {
+            setIsUpdatingAvatar(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    // 积分充值相关函数
+    const handleRecharge = async (amount: number) => {
+        const response = await payApi.getPayQrCode({
+            amount: amount,
+        });
+        if (response.data.code === 200 && response.data.data) {
+            getUserInfo();
+            return {
+                qrDataUrl: response.data.data.qrDataUrl,
+                outTradeNo: response.data.data.outTradeNo
+            };
+        } else {
+            toast.error('充值失败！');
+            return null;
+        }
+    };
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -134,19 +269,49 @@ const Profile: React.FC = () => {
                                 }}
                             />
                             <div className={styles.userProfileContent}>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    accept="image/*"
+                                    onChange={handleAvatarChange}
+                                    style={{ display: 'none' }}
+                                />
                                 <img
                                     className={styles.userAvatar}
                                     src={userAvatar}
                                     alt="用户头像"
+                                    onClick={() => isMobile && !isUpdatingAvatar && fileInputRef.current?.click()}
+                                    style={{ cursor: isMobile && !isUpdatingAvatar ? 'pointer' : 'default' }}
                                 />
-                                <div className={styles.userName}>{userName}</div>
+                                <div className={styles.userNameWrapper}>
+                                    <div className={styles.userName}>{userName}</div>
+                                    {isMobile && (
+                                        <MdEdit
+                                            className={styles.editNameIcon}
+                                            onClick={handleStartEditName}
+                                        />
+                                    )}
+                                </div>
+                                {userCode && isMobile && (
+                                    <div className={styles.userCode}>
+                                        <span className={styles.userCodeText}>Kuran号：{userCode}</span>
+                                        <button
+                                            type="button"
+                                            className={styles.userCodeCopyButton}
+                                            onClick={handleCopyUserCode}
+                                            title="复制Kuran号"
+                                        >
+                                            <MdContentCopy />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* 功能列表 */}
                     <div className={styles.functionList}>
-                        {/* 积分展示 */}
+                        {/* 积分展示与充值 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <RiCopperCoinLine />
@@ -155,13 +320,23 @@ const Profile: React.FC = () => {
                                 <div className={styles.functionTitle}>我的积分</div>
                                 <div className={styles.functionDesc}>当前积分：{user?.user?.points ?? 0}</div>
                             </div>
-                            <button
-                                className={`${styles.functionButton} ${user?.user?.hasSignedIn ? styles.functionButtonSignedIn : styles.functionButtonCheckIn}`}
-                                onClick={handleCheckIn}
-                                disabled={user?.user?.hasSignedIn}
-                            >
-                                {user?.user?.hasSignedIn ? '已签到' : '每日签到'}
-                            </button>
+                            <div className={styles.pointsActions}>
+                                {isMobile && (
+                                    <button
+                                        className={styles.payButton}
+                                        onClick={() => setIsRechargeModalOpen(true)}
+                                    >
+                                        <span>充值</span>
+                                    </button>
+                                )}
+                                <button
+                                    className={`${styles.functionButton} ${user?.user?.hasSignedIn ? styles.functionButtonSignedIn : styles.functionButtonCheckIn}`}
+                                    onClick={handleCheckIn}
+                                    disabled={user?.user?.hasSignedIn}
+                                >
+                                    {user?.user?.hasSignedIn ? '已签到' : '每日签到'}
+                                </button>
+                            </div>
                         </div>
 
                         {/* 观看广告 */}
@@ -284,8 +459,63 @@ const Profile: React.FC = () => {
             </div>
             <MobileBottomNav />
 
+            {/* 修改昵称弹窗 */}
+            {isEditingName && (
+                <div
+                    className={styles.editNameModalOverlay}
+                    onClick={handleCancelEditName}
+                >
+                    <div
+                        className={styles.editNameModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.editNameModalHeader}>
+                            <div className={styles.editNameModalTitle}>修改昵称</div>
+                        </div>
+                        <div className={styles.editNameModalBody}>
+                            <input
+                                className={styles.editNameInput}
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                placeholder="请输入新的昵称"
+                                maxLength={20}
+                                autoFocus
+                            />
+                            <div className={styles.editNameTips}>
+                                昵称长度建议 1-20 个字符，避免包含敏感或违规内容。
+                            </div>
+                        </div>
+                        <div className={styles.editNameModalActions}>
+                            <button
+                                type="button"
+                                className={styles.editNameCancelButton}
+                                onClick={handleCancelEditName}
+                                disabled={isUpdatingName}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.editNameConfirmButton}
+                                onClick={handleConfirmEditName}
+                                disabled={isUpdatingName}
+                            >
+                                {isUpdatingName ? '保存中...' : '确认'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* 加入用户群弹窗（复用组件，双二维码、仅取消按钮） */}
             <JoinGroupModal isOpen={showJoinGroupModal} onClose={() => setShowJoinGroupModal(false)} />
+
+            {/* 积分充值弹窗 */}
+            <RechargeModal
+                isOpen={isRechargeModalOpen}
+                onClose={() => setIsRechargeModalOpen(false)}
+                onRecharge={handleRecharge}
+            />
         </div>
     );
 };

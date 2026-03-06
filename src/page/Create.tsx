@@ -377,7 +377,7 @@ const Create: React.FC = () => {
                                         <MdEdit />
                                     </button>
                                 </div>
-                                {userCode && (
+                                {userCode && window.innerWidth <= 768 && (
                                     <div className={styles.userCode}>
                                         <span className={styles.userCodeText}>Kuran号：{userCode}</span>
                                         <button
