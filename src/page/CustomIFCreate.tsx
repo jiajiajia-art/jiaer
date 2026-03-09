@@ -241,6 +241,10 @@ const CustomIFCreate: React.FC = () => {
       }
       // 2) upload ui（根据模式构建表单）
       const fd = new FormData();
+      // 标题：后端 /ui/upload 已支持 title 字段，用于更新 manifest.name / 游戏名称
+      if (title.trim()) {
+        fd.append('title', title.trim());
+      }
       if (manifestText.trim()) fd.append('manifest', manifestText);
       if (sourceType === 'single'){
         const file = (singleFile || fileRef.current?.files?.[0])!;

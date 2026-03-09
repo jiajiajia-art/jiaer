@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Home.module.css';
-import { useNavigate } from 'react-router-dom';
+//import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import GameGrid from '../components/GameGrid';
 import libraryDataApi from '../api/home/getGameData';
@@ -38,7 +38,7 @@ const Home: React.FC = () => {
     const isLoadingMoreAllRef = useRef(false);
     const lastUserIdRef = useRef<string | number | undefined>(undefined);
     const hasInitializedRef = useRef(false);
-    const navigator = useNavigate();
+    // const navigator = useNavigate();
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
 
@@ -98,14 +98,14 @@ const Home: React.FC = () => {
     }, [user?.user?.id]);
 
     // 导航到游戏详情页
-    const navigateToGameDetail = (game: UserGameData) => {
-        const gameId = game.file_id || game.id;
-        if (gameId) {
-            navigator(`/game/${gameId}`, {
-                state: { source: 'main_page' },
-            });
-        }
-    };
+    // const navigateToGameDetail = (game: UserGameData) => {
+    //     const gameId = game.file_id || game.id;
+    //     if (gameId) {
+    //         navigator(`/game/${gameId}`, {
+    //             state: { source: 'main_page' },
+    //         });
+    //     }
+    // };
 
     // 加载限时优惠数据
     const loadSpecialGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {

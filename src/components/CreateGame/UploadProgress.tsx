@@ -30,7 +30,7 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
     return (
         <div className={styles.uploadOverlay}>
             <div className={styles.uploadOverlayContent}>
-                <h3 className={styles.uploadOverlayTitle}>正在创建游戏</h3>
+                <h3 className={styles.uploadOverlayTitle}>正在创建作品</h3>
 
                 {/* 进度条 */}
                 <div className={styles.uploadProgressContainer}>
