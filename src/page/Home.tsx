@@ -392,7 +392,7 @@ const Home: React.FC = () => {
                                                             <div className={styles.carouselInfo}>
                                                                 <h2 className={styles.carouselTitle}>{item.title}</h2>
                                                                 <p className={styles.carouselDescription}>{item.description}</p>
-                                                                <button
+                                                                {/* <button
                                                                     className={styles.carouselStartBtn}
                                                                     onClick={() =>
                                                                         navigateToGameDetail(item)
@@ -401,7 +401,7 @@ const Home: React.FC = () => {
                                                                     <img
                                                                         src={`${import.meta.env.BASE_URL}data/assets/home/开始游戏.png`}
                                                                         alt="开始游戏" />
-                                                                </button>
+                                                                </button> */}
                                                             </div>
                                                         </div>
                                                     </div>

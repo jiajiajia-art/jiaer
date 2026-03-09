@@ -580,7 +580,7 @@ const GameDetail: React.FC = () => {
                                 <span className={styles.loadingDot}></span>
                             </div>
                         ) : (
-                            '开始游戏'
+                            '开始体验'
                         )}
                     </button>
                 </div>

@@ -26,7 +26,7 @@ const navItems: Array<{
 }> = [
     {
         key: 'home',
-        label: '商城',
+        label: '首页',
         iconInactive: 'data/assets/切图/首页02.png',
         iconActive: 'data/assets/切图/首页01.png',
     },
