@@ -81,7 +81,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             )}
             <button className={styles.dangerButton} onClick={onExitGame}>
-              <span>退出</span>
+              <span>保存并退出</span>
             </button>
           </div>
         </div>
