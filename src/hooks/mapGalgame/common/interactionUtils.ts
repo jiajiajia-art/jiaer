@@ -111,7 +111,8 @@ export const convertStepToMessage = (
         return {
             id: Date.now(),
             type: 'scene_change',
-            message: step.sceneDescription || step.sceneName || '',
+            // 不再自动输出场景 description，scene_change 仅用于更新场景或背景
+            message: '',
         };
     }
 

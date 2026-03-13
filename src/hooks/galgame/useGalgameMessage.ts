@@ -127,7 +127,8 @@ export const useGalgameMessage = (
             return {
                 id: Date.now(),
                 type: 'scene_change',
-                message: step.sceneDescription || step.sceneName || '',
+                // 不再自动输出场景 description，scene_change 仅用于更新场景数据和背景
+                message: '',
                 sceneData: newScene,
             } as Message & { sceneData: GetGalgamePresetResponse['scenes']['scenes'][0] };
         }

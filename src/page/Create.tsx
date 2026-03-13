@@ -38,6 +38,7 @@ const Create: React.FC = () => {
         totalClicks: 0,
         totalAmount: 0,
         totalSettleAmount: 0,
+        pendingIncome: 0,
         isIncentive: false,
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
@@ -104,6 +105,7 @@ const Create: React.FC = () => {
                     totalClicks: response.data.data.uv ?? 0,
                     totalAmount: response.data.data.totalAmount ?? 0,
                     totalSettleAmount: (response.data.data.uv ?? 0) * 5 || 0,
+                    pendingIncome: response.data.data.pendingIncome ?? 0,
                     isIncentive: response.data.data.isIncentive ?? false,
                 });
             }
@@ -490,6 +492,17 @@ const Create: React.FC = () => {
                                     <div className={styles.statValue}>{stats.totalSettleAmount}</div>
                                 </div>
                             )}
+                            {stats.isIncentive && (
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                            <span>待结算收益</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.statValue}>{stats.pendingIncome}</div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -529,6 +542,7 @@ const Create: React.FC = () => {
                                 games={publishedGames}
                                 primaryStat="uv"
                                 isIncentive={stats.isIncentive}
+                                showIncentiveUI={true}
                                 onGameClick={(game) => {
                                     const gameId = game.file_id || game.id;
                                     if (!gameId) return;

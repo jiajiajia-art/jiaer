@@ -194,15 +194,8 @@ const MessageItem = memo<MessageItemProps>(({
     }
 
     if (step.type === 'scene_change') {
-        const displayText = getDisplayText();
-        
-        return (
-            <div className={styles.messageWrapper}>
-                <div className={styles.sceneChangeBubble}>
-                    <ColoredMarkdownText text={displayText} showCursor={isCurrentStep && isTyping} />
-                </div>
-            </div>
-        );
+        // 场景切换不再在文本模式中额外输出 description 文本
+        return null;
     }
 
     return null;

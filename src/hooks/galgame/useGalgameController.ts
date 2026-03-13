@@ -448,8 +448,10 @@ export const useGalgameController = () => {
     useEffect(() => {
         const currentStep = stepHandlers.currentStep;
         
-        if (currentStep?.type === 'scene_change' && currentStep.sceneId) {
-            updateSceneFromId(currentStep.sceneId);
+        if (currentStep?.type === 'scene_change') {
+            if (currentStep.sceneId) {
+                updateSceneFromId(currentStep.sceneId);
+            }
             
             if (currentStep.sceneImage) {
                 const sceneImageUrl = getImageUrl(currentStep.sceneImage);
@@ -463,8 +465,14 @@ export const useGalgameController = () => {
                     });
                 }
             }
+
+            // 场景切换步骤本身不需要在对话区域显示；无论是否重复发送，只要到达 scene_change，
+            // 在更新完场景/背景后，直接自动跳过该步骤，避免出现“空白对话框”和额外点击。
+            if (stepHandlers.handleNextStep) {
+                stepHandlers.handleNextStep();
+            }
         }
-    }, [stepHandlers.currentStep, updateSceneFromId]);
+    }, [stepHandlers.currentStep, stepHandlers.handleNextStep, updateSceneFromId]);
 
     useEffect(() => {
         if (isReplay) {

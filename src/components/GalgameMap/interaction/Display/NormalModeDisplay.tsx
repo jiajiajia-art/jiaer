@@ -205,7 +205,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         </>
                     )}
 
-                    {(currentStep || !isWaitingForData) && currentMessage && (currentMessage.type === 'scene_change' || currentMessage.type === 'transition') && (
+                    {(currentStep || !isWaitingForData) && currentMessage && currentMessage.type === 'transition' && (
                         <div className={styles.narrationMessage}>
                             <div className={styles.characterDivider} style={{ marginBottom: '8px' }}></div>
                             {renderTextWithMarkdown(

@@ -31,6 +31,18 @@ export interface UserGameData {
     customAppId?: string;
     needDeleted: boolean;
     display_cover_url: string;
+    /** 以下为激励计划相关的可选字段（由服务端逐步补充，前端做兼容） */
+    /** 作品激励开始时间（ISO 字符串），为空表示未参与 */
+    incentiveStartTime?: string | null;
+    /** 作品激励结束时间（ISO 字符串），为空表示未结束 */
+    incentiveEndTime?: string | null;
+    /** 作品激励状态：none | running | finished（服务端也可能返回下划线命名） */
+    incentiveStatus?: 'none' | 'running' | 'finished' | string;
+    /** 作品当前激励金额（服务端计算），缺失时前端可按 UV×5 做兜底展示 */
+    incentiveAmount?: number;
+    /** 兼容服务端可能的下划线命名 */
+    incentive_status?: 'none' | 'running' | 'finished' | string;
+    incentive_amount?: number;
 }
 
 export interface UserGameResponse {

@@ -34,6 +34,29 @@
     border-radius: 10px;
 }
 
+/* 激励标签（右上角） */
+.incentiveTag {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 193, 7, 0.95); /* 黄色 */
+    color: #111;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 2;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 193, 7, 1);
+}
+
+.incentiveFinished {
+    background: rgba(40, 167, 69, 0.95); /* 绿色 */
+    color: #fff;
+    border-color: rgba(40, 167, 69, 1);
+}
+
 /* .gameTag {
     position: absolute;
     top: 8px;

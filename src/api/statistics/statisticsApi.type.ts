@@ -28,4 +28,6 @@ export interface GameTotalStatsResponse {
     Count: number;
     totalAmount: number;
     isIncentive: boolean;
+    /** 待结算收益（仅激励作者返回） */
+    pendingIncome?: number;
 }

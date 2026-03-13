@@ -6,7 +6,7 @@
 // 
 // 1. 游戏结构标签（API返回的原始消息，需要解析/转换）
 //    - [NARRATION: ...]
-//    - [DIALOGUE: speaker, "..."]
+//    - [DIALOGUE: npcid,npcName, "..."]
 //    - [CHOICE: ...]...[END_CHOICE]
 //    - [OPTION: ...]
 //    - [SCENE_CHANGE: ...]
@@ -138,11 +138,29 @@ export const processGameTags = (content: string): string => {
 
     result = result.replace(
         /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
-        (_match, speaker, _meta, text) => {
-            if (speaker && text) {
-                return `${speaker.trim()}："${String(text).trim()}"`;
+        (_match, speaker, meta, text) => {
+            const speakerId = speaker ? String(speaker).trim() : '';
+            const metaText = meta ? String(meta).trim() : '';
+            const displayName = metaText
+                ? metaText.replace(/,?\s*$/, '')
+                : speakerId;
+            const finalText = text ? String(text).trim() : '';
+            if (displayName && finalText) {
+                return `${displayName}："${finalText}"`;
             }
-            return text ? String(text).trim() : '';
+            return finalText;
+        }
+    );
+    // 向后兼容旧格式 [DIALOGUE: speaker, "..."]
+    result = result.replace(
+        /\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\s*\]/gi,
+        (_match, speaker, text) => {
+            const displayName = speaker ? String(speaker).trim() : '';
+            const finalText = text ? String(text).trim() : '';
+            if (displayName && finalText) {
+                return `${displayName}："${finalText}"`;
+            }
+            return finalText;
         }
     );
     
@@ -162,11 +180,29 @@ export const processGameTags = (content: string): string => {
         // 处理内容中的其他标签
         cleanedContent = cleanedContent.replace(
             /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
-            (_m: string, speaker: string, _meta: string, text: string) => {
-                if (speaker && text) {
-                    return `${speaker.trim()}："${String(text).trim()}"`;
+            (_m: string, speaker: string, meta: string, text: string) => {
+                const speakerId = speaker ? String(speaker).trim() : '';
+                const metaText = meta ? String(meta).trim() : '';
+                const displayName = metaText
+                    ? metaText.replace(/,?\s*$/, '')
+                    : speakerId;
+                const finalText = text ? String(text).trim() : '';
+                if (displayName && finalText) {
+                    return `${displayName}："${finalText}"`;
                 }
-                return text ? String(text).trim() : '';
+                return finalText;
+            }
+        );
+        // 兼容旧格式
+        cleanedContent = cleanedContent.replace(
+            /\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\s*\]/gi,
+            (_m: string, speaker: string, text: string) => {
+                const displayName = speaker ? String(speaker).trim() : '';
+                const finalText = text ? String(text).trim() : '';
+                if (displayName && finalText) {
+                    return `${displayName}："${finalText}"`;
+                }
+                return finalText;
             }
         );
         cleanedContent = cleanedContent.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_m: string, text: string) => {
@@ -355,11 +391,17 @@ export const cleanHistoryMessage = (text: string): { cleanedText: string; option
     });
     
     // 处理 DIALOGUE - 保留说话人和对话内容
-    cleaned = cleaned.replace(/\[DIALOGUE:\s*([^,]*),\s*"([^"]*)"\]/gi, (_match, speaker, content) => {
-        if (speaker && content) {
-            return `${speaker.trim()}：“${content.trim()}”`;
+    cleaned = cleaned.replace(/\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi, (_match, speaker, meta, content) => {
+        const speakerId = speaker ? String(speaker).trim() : '';
+        const metaText = meta ? String(meta).trim() : '';
+        const displayName = metaText
+            ? metaText.replace(/,?\s*$/, '')
+            : speakerId;
+        const finalContent = content ? String(content).trim() : '';
+        if (displayName && finalContent) {
+            return `${displayName}：“${finalContent}”`;
         }
-        return content ? content.trim() : '';
+        return finalContent;
     });
     
     // 处理 HINT - 保留内容
@@ -469,11 +511,17 @@ export const extractChoiceFromHistory = (text: string): {
         // 移除所有 OPTION 标签
         middleText = middleText.replace(/\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, '');
         // 保留对话中的说话人信息
-        middleText = middleText.replace(/\[DIALOGUE:\s*([^,]*),\s*"([^"]*)"\]/gi, (_match, speaker, content) => {
-            if (speaker && content) {
-                return `${speaker.trim()}：“${content.trim()}”`;
+        middleText = middleText.replace(/\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi, (_match, speaker, meta, content) => {
+            const speakerId = speaker ? String(speaker).trim() : '';
+            const metaText = meta ? String(meta).trim() : '';
+            const displayName = metaText
+                ? metaText.replace(/,?\s*$/, '')
+                : speakerId;
+            const finalContent = content ? String(content).trim() : '';
+            if (displayName && finalContent) {
+                return `${displayName}：“${finalContent}”`;
             }
-            return content ? content.trim() : '';
+            return finalContent;
         });
         middleText = middleText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
             return content ? content.trim() : '';
@@ -490,11 +538,17 @@ export const extractChoiceFromHistory = (text: string): {
         if (afterChoiceMatch && afterChoiceMatch[1]) {
             let extractedText = afterChoiceMatch[1];
             // 保留对话中的说话人信息
-            extractedText = extractedText.replace(/\[DIALOGUE:\s*([^,]*),\s*"([^"]*)"\]/gi, (_match, speaker, content) => {
-                if (speaker && content) {
-                    return `${speaker.trim()}：“${content.trim()}”`;
+            extractedText = extractedText.replace(/\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi, (_match, speaker, meta, content) => {
+                const speakerId = speaker ? String(speaker).trim() : '';
+                const metaText = meta ? String(meta).trim() : '';
+                const displayName = metaText
+                    ? metaText.replace(/,?\s*$/, '')
+                    : speakerId;
+                const finalContent = content ? String(content).trim() : '';
+                if (displayName && finalContent) {
+                    return `${displayName}：“${finalContent}”`;
                 }
-                return content ? content.trim() : '';
+                return finalContent;
             });
             extractedText = extractedText.replace(/\[NARRATION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi, (_match, content) => {
                 return content ? content.trim() : '';
@@ -613,18 +667,24 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
         }
     }
     
-    // 解析 DIALOGUE
-    const dialogueRegex = /\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi;
+    // 解析 DIALOGUE (支持 [DIALOGUE: npcId,npcName,"..."] 格式)
+    const dialogueRegex = /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([^"]*(?:<[^>]*>[^"]*)*?)"\s*\]/gi;
     let dialogueMatch;
     while ((dialogueMatch = dialogueRegex.exec(contentWithoutChoice)) !== null) {
-        const speaker = dialogueMatch[1]?.trim();
-        const text = dialogueMatch[2]?.trim();
-        if (speaker && text) {
+        const rawSpeaker = dialogueMatch[1];
+        const meta = dialogueMatch[2];
+        const text = dialogueMatch[3]?.trim();
+        const speakerId = rawSpeaker ? String(rawSpeaker).trim() : '';
+        const metaText = meta ? String(meta).trim() : '';
+        const displayName = metaText
+            ? metaText.replace(/,?\s*$/, '')
+            : speakerId;
+        if (displayName && text) {
             steps.push({
                 id: `history-dialogue-${stepIndex++}`,
                 type: 'dialogue',
                 content: text,
-                speakerName: speaker
+                speakerName: displayName
             });
         }
     }
@@ -671,10 +731,15 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
 
         // 去掉描述中的 OPTION 标签
         description = description.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
-        // 处理对话/旁白标签为可读文本
-        description = description.replace(/\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\]/gi, (_m: string, speaker: string, text: string) => {
-            if (speaker && text) {
-                return `${speaker.trim()}："${text.trim()}"`;
+        // 处理对话/旁白标签为可读文本 (支持 npcId,npcName)
+        description = description.replace(/\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([^"]*(?:<[^>]*>[^"]*)*?)"\s*\]/gi, (_m: string, speaker: string, meta: string, text: string) => {
+            const speakerId = speaker ? String(speaker).trim() : '';
+            const metaText = meta ? String(meta).trim() : '';
+            const displayName = metaText
+                ? metaText.replace(/,?\s*$/, '')
+                : speakerId;
+            if (displayName && text) {
+                return `${displayName}："${text.trim()}"`;
             }
             return text ? text.trim() : '';
         });
@@ -697,4 +762,3 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
     
     return steps;
 };// 无视 title：不再依赖/提取 CHOICE 标签中的标题内容
-
