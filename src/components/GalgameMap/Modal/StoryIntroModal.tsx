@@ -72,7 +72,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                                 <span className={styles.loadingDot}></span>
                                 <span className={styles.loadingDot}></span>
                             </div>
-                            : '开始游戏'}
+                            : '开始体验'}
                     </button>
                 </div>
             </div>

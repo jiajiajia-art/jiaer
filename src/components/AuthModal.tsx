@@ -28,21 +28,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [email, setEmailInput] = useState('');
+    const [resetPhone, setResetPhone] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
     
     // 错误状态
     const [phoneError, setPhoneError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
-    const [emailError, setEmailError] = useState('');
+    const [resetPhoneError, setResetPhoneError] = useState('');
     const [verificationCodeError, setVerificationCodeError] = useState('');
     
     // 震动状态
     const [phoneShake, setPhoneShake] = useState(false);
     const [passwordShake, setPasswordShake] = useState(false);
     const [confirmPasswordShake, setConfirmPasswordShake] = useState(false);
-    const [emailShake, setEmailShake] = useState(false);
+    const [resetPhoneShake, setResetPhoneShake] = useState(false);
     const [verificationCodeShake, setVerificationCodeShake] = useState(false);
     
     const [isLoading, setIsLoading] = useState(false);
@@ -71,11 +71,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         return pwd.length >= 6;
     };
 
-    const validateEmail = (emailAddress: string): boolean => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(emailAddress);
-    };
-
     // ========== 错误处理辅助函数 ==========
     const setFieldError = (setError: (msg: string) => void, setShake: (val: boolean) => void, message: string) => {
         setError(message);
@@ -93,17 +88,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setPhone('');
         setPassword('');
         setConfirmPassword('');
-        setEmailInput('');
+        setResetPhone('');
         setVerificationCode('');
         setPhoneError('');
         setPasswordError('');
         setConfirmPasswordError('');
-        setEmailError('');
+        setResetPhoneError('');
         setVerificationCodeError('');
         setPhoneShake(false);
         setPasswordShake(false);
         setConfirmPasswordShake(false);
-        setEmailShake(false);
+        setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
         setCountdown(0);
@@ -117,12 +112,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setPhoneError('');
         setPasswordError('');
         setConfirmPasswordError('');
-        setEmailError('');
+        setResetPhoneError('');
         setVerificationCodeError('');
         setPhoneShake(false);
         setPasswordShake(false);
         setConfirmPasswordShake(false);
-        setEmailShake(false);
+        setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
     };
@@ -162,9 +157,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         }
     };
 
-    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEmailInput(e.target.value);
-        if (emailError) clearFieldError(setEmailError, setEmailShake);
+    const handleResetPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setResetPhone(e.target.value);
+        if (resetPhoneError) clearFieldError(setResetPhoneError, setResetPhoneShake);
     };
 
     const handleVerificationCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,20 +190,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
     // ========== 发送验证码 ==========
     const handleSendCode = async () => {
-        if (!email) {
-            setFieldError(setEmailError, setEmailShake, '请输入邮箱');
+        if (!resetPhone) {
+            setFieldError(setResetPhoneError, setResetPhoneShake, '请输入手机号');
             return;
         }
 
-        if (!validateEmail(email)) {
-            setFieldError(setEmailError, setEmailShake, '请输入正确的邮箱格式');
+        if (!validatePhone(resetPhone)) {
+            setFieldError(setResetPhoneError, setResetPhoneShake, '请输入正确的手机号');
             return;
         }
 
         setIsSendingCode(true);
         try {
-            await auth.sendResetCode({ email });
-            setSubmitError('验证码已发送，请查收邮箱');
+            await auth.sendResetCode({ phoneNumber: resetPhone });
+            setSubmitError('验证码已发送，请注意查收');
             startCountdown();
         } catch (error: any) {
             console.error('发送验证码失败:', error);
@@ -257,11 +252,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
         // 重置密码模式验证
         if (mode === 'reset') {
-            if (!email) {
-                setFieldError(setEmailError, setEmailShake, '请输入邮箱');
+            if (!resetPhone) {
+                setFieldError(setResetPhoneError, setResetPhoneShake, '请输入手机号');
                 hasError = true;
-            } else if (!validateEmail(email)) {
-                setFieldError(setEmailError, setEmailShake, '请输入正确的邮箱格式');
+            } else if (!validatePhone(resetPhone)) {
+                setFieldError(setResetPhoneError, setResetPhoneShake, '请输入正确的手机号');
                 hasError = true;
             }
             if (!verificationCode) {
@@ -337,7 +332,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 }
             } else if (mode === 'reset') {
                 const response = await auth.resetPassword({
-                    email: email,
+                    phoneNumber: resetPhone,
                     code: verificationCode,
                     newPassword: password,
                     confirmNewPassword: password,
@@ -373,7 +368,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         resetErrors();
         if (mode === 'register' || mode === 'reset') {
             setConfirmPassword('');
-            setEmailInput('');
+            setResetPhone('');
             setVerificationCode('');
         }
     };
@@ -384,6 +379,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setPhone('');
         setPassword('');
         setConfirmPassword('');
+        setResetPhone('');
         setVerificationCode('');
     };
 
@@ -440,18 +436,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                         </div>
                     )}
 
-                    {/* 邮箱输入 */}
+                    {/* 手机号输入（重置） */}
                     {(mode === 'reset') && (
                         <div className={styles.inputGroup}>
                             <input
-                                type="email"
-                                className={`${styles.input} ${emailError ? styles.inputError : ''} ${emailShake ? styles.shake : ''}`}
-                                placeholder="请输入邮箱"
-                                value={email}
-                                onChange={handleEmailChange}
+                                type="tel"
+                                className={`${styles.input} ${resetPhoneError ? styles.inputError : ''} ${resetPhoneShake ? styles.shake : ''}`}
+                                placeholder="请输入手机号"
+                                value={resetPhone}
+                                onChange={handleResetPhoneChange}
+                                maxLength={11}
                             />
-                            {emailError && (
-                                <div className={styles.errorMessage}>{emailError}</div>
+                            {resetPhoneError && (
+                                <div className={styles.errorMessage}>{resetPhoneError}</div>
                             )}
                         </div>
                     )}
@@ -473,7 +470,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     type="button"
                                     className={styles.sendCodeBtn}
                                     onClick={handleSendCode}
-                                    disabled={isSendingCode || countdown > 0 || !email || !validateEmail(email)}
+                                    disabled={isSendingCode || countdown > 0 || !resetPhone || !validatePhone(resetPhone)}
                                 >
                                     {isSendingCode ? '发送中...' : countdown > 0 ? `${countdown}秒` : '发送验证码'}
                                 </button>
