@@ -30,9 +30,11 @@ const CustomIF: React.FC = () => {
     if (!raw) return '';
     // absolute
     if (/^https?:\/\//i.test(raw)) return raw;
-    // backend-served /public/... should use HOST_ADDRESS as base
-    if (raw.startsWith('/public/')) {
-      try { return new URL(raw, HOST_ADDRESS).href; } catch { return `${HOST_ADDRESS}${raw}`; }
+    // backend-served public assets should use HOST_ADDRESS as base
+    // 支持“/public/…”与“public/…”两种返回格式
+    if (raw.startsWith('/public/') || raw.startsWith('public/')) {
+      const path = raw.startsWith('/') ? raw : `/${raw}`;
+      try { return new URL(path, HOST_ADDRESS).href; } catch { return `${HOST_ADDRESS}${path}`; }
     }
     // fall back to current origin
     try { return new URL(raw, window.location.origin).href; } catch { return raw; }

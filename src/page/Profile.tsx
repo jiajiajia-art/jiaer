@@ -19,6 +19,15 @@ const isWebViewEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
+const maskPhoneNumber = (phone?: string): string => {
+    if (!phone) return '';
+    if (phone.length < 7) return phone;
+    if (phone.length === 11) {
+        return `${phone.slice(0, 3)}****${phone.slice(7)}`;
+    }
+    return `${phone.slice(0, 3)}****${phone.slice(-4)}`;
+};
+
 const Profile: React.FC = () => {
     const { user, logout, updateUser } = useAuthStore();
     const navigate = useNavigate();
@@ -38,6 +47,13 @@ const Profile: React.FC = () => {
     // 头像上传相关状态
     const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 浏览器登录账号绑定相关状态
+    const [isBindAccountModalOpen, setIsBindAccountModalOpen] = useState(false);
+    const [bindPhone, setBindPhone] = useState('');
+    const [bindPassword, setBindPassword] = useState('');
+    const [bindConfirmPassword, setBindConfirmPassword] = useState('');
+    const [isBindingAccount, setIsBindingAccount] = useState(false);
 
     // 移动端判断
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -140,6 +156,60 @@ const Profile: React.FC = () => {
 
     const handleJoinGroup = () => {
         setShowJoinGroupModal(true);
+    };
+
+    // 浏览器登录账号绑定相关函数
+    const handleOpenBindAccountModal = () => {
+        if (user?.user?.phoneNumber) {
+            toast.success('已绑定浏览器登录账号，可在浏览器用手机号 + 密码登录');
+            return;
+        }
+        setIsBindAccountModalOpen(true);
+    };
+
+    const handleConfirmBindAccount = async () => {
+        const phone = bindPhone.trim();
+        if (!/^1[0-9]{10}$/.test(phone)) {
+            toast.error('请输入正确的手机号');
+            return;
+        }
+        if (bindPassword.length < 6) {
+            toast.error('密码至少需要6位');
+            return;
+        }
+        if (bindPassword !== bindConfirmPassword) {
+            toast.error('两次输入的密码不一致');
+            return;
+        }
+
+        try {
+            setIsBindingAccount(true);
+            const response = await auth.bindAccount({
+                phoneNumber: phone,
+                password: bindPassword,
+            });
+
+            if (response.data.success && response.data.data) {
+                updateUser(response.data.data);
+                toast.success('绑定成功！可在浏览器用手机号 + 密码登录');
+                setIsBindAccountModalOpen(false);
+                setBindPhone('');
+                setBindPassword('');
+                setBindConfirmPassword('');
+            } else {
+                toast.error(response.data.message || '绑定失败，请稍后重试');
+            }
+        } catch (error: unknown) {
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string } } };
+                const errorMessage = axiosError.response?.data?.message || '绑定失败，请稍后重试';
+                toast.error(errorMessage);
+            } else {
+                toast.error('绑定失败，请稍后重试');
+            }
+        } finally {
+            setIsBindingAccount(false);
+        }
     };
 
 
@@ -422,6 +492,29 @@ const Profile: React.FC = () => {
 
                         </div>
 
+                        {/* 浏览器登录账号绑定 */}
+                        {isWebViewEnv() && (
+                            <div className={styles.functionItem}>
+                                <div className={styles.functionIcon}>
+                                    <MdPersonAddAlt1 />
+                                </div>
+                                <div className={styles.functionText}>
+                                    <div className={styles.functionTitle}>浏览器登录账号</div>
+                                    <div className={styles.functionDesc}>
+                                        {user?.user?.phoneNumber
+                                            ? `已绑定手机号：${maskPhoneNumber(user?.user?.phoneNumber)}，可在浏览器登录`
+                                            : '设置手机号和密码，用于在浏览器中登录同一账号'}
+                                    </div>
+                                </div>
+                                <button
+                                    className={styles.functionButton}
+                                    onClick={handleOpenBindAccountModal}
+                                >
+                                    {user?.user?.phoneNumber ? '已绑定' : '去设置'}
+                                </button>
+                            </div>
+                        )}
+
                         {/* 加入用户群 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -501,6 +594,67 @@ const Profile: React.FC = () => {
                                 disabled={isUpdatingName}
                             >
                                 {isUpdatingName ? '保存中...' : '确认'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 浏览器登录账号绑定弹窗 */}
+            {isBindAccountModalOpen && (
+                <div
+                    className={styles.editNameModalOverlay}
+                    onClick={() => setIsBindAccountModalOpen(false)}
+                >
+                    <div
+                        className={styles.editNameModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.editNameModalHeader}>
+                            <div className={styles.editNameModalTitle}>设置浏览器登录账号</div>
+                        </div>
+                        <div className={styles.editNameModalBody}>
+                            <input
+                                className={styles.editNameInput}
+                                placeholder="请输入手机号"
+                                value={bindPhone}
+                                onChange={(e) => setBindPhone(e.target.value)}
+                                maxLength={11}
+                            />
+                            <input
+                                type="password"
+                                className={styles.editNameInput}
+                                placeholder="请设置密码（至少6位）"
+                                value={bindPassword}
+                                onChange={(e) => setBindPassword(e.target.value)}
+                            />
+                            <input
+                                type="password"
+                                className={styles.editNameInput}
+                                placeholder="请再次输入密码"
+                                value={bindConfirmPassword}
+                                onChange={(e) => setBindConfirmPassword(e.target.value)}
+                            />
+                            <div className={styles.editNameTips}>
+                                绑定后，可在浏览器访问本站时使用手机号 + 密码登录同一账号。
+                            </div>
+                        </div>
+                        <div className={styles.editNameModalActions}>
+                            <button
+                                type="button"
+                                className={styles.editNameCancelButton}
+                                onClick={() => setIsBindAccountModalOpen(false)}
+                                disabled={isBindingAccount}
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.editNameConfirmButton}
+                                onClick={handleConfirmBindAccount}
+                                disabled={isBindingAccount}
+                            >
+                                {isBindingAccount ? '绑定中...' : '确认绑定'}
                             </button>
                         </div>
                     </div>

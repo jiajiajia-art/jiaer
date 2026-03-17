@@ -22,10 +22,20 @@ GameGrid: React.FC<GameGridProps> = ({
     games,
     onGameClick,
     primaryStat = 'pv',
-    isIncentive = false,
     showIncentiveUI = false,
 }) => {
     const navigate = useNavigate();
+
+    const getTypeLabel = (meta: UserGameData): string => {
+        const raw = String(meta.game_tags || (meta as any).engine || '').toUpperCase();
+        switch (raw) {
+            case 'TXT': return 'Galgame';
+            case 'AVG': return 'World';
+            case 'RPG': return 'Story';
+            case 'CUSTOM': return '自定义';
+            default: return raw || '';
+        }
+    };
 
     // 计算作品激励状态（优先使用后端字段，其次用开始/结束时间推断，最后用账号级标记兜底）
     const getIncentiveStatus = (meta: UserGameData): 'none' | 'running' | 'finished' => {
@@ -99,7 +109,7 @@ GameGrid: React.FC<GameGridProps> = ({
                 return (
                 <div
                     className={styles.goodsCard}
-                    key={meta.id}
+                    key={meta.file_id || meta.id || String(idx)}
                     onClick={() => handleGameClick(meta)}
                 >
                     <div className={styles.goodsImg}>
@@ -126,11 +136,11 @@ GameGrid: React.FC<GameGridProps> = ({
                                     {meta.like_count || 0}
                                 </div>
                             </div>
-                            {/* {(meta.game_tags || (meta as any).engine) && (
-                                <div className={styles.goodsInfoTag} title={String(meta.game_tags || (meta as any).engine)}>
-                                    {String(meta.game_tags || (meta as any).engine)}
+                            {(meta.game_tags || (meta as any).engine) && (
+                                <div className={styles.goodsInfoTag} title={getTypeLabel(meta)}>
+                                    {getTypeLabel(meta)}
                                 </div>
-                            )} */}
+                            )}
                         </div>
                     </div>
                     <div className={styles.goodsBody}>

@@ -6,7 +6,6 @@ import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { MdOutlineAutoStories } from "react-icons/md";
 import { MdSettings, MdOutlineAssessment } from "react-icons/md";
-import { FaRegShareFromSquare } from "react-icons/fa6";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -151,9 +150,6 @@ const Galgame = () => {
             setIsDeleteConfirmOpen(false);
         }
     };
-
-    const canShareReplay = !controller.isReplay && !!sessionId && !controller.stepHandlers.isWaitingForData;
-
     const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
         logVisualButtonClick('share_replay_create');
         if (!sessionId || !fileId) {
@@ -344,25 +340,6 @@ const Galgame = () => {
                                 <span>自动</span>
                             </div>
                         </div>
-                        {!controller.isReplay && (
-                            <div
-                                className={`${styles.buttonItem} ${!canShareReplay ? styles.buttonItemDisabled : ''}`}
-                                onClick={
-                                    !canShareReplay
-                                        ? undefined
-                                        : () => {
-                                              logVisualButtonClick("share_replay");
-                                              setIsShareOpen(true);
-                                          }
-                                }
-                                style={{ cursor: !canShareReplay ? 'not-allowed' : 'pointer' }}
-                            >
-                                <div className={styles.buttonInner}>
-                                    <FaRegShareFromSquare />
-                                    <span>分享回放</span>
-                                </div>
-                            </div>
-                        )}
                         <div
                             className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
                             onClick={() => {

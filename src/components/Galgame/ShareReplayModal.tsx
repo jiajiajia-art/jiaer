@@ -36,7 +36,7 @@ const ShareReplayModal: React.FC<Props> = ({ isOpen, defaultTitle, onSubmit, onC
           <div className={styles.headerContent}>
             <div className={styles.titleWrap}>
               <img className={styles.titleIcon} src={`${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png`} alt="icon" />
-              <div className={styles.title}>分享回放</div>
+              
             </div>
             <button className={styles.closeBtn} onClick={onClose} aria-label="关闭">
               <img className={styles.closeImg} src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} alt="关闭" />

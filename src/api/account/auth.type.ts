@@ -27,6 +27,11 @@ export interface SignupRequest {
 }
 
 // 登录请求
+export interface BindAccountRequest {
+  phoneNumber: string;
+  password: string;
+}
+
 export interface LoginRequest {
   phoneNumber: string;
   password: string;
