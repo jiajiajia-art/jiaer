@@ -43,12 +43,12 @@ export interface AuthResponse {
 
 // 发送验证码请求
 export interface SendCodeRequest {
-  email: string;
+  phoneNumber: string;
 }
 
 // 重置密码请求
 export interface ResetPasswordRequest {
-  email: string;
+  phoneNumber: string;
   code: string;
   newPassword: string;
   confirmNewPassword: string;
