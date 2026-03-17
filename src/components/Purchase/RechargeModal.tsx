@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
@@ -85,6 +85,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         onClose();
         window.location.reload();
     }, [onClose]);
+
+    // 用 ref 做“同步锁”和“实时输入值”，避免 React state 异步批处理导致的偶发旧值提交
+    const inFlightRef = useRef(false);
+    const isComposingRef = useRef(false);
+    const amountInputRef = useRef<HTMLInputElement | null>(null);
 
     const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
     const [customAmount, setCustomAmount] = useState<string>('');
@@ -187,7 +192,25 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const amount = getCurrentAmount();
+        if (inFlightRef.current) {
+            toast.error('请求处理中，请勿重复点击');
+            return;
+        }
+
+        if (isComposingRef.current) {
+            toast.error('请输入完成后再提交');
+            return;
+        }
+
+        let amount: number | null = null;
+        if (selectedAmount !== null) {
+            amount = selectedAmount;
+        } else {
+            const raw = (amountInputRef.current?.value ?? customAmount ?? '').trim();
+            const parsed = parseFloat(raw || '0');
+            amount = !isNaN(parsed) ? parsed : null;
+        }
+
         if (!amount) {
             if (customAmount) {
                 setInputError(`充值金额不能低于 ${MIN_AMOUNT} 元`);
@@ -200,6 +223,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
+        inFlightRef.current = true;
         setIsLoading(true);
         try {
             if (isMiniProgramEnv()) {
@@ -244,6 +268,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setPollingError('发起支付请求失败，请稍后重试。');
         } finally {
             setIsLoading(false);
+            inFlightRef.current = false;
         }
     };
 
@@ -369,7 +394,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 placeholder="请输入金额"
                                 value={customAmount}
                                 onChange={handleCustomAmountChange}
+                                onCompositionStart={() => {
+                                    isComposingRef.current = true;
+                                }}
+                                onCompositionEnd={() => {
+                                    isComposingRef.current = false;
+                                }}
                                 maxLength={10}
+                                ref={amountInputRef}
                             />
                         </div>
                         {inputError && (
