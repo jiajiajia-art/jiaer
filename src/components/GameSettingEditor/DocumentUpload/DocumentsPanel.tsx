@@ -208,7 +208,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     <p className={styles.eyebrow}>Step 1</p>
                     <h2>上传设定文档 · 自动解析</h2>
                     <p className={styles.subtitle}>
-                        一键上传 PDF / Word，系统自动拆解世界观、角色与剧情节点
+                        一键上传 Word（.docx），系统自动拆解世界观、角色与剧情节点
                     </p>
                 </div>
                 {onCreateEmptyGame && (
@@ -252,8 +252,8 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     </p>
 
                     {!uploadedFile ? (
-                        <div 
-                            className={styles.dropzone} 
+                        <div
+                            className={styles.dropzone}
                             onClick={handleDropzoneClick}
                             onDragOver={handleDragOver}
                             onDragEnter={handleDragEnter}

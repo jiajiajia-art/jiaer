@@ -91,8 +91,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const isComposingRef = useRef(false);
     const amountInputRef = useRef<HTMLInputElement | null>(null);
 
-    const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-    const [customAmount, setCustomAmount] = useState<string>('');
+    // 单一真相来源：金额只由这个输入字符串决定（固定金额按钮也只是写入这个值）
+    const [amountText, setAmountText] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
     const [inputError, setInputError] = useState<string>('');
     const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -103,8 +103,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     useEffect(() => {
         if (!isOpen) {
-            setSelectedAmount(null);
-            setCustomAmount('');
+            setAmountText('');
             setIsLoading(false);
             setInputError('');
             setQrCodeUrl(null);
@@ -116,8 +115,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     }, [isOpen]);
 
     const handleFixedAmountClick = (amount: number) => {
-        setSelectedAmount(amount);
-        setCustomAmount('');
+        setAmountText(String(amount));
         setInputError('');
     };
 
@@ -148,16 +146,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         }
 
-        setCustomAmount(value);
-        setSelectedAmount(null);
+        setAmountText(value);
     };
 
     const getCurrentAmount = (): number | null => {
-        if (selectedAmount !== null) {
-            return selectedAmount;
-        }
-        if (customAmount) {
-            const amount = parseFloat(customAmount);
+        if (amountText) {
+            const amount = parseFloat(amountText);
             return !isNaN(amount) && amount >= MIN_AMOUNT ? amount : null;
         }
         return null;
@@ -202,17 +196,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
-        let amount: number | null = null;
-        if (selectedAmount !== null) {
-            amount = selectedAmount;
-        } else {
-            const raw = (amountInputRef.current?.value ?? customAmount ?? '').trim();
-            const parsed = parseFloat(raw || '0');
-            amount = !isNaN(parsed) ? parsed : null;
-        }
+        // 金额读取：只认一个来源（输入框实时 value / amountText），避免“固定金额状态残留”导致偶发旧值
+        const raw = (amountInputRef.current?.value ?? amountText ?? '').trim();
+        const parsed = parseFloat(raw || '0');
+        const amount: number | null = !isNaN(parsed) ? parsed : null;
 
         if (!amount) {
-            if (customAmount) {
+            if (amountText) {
                 setInputError(`充值金额不能低于 ${MIN_AMOUNT} 元`);
             }
             return;
@@ -356,6 +346,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const currentAmount = getCurrentAmount();
     const currentPoints = currentAmount ? calculatePoints(currentAmount) : 0;
+    const selectedPresetAmount = FIXED_AMOUNTS.includes(currentAmount || NaN) ? currentAmount : null;
 
     const formContent = (
         <div className={styles.modalOverlay} onClick={closeAndReload}>
@@ -374,7 +365,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 <button
                                     key={amount}
                                     type="button"
-                                    className={`${styles.amountBtn} ${selectedAmount === amount ? styles.amountBtnActive : ''}`}
+                                    className={`${styles.amountBtn} ${selectedPresetAmount === amount ? styles.amountBtnActive : ''}`}
                                     onClick={() => handleFixedAmountClick(amount)}
                                 >
                                     <div className={styles.amountValue}>￥{amount}</div>
@@ -392,7 +383,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 type="text"
                                 className={`${styles.customInput} ${inputError ? styles.inputError : ''}`}
                                 placeholder="请输入金额"
-                                value={customAmount}
+                                value={amountText}
                                 onChange={handleCustomAmountChange}
                                 onCompositionStart={() => {
                                     isComposingRef.current = true;

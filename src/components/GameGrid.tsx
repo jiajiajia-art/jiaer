@@ -129,11 +129,15 @@ GameGrid: React.FC<GameGridProps> = ({
                             <div className={styles.goodsInfoLeft}>
                                 <div className={styles.goodsInfoItem}>
                                     <PrimaryIcon />
-                                    {primaryValue}
+                                    <span className={styles.goodsInfoValue} title={String(primaryValue)}>
+                                        {primaryValue}
+                                    </span>
                                 </div>
                                 <div className={styles.goodsInfoItem}>
                                     <AiOutlineLike />
-                                    {meta.like_count || 0}
+                                    <span className={styles.goodsInfoValue} title={String(meta.like_count || 0)}>
+                                        {meta.like_count || 0}
+                                    </span>
                                 </div>
                             </div>
                             {(meta.game_tags || (meta as any).engine) && (

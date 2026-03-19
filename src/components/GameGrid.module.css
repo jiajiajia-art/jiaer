@@ -93,6 +93,7 @@
     gap: 12px;
     align-items: center;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .goodsInfoItem {
@@ -102,6 +103,15 @@
     color: #FFFFFF;
     font-size: 14px;
     font-weight: 500;
+    min-width: 0; /* 允许内部文本在 flex 环境下被截断 */
+}
+
+.goodsInfoValue {
+    display: inline-block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .goodsInfoTag {
@@ -118,6 +128,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     backdrop-filter: blur(4px);
+    flex: 0 0 auto;
 }
 
 .goodsInfoItem svg {
@@ -358,7 +369,34 @@
     }
 
     .goodsInfo {
-        gap: 6px;
+        gap: 5px;
+        padding: 9px 5px 5px 5px;
+        min-height: 30px;
+    }
+
+    /* 移动端：给数字一个上限宽度，避免被右侧标签挤压后出现“挡住/叠在一起”的观感 */
+    .goodsInfoValue {
+        max-width: 72px;
+    }
+
+    .goodsInfoTag {
+        max-width: 42%;
+        font-size: 11px;
+        padding: 2px 7px;
+    }
+
+    .goodsInfoLeft {
+        gap: 8px;
+    }
+
+    .goodsInfoItem {
+        font-size: 13px;
+        gap: 4px;
+    }
+
+    .goodsInfoItem svg {
+        width: 15px;
+        height: 15px;
     }
 
     .goodsBody {
