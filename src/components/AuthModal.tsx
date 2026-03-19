@@ -509,7 +509,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     onClick={() => setPasswordVisible((v) => !v)}
                                     aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
                                 >
-                                    {passwordVisible ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                    {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
                                 </button>
                             </div>
                             {passwordError && (
@@ -540,7 +540,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     onClick={() => setConfirmPasswordVisible((v) => !v)}
                                     aria-label={confirmPasswordVisible ? '隐藏密码' : '显示密码'}
                                 >
-                                    {confirmPasswordVisible ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                    {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
                                 </button>
                             </div>
                             {confirmPasswordError && (
@@ -567,7 +567,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         onClick={() => setPasswordVisible((v) => !v)}
                                         aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
                                     >
-                                        {passwordVisible ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                        {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
                                     </button>
                                 </div>
                                 {passwordError && (
@@ -589,7 +589,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         onClick={() => setConfirmPasswordVisible((v) => !v)}
                                         aria-label={confirmPasswordVisible ? '隐藏密码' : '显示密码'}
                                     >
-                                        {confirmPasswordVisible ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                                        {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
                                     </button>
                                 </div>
                                 {confirmPasswordError && (

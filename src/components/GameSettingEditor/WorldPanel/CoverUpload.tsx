@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
 import styles from './WorldPanel.module.css';
 import { getImageUrl } from '../../../utils/constants';
-import { addImageTimestamp } from '../../../utils/imageCache';
+import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
 
 interface CoverUploadProps {
     fileId?: string;
@@ -18,6 +18,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
     const [coverError, setCoverError] = useState<string | null>(null);
     const isUploadingRef = useRef<boolean>(false); // 防止重复上传
+    const previousCoverUrlRef = useRef<string | undefined>(coverUrl);
 
     // 当 coverUrl prop 变化时，同步更新预览（例如父组件刷新数据后）
     useEffect(() => {
@@ -46,6 +47,9 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
         }
 
         setCoverError(null);
+        previousCoverUrlRef.current = coverPreview && !coverPreview.startsWith('data:image/') 
+            ? coverPreview
+            : coverUrl;
         const reader = new FileReader();
         reader.onloadend = () => {
             setCoverPreview(reader.result as string);
@@ -87,6 +91,9 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                 toast.success('封面上传成功');
                 // 使用返回的 coverUrl 更新预览
                 if (response.data.data?.coverUrl) {
+                    if (previousCoverUrlRef.current) {
+                        bumpCacheBust(previousCoverUrlRef.current);
+                    }
                     setCoverPreview(response.data.data.coverUrl);
                     // 通知父组件封面已更新
                     onCoverUploaded?.(response.data.data.coverUrl);
@@ -100,7 +107,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
             isUploadingRef.current = false;
         }
     }, [fileId, onCoverUploaded]);
-
     return (
         <div className={styles.uploadCover}>
             <p className={styles.eyebrow}>Step 2</p>

@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
 import { getImageUrl } from '../../utils/constants';
-import { addImageTimestamp } from '../../utils/imageCache';
+import { addImageTimestamp, bumpCacheBust } from '../../utils/imageCache';
 
 interface PublishSettingsModalProps {
     isOpen: boolean;
@@ -41,7 +41,8 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             const response = await EditorApi.uploadGameCover(fileId, file);
             if (response.data.success) {
                 toast.success('封面上传成功');
-                setCoverPreview(getImageUrl(response.data.data.coverUrl));
+                bumpCacheBust(coverUrl);
+                setCoverPreview(response.data.data.coverUrl);
                 if (onCoverUploaded) {
                     onCoverUploaded();
                 }
@@ -52,7 +53,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         } finally {
             setCoverUploading(false);
         }
-    }, [fileId, onCoverUploaded]);
+    }, [fileId, coverUrl, onCoverUploaded]);
 
     if (!isOpen) return null;
 
@@ -134,7 +135,15 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 />
                                 {coverPreview ? (
                                     <div className={styles.coverPreviewContainer}>
-                                        <img src={addImageTimestamp(getImageUrl(coverPreview))} alt="封面预览" className={styles.coverPreview} />
+                                        <img 
+                                            src={
+                                                coverPreview.startsWith('data:image/') 
+                                                    ? coverPreview 
+                                                    : addImageTimestamp(getImageUrl(coverPreview))
+                                            } 
+                                            alt="封面预览" 
+                                            className={styles.coverPreview} 
+                                        />
                                         <div className={styles.coverActions}>
                                             <button
                                                 type="button"
