@@ -29,7 +29,7 @@ GameGrid: React.FC<GameGridProps> = ({
     const getTypeLabel = (meta: UserGameData): string => {
         const raw = String(meta.game_tags || (meta as any).engine || '').toUpperCase();
         switch (raw) {
-            case 'TXT': return 'Galgame';
+            case 'TXT': return 'Role-Playing';
             case 'AVG': return 'World';
             case 'RPG': return 'Story';
             case 'CUSTOM': return '自定义';
