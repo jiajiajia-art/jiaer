@@ -1,8 +1,9 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
+import getGameDataApi from '../../api/home/getGameData';
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../utils/imageCache';
 
@@ -30,6 +31,23 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [coverError, setCoverError] = useState<string | null>(null);
     const [description, setDescription] = useState<string>('');
 
+    // 当模态框打开且有 fileId 时，获取游戏描述
+    useEffect(() => {
+        if (isOpen && fileId) {
+            const fetchGameDescription = async () => {
+                try {
+                    const response = await getGameDataApi.getGameDetail({ fileId });
+                    if (response.data.success && response.data.data?.description) {
+                        setDescription(response.data.data.description);
+                    }
+                } catch (error) {
+                    console.error('获取游戏描述失败:', error);
+                }
+            };
+            fetchGameDescription();
+        }
+    }, [isOpen, fileId]);
+
     const uploadCover = useCallback(async (file: File) => {
         if (!fileId) {
             setCoverError('缺少文件ID，无法上传封面');
@@ -41,7 +59,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             const response = await EditorApi.uploadGameCover(fileId, file);
             if (response.data.success) {
                 toast.success('封面上传成功');
-                bumpCacheBust(coverUrl);
+                bumpCacheBust(response.data.data.coverUrl);
                 setCoverPreview(response.data.data.coverUrl);
                 if (onCoverUploaded) {
                     onCoverUploaded();
@@ -53,7 +71,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         } finally {
             setCoverUploading(false);
         }
-    }, [fileId, coverUrl, onCoverUploaded]);
+    }, [fileId, onCoverUploaded]);
 
     if (!isOpen) return null;
 

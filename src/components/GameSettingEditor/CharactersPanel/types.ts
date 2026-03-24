@@ -35,6 +35,16 @@ export interface Character {
     variations: Variation[];
 }
 
+/**
+ * 暂存图片类型 - 用于图片选择/生成后、确认修改前的预览
+ */
+export interface PendingImage {
+    file?: File;                    // 待上传的文件（上传图片时）
+    previewUrl: string;            // 本地预览 URL（生成时为服务器返回的URL，上传时为本地Object URL）
+    sourceType: 'upload' | 'generate'; // 来源类型：上传或AI生成
+    variant: string;                // 图片类型：'base' 或差分label
+}
+
 export const VARIATION_TYPES = [
     { value: 'expression', label: '表情' },
     { value: 'clothing', label: '服装' },

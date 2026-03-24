@@ -4,9 +4,9 @@
  */
 import React from 'react';
 import { toast } from 'react-hot-toast';
-import type { Character, Variation } from './types';
+import type { Character, Variation, PendingImage } from './types';
 import type { NPC } from '../../../api/galgame/EditorData.type';
-import { npcToCharacter, playerToCharacter, parseVariantKey, bumpCacheBust } from './utils';
+import { npcToCharacter, playerToCharacter, bumpCacheBust } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
 import type { User } from '../../../api/account/auth.type';
@@ -29,6 +29,9 @@ interface HandlersContext {
     setNpcCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setNpcCostModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setIsLoadingNpcCost: React.Dispatch<React.SetStateAction<boolean>>;
+    // 暂存图片 setters
+    setPendingImages: React.Dispatch<React.SetStateAction<{ [characterId: string]: { [variant: string]: PendingImage } }>>;
+    setHasUnsavedChanges: (value: boolean) => void;
     // State getters
     activeCharacterId: string;
     isAddingNew: boolean;
@@ -53,6 +56,8 @@ export const createHandlers = (ctx: HandlersContext) => {
         setNpcCostPoints,
         setNpcCostModalOpen,
         setIsLoadingNpcCost,
+        setPendingImages,
+        setHasUnsavedChanges,
         activeCharacterId,
         isAddingNew,
         newCharacterData,
@@ -93,6 +98,58 @@ export const createHandlers = (ctx: HandlersContext) => {
                 return { ...char, variations: [...char.variations, newVar] };
             }
         }));
+    };
+
+    /**
+     * 设置暂存图片（用于 AI 生成结果）
+     * 同时更新 characterData 触发 UI 重新渲染
+     */
+    const setPendingImageFromUrl = (
+        characterId: string,
+        imageUrl: string,
+        variant: string
+    ) => {
+        // 同时更新 characterData，触发 UI 重新渲染
+        setCharacterData(prev => prev.map(char => {
+            if (char.id !== characterId) return char;
+
+            // base 图片更新 portrait
+            if (variant === 'base') {
+                return { ...char, portrait: imageUrl };
+            }
+
+            // 差分图片更新 variations
+            const varIndex = char.variations.findIndex(v => v.label === variant);
+            if (varIndex >= 0) {
+                const newVariations = [...char.variations];
+                newVariations[varIndex] = { ...newVariations[varIndex], img: imageUrl };
+                return { ...char, variations: newVariations };
+            } else {
+                // 如果找不到差分，先添加一个占位差分
+                const newVar: Variation = {
+                    id: `v-${Date.now()}`,
+                    label: variant,
+                    img: imageUrl,
+                    type: variant,
+                };
+                return { ...char, variations: [...char.variations, newVar] };
+            }
+        }));
+
+        // 更新暂存图片（用于确认/取消时恢复原值）
+        setPendingImages(prev => ({
+            ...prev,
+            [characterId]: {
+                ...(prev[characterId] || {}),
+                [variant]: {
+                    previewUrl: imageUrl,
+                    sourceType: 'generate',
+                    variant,
+                }
+            }
+        }));
+        // 标记有未保存修改
+        setHasUnsavedChanges(true);
     };
 
     // 刷新用户积分，确保弹窗/扣除后与后端一致
@@ -525,7 +582,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 重新生成NPC图片
+    // 重新生成NPC图片（改为暂存模式，图片需确认后才保存）
     const regenerateNpcImage = async (npc: Character) => {
         if (!fileId || !npc) {
             return;
@@ -535,19 +592,18 @@ export const createHandlers = (ctx: HandlersContext) => {
             setGeneratingCharacterId(npc.id);
             const response = await api.generateNpcImage(fileId, npc.id);
             if (response.data?.success) {
-                toast.success('NPC图片重新生成成功');
-                
-                // 使用后端返回的数据更新本地状态
-                // 首先尝试提取 base 图片数据
+                toast.success('NPC图片生成成功，请在确认修改后保存');
+
+                // 提取生成的图片 URL 并存为暂存
                 const imageData = parseResponse.extractNpcImage(response.data, mode, 'base');
                 if (imageData?.imagePath) {
-                    const imageUrl = imageData.imagePath; // 原始路径
-                    updateCharacterImage(npc.id, imageUrl, 'base');
-                    // 手动刷新缓存，强制浏览器重新加载图片
-                    bumpCacheBust(imageUrl);
+                    // 使用暂存图片模式，不直接更新 characterData
+                    setPendingImageFromUrl(npc.id, imageData.imagePath, 'base');
+                    // 手动刷新缓存
+                    bumpCacheBust(imageData.imagePath);
                 } else {
-                    // 如果无法直接提取图片数据，尝试从响应中获取完整的NPC数据
-                    updateCharacterFromResponse(response.data, npc.id);
+                    // 如果无法提取图片数据，提示用户
+                    toast.error('生成成功但无法获取图片，请稍后重试');
                 }
             } else {
                 toast.error('当前使用人数过多，请稍后再试');
@@ -560,7 +616,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 重新生成玩家图片
+    // 重新生成玩家图片（改为暂存模式）
     const regeneratePlayerImage = async (playerChar: Character) => {
         if (!fileId || !playerChar) return;
         try {
@@ -568,22 +624,16 @@ export const createHandlers = (ctx: HandlersContext) => {
             setGeneratingCharacterId(playerChar.id);
             const response = await api.generatePlayerImage(fileId);
             if (response.data?.success) {
-                toast.success('主角图片重新生成成功');
+                toast.success('主角图片生成成功，请在确认修改后保存');
                 const { image: newImageUrl } = parseResponse.extractPlayerImage(response.data, mode);
 
                 if (newImageUrl) {
-                    setCharacterData(prev => prev.map(char =>
-                        char.id === 'player'
-                            ? { ...char, portrait: newImageUrl } // 存原始路径
-                            : char
-                    ));
-                    // 手动刷新缓存，强制浏览器重新加载图片
+                    // 使用暂存图片模式
+                    setPendingImageFromUrl('player', newImageUrl, 'base');
+                    // 手动刷新缓存
                     bumpCacheBust(newImageUrl);
                 } else {
-                    // 如果无法提取图片数据，触发数据刷新以获取最新数据
-                    if (onDataChange) {
-                        onDataChange();
-                    }
+                    toast.error('生成成功但无法获取图片，请稍后重试');
                 }
             } else {
                 toast.error('当前使用人数过多，请稍后再试');
@@ -596,7 +646,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 重新生成差分图片
+    // 重新生成差分图片（改为暂存模式）
     const regenerateVariationImage = async (variation: Variation, currentCharacter: Character | null) => {
         if (!fileId || !variation || !currentCharacter) {
             toast.error('缺少必要数据，无法生成');
@@ -607,13 +657,8 @@ export const createHandlers = (ctx: HandlersContext) => {
             toast.error('请先上传角色基础立绘');
             return;
         }
-        
-        // 保存原始 variation 信息，用于更新时匹配
-        const originalVariationId = variation.id;
-        const originalVariationLabel = variation.label;
-        
+
         try {
-            // 清理 portrait URL 中的 cb 参数，确保传递给后端的是干净的 URL
             const variantRequest = {
                 type: (variation.type || 'expression') as 'expression' | 'clothing' | 'pose',
                 value: variation.label,
@@ -626,83 +671,25 @@ export const createHandlers = (ctx: HandlersContext) => {
             );
 
             if (response.data?.success) {
-                toast.success('差分图片生成成功');
-                
-                // 使用后端返回的数据更新本地状态
-                // 传递期望的 type 和 value，用于从 images 对象中查找对应的键
+                toast.success('差分图片生成成功，请在确认修改后保存');
+
+                // 使用后端返回的数据设置暂存图片
                 const imageData = parseResponse.extractNpcImage(
-                    response.data, 
-                    mode, 
+                    response.data,
+                    mode,
                     variation.label,
                     variation.type || 'expression',
                     variation.label
                 );
-                
+
                 if (imageData?.imagePath) {
-                    const imageUrl = imageData.imagePath; // 只存原始路径，展示层再加前缀/时间戳
-                    
-                    // 从 variantKey（格式：type_value）中解析 type 和 value
-                    let finalType = variation.type || 'expression';
-                    let finalValue = variation.label;
-                    
-                    if (imageData.variantKey) {
-                        const parsed = parseVariantKey(imageData.variantKey);
-                        if (parsed) {
-                            finalType = parsed.type;
-                            finalValue = parsed.value;
-                        }
-                    } else if (imageData.variant && typeof imageData.variant === 'string') {
-                        // 兼容旧格式
-                        const parsed = parseVariantKey(imageData.variant);
-                        if (parsed) {
-                            finalType = parsed.type;
-                            finalValue = parsed.value;
-                        } else {
-                            finalValue = imageData.variant;
-                        }
-                    }
-                    
-                    // 使用解析出的 type 和 value 更新 variation
-                    // 通过原始 variation.id 来匹配，确保加载效果能正确消失
-                    setCharacterData(prev => prev.map(char => {
-                        if (char.id !== currentCharacter.id) return char;
-                        
-                        // 优先通过 id 查找，如果找不到再通过 label 查找
-                        const varIndexById = char.variations.findIndex(v => v.id === originalVariationId);
-                        const varIndexByLabel = varIndexById < 0 
-                            ? char.variations.findIndex(v => v.label === originalVariationLabel)
-                            : -1;
-                        const varIndex = varIndexById >= 0 ? varIndexById : varIndexByLabel;
-                        
-                        if (varIndex >= 0) {
-                            // 更新已存在的差分，保持 id 不变
-                            const newVariations = [...char.variations];
-                            newVariations[varIndex] = {
-                                ...newVariations[varIndex],
-                                img: imageUrl,
-                                label: finalValue,  // 更新 label
-                                type: finalType,    // 更新 type
-                                description: variation.description,
-                            };
-                            // 手动刷新缓存，强制浏览器重新加载图片
-                            bumpCacheBust(imageUrl);
-                            return { ...char, variations: newVariations };
-                        } else {
-                            const newVar: Variation = {
-                                id: originalVariationId, // 保持原始 id，确保加载效果能正确匹配
-                                label: finalValue,
-                                img: imageUrl,
-                                type: finalType,
-                                description: variation.description,
-                            };
-                            return { ...char, variations: [...char.variations, newVar] };
-                        }
-                    }));
+                    const imageUrl = imageData.imagePath;
+                    // 使用暂存图片模式
+                    setPendingImageFromUrl(currentCharacter.id, imageUrl, variation.label);
+                    // 手动刷新缓存
+                    bumpCacheBust(imageUrl);
                 } else {
-                    // 如果无法提取图片数据，回退到刷新整个数据
-                    if (onDataChange) {
-                        onDataChange();
-                    }
+                    toast.error('生成成功但无法获取图片，请稍后重试');
                 }
             } else {
                 toast.error('当前使用人数过多，请稍后再试');

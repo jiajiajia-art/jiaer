@@ -5,6 +5,7 @@ import EditorApi from '../../../api/galgame/EditorData';
 import styles from './WorldPanel.module.css';
 import { getImageUrl } from '../../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
+import ImageCropModal from '../../CommonModal/ImageCropModal';
 
 interface CoverUploadProps {
     fileId?: string;
@@ -19,6 +20,10 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
     const [coverError, setCoverError] = useState<string | null>(null);
     const isUploadingRef = useRef<boolean>(false); // 防止重复上传
     const previousCoverUrlRef = useRef<string | undefined>(coverUrl);
+
+    // 裁剪相关状态
+    const [showCropModal, setShowCropModal] = useState<boolean>(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
     // 当 coverUrl prop 变化时，同步更新预览（例如父组件刷新数据后）
     useEffect(() => {
@@ -50,13 +55,16 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
         previousCoverUrlRef.current = coverPreview && !coverPreview.startsWith('data:image/') 
             ? coverPreview
             : coverUrl;
+
+        // 读取图片并打开裁剪弹窗
         const reader = new FileReader();
         reader.onloadend = () => {
-            setCoverPreview(reader.result as string);
+            const dataUrl = reader.result as string;
+            setImageToCrop(dataUrl);
+            setShowCropModal(true);
         };
         reader.readAsDataURL(file);
-        uploadCover(file);
-        
+
         // 清空 input 值，允许重复选择同一文件
         event.target.value = '';
     };
@@ -107,6 +115,30 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
             isUploadingRef.current = false;
         }
     }, [fileId, onCoverUploaded]);
+
+    // 裁剪完成回调
+    const handleCropComplete = useCallback((croppedBlob: Blob) => {
+        if (croppedBlob) {
+            // 使用裁剪后的 blob 创建新文件
+            const croppedFile = new File([croppedBlob], 'cover.jpg', {
+                type: 'image/jpeg',
+            });
+            // 保存本地预览
+            const previewUrl = URL.createObjectURL(croppedBlob);
+            setCoverPreview(previewUrl);
+            // 上传裁剪后的图片
+            uploadCover(croppedFile);
+        }
+        // 清理状态
+        setShowCropModal(false);
+        setImageToCrop(null);
+    }, [uploadCover]);
+
+    // 关闭裁剪弹窗
+    const handleCloseCropModal = useCallback(() => {
+        setShowCropModal(false);
+        setImageToCrop(null);
+    }, []);
     return (
         <div className={styles.uploadCover}>
             <p className={styles.eyebrow}>Step 2</p>
@@ -124,8 +156,8 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                     <div className={styles.coverPreviewContainer}>
                         <img 
                             src={
-                                // 如果是本地预览（base64），直接使用；否则使用服务器URL（需要添加前缀和时间戳）
-                                coverPreview.startsWith('data:image/') 
+                                // 本地预览（base64 或 blob://）直接使用；否则使用服务器URL
+                                (coverPreview.startsWith('data:image/') || coverPreview.startsWith('blob:'))
                                     ? coverPreview 
                                     : addImageTimestamp(getImageUrl(coverPreview))
                             } 
@@ -153,6 +185,19 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
             </div>
             {coverError && (
                 <p className={styles.coverErrorText}>{coverError}</p>
+            )}
+
+            {/* 图片裁剪弹窗 */}
+            {imageToCrop && (
+                <ImageCropModal
+                    isOpen={showCropModal}
+                    imageSrc={imageToCrop}
+                    onClose={handleCloseCropModal}
+                    onCropComplete={handleCropComplete}
+                    aspectRatio={16 / 9}
+                    outputWidth={800}
+                    outputHeight={450}
+                />
             )}
         </div>
     );

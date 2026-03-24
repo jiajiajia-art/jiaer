@@ -540,7 +540,7 @@ const Create: React.FC = () => {
                         ) : (
                             <GameGrid
                                 games={publishedGames}
-                                primaryStat="uv"
+                                primaryStat="pv"
                                 isIncentive={stats.isIncentive}
                                 showIncentiveUI={true}
                                 onGameClick={(game) => {

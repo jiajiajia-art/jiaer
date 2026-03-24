@@ -5,7 +5,8 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
 import { RiMoneyCnyCircleLine } from "react-icons/ri";
-import { getImageUrl } from '../utils/constants';
+//import { getImageUrl } from '../utils/constants';
+import { addImageTimestamp } from '../utils/imageCache';
 
 interface GameGridProps {
     games: UserGameData[];
@@ -38,11 +39,11 @@ GameGrid: React.FC<GameGridProps> = ({
     };
 
     // 计算作品激励状态（优先使用后端字段，其次用开始/结束时间推断，最后用账号级标记兜底）
-    const getIncentiveStatus = (meta: UserGameData): 'none' | 'running' | 'finished' => {
+    const getIncentiveStatus = (meta: UserGameData): 'none' | 'incentive' | 'finished' => {
         const raw = (meta as any).incentiveStatus || (meta as any).incentive_status;
         if (raw) {
             const val = String(raw).toLowerCase();
-            if (val === 'running') return 'running';
+            if (val === 'incentive') return 'incentive';
             if (val === 'finished') return 'finished';
             return 'none';
         }
@@ -55,17 +56,17 @@ GameGrid: React.FC<GameGridProps> = ({
         const start = Date.parse(startStr);
         const end = endStr ? Date.parse(endStr) : NaN;
         if (isNaN(start)) return 'none';
-        if (now > start && (isNaN(end) || now < end)) return 'running';
+        if (now > start && (isNaN(end) || now < end)) return 'incentive';
         if (!isNaN(end) && now > end) return 'finished';
         return 'none';
     };
 
-    // 获取展示的激励金额：running 用 incentivePendingAmount/Amount，finished 用 incentiveSettledAmount
-    const getIncentiveAmount = (meta: UserGameData, status: 'none' | 'running' | 'finished'): number => {
+    // incentive 用 incentivePendingAmount/Amount，finished 用 incentiveSettledAmount
+    const getIncentiveAmount = (meta: UserGameData, status: 'none' | 'incentive' | 'finished'): number => {
         const pending = (meta as any).incentivePendingAmount ?? (meta as any).incentive_pending_amount;
         const settled = (meta as any).incentiveSettledAmount ?? (meta as any).incentive_settled_amount;
         const amount = (meta as any).incentiveAmount ?? (meta as any).incentive_amount;
-        if (status === 'running') {
+        if (status === 'incentive') {
             if (typeof pending === 'number') return pending;
             if (typeof amount === 'number') return amount;
         }
@@ -102,8 +103,7 @@ GameGrid: React.FC<GameGridProps> = ({
         <div className={styles.grid4}>
             {games.map((meta, idx) => {
                 const status = getIncentiveStatus(meta);
-                // 仅在作品具备明确的激励状态/时间时展示激励；不要因为作者参与而对全部作品生效
-                const effectiveStatus: 'none' | 'running' | 'finished' = status;
+                const effectiveStatus: 'none' | 'incentive' | 'finished' = status;
                 const showIncentive = showIncentiveUI && effectiveStatus !== 'none';
 
                 const primaryValue = showIncentive
@@ -122,7 +122,9 @@ GameGrid: React.FC<GameGridProps> = ({
                 >
                     <div className={styles.goodsImg}>
                         <img
-                            src={getImageUrl(meta.display_cover_url || meta.cover_url) || `${import.meta.env.BASE_URL}data/events/welcome.png`}
+                            src={meta.display_cover_url || meta.cover_url 
+                                ? addImageTimestamp(meta.display_cover_url || meta.cover_url)
+                                : `${import.meta.env.BASE_URL}data/events/welcome.png`}
                             alt={meta.title || `剧情${idx + 1}`}
                         />
                         {showIncentive && (
