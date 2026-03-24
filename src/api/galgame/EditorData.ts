@@ -1,5 +1,5 @@
 import type { ApiResponse } from "../api.types";
-import { api } from "../base";
+import { api, UPLOAD_TIMEOUT_MS } from "../base";
 import type { CalculatePointsResponse, GetMusicListResponse, UploadMusicResponse, UploadNpcImageResponse, UploadPlayerImageResponse, UploadSceneImageResponse } from "../worldInteraction/worldEditor.type";
 import type {
     AllGameData,
@@ -96,6 +96,7 @@ const EditorApi = {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            timeout: UPLOAD_TIMEOUT_MS,
         });
     },
     uploadPlayerImage: (fileId:string, data:{file:File, variant:string}) => {
@@ -115,6 +116,8 @@ const EditorApi = {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
+            // 上传/后端处理可能超过全局默认 10s，单独放宽超时，避免 ECONNABORTED
+            timeout: UPLOAD_TIMEOUT_MS,
         });
     },
     uploadNpcImage: (fileId:string, npcId:string, data:{file:File, variat:string}) => {

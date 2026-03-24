@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
@@ -86,8 +86,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         window.location.reload();
     }, [onClose]);
 
-    const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-    const [customAmount, setCustomAmount] = useState<string>('');
+    // 用 ref 做“同步锁”和“实时输入值”，避免 React state 异步批处理导致的偶发旧值提交
+    const inFlightRef = useRef(false);
+    const isComposingRef = useRef(false);
+    const amountInputRef = useRef<HTMLInputElement | null>(null);
+
+    // 单一真相来源：金额只由这个输入字符串决定（固定金额按钮也只是写入这个值）
+    const [amountText, setAmountText] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
     const [inputError, setInputError] = useState<string>('');
     const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -98,8 +103,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     useEffect(() => {
         if (!isOpen) {
-            setSelectedAmount(null);
-            setCustomAmount('');
+            setAmountText('');
             setIsLoading(false);
             setInputError('');
             setQrCodeUrl(null);
@@ -111,8 +115,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     }, [isOpen]);
 
     const handleFixedAmountClick = (amount: number) => {
-        setSelectedAmount(amount);
-        setCustomAmount('');
+        setAmountText(String(amount));
         setInputError('');
     };
 
@@ -143,16 +146,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         }
 
-        setCustomAmount(value);
-        setSelectedAmount(null);
+        setAmountText(value);
     };
 
     const getCurrentAmount = (): number | null => {
-        if (selectedAmount !== null) {
-            return selectedAmount;
-        }
-        if (customAmount) {
-            const amount = parseFloat(customAmount);
+        if (amountText) {
+            const amount = parseFloat(amountText);
             return !isNaN(amount) && amount >= MIN_AMOUNT ? amount : null;
         }
         return null;
@@ -187,9 +186,23 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const amount = getCurrentAmount();
+        if (inFlightRef.current) {
+            toast.error('请求处理中，请勿重复点击');
+            return;
+        }
+
+        if (isComposingRef.current) {
+            toast.error('请输入完成后再提交');
+            return;
+        }
+
+        // 金额读取：只认一个来源（输入框实时 value / amountText），避免“固定金额状态残留”导致偶发旧值
+        const raw = (amountInputRef.current?.value ?? amountText ?? '').trim();
+        const parsed = parseFloat(raw || '0');
+        const amount: number | null = !isNaN(parsed) ? parsed : null;
+
         if (!amount) {
-            if (customAmount) {
+            if (amountText) {
                 setInputError(`充值金额不能低于 ${MIN_AMOUNT} 元`);
             }
             return;
@@ -200,6 +213,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
+        inFlightRef.current = true;
         setIsLoading(true);
         try {
             if (isMiniProgramEnv()) {
@@ -244,6 +258,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setPollingError('发起支付请求失败，请稍后重试。');
         } finally {
             setIsLoading(false);
+            inFlightRef.current = false;
         }
     };
 
@@ -331,6 +346,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const currentAmount = getCurrentAmount();
     const currentPoints = currentAmount ? calculatePoints(currentAmount) : 0;
+    const selectedPresetAmount = FIXED_AMOUNTS.includes(currentAmount || NaN) ? currentAmount : null;
 
     const formContent = (
         <div className={styles.modalOverlay} onClick={closeAndReload}>
@@ -349,7 +365,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 <button
                                     key={amount}
                                     type="button"
-                                    className={`${styles.amountBtn} ${selectedAmount === amount ? styles.amountBtnActive : ''}`}
+                                    className={`${styles.amountBtn} ${selectedPresetAmount === amount ? styles.amountBtnActive : ''}`}
                                     onClick={() => handleFixedAmountClick(amount)}
                                 >
                                     <div className={styles.amountValue}>￥{amount}</div>
@@ -367,9 +383,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 type="text"
                                 className={`${styles.customInput} ${inputError ? styles.inputError : ''}`}
                                 placeholder="请输入金额"
-                                value={customAmount}
+                                value={amountText}
                                 onChange={handleCustomAmountChange}
+                                onCompositionStart={() => {
+                                    isComposingRef.current = true;
+                                }}
+                                onCompositionEnd={() => {
+                                    isComposingRef.current = false;
+                                }}
                                 maxLength={10}
+                                ref={amountInputRef}
                             />
                         </div>
                         {inputError && (

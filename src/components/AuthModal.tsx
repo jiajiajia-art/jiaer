@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import styles from './AuthModal.module.css';
 import { auth } from '../api/account/authApi';
 import { useAuthStore } from '../store/useAuthStore';
@@ -30,21 +31,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [confirmPassword, setConfirmPassword] = useState('');
     const [resetPhone, setResetPhone] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
-    
+
     // 错误状态
     const [phoneError, setPhoneError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [confirmPasswordError, setConfirmPasswordError] = useState('');
     const [resetPhoneError, setResetPhoneError] = useState('');
     const [verificationCodeError, setVerificationCodeError] = useState('');
-    
+
     // 震动状态
     const [phoneShake, setPhoneShake] = useState(false);
     const [passwordShake, setPasswordShake] = useState(false);
     const [confirmPasswordShake, setConfirmPasswordShake] = useState(false);
     const [resetPhoneShake, setResetPhoneShake] = useState(false);
     const [verificationCodeShake, setVerificationCodeShake] = useState(false);
-    
+
+    // 密码是否可见状态
+    const [passwordVisible, setPasswordVisible] = useState(false);
+    const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+
     const [isLoading, setIsLoading] = useState(false);
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [countdown, setCountdown] = useState(0);
@@ -101,6 +106,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         setResetPhoneShake(false);
         setVerificationCodeShake(false);
         setSubmitError('');
+        setPasswordVisible(false);
+        setConfirmPasswordVisible(false);
         setCountdown(0);
         if (countdownTimerRef.current) {
             clearInterval(countdownTimerRef.current);
@@ -132,7 +139,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         const value = e.target.value;
         setPassword(value);
         if (passwordError) clearFieldError(setPasswordError, setPasswordShake);
-        
+
         // 如果确认密码已填写，重新验证
         if (confirmPassword && (mode === 'register' || mode === 'reset')) {
             if (value !== confirmPassword) {
@@ -147,7 +154,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         const value = e.target.value;
         setConfirmPassword(value);
         if (confirmPasswordError) clearFieldError(setConfirmPasswordError, setConfirmPasswordShake);
-        
+
         if (value && password) {
             if (value !== password) {
                 setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '两次输入的密码不一致');
@@ -285,7 +292,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     // ========== 表单提交 ==========
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             console.log('[Auth] 表单验证失败，停止提交');
             return;
@@ -298,7 +305,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     phoneNumber: phone,
                     password: password,
                 });
-                
+
                 if (response.data?.data) {
                     login(response.data.data);
                     if (onLogin) {
@@ -316,14 +323,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     avatarUrl: '',
                     nickname: '',
                 });
-                
+
                 if (response.data?.data) {
                     setMode('login');
                     setPassword('');
                     setConfirmPassword('');
                     resetErrors();
                     setSubmitError('注册成功！请登录');
-                    
+
                     if (onRegister) {
                         onRegister(phone, password);
                     }
@@ -337,7 +344,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     newPassword: password,
                     confirmNewPassword: password,
                 });
-                
+
                 if (response.data?.data || response.data?.success) {
                     setSubmitError('密码重置成功！请登录');
                     resetAllStates();
@@ -366,6 +373,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
             setMode('login');
         }
         resetErrors();
+        setPasswordVisible(false);
+        setConfirmPasswordVisible(false);
         if (mode === 'register' || mode === 'reset') {
             setConfirmPassword('');
             setResetPhone('');
@@ -376,6 +385,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const handleForgetPassword = () => {
         setMode('reset');
         resetErrors();
+        setPasswordVisible(false);
+        setConfirmPasswordVisible(false);
         setPhone('');
         setPassword('');
         setConfirmPassword('');
@@ -415,7 +426,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 <button type="button" className={styles.closeBtn} onClick={handleClose}>
                     ×
                 </button>
-                
+
                 <h2 className={styles.title}>{getTitle()}</h2>
 
                 <form className={styles.form} onSubmit={handleSubmit}>
@@ -484,13 +495,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     {/* 密码输入（登录/注册） */}
                     {mode !== 'reset' && (
                         <div className={styles.inputGroup}>
-                            <input
-                                type="password"
-                                className={`${styles.input} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
-                                placeholder="请输入密码"
-                                value={password}
-                                onChange={handlePasswordChange}
-                            />
+                            <div className={styles.passwordInputWrapper}>
+                                <input
+                                    type={passwordVisible ? 'text' : 'password'}
+                                    className={`${styles.input} ${styles.inputWithToggle} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
+                                    placeholder="请输入密码"
+                                    value={password}
+                                    onChange={handlePasswordChange}
+                                />
+                                <button
+                                    type="button"
+                                    className={styles.togglePasswordBtn}
+                                    onClick={() => setPasswordVisible((v) => !v)}
+                                    aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
+                                >
+                                    {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
+                                </button>
+                            </div>
                             {passwordError && (
                                 <div className={styles.errorMessage}>{passwordError}</div>
                             )}
@@ -505,13 +526,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     {/* 确认密码输入（注册） */}
                     {mode === 'register' && (
                         <div className={styles.inputGroup}>
-                            <input
-                                type="password"
-                                className={`${styles.input} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
-                                placeholder="请再次输入密码"
-                                value={confirmPassword}
-                                onChange={handleConfirmPasswordChange}
-                            />
+                            <div className={styles.passwordInputWrapper}>
+                                <input
+                                    type={confirmPasswordVisible ? 'text' : 'password'}
+                                    className={`${styles.input} ${styles.inputWithToggle} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
+                                    placeholder="请再次输入密码"
+                                    value={confirmPassword}
+                                    onChange={handleConfirmPasswordChange}
+                                />
+                                <button
+                                    type="button"
+                                    className={styles.togglePasswordBtn}
+                                    onClick={() => setConfirmPasswordVisible((v) => !v)}
+                                    aria-label={confirmPasswordVisible ? '隐藏密码' : '显示密码'}
+                                >
+                                    {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
+                                </button>
+                            </div>
                             {confirmPasswordError && (
                                 <div className={styles.errorMessage}>{confirmPasswordError}</div>
                             )}
@@ -522,25 +553,45 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     {mode === 'reset' && (
                         <>
                             <div className={styles.inputGroup}>
-                                <input
-                                    type="password"
-                                    className={`${styles.input} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
-                                    placeholder="请输入新密码"
-                                    value={password}
-                                    onChange={handlePasswordChange}
-                                />
+                                <div className={styles.passwordInputWrapper}>
+                                    <input
+                                        type={passwordVisible ? 'text' : 'password'}
+                                        className={`${styles.input} ${styles.inputWithToggle} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
+                                        placeholder="请输入新密码"
+                                        value={password}
+                                        onChange={handlePasswordChange}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.togglePasswordBtn}
+                                        onClick={() => setPasswordVisible((v) => !v)}
+                                        aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
+                                    >
+                                        {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
+                                    </button>
+                                </div>
                                 {passwordError && (
                                     <div className={styles.errorMessage}>{passwordError}</div>
                                 )}
                             </div>
                             <div className={styles.inputGroup}>
-                                <input
-                                    type="password"
-                                    className={`${styles.input} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
-                                    placeholder="请再次输入新密码"
-                                    value={confirmPassword}
-                                    onChange={handleConfirmPasswordChange}
-                                />
+                                <div className={styles.passwordInputWrapper}>
+                                    <input
+                                        type={confirmPasswordVisible ? 'text' : 'password'}
+                                        className={`${styles.input} ${styles.inputWithToggle} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
+                                        placeholder="请再次输入新密码"
+                                        value={confirmPassword}
+                                        onChange={handleConfirmPasswordChange}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.togglePasswordBtn}
+                                        onClick={() => setConfirmPasswordVisible((v) => !v)}
+                                        aria-label={confirmPasswordVisible ? '隐藏密码' : '显示密码'}
+                                    >
+                                        {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
+                                    </button>
+                                </div>
                                 {confirmPasswordError && (
                                     <div className={styles.errorMessage}>{confirmPasswordError}</div>
                                 )}
@@ -550,10 +601,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
                     {/* 提交错误信息 */}
                     {submitError && (
-                        <div 
-                            className={styles.errorMessage} 
-                            style={{ 
-                                textAlign: 'center', 
+                        <div
+                            className={styles.errorMessage}
+                            style={{
+                                textAlign: 'center',
                                 marginTop: '0px',
                                 color: submitError.includes('成功') ? '#28a745' : '#DC3545'
                             }}
@@ -561,10 +612,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                             {submitError}
                         </div>
                     )}
-                    
+
                     {/* 提交按钮 */}
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         className={styles.submitBtn}
                         disabled={isLoading}
                     >

@@ -1,5 +1,5 @@
 import type { ApiResponse } from "../api.types";
-import { api } from "../base";
+import { api, UPLOAD_TIMEOUT_MS } from "../base";
 import type {
   CheckUploadStatusResponse,
   GenerateImgeResponse,
@@ -151,6 +151,7 @@ const worldEditor = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: UPLOAD_TIMEOUT_MS,
       }
     );
   },
@@ -164,6 +165,7 @@ const worldEditor = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: UPLOAD_TIMEOUT_MS,
       }
     );
   },

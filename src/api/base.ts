@@ -6,6 +6,9 @@ import { HOST_ADDRESS } from '../config';
 
 const BASE_URL = HOST_ADDRESS + '/api';
 
+// 更宽松的超时
+export const UPLOAD_TIMEOUT_MS = 20000;
+
 export interface ApiConfig {
   baseURL?: string;
   timeout?: number;

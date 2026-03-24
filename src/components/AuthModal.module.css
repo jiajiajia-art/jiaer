@@ -231,6 +231,52 @@
     margin-bottom: -4px;
 }
 
+/* Custom password visibility toggle */
+.passwordInputWrapper {
+    position: relative;
+    width: 100%;
+}
+
+.inputWithToggle {
+    padding-right: 46px;
+}
+
+
+.inputWithToggle::-ms-reveal {
+    display: none;
+}
+
+.inputWithToggle::-ms-clear {
+    display: none;
+}
+
+.togglePasswordBtn {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.togglePasswordBtn:hover {
+    color: #FB4655;
+}
+
+.togglePasswordBtn:focus-visible {
+    outline: 2px solid rgba(251, 70, 85, 0.35);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
 /* 验证码输入框容器 */
 .codeInputWrapper {
     display: flex;
