@@ -6,7 +6,19 @@ import { useGameStore } from '../../store/gameStore';
 import { useUploadStore } from '../../store/uploadStore';
 import { useEditorStore } from '../../store/editorStore';
 
-type JobStage = 'uploaded' | 'parsing' | 'generating' | 'validating' | 'writing' | 'done';
+type JobStage =
+    | 'uploaded'
+    | 'parsing'
+    | 'generating'
+    | 'validating'
+    | 'writing'
+    | 'done'
+    | 'generating_world'
+    | 'generating_npcs'
+    | 'generating_scenes'
+    | 'generating_functional_npcs'
+    | 'generating_attributes'
+    | string;
 
 interface JobStatusResponseRunning {
     success?: boolean;
@@ -40,6 +52,28 @@ interface UseFileUploadReturn {
     handleFileUpload: (file: File) => Promise<boolean>;
     handleGenerateFromIdea: (idea: string) => Promise<boolean>;
 }
+
+/**
+ * 功能注释：提取后端错误信息（优先使用后端返回的 error/message，避免前端吞错）
+ */
+const getBackendErrorMessage = (error: unknown, fallback = '上传失败，请重试'): string => {
+    const anyError = error as {
+        message?: string;
+        response?: {
+            data?: {
+                error?: string;
+                message?: string;
+            };
+        };
+    };
+
+    return (
+        anyError?.response?.data?.error ||
+        anyError?.response?.data?.message ||
+        anyError?.message ||
+        fallback
+    );
+};
 
 export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions): UseFileUploadReturn => {
     const { setFileId, setIsPreset } = useGameStore();
@@ -152,12 +186,13 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 }
                 
             } catch (error) {
+                const errMsg = getBackendErrorMessage(error, '轮询状态失败，请重试');
                 console.error('Error polling upload status:', error);
                 updateJob(jobId, {
                     status: 'failed',
-                    error: error instanceof Error ? error.message : '轮询状态失败',
+                    error: errMsg,
                 });
-                toast.error('轮询状态失败，请重试');
+                toast.error(errMsg);
                 setTimeout(() => {
                     removeJob(jobId);
                 }, 3000);
@@ -170,13 +205,27 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
     const handleFileUpload = useCallback(async (file: File): Promise<boolean> => {
         const uploadStartTime = Date.now(); // 记录上传开始时间
         try {
+            // 功能注释：记录上传入口信息，便于前后端联调时快速定位文件与模式
+            console.log('[useFileUpload] Upload started:', {
+                mode: mode || 'visual',
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+            });
+
             let uploadResponse;
-            
+             
             if (mode === 'worldInteraction') {
                 uploadResponse = await worldEditor.uploadWorldFile(file);
             } else {
                 uploadResponse = await EditorApi.uploadGameFile(file);
             }
+
+            console.log('[useFileUpload] Upload request finished:', {
+                status: uploadResponse.status,
+                mode: mode || 'visual',
+                fileName: file.name,
+            });
             
             // 容错：若后端临时返回 200 + fileId，也尝试兼容
             if (uploadResponse.status === 200) {
@@ -204,9 +253,14 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 toast.error('上传失败，请重试');
                 return false;
             }
-            
+             
             const { jobId, fileId: initialFileId } = accepted;
-            
+            console.log('[useFileUpload] Upload accepted:', {
+                jobId,
+                initialFileId: initialFileId || null,
+                mode: mode || 'visual',
+            });
+             
             if (initialFileId) {
                 updateJob(jobId, {
                     fileId: initialFileId,
@@ -214,13 +268,34 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
             }
             
             startPollingUploadStatus(jobId, file.name, mode || 'visual', uploadStartTime);
-            
+             
             return true;
         } catch (error) {
-            console.error('Error uploading file:', error);
+            const errorMessage = getBackendErrorMessage(error, '上传失败，请重试');
+            console.error('[useFileUpload] Upload failed:', {
+                mode: mode || 'visual',
+                fileName: file.name,
+                error: errorMessage,
+                raw: error,
+            });
+
+            // 功能注释：请求阶段失败时补一条失败任务，确保 UI 能展示后端原始错误文本
+            const failedJobId = `upload-failed-${Date.now()}`;
+            addJob(failedJobId, file.name, uploadStartTime);
+            updateJob(failedJobId, {
+                status: 'failed',
+                progress: 0,
+                stage: '上传失败',
+                error: errorMessage,
+            });
+            setTimeout(() => {
+                removeJob(failedJobId);
+            }, 8000);
+
+            toast.error(errorMessage);
             return false;
         }
-    }, [mode, setFileId, setIsParsed, setIsPreset, updateJob, startPollingUploadStatus]);
+    }, [mode, setFileId, setIsParsed, setIsPreset, addJob, updateJob, removeJob, startPollingUploadStatus]);
 
     const handleGenerateFromIdea = useCallback(async (idea: string): Promise<boolean> => {
         if (mode === 'worldInteraction') {

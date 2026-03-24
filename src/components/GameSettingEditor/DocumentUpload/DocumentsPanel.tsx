@@ -43,6 +43,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            // 功能注释：记录前端上传入口状态，便于定位“选择文件后无响应”问题
+            console.log('[DocumentsPanel] File selected:', {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+            });
             setUploadedFile(file);
             setFailedJobSnapshot(null);
             onParsingStart();
@@ -75,6 +81,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         
         const file = e.dataTransfer.files?.[0];
         if (file) {
+            // 功能注释：拖拽上传路径日志，便于区分点击上传与拖拽上传行为
+            console.log('[DocumentsPanel] File dropped:', {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+            });
             // 验证文件类型
             const validTypes = ['.pdf', '.docx'];
             const fileName = file.name.toLowerCase();
@@ -208,7 +220,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     <p className={styles.eyebrow}>Step 1</p>
                     <h2>上传设定文档 · 自动解析</h2>
                     <p className={styles.subtitle}>
-                        一键上传 Word（.docx），系统自动拆解世界观、角色与剧情节点
+                        一键上传 PDF / Word（.pdf / .docx），系统自动拆解世界观、角色与剧情节点
                     </p>
                 </div>
                 {onCreateEmptyGame && (
@@ -248,7 +260,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 <div className={styles.card}>
                     <h3>文档导入</h3>
                     <p className={styles.muted}>
-                        支持 Word（.docx），解析完成后将自动跳转到「世界观表单」
+                        支持 PDF / Word（.pdf / .docx），解析完成后将自动跳转到「世界观表单」
                     </p>
 
                     {!uploadedFile ? (
