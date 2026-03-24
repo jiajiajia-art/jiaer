@@ -40,9 +40,15 @@ export interface UserGameData {
     incentiveStatus?: 'none' | 'running' | 'finished' | string;
     /** 作品当前激励金额（服务端计算），缺失时前端可按 UV×5 做兜底展示 */
     incentiveAmount?: number;
+    /** 作品激励中-待结算金额 */
+    incentivePendingAmount?: number;
+    /** 作品激励已结算金额（激励结束后的最终值） */
+    incentiveSettledAmount?: number;
     /** 兼容服务端可能的下划线命名 */
     incentive_status?: 'none' | 'running' | 'finished' | string;
     incentive_amount?: number;
+    incentive_pending_amount?: number;
+    incentive_settled_amount?: number;
 }
 
 export interface UserGameResponse {

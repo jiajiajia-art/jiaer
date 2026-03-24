@@ -60,12 +60,20 @@ GameGrid: React.FC<GameGridProps> = ({
         return 'none';
     };
 
-    // 获取展示的激励金额，优先后端给的金额，缺省时用 UV×5 做兜底
-    const getIncentiveAmount = (meta: UserGameData): number => {
+    // 获取展示的激励金额：running 用 incentivePendingAmount/Amount，finished 用 incentiveSettledAmount
+    const getIncentiveAmount = (meta: UserGameData, status: 'none' | 'running' | 'finished'): number => {
+        const pending = (meta as any).incentivePendingAmount ?? (meta as any).incentive_pending_amount;
+        const settled = (meta as any).incentiveSettledAmount ?? (meta as any).incentive_settled_amount;
         const amount = (meta as any).incentiveAmount ?? (meta as any).incentive_amount;
-        if (typeof amount === 'number') return amount;
-        const uv = meta.total_uv_count ?? 0;
-        return uv * 5;
+        if (status === 'running') {
+            if (typeof pending === 'number') return pending;
+            if (typeof amount === 'number') return amount;
+        }
+        if (status === 'finished') {
+            if (typeof settled === 'number') return settled;
+            if (typeof amount === 'number') return amount;
+        }
+        return typeof amount === 'number' ? amount : (meta.total_uv_count ?? 0) * 5;
     };
 
     const handleGameClick = (game: UserGameData) => {
@@ -99,7 +107,7 @@ GameGrid: React.FC<GameGridProps> = ({
                 const showIncentive = showIncentiveUI && effectiveStatus !== 'none';
 
                 const primaryValue = showIncentive
-                    ? getIncentiveAmount(meta)
+                    ? getIncentiveAmount(meta, effectiveStatus)
                     : (primaryStat === 'uv' ? (meta.total_uv_count ?? 0) : (meta.total_pv_count ?? 0));
 
                 const PrimaryIcon = showIncentive

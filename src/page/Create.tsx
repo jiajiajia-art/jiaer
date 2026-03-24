@@ -36,8 +36,8 @@ const Create: React.FC = () => {
         totalCreated: 0,
         totalViews: 0,
         totalClicks: 0,
-        totalAmount: 0,
-        totalSettleAmount: 0,
+        totalAmount: 0, // 积分奖励总收益
+        totalIncentiveAmount: 0, // 激励总收益（结算总收益-激励）
         pendingIncome: 0,
         isIncentive: false,
     });
@@ -104,7 +104,7 @@ const Create: React.FC = () => {
                     totalViews: response.data.data.pv ?? 0,
                     totalClicks: response.data.data.uv ?? 0,
                     totalAmount: response.data.data.totalAmount ?? 0,
-                    totalSettleAmount: (response.data.data.uv ?? 0) * 5 || 0,
+                    totalIncentiveAmount: response.data.data.totalIncentiveAmount ?? 0,
                     pendingIncome: response.data.data.pendingIncome ?? 0,
                     isIncentive: response.data.data.isIncentive ?? false,
                 });
@@ -458,7 +458,7 @@ const Create: React.FC = () => {
                                 <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                        <span>积分总收益</span>
+                                        <span>待结算奖励积分</span>
                                     </div>
                                     {stats.totalAmount > 0 && (
                                         <button
@@ -486,10 +486,10 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>结算总收益</span>
+                                            <span>结算总收益（激励）</span>
                                         </div>
                                     </div>
-                                    <div className={styles.statValue}>{stats.totalSettleAmount}</div>
+                                    <div className={styles.statValue}>{stats.totalIncentiveAmount}</div>
                                 </div>
                             )}
                             {stats.isIncentive && (
@@ -497,7 +497,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>待结算收益</span>
+                                            <span>待结算激励收益</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.pendingIncome}</div>
