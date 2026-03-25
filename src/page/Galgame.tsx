@@ -27,6 +27,10 @@ import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
 import replayApi from "../api/galgame/replay";
 import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
+import SaveModal from "../components/Galgame/SaveModal";
+import LoadSaveListModal from "../components/CreateGame/LoadSaveListModal";
+import SavePreviewModal from "../components/CreateGame/SavePreviewModal";
+import { savesApi, type SaveSummaryItem } from "../api/galgame/saves";
 import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
@@ -39,6 +43,9 @@ const Galgame = () => {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isAttributesOpen, setIsAttributesOpen] = useState(false);
+    const [isSaveOpen, setIsSaveOpen] = useState(false);
+    const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
+    const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
     useGameDurationTracking(fileId || undefined);
@@ -302,6 +309,19 @@ const Galgame = () => {
                                 <span>{user?.user?.points}</span>
                             </div>
                         </div>
+                        {/* 存档按钮（仅非回放模式显示） */}
+                        {!controller.isReplay && (
+                            <div
+                                className={styles.buttonItem}
+                                onClick={() => setIsSaveOpen(true)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className={styles.buttonInner}>
+                                    <MdOutlineAssessment />
+                                    <span>存档</span>
+                                </div>
+                            </div>
+                        )}
                         {!controller.isReplay && (
                             <div
                                 className={`${styles.buttonItem} ${controller.showGalgameHistory ? styles.buttonItemActive : ''}`}
@@ -391,6 +411,46 @@ const Galgame = () => {
                             onClose={() => setIsAttributesOpen(false)}
                         />
                     ) : null}
+
+                    {/* 存档弹窗 */}
+                    <SaveModal
+                        isOpen={isSaveOpen}
+                        onClose={() => setIsSaveOpen(false)}
+                        sessionId={sessionId}
+                        fileId={fileId}
+                    />
+
+                    {/* 读取存档（游戏内也复用同一列表界面，并允许“空位新建”） */}
+                    <LoadSaveListModal
+                      isOpen={isLoadSaveOpen}
+                      onClose={() => setIsLoadSaveOpen(false)}
+                      fileId={fileId}
+                      onPreview={async (item) => {
+                        try {
+                          if (!fileId) return setPreviewItem(item);
+                          const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
+                          const detail = resp.data;
+                          setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
+                        } catch (e) {
+                          setPreviewItem(item);
+                        }
+                      }}
+                      allowCreateSlot={true}
+                      onCreateSlotClick={() => {
+                        // 仅游戏内允许新建存档：关闭列表，打开保存弹窗
+                        setIsLoadSaveOpen(false);
+                        setIsSaveOpen(true);
+                      }}
+                    />
+                    <SavePreviewModal
+                      isOpen={!!previewItem}
+                      onClose={() => setPreviewItem(null)}
+                      item={previewItem}
+                      onLoad={() => {
+                        // 游戏内“从存档开始”通常用于从详情页；在游戏内这里仅做预览关闭
+                        setPreviewItem(null);
+                      }}
+                    />
 
                     {/* 请求超时弹窗 */}
                     {renderErrorModal(

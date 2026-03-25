@@ -13,6 +13,9 @@ import createWorldSessionApi from '../../api/worldInteraction/createWorldSession
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp } from '../../utils/imageCache';
 import MobileTipModal from './MobileTipModal';
+import LoadSaveListModal from './LoadSaveListModal';
+import SavePreviewModal from './SavePreviewModal';
+import type { SaveSummaryItem } from '../../api/galgame/saves';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -39,6 +42,8 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const [isLoading, setIsLoading] = useState(false);
     const [gameStats, setGameStats] = useState<GameStatsResponse>();
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
+    const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
+    const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
 
     /**
      * 创建会话（按引擎类型分发）。
@@ -145,6 +150,40 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         }
     };
 
+    // 读取存档：打开列表
+    const handleOpenLoadSave = () => {
+        setIsLoadSaveOpen(true);
+    };
+
+    // 读取存档：选择一项后预览
+    const handlePreview = (item: SaveSummaryItem) => {
+        setPreviewItem(item);
+    };
+
+    // 从存档开始游戏
+    const handleLoadSave = async (saveId: string) => {
+        try {
+            const fileId = gameDetail?.file_id || gameDetail?.id;
+            if (!fileId) return;
+            setIsLoading(true);
+            const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
+            if (resp.data.success) {
+                const sessionId = resp.data.data.session;
+                setSessionId(sessionId);
+                navigate('/galgame');
+                return;
+            }
+            alert(resp.data.message || '加载存档失败');
+        } catch (e) {
+            console.error('加载存档失败:', e);
+            alert('加载存档失败，请稍后重试');
+        } finally {
+            setIsLoading(false);
+            setIsLoadSaveOpen(false);
+            setPreviewItem(null);
+        }
+    };
+
     const getGameStats = async () => {
         const response = await GameAction.getGameStats(gameDetail.file_id);
         if (response.data.success) {
@@ -180,6 +219,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 disabled={isLoading}
                             >
                                 {isLoading ? '加载中...' : '开始游戏'}
+                            </button>
+
+                            <button
+                                className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
+                                onClick={handleOpenLoadSave}
+                                disabled={isLoading}
+                            >
+                                读取存档
                             </button>
 
                             {
@@ -283,6 +330,20 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 isOpen={isMobileTipModalOpen}
                 onClose={() => setIsMobileTipModalOpen(false)}
                 message="编辑功能暂不支持移动端，请在电脑上访问以获得更好的体验"
+            />
+
+            {/* 读取存档 → 列表 → 预览 → 加载 */}
+            <LoadSaveListModal
+                isOpen={isLoadSaveOpen}
+                onClose={() => setIsLoadSaveOpen(false)}
+                fileId={gameDetail?.file_id || gameDetail?.id || null}
+                onPreview={handlePreview}
+            />
+            <SavePreviewModal
+                isOpen={!!previewItem}
+                onClose={() => setPreviewItem(null)}
+                item={previewItem}
+                onLoad={handleLoadSave}
             />
         </div>
     );

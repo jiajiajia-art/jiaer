@@ -356,8 +356,8 @@
 }
 
 .bottomActionRow {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
 }
 
@@ -396,8 +396,7 @@
 
 .bottomActionRow .startButton,
 .bottomActionRow .purchaseButton {
-    flex: 1;
-    width: auto;
+    width: 100%;
 }
 
 .priceTopRow {

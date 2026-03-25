@@ -17,6 +17,9 @@ import { getImageUrl } from '../utils/constants';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
 import { IoChevronBack } from 'react-icons/io5';
 import AuthModal from '../components/AuthModal';
+import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
+import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
+import type { SaveSummaryItem } from '../api/galgame/saves';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
 
@@ -61,6 +64,8 @@ const GameDetail: React.FC = () => {
     const [likeCount, setLikeCount] = useState(0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
+    const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
+    const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -437,6 +442,50 @@ const GameDetail: React.FC = () => {
         }
     };
 
+    // ===== 存档读取（列表 → 预览 → 加载） =====
+    const handleOpenLoadSave = () => {
+        if (!checkAuth()) return;
+        setIsLoadSaveOpen(true);
+    };
+
+    const handlePreviewSave = async (item: SaveSummaryItem) => {
+        // 加载详情并展示在 TEXT 区域
+        try {
+            if (!fileId) return;
+            const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
+            const detail = resp.data;
+            setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
+        } catch (e) {
+            console.error('获取存档详情失败:', e);
+            toast.error('获取存档详情失败');
+            // 兜底显示列表项内容
+            setPreviewItem(item);
+        }
+    };
+
+    const handleLoadSave = async (saveId: string) => {
+        try {
+            if (!fileId) return;
+            setIsLoading(true);
+            // 复用可选 saveId 的 /visual/session/create
+            const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
+            if (resp.data.success) {
+                const sessionId = resp.data.data.session;
+                setSessionId(sessionId);
+                navigate('/galgame');
+                return;
+            }
+            toast.error(resp.data.message || '加载存档失败');
+        } catch (e) {
+            console.error('加载存档失败:', e);
+            toast.error('加载存档失败，请稍后重试');
+        } finally {
+            setIsLoading(false);
+            setIsLoadSaveOpen(false);
+            setPreviewItem(null);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className={styles.fullscreenOverlay}>
@@ -540,25 +589,46 @@ const GameDetail: React.FC = () => {
                 </div>
             </div>
 
-            {/* 底部悬浮按钮栏 */}
+            {/* 底部悬浮按钮栏（横向排列：开始体验 + 读取存档） */}
             <div className={styles.floatingActionBar}>
                 <div className={styles.floatingActionInner}>
-                    <div className={styles.actionSection} />
-                    <button
-                        className={styles.startButton}
-                        onClick={handleStartGame}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <div className={styles.loading}>
-                                <span className={styles.loadingDot}></span>
-                                <span className={styles.loadingDot}></span>
-                                <span className={styles.loadingDot}></span>
-                            </div>
-                        ) : (
-                            '开始体验'
-                        )}
-                    </button>
+                    <div className={styles.bottomActionRow}>
+                        <button
+                            className={styles.startButton}
+                            onClick={handleStartGame}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <div className={styles.loading}>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                    <span className={styles.loadingDot}></span>
+                                </div>
+                            ) : (
+                                '开始体验'
+                            )}
+                        </button>
+                        {(() => {
+                            const mapServerEngine = (engine?: string) => {
+                                switch ((engine || '').toUpperCase()) {
+                                    case 'CUSTOM': return 'customif' as const;
+                                    default: return undefined;
+                                }
+                            };
+                            const normalized = mapServerEngine(game?.engine) || game?.game_tags;
+                            const isGalgame = normalized === 'TXT';
+                            if (!isGalgame) return null;
+                            return (
+                                <button
+                                    className={styles.startButton}
+                                    onClick={handleOpenLoadSave}
+                                    disabled={isLoading}
+                                >
+                                    读取存档
+                                </button>
+                            );
+                        })()}
+                    </div>
                 </div>
             </div>
 
@@ -582,6 +652,22 @@ const GameDetail: React.FC = () => {
                     onClose={() => setIsAuthModalOpen(false)}
                 />
             )}
+
+            {/* 存档读取弹窗链：列表 → 预览 → 加载 */}
+            <LoadSaveListModal
+                isOpen={isLoadSaveOpen}
+                onClose={() => setIsLoadSaveOpen(false)}
+                fileId={fileId || null}
+                onPreview={handlePreviewSave}
+                allowCreateSlot={false}
+            />
+            <SavePreviewModal
+                isOpen={!!previewItem}
+                onClose={() => setPreviewItem(null)}
+                item={previewItem}
+                onLoad={handleLoadSave}
+                loadButtonText={'开始体验'}
+            />
         </div>
     );
 };
