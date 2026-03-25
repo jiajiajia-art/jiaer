@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './Home.module.css';
 import Navbar from '../components/Layout/Navbar';
 import GameGrid from '../components/GameGrid';
@@ -13,6 +14,9 @@ import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
 
 const Home: React.FC = () => {
+    const navigate = useNavigate();
+    const SWIPE_THRESHOLD = 40;
+    const SWIPE_CLICK_SUPPRESS_MS = 250;
     //const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
     const [,setFileMetas] = useState<UserGameData[]>([]);
     const [allGames, setAllGames] = useState<UserGameData[]>([]);
@@ -25,7 +29,8 @@ const Home: React.FC = () => {
     const [hasMoreAll, setHasMoreAll] = useState(true);
     const [specialPage, setSpecialPage] = useState(0);
     const [allPage, setAllPage] = useState(0);
-    const [currentSlide, setCurrentSlide] = useState(0);
+    const [currentSlide, setCurrentSlide] = useState(1);
+    const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
     const { user } = useAuthStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -39,6 +44,19 @@ const Home: React.FC = () => {
     const hasInitializedRef = useRef(false);
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+    const touchStartXRef = useRef<number | null>(null);
+    const touchStartYRef = useRef<number | null>(null);
+    const touchDeltaXRef = useRef(0);
+    const touchDeltaYRef = useRef(0);
+    const suppressBannerClickRef = useRef(false);
+    const suppressClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasMultipleCarouselItems = carouselItems.length > 1;
+    const carouselRenderItems = hasMultipleCarouselItems
+        ? [carouselItems[carouselItems.length - 1], ...carouselItems, carouselItems[0]]
+        : carouselItems;
+    const currentLogicalSlide = hasMultipleCarouselItems
+        ? ((currentSlide - 1 + carouselItems.length) % carouselItems.length)
+        : 0;
 
     // 监听用户登出，重置检查状态
     useEffect(() => {
@@ -302,33 +320,159 @@ const Home: React.FC = () => {
 
 
     // 自动轮播
-    useEffect(() => {
-        if (carouselItems.length > 1) {
-            carouselIntervalRef.current = setInterval(() => {
-                setCurrentSlide((prev) => (prev + 1) % carouselItems.length);
-            }, 5000); // 每5秒切换一次
-
-            return () => {
-                if (carouselIntervalRef.current) {
-                    clearInterval(carouselIntervalRef.current);
-                }
-            };
-        }
-    }, [carouselItems.length]);
-
-    // 手动切换轮播
-    const goToSlide = (index: number) => {
-        setCurrentSlide(index);
-        // 重置自动轮播
+    const clearCarouselInterval = useCallback(() => {
         if (carouselIntervalRef.current) {
             clearInterval(carouselIntervalRef.current);
+            carouselIntervalRef.current = null;
         }
-        if (carouselItems.length > 1) {
-            carouselIntervalRef.current = setInterval(() => {
-                setCurrentSlide((prev) => (prev + 1) % carouselItems.length);
-            }, 5000);
+    }, []);
+
+    const restartCarouselAutoPlay = useCallback(() => {
+        clearCarouselInterval();
+        if (!hasMultipleCarouselItems) return;
+
+        carouselIntervalRef.current = setInterval(() => {
+            setIsTransitionEnabled(true);
+            setCurrentSlide((prev) => prev + 1);
+        }, 5000);
+    }, [clearCarouselInterval, hasMultipleCarouselItems]);
+
+    useEffect(() => {
+        if (hasMultipleCarouselItems) {
+            setIsTransitionEnabled(true);
+            setCurrentSlide(1);
+        } else {
+            setIsTransitionEnabled(true);
+            setCurrentSlide(0);
+        }
+    }, [hasMultipleCarouselItems, carouselItems.length]);
+
+    // autoplay
+    useEffect(() => {
+        restartCarouselAutoPlay();
+        return () => {
+            clearCarouselInterval();
+        };
+    }, [restartCarouselAutoPlay, clearCarouselInterval]);
+
+    // manual switching
+    const goToSlide = (logicalIndex: number) => {
+        if (!hasMultipleCarouselItems) {
+            setCurrentSlide(0);
+            return;
+        }
+        const safeIndex = ((logicalIndex % carouselItems.length) + carouselItems.length) % carouselItems.length;
+        setIsTransitionEnabled(true);
+        setCurrentSlide(safeIndex + 1);
+        restartCarouselAutoPlay();
+    };
+
+    const goToPrevSlide = () => {
+        if (!hasMultipleCarouselItems) return;
+        setIsTransitionEnabled(true);
+        setCurrentSlide((prev) => prev - 1);
+        restartCarouselAutoPlay();
+    };
+
+    const goToNextSlide = () => {
+        if (!hasMultipleCarouselItems) return;
+        setIsTransitionEnabled(true);
+        setCurrentSlide((prev) => prev + 1);
+        restartCarouselAutoPlay();
+    };
+
+    const handleCarouselTransitionEnd = () => {
+        if (!hasMultipleCarouselItems) return;
+
+        if (currentSlide === carouselItems.length + 1) {
+            setIsTransitionEnabled(false);
+            setCurrentSlide(1);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsTransitionEnabled(true);
+                });
+            });
+            return;
+        }
+
+        if (currentSlide === 0) {
+            setIsTransitionEnabled(false);
+            setCurrentSlide(carouselItems.length);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsTransitionEnabled(true);
+                });
+            });
         }
     };
+
+    const handleCarouselTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        touchStartXRef.current = touch.clientX;
+        touchStartYRef.current = touch.clientY;
+        touchDeltaXRef.current = 0;
+        touchDeltaYRef.current = 0;
+        suppressBannerClickRef.current = false;
+    };
+
+    const handleCarouselTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (touchStartXRef.current === null || touchStartYRef.current === null || e.touches.length !== 1) {
+            return;
+        }
+        const touch = e.touches[0];
+        touchDeltaXRef.current = touch.clientX - touchStartXRef.current;
+        touchDeltaYRef.current = touch.clientY - touchStartYRef.current;
+    };
+
+    const resetTouchState = () => {
+        touchStartXRef.current = null;
+        touchStartYRef.current = null;
+        touchDeltaXRef.current = 0;
+        touchDeltaYRef.current = 0;
+    };
+
+    const handleCarouselTouchEnd = () => {
+        const absX = Math.abs(touchDeltaXRef.current);
+        const absY = Math.abs(touchDeltaYRef.current);
+        const isValidSwipe = absX >= SWIPE_THRESHOLD && absX > absY;
+
+        if (isValidSwipe && hasMultipleCarouselItems) {
+            suppressBannerClickRef.current = true;
+            if (suppressClickTimerRef.current) {
+                clearTimeout(suppressClickTimerRef.current);
+            }
+            suppressClickTimerRef.current = setTimeout(() => {
+                suppressBannerClickRef.current = false;
+                suppressClickTimerRef.current = null;
+            }, SWIPE_CLICK_SUPPRESS_MS);
+
+            if (touchDeltaXRef.current > 0) {
+                goToPrevSlide();
+            } else {
+                goToNextSlide();
+            }
+        }
+
+        resetTouchState();
+    };
+
+    const navigateToGameDetail = (item: UserGameData) => {
+        const gameId = item.file_id || item.id;
+        if (!gameId) return;
+
+        navigate(`/game/${gameId}`, {
+            state: { source: 'main_page' },
+        });
+    };
+
+    useEffect(() => {
+        return () => {
+            if (suppressClickTimerRef.current) {
+                clearTimeout(suppressClickTimerRef.current);
+            }
+        };
+    }, []);
 
     // 关闭加入群弹窗；记录已展示；必要时跟进弹签到
     const handleCloseJoinGroupModal = () => {
@@ -364,13 +508,30 @@ const Home: React.FC = () => {
                                 <>
                                     <div className={styles.carouselWrapper}>
                                         <div
-                                            className={styles.carouselTrack}
+                                            className={`${styles.carouselTrack} ${!isTransitionEnabled ? styles.carouselTrackNoTransition : ''}`}
                                             style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                                            onTransitionEnd={handleCarouselTransitionEnd}
+                                            onTouchStart={handleCarouselTouchStart}
+                                            onTouchMove={handleCarouselTouchMove}
+                                            onTouchEnd={handleCarouselTouchEnd}
+                                            onTouchCancel={resetTouchState}
                                         >
-                                            {carouselItems.map((item, idx) => {
-                                                const imageId = item.id || `carousel-${idx}`;
+                                            {carouselRenderItems.map((item, idx) => {
+                                                const imageId = item.file_id || item.id || `carousel-${idx}`;
+                                                const gameId = item.file_id || item.id;
                                                 return (
-                                                    <div key={imageId} className={styles.carouselSlide}>
+                                                    <div
+                                                        key={`${imageId}-${idx}`}
+                                                        className={`${styles.carouselSlide} ${gameId ? styles.carouselSlideClickable : ''}`}
+                                                        onClick={(event) => {
+                                                            if (suppressBannerClickRef.current) {
+                                                                event.preventDefault();
+                                                                event.stopPropagation();
+                                                                return;
+                                                            }
+                                                            navigateToGameDetail(item);
+                                                        }}
+                                                    >
                                                         <div className={styles.carouselImage}>
                                                             <img
                                                                 src={getImageUrl(item.cover_url)}
@@ -398,12 +559,48 @@ const Home: React.FC = () => {
                                             })}
                                         </div>
                                     </div>
-                                    {carouselItems.length > 1 && (
+                                    {hasMultipleCarouselItems && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className={`${styles.carouselNavButton} ${styles.carouselNavButtonLeft}`}
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    goToPrevSlide();
+                                                }}
+                                                aria-label="上一张"
+                                            >
+                                                <span className={styles.carouselNavIcon} aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M15 4L7 12L15 20" />
+                                                    </svg>
+                                                </span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`${styles.carouselNavButton} ${styles.carouselNavButtonRight}`}
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    goToNextSlide();
+                                                }}
+                                                aria-label="下一张"
+                                            >
+                                                <span className={styles.carouselNavIcon} aria-hidden="true">
+                                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M9 4L17 12L9 20" />
+                                                    </svg>
+                                                </span>
+                                            </button>
+                                        </>
+                                    )}
+                                    {hasMultipleCarouselItems && (
                                         <div className={styles.carouselIndicators}>
                                             {carouselItems.map((_, index) => (
                                                 <button
                                                     key={index}
-                                                    className={`${styles.carouselIndicator} ${currentSlide === index ? styles.carouselIndicatorActive : ''}`}
+                                                    className={`${styles.carouselIndicator} ${currentLogicalSlide === index ? styles.carouselIndicatorActive : ''}`}
                                                     onClick={() => goToSlide(index)}
                                                     aria-label={`切换到第 ${index + 1} 张`}
                                                 />
