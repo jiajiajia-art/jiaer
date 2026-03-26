@@ -71,9 +71,13 @@
 
 /* 布局 */
 .characterLayout {
+    --panel-body-height: clamp(620px, calc(100vh - 240px), 820px);
     display: grid;
     grid-template-columns: minmax(280px, 360px) 1fr;
     gap: 20px;
+    align-items: stretch;
+    height: var(--panel-body-height); 
+    min-height: 0;
 }
 
 /* 卡片样式 */
@@ -86,6 +90,9 @@
     flex-direction: column;
     gap: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .card h3 {
@@ -93,6 +100,24 @@
     font-size: 1.1rem;
     color: #1a1a1a;
     font-weight: 600;
+}
+
+.detailCard {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.detailCard > * {
+    flex-shrink: 0;
+}
+
+.detailActionRow {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .ghostSmall {
@@ -156,7 +181,6 @@
     color: rgba(0, 0, 0, 0.6);
 }
 
-/* 立绘大图 */
 .portraitImageActions {
     display: flex;
     gap: 8px;
@@ -171,6 +195,8 @@
 .portraitLarge {
     width: 100%;
     height: 320px;
+    min-height: 320px;
+    flex-shrink: 0;
     border-radius: 20px;
     background-size: cover;
     background-position: center;
@@ -844,6 +870,27 @@
 @media (max-width: 1080px) {
     .characterLayout {
         grid-template-columns: 1fr;
+        height: auto;
+        min-height: 0;
+    }
+
+    .card {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .detailCard {
+        overflow: visible;
+    }
+
+    .detailCard > * {
+        flex-shrink: initial;
+    }
+
+    .portraitLarge {
+        height: clamp(220px, 42vh, 320px);
+        min-height: 220px;
     }
 }
 

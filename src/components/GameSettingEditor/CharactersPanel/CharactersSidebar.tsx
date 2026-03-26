@@ -1,7 +1,7 @@
 import React from 'react';
 import sidebarStyles from './CharactersSidebar.module.css';
 import sharedStyles from './CharactersPanel.module.css';
-import { withCacheBust } from './utils';
+import { withCacheBust, normalizePersonalityTags } from './utils';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import type { Character } from './types';
 
@@ -42,56 +42,61 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
 
     return (
         <div 
-            className={sharedStyles.card}
-            style={{ maxHeight: '72vh', overflowY: 'auto' }}
+            className={`${sharedStyles.card} ${sidebarStyles.sidebarCard}`}
         >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div className={sidebarStyles.sidebarHeader}>
                 <h3>解析出的角色</h3>
                 <button className={sharedStyles.ghostSmall} onClick={onAddNew}>
                     + 新增角色
                 </button>
             </div>
-            <div className={sidebarStyles.characterRoster}>
-                {characters.map((character) => (
-                    <article
-                        key={character.id}
-                        className={`${sidebarStyles.characterRow} ${character.id === activeCharacterId ? sidebarStyles.active : ''}`}
-                        onClick={() => handleCharacterClick(character.id)}
-                    >
-                        <div
-                            className={sidebarStyles.characterThumb}
-                            style={{ backgroundImage: character.portrait ? `url('${withCacheBust(character.portrait)}')` : 'none' }}
-                        />
-                        <div className={sidebarStyles.characterMeta}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                <strong>{character.name || '未命名'}</strong>
-                                {character.id !== 'player' && (
-                                    <button
-                                        className={sidebarStyles.deleteButton}
-                                        onClick={(e) => onDeleteCharacter(character.id, e)}
-                                        title="删除角色"
-                                    >
-                                        <RiDeleteBin5Line />
-                                    </button>
-                                )}
-                            </div>
-                            <p className={sharedStyles.mutedSmall}>{character.role || ''} · {character.identity || ''}</p>
-                            <div className={sharedStyles.tagRow}>
-                                {character.personality && character.personality.length > 0 ? (
-                                    character.personality.map((tag) => (
-                                        <span key={tag} className={sharedStyles.tag}>{tag}</span>
-                                    ))
-                                ) : (
-                                    <span className={sharedStyles.mutedSmall}>暂无性格标签</span>
-                                )}
-                            </div>
-                        </div>
-                    </article>
-                ))}
+            <div className={sidebarStyles.rosterScroll}>
+                <div className={sidebarStyles.characterRoster}>
+                    {characters.map((character) => {
+                        // 侧栏角色前缀统一
+                        const sidebarRole = character.id === 'player' ? (character.role || '主角') : 'NPC';
+                        const personalityTags = normalizePersonalityTags(character.personality);
+                        return (
+                            <article
+                                key={character.id}
+                                className={`${sidebarStyles.characterRow} ${character.id === activeCharacterId ? sidebarStyles.active : ''}`}
+                                onClick={() => handleCharacterClick(character.id)}
+                            >
+                                <div
+                                    className={sidebarStyles.characterThumb}
+                                    style={{ backgroundImage: character.portrait ? `url('${withCacheBust(character.portrait)}')` : 'none' }}
+                                />
+                                <div className={sidebarStyles.characterMeta}>
+                                    <div className={sidebarStyles.characterTitleRow}>
+                                        <strong>{character.name || '未命名'}</strong>
+                                        {character.id !== 'player' && (
+                                            <button
+                                                className={sidebarStyles.deleteButton}
+                                                onClick={(e) => onDeleteCharacter(character.id, e)}
+                                                title="删除角色"
+                                            >
+                                                <RiDeleteBin5Line />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className={sharedStyles.mutedSmall}>{sidebarRole} · {character.identity || ''}</p>
+                                    <div className={sharedStyles.tagRow}>
+                                        {personalityTags.length > 0 ? (
+                                            personalityTags.map((tag) => (
+                                                <span key={tag} className={sharedStyles.tag}>{tag}</span>
+                                            ))
+                                        ) : (
+                                            <span className={sharedStyles.mutedSmall}>暂无性格标签</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
 };
 
 export default CharactersSidebar;
-

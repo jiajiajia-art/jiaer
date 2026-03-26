@@ -6,7 +6,7 @@ import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Character, Variation, PendingImage } from './types';
 import type { NPC } from '../../../api/galgame/EditorData.type';
-import { npcToCharacter, playerToCharacter, bumpCacheBust } from './utils';
+import { npcToCharacter, playerToCharacter, bumpCacheBust, stringifyPersonalityTags } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
 import type { User } from '../../../api/account/auth.type';
@@ -175,135 +175,158 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
+    // 过滤本地 blob 预览地址，避免提交时覆盖后端正式图片路径
+    const normalizePersistedImagePath = (imagePath?: string): string | undefined => {
+        if (!imagePath) return undefined;
+        const trimmed = imagePath.trim();
+        if (!trimmed || trimmed.startsWith('blob:')) {
+            return undefined;
+        }
+        return trimmed;
+    };
+
     // 确认修改/新增角色
-    const confirmEdit = async (characterToSave: Character) => {
+    const confirmEdit = async (characterToSave: Character): Promise<boolean> => {
         if (!fileId || !characterToSave) {
             toast.error('缺少必要数据，无法保存修改');
-            return;
+            return false;
         }
 
-        // 如果是主角，使用 updatePlayer API
+        // 主角资料保存
         if (characterToSave.id === 'player') {
-            // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
-            const images: { base: string; [key: string]: string } = {
-                base: characterToSave.portrait || '', // base 图片来自 portrait
-            };
+            const persistedBaseImage = normalizePersistedImagePath(characterToSave.portrait);
+            const images: { [key: string]: string } = {};
+            if (persistedBaseImage) {
+                images.base = persistedBaseImage;
+            }
+
             characterToSave.variations
                 .filter(v => v.label !== 'base')
                 .forEach(variation => {
-                    if (variation.img) {
-                        const key = variation.type && variation.label 
-                            ? `${variation.type}_${variation.label}` 
+                    const persistedVariationImage = normalizePersistedImagePath(variation.img);
+                    if (persistedVariationImage) {
+                        const key = variation.type && variation.label
+                            ? `${variation.type}_${variation.label}`
                             : variation.label || variation.type || '';
                         if (key) {
-                            images[key] = variation.img;
+                            images[key] = persistedVariationImage;
                         }
                     }
                 });
 
             const playerData = {
                 name: characterToSave.name || '',
+                callName: characterToSave.callName || '',
                 gender: characterToSave.gender || '',
                 race: characterToSave.identity || undefined,
                 appearance: characterToSave.appearance || '',
-                personality: characterToSave.personality && characterToSave.personality.length > 0 ? characterToSave.personality.join(', ') : undefined,
+                personality: stringifyPersonalityTags(characterToSave.personality) || undefined,
                 tone: characterToSave.speech || undefined,
-                image: characterToSave.portrait || '',
-                images: characterToSave.portrait || Object.keys(images).length > 1 ? images : undefined,
+                // 过滤 blob 预览地址，仅提交可持久化图片路径
+                background: characterToSave.background || undefined,
+                image: persistedBaseImage,
+                images: Object.keys(images).length > 0 ? images : undefined,
             };
 
             try {
                 const response = await api.updatePlayer(fileId, playerData as any);
-                if (response.data?.success) {
-                    toast.success('主角信息更新成功');
-                    const p = parseResponse.extractPlayer(response.data, mode);
-                    if (p) {
-                        setCharacterData(prev => prev.map(char => char.id === 'player' ? playerToCharacter(p) : char));
-                    }
-                } else {
+                if (!response.data?.success) {
                     toast.error('更新主角信息失败');
+                    return false;
                 }
+
+                toast.success('主角信息更新成功');
+                const p = parseResponse.extractPlayer(response.data, mode);
+                if (p) {
+                    setCharacterData(prev => prev.map(char => char.id === 'player' ? playerToCharacter(p) : char));
+                }
+                return true;
             } catch (error) {
                 console.error('更新主角信息时出错:', error);
                 toast.error('更新主角信息失败，请重试');
+                return false;
             }
-        } else {
-            // 更新或新增 NPC 信息
-            const identityParts = characterToSave.identity.split(' · ');
-            const race = identityParts.length > 1 ? identityParts[0] : undefined;
-            const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || characterToSave.role);
+        }
 
-            // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
-            // 键名格式：type_value（如 "clothing_happy"）
-            const images: { base: string; [key: string]: string } = {
-                base: characterToSave.portrait || '', // base 图片来自 portrait
-            };
-            characterToSave.variations
-                .filter(v => v.label !== 'base') // 确保不包含 base
-                .forEach(variation => {
-                    if (variation.img) {
-                        // 键名格式：type_value
-                        const key = variation.type && variation.label 
-                            ? `${variation.type}_${variation.label}` 
-                            : variation.label || variation.type || '';
-                        if (key) {
-                            images[key] = variation.img;
-                        }
+        // NPC 资料保存
+        const identityParts = characterToSave.identity.split(/\s*·\s*/);
+        const race = identityParts.length > 1 ? identityParts[0] : undefined;
+        const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || characterToSave.role);
+        const persistedBaseImage = normalizePersistedImagePath(characterToSave.portrait);
+
+        const images: { [key: string]: string } = {};
+        if (persistedBaseImage) {
+            images.base = persistedBaseImage;
+        }
+
+        characterToSave.variations
+            .filter(v => v.label !== 'base')
+            .forEach(variation => {
+                const persistedVariationImage = normalizePersistedImagePath(variation.img);
+                if (persistedVariationImage) {
+                    const key = variation.type && variation.label
+                        ? `${variation.type}_${variation.label}`
+                        : variation.label || variation.type || '';
+                    if (key) {
+                        images[key] = persistedVariationImage;
                     }
-                });
-
-            const finalImages: { base: string; [key: string]: string } | undefined = 
-                characterToSave.portrait || Object.keys(images).length > 1 ? images : undefined;
-
-            const playerRelationship = characterToSave.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
-
-            const npcData: NPC = {
-                id: characterToSave.id.startsWith('temp-') ? `npc_${Date.now()}` : characterToSave.id,
-                name: characterToSave.name || '',
-                gender: characterToSave.gender || '',
-                job: job || undefined,
-                race: race || undefined,
-                description: characterToSave.background || ' ',
-                appearance: characterToSave.appearance || '',
-                personality: characterToSave.personality && characterToSave.personality.length > 0 ? characterToSave.personality.join(', ') : undefined,
-                tone: characterToSave.speech || '',
-                relationship: playerRelationship?.description || undefined,
-                images: finalImages,
-            };
-
-            try {
-                const response = isAddingNew
-                    ? await api.addNpc(fileId, npcData)
-                    : await api.updateNpc(fileId, npcData);
-
-                if (response.data?.success) {
-                    toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
-                    const finalNpcId = npcData.id;
-                    const npc = parseResponse.extractNpc(response.data, mode, finalNpcId);
-                    
-                    if (npc) {
-                        const newCharacter = npcToCharacter(npc, 0);
-                        if (isAddingNew) {
-                            setCharacterData(prev => [newCharacter, ...prev]);
-                            setActiveCharacterId(newCharacter.id);
-                            setIsAddingNew(false);
-                            setNewCharacterData(null);
-                        } else {
-                            setCharacterData(prev => prev.map(char => char.id === finalNpcId ? newCharacter : char));
-                        }
-                    } else if (!isAddingNew) {
-                        updateCharacterFromResponse(response.data, finalNpcId);
-                    }
-                } else {
-                    toast.error(isAddingNew ? '创建角色失败' : '更新角色失败');
                 }
-            } catch (error) {
-                toast.error(isAddingNew ? '创建角色失败，请重试' : '更新角色失败，请重试');
+            });
+
+        const finalImages: { [key: string]: string } | undefined = Object.keys(images).length > 0 ? images : undefined;
+        const playerRelationship = characterToSave.relationships.find(
+            r => r.name === '玩家' || r.name.toLowerCase().includes('player'),
+        );
+
+        const npcData: NPC & { callName?: string } = {
+            id: characterToSave.id.startsWith('temp-') ? `npc_${Date.now()}` : characterToSave.id,
+            name: characterToSave.name || '',
+            callName: characterToSave.callName || '',
+            gender: characterToSave.gender || '',
+            job: job || undefined,
+            race: race || undefined,
+            description: characterToSave.background || ' ',
+            appearance: characterToSave.appearance || '',
+            personality: stringifyPersonalityTags(characterToSave.personality) || undefined,
+            tone: characterToSave.speech || '',
+            relationship: playerRelationship?.description || undefined,
+            images: finalImages,
+        };
+
+        try {
+            const response = isAddingNew
+                ? await api.addNpc(fileId, npcData)
+                : await api.updateNpc(fileId, npcData);
+
+            if (!response.data?.success) {
+                toast.error(isAddingNew ? '创建角色失败' : '更新角色失败');
+                return false;
             }
+
+            toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
+            const finalNpcId = npcData.id;
+            const npc = parseResponse.extractNpc(response.data, mode, finalNpcId);
+
+            if (npc) {
+                const newCharacter = npcToCharacter(npc, 0);
+                if (isAddingNew) {
+                    setCharacterData(prev => [newCharacter, ...prev]);
+                    setActiveCharacterId(newCharacter.id);
+                    setIsAddingNew(false);
+                    setNewCharacterData(null);
+                } else {
+                    setCharacterData(prev => prev.map(char => char.id === finalNpcId ? newCharacter : char));
+                }
+            } else if (!isAddingNew) {
+                updateCharacterFromResponse(response.data, finalNpcId);
+            }
+            return true;
+        } catch (error) {
+            toast.error(isAddingNew ? '创建角色失败，请重试' : '更新角色失败，请重试');
+            return false;
         }
     };
 
-    // 删除角色
     const handleConfirmDelete = async (characterToDelete: string) => {
         if (!characterToDelete || !fileId) {
             return;
@@ -376,15 +399,16 @@ export const createHandlers = (ctx: HandlersContext) => {
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
-        const newNpc: NPC = {
+        const newNpc: NPC & { callName?: string } = {
             id: targetCharacterId,
             name: newCharacterData.name || '未命名角色',
+            callName: newCharacterData.callName || '',
             gender: newCharacterData.gender || '',
             job: job || undefined,
             race: race || undefined,
             description: newCharacterData.background || '暂无描述',
             appearance: newCharacterData.appearance || '',
-            personality: newCharacterData.personality && newCharacterData.personality.length > 0 ? newCharacterData.personality.join(', ') : undefined,
+            personality: stringifyPersonalityTags(newCharacterData.personality) || undefined,
             tone: newCharacterData.speech || '',
             relationship: playerRelationship?.description || undefined,
             images: finalImages,
@@ -423,7 +447,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             inputRef?: React.RefObject<HTMLInputElement | null> | { current: HTMLInputElement | null };
             successMessage?: string;
         }
-    ) => {
+    ): Promise<boolean> => {
         const validateFile = (file: File): boolean => {
             if (!file.type.startsWith('image/')) {
                 toast.error('请选择图片文件');
@@ -437,12 +461,12 @@ export const createHandlers = (ctx: HandlersContext) => {
         };
 
         if (!validateFile(file)) {
-            return;
+            return false;
         }
 
         if (!fileId) {
             toast.error('缺少文件ID，无法上传');
-            return;
+            return false;
         }
 
         const { type, characterId, variant = 'base', inputRef, successMessage } = options;
@@ -451,130 +475,120 @@ export const createHandlers = (ctx: HandlersContext) => {
             let response;
             let targetCharacterId: string | undefined = characterId || undefined;
 
-            // 如果是新增模式且上传NPC图片，需要先创建角色
+            // 新增流程下上传 NPC 图片前先落库角色
             if (type === 'npc' && isAddingNew && newCharacterData && !targetCharacterId) {
                 const newId = await createNewNpcForUpload();
                 if (!newId) {
-                    return;
+                    return false;
                 }
                 targetCharacterId = newId;
             }
 
-            // 根据类型调用不同的API
             if (type === 'player') {
                 response = await api.uploadPlayerImage(fileId, file, variant);
             } else if (type === 'npc' || type === 'variation') {
                 if (!targetCharacterId) {
                     toast.error('缺少角色ID，无法上传');
-                    return;
+                    return false;
                 }
                 response = await api.uploadNpcImage(fileId, targetCharacterId, file, variant);
             } else {
                 toast.error('未知的上传类型');
-                return;
+                return false;
             }
 
-            if (response.data?.success) {
-                toast.success(successMessage || '图片上传成功');
+            if (!response.data?.success) {
+                toast.error('上传失败，请重试');
+                return false;
+            }
 
-                // 如果是玩家图片，更新 portrait 或 variations
-                if (type === 'player' && !isAddingNew) {
+            toast.success(successMessage || '图片上传成功');
+
+            if (type === 'player' && !isAddingNew) {
                 const { image: playerImage, images: playerImages } = parseResponse.extractPlayerImage(response.data, mode);
 
-                    if (variant === 'base') {
-                        const newPortrait = (playerImages && playerImages.base) || playerImage;
-                        if (newPortrait) {
-                            setCharacterData(prev =>
-                                prev.map(char =>
-                                    char.id === 'player'
-                                        ? { ...char, portrait: newPortrait }
-                                        : char
-                                )
-                            );
-                            // 手动刷新缓存，强制浏览器重新加载图片
-                            bumpCacheBust(newPortrait);
-                        } else {
-                            // 如果无法提取图片数据，触发数据刷新以获取最新数据
-                            if (onDataChange) {
-                                onDataChange();
-                            }
-                        }
-                    } else {
-                        // 差分图片
-                        const variantImg = (playerImages && playerImages[variant]) || playerImage;
-                        if (variantImg) {
-                            setCharacterData(prev =>
-                                prev.map(char => {
-                                    if (char.id !== 'player') return char;
-                                    
-                                    const existingVarIndex = char.variations.findIndex(v => v.label === variant);
-                                    if (existingVarIndex >= 0) {
-                                        const newVariations = [...char.variations];
-                                        newVariations[existingVarIndex] = {
-                                            ...newVariations[existingVarIndex],
-                                            img: variantImg, // 存原始路径
-                                        };
-                                        bumpCacheBust(variantImg);
-                                        return { ...char, variations: newVariations };
-                                    } else {
-                                        const newVar: Variation = {
-                                            id: `v-${Date.now()}`,
-                                            label: variant,
-                                            img: variantImg,
-                                            type: variant,
-                                        };
-                                        return { ...char, variations: [...char.variations, newVar] };
-                                    }
-                                })
-                            );
-                        } else {
-                            // 如果无法提取图片数据，触发数据刷新以获取最新数据
-                            if (onDataChange) {
-                                onDataChange();
-                            }
-                        }
+                if (variant === 'base') {
+                    const newPortrait = (playerImages && playerImages.base) || playerImage;
+                    if (newPortrait) {
+                        setCharacterData(prev =>
+                            prev.map(char =>
+                                char.id === 'player'
+                                    ? { ...char, portrait: newPortrait }
+                                    : char,
+                            ),
+                        );
+                        bumpCacheBust(newPortrait);
+                    } else if (onDataChange) {
+                        onDataChange();
                     }
-                }
+                } else {
+                    const variantImg = (playerImages && playerImages[variant]) || playerImage;
+                    if (variantImg) {
+                        setCharacterData(prev =>
+                            prev.map(char => {
+                                if (char.id !== 'player') return char;
 
-                // 如果是NPC图片（基础立绘或差分），使用返回的数据更新本地状态
-                if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
-                    const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
-                    if (imageData?.imagePath) {
-                        const imageUrl = imageData.imagePath; // 原始路径
-                        
-                        if (variant === 'base') {
-                            updateCharacterImage(targetCharacterId, imageUrl, 'base');
-                            bumpCacheBust(imageUrl);
-                        } else {
-                            // 上传图片时，直接使用原有的 variant（不拆分）
-                            // 从当前状态中获取 type 信息用于更新本地状态
-                            let finalType = 'expression';
-                            let finalValue = variant || '';
-                            
-                            setCharacterData(prev => {
-                                const currentChar = prev.find(c => c.id === targetCharacterId);
-                                const currentVariation = currentChar?.variations.find(v => v.label === variant);
-                                if (currentVariation?.type) {
-                                    finalType = currentVariation.type;
-                                    finalValue = currentVariation.label;
+                                const existingVarIndex = char.variations.findIndex(v => v.label === variant);
+                                if (existingVarIndex >= 0) {
+                                    const newVariations = [...char.variations];
+                                    newVariations[existingVarIndex] = {
+                                        ...newVariations[existingVarIndex],
+                                        img: variantImg,
+                                    };
+                                    bumpCacheBust(variantImg);
+                                    return { ...char, variations: newVariations };
                                 }
-                                return prev; // 不修改状态，只是读取
-                            });
-                            
-                            updateCharacterImage(targetCharacterId, imageUrl, finalValue, finalType);
-                            bumpCacheBust(imageUrl);
-                        }
-                    } else {
-                        // 如果无法提取图片数据，使用后端返回的完整数据进行更新
-                        updateCharacterFromResponse(response.data, targetCharacterId);
+
+                                const newVar: Variation = {
+                                    id: `v-${Date.now()}`,
+                                    label: variant,
+                                    img: variantImg,
+                                    type: variant,
+                                };
+                                return { ...char, variations: [...char.variations, newVar] };
+                            }),
+                        );
+                    } else if (onDataChange) {
+                        onDataChange();
                     }
                 }
-            } else {
-                toast.error('上传失败，请重试');
             }
+
+            if ((type === 'npc' || type === 'variation') && targetCharacterId && !isAddingNew) {
+                const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
+                if (imageData?.imagePath) {
+                    const imageUrl = imageData.imagePath;
+
+                    if (variant === 'base') {
+                        updateCharacterImage(targetCharacterId, imageUrl, 'base');
+                        bumpCacheBust(imageUrl);
+                    } else {
+                        let finalType = 'expression';
+                        let finalValue = variant || '';
+
+                        setCharacterData(prev => {
+                            const currentChar = prev.find(c => c.id === targetCharacterId);
+                            const currentVariation = currentChar?.variations.find(v => v.label === variant);
+                            if (currentVariation?.type) {
+                                finalType = currentVariation.type;
+                                finalValue = currentVariation.label;
+                            }
+                            return prev;
+                        });
+
+                        updateCharacterImage(targetCharacterId, imageUrl, finalValue, finalType);
+                        bumpCacheBust(imageUrl);
+                    }
+                } else {
+                    updateCharacterFromResponse(response.data, targetCharacterId);
+                }
+            }
+
+            return true;
         } catch (error) {
-            console.error('上传图片时出错:', error);
+            console.error('上传图片失败:', error);
             toast.error('上传图片失败，请重试');
+            return false;
         } finally {
             if (inputRef && 'current' in inputRef && inputRef.current) {
                 inputRef.current.value = '';
@@ -582,7 +596,6 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 重新生成NPC图片（改为暂存模式，图片需确认后才保存）
     const regenerateNpcImage = async (npc: Character) => {
         if (!fileId || !npc) {
             return;

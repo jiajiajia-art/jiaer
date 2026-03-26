@@ -14,9 +14,9 @@ import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
-import type { Character, Variation, Relationship, PendingImage } from './types';
-import { VARIATION_TYPES } from './types';
-import { getNpcs, npcToCharacter, playerToCharacter } from './utils';
+import type { Character, Variation, PendingImage } from './types';
+import { VARIATION_TYPES, DEFAULT_NPC_PORTRAIT } from './types';
+import { getNpcs, npcToCharacter, playerToCharacter, normalizePersonalityTags, stringifyPersonalityTags } from './utils';
 import { createApiHelpers } from './apiHelpers';
 import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
@@ -31,7 +31,7 @@ const CHARACTER_WORD_LIMITS = {
     personality: 100,
     speech: 100,
     appearance: 500,
-    background: 300,
+    background: 800, 
 } as const;
 
 interface CharactersPanelProps {
@@ -61,7 +61,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
-    const [isRelationshipExpanded, setIsRelationshipExpanded] = useState<boolean>(false);
     const [isVariationExpanded, setIsVariationExpanded] = useState<boolean>(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [characterToDelete, setCharacterToDelete] = useState<string | null>(null);
@@ -77,6 +76,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
+    const [isUploadingPortrait, setIsUploadingPortrait] = useState<boolean>(false);
+    const [isSavingCharacter, setIsSavingCharacter] = useState<boolean>(false);
     // 差分生成加载状态
     const [isGeneratingVariation, setIsGeneratingVariation] = useState<boolean>(false);
     const [generatingVariationId, setGeneratingVariationId] = useState<string | null>(null);
@@ -91,6 +92,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [variationCostModalOpen, setVariationCostModalOpen] = useState<boolean>(false);
     const [pendingVariationForGenerate, setPendingVariationForGenerate] = useState<{ variation: Variation; character: Character } | null>(null);
     const attributePanelRef = useRef<CharacterAttributesPanelRef>(null);
+    const detailCardRef = useRef<HTMLDivElement>(null);
     const originalCharacterDataRef = useRef<Character[]>([]);
     const [deleteVariationModalOpen, setDeleteVariationModalOpen] = useState(false);
     const [pendingVariationToDelete, setPendingVariationToDelete] = useState<{ variation: Variation; character: Character } | null>(null);
@@ -125,6 +127,22 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         pendingImageUrlsRef.current = {};
         setPendingImages({});
     };
+
+    // 仅清理单个角色的暂存图，确保保存失败时不误丢其它角色待保存数据
+    const clearPendingImagesForCharacter = useCallback((characterId: string) => {
+        const pendingForCharacter = pendingImagesRef.current[characterId];
+        if (!pendingForCharacter) return;
+
+        Object.keys(pendingForCharacter).forEach((variant) => {
+            clearPendingImageUrl(`${characterId}-${variant}`);
+        });
+
+        setPendingImages(prev => {
+            const next = { ...prev };
+            delete next[characterId];
+            return next;
+        });
+    }, []);
 
     // 获取有效的图片（优先使用暂存预览，否则使用原图）
     const getEffectiveImage = (character: Character, variant: string): string | undefined => {
@@ -282,12 +300,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 return {
                     id: char.id,
                     name: char.name,
+                    callName: char.callName || '',
                     gender: char.gender,
                     job: job || undefined,
                     race: race || undefined,
                     description: char.background || '',
                     appearance: char.appearance || '',
-                    personality: char.personality && char.personality.length > 0 ? char.personality.join(', ') : undefined,
+                    personality: stringifyPersonalityTags(char.personality) || undefined,
                     tone: char.speech || '',
                     relationship: playerRelationship?.description || undefined,
                     images: finalImages,
@@ -303,28 +322,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const executePendingAction = useCallback(() => {
         if (!pendingAction) return;
 
-        // 恢复原图（如果有暂存图片被更新到 characterData）
-        if (activeCharacterId && pendingImages[activeCharacterId]) {
-            // 从 originalCharacterDataRef 获取原值
-            const originalChar = originalCharacterDataRef.current.find(c => c.id === activeCharacterId);
-            if (originalChar) {
-                // 恢复 characterData
-                setCharacterData(prev => prev.map(char => {
-                    if (char.id !== activeCharacterId) return char;
-                    return originalChar;
-                }));
-            }
-            // 清理暂存图片
-            Object.keys(pendingImages[activeCharacterId]).forEach(variant => {
-                clearPendingImageUrl(`${activeCharacterId}-${variant}`);
-            });
-            setPendingImages(prev => {
-                const newState = { ...prev };
-                delete newState[activeCharacterId];
-                return newState;
-            });
-        }
-
         if (pendingAction.type === 'switchCharacter') {
             setActiveCharacterId(pendingAction.targetCharacterId || '');
         } else if (pendingAction.type === 'createCharacter') {
@@ -332,7 +329,20 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
 
         setPendingAction(null);
-    }, [pendingAction, activeCharacterId, pendingImages]);
+    }, [pendingAction]);
+
+    // 丢弃当前角色的暂存立绘并恢复到原始数据
+    const discardCurrentCharacterPendingImages = useCallback(() => {
+        if (activeCharacterId && pendingImages[activeCharacterId]) {
+            const originalChar = originalCharacterDataRef.current.find(c => c.id === activeCharacterId);
+            if (originalChar) {
+                setCharacterData(prev => prev.map(char => (
+                    char.id === activeCharacterId ? originalChar : char
+                )));
+            }
+            clearPendingImagesForCharacter(activeCharacterId);
+        }
+    }, [activeCharacterId, pendingImages, clearPendingImagesForCharacter]);
 
     // 检查是否可以切换（如果有未保存修改或暂存图片，显示确认弹窗）
     const checkBeforeSwitch = useCallback((action: { type: 'switchCharacter' | 'switchPanel' | 'createCharacter'; targetCharacterId?: string | null }) => {
@@ -414,6 +424,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         ? newCharacterData
         : (characterData.find(c => c.id === activeCharacterId) || characterData[0]);
 
+    useEffect(() => {
+        // 切换角色后自动回到详情顶部，确保优先看到基础立绘区域
+        if (detailCardRef.current) {
+            detailCardRef.current.scrollTop = 0;
+        }
+    }, [activeCharacterId, isAddingNew]);
+
     // 获取当前角色的属性设置（仅在 worldInteraction 模式下）
     const isWorldInteractionMode = mode === 'worldInteraction';
     const attributeSetting = isWorldInteractionMode && gameData && 'attributeSetting' in gameData
@@ -433,6 +450,21 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         );
         return worldNpc?.attributes;
     }, [isWorldInteractionMode, gameData, currentCharacter]);
+
+    const currentPortraitImage = currentCharacter
+        ? getEffectiveImage(currentCharacter, 'base')
+        : undefined;
+    const displayPortraitImage = currentPortraitImage
+        ? (currentPortraitImage.startsWith('blob:') ? currentPortraitImage : withCacheBust(currentPortraitImage))
+        : DEFAULT_NPC_PORTRAIT;
+    const isCurrentPortraitGenerating = Boolean(
+        currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
+    );
+    const isPortraitActionBusy = isUploadingPortrait
+        || isSavingCharacter
+        || isCurrentPortraitGenerating
+        || isGeneratingNpcImages
+        || isGeneratingVariation;
 
     // 更新角色字段（统一处理新增和编辑模式）
     const updateField = (field: keyof Character, value: string | string[]) => {
@@ -455,7 +487,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     const handleFieldChange = (field: keyof Character, value: string) => {
         if (field === 'personality') {
-            const tags = value.split(/[，,\/、\s]+/).map(tag => tag.trim()).filter(Boolean);
+            const tags = normalizePersonalityTags(value);
             updateField(field, tags);
         } else {
             updateField(field, value);
@@ -491,74 +523,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     
     // 性格标签特殊处理（需要分割后限制）
     const personalityLimit = useWordLimit(CHARACTER_WORD_LIMITS.personality, (value) => {
-        const tags = value.split(/[，,\/、\s]+/).map(tag => tag.trim()).filter(Boolean);
+        const tags = normalizePersonalityTags(value);
         updateField('personality', tags);
         setHasUnsavedChanges(true);
     });
-
-    // 关系管理（统一处理新增和编辑模式）
-    const addRelationship = () => {
-        const newRel: Relationship = { id: `r-${Date.now()}`, name: '', description: '' };
-        if (isAddingNew && newCharacterData) {
-            setNewCharacterData({
-                ...newCharacterData,
-                relationships: [...newCharacterData.relationships, newRel],
-            });
-        } else {
-            setCharacterData(prev =>
-                prev.map(char =>
-                    char.id === activeCharacterId
-                        ? { ...char, relationships: [...char.relationships, newRel] }
-                        : char
-                )
-            );
-        }
-        setHasUnsavedChanges(true);
-    };
-
-    const updateRelationship = (relId: string, key: 'name' | 'description', value: string) => {
-        if (isAddingNew && newCharacterData) {
-            setNewCharacterData({
-                ...newCharacterData,
-                relationships: newCharacterData.relationships.map(r =>
-                    r.id === relId ? { ...r, [key]: value } : r
-                ),
-            });
-        } else {
-            setCharacterData(prev =>
-                prev.map(char =>
-                    char.id === activeCharacterId
-                        ? {
-                            ...char,
-                            relationships: char.relationships.map(r =>
-                                r.id === relId ? { ...r, [key]: value } : r
-                            ),
-                        }
-                        : char
-                )
-            );
-        }
-        setHasUnsavedChanges(true);
-    };
-
-    const removeRelationship = (relId: string) => {
-        if (isAddingNew && newCharacterData) {
-            setNewCharacterData({
-                ...newCharacterData,
-                relationships: newCharacterData.relationships.filter(r => r.id !== relId),
-            });
-        } else {
-            setCharacterData(prev =>
-                prev.map(char =>
-                    char.id === activeCharacterId
-                        ? { ...char, relationships: char.relationships.filter(r => r.id !== relId) }
-                        : char
-                )
-            );
-        }
-        setHasUnsavedChanges(true);
-    };
-
 
     // 打开新增差分弹窗
     const openAddVariationModal = () => {
@@ -691,75 +659,81 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     // 确认修改/新增角色（统一处理）
-    const confirmEdit = async () => {
-        if (!handlers) return;
-        const characterToSave = isAddingNew && newCharacterData
-            ? newCharacterData
-            : currentCharacter;
+    const confirmEdit = async (): Promise<boolean> => {
+        if (!handlers) return false;
 
-        // 验证必填字段
-        if (!validateRequiredFields(characterToSave)) {
-            return;
-        }
+        setIsSavingCharacter(true);
+        try {
+            const characterToSave = isAddingNew && newCharacterData
+                ? newCharacterData
+                : currentCharacter;
 
-        // 先保存属性修改（如果有）
-        if (attributePanelRef.current && attributePanelRef.current.hasChanges) {
-            const success = await attributePanelRef.current.saveAttributes();
-            if (!success) {
-                toast.error('属性保存失败，请重试');
-                return;
+            if (!validateRequiredFields(characterToSave)) {
+                return false;
             }
-        }
 
-        // 处理暂存图片 - 先上传暂存的图片
-        const characterId = isAddingNew && newCharacterData ? null : activeCharacterId;
-        if (characterId && pendingImages[characterId]) {
-            const pendingForChar = pendingImages[characterId];
-            for (const [variant, pending] of Object.entries(pendingForChar)) {
-                if (pending.file) {
-                    try {
-                        if (characterId === 'player') {
-                            await handlers.handleUploadImage(pending.file, {
-                                type: 'player',
-                                variant: variant,
-                            });
-                        } else {
-                            await handlers.handleUploadImage(pending.file, {
-                                type: variant === 'base' ? 'npc' : 'variation',
-                                characterId: characterId,
-                                variant: variant,
-                            });
-                        }
-                    } catch (error) {
-                        toast.error(`图片上传失败: ${variant}`);
-                        return;
+            if (attributePanelRef.current && attributePanelRef.current.hasChanges) {
+                const success = await attributePanelRef.current.saveAttributes();
+                if (!success) {
+                    toast.error('属性保存失败，请重试');
+                    return false;
+                }
+            }
+
+            const characterId = isAddingNew && newCharacterData ? null : activeCharacterId;
+            if (characterId && pendingImages[characterId]) {
+                const pendingForChar = pendingImages[characterId];
+                for (const [variant, pending] of Object.entries(pendingForChar)) {
+                    if (!pending.file) continue;
+
+                    const uploadSuccess = characterId === 'player'
+                        ? await handlers.handleUploadImage(pending.file, {
+                            type: 'player',
+                            variant,
+                        })
+                        : await handlers.handleUploadImage(pending.file, {
+                            type: variant === 'base' ? 'npc' : 'variation',
+                            characterId,
+                            variant,
+                        });
+
+                    if (!uploadSuccess) {
+                        toast.error(`图片上传失败：${variant}`);
+                        return false;
                     }
                 }
             }
-            // 清理暂存图片状态
-            clearAllPendingImages();
-        }
 
-        await handlers.confirmEdit(characterToSave);
-        // 保存成功后，更新原始数据并清除未保存状态
-        if (gameData) {
-            const npcs = getNpcs(gameData);
-            const convertedCharacters: Character[] = [];
-            if (gameData.worldSetting.player) {
-                convertedCharacters.push(playerToCharacter(gameData.worldSetting.player));
+            const saveSuccess = await handlers.confirmEdit(characterToSave);
+            if (!saveSuccess) {
+                return false;
             }
-            if (npcs && npcs.length > 0) {
-                const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
-                convertedCharacters.push(...npcCharacters);
+
+            if (characterId) {
+                clearPendingImagesForCharacter(characterId);
             }
-            originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
+
+            if (gameData) {
+                const npcs = getNpcs(gameData);
+                const convertedCharacters: Character[] = [];
+                if (gameData.worldSetting.player) {
+                    convertedCharacters.push(playerToCharacter(gameData.worldSetting.player));
+                }
+                if (npcs && npcs.length > 0) {
+                    const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
+                    convertedCharacters.push(...npcCharacters);
+                }
+                originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
+            }
+
+            setHasUnsavedChanges(false);
+            setFieldErrors({});
+            return true;
+        } finally {
+            setIsSavingCharacter(false);
         }
-        setHasUnsavedChanges(false);
-        setFieldErrors({}); // 清除错误状态
-        // onDataChange?.();
     };
 
-    // 删除角色
     const handleDeleteClick = (characterId: string, e: React.MouseEvent) => {
         e.stopPropagation(); // 阻止触发角色选择
         setCharacterToDelete(characterId);
@@ -785,7 +759,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 触发文件选择
     const handlePortraitClick = () => {
         // 新增模式下禁止上传图片
-        if (isAddingNew) {
+        if (isAddingNew || isPortraitActionBusy) {
             return;
         }
         
@@ -809,52 +783,54 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             successMessage?: string;
         }
     ) => {
-        // 新增模式下禁止上传
         if (isAddingNew) {
             toast.error('请先确认增加角色后再上传图片');
             return;
         }
 
-        // 验证文件
-        if (!file.type.startsWith('image/')) {
-            toast.error('请选择图片文件');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('图片大小不能超过 5MB');
+        if (isPortraitActionBusy) {
+            toast.error('当前有图片任务正在处理，请稍后再试');
             return;
         }
 
-        const { type, characterId, variant = 'base' } = options;
-        const targetCharacterId = characterId || activeCharacterId;
-
-        if (!targetCharacterId || targetCharacterId === 'player' && type !== 'player') {
-            toast.error('缺少角色ID，无法上传');
-            return;
-        }
-
-        // 创建本地预览 URL
-        const previewUrl = URL.createObjectURL(file);
-        const pendingKey = `${targetCharacterId}-${variant}`;
-        pendingImageUrlsRef.current[pendingKey] = previewUrl;
-
-        // 同时更新 characterData，触发 React 重新渲染
-        setCharacterData(prev => prev.map(char => {
-            if (char.id !== targetCharacterId) return char;
-
-            // base 图片更新 portrait
-            if (variant === 'base') {
-                return { ...char, portrait: previewUrl };
+        setIsUploadingPortrait(true);
+        try {
+            if (!file.type.startsWith('image/')) {
+                toast.error('请选择图片文件');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('图片大小不能超过 5MB');
+                return;
             }
 
-            // 差分图片更新 variations
-            const varIndex = char.variations.findIndex(v => v.label === variant);
-            if (varIndex >= 0) {
-                const newVariations = [...char.variations];
-                newVariations[varIndex] = { ...newVariations[varIndex], img: previewUrl };
-                return { ...char, variations: newVariations };
-            } else {
-                // 如果找不到差分，先添加一个占位差分
+            const { type, characterId, variant = 'base' } = options;
+            const targetCharacterId = characterId || activeCharacterId;
+
+            if (!targetCharacterId || (targetCharacterId === 'player' && type !== 'player')) {
+                toast.error('缺少角色ID，无法上传');
+                return;
+            }
+
+            const previewUrl = URL.createObjectURL(file);
+            const pendingKey = `${targetCharacterId}-${variant}`;
+            clearPendingImageUrl(pendingKey);
+            pendingImageUrlsRef.current[pendingKey] = previewUrl;
+
+            setCharacterData(prev => prev.map(char => {
+                if (char.id !== targetCharacterId) return char;
+
+                if (variant === 'base') {
+                    return { ...char, portrait: previewUrl };
+                }
+
+                const varIndex = char.variations.findIndex(v => v.label === variant);
+                if (varIndex >= 0) {
+                    const newVariations = [...char.variations];
+                    newVariations[varIndex] = { ...newVariations[varIndex], img: previewUrl };
+                    return { ...char, variations: newVariations };
+                }
+
                 const newVar: Variation = {
                     id: `v-${Date.now()}`,
                     label: variant,
@@ -862,35 +838,33 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     type: variant,
                 };
                 return { ...char, variations: [...char.variations, newVar] };
+            }));
+
+            setPendingImages(prev => ({
+                ...prev,
+                [targetCharacterId]: {
+                    ...(prev[targetCharacterId] || {}),
+                    [variant]: {
+                        file,
+                        previewUrl,
+                        sourceType: 'upload',
+                        variant,
+                    },
+                },
+            }));
+
+            setHasUnsavedChanges(true);
+            toast.success(options.successMessage || '图片已选择，请在确认修改后保存');
+        } finally {
+            if (options.inputRef && 'current' in options.inputRef && options.inputRef.current) {
+                options.inputRef.current.value = '';
             }
-        }));
-
-        // 暂存图片（用于确认/取消时恢复）
-        setPendingImages(prev => ({
-            ...prev,
-            [targetCharacterId]: {
-                ...(prev[targetCharacterId] || {}),
-                [variant]: {
-                    file,
-                    previewUrl,
-                    sourceType: 'upload',
-                    variant,
-                }
-            }
-        }));
-
-        // 标记有未保存修改
-        setHasUnsavedChanges(true);
-
-        toast.success('图片已选择，请在确认修改后保存');
-
-        // 清空 input
-        if (options.inputRef && 'current' in options.inputRef && options.inputRef.current) {
-            options.inputRef.current.value = '';
+            setIsUploadingPortrait(false);
         }
     };
 
     const handleUploadPlayerImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isPortraitActionBusy) return;
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -903,6 +877,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     const handleUploadNpcImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (isPortraitActionBusy) return;
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -1111,7 +1086,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
                 {/* 右栏 - 角色详情（统一表单） */}
                 {currentCharacter && (
-                    <div className={styles.card}>
+                    <div ref={detailCardRef} className={`${styles.card} ${styles.detailCard}`}>
                         {/* 隐藏的图片上传 inputs */}
                         <input
                             ref={playerFileInputRef}
@@ -1130,48 +1105,56 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
                         {/* 右侧面板头部 - 确认/取消按钮 */}
                         {isAddingNew ? (
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-                                <button className={styles.ghostSmall} onClick={confirmEdit}>
+                            <div className={styles.detailActionRow}>
+                                <button
+                                    className={styles.ghostSmall}
+                                    onClick={confirmEdit}
+                                    disabled={isPortraitActionBusy}
+                                >
                                     确认增加
                                 </button>
-                                <button className={styles.ghostSmall} onClick={cancelAddNew}>
+                                <button className={styles.ghostSmall} onClick={cancelAddNew} disabled={isSavingCharacter}>
                                     取消
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-                                <button className={styles.ghostSmall} onClick={confirmEdit}>
+                            <div className={styles.detailActionRow}>
+                                <button
+                                    className={styles.ghostSmall}
+                                    onClick={confirmEdit}
+                                    disabled={isPortraitActionBusy}
+                                >
                                     确认修改
                                 </button>
                             </div>
                         )}
 
                         <>
-                            {/* 立绘 - 使用 getEffectiveImage 优先显示暂存预览 */}
+                            {/* 立绘大图区域 */}
                             <div
                                 className={styles.portraitLarge}
                                 style={{
-                                    backgroundImage: getEffectiveImage(currentCharacter, 'base') ? `url('${withCacheBust(getEffectiveImage(currentCharacter, 'base')!)}')` : 'none',
+                                    backgroundImage: `url('${displayPortraitImage}')`,
                                     backgroundSize: 'contain',
                                     backgroundPosition: 'center',
                                     backgroundRepeat: 'no-repeat',
-                                    cursor: (isAddingNew || (isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id)) ? 'not-allowed' : 'pointer'
+                                    cursor: (isAddingNew || isPortraitActionBusy) ? 'not-allowed' : 'pointer',
                                 }}
                                 onClick={handlePortraitClick}
                             >
-                                {getEffectiveImage(currentCharacter, 'base') && (
+                                {currentPortraitImage && (
                                     <button
                                         className={styles.downloadButton}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const imgUrl = getEffectiveImage(currentCharacter, 'base');
                                             if (currentCharacter.id === 'player') {
-                                                handleDownloadImage('players', '', 'base', imgUrl);
+                                                handleDownloadImage('players', '', 'base', currentPortraitImage);
                                             } else {
-                                                handleDownloadImage('npcs', currentCharacter.id, 'base', imgUrl);
+                                                handleDownloadImage('npcs', currentCharacter.id, 'base', currentPortraitImage);
                                             }
                                         }}
                                         title="下载图片"
+                                        disabled={isPortraitActionBusy}
                                     >
                                         <MdDownload size={18} />
                                     </button>
@@ -1179,7 +1162,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 <span className={styles.portraitHint}>
                                     {isAddingNew ? '请先确认增加角色后再上传图片' : '点击替换角色基础立绘'}
                                 </span>
-                                {isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id && (
+                                {isCurrentPortraitGenerating && (
                                     <div className={styles.loadingOverlay}>
                                         <div className={styles.loadingSpinner}></div>
                                         <div className={styles.loadingText}>正在生成角色立绘...</div>
@@ -1188,9 +1171,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             </div>
 
                             <div className={styles.portraitImageActions}>
-                                <button className={styles.ghostSmall}
+                                <button
+                                    className={styles.ghostSmall}
                                     onClick={handlePortraitClick}
-                                    disabled={isAddingNew || (isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id)}
+                                    disabled={isAddingNew || isPortraitActionBusy}
                                 >
                                     上传图片
                                 </button>
@@ -1198,7 +1182,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     <button
                                         className={`${styles.ghostSmall} ${styles.generateButton}`}
                                         onClick={() => handleRequestSingleNpcGenerate(currentCharacter)}
-                                        disabled={isAddingNew || (isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id)}
+                                        disabled={isAddingNew || isPortraitActionBusy}
                                     >
                                         <img
                                             src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -1445,16 +1429,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             )}
 
 
-                            {/* 人物背景 & 动机（可折叠） */}
+                            {/* 仅保留可持久化且可被剧情使用的“人物背景故事”字段 */}
                             <div className={styles.detailBlock}>
                                 <div
                                     className={styles.collapsibleHeader}
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => setIsBackgroundExpanded(!isBackgroundExpanded)}
                                 >
-                                    <strong>人物背景 & 动机（可选）</strong>
+                                    <strong>人物背景故事（可选）</strong>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span className={styles.mutedSmall}>不限格式，所有内容均是选填</span>
+                                        <span className={styles.mutedSmall}>不限格式，选填项</span>
                                         <MdArrowDropDown size={30} style={{ transform: isBackgroundExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                                     </div>
                                 </div>
@@ -1470,98 +1454,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             <textarea
                                                 rows={4}
                                                 value={currentCharacter.background}
+                                                placeholder="可填写：成长经历/目标/秘密/人物关系等，会统一作为背景在剧情中生效"
                                                 {...backgroundLimit}
                                             />
                                         </label>
-                                        <label className={styles.wide}>
-                                            <span>成长经历 / 转折</span>
-                                            <textarea
-                                                rows={4}
-                                                value={currentCharacter.growth}
-                                                onChange={(e) => handleFieldChange('growth', e.target.value)}
-                                            />
-                                        </label>
-                                        <label>
-                                            <span>短期目标</span>
-                                            <input
-                                                type="text"
-                                                value={currentCharacter.goalShort}
-                                                onChange={(e) => handleFieldChange('goalShort', e.target.value)}
-                                            />
-                                        </label>
-                                        <label>
-                                            <span>长期愿景</span>
-                                            <input
-                                                type="text"
-                                                value={currentCharacter.goalLong}
-                                                onChange={(e) => handleFieldChange('goalLong', e.target.value)}
-                                            />
-                                        </label>
-                                        <label className={styles.wide}>
-                                            <span>隐藏秘密 / 禁忌</span>
-                                            <textarea
-                                                rows={3}
-                                                value={currentCharacter.secret}
-                                                onChange={(e) => handleFieldChange('secret', e.target.value)}
-                                            />
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 人物关系（可折叠） */}
-                            <div className={styles.detailBlock}>
-                                <div
-                                    className={styles.collapsibleHeader}
-                                    style={{ cursor: 'pointer' }}
-                                    onClick={() => setIsRelationshipExpanded(!isRelationshipExpanded)}
-                                >
-                                    <strong>人物关系（可选）</strong>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        {isRelationshipExpanded && (
-                                            <button
-                                                className={styles.ghostSmall}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    addRelationship();
-                                                }}
-                                            >
-                                                + 添加关系
-                                            </button>
-                                        )}
-                                        <MdArrowDropDown size={30} style={{ transform: isRelationshipExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                                    </div>
-                                </div>
-                                {isRelationshipExpanded && (
-                                    <div className={styles.relationshipList}>
-                                        {currentCharacter.relationships.length === 0 ? (
-                                            <p className={styles.mutedSmall}>暂无关系。可添加与其他 NPC 的亲疏、不同身份下的角色差异等信息。</p>
-                                        ) : (
-                                            currentCharacter.relationships.map((rel) => (
-                                                <div key={rel.id} className={styles.relationshipRow}>
-                                                    <label>
-                                                        <span>对象 / 称呼</span>
-                                                        <input
-                                                            type="text"
-                                                            value={rel.name}
-                                                            onChange={(e) => updateRelationship(rel.id, 'name', e.target.value)}
-                                                        />
-                                                    </label>
-                                                    <label className={styles.wide}>
-                                                        <span>关系描述</span>
-                                                        <textarea
-                                                            rows={3}
-                                                            value={rel.description}
-                                                            onChange={(e) => updateRelationship(rel.id, 'description', e.target.value)}
-                                                        />
-                                                    </label>
-                                                    <button
-                                                        className={styles.ghostTiny}
-                                                        onClick={() => removeRelationship(rel.id)}
-                                                    >删除</button>
-                                                </div>
-                                            ))
-                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1695,33 +1591,21 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             <SaveConfirmModal
                 isOpen={saveConfirmModalOpen}
                 onSave={async () => {
-                    // 保存当前正在编辑的角色，而不是所有角色
                     try {
-                        await confirmEdit();
+                        const saved = await confirmEdit();
+                        if (!saved) {
+                            return;
+                        }
                         setSaveConfirmModalOpen(false);
                         setIsBlockingSwitch(false);
                         setHasUnsavedChanges(false);
                         executePendingAction();
                     } catch (error) {
                         toast.error('保存失败，请重试');
-                        // 保存失败时不关闭弹窗，不执行待处理操作
                     }
                 }}
                 onDiscard={() => {
-                    // 恢复原图（如果有暂存图片被更新到 characterData）
-                    if (activeCharacterId && pendingImages[activeCharacterId]) {
-                        const originalChar = originalCharacterDataRef.current.find(c => c.id === activeCharacterId);
-                        if (originalChar) {
-                            setCharacterData(prev => prev.map(char => {
-                                if (char.id !== activeCharacterId) return char;
-                                return originalChar;
-                            }));
-                        }
-                        Object.keys(pendingImages[activeCharacterId]).forEach(variant => {
-                            clearPendingImageUrl(`${activeCharacterId}-${variant}`);
-                        });
-                    }
-                    setPendingImages({});
+                    discardCurrentCharacterPendingImages();
                     setSaveConfirmModalOpen(false);
                     setHasUnsavedChanges(false);
                     setIsBlockingSwitch(false);

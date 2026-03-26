@@ -15,6 +15,7 @@ export interface Player {
   age?: number;
   gender: string;
   race?: string;
+  background?: string;
   appearance: string;
   personality?: string;
   tone?: string;

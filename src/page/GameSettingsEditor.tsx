@@ -251,6 +251,32 @@ const GameSettingsEditor = () => {
         setShowPublishModal(false);
     }, [handlePublishGame]);
 
+    const checkActivePanelBeforeTest = useCallback(async (): Promise<boolean> => {
+        // 功能注释：测试体验前复用各面板的未保存检查，避免改动未保存直接开局
+        if (activePanel === 'functionalNPCs' && functionalNPCsPanelRef.current) {
+            return await Promise.resolve(functionalNPCsPanelRef.current.checkBeforeLeave());
+        }
+        if (activePanel === 'objects' && objectsPanelRef.current) {
+            return await Promise.resolve(objectsPanelRef.current.checkBeforeLeave());
+        }
+        if (activePanel === 'characters' && charactersPanelRef.current) {
+            return await Promise.resolve(charactersPanelRef.current.checkBeforeLeave());
+        }
+        if (activePanel === 'scenes' && scenesPanelRef.current) {
+            return await Promise.resolve(scenesPanelRef.current.checkBeforeLeave());
+        }
+        if (activePanel === 'attributeGrowth' && attributeGrowthPanelRef.current) {
+            return await Promise.resolve(attributeGrowthPanelRef.current.checkBeforeLeave());
+        }
+        if (activePanel === 'world' && worldPanelRef.current) {
+            return await Promise.resolve(worldPanelRef.current.checkBeforeLeave());
+        }
+        if (activePanel === 'mapEdit' && mapPanelRef.current) {
+            return await Promise.resolve(mapPanelRef.current.checkBeforeLeave());
+        }
+        return true;
+    }, [activePanel]);
+
     return (
         <div className={styles.appShell}>
             <Sidebar
@@ -277,6 +303,10 @@ const GameSettingsEditor = () => {
                             onClick={async (e) => {
                                 console.log('点击测试体验');
                                 e.preventDefault();
+                                const canStartTest = await checkActivePanelBeforeTest();
+                                if (!canStartTest) {
+                                    return;
+                                }
                                 await createGalgameSession();
                             }}
                             disabled={!fileId || !gameData || isSubmitting || isLoadingData}
