@@ -45,10 +45,19 @@ export const createSceneApiHelpers = (mode: string) => {
             scene: { id: string; name: string; description: string };
         }) => {
             const { fileId, scene } = params;
-            return EditorApi.generateSceneImage(scene.id, fileId, {
-                removeBg: true,
-                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
-            });
+            try {
+                const response = await EditorApi.generateSceneImage(scene.id, fileId, {
+                    removeBg: true,
+                    pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                });
+
+                const sceneId = (response.headers['x-scene-id'] as string) || scene.id;
+                return { data: { success: true, blob: response.data, sceneId } };
+            } catch (error) {
+                const err = error as { response?: { data?: { message?: string } }; message?: string };
+                const message = err?.response?.data?.message || err?.message || '生成失败';
+                return { data: { success: false, message } };
+            }
         },
 
         // 子场景（仅 worldInteraction）

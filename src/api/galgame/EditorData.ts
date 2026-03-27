@@ -102,7 +102,7 @@ const EditorApi = {
     uploadPlayerImage: (fileId:string, data:{file:File, variant:string}) => {
         const formData = new FormData();
         formData.append('image', data.file);
-        formData.append('variat', data.variant);
+        formData.append('variant', data.variant);
         return api.post<UploadPlayerImageResponse>(`/visual/edit/${fileId}/player/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -145,7 +145,8 @@ const EditorApi = {
             timeout: 180000,
         }),
     generateSceneImage: (sceneId: string, fileId: string, data: GenerateImageRequest) =>
-        api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/scenes/${sceneId}`, data, {
+        api.post<Blob>(`/visual/generate-images/${fileId}/scenes/${encodeURIComponent(sceneId)}`, data, {
+            responseType: 'blob',
             timeout: 180000,
         }),
     generateVariantImage: (fileId: string, npcId: string, data: GenerateVariantImageRequest) =>
@@ -154,6 +155,8 @@ const EditorApi = {
         }),
     deleteVariantImage: (fileId:string, npcId:string, variant:string) =>
         api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/npcs/${npcId}/image/${variant}`),
+    deletePlayerImageVariant: (fileId:string, variant:string) =>
+        api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/player/image/${variant}`),
     calculateScenePoints: (fileId: string) =>
         api.post<CalculatePointsResponse>(`/visual/images/generate-scenes/calculate-points`, {
             fileId: fileId,
@@ -171,11 +174,11 @@ const EditorApi = {
         
         let url: string;
         if (type === 'players' && variant) {
-            url = `/images/${pluginType}/${fileId}/${type}/${variant}${extension}`;
+            url = `/${pluginType}/images/${fileId}/${type}/${variant}${extension}`;
         } else if (type === 'npcs' && variant) {
-            url = `/images/${pluginType}/${fileId}/${type}/${name}/${variant}${extension}`;
+            url = `/${pluginType}/images/${fileId}/${type}/${name}/${variant}${extension}`;
         } else {
-            url = `/images/${pluginType}/${fileId}/${type}/${name}${extension}`;
+            url = `/${pluginType}/images/${fileId}/${type}/${name}${extension}`;
         }
         return api.get<Blob>(url, {
             responseType: 'blob',

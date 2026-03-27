@@ -24,6 +24,7 @@ interface SceneDetailFormProps {
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     isGeneratingForThisScene: boolean;
     isAddingNewSubscene?: boolean;
+    getEffectiveImage?: (sceneId: string, subsceneId?: string) => string | undefined;
     onImageClick: () => void;
     onUploadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRequestRegenerate: (scene: LocalScene) => void;
@@ -38,6 +39,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     fileInputRef,
     isGeneratingForThisScene,
     isAddingNewSubscene = false,
+    getEffectiveImage,
     onImageClick,
     onUploadChange,
     onRequestRegenerate,
@@ -46,26 +48,31 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     sceneType = 'scenes',
 }) => {
     // 根据场景类型自动计算默认图片和上传按钮文本
-    const defaultImage = useMemo(() => 
+    const defaultImage = useMemo(() =>
         sceneType === 'subscenes' ? DEFAULT_WORLD_MAP_IMAGE : DEFAULT_SCENE_IMAGE,
         [sceneType]
     );
 
-    const uploadButtonText = useMemo(() => 
-        scene.image ? '重新上传' : '上传背景',
-        [scene.image]
+    // 获取有效的图片
+    const effectiveImage = getEffectiveImage
+        ? getEffectiveImage(scene.id)
+        : scene.image;
+
+    const uploadButtonText = useMemo(() =>
+        effectiveImage ? '重新上传' : '上传背景',
+        [effectiveImage]
     );
 
     // 根据场景ID判断是否为临时场景（新增状态）
     const isTempScene = scene.id.startsWith('temp-');
     // 新增场景或新增子场景时都应该禁用
     const disabled = isTempScene;
-    const disabledMessage = disabled 
-        ? (isAddingNewSubscene 
-            ? '请先确认新增子场景，然后再上传图片' 
+    const disabledMessage = disabled
+        ? (isAddingNewSubscene
+            ? '请先确认新增子场景，然后再上传图片'
             : '请先确认新增场景，然后再上传图片')
         : undefined;
-    
+
     const showDisabledMessage = disabled && disabledMessage;
     const isDisabled = disabled || isGeneratingForThisScene;
 
@@ -77,25 +84,34 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     const nameLimit = useWordLimit(SCENE_WORD_LIMITS.name, (value) => onFieldChange('name', value));
     const descLimit = useWordLimit(SCENE_WORD_LIMITS.desc, (value) => onFieldChange('desc', value));
 
+    // 计算背景图片 URL
+    const backgroundImageStyle = (() => {
+        if (!effectiveImage) return `url('${defaultImage}')`;
+        if (effectiveImage.startsWith('blob:') || effectiveImage.startsWith('data:')) {
+            return `url('${effectiveImage}')`;
+        }
+        return `url('${withCacheBust(getImageUrl(effectiveImage))}')`;
+    })();
+
     return (
         <>
             {/* 场景背景大图 */}
             <div
-                className={`${styles.sceneHero} ${!scene.image ? styles.empty : ''}`}
+                className={`${styles.sceneHero} ${!effectiveImage ? styles.empty : ''}`}
                 onClick={onImageClick}
                 style={{
                     cursor: isDisabled ? 'not-allowed' : 'pointer',
                     opacity: isDisabled ? 0.7 : 1,
-                    backgroundImage: `url('${scene.image ? withCacheBust(getImageUrl(scene.image)) : defaultImage}')`,
+                    backgroundImage: backgroundImageStyle,
                 }}
             >
                 {/* 下载按钮 */}
-                {scene.image && onDownloadImage && (
+                {effectiveImage && onDownloadImage && (
                     <button
                         className={styles.downloadButton}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDownloadImage(sceneType, scene.id, scene.image);
+                            onDownloadImage(sceneType, scene.id, effectiveImage);
                         }}
                         title="下载图片"
                     >
@@ -104,7 +120,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 )}
                 {showDisabledMessage ? (
                     <span className={styles.heroHint}>{disabledMessage}</span>
-                ) : scene.image ? (
+                ) : effectiveImage ? (
                     <span className={styles.heroHint}>点击替换背景</span>
                 ) : (
                     <span>点击上传背景图</span>

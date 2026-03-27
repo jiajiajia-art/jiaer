@@ -30,7 +30,7 @@ import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
 import SaveModal from "../components/Galgame/SaveModal";
 import LoadSaveListModal from "../components/CreateGame/LoadSaveListModal";
 import SavePreviewModal from "../components/CreateGame/SavePreviewModal";
-import { savesApi, type SaveSummaryItem } from "../api/galgame/saves";
+import type { SaveSummaryItem } from "../api/galgame/saves";
 import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";

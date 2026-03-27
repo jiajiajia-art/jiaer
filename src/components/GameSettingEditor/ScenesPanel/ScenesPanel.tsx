@@ -32,6 +32,16 @@ interface BgmItem {
     description: string;
 }
 
+/**
+ * 暂存图片类型 - 用于图片选择/生成后、确认修改前的预览
+ */
+interface PendingImage {
+    file?: File;                    // 待上传的文件
+    previewUrl: string;            // 本地预览 URL
+    sourceType: 'upload' | 'generate' | 'url'; // 来源类型
+    variant: string;                // 图片类型：'base'
+}
+
 type LocalScene = HandlerLocalScene;
 
 interface ScenesPanelProps {
@@ -96,6 +106,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     } | null>(null);
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
 
+    // 暂存图片相关状态
+    const [pendingImages, setPendingImages] = useState<{ [sceneId: string]: { [variant: string]: PendingImage } }>({});
+    const pendingImageUrlsRef = useRef<{ [key: string]: string }>({});
+
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
     
@@ -106,6 +120,44 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     useEffect(() => {
         isBlockingSwitchRef.current = isBlockingSwitch;
     }, [isBlockingSwitch]);
+
+    // 清理暂存图片 Object URL
+    const clearPendingImageUrl = (key: string) => {
+        if (pendingImageUrlsRef.current[key]) {
+            URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            delete pendingImageUrlsRef.current[key];
+        }
+    };
+
+    // 清理单个场景的暂存图
+    const clearPendingImagesForScene = useCallback((sceneId: string) => {
+        const pendingForScene = pendingImages[sceneId];
+        if (!pendingForScene) return;
+
+        Object.keys(pendingForScene).forEach((variant) => {
+            clearPendingImageUrl(`${sceneId}-${variant}`);
+        });
+
+        setPendingImages(prev => {
+            const next = { ...prev };
+            delete next[sceneId];
+            return next;
+        });
+    }, [pendingImages]);
+
+    // 丢弃当前场景的暂存数据并恢复到原始数据
+    const discardCurrentScenePendingChanges = useCallback(() => {
+        if (!activeSceneId) return;
+        
+        const originalScene = originalSceneDataRef.current.find(s => s.id === activeSceneId);
+        if (originalScene) {
+            setSceneData(prev => prev.map(scene => (
+                scene.id === activeSceneId ? originalScene : scene
+            )));
+            setActiveSceneDraft(originalScene);
+        }
+        clearPendingImagesForScene(activeSceneId);
+    }, [activeSceneId, clearPendingImagesForScene]);
 
     const bgmLibrary = useMemo<BgmItem[]>(() => {
         return musicList.map(music => ({
@@ -134,9 +186,21 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         return processedUrl ? withCacheBust(`${processedUrl}`) : DEFAULT_WORLD_MAP_IMAGE;
     }, [worldMapImage]);
 
-    const activeScene = sceneData.length > 0 
+    const activeScene = sceneData.length > 0
         ? (sceneData.find(s => s.id === activeSceneId) || sceneData[0])
         : null;
+
+    const getEffectiveImage = (sceneId: string, subsceneId?: string): string | undefined => {
+        const targetId = subsceneId || sceneId;
+        const pending = pendingImages[targetId]?.['base'];
+        if (pending?.previewUrl) {
+            return pending.previewUrl;
+        }
+        if (subsceneId) {
+            return subsceneDataBySceneId[sceneId]?.find(s => (s.id || s.name) === subsceneId)?.image;
+        }
+        return sceneData.find(s => s.id === sceneId)?.image;
+    };
 
     useEffect(() => {
         if (isAddingNew) return;
@@ -177,6 +241,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 isAddingNew,
                 newSceneData,
                 isAddingNewSubscene,
+                pendingImages,
                 setSceneData,
                 setSubsceneDataBySceneId,
                 setActiveSceneId,
@@ -192,9 +257,12 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setIsGeneratingAllSceneImages,
                 setSceneCostPoints,
                 setIsLoadingSceneCost,
+                setPendingImages,
+                setHasUnsavedChanges,
                 sceneFileInputRef,
                 newSceneFileInputRef,
                 worldMapFileInputRef,
+                pendingImageUrlsRef,
                 onDeleteModalOpen: handleDeleteModalOpen,
                 onDeleteModalClose: handleDeleteModalClose,
                 onSubsceneDeleteModalOpen: handleSubsceneDeleteModalOpen,
@@ -219,6 +287,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             isAddingNew,
             newSceneData,
             isAddingNewSubscene,
+            pendingImages,
             handleDeleteModalOpen,
             handleDeleteModalClose,
             handleSubsceneDeleteModalOpen,
@@ -474,8 +543,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     }, [handlers]);
 
     const handleDownloadImage = useCallback(async (
-        type: 'npcs' | 'scenes' | 'subscenes' | 'worldMap', 
-        id: string, 
+        type: 'npcs' | 'scenes' | 'subscenes' | 'worldMap',
+        id: string,
         variantOrImagePath?: string,
         imagePath?: string
     ) => {
@@ -484,10 +553,9 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             return;
         }
 
-
         let variant: string | undefined;
         let finalImagePath: string | undefined;
-        
+
         if (type === 'scenes' || type === 'subscenes') {
             finalImagePath = variantOrImagePath;
         } else {
@@ -495,14 +563,29 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             finalImagePath = imagePath;
         }
 
+        if (!finalImagePath) {
+            toast.error('缺少图片路径，无法下载');
+            return;
+        }
+
         try {
-            const response = await sceneApi.downloadImage(fileId, type, id, variant, finalImagePath);
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            let blob: Blob;
+
+            if (finalImagePath.startsWith('blob:') || finalImagePath.startsWith('data:')) {
+                const response = await fetch(finalImagePath);
+                if (!response.ok) {
+                    throw new Error('获取图片数据失败');
+                }
+                blob = await response.blob();
+            } else {
+                const response = await sceneApi.downloadImage(fileId, type, id, variant, finalImagePath);
+                blob = response.data;
+            }
+            const extension = extractImageExtension(finalImagePath) || '.png';
+            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            
-            const extension = extractImageExtension(finalImagePath);
-            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
             link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
@@ -636,6 +719,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         activeSceneId={activeSceneId}
                         activeSubsceneId={activeSubsceneId}
                         mode={mode}
+                        getEffectiveImage={getEffectiveImage}
                         onSceneClick={handleSceneClick}
                         onSubsceneClick={handleSubsceneClick}
                         onDeleteClick={onListDeleteClick}
@@ -696,6 +780,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     fileInputRef={sceneFileInputRef}
                                     isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === activeSubsceneDraft.id}
                                     isAddingNewSubscene={isAddingNewSubscene}
+                                    getEffectiveImage={getEffectiveImage}
                                     onImageClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
@@ -712,6 +797,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     bgmLibrary={bgmLibrary}
                                     fileInputRef={sceneFileInputRef}
                                     isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === (activeSceneDraft || activeScene)!.id}
+                                    getEffectiveImage={getEffectiveImage}
                                     onImageClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
@@ -827,6 +913,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     }
                 }}
                 onDiscard={() => {
+                    discardCurrentScenePendingChanges();
                     setSaveConfirmModalOpen(false);
                     setHasUnsavedChanges(false);
                     setIsBlockingSwitch(false);

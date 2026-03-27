@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import type { Scene as ApiScene } from '../../../api/galgame/getGalgamePreset.type';
 import { getSceneById, getSubSceneById, isWorldSubScene, type SceneLike } from '../editorCompat';
 import type { SceneApiHelpers } from './apiHelpers';
-import { parseSceneResponse } from './apiHelpers';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { User } from '../../../api/account/auth.type';
@@ -40,6 +39,7 @@ export interface HandlersContext {
     isAddingNew: boolean;
     newSceneData: LocalScene | null;
     isAddingNewSubscene: boolean;
+    pendingImages: { [sceneId: string]: { [variant: string]: PendingImage } };
 
     // 必要的 setters（只传真正需要的）
     setSceneData: React.Dispatch<React.SetStateAction<LocalScene[]>>;
@@ -57,11 +57,14 @@ export interface HandlersContext {
     setIsGeneratingAllSceneImages: React.Dispatch<React.SetStateAction<boolean>>;
     setSceneCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setIsLoadingSceneCost: React.Dispatch<React.SetStateAction<boolean>>;
+    setPendingImages: React.Dispatch<React.SetStateAction<{ [sceneId: string]: { [variant: string]: PendingImage } }>>;
+    setHasUnsavedChanges: (value: boolean) => void;
 
     // refs（需要操作 DOM）
     sceneFileInputRef: React.RefObject<HTMLInputElement | null>;
     newSceneFileInputRef: React.RefObject<HTMLInputElement | null>;
     worldMapFileInputRef: React.RefObject<HTMLInputElement | null>;
+    pendingImageUrlsRef: React.MutableRefObject<{ [key: string]: string }>;
 
     // 弹窗控制回调（简化：只传开关函数，内部状态用闭包管理）
     onDeleteModalOpen: () => void;
@@ -73,6 +76,16 @@ export interface HandlersContext {
     onWorldMapCostModalOpen: () => void;
 
     onDataChange?: () => void;
+}
+
+/**
+ * 暂存图片类型 - 用于图片选择/生成后、确认修改前的预览
+ */
+export interface PendingImage {
+    file?: File;
+    previewUrl: string;
+    sourceType: 'upload' | 'generate' | 'url';
+    variant: string;
 }
 
 export const createSceneHandlers = (ctx: HandlersContext) => {
@@ -90,6 +103,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         isAddingNew,
         newSceneData,
         isAddingNewSubscene,
+        pendingImages,
         // setters
         setSceneData,
         setSubsceneDataBySceneId,
@@ -106,10 +120,13 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setIsGeneratingAllSceneImages,
         setSceneCostPoints,
         setIsLoadingSceneCost,
+        setPendingImages,
+        setHasUnsavedChanges,
         // refs
         sceneFileInputRef,
         newSceneFileInputRef,
         worldMapFileInputRef,
+        pendingImageUrlsRef,
         // 弹窗控制
         onDeleteModalOpen,
         onDeleteModalClose,
@@ -136,6 +153,105 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             }
         } catch (error) {
             console.error('刷新用户积分失败:', error);
+        }
+    };
+
+    // 设置暂存图片（支持 File、Blob、URL）
+    const setPendingImage = async (
+        sceneId: string,
+        imageData: string | File | Blob | ArrayBuffer,
+        variant: string = 'base'
+    ) => {
+        let previewUrl: string;
+        let file: File | undefined;
+
+        if (typeof imageData === 'string') {
+            previewUrl = imageData;
+        } else if (imageData instanceof File) {
+            previewUrl = URL.createObjectURL(imageData);
+            file = imageData;
+            const key = `${sceneId}-${variant}`;
+            if (pendingImageUrlsRef.current[key]) {
+                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            }
+            pendingImageUrlsRef.current[key] = previewUrl;
+        } else if (imageData instanceof Blob) {
+            const key = `${sceneId}-${variant}`;
+            if (pendingImageUrlsRef.current[key]) {
+                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            }
+            file = new File([imageData], `generated_${variant}.webp`, { type: imageData.type || 'image/webp' });
+            previewUrl = URL.createObjectURL(file);
+            pendingImageUrlsRef.current[key] = previewUrl;
+        } else if (imageData instanceof ArrayBuffer) {
+            const blob = new Blob([imageData], { type: 'image/webp' });
+            file = new File([blob], `generated_${variant}.webp`, { type: 'image/webp' });
+            previewUrl = URL.createObjectURL(file);
+            const key = `${sceneId}-${variant}`;
+            if (pendingImageUrlsRef.current[key]) {
+                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            }
+            pendingImageUrlsRef.current[key] = previewUrl;
+        } else {
+            console.error('无效的图片数据类型');
+            return;
+        }
+
+        // 更新暂存图片
+        setPendingImages(prev => ({
+            ...prev,
+            [sceneId]: {
+                ...(prev[sceneId] || {}),
+                [variant]: {
+                    previewUrl,
+                    file,
+                    sourceType: file ? 'upload' : 'url',
+                    variant,
+                }
+            }
+        }));
+        setHasUnsavedChanges(true);
+    };
+
+    // 上传图片到服务器
+    const uploadImage = async (
+        sceneId: string,
+        subsceneId?: string,
+        variant: string = 'base'
+    ): Promise<string | undefined> => {
+        const targetId = subsceneId || sceneId;
+        const pendingImage = pendingImages[targetId]?.[variant];
+        if (!pendingImage?.file) {
+            console.warn(`未找到 ${targetId}-${variant} 的暂存图片文件`);
+            return undefined;
+        }
+
+        const file = pendingImage.file;
+        toast.loading('正在存储图片...', { id: 'uploading-image' });
+
+        try {
+            let response;
+            if (subsceneId && mode === 'worldInteraction') {
+                response = await api.uploadSubSceneImage(fileId!, sceneId, subsceneId, file);
+            } else {
+                response = await api.uploadSceneImage(fileId!, sceneId, file);
+            }
+
+            toast.dismiss('uploading-image');
+
+            if (response.data?.success) {
+                const serverPath = response.data.imagePath;
+                if (serverPath) {
+                    return serverPath;
+                }
+            }
+            toast.error('图片存储失败');
+            return undefined;
+        } catch (error) {
+            console.error('存储图片失败:', error);
+            toast.dismiss('uploading-image');
+            toast.error('图片存储失败，请重试');
+            return undefined;
         }
     };
 
@@ -295,12 +411,28 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
         const sceneToSave = activeScene;
 
+        // 处理暂存图片
+        let imagePath = sceneToSave.image;
+        const pendingImage = pendingImages[sceneToSave.id]?.['base'];
+        if (pendingImage) {
+            const serverPath = await uploadImage(sceneToSave.id);
+            if (serverPath) {
+                imagePath = serverPath;
+            }
+            // 清理暂存
+            setPendingImages(prev => {
+                const next = { ...prev };
+                delete next[sceneToSave.id];
+                return next;
+            });
+        }
+
         const sceneDataForApi: ApiScene = {
             id: sceneToSave.id,
             name: sceneToSave.name || '未命名场景',
             type: sceneToSave.type || '',
             description: sceneToSave.desc || '暂无描述',
-            image: sceneToSave.image || undefined,
+            image: imagePath || undefined,
             soundtrack: sceneToSave.bgmId || undefined,
             npcs: [],
             events: [],
@@ -312,7 +444,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 toast.success('场景更新成功');
                 // 先把用户刚确认的数据写回本地（保证不依赖刷新 document 也能持久）
                 setSceneData(prev =>
-                    prev.map(s => (s.id === sceneToSave.id ? { ...s, ...sceneToSave } : s))
+                    prev.map(s => (s.id === sceneToSave.id ? { ...s, ...sceneToSave, image: imagePath || sceneToSave.image } : s))
                 );
                 // 再用后端回包做一次覆盖（如果后端返回了更完整字段，如 image/soundtrack 等）
                 updateSceneFromResponse(response.data, sceneToSave.id);
@@ -365,11 +497,27 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             return;
         }
 
+        // 处理暂存图片
+        let imagePath = activeSubsceneDraft.image;
+        const pendingImage = pendingImages[activeSubsceneDraft.id]?.['base'];
+        if (pendingImage) {
+            const serverPath = await uploadImage(activeSceneId, activeSubsceneDraft.id);
+            if (serverPath) {
+                imagePath = serverPath;
+            }
+            // 清理暂存
+            setPendingImages(prev => {
+                const next = { ...prev };
+                delete next[activeSubsceneDraft.id];
+                return next;
+            });
+        }
+
         const subsceneData: any = {
             id: isAddingNewSubscene ? `subscene_${Date.now()}` : activeSubsceneDraft.id,
             name: activeSubsceneDraft.name || '未命名子场景',
             description: activeSubsceneDraft.desc || '',
-            image: activeSubsceneDraft.image || '',
+            image: imagePath || '',
             npcs: [],
             position: [0, 0],
             npcs_slots: [],
@@ -557,7 +705,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 上传场景/子场景图片
+    // 上传场景/子场景图片（暂存模式）
     const handleUploadSceneImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -570,12 +718,9 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             toast.error('图片大小不能超过 5MB');
             return;
         }
-        if (!fileId) {
-            toast.error('缺少文件ID，无法上传');
-            return;
-        }
 
         let targetSceneId = '';
+        let targetSubsceneId: string | undefined;
 
         if (isAddingNew && newSceneData) {
             toast.error('请先确认新增场景，然后再上传图片');
@@ -596,58 +741,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 if (sceneFileInputRef.current) sceneFileInputRef.current.value = '';
                 return;
             }
-            try {
-                const response = await api.uploadSubSceneImage(fileId, activeSceneId, activeSubsceneId, file);
-                if (response.data?.success) {
-                    toast.success('子场景图片上传成功');
-                    const responseAny = response.data as any;
-                    const newImageUrl = responseAny?.data?.image || responseAny?.imagePath;
-                    if (newImageUrl) {
-                        // 本地存原始路径，展示时再 getImageUrl/加时间戳
-                        setActiveSubsceneDraft(prev => prev ? {
-                            ...prev,
-                            image: newImageUrl,
-                        } : null);
-                        if (setSubsceneDataBySceneId) {
-                            setSubsceneDataBySceneId(prev => {
-                                const current = ((prev || {})[activeSceneId] || []) as any[];
-                                const idx = current.findIndex(s => (s.id || s.name) === activeSubsceneId);
-                                if (idx < 0) return prev || {};
-                                const next = current.map((s, i) => i === idx ? { ...s, image: newImageUrl } : s);
-                                return { ...(prev || {}), [activeSceneId]: next };
-                            });
-                        }
-                        // 手动刷新缓存，强制浏览器重新加载图片
-                        bumpCacheBust(newImageUrl);
-                    } else if (activeSubsceneDraft?.image) {
-                        const baseUrl = activeSubsceneDraft.image.split('?')[0];
-                        setActiveSubsceneDraft(prev => prev ? {
-                            ...prev,
-                            image: baseUrl,
-                        } : null);
-                        if (setSubsceneDataBySceneId) {
-                            setSubsceneDataBySceneId(prev => {
-                                const current = ((prev || {})[activeSceneId] || []) as any[];
-                                const idx = current.findIndex(s => (s.id || s.name) === activeSubsceneId);
-                                if (idx < 0) return prev || {};
-                                const next = current.map((s, i) => i === idx ? { ...s, image: baseUrl } : s);
-                                return { ...(prev || {}), [activeSceneId]: next };
-                            });
-                        }
-                    }
-                    // 不在此处触发全量刷新（避免确认后立刻刷新 document）
-                } else {
-                    toast.error('上传子场景图片失败');
-                }
-            } catch (error) {
-                console.error('上传子场景图片时出错:', error);
-                toast.error('上传子场景图片失败，请重试');
-            } finally {
-                if (sceneFileInputRef.current) {
-                    sceneFileInputRef.current.value = '';
-                }
-            }
-            return;
+            targetSceneId = activeSceneId;
+            targetSubsceneId = activeSubsceneId;
         } else {
             targetSceneId = activeSceneId;
         }
@@ -657,37 +752,17 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             return;
         }
 
-        try {
-            const response = await api.uploadSceneImage(fileId, targetSceneId, file);
-            if (response.data?.success) {
-                toast.success('场景图片上传成功');
-                
-                // 使用后端返回的数据更新本地状态
-                const imageData = parseSceneResponse.extractSceneImage(response.data, mode, targetSceneId);
-                if (imageData?.imagePath) {
-                    // 本地存原始路径，展示时再 getImageUrl/加时间戳
-                    const nextPath = imageData.imagePath as string;
-                    setSceneData(prev => prev.map(s =>
-                        s.id === targetSceneId
-                            ? { ...s, image: nextPath }
-                            : s
-                    ));
-                    // 手动刷新缓存，强制浏览器重新加载图片
-                    bumpCacheBust(nextPath);
-                }
-            } else {
-                toast.error('上传场景图片失败');
-            }
-        } catch (error) {
-            console.error('上传场景图片时出错:', error);
-            toast.error('上传场景图片失败，请重试');
-        } finally {
-            if (sceneFileInputRef.current) sceneFileInputRef.current.value = '';
-            if (newSceneFileInputRef.current) newSceneFileInputRef.current.value = '';
-        }
+        // 暂存模式：直接设置预览
+        const targetId = targetSubsceneId || targetSceneId;
+        await setPendingImage(targetId, file);
+        toast.success('图片已暂存，请在确认修改后保存');
+        setHasUnsavedChanges(true);
+
+        if (sceneFileInputRef.current) sceneFileInputRef.current.value = '';
+        if (newSceneFileInputRef.current) newSceneFileInputRef.current.value = '';
     };
 
-    // 重新生成单个场景/子场景图片
+    // 重新生成单个场景/子场景图片（暂存模式）
     const doRegenerateSceneImage = async (scene: LocalScene) => {
         if (!fileId || !scene) return;
 
@@ -707,13 +782,10 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             setGeneratingSceneId(scene.id);
 
             let response: any;
-            let imagePath: string | undefined;
+            const targetId = isSubscene ? scene.id : scene.id;
 
             if (isSubscene && mode === 'worldInteraction' && activeSceneId) {
                 response = await api.generateSubSceneImage(fileId, activeSceneId, scene.id);
-                if (response.data?.success) {
-                    imagePath = response.data.imagePath || undefined;
-                }
             } else {
                 response = await api.generateSceneImage({
                     fileId,
@@ -723,71 +795,20 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                         description: scene.desc,
                     },
                 });
-                if (response.data?.success) {
-                    // 使用后端返回的数据更新本地状态
-                    const imageData = parseSceneResponse.extractSceneImage(response.data, mode, scene.id);
-                    imagePath = imageData?.imagePath || undefined;
-                }
             }
 
             if (response.data?.success) {
-                toast.success('场景图片重新生成成功');
-
-                if (isSubscene) {
-                    if (imagePath) {
-                        setActiveSubsceneDraft(prev => prev ? {
-                            ...prev,
-                            image: imagePath,
-                        } : null);
-                        if (setSubsceneDataBySceneId && activeSceneId) {
-                            setSubsceneDataBySceneId(prev => {
-                                const current = ((prev || {})[activeSceneId] || []) as any[];
-                                const idx = current.findIndex(s => (s.id || s.name) === scene.id);
-                                if (idx < 0) return prev || {};
-                                const next = current.map((s, i) => i === idx ? { ...s, image: imagePath } : s);
-                                return { ...(prev || {}), [activeSceneId]: next };
-                            });
-                        }
-                        // 手动刷新缓存，强制浏览器重新加载图片
-                        bumpCacheBust(imagePath);
-                    } else if (activeSubsceneDraft?.image) {
-                        const baseUrl = activeSubsceneDraft.image.split('?')[0];
-                        setActiveSubsceneDraft(prev => prev ? {
-                            ...prev,
-                            image: baseUrl,
-                        } : null);
-                        if (setSubsceneDataBySceneId && activeSceneId) {
-                            setSubsceneDataBySceneId(prev => {
-                                const current = ((prev || {})[activeSceneId] || []) as any[];
-                                const idx = current.findIndex(s => (s.id || s.name) === scene.id);
-                                if (idx < 0) return prev || {};
-                                const next = current.map((s, i) => i === idx ? { ...s, image: baseUrl } : s);
-                                return { ...(prev || {}), [activeSceneId]: next };
-                            });
-                        }
-                    }
-                    // 不在此处触发全量刷新（避免确认后立刻刷新 document）
-                } else {
-                    if (imagePath) {
-                        setSceneData(prev => prev.map(s =>
-                            s.id === scene.id
-                                ? { ...s, image: imagePath }
-                                : s
-                        ));
-                        // 手动刷新缓存，强制浏览器重新加载图片
-                        bumpCacheBust(imagePath);
-                    } else {
-                        setSceneData(prev => prev.map(s => {
-                            if (s.id === scene.id && s.image) {
-                                const baseUrl = s.image.split('?')[0];
-                                return { ...s, image: baseUrl };
-                            }
-                            return s;
-                        }));
-                    }
+                // 优先尝试获取 blob 数据（AI 生成）
+                if (response.data.blob) {
+                    toast.success('场景图片生成成功，请在确认修改后保存');
+                    await setPendingImage(targetId, response.data.blob);
+                } else if (response.data.imagePath) {
+                    // 兼容：直接返回路径的情况
+                    toast.success('场景图片生成成功，请在确认修改后保存');
+                    await setPendingImage(targetId, response.data.imagePath);
                 }
             } else {
-                toast.error('重新生成场景图片失败');
+                toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }
         } catch (error) {
             console.error('重新生成场景图片时出错:', error);
@@ -989,7 +1010,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         // 模式切换
         exitCreateModes,
 
-        // 图片上传 / 生图
+        // 图片上传 / 生图（暂存模式）
+        setPendingImage,
         handleSceneImageClick,
         handleUploadSceneImage,
         handleRequestRegenerateSceneImage,

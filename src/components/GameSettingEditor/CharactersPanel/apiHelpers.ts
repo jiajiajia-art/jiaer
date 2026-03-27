@@ -2,6 +2,7 @@
  * API调用辅助函数
  * 统一封装两种模式的API调用差异，消除mode判断
  */
+import { api } from '../../../api/base';
 import EditorApi from '../../../api/galgame/EditorData';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import type { NPC, Player, GenerateVariantImageRequest } from '../../../api/galgame/EditorData.type';
@@ -12,7 +13,7 @@ import type { PlayerCharacter as WIPlayer, NPC as WINPC } from '../../../api/wor
 export type ApiHelpers = ReturnType<typeof createApiHelpers>;
 
 export const createApiHelpers = (mode: string) => {
-    const isWorldInteraction = mode === 'worldInteraction';    
+    const isWorldInteraction = mode === 'worldInteraction';
 
     return {
         // 玩家相关
@@ -28,12 +29,10 @@ export const createApiHelpers = (mode: string) => {
                     tone: data.tone || '',
                     images: typeof data.images === 'string' ? data.images : (data.image || ''),
                 };
-                
                 // 只有当 data 中确实存在 attributes 时才传递，避免覆盖后端数据
                 if ((data as any).attributes) {
                     wiPlayerData.attributes = (data as any).attributes;
                 }
-                
                 return worldEditor.updatePlayer(fileId, wiPlayerData);
             }
             return EditorApi.updatePlayer(fileId, data);
@@ -46,10 +45,22 @@ export const createApiHelpers = (mode: string) => {
         },
 
         generatePlayerImage: async (fileId: string) => {
-            return EditorApi.generatePlayerImage(fileId, {
-                removeBg: true,
-                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
-            });
+            try {
+                const response = await api.post<Blob>(`/visual/generate-images/${fileId}/player`, {
+                    removeBg: true,
+                    pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                }, {
+                    responseType: 'blob',
+                    timeout: 180000,
+                });
+
+                // 从 blob 的文件名中获取 variant
+                const variant = (response.headers['x-variant'] as string) || 'base';
+                return { data: { success: true, blob: response.data, variant } };
+            } catch (error: any) {
+                const message = error?.response?.data?.message || error?.message || '生成失败';
+                return { data: { success: false, message } };
+            }
         },
 
         // NPC相关
@@ -114,10 +125,21 @@ export const createApiHelpers = (mode: string) => {
         },
 
         generateNpcImage: async (fileId: string, npcId: string) => {
-            return EditorApi.generateNpcImage(fileId, npcId, {
-                removeBg: true,
-                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
-            });
+            try {
+                const response = await api.post<Blob>(`/visual/generate-images/${fileId}/npcs/${npcId}`, {
+                    removeBg: true,
+                    pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                }, {
+                    responseType: 'blob',
+                    timeout: 180000,
+                });
+
+                const variant = (response.headers['x-variant'] as string) || 'base';
+                return { data: { success: true, blob: response.data, variant } };
+            } catch (error: any) {
+                const message = error?.response?.data?.message || error?.message || '生成失败';
+                return { data: { success: false, message } };
+            }
         },
 
         // 批量操作
@@ -142,17 +164,45 @@ export const createApiHelpers = (mode: string) => {
         generateVariantImage: async (
             fileId: string,
             npcId: string,
-            variant: GenerateVariantImageRequest['variant']
+            variantRequest: GenerateVariantImageRequest['variant']
         ) => {
-            return EditorApi.generateVariantImage(fileId, npcId === 'player' ? 'player' : npcId, {
-                variant,
-                removeBg: true,
-                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
-            });
+            try {
+                const isPlayer = npcId === 'player';
+                const url = isPlayer
+                    ? `/visual/generate-images/${fileId}/player/variant`
+                    : `/visual/generate-images/${fileId}/npcs/${npcId}/variant`;
+
+                const response = await api.post<{
+                    success: boolean;
+                    message: string;
+                    imagePath: string;
+                    npcId: string;
+                    variant: { type: string; value: string };
+                }>(
+                    url,
+                    {
+                        variant: variantRequest,
+                        removeBg: true,
+                        pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                    },
+                    {
+                        timeout: 180000,
+                    }
+                );
+
+                return { data: response.data };
+            } catch (error: any) {
+                const message = error?.response?.data?.message || error?.message || '生成失败';
+                return { data: { success: false, message } };
+            }
         },
 
         deleteVariantImage: async (fileId: string, npcId: string, variant: string) => {
             return EditorApi.deleteVariantImage(fileId, npcId, variant);
+        },
+
+        deletePlayerImageVariant: async (fileId: string, variant: string) => {
+            return EditorApi.deletePlayerImageVariant(fileId, variant);
         },
 
         // 下载图片
@@ -160,6 +210,13 @@ export const createApiHelpers = (mode: string) => {
             const pluginType = isWorldInteraction ? 'world-interaction' : 'visual';
             // 对于 NPC，需要传递 variant（如 base），场景不需要
             return EditorApi.downloadImage(pluginType, fileId, type, name, variant, imagePath);
+        },
+
+        // 通过完整路径下载图片（用于已保存的差分图片等）
+        downloadByPath: async (imagePath: string) => {
+            return api.get<Blob>(`/api${imagePath}`, {
+                responseType: 'blob',
+            });
         },
     };
 };
