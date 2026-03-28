@@ -9,7 +9,7 @@ const isWebViewEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-type BottomNavKey = 'home' | 'profile';
+type BottomNavKey = 'home' | 'create' | 'profile';
 
 const normalize = (path: string) => {
     const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -29,6 +29,12 @@ const navItems: Array<{
         label: '首页',
         iconInactive: 'data/assets/切图/首页02.png',
         iconActive: 'data/assets/切图/首页01.png',
+    },
+    {
+        key: 'create',
+        label: '创作',
+        iconInactive: 'data/assets/切图/创作02.png',
+        iconActive: 'data/assets/切图/创作01.png',
     },
     {
         key: 'profile',
@@ -52,15 +58,34 @@ const MobileBottomNav: React.FC = () => {
     const currentPath = normalize(location.pathname);
 
     const activeKey = useMemo<BottomNavKey>(() => {
+        if (currentPath.startsWith('/create')) return 'create';
         if (currentPath.startsWith('/home')) return 'home';
         if (currentPath.startsWith('/profile')) return 'profile';
         return 'home';
     }, [currentPath]);
+    useEffect(() => {
+        try {
+            console.log('[MobileBottomNav] items', (navItems || []).map(n => n.key));
+            console.log('[MobileBottomNav] activeKey', activeKey, 'path', currentPath);
+        } catch (e) {
+            console.warn('[MobileBottomNav] log error', e);
+        }
+    }, [activeKey, currentPath]);
+
 
     const handleNav = (key: BottomNavKey) => {
         switch (key) {
             case 'home':
                 navigate('/home');
+                break;
+            case 'create':
+                if (!isAuthenticated) {
+                    if (!isWebViewEnv()) {
+                        setIsAuthModalOpen(true);
+                    }
+                    return;
+                }
+                navigate('/create');
                 break;
             case 'profile':
                 if (!isAuthenticated) {
