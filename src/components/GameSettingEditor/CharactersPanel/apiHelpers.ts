@@ -257,6 +257,12 @@ export const parseResponse = {
         response: UploadPlayerImageResponse | GenerateImgeResponse,
         _mode: string
     ): { image: string; images?: { [key: string]: string } } => {
+        if ('images' in response && response.images && typeof response.images === 'object') {
+            return {
+                image: response.imagePath || '',
+                images: response.images as { [key: string]: string },
+            };
+        }
         return {
             image: response.imagePath || '',
             images: 'variant' in response && response.variant ? { [response.variant]: response.imagePath } : undefined,
@@ -269,10 +275,13 @@ export const parseResponse = {
         variant?: string,
         expectedType?: string,
         expectedValue?: string
-    ): { imagePath?: string; variant?: string; variantKey?: string; npcId?: string } | null => {
+    ): { imagePath?: string; variant?: string; variantKey?: string; npcId?: string; allVariants?: Record<string, string> } | null => {
         if (response.images && typeof response.images === 'object') {
             let variantKey: string | null = null;
             let imagePath: string | undefined = undefined;
+            let allVariants: Record<string, string> | undefined = undefined;
+
+            allVariants = { ...response.images };
 
             if (variant === 'base' && response.images.base) {
                 variantKey = 'base';
@@ -310,6 +319,7 @@ export const parseResponse = {
                     variant: variantKey,
                     variantKey,
                     npcId: 'npcId' in response ? response.npcId : undefined,
+                    allVariants,
                 };
             }
         }

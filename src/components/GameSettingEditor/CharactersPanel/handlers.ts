@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 业务逻辑处理函数
  * 提取主要的业务逻辑，降低主文件复杂度
  */
@@ -64,7 +64,6 @@ export const createHandlers = (ctx: HandlersContext) => {
         isAddingNew,
         newCharacterData,
         onDataChange,
-        pendingImages,
         pendingImageUrlsRef,
     } = ctx;
 
@@ -111,41 +110,37 @@ export const createHandlers = (ctx: HandlersContext) => {
      * @param imageData 可以是 URL 字符串、File 对象、Blob、ArrayBuffer（二进制数据）
      * @param variant 变体名称
      */
-    const setPendingImage = async (
+    const setPendingImage = (
         characterId: string,
         imageData: string | File | Blob | ArrayBuffer,
         variant: string
     ) => {
         let previewUrl: string;
         let file: File | undefined;
+        const pendingImageKey = `${characterId}-${variant}`;
+
+        const createOrReplacePendingUrl = (imageFile: File): string => {
+            const previousUrl = pendingImageUrlsRef.current[pendingImageKey];
+            if (previousUrl) {
+                URL.revokeObjectURL(previousUrl);
+            }
+            const objectUrl = URL.createObjectURL(imageFile);
+            pendingImageUrlsRef.current[pendingImageKey] = objectUrl;
+            return objectUrl;
+        };
 
         if (typeof imageData === 'string') {
             previewUrl = imageData;
         } else if (imageData instanceof File) {
-            previewUrl = URL.createObjectURL(imageData);
             file = imageData;
-            const key = `${characterId}-${variant}`;
-            if (pendingImageUrlsRef.current[key]) {
-                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
-            }
-            pendingImageUrlsRef.current[key] = previewUrl;
-        } else if (imageData instanceof Blob) {
-            const key = `${characterId}-${variant}`;
-            if (pendingImageUrlsRef.current[key]) {
-                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
-            }
+            previewUrl = createOrReplacePendingUrl(file);
+        } else if (imageData instanceof Blob) {//
             file = new File([imageData], `generated_${variant}.webp`, { type: imageData.type || 'image/webp' });
-            previewUrl = URL.createObjectURL(file);
-            pendingImageUrlsRef.current[key] = previewUrl;
+            previewUrl = createOrReplacePendingUrl(file);
         } else if (imageData instanceof ArrayBuffer) {
             const blob = new Blob([imageData], { type: 'image/webp' });
             file = new File([blob], `generated_${variant}.webp`, { type: 'image/webp' });
-            previewUrl = URL.createObjectURL(file);
-            const key = `${characterId}-${variant}`;
-            if (pendingImageUrlsRef.current[key]) {
-                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
-            }
-            pendingImageUrlsRef.current[key] = previewUrl;
+            previewUrl = createOrReplacePendingUrl(file);
         } else {
             console.error('无效的图片数据类型');
             return;
@@ -190,7 +185,6 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    // 过滤本地 blob 预览地址，避免提交时覆盖后端正式图片路径
     const normalizePersistedImagePath = (imagePath?: string): string | undefined => {
         if (!imagePath) return undefined;
         const trimmed = imagePath.trim();
@@ -199,55 +193,109 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
         return trimmed;
     };
+    const getVariationImageKey = (variation: Pick<Variation, 'type' | 'label'>): string =>
+        variation.type && variation.label
+            ? `${variation.type}_${variation.label}`
+            : variation.label || variation.type || '';
 
-    // 统一处理图片上传 - 不管是用户上传还是 AI 生成，都统一调用存储接口
-    const uploadImage = async (
-        imageUrl: string | undefined,
-        characterId: string,
-        variant: string
-    ): Promise<string | undefined> => {
-        if (!imageUrl) {
-            return undefined;
+    const parseVariantKey = (variantKey: string): { type: string; label: string } => {
+        if (!variantKey.includes('_')) {
+            return { type: 'expression', label: variantKey };
         }
-
-        try {
-            // 从 pendingImages 中获取文件
-            const pendingImage = pendingImages[characterId]?.[variant];
-            if (!pendingImage?.file) {
-                console.warn(`未找到 ${characterId}-${variant} 的暂存图片文件`);
-                return imageUrl;
-            }
-
-            const file = pendingImage.file;
-            toast.loading('正在存储图片...', { id: 'uploading-image' });
-
-            // 调用对应的上传 API
-            let response;
-            if (characterId === 'player') {
-                response = await api.uploadPlayerImage(fileId, file, variant);
-            } else {
-                const npcId = characterId.startsWith('temp-') ? `npc_${Date.now()}` : characterId;
-                response = await api.uploadNpcImage(fileId, npcId, file, variant);
-            }
-
-            toast.dismiss('uploading-image');
-
-            if (response.data?.success) {
-                // 从响应中提取服务器返回的图片路径
-                const serverPath = response.data.imagePath;
-                if (serverPath) {
-                    return serverPath;
-                }
-            }
-            toast.error('图片存储失败');
-            return imageUrl;
-        } catch (error) {
-            console.error('存储图片失败:', error);
-            toast.dismiss('uploading-image');
-            toast.error('图片存储失败，请重试');
-            return imageUrl;
-        }
+        const [variantType, ...rest] = variantKey.split('_');
+        return {
+            type: variantType || 'expression',
+            label: rest.join('_') || variantKey,
+        };
     };
+
+    const splitIdentity = (identity: string, fallbackRole?: string): { race?: string; job?: string } => {
+        const identityParts = identity.split(/\s*·\s*/);
+        if (identityParts.length > 1) {
+            return { race: identityParts[0], job: identityParts[1] };
+        }
+        return { race: undefined, job: identityParts[0] || fallbackRole };
+    };
+
+    const buildCharacterImages = (
+        character: Character,
+        options?: { normalize?: boolean; includeEmptyBase?: boolean }
+    ): { [key: string]: string } => {
+        const { normalize = false, includeEmptyBase = false } = options || {};
+        const images: { [key: string]: string } = {};
+        const baseImage = normalize
+            ? normalizePersistedImagePath(character.portrait)
+            : character.portrait?.trim();
+
+        if (baseImage) {
+            images.base = baseImage;
+        } else if (includeEmptyBase) {
+            images.base = '';
+        }
+
+        character.variations
+            .filter(v => v.label !== 'base')
+            .forEach(variation => {
+                const variationImage = normalize
+                    ? normalizePersistedImagePath(variation.img)
+                    : variation.img?.trim();
+                const key = getVariationImageKey(variation);
+                if (variationImage && key) {
+                    images[key] = variationImage;
+                }
+            });
+
+        return images;
+    };
+
+    // 确认修改/新增角色 - 不管是用户上传还是 AI 生成，都统一调用存储接口
+    // const uploadImage = async (
+    //     imageUrl: string | undefined,
+    //     characterId: string,
+    //     variant: string
+    // ): Promise<string | undefined> => {
+    //     if (!imageUrl) {
+    //         return undefined;
+    //     }
+
+    //     try {
+    //         // 从 pendingImages 中获取文件
+    //         const pendingImage = pendingImages[characterId]?.[variant];
+    //         if (!pendingImage?.file) {
+    //             console.warn(`未找到 ${characterId}-${variant} 的暂存图片文件`);
+    //             return imageUrl;
+    //         }
+
+    //         const file = pendingImage.file;
+    //         toast.loading('正在存储图片...', { id: 'uploading-image' });
+
+    //         // 调用对应的上传 API
+    //         let response;
+    //         if (characterId === 'player') {
+    //             response = await api.uploadPlayerImage(fileId, file, variant);
+    //         } else {
+    //             const npcId = characterId.startsWith('temp-') ? `npc_${Date.now()}` : characterId;
+    //             response = await api.uploadNpcImage(fileId, npcId, file, variant);
+    //         }
+
+    //         toast.dismiss('uploading-image');
+
+    //         if (response.data?.success) {
+    //             // 从响应中提取服务器返回的图片路径
+    //             const serverPath = response.data.imagePath;
+    //             if (serverPath) {
+    //                 return serverPath;
+    //             }
+    //         }
+    //         toast.error('图片存储失败');
+    //         return imageUrl;
+    //     } catch (error) {
+    //         console.error('存储图片失败:', error);
+    //         toast.dismiss('uploading-image');
+    //         toast.error('图片存储失败，请重试');
+    //         return imageUrl;
+    //     }
+    // };
 
     // 确认修改/新增角色
     const confirmEdit = async (characterToSave: Character): Promise<boolean> => {
@@ -259,24 +307,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         // 主角资料保存
         if (characterToSave.id === 'player') {
             const persistedBaseImage = normalizePersistedImagePath(characterToSave.portrait);
-            const images: { [key: string]: string } = {};
-            if (persistedBaseImage) {
-                images.base = persistedBaseImage;
-            }
-
-            characterToSave.variations
-                .filter(v => v.label !== 'base')
-                .forEach(variation => {
-                    const persistedVariationImage = normalizePersistedImagePath(variation.img);
-                    if (persistedVariationImage) {
-                        const key = variation.type && variation.label
-                            ? `${variation.type}_${variation.label}`
-                            : variation.label || variation.type || '';
-                        if (key) {
-                            images[key] = persistedVariationImage;
-                        }
-                    }
-                });
+            const images = buildCharacterImages(characterToSave, { normalize: true });
 
             const playerData = {
                 name: characterToSave.name || '',
@@ -313,29 +344,8 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
 
         // NPC 资料保存
-        const identityParts = characterToSave.identity.split(/\s*·\s*/);
-        const race = identityParts.length > 1 ? identityParts[0] : undefined;
-        const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || characterToSave.role);
-        const persistedBaseImage = normalizePersistedImagePath(characterToSave.portrait);
-
-        const images: { [key: string]: string } = {};
-        if (persistedBaseImage) {
-            images.base = persistedBaseImage;
-        }
-
-        characterToSave.variations
-            .filter(v => v.label !== 'base')
-            .forEach(variation => {
-                const persistedVariationImage = normalizePersistedImagePath(variation.img);
-                if (persistedVariationImage) {
-                    const key = variation.type && variation.label
-                        ? `${variation.type}_${variation.label}`
-                        : variation.label || variation.type || '';
-                    if (key) {
-                        images[key] = persistedVariationImage;
-                    }
-                }
-            });
+        const { race, job } = splitIdentity(characterToSave.identity, characterToSave.role);
+        const images = buildCharacterImages(characterToSave, { normalize: true });
 
         const finalImages: { [key: string]: string } | undefined = Object.keys(images).length > 0 ? images : undefined;
         const playerRelationship = characterToSave.relationships.find(
@@ -435,30 +445,10 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
 
         const targetCharacterId = `npc_${Date.now()}`;
-        const identityParts = newCharacterData.identity.split(' · ');
-        const race = identityParts.length > 1 ? identityParts[0] : undefined;
-        const job = identityParts.length > 1 ? identityParts[1] : (identityParts[0] || newCharacterData.role);
+        const { race, job } = splitIdentity(newCharacterData.identity, newCharacterData.role);
+        const images = buildCharacterImages(newCharacterData, { includeEmptyBase: true });
 
-        // 将 variations 转换回 images 对象（variations 中不包含 base，base 存储在 portrait 中）
-        // 键名格式：type_value（如 "clothing_happy"）
-        const images: { base: string; [key: string]: string } = {
-            base: newCharacterData.portrait || '', // base 图片来自 portrait
-        };
-        newCharacterData.variations
-            .filter(v => v.label !== 'base') // 确保不包含 base
-            .forEach(variation => {
-                if (variation.img) {
-                    // 键名格式：type_value
-                    const key = variation.type && variation.label 
-                        ? `${variation.type}_${variation.label}` 
-                        : variation.label || variation.type || '';
-                    if (key) {
-                        images[key] = variation.img;
-                    }
-                }
-            });
-
-        const finalImages: { base: string; [key: string]: string } | undefined = 
+        const finalImages: { [key: string]: string } | undefined =
             newCharacterData.portrait || Object.keys(images).length > 1 ? images : undefined;
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
@@ -592,13 +582,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                         }
                     } else {
                         // 差分图片：解析 type_label 格式的 variant（如 expression_伤心）
-                        let finalType = 'expression';
-                        let finalLabel = variant || '';
-                        if (variant && variant.includes('_')) {
-                            const parts = variant.split('_');
-                            finalType = parts[0];
-                            finalLabel = parts.slice(1).join('_');
-                        }
+                        const { type: finalType, label: finalLabel } = parseVariantKey(variant);
                         const variantImg = (playerImages && playerImages[variant]) || playerImage;
                         if (variantImg) {
                             setCharacterData(prev =>
@@ -640,18 +624,26 @@ export const createHandlers = (ctx: HandlersContext) => {
                         const imageUrl = imageData.imagePath;
                         if (variant === 'base') {
                             updateCharacterImage(targetCharacterId, imageUrl, 'base');
+                            // 同步其他差分图片
+                            if (imageData.allVariants) {
+                                for (const [variantKey, variantUrl] of Object.entries(imageData.allVariants)) {
+                                    if (variantKey !== 'base') {
+                                        // 解析 variantKey 获取 type 和 label
+                                        const { type: finalType, label: finalLabel } = parseVariantKey(variantKey);
+                                        updateCharacterImage(targetCharacterId, variantUrl, finalLabel, finalType);
+                                    }
+                                }
+                            }
                             bumpCacheBust(imageUrl);
                         } else {
                             // 上传图片时，处理 type_label 格式的 variant（如 expression_伤心）
                             // 解析 variant 获取 type 和 label
-                            let finalType = 'expression';
-                            let finalValue = variant || '';
-                            if (variant && variant.includes('_')) {
-                                const parts = variant.split('_');
-                                finalType = parts[0];
-                                finalValue = parts.slice(1).join('_');
-                            }
+                            const { type: finalType, label: finalValue } = parseVariantKey(variant);
                             updateCharacterImage(targetCharacterId, imageUrl, finalValue, finalType);
+                            // 同步 base 图片（如果有）
+                            if (imageData.allVariants?.base) {
+                                updateCharacterImage(targetCharacterId, imageData.allVariants.base, 'base');
+                            }
                             bumpCacheBust(imageUrl);
                         }
                     } else {
@@ -887,4 +879,8 @@ export const createHandlers = (ctx: HandlersContext) => {
         updateCharacterFromResponse,
     };
 };
+
+
+
+
 

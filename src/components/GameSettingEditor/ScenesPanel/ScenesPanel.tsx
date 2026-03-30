@@ -21,6 +21,7 @@ import SceneDetailActions from './SceneDetailActions';
 import { DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust, extractImageExtension } from '../../../utils/imageCache';
 import { useAuthStore } from '../../../store/useAuthStore';
+import { HOST_ADDRESS } from '../../../config';
 import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
@@ -571,7 +572,15 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         try {
             let blob: Blob;
 
-            if (finalImagePath.startsWith('blob:') || finalImagePath.startsWith('data:')) {
+            // /api/ 路径：fetch + blob 方式下载
+            if (finalImagePath.startsWith('/api/')) {
+                const fullUrl = `${HOST_ADDRESS}${finalImagePath}`;
+                const response = await fetch(fullUrl);
+                if (!response.ok) {
+                    throw new Error('获取图片数据失败');
+                }
+                blob = await response.blob();
+            } else if (finalImagePath.startsWith('blob:') || finalImagePath.startsWith('data:')) {
                 const response = await fetch(finalImagePath);
                 if (!response.ok) {
                     throw new Error('获取图片数据失败');

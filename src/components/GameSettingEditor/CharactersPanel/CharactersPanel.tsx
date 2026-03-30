@@ -22,6 +22,7 @@ import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
 import CharactersSidebar from './CharactersSidebar';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+import { HOST_ADDRESS } from '../../../config';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -694,6 +695,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 }
             }
 
+            // 先保存表单
+            const saveSuccess = await handlers.confirmEdit(characterToSave);
+            if (!saveSuccess) {
+                return false;
+            }
+
+            // 后上传图片
             const characterId = isAddingNew && newCharacterData ? null : activeCharacterId;
             if (characterId && pendingImages[characterId]) {
                 const pendingForChar = pendingImages[characterId];
@@ -716,11 +724,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         return false;
                     }
                 }
-            }
-
-            const saveSuccess = await handlers.confirmEdit(characterToSave);
-            if (!saveSuccess) {
-                return false;
             }
 
             if (characterId) {
@@ -1037,8 +1040,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     // 下载图片
-    const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string, imagePath?: string, imageType?: string) => {
-        // 如果是 blob URL，直接从浏览器下载
+    const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string, imagePath?: string) => {
+        // blob URL 下载
         if (imagePath?.startsWith('blob:')) {
             try {
                 const response = await fetch(imagePath);
@@ -1063,7 +1066,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return;
         }
 
-        // 如果是 data URL，也直接下载
+        // data URL 下载
         if (imagePath?.startsWith('data:')) {
             const link = document.createElement('a');
             link.href = imagePath;
@@ -1077,26 +1080,39 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return;
         }
 
-        // 如果有完整的 imagePath（已保存的差分图片等），直接使用该路径下载
-        if (imagePath && !imagePath.startsWith('/api/')) {
-            // 修复路径：服务器返回的 imagePath 可能是 "伤心.webp"，需要添加 type 前缀变成 "expression_伤心.webp"
-            let fixedImagePath = imagePath;
-            if (imageType && variant) {
-                // 从 imagePath 提取扩展名
-                const extMatch = imagePath.match(/\.[^.]+$/);
-                const extension = extMatch ? extMatch[0] : '.webp';
-                // 构建正确的路径：type_label.extension
-                fixedImagePath = imagePath.replace(/\.[^.]+$/, '').replace(/^/, `${imageType}_`) + extension;
-            }
-            
+        // 完整 URL (https/http) 下载
+        if (imagePath?.startsWith('https://') || imagePath?.startsWith('http://')) {
             try {
-                const response = await api.downloadByPath(fixedImagePath);
-                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = imagePath;
+                const extension = extractImageExtension(imagePath);
+                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
+                link.setAttribute('download', fileName);
+                link.setAttribute('target', '_self');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                toast.success('原生图片下载成功');
+                return;
+            } catch (error) {
+                console.error('下载图片失败:', error);
+                toast.error('下载图片失败，请稍后重试');
+                return;
+            }
+        }
+
+        // /api/ 路径：fetch + blob 方式下载
+        if (imagePath?.startsWith('/api/')) {
+            const fullUrl = `${HOST_ADDRESS}${imagePath}`;
+            try {
+                const response = await fetch(fullUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                
-                // 从 imagePath 提取文件名
-                const fileName = fixedImagePath.split('/').pop() || `${id}_${variant}.webp`;
+                const extension = extractImageExtension(imagePath);
+                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
                 link.setAttribute('download', fileName);
                 document.body.appendChild(link);
                 link.click();
@@ -1111,7 +1127,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             }
         }
 
-        // 其他情况从服务器下载（使用旧的 API 逻辑）
+        // 兜底：使用 api.downloadImage
         if (!fileId || !api) {
             toast.error('缺少必要数据，无法下载');
             return;
@@ -1460,7 +1476,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                     ? `${variation.type}_${variation.label}`
                                                                     : variation.label || variation.type || '';
                                                                 const downloadType = currentCharacter.id === 'player' ? 'players' : 'npcs';
-                                                                handleDownloadImage(downloadType, currentCharacter.id, variantType, variation.img, variation.type);
+                                                                handleDownloadImage(downloadType, currentCharacter.id, variantType, variation.img);
                                                             }}
                                                             title="下载图片"
                                                         >
