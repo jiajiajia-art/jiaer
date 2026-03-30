@@ -32,6 +32,12 @@ const navItems: Array<{
         iconActive: 'data/assets/切图/创作01.png',
     },
     {
+        key: 'create',
+        label: '创作',
+        iconInactive: 'data/assets/切图/创作02.png',
+        iconActive: 'data/assets/切图/创作01.png',
+    },
+    {
         key: 'profile',
         label: '我的',
         iconInactive: 'data/assets/切图/我的02.png',
@@ -52,6 +58,7 @@ const MobileBottomNav: React.FC = () => {
     const currentPath = normalize(location.pathname);
 
     const activeKey = useMemo<BottomNavKey>(() => {
+        if (currentPath.startsWith('/create')) return 'create';
         if (currentPath.startsWith('/home')) return 'home';
         if (isCreatorRoutePath(currentPath)) return 'create';
         if (currentPath.startsWith('/profile')) return 'profile';

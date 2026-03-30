@@ -64,7 +64,11 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                             >
                                 <div
                                     className={sidebarStyles.characterThumb}
-                                    style={{ backgroundImage: character.portrait ? `url('${withCacheBust(character.portrait)}')` : 'none' }}
+                                    style={{ backgroundImage: character.portrait
+                                ? (character.portrait.startsWith('blob:') || character.portrait.startsWith('data:')
+                                    ? `url('${character.portrait}')`
+                                    : `url('${withCacheBust(character.portrait)}')`)
+                                : 'none' }}
                                 />
                                 <div className={sidebarStyles.characterMeta}>
                                     <div className={sidebarStyles.characterTitleRow}>

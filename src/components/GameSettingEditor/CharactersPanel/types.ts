@@ -41,7 +41,7 @@ export interface Character {
 export interface PendingImage {
     file?: File;                    // 待上传的文件（上传图片时）
     previewUrl: string;            // 本地预览 URL（生成时为服务器返回的URL，上传时为本地Object URL）
-    sourceType: 'upload' | 'generate'; // 来源类型：上传或AI生成
+    sourceType: 'upload' | 'generate' | 'url'; // 来源类型：上传、AI生成、或已有URL
     variant: string;                // 图片类型：'base' 或差分label
 }
 

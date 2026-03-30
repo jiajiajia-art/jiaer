@@ -296,7 +296,7 @@ const GameSettingsEditor = () => {
                         <p className={styles.eyebrow}>KURAN · CREATOR</p>
                         <h1>游戏创作流程</h1>
                         <p className={styles.subtitle}>
-                            Step 1 上传 Word → Step 2 表单化校对世界观 → Step 3 角色差分 → Step 4 场景绑定 BGM
+                            Step 1 上传 Word / PDF→ Step 2 表单化校对世界观 → Step 3 角色差分 → Step 4 场景绑定 BGM
                             {mode === 'worldInteraction' ? ' → Step 5 地图与子场景布局' : ''}
                         </p>
                     </div>

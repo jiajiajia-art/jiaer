@@ -22,6 +22,7 @@ import { createHandlers } from './handlers';
 import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './CharacterAttributesPanel';
 import CharactersSidebar from './CharactersSidebar';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+import { HOST_ADDRESS } from '../../../config';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -333,16 +334,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 丢弃当前角色的暂存立绘并恢复到原始数据
     const discardCurrentCharacterPendingImages = useCallback(() => {
-        if (activeCharacterId && pendingImages[activeCharacterId]) {
-            const originalChar = originalCharacterDataRef.current.find(c => c.id === activeCharacterId);
-            if (originalChar) {
-                setCharacterData(prev => prev.map(char => (
-                    char.id === activeCharacterId ? originalChar : char
-                )));
-            }
-            clearPendingImagesForCharacter(activeCharacterId);
+        if (!activeCharacterId) return;
+
+        const originalChar = originalCharacterDataRef.current.find(c => c.id === activeCharacterId);
+        if (originalChar) {
+            setCharacterData(prev => prev.map(char => (
+                char.id === activeCharacterId ? originalChar : char
+            )));
         }
-    }, [activeCharacterId, pendingImages, clearPendingImagesForCharacter]);
+        clearPendingImagesForCharacter(activeCharacterId);
+    }, [activeCharacterId, clearPendingImagesForCharacter]);
 
     // 检查是否可以切换（如果有未保存修改或暂存图片，显示确认弹窗）
     const checkBeforeSwitch = useCallback((action: { type: 'switchCharacter' | 'switchPanel' | 'createCharacter'; targetCharacterId?: string | null }) => {
@@ -415,9 +416,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             activeCharacterId,
             isAddingNew,
             newCharacterData,
+            pendingImages,
+            pendingImageUrlsRef,
             onDataChange,
         });
-    }, [fileId, mode, api, userPoints, activeCharacterId, isAddingNew, newCharacterData, onDataChange]);
+    }, [fileId, mode, api, userPoints, activeCharacterId, isAddingNew, newCharacterData, pendingImages, pendingImageUrlsRef, onDataChange]);
 
     // 获取当前显示的角色（统一处理新增和编辑模式）
     const currentCharacter = isAddingNew && newCharacterData
@@ -481,10 +484,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     };
 
-    if (!isAddingNew && characterData.length === 0 && !isLoading) {
-
-    }
-
     const handleFieldChange = (field: keyof Character, value: string) => {
         if (field === 'personality') {
             const tags = normalizePersonalityTags(value);
@@ -493,7 +492,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             updateField(field, value);
         }
         setHasUnsavedChanges(true);
-        
+
         // 清除该字段的错误状态
         if (fieldErrors[field as string]) {
             setFieldErrors(prev => {
@@ -556,9 +555,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return;
         }
 
+        const trimmedLabel = newVariationLabel.trim();
+
+        // 检查差分名称是否重复
+        let existingVariations: Variation[] = [];
+        if (isAddingNew && newCharacterData) {
+            existingVariations = newCharacterData.variations;
+        } else if (currentCharacter) {
+            existingVariations = currentCharacter.variations;
+        }
+
+        const isDuplicate = existingVariations.some(v => v.label === trimmedLabel);
+        if (isDuplicate) {
+            toast.error(`差分「${trimmedLabel}」已存在，请使用不同的名称`);
+            return;
+        }
+
         const newVar: Variation = {
             id: `v-${Date.now()}`,
-            label: newVariationLabel.trim(),
+            label: trimmedLabel,
             img: '',
             type: newVariationType,
             description: newVariationDescription || undefined,
@@ -680,6 +695,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 }
             }
 
+            // 先保存表单
+            const saveSuccess = await handlers.confirmEdit(characterToSave);
+            if (!saveSuccess) {
+                return false;
+            }
+
+            // 后上传图片
             const characterId = isAddingNew && newCharacterData ? null : activeCharacterId;
             if (characterId && pendingImages[characterId]) {
                 const pendingForChar = pendingImages[characterId];
@@ -702,11 +724,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         return false;
                     }
                 }
-            }
-
-            const saveSuccess = await handlers.confirmEdit(characterToSave);
-            if (!saveSuccess) {
-                return false;
             }
 
             if (characterId) {
@@ -908,22 +925,30 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return;
         }
 
-        if (!currentCharacter) {
+        if (!currentCharacter || !handlers) {
             toast.error('缺少必要数据，无法上传');
             return;
         }
 
         const inputRef = { current: variationFileInputRefs.current[variation.id] };
 
-        // NPC 使用 uploadNpcImage
-        await handleUploadImage(file, {
+        // 差分图直接上传到服务器，不走暂存流程
+        // 构建完整的 variant 键：type_label 格式（如 expression_伤心）
+        const variantKey = variation.type && variation.label
+            ? `${variation.type}_${variation.label}`
+            : variation.label || variation.type || 'base';
+        const success = await handlers.handleUploadImage(file, {
             type: 'variation',
             characterId: currentCharacter.id,
-            variant: variation.label,
+            variant: variantKey,
             inputRef,
             successMessage: '差分图片上传成功',
         });
 
+        // 上传成功后，刷新数据以获取最新的图片路径
+        if (success && onDataChange) {
+            onDataChange();
+        }
     };
 
     // 点击差分 AI 生成前，先弹出积分确认
@@ -1016,6 +1041,93 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 下载图片
     const handleDownloadImage = async (type: 'npcs' | 'players' | 'scenes' | 'subscenes' | 'worldMap', id: string, variant?: string, imagePath?: string) => {
+        // blob URL 下载
+        if (imagePath?.startsWith('blob:')) {
+            try {
+                const response = await fetch(imagePath);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                // 从 blob URL 提取扩展名
+                const extension = '.' + (blob.type.split('/')[1] || 'png');
+                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+                toast.success('图片下载成功');
+            } catch (error) {
+                console.error('下载 blob 图片失败:', error);
+                toast.error('下载图片失败');
+            }
+            return;
+        }
+
+        // data URL 下载
+        if (imagePath?.startsWith('data:')) {
+            const link = document.createElement('a');
+            link.href = imagePath;
+            const extension = '.' + (imagePath.split(';')[0].split('/')[1] || 'png');
+            const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success('图片下载成功');
+            return;
+        }
+
+        // 完整 URL (https/http) 下载
+        if (imagePath?.startsWith('https://') || imagePath?.startsWith('http://')) {
+            try {
+                const link = document.createElement('a');
+                link.href = imagePath;
+                const extension = extractImageExtension(imagePath);
+                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
+                link.setAttribute('download', fileName);
+                link.setAttribute('target', '_self');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                toast.success('原生图片下载成功');
+                return;
+            } catch (error) {
+                console.error('下载图片失败:', error);
+                toast.error('下载图片失败，请稍后重试');
+                return;
+            }
+        }
+
+        // /api/ 路径：fetch + blob 方式下载
+        if (imagePath?.startsWith('/api/')) {
+            const fullUrl = `${HOST_ADDRESS}${imagePath}`;
+            try {
+                const response = await fetch(fullUrl);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                const extension = extractImageExtension(imagePath);
+                const fileName = variant ? `${id}_${variant}${extension}` : `${id}${extension}`;
+                link.setAttribute('download', fileName);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(url);
+                toast.success('图片下载成功');
+                return;
+            } catch (error) {
+                console.error('下载图片失败:', error);
+                toast.error('下载图片失败，请稍后重试');
+                return;
+            }
+        }
+
+        // 兜底：使用 api.downloadImage
         if (!fileId || !api) {
             toast.error('缺少必要数据，无法下载');
             return;
@@ -1054,7 +1166,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 <button
                     className={`${styles.ghost} ${styles.generateButton}`}
                     onClick={openNpcCostModal}
-                    disabled={isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
+                    disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
                 >
                     <img
                         src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -1306,68 +1418,71 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             </div>
 
                             {/* 立绘差分（可折叠） */}
-                            {
-                                currentCharacter.id !== 'player' &&
-                                <div className={styles.detailBlock}>
-                                    <div
-                                        className={styles.collapsibleHeader}
-                                        style={{ cursor: 'pointer' }}
-                                        onClick={() => setIsVariationExpanded(!isVariationExpanded)}
-                                    >
-                                        <strong>立绘差分</strong>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <span className={styles.mutedSmall}>
-                                                {currentCharacter.variations.filter(v => v.label !== 'base').length} 个差分
-                                            </span>
-                                            <MdArrowDropDown size={30} style={{ transform: isVariationExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
-                                        </div>
+                            <div className={styles.detailBlock}>
+                                <div
+                                    className={styles.collapsibleHeader}
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => setIsVariationExpanded(!isVariationExpanded)}
+                                >
+                                    <strong>立绘差分</strong>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span className={styles.mutedSmall}>
+                                            {currentCharacter.variations.filter(v => v.label !== 'base').length} 个差分
+                                        </span>
+                                        <MdArrowDropDown size={30} style={{ transform: isVariationExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                                     </div>
-                                    {isVariationExpanded && (
-                                        <div className={styles.variationGrid}>
-                                            {currentCharacter.variations.filter(v => v.label !== 'base').map((variation) => {
-                                                const effectiveImage = getEffectiveImage(currentCharacter, variation.label);
-                                                return (
-                                                <div key={variation.id} className={styles.variationCard}>
-                                                    <div
-                                                        className={`${styles.variationThumb} ${!effectiveImage ? styles.empty : ''}`}
-                                                        style={effectiveImage ? { backgroundImage: `url('${withCacheBust(effectiveImage)}')` } : {}}
-                                                    >
-                                                        {/* 加载效果 */}
-                                                        {isGeneratingVariation && generatingVariationId === variation.id && (
-                                                            <div className={styles.loadingOverlay}>
-                                                                <div className={styles.loadingSpinner}></div>
-                                                                <div className={styles.loadingText}>正在生成...</div>
-                                                            </div>
-                                                        )}
-                                                        {/* 下载按钮 */}
-                                                        { currentCharacter.id !== 'player' && (
-                                                            <>
-                                                                <button
-                                                                    className={styles.variationDeleteButton}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        if (!handlers) return;
-                                                                        setPendingVariationToDelete({ variation, character: currentCharacter });
-                                                                        setDeleteVariationModalOpen(true);
-                                                                    }}
-                                                                    title="删除差分"
-                                                                    disabled={isGeneratingVariation && generatingVariationId === variation.id}
-                                                                >
-                                                                    <RiDeleteBin5Line size={14} />
-                                                                </button>
-                                                                <button
-                                                                    className={styles.variationDownloadButton}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const variantType = variation.label;
-                                                                        handleDownloadImage('npcs', currentCharacter.id, variantType, effectiveImage);
-                                                                    }}
-                                                                    title="下载图片"
-                                                                >
-                                                                    <MdDownload size={14} />
-                                                                </button>
-                                                            </>
-                                                        )}
+                                </div>
+                                {isVariationExpanded && (
+                                    <div className={styles.variationGrid}>
+                                        {currentCharacter.variations.filter(v => v.label !== 'base').map((variation) => {
+                                            const effectiveImage = getEffectiveImage(currentCharacter, variation.label);
+                                            return (
+                                            <div key={variation.id} className={styles.variationCard}>
+                                                <div
+                                                    className={`${styles.variationThumb} ${!effectiveImage ? styles.empty : ''}`}
+                                                    style={effectiveImage ? { 
+                                                        backgroundImage: (effectiveImage.startsWith('blob:') || effectiveImage.startsWith('data:'))
+                                                            ? `url('${effectiveImage}')` 
+                                                            : `url('${withCacheBust(effectiveImage)}')` 
+                                                    } : {}}
+                                                >
+                                                    {/* 加载效果 */}
+                                                    {isGeneratingVariation && generatingVariationId === variation.id && (
+                                                        <div className={styles.loadingOverlay}>
+                                                            <div className={styles.loadingSpinner}></div>
+                                                            <div className={styles.loadingText}>正在生成...</div>
+                                                        </div>
+                                                    )}
+                                                    {/* 下载和删除按钮 */}
+                                                    <>
+                                                        <button
+                                                            className={styles.variationDeleteButton}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!handlers) return;
+                                                                setPendingVariationToDelete({ variation, character: currentCharacter });
+                                                                setDeleteVariationModalOpen(true);
+                                                            }}
+                                                            title="删除差分"
+                                                            disabled={isGeneratingVariation && generatingVariationId === variation.id}
+                                                        >
+                                                            <RiDeleteBin5Line size={14} />
+                                                        </button>
+                                                        <button
+                                                            className={styles.variationDownloadButton}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const variantType = variation.type && variation.label
+                                                                    ? `${variation.type}_${variation.label}`
+                                                                    : variation.label || variation.type || '';
+                                                                const downloadType = currentCharacter.id === 'player' ? 'players' : 'npcs';
+                                                                handleDownloadImage(downloadType, currentCharacter.id, variantType, variation.img);
+                                                            }}
+                                                            title="下载图片"
+                                                        >
+                                                            <MdDownload size={14} />
+                                                        </button>
+                                                    </>
                                                         {!effectiveImage && !isGeneratingVariation && <span className={styles.mutedSmall}>等待图片</span>}
                                                     </div>
                                                     <p>{variation.label}</p>
@@ -1415,7 +1530,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         </div>
                                     )}
                                 </div>
-                            }
                             {/* 角色属性（worldInteraction 模式） */}
                             {isWorldInteractionMode && attributeSetting && currentCharacter && fileId && (
                                 <CharacterAttributesPanel

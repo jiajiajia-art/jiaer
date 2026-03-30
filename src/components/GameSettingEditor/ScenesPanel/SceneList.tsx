@@ -12,6 +12,7 @@ interface SceneListProps {
     activeSceneId: string;
     activeSubsceneId: string | null;
     mode: string;
+    getEffectiveImage: (sceneId: string, subsceneId?: string) => string | undefined;
     onSceneClick: (sceneId: string) => void;
     onSubsceneClick: (sceneId: string, subsceneId: string) => void;
     onDeleteClick: (sceneId: string, e: React.MouseEvent) => void;
@@ -26,6 +27,7 @@ const SceneList: React.FC<SceneListProps> = ({
     activeSceneId,
     activeSubsceneId,
     mode,
+    getEffectiveImage,
     onSceneClick,
     onSubsceneClick,
     onDeleteClick,
@@ -68,7 +70,14 @@ const SceneList: React.FC<SceneListProps> = ({
                             >
                                 <div
                                     className={`${styles.sceneThumb} ${!scene.image ? styles.empty : ''}`}
-                                    style={{ backgroundImage: `url('${scene.image ? withCacheBust(getImageUrl(scene.image)) : DEFAULT_SCENE_IMAGE}')` }}
+                                    style={{ backgroundImage: (() => {
+                                        const img = getEffectiveImage(scene.id);
+                                        if (!img) return `url('${DEFAULT_SCENE_IMAGE}')`;
+                                        if (img.startsWith('blob:') || img.startsWith('data:')) {
+                                            return `url('${img}')`;
+                                        }
+                                        return `url('${withCacheBust(getImageUrl(img))}')`;
+                                    })() }}
                                 >
                                     {!scene.image && <span>待上传</span>}
                                 </div>
@@ -122,6 +131,7 @@ const SceneList: React.FC<SceneListProps> = ({
                                     {!subsceneCollapsed[scene.id] && subscenes.map((sub) => {
                                         const subId = sub.id || sub.name;
                                         const isActiveSub = activeSubsceneId === subId;
+                                        const subImage = getEffectiveImage(scene.id, subId);
                                         return (
                                             <article
                                                 key={subId}
@@ -129,12 +139,18 @@ const SceneList: React.FC<SceneListProps> = ({
                                                 onClick={() => onSubsceneClick(scene.id, subId)}
                                             >
                                                 <div
-                                                    className={`${styles.sceneThumb} ${!sub.image ? styles.empty : ''}`}
-                                                    style={{ 
-                                                        backgroundImage: `url('${sub.image ? withCacheBust(getImageUrl(sub.image)) : DEFAULT_WORLD_MAP_IMAGE}')` 
+                                                    className={`${styles.sceneThumb} ${!subImage ? styles.empty : ''}`}
+                                                    style={{
+                                                        backgroundImage: (() => {
+                                                            if (!subImage) return `url('${DEFAULT_WORLD_MAP_IMAGE}')`;
+                                                            if (subImage.startsWith('blob:') || subImage.startsWith('data:')) {
+                                                                return `url('${subImage}')`;
+                                                            }
+                                                            return `url('${withCacheBust(getImageUrl(subImage))}')`;
+                                                        })()
                                                     }}
                                                 >
-                                                    {!sub.image && <span>待生成或上传</span>}
+                                                    {!subImage && <span>待生成或上传</span>}
                                                 </div>
                                                 <div className={styles.sceneMeta}>
                                                     <div className={styles.subsceneTitleRow}>
