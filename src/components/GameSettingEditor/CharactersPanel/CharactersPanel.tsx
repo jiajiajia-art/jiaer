@@ -1550,7 +1550,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => setIsBackgroundExpanded(!isBackgroundExpanded)}
                                 >
-                                    <strong>人物背景故事（可选）</strong>
+                                    <strong>人物背景故事</strong>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span className={styles.mutedSmall}>不限格式，选填项</span>
                                         <MdArrowDropDown size={30} style={{ transform: isBackgroundExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
@@ -1696,8 +1696,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
             {isGeneratingNpcImages && (
                 <div className={styles.plusLoadingOverlay}>
-                    <div className={styles.plusLoadingSpinner}></div>
-                    <div className={styles.plusLoadingText}>正在生成角色立绘...</div>
+                    <div className={styles.plusLoadingDialog}>
+                        <div className={styles.plusLoadingSpinner}></div>
+                        <div className={styles.plusLoadingText}>正在生成角色立绘...</div>
+                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作。</div>
+                    </div>
                 </div>
             )}
 

@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from './SceneDetailForm.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
 import { IMAGE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust } from '../../../utils/imageCache';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+import { isMiniProgramEnv } from '../../../utils/miniProgram';
 
 // 字数限制配置
 const SCENE_WORD_LIMITS = {
@@ -47,6 +48,23 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     onDownloadImage,
     sceneType = 'scenes',
 }) => {
+    const [isMobilePicker, setIsMobilePicker] = useState(false);
+    const [isBgmPickerOpen, setIsBgmPickerOpen] = useState(false);
+
+    useEffect(() => {
+        const updatePickerMode = () => {
+            if (typeof window === 'undefined') {
+                setIsMobilePicker(false);
+                return;
+            }
+            setIsMobilePicker(isMiniProgramEnv() || window.innerWidth <= 720);
+        };
+
+        updatePickerMode();
+        window.addEventListener('resize', updatePickerMode);
+        return () => window.removeEventListener('resize', updatePickerMode);
+    }, []);
+
     // 根据场景类型自动计算默认图片和上传按钮文本
     const defaultImage = useMemo(() =>
         sceneType === 'subscenes' ? DEFAULT_WORLD_MAP_IMAGE : DEFAULT_SCENE_IMAGE,
@@ -92,6 +110,11 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
         }
         return `url('${withCacheBust(getImageUrl(effectiveImage))}')`;
     })();
+
+    const selectedBgm = bgmLibrary.find((bgm) => bgm.id === scene.bgmId);
+    const selectedBgmText = selectedBgm
+        ? `${selectedBgm.name}${selectedBgm.description ? ` · ${selectedBgm.description}` : ''}`
+        : '不绑定特殊 BGM';
 
     return (
         <>
@@ -197,17 +220,79 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 </label>
                 <label>
                     <span>特殊 BGM</span>
-                    <select
-                        value={scene.bgmId}
-                        onChange={(e) => onFieldChange('bgmId', e.target.value)}
-                    >
-                        <option value="">不绑定特殊 BGM</option>
-                        {bgmLibrary.map((bgm) => (
-                            <option key={bgm.id} value={bgm.id}>
-                                {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
-                            </option>
-                        ))}
-                    </select>
+                    {isMobilePicker ? (
+                        <>
+                            {/* 实现移动端特殊 BGM 选项弹层。 */}
+                            <button
+                                type="button"
+                                className={styles.mobileSelectTrigger}
+                                onClick={() => setIsBgmPickerOpen(true)}
+                            >
+                                <span className={styles.mobileSelectValue}>{selectedBgmText}</span>
+                                <span className={styles.mobileSelectArrow}>选择</span>
+                            </button>
+
+                            {isBgmPickerOpen && (
+                                <div className={styles.mobilePickerOverlay} onClick={() => setIsBgmPickerOpen(false)}>
+                                    <div className={styles.mobilePickerSheet} onClick={(e) => e.stopPropagation()}>
+                                        <div className={styles.mobilePickerHeader}>
+                                            <strong>选择特殊 BGM</strong>
+                                            <button
+                                                type="button"
+                                                className={styles.mobilePickerClose}
+                                                onClick={() => setIsBgmPickerOpen(false)}
+                                            >
+                                                关闭
+                                            </button>
+                                        </div>
+                                        <div className={styles.mobilePickerList}>
+                                            <button
+                                                type="button"
+                                                className={`${styles.mobilePickerOption} ${!scene.bgmId ? styles.mobilePickerOptionActive : ''}`}
+                                                onClick={() => {
+                                                    onFieldChange('bgmId', '');
+                                                    setIsBgmPickerOpen(false);
+                                                }}
+                                            >
+                                                不绑定特殊 BGM
+                                            </button>
+                                            {bgmLibrary.map((bgm) => (
+                                                <button
+                                                    key={bgm.id}
+                                                    type="button"
+                                                    className={`${styles.mobilePickerOption} ${scene.bgmId === bgm.id ? styles.mobilePickerOptionActive : ''}`}
+                                                    onClick={() => {
+                                                        onFieldChange('bgmId', bgm.id);
+                                                        setIsBgmPickerOpen(false);
+                                                    }}
+                                                >
+                                                    <span>{bgm.name}</span>
+                                                    {bgm.description && (
+                                                        <span className={styles.mobilePickerOptionDesc}>{bgm.description}</span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className={styles.selectWrap}>
+                            <select
+                                className={styles.specialBgmSelect}
+                                value={scene.bgmId}
+                                onChange={(e) => onFieldChange('bgmId', e.target.value)}
+                            >
+                                <option value="">不绑定特殊 BGM</option>
+                                {bgmLibrary.map((bgm) => (
+                                    <option key={bgm.id} value={bgm.id}>
+                                        {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </label>
             </div>
         </>

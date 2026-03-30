@@ -168,6 +168,26 @@
     overflow: hidden;
 }
 
+.menuBtn {
+    width: 100%;
+    padding: 12px 20px;
+    background: transparent;
+    color: #111827;
+    border: none;
+    border-radius: 0;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.menuBtn:hover {
+    background: rgba(224, 61, 75, 0.08);
+    color: var(--primary);
+}
+
 @keyframes slideDown {
     from {
         opacity: 0;
@@ -180,18 +200,14 @@
 }
 
 .logoutBtn {
-    width: 100%;
-    padding: 12px 20px;
     background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
     color: #fff;
-    border: none;
-    border-radius: 0;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
     transition: all 0.3s ease;
-    text-align: center;
-    white-space: nowrap;
+}
+
+.logoutBtn:hover {
+    background: linear-gradient(135deg, #e63b4b 0%, #f65061 100%);
+    color: #fff;
 }
 
 .settingIcon {

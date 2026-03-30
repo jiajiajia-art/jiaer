@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import styles from './Create.module.css';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
@@ -9,7 +9,7 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
-import { MdEdit, MdContentCopy } from 'react-icons/md';
+import { MdContentCopy } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import statisticsApi from '../api/statistics/statisticsApi';
@@ -20,7 +20,6 @@ import payApi from '../api/pay/payApi';
 import { auth } from '../api/account/authApi';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
-import { getImageUrl } from '../utils/constants';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
@@ -52,14 +51,9 @@ const Create: React.FC = () => {
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
     const [mobileTipMessage, setMobileTipMessage] = useState('');
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editName, setEditName] = useState('');
-    const [isUpdatingName, setIsUpdatingName] = useState(false);
-    const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
     const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { publishedGames, draftGames } = useMemo(() => {
         const published: UserGameData[] = [];
@@ -157,7 +151,6 @@ const Create: React.FC = () => {
     //     );
     // };
 
-    const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}/data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
     const userCode = user?.user?.userCode;
 
@@ -169,88 +162,6 @@ const Create: React.FC = () => {
         } catch (error) {
             console.error('复制 Kuran号 失败:', error);
             toast.error('复制失败，请稍后重试');
-        }
-    };
-
-    const handleStartEditName = () => {
-        if (!user) {
-            toast.error('请先登录');
-            return;
-        }
-        setEditName(userName === '未设置' ? '' : userName);
-        setIsEditingName(true);
-    };
-
-    const handleCancelEditName = () => {
-        setIsEditingName(false);
-        setEditName('');
-    };
-
-    const handleConfirmEditName = async () => {
-        const newName = editName.trim();
-        if (!newName) {
-            toast.error('昵称不能为空');
-            return;
-        }
-        if (newName === userName) {
-            setIsEditingName(false);
-            return;
-        }
-
-        try {
-            setIsUpdatingName(true);
-            const response = await auth.updateUserInfo(newName);
-            if (response.data.success && response.data.data) {
-                updateUser(response.data.data);
-                toast.success('昵称修改成功');
-                setIsEditingName(false);
-            } else {
-                toast.error(response.data.message || '昵称修改失败');
-            }
-        } catch (error) {
-            console.error('修改昵称失败:', error);
-            toast.error('昵称修改失败，请稍后重试');
-        } finally {
-            setIsUpdatingName(false);
-        }
-    };
-
-    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // 验证文件类型
-        if (!file.type.startsWith('image/')) {
-            toast.error('请选择图片文件');
-            return;
-        }
-
-        // 验证文件大小（例如限制为 5MB）
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
-            toast.error('图片大小不能超过 5MB');
-            return;
-        }
-
-        try {
-            setIsUpdatingAvatar(true);
-            const response = await auth.updateUserAvatar(file);
-            if (response.data.success && response.data.data) {
-                // 更新用户信息
-                await getUserInfo();
-                toast.success('头像更新成功');
-            } else {
-                toast.error(response.data.message || '头像更新失败');
-            }
-        } catch (error) {
-            console.error('更新头像失败:', error);
-            toast.error('头像更新失败，请稍后重试');
-        } finally {
-            setIsUpdatingAvatar(false);
-            // 清空 input，以便可以重复选择同一文件
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
         }
     };
 
@@ -333,97 +244,68 @@ const Create: React.FC = () => {
 
             <div className={styles.mainContent}>
                 <div className={styles.main}>
-                    {/* 创作游戏按钮 */}
-                    <div className={styles.createGameButton}>
-                        <div className={styles.createGameButtonRow}>
-                            <button
-                                className={styles.createGameButtonItem}
-                                onClick={() => {
-                                    // 小程序端进入创作者首页后统一走模式选择弹窗。
-                                    setIsCreateTypeModalOpen(true);
-                                }}
-                            >
-                                <HiOutlineLightBulb />
-                                <span>创作游戏</span>
-                            </button>
-                            <button
-                                className={styles.helpButton}
-                                onClick={() => setIsPDFModalOpen(true)}
-                                title="PDF模板指引"
-                            >
-                                <span className={styles.helpIcon}>?</span>
-                            </button>
-                        </div>
-                        <button
-                            className={`${styles.createGameButtonItem}`}
-                            onClick={() => navigate('/profile')}
-                        >
-                            活动获取积分
-                        </button>
-                    </div>
-
-                    {/* 用户信息展示区域 */}
-                    <div className={styles.userProfileSection}>
-                        <div className={styles.userProfileBackground}>
-                            <div
-                                className={styles.userProfileBlur}
-                                style={{
-                                    backgroundImage: `url(${userAvatar})`,
-                                }}
-                            />
-                            <div className={styles.userProfileContent}>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: 'none' }}
-                                    onChange={handleAvatarChange}
-                                    disabled={isUpdatingAvatar}
-                                />
-                                <img
-                                    className={styles.userAvatar}
-                                    src={userAvatar}
-                                    alt="用户头像"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    style={{ cursor: isUpdatingAvatar ? 'wait' : 'pointer' }}
-                                    title={isUpdatingAvatar ? '上传中...' : '点击更换头像'}
-                                />
-                                <div className={styles.userNameRow}>
-                                    <div className={styles.userName}>{userName}</div>
-                                    <button
-                                        type="button"
-                                        className={styles.editNameButton}
-                                        onClick={handleStartEditName}
-                                        title="修改昵称"
-                                    >
-                                        <MdEdit />
-                                    </button>
+                    <div className={styles.creatorHeroSection}>
+                        <div className={styles.creatorHeroCard}>
+                            <div className={styles.creatorHeroMain}>
+                                <div className={styles.creatorHeroMeta}>
+                                    <div className={styles.creatorHeroEyebrow}>Creator Studio</div>
+                                    <div className={styles.creatorHeroName}>{userName}</div>
+                                    <div className={styles.creatorHeroInfoRow}>
+                                        <div className={styles.userCode}>
+                                            <span className={styles.userCodeText}>Kuran号：{userCode || '--'}</span>
+                                            {userCode && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.userCodeCopyButton}
+                                                    onClick={handleCopyUserCode}
+                                                    title="复制Kuran号"
+                                                >
+                                                    <MdContentCopy />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className={styles.userCredit}>
+                                            <span className={styles.userPoints}>
+                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
+                                                积分：{user?.user?.points ?? 0}
+                                            </span>
+                                            <button
+                                                className={`${styles.payButton} ${styles.desktopPayButton}`}
+                                                onClick={() => setIsRechargeModalOpen(true)}
+                                            >
+                                                <span>充值</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                                {userCode && window.innerWidth <= 768 && (
-                                    <div className={styles.userCode}>
-                                        <span className={styles.userCodeText}>Kuran号：{userCode}</span>
+
+                                <div className={styles.creatorHeroActions}>
+                                    {/* 实现移动端操作按钮同行布局。 */}
+                                    <div className={styles.createGameButtonRow}>
                                         <button
-                                            type="button"
-                                            className={styles.userCodeCopyButton}
-                                            onClick={handleCopyUserCode}
-                                            title="复制Kuran号"
+                                            className={`${styles.payButton} ${styles.mobilePayButton}`}
+                                            onClick={() => setIsRechargeModalOpen(true)}
                                         >
-                                            <MdContentCopy />
+                                            <span>充值</span>
+                                        </button>
+                                        <button
+                                            className={styles.createGameButtonItem}
+                                            onClick={() => {
+                                                // 小程序端进入创作者首页后统一走模式选择弹窗。
+                                                setIsCreateTypeModalOpen(true);
+                                            }}
+                                        >
+                                            <HiOutlineLightBulb />
+                                            <span>创作游戏</span>
+                                        </button>
+                                        <button
+                                            className={styles.helpButton}
+                                            onClick={() => setIsPDFModalOpen(true)}
+                                            title="PDF模板指引"
+                                        >
+                                            <span className={styles.helpIcon}>?</span>
                                         </button>
                                     </div>
-                                )}
-                                <div className={styles.userCredit}>
-                                    <span className={styles.userPoints}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="" className={styles.priceIcon} />
-
-                                        积分：{user?.user?.points ?? 0}
-                                    </span>
-                                    <button
-                                        className={`${styles.payButton}`}
-                                        onClick={() => setIsRechargeModalOpen(true)}
-                                    >
-                                        <span>充值</span>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -617,54 +499,6 @@ const Create: React.FC = () => {
             <MobileBottomNav />
 
             <FooterArea />
-
-            {/* 修改昵称弹窗 */}
-            {isEditingName && (
-                <div
-                    className={styles.editNameModalOverlay}
-                    onClick={handleCancelEditName}
-                >
-                    <div
-                        className={styles.editNameModal}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>修改昵称</div>
-                        </div>
-                        <div className={styles.editNameModalBody}>
-                            <input
-                                className={styles.editNameInput}
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                placeholder="请输入新的昵称"
-                                maxLength={20}
-                                autoFocus
-                            />
-                            <div className={styles.editNameTips}>
-                                昵称长度建议 1-20 个字符，避免包含敏感或违规内容。
-                            </div>
-                        </div>
-                        <div className={styles.editNameModalActions}>
-                            <button
-                                type="button"
-                                className={styles.editNameCancelButton}
-                                onClick={handleCancelEditName}
-                                disabled={isUpdatingName}
-                            >
-                                取消
-                            </button>
-                            <button
-                                type="button"
-                                className={styles.editNameConfirmButton}
-                                onClick={handleConfirmEditName}
-                                disabled={isUpdatingName}
-                            >
-                                {isUpdatingName ? '保存中...' : '确认'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* 创作游戏相关弹窗 */}
             <CreateGameModals

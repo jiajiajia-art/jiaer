@@ -97,14 +97,16 @@
 }
 
 .userCode {
-    margin-top: 4px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 16px;
-    font-weight: 400;
-    color: #f5f5f5;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #4b5563;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .userCodeText {
@@ -115,7 +117,7 @@
     background: transparent;
     border-radius: 4px;
     border: none;
-    color: #ffffff;
+    color: #4b5563;
     min-width: auto;
     min-height: auto;
     display: flex;
@@ -128,7 +130,7 @@
 }
 
 .userCodeCopyButton:hover {
-    color: #fcfbfa;
+    color: var(--primary);
     transform: translateY(-1px);
 }
 
@@ -296,11 +298,66 @@
 }
 
 
+.creatorHeroSection {
+    width: 100%;
+    margin: 108px 0 38px;
+}
+
+.creatorHeroCard {
+    position: relative;
+    overflow: hidden;
+    border-radius: 32px;
+    padding: 32px 36px;
+    background: linear-gradient(180deg, #fffdfb 0%, #fff8f7 100%);
+    border: 1px solid rgba(17, 24, 39, 0.06);
+    box-shadow: 0 18px 44px rgba(17, 24, 39, 0.06);
+}
+
+.creatorHeroMain {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.creatorHeroMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+}
+
+.creatorHeroEyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(251, 70, 85, 0.78);
+}
+
+.creatorHeroName {
+    font-size: 36px;
+    line-height: 1.1;
+    font-weight: 700;
+    color: #121826;
+    word-break: break-word;
+}
+
+.creatorHeroInfoRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 18px;
+}
+
+.creatorHeroActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
 .createGameButton {
-    position: absolute;
-    top: 100px;
-    left: 0;
-    z-index: 10;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -308,10 +365,10 @@
 }
 
 .createGameButtonItem {
-    width: 200px;
-    height: 60px;
-    background-color: #FB4655;
-    border-radius: 10px;
+    min-width: 188px;
+    height: 56px;
+    background: linear-gradient(135deg, #fb4655 0%, #ff7b57 100%);
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -319,14 +376,16 @@
     border: none;
     cursor: pointer;
     font-size: 18px;
+    font-weight: 600;
     color: #ffffff;
     transition: all 0.3s ease;
-    margin-left: 10px;
+    padding: 0 22px;
+    box-shadow: 0 18px 32px rgba(251, 70, 85, 0.24);
 }
 
 .createGameButtonItem:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 20px 36px rgba(251, 70, 85, 0.3);
 }
 
 .createGameButtonItem svg {
@@ -336,15 +395,18 @@
 .createGameButtonRow {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: nowrap;
 }
 
 .helpButton {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    background: var(--primary);
-    color: #ffffff;
+    border: 1px solid rgba(251, 70, 85, 0.16);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--primary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -353,10 +415,11 @@
     font-size: 1.2rem;
     font-weight: 600;
     flex-shrink: 0;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
 }
 
 .helpButton:hover {
-    transform: scale(1.05);
+    transform: translateY(-2px);
 }
 
 .helpButton:active {
@@ -372,7 +435,16 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    color: #ffffff;
+    color: #111827;
+    flex-wrap: nowrap;
+}
+
+.desktopPayButton {
+    display: inline-flex;
+}
+
+.mobilePayButton {
+    display: none;
 }
 
 .priceIcon{
@@ -387,7 +459,13 @@
     align-items: center;
     gap: 6px;
     font-size: 18px;
-    font-weight: 500;
+    font-weight: 600;
+    color: #111827;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    white-space: nowrap;
 }
 
 .userPoints svg {
@@ -397,13 +475,14 @@
 
 .payButton {
     background-color: #FB4655;
-    border-radius: 5px;
-    padding: 6px 10px;
+    border-radius: 999px;
+    padding: 10px 18px;
     color: #ffffff;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    border: none;
 }
 
 .payButton:hover {
@@ -558,30 +637,27 @@
         padding: 0 20px;
     }
 
-    .userProfileBackground {
-        height: 300px;
+    .creatorHeroSection {
+        margin-top: 92px;
     }
 
-    .userAvatar {
-        margin-top: 80px;
-        width: 80px;
-        height: 80px;
-        border-width: 2px;
+    .creatorHeroCard {
+        padding: 28px;
+        border-radius: 28px;
     }
 
-    .userCode {
-        gap: 4px;
-        font-size: 14px;
+    .creatorHeroMain {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 24px;
     }
 
-    .userName {
-        font-size: 24px;
+    .creatorHeroName {
+        font-size: 30px;
     }
 
-    .userNameInput {
-        font-size: 14px;
-        min-width: 140px;
-        max-width: 200px;
+    .creatorHeroActions {
+        justify-content: flex-start;
     }
 
     .statsSection,
@@ -635,47 +711,108 @@
         padding-bottom: 20px;
     }
 
-    .createGameButton {
-        top: 70px;
+    .creatorHeroSection {
+        margin: 76px 0 28px;
+    }
+
+    .creatorHeroCard {
+        padding: 22px 18px;
+        border-radius: 24px;
+    }
+
+    .creatorHeroMain {
+        gap: 18px;
+    }
+
+    .creatorHeroMeta {
+        gap: 12px;
+    }
+
+    .creatorHeroName {
+        font-size: 24px;
+    }
+
+    .creatorHeroInfoRow {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 10px;
+    }
+
+    .createGameButtonRow {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 8px;
     }
 
     .createGameButtonItem {
-        width: 120px;
-        height: 36px;
-        font-size: 12px;
+        flex: 1 1 auto;
+        min-width: 120px;
+        height: 48px;
+        font-size: 15px;
         gap: 6px;
+        padding: 0 16px;
+        border-radius: 16px;
     }
 
-    .helpButton {
-        width: 32px;
-        height: 32px;
-        font-size: 1rem;
-    }
-
-    .userProfileBackground {
-        height: 250px;
-    }
-
-    .userAvatar {
-        margin-top: 80px;
-        width: 60px;
-        height: 60px;
-        border-width: 2px;
-    }
-
-    .userCode {
-        gap: 4px;
-        font-size: 12px;
-    }
-
-    .userName {
+    .createGameButtonItem svg {
         font-size: 20px;
     }
 
-    .userNameInput {
-        font-size: 13px;
-        min-width: 120px;
-        max-width: 180px;
+    .helpButton {
+        width: 44px;
+        height: 44px;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .userCode {
+        width: auto;
+        box-sizing: border-box;
+        justify-content: flex-start;
+        gap: 6px;
+        font-size: 14px;
+        padding: 8px 12px;
+        flex-shrink: 0;
+    }
+
+    .userPoints {
+        width: auto;
+        box-sizing: border-box;
+        justify-content: flex-start;
+        gap: 6px;
+        font-size: 14px;
+        padding: 8px 12px;
+        flex-shrink: 0;
+    }
+
+    .userCredit {
+        width: auto;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0;
+        flex-wrap: nowrap;
+        flex-shrink: 0;
+    }
+
+    .desktopPayButton {
+        display: none;
+    }
+
+    .mobilePayButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .payButton {
+        width: auto;
+        flex-shrink: 0;
+        min-height: 44px;
+        padding: 0 16px;
+        white-space: nowrap;
     }
 
     .statsGrid {

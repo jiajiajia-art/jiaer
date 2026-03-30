@@ -131,7 +131,17 @@ const Navbar: React.FC = () => {
                             {showUserMenu && !isWebViewEnv() && (
                                 <div className={styles.userMenu}>
                                     <button
-                                        className={styles.logoutBtn}
+                                        className={styles.menuBtn}
+                                        onClick={() => {
+                                            // 实现头像菜单跳转个人中心。
+                                            navigate('/profile');
+                                            setShowUserMenu(false);
+                                        }}
+                                    >
+                                        个人中心
+                                    </button>
+                                    <button
+                                        className={`${styles.menuBtn} ${styles.logoutBtn}`}
                                         onClick={() => {
                                             logout();
                                             setShowUserMenu(false);

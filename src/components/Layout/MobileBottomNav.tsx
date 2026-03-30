@@ -32,12 +32,6 @@ const navItems: Array<{
         iconActive: 'data/assets/切图/创作01.png',
     },
     {
-        key: 'create',
-        label: '创作',
-        iconInactive: 'data/assets/切图/创作02.png',
-        iconActive: 'data/assets/切图/创作01.png',
-    },
-    {
         key: 'profile',
         label: '我的',
         iconInactive: 'data/assets/切图/我的02.png',

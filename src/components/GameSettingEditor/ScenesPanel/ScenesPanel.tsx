@@ -889,8 +889,11 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
             {isGeneratingAllSceneImages && (
                 <div className={styles.plusLoadingOverlay}>
-                    <div className={styles.plusLoadingSpinner}></div>
-                    <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
+                    <div className={styles.plusLoadingDialog}>
+                        <div className={styles.plusLoadingSpinner}></div>
+                        <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
+                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作。</div>
+                    </div>
                 </div>
             )}
 
