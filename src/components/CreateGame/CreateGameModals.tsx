@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
+import { toast } from 'react-hot-toast';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
-import { toast } from 'react-hot-toast';
+import type { CreatorGameType } from '../../utils/miniProgram';
 
 interface CreateGameModalsProps {
     isCreateTypeModalOpen: boolean;
     isMobileTipModalOpen: boolean;
+    isMiniProgram: boolean;
+    mobileTipMessage: string;
+    mobileTipTitle?: string;
+    mobileTipLinkUrl?: string;
     onCloseCreateTypeModal: () => void;
     onCloseMobileTipModal: () => void;
-    onSelectGameType: (type: 'avg' | 'rpg' | 'txt' | 'custom') => void;
+    onSelectGameType: (type: CreatorGameType) => void;
+    onOpenMiniProgramTip: (type: Exclude<CreatorGameType, 'txt' | 'rpg'>) => void;
 }
 
 const AVG_INVITE_CODE = 'AVG2025DEV';
@@ -16,17 +22,40 @@ const AVG_INVITE_CODE = 'AVG2025DEV';
 const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     isCreateTypeModalOpen,
     isMobileTipModalOpen,
+    isMiniProgram,
+    mobileTipMessage,
+    mobileTipTitle,
+    mobileTipLinkUrl,
     onCloseCreateTypeModal,
     onCloseMobileTipModal,
     onSelectGameType,
+    onOpenMiniProgramTip,
 }) => {
     const [isInviteCodeModalOpen, setIsInviteCodeModalOpen] = useState(false);
     const [inviteCodeInput, setInviteCodeInput] = useState('');
     const [inviteCodeError, setInviteCodeError] = useState('');
 
     const handleAvgClick = () => {
+        if (isMiniProgram) {
+            // 小程序端只开放 TXT，AVG 统一引导去 PC 端。
+            onCloseCreateTypeModal();
+            onOpenMiniProgramTip('avg');
+            return;
+        }
+
         setIsInviteCodeModalOpen(true);
         setInviteCodeError('');
+    };
+
+    const handleCustomClick = () => {
+        if (isMiniProgram) {
+            // 小程序端暂不承载自定义模式编辑，统一给出 PC 引导。
+            onCloseCreateTypeModal();
+            onOpenMiniProgramTip('custom');
+            return;
+        }
+
+        onSelectGameType('custom');
     };
 
     const handleInviteCodeConfirm = () => {
@@ -34,7 +63,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
             setInviteCodeError('请输入邀请码');
             return;
         }
-        
+
         if (inviteCodeInput.trim() === AVG_INVITE_CODE) {
             setIsInviteCodeModalOpen(false);
             setInviteCodeInput('');
@@ -53,19 +82,6 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
         setInviteCodeError('');
     };
 
-    const handleInviteCodeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setInviteCodeInput(e.target.value);
-        // 输入时清除错误提示
-        if (inviteCodeError) {
-            setInviteCodeError('');
-        }
-    };
-
-    const handleInviteCodeKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            handleInviteCodeConfirm();
-        }
-    };
     return (
         <>
             {isCreateTypeModalOpen && (
@@ -75,12 +91,10 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 >
                     <div
                         className={styles.createTypeModal}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(event) => event.stopPropagation()}
                     >
                         <div className={styles.createTypeModalHeader}>
-                            <div className={styles.createTypeModalTitle}>
-                                选择需创建游戏类型
-                            </div>
+                            <div className={styles.createTypeModalTitle}>选择需创建游戏类型</div>
                         </div>
                         <div className={styles.createTypeModalDesc}>
                             请选择你要创作的游戏形态，我们会为你匹配合适的创作流程。
@@ -98,19 +112,23 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 onClick={handleAvgClick}
                             >
                                 <span>AVG</span>
-                                <span className={styles.createTypeOptionLockedTag}>需邀请码</span>
+                                <span className={styles.createTypeOptionLockedTag}>
+                                    {isMiniProgram ? '去 PC 端' : '需邀请码'}
+                                </span>
                             </button>
                             <button
                                 className={styles.createTypeOption}
-                                onClick={() => onSelectGameType('custom')}
+                                onClick={handleCustomClick}
                             >
                                 <span>自定义</span>
-                                <span className={styles.createTypeOptionRecommend}>新</span>
+                                <span className={styles.createTypeOptionRecommend}>
+                                    {isMiniProgram ? '去 PC 端' : '新'}
+                                </span>
                             </button>
                             <button
                                 className={`${styles.createTypeOption} ${styles.createTypeOptionDisabled}`}
                                 onClick={() => onSelectGameType('rpg')}
-                                disabled={true}
+                                disabled
                             >
                                 <span>RPG</span>
                                 <span className={styles.createTypeOptionLocked}>待解锁</span>
@@ -129,14 +147,14 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 </div>
             )}
 
-            {/* 移动端提示弹窗 */}
             <MobileTipModal
                 isOpen={isMobileTipModalOpen}
                 onClose={onCloseMobileTipModal}
-                message="创作功能暂不支持移动端，请在电脑上访问以获得更好的体验"
+                title={mobileTipTitle}
+                message={mobileTipMessage}
+                linkUrl={mobileTipLinkUrl}
             />
 
-            {/* 邀请码输入弹窗 */}
             {isInviteCodeModalOpen && (
                 <div
                     className={styles.createTypeModalOverlay}
@@ -144,12 +162,10 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 >
                     <div
                         className={styles.createTypeModal}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(event) => event.stopPropagation()}
                     >
                         <div className={styles.createTypeModalHeader}>
-                            <div className={styles.createTypeModalTitle}>
-                                输入邀请码
-                            </div>
+                            <div className={styles.createTypeModalTitle}>输入邀请码</div>
                             <button
                                 type="button"
                                 onClick={handleInviteCodeCancel}
@@ -167,15 +183,22 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 type="text"
                                 className={`${styles.inviteCodeInput} ${inviteCodeError ? styles.inviteCodeInputError : ''}`}
                                 value={inviteCodeInput}
-                                onChange={handleInviteCodeInputChange}
-                                onKeyPress={handleInviteCodeKeyPress}
+                                onChange={(event) => {
+                                    setInviteCodeInput(event.target.value);
+                                    if (inviteCodeError) {
+                                        setInviteCodeError('');
+                                    }
+                                }}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        handleInviteCodeConfirm();
+                                    }
+                                }}
                                 placeholder="请输入邀请码"
                                 autoFocus
                             />
                             {inviteCodeError && (
-                                <div className={styles.inviteCodeErrorText}>
-                                    {inviteCodeError}
-                                </div>
+                                <div className={styles.inviteCodeErrorText}>{inviteCodeError}</div>
                             )}
                         </div>
                         <div className={styles.createTypeModalFooter}>

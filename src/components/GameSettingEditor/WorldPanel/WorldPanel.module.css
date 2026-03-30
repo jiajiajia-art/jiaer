@@ -110,6 +110,15 @@
 .ghostSmall:hover {
     border-color: var(--primary);
     color: var(--primary);
+    background: rgba(224, 61, 75, 0.05);
+}
+
+.ghostSmall:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
 }
 
 .ghostTiny {
@@ -133,82 +142,87 @@
 /* 单栏表单容器 */
 .formContainer {
     display: flex;
-    flex-direction: row;
-    gap: 0;
+    flex-direction: column;
+    gap: 24px;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 24px;
-    padding: 0;
+    padding: 28px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
     position: relative;
     overflow: hidden;
 }
 
-/* 当没有 tab 容器时，tabContent 应该全宽 */
-.formContainer:not(:has(.tabContainer)) .tabContent {
-    padding: 28px;
-}
-
-/* Tab 容器 - 侧边 */
-.tabContainer {
+.cardHead {
     display: flex;
-    flex-direction: column;
-    background: rgba(0, 0, 0, 0.02);
-    border-right: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 8px;
-    width: fit-content;
-    min-width: 120px;
-    gap: 6px;
-    border-radius: 12px 0 0 12px;
-    margin-right: 1px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-/* Tab 按钮 - 突出样式 */
-.tab {
-    position: relative;
-    padding: 10px 16px;
-    background: transparent;
-    border: none;
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.6);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 8px;
-    white-space: nowrap;
-    min-width: 100px;
-}
-
-.tab:hover {
-    color: var(--primary);
-    background: rgba(224, 61, 75, 0.08);
-}
-
-.tabActive {
-    color: #ffffff;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+.cardTitle {
+    font-size: 1rem;
+    color: #1a1a1a;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
 }
 
-/* Tab 内容区域 */
-.tabContent {
-    flex: 1;
-    padding: 28px;
+.formBody {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    overflow-y: auto;
-    position: relative;
 }
 
-.tabContentGenerating {
-    max-height: calc(100vh - 200px);
-    overflow: hidden;
+.sectionTitleRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
 }
 
-/* 高级 story-structure 样式已迁移到 StoryStructureAdvanced.module.css */
+.sectionTitle {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.sectionDescription {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.55);
+}
+
+.detailBlock {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 249, 249, 0.96) 100%);
+}
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.formGrid label,
+.detailBlock label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formStack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
 
 /* 表单行 */
 .formRow {
@@ -221,6 +235,24 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+
+.fieldTopRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.fieldMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.fieldBlock {
+    width: 100%;
 }
 
 .fieldLabel {
@@ -248,10 +280,10 @@
 }
 
 .wordCounter {
-    margin-left: auto;
     font-size: 0.7rem;
     font-weight: 400;
     color: rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
 }
 
 /* 字数限制表单容器 */
@@ -259,6 +291,18 @@
     display: flex;
     gap: 12px;
     align-items: center;
+}
+
+.outputLengthGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.outputLengthGrid label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .outputLengthField {
@@ -405,6 +449,7 @@
 }
 
 .wide {
+    grid-column: 1 / -1;
     width: 100%;
 }
 
@@ -754,8 +799,30 @@
     }
 
     .formContainer {
+        gap: 20px;
         padding: 20px;
         border-radius: 18px;
+    }
+
+    .cardHead {
+        align-items: flex-start;
+        padding-bottom: 14px;
+    }
+
+    .detailBlock {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .formGrid,
+    .outputLengthGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .fieldTopRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
     }
 
     .storylineHeader {

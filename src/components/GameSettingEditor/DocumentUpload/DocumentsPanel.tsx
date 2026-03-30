@@ -43,7 +43,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // 功能注释：记录前端上传入口状态，便于定位“选择文件后无响应”问题
+            // 记录前端上传入口状态，便于定位“选择文件后无响应”问题
             console.log('[DocumentsPanel] File selected:', {
                 fileName: file.name,
                 fileSize: file.size,
@@ -81,7 +81,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         
         const file = e.dataTransfer.files?.[0];
         if (file) {
-            // 功能注释：拖拽上传路径日志，便于区分点击上传与拖拽上传行为
+            // 记录拖拽上传路径日志，便于区分点击上传与拖拽上传行为
             console.log('[DocumentsPanel] File dropped:', {
                 fileName: file.name,
                 fileSize: file.size,

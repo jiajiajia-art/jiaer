@@ -15,6 +15,13 @@ import FooterArea from '../components/Layout/FooterArea';
 import toast from 'react-hot-toast';
 import PriceAdjustmentModal from '../components/CreateGame/PriceAdjustmentModal';
 import { getImageUrl } from '../utils/constants';
+import MobileTipModal from '../components/CreateGame/MobileTipModal';
+import {
+    getMiniProgramCreatorBlockedMessage,
+    isMiniProgramEnv,
+    MINI_PROGRAM_CREATOR_PC_URL,
+    resolveCreatorEngine,
+} from '../utils/miniProgram';
 
 const CreateGame: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -32,6 +39,8 @@ const CreateGame: React.FC = () => {
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showPriceModal, setShowPriceModal] = useState(false);
+    const [showMiniProgramTip, setShowMiniProgramTip] = useState(false);
+    const [miniProgramTipMessage, setMiniProgramTipMessage] = useState('');
 
     const defaultHeroCover = `${import.meta.env.BASE_URL}data/events/welcome.png`;
     const heroBackground = gameDetail?.cover_url ? getImageUrl(gameDetail.cover_url) : defaultHeroCover;
@@ -174,9 +183,19 @@ const CreateGame: React.FC = () => {
     };
 
     const editGame = () => {
-        // 优先根据服务端引擎类型做分流（支持自定义游戏）
-        const engine = (gameDetail?.engine || '').toUpperCase();
-        if (engine === 'CUSTOM') {
+        const normalizedEngine = resolveCreatorEngine(gameDetail?.engine, gameDetail?.game_tags);
+        if (!normalizedEngine || !gameDetail) {
+            return;
+        }
+
+        if (isMiniProgramEnv() && normalizedEngine !== 'TXT') {
+            // 小程序端只能编辑 TXT，已有 AVG / 自定义作品统一引导去 PC 端。
+            setMiniProgramTipMessage(getMiniProgramCreatorBlockedMessage(normalizedEngine));
+            setShowMiniProgramTip(true);
+            return;
+        }
+
+        if (normalizedEngine === 'CUSTOM') {
             const appId = gameDetail?.customAppId || gameDetail?.file_id;
             if (!appId) {
                 alert('缺少自定义 AppID，无法编辑');
@@ -188,7 +207,7 @@ const CreateGame: React.FC = () => {
         }
 
         // 按游戏类型选择编辑器
-        if (gameDetail?.game_tags == 'AVG') {
+        if (normalizedEngine === 'AVG') {
             setFileId(gameId)
             navigate(`/gameSettingsEditor?mode=worldInteraction`);
         } else {
@@ -279,6 +298,14 @@ const CreateGame: React.FC = () => {
                     onSave={handlePriceAdjust}
                 />
             )}
+
+            <MobileTipModal
+                isOpen={showMiniProgramTip}
+                onClose={() => setShowMiniProgramTip(false)}
+                title="请前往 PC 端操作"
+                message={miniProgramTipMessage}
+                linkUrl={MINI_PROGRAM_CREATOR_PC_URL}
+            />
 
             <FooterArea />
         </div>

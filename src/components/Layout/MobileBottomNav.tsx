@@ -1,15 +1,10 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './MobileBottomNav.module.css';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
+import { isCreatorRoutePath, isMiniProgramEnv } from '../../utils/miniProgram';
 
-// 检测是否在微信小程序环境
-const isWebViewEnv = (): boolean => {
-    const win = window as any;
-    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
-};
-
-type BottomNavKey = 'home' | 'profile';
+type BottomNavKey = 'home' | 'create' | 'profile';
 
 const normalize = (path: string) => {
     const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -31,6 +26,12 @@ const navItems: Array<{
         iconActive: 'data/assets/切图/首页01.png',
     },
     {
+        key: 'create',
+        label: '创作',
+        iconInactive: 'data/assets/切图/创作02.png',
+        iconActive: 'data/assets/切图/创作01.png',
+    },
+    {
         key: 'profile',
         label: '我的',
         iconInactive: 'data/assets/切图/我的02.png',
@@ -48,27 +49,37 @@ const MobileBottomNav: React.FC = () => {
         initialize();
     }, [initialize]);
 
-
     const currentPath = normalize(location.pathname);
 
     const activeKey = useMemo<BottomNavKey>(() => {
         if (currentPath.startsWith('/home')) return 'home';
+        if (isCreatorRoutePath(currentPath)) return 'create';
         if (currentPath.startsWith('/profile')) return 'profile';
         return 'home';
     }, [currentPath]);
+
+    const ensureAuthenticated = () => {
+        if (isAuthenticated) {
+            return true;
+        }
+
+        if (!isMiniProgramEnv()) {
+            setIsAuthModalOpen(true);
+        }
+        return false;
+    };
 
     const handleNav = (key: BottomNavKey) => {
         switch (key) {
             case 'home':
                 navigate('/home');
                 break;
+            case 'create':
+                if (!ensureAuthenticated()) return;
+                navigate('/create');
+                break;
             case 'profile':
-                if (!isAuthenticated) {
-                    if (!isWebViewEnv()) {
-                        setIsAuthModalOpen(true);
-                    }
-                    return;
-                }
+                if (!ensureAuthenticated()) return;
                 navigate('/profile');
                 break;
             default:
@@ -77,30 +88,25 @@ const MobileBottomNav: React.FC = () => {
     };
 
     return (
-        <>
-            <div className={styles.container}>
-                {navItems.map(({ key, label, iconActive, iconInactive }) => {
-                    const isActive = activeKey === key;
-                    const iconSrc = `${import.meta.env.BASE_URL}${isActive ? iconActive : iconInactive}`;
+        <div className={styles.container}>
+            {navItems.map(({ key, label, iconActive, iconInactive }) => {
+                const isActive = activeKey === key;
+                const iconSrc = `${import.meta.env.BASE_URL}${isActive ? iconActive : iconInactive}`;
 
-                    return (
+                return (
                     <button
                         key={key}
                         type="button"
-                        className={`${styles.navItem} ${activeKey === key ? styles.navItemActive : ''}`}
+                        className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                         onClick={() => handleNav(key)}
                     >
                         <img src={iconSrc} alt={label} className={styles.icon} />
-                        <span className={styles.label}>
-                            {label}
-                        </span>
+                        <span className={styles.label}>{label}</span>
                     </button>
-                    );
-                })}
-            </div>
-        </>
+                );
+            })}
+        </div>
     );
 };
 
 export default MobileBottomNav;
-

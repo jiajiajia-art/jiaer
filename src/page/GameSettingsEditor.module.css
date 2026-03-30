@@ -1,11 +1,14 @@
 .appShell {
     display: flex;
+    width: 100%;
+    min-width: 0;
     height: 100vh;
     background: #FAFBFC;
 }
 
 .main {
     flex: 1;
+    min-width: 0;
     padding: 40px 56px 56px;
     display: flex;
     flex-direction: column;
@@ -158,12 +161,31 @@
 .panel {
     display: none;
     flex-direction: column;
+    min-width: 0;
     gap: 28px;
     animation: fadeIn 0.4s ease-out;
 }
 
 .panel.active {
     display: flex;
+}
+
+.miniProgramShell {
+    min-height: 100vh;
+}
+
+.miniProgramMain {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+}
+
+.miniProgramTopBar {
+    gap: 16px;
+}
+
+.miniProgramTopActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
 }
 
 @keyframes fadeIn {
@@ -205,5 +227,28 @@
     .main {
         padding: 20px 16px;
         gap: 24px;
+    }
+
+    .miniProgramMain {
+        padding: 18px 14px calc(104px + env(safe-area-inset-bottom));
+    }
+
+    .miniProgramTopBar {
+        padding-bottom: 20px;
+    }
+
+    .miniProgramTopActions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .miniProgramTopActions .ghost,
+    .miniProgramTopActions .primary {
+        width: 100%;
+        min-width: 0;
+        padding-left: 12px;
+        padding-right: 12px;
+        justify-content: center;
     }
 }

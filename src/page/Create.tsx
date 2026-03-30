@@ -24,6 +24,13 @@ import { getImageUrl } from '../utils/constants';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
+import {
+    getMiniProgramCreatorBlockedMessage,
+    isMiniProgramCreatorTypeSupported,
+    isMiniProgramEnv,
+    MINI_PROGRAM_CREATOR_PC_URL,
+    type CreatorGameType,
+} from '../utils/miniProgram';
 
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
@@ -44,6 +51,7 @@ const Create: React.FC = () => {
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
+    const [mobileTipMessage, setMobileTipMessage] = useState('');
     const [isEditingName, setIsEditingName] = useState(false);
     const [editName, setEditName] = useState('');
     const [isUpdatingName, setIsUpdatingName] = useState(false);
@@ -285,7 +293,24 @@ const Create: React.FC = () => {
         }
     };
 
-    const handleSelectGameType = (type: 'avg' | 'rpg' | 'txt' | 'custom') => {
+    const isMiniProgram = isMiniProgramEnv();
+
+    const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom'>) => {
+        // 小程序端暂不开放 AVG / 自定义编辑，统一引导去 PC 端。
+        setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
+        setIsMobileTipModalOpen(true);
+    };
+
+    const handleSelectGameType = (type: CreatorGameType) => {
+        // 小程序端当前只允许 TXT 模式进入创作者编辑器。
+        if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
+            if (type === 'avg' || type === 'custom') {
+                openMiniProgramTypeTip(type);
+            }
+            setIsCreateTypeModalOpen(false);
+            return;
+        }
+
         clearAll();
         if (type === 'rpg') {
             navigate('/createGame');
@@ -314,12 +339,7 @@ const Create: React.FC = () => {
                             <button
                                 className={styles.createGameButtonItem}
                                 onClick={() => {
-                                    // 检测是否为移动端（断点与 CSS 保持一致：768px）
-                                    const isMobile = window.innerWidth <= 768;
-                                    if (isMobile) {
-                                        setIsMobileTipModalOpen(true);
-                                        return;
-                                    }
+                                    // 小程序端进入创作者首页后统一走模式选择弹窗。
                                     setIsCreateTypeModalOpen(true);
                                 }}
                             >
@@ -650,9 +670,14 @@ const Create: React.FC = () => {
             <CreateGameModals
                 isCreateTypeModalOpen={isCreateTypeModalOpen}
                 isMobileTipModalOpen={isMobileTipModalOpen}
+                isMiniProgram={isMiniProgram}
+                mobileTipTitle="请前往 PC 端操作"
+                mobileTipMessage={mobileTipMessage}
+                mobileTipLinkUrl={MINI_PROGRAM_CREATOR_PC_URL}
                 onCloseCreateTypeModal={() => setIsCreateTypeModalOpen(false)}
                 onCloseMobileTipModal={() => setIsMobileTipModalOpen(false)}
                 onSelectGameType={handleSelectGameType}
+                onOpenMiniProgramTip={openMiniProgramTypeTip}
             />
 
             {/* 充值弹窗 */}

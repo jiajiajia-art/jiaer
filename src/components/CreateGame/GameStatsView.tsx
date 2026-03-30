@@ -12,10 +12,10 @@ import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp } from '../../utils/imageCache';
-import MobileTipModal from './MobileTipModal';
 import LoadSaveListModal from './LoadSaveListModal';
 import SavePreviewModal from './SavePreviewModal';
 import type { SaveSummaryItem } from '../../api/galgame/saves';
+import { isMiniProgramEnv } from '../../utils/miniProgram';
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -41,7 +41,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [gameStats, setGameStats] = useState<GameStatsResponse>();
-    const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
 
@@ -123,10 +122,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
      */
     const handleStartGame = async () => {
         if (!user?.user.userId || !user?.user.id) {
-            // 检测是否在微信小程序环境
-            const win = window as any;
-            const isMiniProgram = String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
-            if (!isMiniProgram) {
+            if (!isMiniProgramEnv()) {
                 authModalStore.getState().setIsAuthModalOpen(true);
             }
             return;
@@ -302,15 +298,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 <div className={styles.heroActionGroup}>
                     <button
                         className={styles.editGameBtn}
-                        onClick={() => {
-                            // 检测是否为移动端（断点与 CSS 保持一致：768px）
-                            const isMobile = window.innerWidth <= 768;
-                            if (isMobile) {
-                                setIsMobileTipModalOpen(true);
-                                return;
-                            }
-                            onEdit();
-                        }}
+                        onClick={onEdit}
                     >
                         编辑游戏
                     </button>
@@ -324,13 +312,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     </button>
                 </div>
             </div>
-
-            {/* 移动端提示弹窗 */}
-            <MobileTipModal
-                isOpen={isMobileTipModalOpen}
-                onClose={() => setIsMobileTipModalOpen(false)}
-                message="编辑功能暂不支持移动端，请在电脑上访问以获得更好的体验"
-            />
 
             {/* 读取存档 → 列表 → 预览 → 加载 */}
             <LoadSaveListModal

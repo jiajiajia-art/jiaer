@@ -22,12 +22,15 @@ import type { WorldInteractionGameData } from '../api/worldInteraction/worldInte
 import FullPageLoading from '../components/Skeleton/FullPageLoading';
 import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import { isMiniProgramEnv } from '../utils/miniProgram';
 
 const GameSettingsEditor = () => {
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { fileId, setFileId } = useGameStore();
     const [searchParams] = useSearchParams();
     const mode = searchParams.get('mode'); // 默认为 'visual'，新按钮传 'worldInteraction'
+    const isMiniProgramTxtMode = isMiniProgramEnv() && mode !== 'worldInteraction';
     
     const [isParsing, setIsParsing] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
@@ -252,7 +255,7 @@ const GameSettingsEditor = () => {
     }, [handlePublishGame]);
 
     const checkActivePanelBeforeTest = useCallback(async (): Promise<boolean> => {
-        // 功能注释：测试体验前复用各面板的未保存检查，避免改动未保存直接开局
+        // 测试体验前复用各面板的未保存检查，避免改动未保存直接开局
         if (activePanel === 'functionalNPCs' && functionalNPCsPanelRef.current) {
             return await Promise.resolve(functionalNPCsPanelRef.current.checkBeforeLeave());
         }
@@ -278,16 +281,17 @@ const GameSettingsEditor = () => {
     }, [activePanel]);
 
     return (
-        <div className={styles.appShell}>
-            <Sidebar
-                activePanel={activePanel}
-                onPanelChange={handlePanelChange}
-                isParsing={isParsing}
-                isParsed={isParsed}
-                mode={mode ?? undefined}
-            />
-            <main className={styles.main}>
-                <header className={styles.topBar}>
+        <>
+            <div className={`${styles.appShell} ${isMiniProgramTxtMode ? styles.miniProgramShell : ''}`}>
+                <Sidebar
+                    activePanel={activePanel}
+                    onPanelChange={handlePanelChange}
+                    isParsing={isParsing}
+                    isParsed={isParsed}
+                    mode={mode ?? undefined}
+                />
+                <main className={`${styles.main} ${isMiniProgramTxtMode ? styles.miniProgramMain : ''}`}>
+                <header className={`${styles.topBar} ${isMiniProgramTxtMode ? styles.miniProgramTopBar : ''}`}>
                     <div>
                         <p className={styles.eyebrow}>KURAN · CREATOR</p>
                         <h1>游戏创作流程</h1>
@@ -297,7 +301,7 @@ const GameSettingsEditor = () => {
                         </p>
                     </div>
 
-                    <div className={styles.topActions}>
+                    <div className={`${styles.topActions} ${isMiniProgramTxtMode ? styles.miniProgramTopActions : ''}`}>
                         <button
                             className={styles.ghost}
                             onClick={async (e) => {
@@ -475,16 +479,18 @@ const GameSettingsEditor = () => {
                         contentClassName={styles.mapContainer}
                     />
                 )}
-            </main>
-            {showPublishModal && (
-                <PublishSettingsModal
-                    isOpen={showPublishModal}
-                    onClose={() => setShowPublishModal(false)}
-                    onPublish={onPublishGame}
-                    fileId={fileId || undefined}
-                />
-            )}
-        </div>
+                </main>
+                {showPublishModal && (
+                    <PublishSettingsModal
+                        isOpen={showPublishModal}
+                        onClose={() => setShowPublishModal(false)}
+                        onPublish={onPublishGame}
+                        fileId={fileId || undefined}
+                    />
+                )}
+            </div>
+            {isMiniProgramTxtMode && <MobileBottomNav />}
+        </>
     );
 };
 
