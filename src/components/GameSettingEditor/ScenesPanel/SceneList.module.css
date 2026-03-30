@@ -216,3 +216,51 @@
     flex-shrink: 0;
 }
 
+.mobileToggleButton {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .boardHead {
+        flex-wrap: wrap;
+    }
+
+    .sceneRow {
+        grid-template-columns: 88px 1fr;
+        height: 144px;
+    }
+
+    .sceneThumb {
+        width: 88px;
+    }
+
+    .subsceneList {
+        padding-left: 0;
+    }
+
+    .subsceneHeader,
+    .subsceneRowCard {
+        margin-left: 0;
+    }
+
+    .mobileToggleButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        border: 1px solid rgba(224, 61, 75, 0.14);
+        border-radius: 999px;
+        padding: 10px 14px;
+        background: rgba(224, 61, 75, 0.04);
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s ease;
+    }
+
+    .mobileToggleButton:hover {
+        background: rgba(224, 61, 75, 0.08);
+    }
+}
+

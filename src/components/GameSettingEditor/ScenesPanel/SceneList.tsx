@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from './SceneList.module.css';
 import { RiDeleteBin5Line, RiArrowDownSLine, RiArrowRightSLine } from 'react-icons/ri';
 import type { LocalScene } from './handlers';
@@ -37,6 +37,52 @@ const SceneList: React.FC<SceneListProps> = ({
 }) => {
     // 子场景折叠状态在组件内部管理
     const [subsceneCollapsed, setSubsceneCollapsed] = useState<Record<string, boolean>>({});
+    // 实现移动端场景列表折叠
+    const [isMobileViewport, setIsMobileViewport] = useState(() =>
+        typeof window !== 'undefined' ? window.matchMedia('(max-width: 720px)').matches : false
+    );
+    const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const mediaQuery = window.matchMedia('(max-width: 720px)');
+        const handleViewportChange = (event: MediaQueryListEvent) => {
+            setIsMobileViewport(event.matches);
+        };
+
+        setIsMobileViewport(mediaQuery.matches);
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', handleViewportChange);
+            return () => mediaQuery.removeEventListener('change', handleViewportChange);
+        }
+
+        mediaQuery.addListener(handleViewportChange);
+        return () => mediaQuery.removeListener(handleViewportChange);
+    }, []);
+
+    useEffect(() => {
+        if (!isMobileViewport) {
+            setIsMobileExpanded(false);
+        }
+    }, [isMobileViewport]);
+
+    const visibleScenes = useMemo(() => {
+        if (!isMobileViewport || isMobileExpanded || sceneData.length <= 2) {
+            return sceneData;
+        }
+
+        const defaultScenes = sceneData.slice(0, 2);
+        if (defaultScenes.some((scene) => scene.id === activeSceneId)) {
+            return defaultScenes;
+        }
+
+        const activeScene = sceneData.find((scene) => scene.id === activeSceneId);
+        return activeScene ? [...defaultScenes, activeScene] : defaultScenes;
+    }, [activeSceneId, isMobileExpanded, isMobileViewport, sceneData]);
 
     const handleToggleCollapse = (sceneId: string) => {
         setSubsceneCollapsed(prev => ({
@@ -55,7 +101,7 @@ const SceneList: React.FC<SceneListProps> = ({
                 </button>
             </div>
             <div className={styles.sceneList}>
-                {sceneData.map((scene) => {
+                {visibleScenes.map((scene) => {
                     const subscenes: WorldSubScene[] =
                         mode === 'worldInteraction'
                             ? (subsceneDataBySceneId?.[scene.id] || [])
@@ -177,6 +223,15 @@ const SceneList: React.FC<SceneListProps> = ({
                     );
                 })}
             </div>
+            {isMobileViewport && sceneData.length > 2 && (
+                <button
+                    type="button"
+                    className={styles.mobileToggleButton}
+                    onClick={() => setIsMobileExpanded((prev) => !prev)}
+                >
+                    {isMobileExpanded ? '收起场景' : `展开全部场景（${sceneData.length}）`}
+                </button>
+            )}
         </div>
     );
 };

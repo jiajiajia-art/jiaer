@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import sidebarStyles from './CharactersSidebar.module.css';
 import sharedStyles from './CharactersPanel.module.css';
 import { withCacheBust, normalizePersonalityTags } from './utils';
@@ -28,6 +28,53 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
     setIsAddingNew,
     setNewCharacterData,
 }) => {
+    // 实现移动端角色列表折叠
+    const [isMobileViewport, setIsMobileViewport] = useState(() =>
+        typeof window !== 'undefined' ? window.matchMedia('(max-width: 720px)').matches : false
+    );
+    const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const mediaQuery = window.matchMedia('(max-width: 720px)');
+        const handleViewportChange = (event: MediaQueryListEvent) => {
+            setIsMobileViewport(event.matches);
+        };
+
+        setIsMobileViewport(mediaQuery.matches);
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', handleViewportChange);
+            return () => mediaQuery.removeEventListener('change', handleViewportChange);
+        }
+
+        mediaQuery.addListener(handleViewportChange);
+        return () => mediaQuery.removeListener(handleViewportChange);
+    }, []);
+
+    useEffect(() => {
+        if (!isMobileViewport) {
+            setIsMobileExpanded(false);
+        }
+    }, [isMobileViewport]);
+
+    const visibleCharacters = useMemo(() => {
+        if (!isMobileViewport || isMobileExpanded || characters.length <= 2) {
+            return characters;
+        }
+
+        const defaultCharacters = characters.slice(0, 2);
+        if (defaultCharacters.some((character) => character.id === activeCharacterId)) {
+            return defaultCharacters;
+        }
+
+        const activeCharacter = characters.find((character) => character.id === activeCharacterId);
+        return activeCharacter ? [...defaultCharacters, activeCharacter] : defaultCharacters;
+    }, [activeCharacterId, characters, isMobileExpanded, isMobileViewport]);
+
     const handleCharacterClick = (characterId: string) => {
         if (!checkBeforeSwitch({ type: 'switchCharacter', targetCharacterId: characterId })) {
             return;
@@ -52,7 +99,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
             </div>
             <div className={sidebarStyles.rosterScroll}>
                 <div className={sidebarStyles.characterRoster}>
-                    {characters.map((character) => {
+                    {visibleCharacters.map((character) => {
                         // 侧栏角色前缀统一
                         const sidebarRole = character.id === 'player' ? (character.role || '主角') : 'NPC';
                         const personalityTags = normalizePersonalityTags(character.personality);
@@ -98,6 +145,15 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                         );
                     })}
                 </div>
+                {isMobileViewport && characters.length > 2 && (
+                    <button
+                        type="button"
+                        className={sidebarStyles.mobileToggleButton}
+                        onClick={() => setIsMobileExpanded((prev) => !prev)}
+                    >
+                        {isMobileExpanded ? '收起角色' : `展开全部角色（${characters.length}）`}
+                    </button>
+                )}
             </div>
         </div>
     );

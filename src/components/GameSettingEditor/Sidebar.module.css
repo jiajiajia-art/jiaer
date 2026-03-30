@@ -13,24 +13,27 @@
     position: relative;
 }
 
-/* 品牌区域 */
 .brand {
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
-.badge {
-    width: 44px;
-    height: 44px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.3);
+.brandAvatarWrap {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+    flex-shrink: 0;
+    background: rgba(241, 245, 249, 0.9);
+}
+
+.brandAvatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .brandLabel {
@@ -47,7 +50,10 @@
     font-size: 0.82rem;
 }
 
-/* 导航区域 */
+.mobileProgressCard {
+    display: none;
+}
+
 .nav {
     display: flex;
     flex-direction: column;
@@ -64,8 +70,8 @@
     cursor: pointer;
     transition: all 0.25s ease;
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: flex-start;
+    gap: 0;
     position: relative;
     font-size: 0.95rem;
     font-weight: 500;
@@ -84,10 +90,31 @@
     transition: height 0.25s ease;
 }
 
+.navBadge {
+    display: none;
+}
+
+.navText {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.navTitleDesktop {
+    display: block;
+    line-height: 1.4;
+}
+
+.navTitleMobile {
+    display: none;
+}
+
 .navBtn small {
     color: rgba(0, 0, 0, 0.5);
     font-size: 0.75rem;
     font-weight: 400;
+    line-height: 1.45;
 }
 
 .navBtn:hover:not(.disabled) {
@@ -98,7 +125,6 @@
     height: 18px;
 }
 
-/* 激活状态 */
 .navBtn.active {
     border-color: rgba(224, 61, 75, 0.15);
     background: rgba(224, 61, 75, 0.06);
@@ -115,7 +141,15 @@
     color: rgba(224, 61, 75, 0.7);
 }
 
-/* 禁用状态 */
+.navBtn.done {
+    border-color: transparent;
+    background: transparent;
+}
+
+.navBtn.done small {
+    color: rgba(0, 0, 0, 0.5);
+}
+
 .navBtn.disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -130,90 +164,6 @@
     background: transparent;
 }
 
-/* 底部区域 */
-.sidebarFooter {
-    margin-top: auto;
-    padding: 16px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
-    background: rgba(0, 0, 0, 0.02);
-}
-
-.footerLabel {
-    margin: 0;
-    font-size: 0.72rem;
-    color: rgba(0, 0, 0, 0.5);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-}
-
-.footerValue {
-    margin: 6px 0 14px;
-    font-weight: 600;
-    color: #1a1a1a;
-    font-size: 0.95rem;
-}
-
-.ghostSmall {
-    border-radius: 999px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 8px 14px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.25s ease;
-    color: #1a1a1a;
-    background: #fff;
-    width: 100%;
-}
-
-.ghostSmall:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-}
-
-/* 帮助按钮 */
-.helpButtonContainer {
-    position: absolute;
-    left: 24px;
-    bottom: 24px;
-    display: flex;
-    justify-content: flex-start;
-}
-
-.helpButton {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid rgba(224, 61, 75, 0.3);
-    background: rgba(224, 61, 75, 0.06);
-    color: var(--primary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.25s ease;
-    font-size: 1.2rem;
-    font-weight: 600;
-}
-
-.helpButton:hover {
-    background: rgba(224, 61, 75, 0.12);
-    border-color: rgba(224, 61, 75, 0.5);
-    transform: scale(1.05);
-}
-
-.helpButton:active {
-    transform: scale(0.95);
-}
-
-.helpIcon {
-    line-height: 1;
-    user-select: none;
-}
-
-/* 响应式布局 */
 @media (max-width: 1080px) {
     .sidebar {
         width: auto;
@@ -263,42 +213,172 @@
         width: 24px;
         height: 3px;
     }
-
-    .sidebarFooter {
-        display: none;
-    }
-
-    .helpButtonContainer {
-        display: none;
-    }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
     .sidebar {
-        padding: 12px 14px;
+        width: 100%;
+        overflow: visible;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 12px 8px;
+        background: rgba(255, 255, 255, 0.98);
+        box-shadow: none;
     }
 
-    .badge {
-        width: 36px;
-        height: 36px;
-        font-size: 0.8rem;
-        border-radius: 10px;
+    .brand {
+        display: none;
     }
 
-    .brandLabel {
-        font-size: 0.9rem;
+    .mobileProgressCard {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 0 2px;
     }
 
-    .brandDesc {
+    .mobileProgressTitle {
+        margin: 0;
+        min-width: 0;
+        flex: 1;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #1a1d21;
+        line-height: 1.3;
+    }
+
+    .mobileProgressStatus {
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(224, 61, 75, 0.08);
+        color: var(--primary);
+        font-size: 0.68rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .nav {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding: 1px 1px 4px;
+        gap: 8px;
+    }
+
+    .nav::-webkit-scrollbar {
         display: none;
     }
 
     .navBtn {
-        padding: 8px 12px;
-        font-size: 0.82rem;
+        flex: 0 0 auto;
+        min-width: 92px;
+        max-width: 112px;
+        border-radius: 15px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: #ffffff;
+        box-shadow: none;
+        padding: 9px 10px;
+        white-space: normal;
+        align-items: center;
+        gap: 8px;
+        scroll-snap-align: start;
+    }
+
+    .navBtn::before {
+        display: none;
+    }
+
+    .navBtn:hover:not(.disabled) {
+        background: #ffffff;
+        border-color: rgba(224, 61, 75, 0.18);
+        transform: none;
+    }
+
+    .navBadge {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #4b5563;
+        background: #f5f6f8;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .navText {
+        gap: 2px;
+    }
+
+    .navTitleDesktop {
+        display: none;
+    }
+
+    .navTitleMobile {
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #1a1d21;
+        line-height: 1.2;
     }
 
     .navBtn small {
         display: none;
+    }
+
+    .navBtn.active {
+        border-color: rgba(224, 61, 75, 0.26);
+        background: linear-gradient(135deg, rgba(255, 244, 245, 0.96), rgba(255, 255, 255, 1));
+        box-shadow: 0 6px 14px rgba(224, 61, 75, 0.08);
+    }
+
+    .navBtn.active .navBadge {
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--primary), var(--primary-light));
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    .navBtn.active .navTitleMobile {
+        color: var(--primary);
+    }
+
+    .navBtn.done {
+        border-color: rgba(15, 23, 42, 0.08);
+        background: #ffffff;
+    }
+
+    .navBtn.done .navBadge {
+        color: #4b5563;
+        background: #f5f6f8;
+        border-color: rgba(15, 23, 42, 0.08);
+    }
+
+    .navBtn.done .navTitleMobile {
+        color: #1a1d21;
+    }
+
+    .navBtn.disabled {
+        opacity: 1;
+        background: rgba(245, 246, 248, 0.86);
+        border-color: rgba(15, 23, 42, 0.05);
+    }
+
+    .navBtn.disabled .navBadge {
+        color: rgba(107, 114, 128, 0.78);
+        background: rgba(229, 231, 235, 0.92);
+        border-color: transparent;
+    }
+
+    .navBtn.disabled .navTitleMobile {
+        color: rgba(75, 85, 99, 0.76);
     }
 }

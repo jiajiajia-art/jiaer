@@ -102,6 +102,10 @@
     color: var(--primary);
 }
 
+.mobileToggleButton {
+    display: none;
+}
+
 @media (max-width: 1080px) {
     .sidebarCard {
         height: auto;
@@ -111,6 +115,29 @@
     .rosterScroll {
         overflow: visible;
         padding-right: 0;
+    }
+}
+
+@media (max-width: 720px) {
+    .mobileToggleButton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin-top: 12px;
+        border: 1px solid rgba(224, 61, 75, 0.14);
+        border-radius: 999px;
+        padding: 10px 14px;
+        background: rgba(224, 61, 75, 0.04);
+        color: var(--primary);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s ease;
+    }
+
+    .mobileToggleButton:hover {
+        background: rgba(224, 61, 75, 0.08);
     }
 }
 

@@ -689,7 +689,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 </button>
             </div>
 
-            {(mode === 'worldInteraction' || mode === 'visual') && (
+            {false && ((mode === 'worldInteraction' || mode === 'visual') && (
                 <MusicList
                     musicList={musicList}
                     onUploadClick={() => setUploadMusicModalOpen(true)}
@@ -718,7 +718,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         }
                     }}
                 />
-            )}
+            ))}
 
             <div className={styles.sceneLayout}>
                 <div className={styles.stack}>
@@ -826,6 +826,37 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     )}
                 </div>
             </div>
+
+            {(mode === 'worldInteraction' || mode === 'visual') && (
+                <MusicList
+                    musicList={musicList}
+                    onUploadClick={() => setUploadMusicModalOpen(true)}
+                    fileId={fileId}
+                    mode={mode}
+                    sceneApi={sceneApi}
+                    onMusicDeleted={async () => {
+                        if (fileId && sceneApi) {
+                            try {
+                                const response = await sceneApi.getMusicList(fileId);
+                                if (response.data?.success && response.data.files) {
+                                    const musicItems: MusicItem[] = response.data.files.map((music, index) => {
+                                        return {
+                                            id: `music-${index}`,
+                                            name: music.name || music.originalFilename?.replace(/\.[^/.]+$/, '') || music.filename,
+                                            description: music.description || music.originalFilename || music.filename,
+                                            filename: music.filename,
+                                            musicPath: getMusicUrlWithHost(music.url),
+                                        };
+                                    });
+                                    setMusicList(musicItems);
+                                }
+                            } catch (error) {
+                                console.error('刷新音乐列表失败:', error);
+                            }
+                        }
+                    }}
+                />
+            )}
 
             <ConfirmModal
                 isOpen={deleteModalOpen}
