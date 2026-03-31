@@ -82,7 +82,7 @@ const refreshAccessToken = async (): Promise<string> => {
 export const createApi = (config?: ApiConfig): AxiosInstance => {
   const instance = axios.create({
     baseURL: config?.baseURL || BASE_URL,
-    timeout: config?.timeout || 10000,
+    timeout: config?.timeout ?? 0,
     headers: {
       'Content-Type': 'application/json',
       ...config?.headers,
