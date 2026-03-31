@@ -74,6 +74,16 @@ export interface GameDetailResponse {
     data: UserGameData;
 }
 
+export interface GamePlayStatusData {
+    hasContinueState: boolean;
+    hasSave: boolean;
+}
+
+export interface GamePlayStatusResponse {
+    success: boolean;
+    message?: string;
+    data: GamePlayStatusData;
+}
 
 export interface WareHouseResponse {
     success: boolean;

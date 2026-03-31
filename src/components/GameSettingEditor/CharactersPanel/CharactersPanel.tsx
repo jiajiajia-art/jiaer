@@ -797,7 +797,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             characterId?: string | null;
             variant?: string;
             inputRef?: React.RefObject<HTMLInputElement | null> | { current: HTMLInputElement | null };
-            successMessage?: string;
         }
     ) => {
         if (isAddingNew) {
@@ -871,7 +870,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             }));
 
             setHasUnsavedChanges(true);
-            toast.success(options.successMessage || '图片已选择，请在确认修改后保存');
+            toast.success('图片已暂存，请在确认修改后保存');
         } finally {
             if (options.inputRef && 'current' in options.inputRef && options.inputRef.current) {
                 options.inputRef.current.value = '';
@@ -889,7 +888,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             type: 'player',
             variant: 'base',
             inputRef: playerFileInputRef,
-            successMessage: '玩家图片上传成功',
         });
     };
 
@@ -905,7 +903,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             characterId,
             variant: 'base',
             inputRef: npcFileInputRef,
-            successMessage: '角色图片上传成功',
         });
     };
 
@@ -942,7 +939,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             characterId: currentCharacter.id,
             variant: variantKey,
             inputRef,
-            successMessage: '差分图片上传成功',
         });
 
         // 上传成功后，刷新数据以获取最新的图片路径

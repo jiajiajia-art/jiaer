@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styles from './GameDetail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
@@ -33,6 +33,10 @@ const isWebViewEnv = (): boolean => {
 const LIKE_DEBOUNCE_DELAY = 300;
 const DEFAULT_RATING = '9.0';
 const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
+const DEFAULT_PLAY_STATUS = {
+    hasContinueState: true,
+    hasSave: true,
+};
 
 // 判断是否点赞的辅助函数
 const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
@@ -66,6 +70,9 @@ const GameDetail: React.FC = () => {
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
+    const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
+    const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
+    const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,6 +83,17 @@ const GameDetail: React.FC = () => {
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
+    const isStartButtonLoading = isLoading || isPlayStatusLoading;
+    const isGalgame = useMemo(() => {
+        const mapServerEngine = (engine?: string) => {
+            switch ((engine || '').toUpperCase()) {
+                case 'CUSTOM': return 'customif' as const;
+                default: return undefined;
+            }
+        };
+        const normalized = mapServerEngine(game?.engine) || game?.game_tags;
+        return normalized === 'TXT';
+    }, [game?.engine, game?.game_tags]);
 
     // 解析进入详情页的来源
     const enterSource = useMemo(() => {
@@ -190,7 +208,7 @@ const GameDetail: React.FC = () => {
     }, [fileIdParam, fetchGameDetail]);
 
     // 创建 Galgame 会话
-    const createGalgameSession = async (presetId: string): Promise<string | null> => {
+    const createGalgameSession = async (presetId: string, restart?: boolean): Promise<string | null> => {
         if (!presetId || !userId) {
             return null;
         }
@@ -200,6 +218,7 @@ const GameDetail: React.FC = () => {
             const sessionResponse = await createGalgameSessionApi.createGalgamePlaySession({ 
                 fileId: presetId,
                 source: mapSourceForSession(enterSource), // 映射并传递来源
+                restart,
             });
             if (sessionResponse.data.success) {
                 const startTime = new Date().toISOString();
@@ -326,6 +345,57 @@ const GameDetail: React.FC = () => {
         }
 
         await startGameInternal();
+    };
+
+    const fetchPlayStatus = async () => {
+        if (!fileId) {
+            return DEFAULT_PLAY_STATUS;
+        }
+
+        try {
+            const response = await getGameDataApi.getPlayStatus(fileId);
+            if (response.data?.success && response.data?.data) {
+                return {
+                    hasContinueState: !!response.data.data.hasContinueState,
+                    hasSave: !!response.data.data.hasSave,
+                };
+            }
+            toast.error(response.data?.message || '获取游玩状态失败');
+        } catch (error) {
+            console.error('获取游玩状态失败:', error);
+            toast.error('获取游玩状态失败，请稍后重试');
+        }
+
+        return DEFAULT_PLAY_STATUS;
+    };
+
+    const handleOpenStartOptions = async () => {
+        if (!checkAuth()) return;
+        if (!fileId) {
+            toast.error('游戏ID无效');
+            return;
+        }
+
+        setIsPlayStatusLoading(true);
+        try {
+            const status = await fetchPlayStatus();
+            setPlayStatus(status);
+            setIsStartOptionsOpen(true);
+        } finally {
+            setIsPlayStatusLoading(false);
+        }
+    };
+
+    const handleStartNewGame = async () => {
+        if (!fileId) {
+            toast.error('游戏ID无效');
+            return;
+        }
+        const sessionId = await createGalgameSession(fileId, true);
+        if (sessionId) {
+            setSessionId(sessionId);
+            navigate('/galgame');
+        }
     };
 
     // 处理点赞
@@ -589,16 +659,16 @@ const GameDetail: React.FC = () => {
                 </div>
             </div>
 
-            {/* 底部悬浮按钮栏（横向排列：开始体验 + 读取存档） */}
+            {/* 底部悬浮按钮栏 */}
             <div className={styles.floatingActionBar}>
                 <div className={styles.floatingActionInner}>
                     <div className={styles.bottomActionRow}>
                         <button
                             className={styles.startButton}
-                            onClick={handleStartGame}
-                            disabled={isLoading}
+                            onClick={handleOpenStartOptions}
+                            disabled={isStartButtonLoading}
                         >
-                            {isLoading ? (
+                            {isStartButtonLoading ? (
                                 <div className={styles.loading}>
                                     <span className={styles.loadingDot}></span>
                                     <span className={styles.loadingDot}></span>
@@ -608,26 +678,6 @@ const GameDetail: React.FC = () => {
                                 '开始体验'
                             )}
                         </button>
-                        {(() => {
-                            const mapServerEngine = (engine?: string) => {
-                                switch ((engine || '').toUpperCase()) {
-                                    case 'CUSTOM': return 'customif' as const;
-                                    default: return undefined;
-                                }
-                            };
-                            const normalized = mapServerEngine(game?.engine) || game?.game_tags;
-                            const isGalgame = normalized === 'TXT';
-                            if (!isGalgame) return null;
-                            return (
-                                <button
-                                    className={styles.startButton}
-                                    onClick={handleOpenLoadSave}
-                                    disabled={isLoading}
-                                >
-                                    读取存档
-                                </button>
-                            );
-                        })()}
                     </div>
                 </div>
             </div>
@@ -668,6 +718,55 @@ const GameDetail: React.FC = () => {
                 onLoad={handleLoadSave}
                 loadButtonText={'开始体验'}
             />
+            {isStartOptionsOpen && (
+                <div className={styles.startOptionsOverlay} onClick={() => setIsStartOptionsOpen(false)}>
+                    <div className={styles.startOptionsModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.startOptionsHeader}>
+                            <h2 className={styles.startOptionsTitle}>请选择开始方式</h2>
+                            <button
+                                className={styles.startOptionsClose}
+                                onClick={() => setIsStartOptionsOpen(false)}
+                                aria-label="关闭"
+                            >
+                                <img src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} alt="关闭" />
+                            </button>
+                        </div>
+                        <div className={styles.startOptionsButtons}>
+                            <button
+                                className={styles.startOptionsPrimary}
+                                onClick={async () => {
+                                    setIsStartOptionsOpen(false);
+                                    await handleStartNewGame();
+                                }}
+                            >
+                                新的开始
+                            </button>
+                            <button
+                                className={styles.startOptionsSecondary}
+                                disabled={!playStatus.hasContinueState}
+                                onClick={async () => {
+                                    setIsStartOptionsOpen(false);
+                                    await handleStartGame();
+                                }}
+                            >
+                                继续体验
+                            </button>
+                            {isGalgame && (
+                                <button
+                                    className={styles.startOptionsGhost}
+                                    disabled={!playStatus.hasSave}
+                                    onClick={() => {
+                                        setIsStartOptionsOpen(false);
+                                        handleOpenLoadSave();
+                                    }}
+                                >
+                                    读取存档
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

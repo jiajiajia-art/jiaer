@@ -499,7 +499,6 @@ export const createHandlers = (ctx: HandlersContext) => {
             characterId?: string | null;
             variant?: string;
             inputRef?: React.RefObject<HTMLInputElement | null> | { current: HTMLInputElement | null };
-            successMessage?: string;
         }
     ): Promise<boolean> => {
         const validateFile = (file: File): boolean => {
@@ -523,7 +522,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             return false;
         }
 
-        const { type, characterId, variant = 'base', inputRef, successMessage } = options;
+        const { type, characterId, variant = 'base', inputRef } = options;
 
         try {
             let response;
@@ -555,8 +554,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                 toast.error('上传失败，请重试');
                 return false;
             }
-
-            toast.success(successMessage || '图片上传成功');
 
                 // 如果是玩家图片，更新 portrait 或 variations
             if ((type === 'player' || (type === 'variation' && targetCharacterId === 'player')) && !isAddingNew) {
