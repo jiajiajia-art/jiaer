@@ -189,6 +189,12 @@
 }
 
 @media (max-width: 768px) {
+    /* 移动端版本暂缓，当前先只保留 PC 端入口。 */
+    .floatingButton,
+    .overlay {
+        display: none;
+    }
+
     .floatingButton {
         right: auto;
         top: auto;
