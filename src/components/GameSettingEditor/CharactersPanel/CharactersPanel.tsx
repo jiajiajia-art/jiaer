@@ -1591,15 +1591,27 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         <div className={styles.modalBody}>
                             <label>
                                 <span>差分类型<span className={styles.required}>*</span></span>
-                                <select
-                                    value={newVariationType}
-                                    onChange={(e) => setNewVariationType(e.target.value)}
-                                >
-                                    <option value="">请选择类型</option>
-                                    {VARIATION_TYPES.map(type => (
-                                        <option key={type.value} value={type.value}>{type.label}</option>
-                                    ))}
-                                </select>
+                                <div className={styles.variationTypeGroup} role="radiogroup" aria-label="差分类型">
+                                    {VARIATION_TYPES.map((type) => {
+                                        const isSelected = newVariationType === type.value;
+                                        return (
+                                            <button
+                                                key={type.value}
+                                                type="button"
+                                                className={`${styles.variationTypeButton} ${isSelected ? styles.variationTypeButtonActive : ''}`}
+                                                onClick={() => setNewVariationType(type.value)}
+                                                role="radio"
+                                                aria-checked={isSelected}
+                                            >
+                                                <span className={styles.variationTypeLabel}>{type.label}</span>
+                                                <span
+                                                    className={`${styles.variationTypeIndicator} ${isSelected ? styles.variationTypeIndicatorActive : ''}`}
+                                                    aria-hidden="true"
+                                                />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </label>
                             <label>
                                 <span>差分标签<span className={styles.required}>*</span></span>

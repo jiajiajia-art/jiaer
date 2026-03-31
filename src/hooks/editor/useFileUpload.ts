@@ -48,13 +48,19 @@ interface UseFileUploadOptions {
     onUploadComplete: (fileId: string, dataMode: string) => Promise<void>;
 }
 
+export interface UploadResult {
+    success: boolean;
+    error?: string;
+    completedImmediately?: boolean;
+}
+
 interface UseFileUploadReturn {
-    handleFileUpload: (file: File) => Promise<boolean>;
+    handleFileUpload: (file: File) => Promise<UploadResult>;
     handleGenerateFromIdea: (idea: string) => Promise<boolean>;
 }
 
 /**
- * 功能注释：提取后端错误信息（优先使用后端返回的 error/message，避免前端吞错）
+ * 提取后端错误信息
  */
 const getBackendErrorMessage = (error: unknown, fallback = '上传失败，请重试'): string => {
     const anyError = error as {
@@ -75,6 +81,18 @@ const getBackendErrorMessage = (error: unknown, fallback = '上传失败，请�
     );
 };
 
+/**
+ * 提取非异常响应中的错误文案
+ */
+const getResponseErrorMessage = (payload: unknown, fallback = '上传失败，请重试'): string => {
+    const responseData = payload as {
+        error?: string;
+        message?: string;
+    };
+
+    return responseData?.error || responseData?.message || fallback;
+};
+
 export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions): UseFileUploadReturn => {
     const { setFileId, setIsPreset } = useGameStore();
     const { setIsParsed } = useEditorStore();
@@ -84,15 +102,15 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         jobId: string,
         fileName: string,
         dataMode: string,
-        startTime?: number // 可选的上传开始时间
+        startTime?: number,
     ) => {
-        addJob(jobId, fileName, startTime); // 直接传递开始时间给 addJob
-        
+        addJob(jobId, fileName, startTime);
+
         let delay = 1000;
         const maxDelay = 5000;
-        const timeoutMs = 30 * 60 * 1000; // 30分钟超时
+        const timeoutMs = 30 * 60 * 1000;
         const started = Date.now();
-        
+
         const pollStatus = async () => {
             try {
                 if (Date.now() - started > timeoutMs) {
@@ -106,14 +124,14 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     toast.error('上传超时，请重试');
                     return;
                 }
-                
-                const statusResponse = mode === 'worldInteraction' 
-                    ? worldEditor.checkUploadStatus(jobId) 
+
+                const statusResponse = mode === 'worldInteraction'
+                    ? worldEditor.checkUploadStatus(jobId)
                     : EditorApi.checkUploadStatus(jobId);
                 const statusData = (await statusResponse).data;
-                
+
                 console.log('[轮询状态] jobId:', jobId, 'status:', statusData.status, 'progress:', statusData.progress, 'stage:', statusData.stage);
-                
+
                 if (statusData.status === 'running' || statusData.status === 'queued' || statusData.status === 'pending') {
                     const runningData = statusData as JobStatusResponseRunning;
                     const isQueuedOrPending = runningData.status === 'queued' || runningData.status === 'pending';
@@ -124,31 +142,30 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                         stage: runningData.stage || (isQueuedOrPending ? '排队中' : '处理中'),
                         error: null,
                     });
-                    
+
                     setTimeout(() => {
                         pollStatus();
                     }, delay);
                     delay = Math.min(Math.round(delay * 1.3), maxDelay);
-                    
                 } else if (statusData.status === 'completed') {
                     const completedData = statusData as JobStatusResponseCompleted;
                     if (completedData.fileId) {
                         setFileId(completedData.fileId);
                         setIsParsed(false);
                         setIsPreset(false);
-                        
+
                         updateJob(jobId, {
                             fileId: completedData.fileId,
                             status: 'completed',
                             progress: 100,
                             stage: '完成',
                         });
-                        
+
                         onUploadComplete(completedData.fileId, dataMode).catch((error) => {
                             console.error('Error fetching editor data after upload:', error);
                             toast.error('文件解析完成，但加载数据失败，请刷新页面');
                         });
-                        
+
                         setTimeout(() => {
                             removeJob(jobId);
                         }, 2000);
@@ -161,7 +178,6 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                             removeJob(jobId);
                         }, 3000);
                     }
-                    
                 } else if (statusData.status === 'failed') {
                     const failedData = statusData as JobStatusResponseFailed;
                     const errMsg = failedData.error || '解析失败，请重试';
@@ -173,7 +189,6 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     setTimeout(() => {
                         removeJob(jobId);
                     }, 3000);
-                    
                 } else if (statusData.status === 'unknown') {
                     updateJob(jobId, {
                         status: 'failed',
@@ -184,7 +199,6 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                         removeJob(jobId);
                     }, 3000);
                 }
-                
             } catch (error) {
                 const errMsg = getBackendErrorMessage(error, '轮询状态失败，请重试');
                 console.error('Error polling upload status:', error);
@@ -198,14 +212,14 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 }, 3000);
             }
         };
-        
+
         pollStatus();
     }, [mode, addJob, updateJob, removeJob, setFileId, setIsParsed, setIsPreset, onUploadComplete]);
 
-    const handleFileUpload = useCallback(async (file: File): Promise<boolean> => {
-        const uploadStartTime = Date.now(); // 记录上传开始时间
+    const handleFileUpload = useCallback(async (file: File): Promise<UploadResult> => {
+        const uploadStartTime = Date.now();
         try {
-            // 功能注释：记录上传入口信息，便于前后端联调时快速定位文件与模式
+            // 记录上传入口信息
             console.log('[useFileUpload] Upload started:', {
                 mode: mode || 'visual',
                 fileName: file.name,
@@ -213,63 +227,75 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 fileType: file.type,
             });
 
-            let uploadResponse;
-             
-            if (mode === 'worldInteraction') {
-                uploadResponse = await worldEditor.uploadWorldFile(file);
-            } else {
-                uploadResponse = await EditorApi.uploadGameFile(file);
-            }
+            const uploadResponse = mode === 'worldInteraction'
+                ? await worldEditor.uploadWorldFile(file)
+                : await EditorApi.uploadGameFile(file);
 
             console.log('[useFileUpload] Upload request finished:', {
                 status: uploadResponse.status,
                 mode: mode || 'visual',
                 fileName: file.name,
             });
-            
-            // 容错：若后端临时返回 200 + fileId，也尝试兼容
+
             if (uploadResponse.status === 200) {
                 const legacy = uploadResponse.data;
                 if (legacy.success && legacy.fileId) {
                     setFileId(legacy.fileId);
                     setIsParsed(false);
                     setIsPreset(false);
-                    return true;
-                } else {
-                    console.error('Unexpected upload response: 200 but no fileId in body');
-                    return false;
+                    await onUploadComplete(legacy.fileId, mode || 'visual');
+                    return {
+                        success: true,
+                        completedImmediately: true,
+                    };
                 }
+
+                console.error('Unexpected upload response: 200 but no fileId in body');
+                return {
+                    success: false,
+                    error: getResponseErrorMessage(legacy, '上传失败，请重试'),
+                };
             }
-            
+
             if (uploadResponse.status !== 202) {
                 console.error('Unexpected upload response status:', uploadResponse.status);
-                toast.error('上传失败，请重试');
-                return false;
+                const errorMessage = getResponseErrorMessage(uploadResponse.data, '上传失败，请重试');
+                toast.error(errorMessage);
+                return {
+                    success: false,
+                    error: errorMessage,
+                };
             }
-            
+
             const accepted = uploadResponse.data;
             if (!accepted.success || !accepted.jobId) {
                 console.error('Invalid 202 Accepted payload', accepted);
-                toast.error('上传失败，请重试');
-                return false;
+                const errorMessage = getResponseErrorMessage(accepted, '上传失败，请重试');
+                toast.error(errorMessage);
+                return {
+                    success: false,
+                    error: errorMessage,
+                };
             }
-             
+
             const { jobId, fileId: initialFileId } = accepted;
             console.log('[useFileUpload] Upload accepted:', {
                 jobId,
                 initialFileId: initialFileId || null,
                 mode: mode || 'visual',
             });
-             
+
             if (initialFileId) {
                 updateJob(jobId, {
                     fileId: initialFileId,
                 });
             }
-            
+
             startPollingUploadStatus(jobId, file.name, mode || 'visual', uploadStartTime);
-             
-            return true;
+
+            return {
+                success: true,
+            };
         } catch (error) {
             const errorMessage = getBackendErrorMessage(error, '上传失败，请重试');
             console.error('[useFileUpload] Upload failed:', {
@@ -279,23 +305,13 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 raw: error,
             });
 
-            // 功能注释：请求阶段失败时补一条失败任务，确保 UI 能展示后端原始错误文本
-            const failedJobId = `upload-failed-${Date.now()}`;
-            addJob(failedJobId, file.name, uploadStartTime);
-            updateJob(failedJobId, {
-                status: 'failed',
-                progress: 0,
-                stage: '上传失败',
-                error: errorMessage,
-            });
-            setTimeout(() => {
-                removeJob(failedJobId);
-            }, 8000);
-
             toast.error(errorMessage);
-            return false;
+            return {
+                success: false,
+                error: errorMessage,
+            };
         }
-    }, [mode, setFileId, setIsParsed, setIsPreset, addJob, updateJob, removeJob, startPollingUploadStatus]);
+    }, [mode, onUploadComplete, setFileId, setIsParsed, setIsPreset, startPollingUploadStatus, updateJob]);
 
     const handleGenerateFromIdea = useCallback(async (idea: string): Promise<boolean> => {
         if (mode === 'worldInteraction') {
@@ -316,33 +332,32 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     return false;
                 }
             }
-            
+
             if (response.status !== 202) {
                 console.error('Unexpected generate response status:', response.status);
                 toast.error('生成失败，请重试');
                 return false;
             }
-            
+
             const accepted = response.data;
             if (!accepted.success || !accepted.jobId) {
                 console.error('Invalid 202 Accepted payload', accepted);
                 toast.error('生成失败，请重试');
                 return false;
             }
-            
+
             const { jobId, fileId: initialFileId } = accepted;
-            
+
             if (initialFileId) {
                 updateJob(jobId, {
                     fileId: initialFileId,
                 });
             }
-            
-            // 使用相同的轮询机制
-            const generateStartTime = Date.now(); // 记录生成开始时间
+
+            const generateStartTime = Date.now();
             console.log('[一句话生成] 开始轮询，jobId:', jobId);
             startPollingUploadStatus(jobId, `生成游戏：${idea.substring(0, 20)}...`, 'visual', generateStartTime);
-            
+
             return true;
         } catch (error) {
             console.error('Error generating from idea:', error);
@@ -356,4 +371,3 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
         handleGenerateFromIdea,
     };
 };
-

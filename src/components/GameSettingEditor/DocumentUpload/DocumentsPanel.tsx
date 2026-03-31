@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './DocumentsPanel.module.css';
 import { BsUpload, BsCheckCircle } from 'react-icons/bs';
 import { HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineMap, HiOutlineCheckCircle } from 'react-icons/hi';
@@ -6,54 +7,164 @@ import toast from 'react-hot-toast';
 import { useUploadStore } from '../../../store/uploadStore';
 import CreateEmptyGameModal from './CreateEmptyGameModal';
 import GenerateFromIdeaModal from './GenerateFromIdeaModal';
+import type { UploadResult } from '../../../hooks/editor/useFileUpload';
+
 interface DocumentsPanelProps {
-    onFileUpload: (file: File) => Promise<boolean>;
+    onFileUpload: (file: File) => Promise<UploadResult>;
     isParsing: boolean;
     onParsingStart: () => void;
-    onParsingComplete: () => void;
+    onParsingSuccess: () => void;
+    onParsingFailed: () => void;
     fileId: string;
     onCreateEmptyGame?: (title: string) => Promise<void>;
     onGenerateFromIdea?: (idea: string) => Promise<boolean>;
     mode?: string;
 }
 
+interface FailedJobSnapshot {
+    fileName?: string;
+    progress: number;
+    stage: string;
+    error: string;
+}
+
+interface ParseErrorModalState {
+    visible: boolean;
+    message: string;
+    errorDetail: string;
+}
+
+const DEFAULT_PARSE_ERROR_MESSAGE = '由于网络波动导致上传失败，请再次重试';
+
 const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     onFileUpload,
     isParsing,
     onParsingStart,
-    onParsingComplete,
+    onParsingSuccess,
+    onParsingFailed,
     onCreateEmptyGame,
     onGenerateFromIdea,
     mode,
 }) => {
     const [showCreateEmptyModal, setShowCreateEmptyModal] = useState(false);
     const [showGenerateFromIdeaModal, setShowGenerateFromIdeaModal] = useState(false);
-    const isVisualMode = mode === 'visual' || !mode; // 默认为 visual 模式
+    const isVisualMode = mode === 'visual' || !mode;
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const handledJobStateRef = useRef<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-    const [failedJobSnapshot, setFailedJobSnapshot] = useState<{
-        fileName?: string;
-        progress: number;
-        stage: string;
-        error: string;
-    } | null>(null);
+    const [failedJobSnapshot, setFailedJobSnapshot] = useState<FailedJobSnapshot | null>(null);
+    const [parseErrorModal, setParseErrorModal] = useState<ParseErrorModalState>({
+        visible: false,
+        message: '',
+        errorDetail: '',
+    });
     const { jobs } = useUploadStore();
-    const currentJobRef = useRef<string | null>(null);
+
+    const validateFileType = useCallback((file: File) => {
+        const validTypes = ['.pdf', '.docx'];
+        const fileName = file.name.toLowerCase();
+        const isValidType = validTypes.some((type) => fileName.endsWith(type));
+        if (!isValidType) {
+            toast.error('请上传 PDF 或 Word (.docx) 文件');
+            return false;
+        }
+        return true;
+    }, []);
+
+    const openParseErrorModal = useCallback((errorDetail: string) => {
+        // 实现解析失败弹窗展示
+        setParseErrorModal({
+            visible: true,
+            message: DEFAULT_PARSE_ERROR_MESSAGE,
+            errorDetail,
+        });
+    }, []);
+
+    const closeParseErrorModal = useCallback(() => {
+        setParseErrorModal((prev) => ({
+            ...prev,
+            visible: false,
+        }));
+    }, []);
+
+    const handleUploadFailure = useCallback((errorDetail: string, snapshot?: Partial<FailedJobSnapshot>) => {
+        // 实现解析失败状态同步
+        setFailedJobSnapshot({
+            fileName: snapshot?.fileName || uploadedFile?.name,
+            progress: snapshot?.progress ?? 0,
+            stage: snapshot?.stage || '上传失败',
+            error: errorDetail,
+        });
+        openParseErrorModal(errorDetail);
+        onParsingFailed();
+    }, [onParsingFailed, openParseErrorModal, uploadedFile?.name]);
+
+    const handleCopyErrorDetail = useCallback(async () => {
+        const text = parseErrorModal.errorDetail;
+        if (!text) {
+            toast.error('没有可复制的报错信息');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(text);
+            toast.success('报错信息已复制');
+        } catch (error) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                toast.success('报错信息已复制');
+            } catch (copyError) {
+                console.error('复制报错信息失败:', copyError || error);
+                toast.error('复制失败，请稍后重试');
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        }
+    }, [parseErrorModal.errorDetail]);
+
+    const startUpload = useCallback(async (file: File) => {
+        if (!validateFileType(file)) {
+            return;
+        }
+
+        setUploadedFile(file);
+        setFailedJobSnapshot(null);
+        handledJobStateRef.current = null;
+        onParsingStart();
+
+        const result = await onFileUpload(file);
+        if (!result.success) {
+            handleUploadFailure(result.error || '文件上传或解析失败，请重试');
+            return;
+        }
+
+        if (result.completedImmediately) {
+            setFailedJobSnapshot(null);
+            onParsingSuccess();
+        }
+    }, [handleUploadFailure, onFileUpload, onParsingStart, onParsingSuccess, validateFileType]);
 
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            // 记录前端上传入口状态，便于定位“选择文件后无响应”问题
-            console.log('[DocumentsPanel] File selected:', {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-            });
-            setUploadedFile(file);
-            setFailedJobSnapshot(null);
-            onParsingStart();
-            await onFileUpload(file);
+        if (!file) {
+            return;
         }
+
+        // 记录点击上传入口状态
+        console.log('[DocumentsPanel] File selected:', {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+        });
+
+        await startUpload(file);
     };
 
     const handleDropzoneClick = () => {
@@ -78,130 +189,123 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const file = e.dataTransfer.files?.[0];
-        if (file) {
-            // 记录拖拽上传路径日志，便于区分点击上传与拖拽上传行为
-            console.log('[DocumentsPanel] File dropped:', {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-            });
-            // 验证文件类型
-            const validTypes = ['.pdf', '.docx'];
-            const fileName = file.name.toLowerCase();
-            const isValidType = validTypes.some(type => fileName.endsWith(type));
-            
-            if (!isValidType) {
-                toast.error('请上传 PDF 或 Word (.docx) 文件');
-                return;
-            }
-            
-            setUploadedFile(file);
-            setFailedJobSnapshot(null);
-            onParsingStart();
-            await onFileUpload(file);
-        }
-    };
-
-
-    // 监听 uploadStore 中的任务状态，使用后端返回的真实状态
-    useEffect(() => {
-        const jobList = Object.values(jobs);
-        if (jobList.length === 0) {
+        if (!file) {
             return;
         }
 
-        // 找到当前文件对应的任务（通过文件名匹配，或使用最新的任务）
-        const currentJob = jobList.find(job => 
-            job.fileName === uploadedFile?.name
-        ) || jobList[jobList.length - 1];
+        // 记录拖拽上传入口状态
+        console.log('[DocumentsPanel] File dropped:', {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+        });
 
-        if (currentJob) {
-            currentJobRef.current = currentJob.jobId;
-            if (currentJob.status === 'completed') {
-                setFailedJobSnapshot(null);
-                onParsingComplete();
-            } else if (currentJob.status === 'failed') {
-                // 上传/解析失败：保留进度与阶段信息，展示失败提示（不让 UI 退回 0%）
-                setFailedJobSnapshot({
+        await startUpload(file);
+    };
+
+    useEffect(() => {
+        const jobList = Object.values(jobs);
+        if (jobList.length === 0 || !uploadedFile) {
+            return;
+        }
+
+        const currentJob = jobList.find((job) => job.fileName === uploadedFile.name) || jobList[jobList.length - 1];
+        if (!currentJob) {
+            return;
+        }
+
+        const handledStateKey = `${currentJob.jobId}-${currentJob.status}`;
+        if (handledJobStateRef.current === handledStateKey) {
+            return;
+        }
+
+        if (currentJob.status === 'completed') {
+            handledJobStateRef.current = handledStateKey;
+            setFailedJobSnapshot(null);
+            onParsingSuccess();
+            return;
+        }
+
+        if (currentJob.status === 'failed') {
+            handledJobStateRef.current = handledStateKey;
+            handleUploadFailure(
+                currentJob.error || '文件上传或解析失败，请重试',
+                {
                     fileName: currentJob.fileName,
                     progress: currentJob.progress ?? 0,
-                    stage: currentJob.stage || '',
-                    error: currentJob.error || '文件上传或解析失败，请重试',
-                });
-                onParsingComplete();
-            }
+                    stage: currentJob.stage || '解析失败',
+                },
+            );
         }
-    }, [jobs, uploadedFile, onParsingComplete]);
+    }, [jobs, uploadedFile, onParsingSuccess, handleUploadFailure]);
 
     const handleRetry = () => {
         setFailedJobSnapshot(null);
         setUploadedFile(null);
+        setParseErrorModal((prev) => ({
+            ...prev,
+            visible: false,
+        }));
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        currentJobRef.current = null;
+        handledJobStateRef.current = null;
     };
 
     const formatFileSize = (bytes: number) => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    // 获取当前任务的状态信息
     const getCurrentJob = () => {
         const jobList = Object.values(jobs);
-        if (jobList.length === 0) return null;
-        return jobList.find(job => 
-            job.fileName === uploadedFile?.name
-        ) || jobList[jobList.length - 1];
+        if (jobList.length === 0 || !uploadedFile) return null;
+        return jobList.find((job) => job.fileName === uploadedFile.name) || jobList[jobList.length - 1];
     };
 
     const currentJob = getCurrentJob();
-    // 如果正在解析但没有 jobId（还在上传中），显示上传状态
     const isUploading = isParsing && !currentJob && uploadedFile;
-    const progress = (currentJob?.progress ?? failedJobSnapshot?.progress) ?? 0; // 失败时沿用最后一次进度
+    const progress = (currentJob?.progress ?? failedJobSnapshot?.progress) ?? 0;
     const stage = currentJob?.stage || failedJobSnapshot?.stage || (isUploading ? '正在上传文件...' : '');
     const apiError =
-        (currentJob?.status === 'failed'
+        currentJob?.status === 'failed'
             ? (currentJob.error || '文件上传或解析失败，请重试')
-            : (failedJobSnapshot?.error || null));
+            : (failedJobSnapshot?.error || null);
 
-    // 定义解析步骤
     const parseSteps = useMemo(() => [
-        { 
-            id: 'world', 
-            label: '生成世界', 
+        {
+            id: 'world',
+            label: '生成世界',
             progress: 30,
             icon: HiOutlineGlobeAlt,
-            description: '正在分析文档结构，生成世界观设定...'
+            description: '正在分析文档结构，生成世界观设定...',
         },
-        { 
-            id: 'npc', 
-            label: '解析NPC', 
+        {
+            id: 'npc',
+            label: '解析NPC',
             progress: 55,
             icon: HiOutlineUserGroup,
-            description: '正在提取角色信息，构建NPC数据...'
+            description: '正在提取角色信息，构建 NPC 数据...',
         },
-        { 
-            id: 'scene', 
-            label: '解析场景', 
+        {
+            id: 'scene',
+            label: '解析场景',
             progress: 75,
             icon: HiOutlineMap,
-            description: '正在识别场景描述，整理场景节点...'
+            description: '正在识别场景描述，整理场景节点...',
         },
-        { 
-            id: 'complete', 
-            label: '完成', 
+        {
+            id: 'complete',
+            label: '完成',
             progress: 100,
             icon: HiOutlineCheckCircle,
-            description: '解析完成，准备跳转到下一步...'
-        }
+            description: '解析完成，准备跳转到下一步...',
+        },
     ], []);
 
-    // 根据进度判断当前步骤
     const getCurrentStepIndex = () => {
         if (progress >= 100) return 3;
         if (progress >= 75) return 2;
@@ -224,7 +328,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     </p>
                 </div>
                 {onCreateEmptyGame && (
-                    <button 
+                    <button
                         className={styles.ghost}
                         onClick={() => setShowCreateEmptyModal(true)}
                         disabled={isParsing}
@@ -234,7 +338,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 )}
             </div>
 
-            {/* 一句话生成 - 更突出的展示 */}
             {isVisualMode && onGenerateFromIdea && (
                 <div className={styles.generateFromIdeaCard}>
                     <div className={styles.generateFromIdeaContent}>
@@ -245,7 +348,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                 输入你的游戏创意，AI 自动生成完整的游戏设定文档
                             </p>
                         </div>
-                        <button 
+                        <button
                             className={styles.generateFromIdeaButton}
                             onClick={() => setShowGenerateFromIdeaModal(true)}
                             disabled={isParsing}
@@ -312,7 +415,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
                     {(isParsing || isUploading) && !apiError && (
                         <div className={styles.progressSection}>
-                            {/* 进度百分比和阶段 */}
                             <div className={styles.progressHeader}>
                                 <span className={styles.progressPercentage}>
                                     {Math.round(progress)}%
@@ -322,7 +424,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                 )}
                             </div>
 
-                            {/* 步骤指示器 */}
                             <div className={styles.stepsIndicator}>
                                 {parseSteps.map((step, index) => {
                                     const StepIcon = step.icon;
@@ -330,26 +431,24 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                     const isDone = index < currentStepIndex || (isCompleted && index === 3);
 
                                     return (
-                                        <div 
-                                            key={step.id} 
+                                        <div
+                                            key={step.id}
                                             className={`${styles.stepItem} ${
-                                                isActive ? styles.stepActive : 
-                                                isDone ? styles.stepDone : 
+                                                isActive ? styles.stepActive :
+                                                isDone ? styles.stepDone :
                                                 styles.stepPending
                                             }`}
                                         >
                                             <div className={styles.stepIconWrapper}>
                                                 <div className={styles.stepIcon}>
-                                                    {isDone ? (
-                                                        <BsCheckCircle />
-                                                    ) : (
-                                                        <StepIcon />
-                                                    )}
+                                                    {isDone ? <BsCheckCircle /> : <StepIcon />}
                                                 </div>
                                                 {index < parseSteps.length - 1 && (
-                                                    <div className={`${styles.stepConnector} ${
-                                                        isDone ? styles.stepConnectorDone : ''
-                                                    }`} />
+                                                    <div
+                                                        className={`${styles.stepConnector} ${
+                                                            isDone ? styles.stepConnectorDone : ''
+                                                        }`}
+                                                    />
                                                 )}
                                             </div>
                                             <div className={styles.stepContent}>
@@ -374,7 +473,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     )}
                 </div>
             </div>
-            
+
             {onCreateEmptyGame && (
                 <CreateEmptyGameModal
                     isOpen={showCreateEmptyModal}
@@ -382,13 +481,63 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     onSubmit={onCreateEmptyGame}
                 />
             )}
-            
+
             {isVisualMode && onGenerateFromIdea && (
                 <GenerateFromIdeaModal
                     isOpen={showGenerateFromIdeaModal}
                     onClose={() => setShowGenerateFromIdeaModal(false)}
                     onSubmit={onGenerateFromIdea}
                 />
+            )}
+
+            {parseErrorModal.visible && typeof document !== 'undefined' && createPortal(
+                <div className={styles.errorModalOverlay} onClick={closeParseErrorModal}>
+                    <div className={styles.errorModalContent} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.errorModalHeader}>
+                            <div>
+                                <p className={styles.errorModalEyebrow}>解析失败</p>
+                                <h3>请重新上传文档</h3>
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.errorModalClose}
+                                onClick={closeParseErrorModal}
+                                aria-label="关闭解析失败弹窗"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className={styles.errorModalBody}>
+                            <p className={styles.errorModalMessage}>{parseErrorModal.message}</p>
+                            <div className={styles.errorDetailBlock}>
+                                <div className={styles.errorDetailHeader}>
+                                    <span>异常信息</span>
+                                    <button
+                                        type="button"
+                                        className={styles.copyErrorButton}
+                                        onClick={handleCopyErrorDetail}
+                                    >
+                                        复制报错信息
+                                    </button>
+                                </div>
+                                <pre className={styles.errorDetailText}>{parseErrorModal.errorDetail}</pre>
+                            </div>
+                            <p className={styles.errorModalHint}>
+                                如果多次报错，请复制这个报错信息给技术人员
+                            </p>
+                        </div>
+                        <div className={styles.errorModalFooter}>
+                            <button
+                                type="button"
+                                className={styles.errorModalPrimary}
+                                onClick={closeParseErrorModal}
+                            >
+                                关闭
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body,
             )}
         </div>
     );

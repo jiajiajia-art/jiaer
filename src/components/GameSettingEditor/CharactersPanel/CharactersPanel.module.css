@@ -661,6 +661,70 @@
     letter-spacing: 0.01em;
 }
 
+.variationTypeGroup {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.variationTypeButton {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1.5px solid rgba(0, 0, 0, 0.08);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.03) 100%);
+    color: rgba(0, 0, 0, 0.72);
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.variationTypeButtonActive {
+    border-color: rgba(224, 61, 75, 0.48);
+    background: linear-gradient(135deg, rgba(224, 61, 75, 0.14) 0%, rgba(255, 107, 122, 0.08) 100%);
+    color: var(--primary);
+    box-shadow: 0 8px 18px rgba(224, 61, 75, 0.12);
+}
+
+.variationTypeLabel {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.variationTypeIndicator {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(0, 0, 0, 0.18);
+    background: #fff;
+    box-shadow: inset 0 0 0 3px #fff;
+    transition: 0.2s ease;
+}
+
+.variationTypeIndicatorActive {
+    border-color: var(--primary);
+    background: var(--primary);
+}
+
+.variationTypeButton:focus-visible {
+    outline: none;
+    border-color: rgba(224, 61, 75, 0.4);
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .variationTypeButton:hover:not(.variationTypeButtonActive) {
+        border-color: rgba(224, 61, 75, 0.28);
+        background: rgba(224, 61, 75, 0.05);
+        color: var(--primary);
+    }
+}
+
 .modalBody input,
 .modalBody select,
 .modalBody textarea {
@@ -1031,6 +1095,21 @@
         margin-bottom: 20px;
     }
 
+    .variationTypeGroup {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .variationTypeButton {
+        min-height: 44px;
+        padding: 10px 12px;
+        border-radius: 14px;
+    }
+
+    .variationTypeLabel {
+        font-size: 0.88rem;
+    }
+
     .modalFooter {
         flex-direction: column-reverse;
         gap: 10px;
@@ -1038,5 +1117,11 @@
 
     .modalFooter .ghostSmall {
         width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .variationTypeGroup {
+        grid-template-columns: 1fr;
     }
 }

@@ -419,6 +419,166 @@
     transform: none;
 }
 
+.errorModalOverlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.56);
+    backdrop-filter: blur(6px);
+    z-index: 1400;
+}
+
+.errorModalContent {
+    width: min(100%, 640px);
+    border-radius: 24px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+}
+
+.errorModalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px 24px 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.errorModalEyebrow {
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--primary);
+    text-transform: uppercase;
+}
+
+.errorModalHeader h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: #1a1a1a;
+}
+
+.errorModalClose {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.05);
+    color: rgba(0, 0, 0, 0.65);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.errorModalClose:hover {
+    background: rgba(224, 61, 75, 0.1);
+    color: var(--primary);
+}
+
+.errorModalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+}
+
+.errorModalMessage {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: rgba(0, 0, 0, 0.72);
+}
+
+.errorDetailBlock {
+    border: 1px solid rgba(224, 61, 75, 0.14);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(224, 61, 75, 0.04) 0%, rgba(0, 0, 0, 0.015) 100%);
+    overflow: hidden;
+}
+
+.errorDetailHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.errorDetailHeader span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.copyErrorButton {
+    border: 1px solid rgba(224, 61, 75, 0.24);
+    border-radius: 999px;
+    padding: 8px 14px;
+    background: #fff;
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.copyErrorButton:hover {
+    background: rgba(224, 61, 75, 0.06);
+}
+
+.errorDetailText {
+    margin: 0;
+    padding: 16px;
+    max-height: 260px;
+    overflow: auto;
+    font-family: "Consolas", "SFMono-Regular", monospace;
+    font-size: 0.84rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: rgba(0, 0, 0, 0.78);
+}
+
+.errorModalHint {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: rgba(0, 0, 0, 0.58);
+}
+
+.errorModalFooter {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 24px 24px;
+}
+
+.errorModalPrimary {
+    min-width: 128px;
+    border: none;
+    border-radius: 999px;
+    padding: 12px 22px;
+    background: linear-gradient(135deg, var(--primary) 0%, #ff6b7a 100%);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+    box-shadow: 0 8px 18px rgba(224, 61, 75, 0.25);
+}
+
+.errorModalPrimary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(224, 61, 75, 0.3);
+}
+
 @media (max-width: 720px) {
     .panelHeader {
         flex-direction: column;
@@ -444,6 +604,57 @@
     }
 
     .generateFromIdeaButton {
+        width: 100%;
+    }
+
+    .errorModalOverlay {
+        align-items: flex-end;
+        padding: 12px;
+    }
+
+    .errorModalContent {
+        width: 100%;
+        border-radius: 22px 22px 18px 18px;
+    }
+
+    .errorModalHeader {
+        padding: 20px 18px 14px;
+    }
+
+    .errorModalHeader h3 {
+        font-size: 1.12rem;
+    }
+
+    .errorModalClose {
+        width: 36px;
+        height: 36px;
+        font-size: 1.35rem;
+    }
+
+    .errorModalBody {
+        padding: 18px;
+        gap: 14px;
+    }
+
+    .errorDetailHeader {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .copyErrorButton {
+        width: 100%;
+    }
+
+    .errorDetailText {
+        max-height: 220px;
+        font-size: 0.8rem;
+    }
+
+    .errorModalFooter {
+        padding: 0 18px 18px;
+    }
+
+    .errorModalPrimary {
         width: 100%;
     }
 }

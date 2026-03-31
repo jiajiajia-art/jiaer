@@ -35,6 +35,7 @@ const GameSettingsEditor = () => {
     const [isParsing, setIsParsing] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
     const hasLoadedMapRef = useRef<boolean>(false);
+    const parsingSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // 使用自定义 Hooks
     const { gameData, isLoadingData, fetchEditorData } = useEditorData({ fileId, mode });
@@ -93,20 +94,37 @@ const GameSettingsEditor = () => {
     }, [mode, setFileId, fetchEditorData]);
 
     const handleParsingStart = useCallback(() => {
+        // 清理旧的自动跳转
+        if (parsingSuccessTimerRef.current) {
+            clearTimeout(parsingSuccessTimerRef.current);
+            parsingSuccessTimerRef.current = null;
+        }
         setIsParsing(true);
         setIsParsed(false);
     }, [setIsParsed]);
 
-    const handleParsingComplete = useCallback(() => {
+    const handleParsingSuccess = useCallback(() => {
         setIsParsing(false);
         setIsParsed(true);
         // 延迟1秒后自动跳转到下一步
-        setTimeout(() => {
+        // 实现解析成功后自动进入 Step 2
+        parsingSuccessTimerRef.current = setTimeout(() => {
             setActivePanel('world');
         }, 1000);
     }, [setIsParsed, setActivePanel]);
 
     // 一句话生成游戏
+    const handleParsingFailed = useCallback(() => {
+        // 实现解析失败后停留在 Step 1
+        if (parsingSuccessTimerRef.current) {
+            clearTimeout(parsingSuccessTimerRef.current);
+            parsingSuccessTimerRef.current = null;
+        }
+        setIsParsing(false);
+        setIsParsed(false);
+        setActivePanel('documents');
+    }, [setActivePanel, setIsParsed]);
+
     const handleGenerateFromIdeaWrapper = useCallback(async (idea: string) => {
         // mode 为 null 时默认为 visual 模式，只有 worldInteraction 模式才不允许
         if (mode === 'worldInteraction') {
@@ -280,6 +298,12 @@ const GameSettingsEditor = () => {
         return true;
     }, [activePanel]);
 
+    useEffect(() => () => {
+        if (parsingSuccessTimerRef.current) {
+            clearTimeout(parsingSuccessTimerRef.current);
+        }
+    }, []);
+
     return (
         <>
             <div className={`${styles.appShell} ${isMiniProgramTxtMode ? styles.miniProgramShell : ''}`}>
@@ -335,7 +359,8 @@ const GameSettingsEditor = () => {
                         onFileUpload={handleFileUpload}
                         isParsing={isParsing}
                         onParsingStart={handleParsingStart}
-                        onParsingComplete={handleParsingComplete}
+                        onParsingSuccess={handleParsingSuccess}
+                        onParsingFailed={handleParsingFailed}
                         fileId={fileId || ''}
                         onCreateEmptyGame={handleCreateEmptyGame}
                         onGenerateFromIdea={handleGenerateFromIdeaWrapper}
