@@ -2,6 +2,7 @@ export interface CreateGalgamePlaySessionRequest {
   fileId: string;
   playerName?: string;
   source?: 'link' | 'game_detail' | 'history' | 'other';
+  restart?: boolean;
 }
 
 export interface CreateGalgameSessionRequest {

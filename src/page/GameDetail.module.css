@@ -361,6 +361,10 @@
     gap: 0.75rem;
 }
 
+.bottomActionRow > :only-child {
+    grid-column: 1 / -1;
+}
+
 .deleteInlineButton {
     padding: 0.625rem 1rem;
     background: rgba(0, 0, 0, 0.05);
@@ -518,6 +522,113 @@
         opacity: 1;
         transform: scale(1);
     }
+}
+
+/* ==================== Start Options Modal ==================== */
+.startOptionsOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.startOptionsModal {
+    width: min(26rem, 92vw);
+    background: #fff;
+    border-radius: 1.25rem;
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.25);
+    padding: 1.25rem 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.startOptionsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.startOptionsTitle {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.startOptionsClose {
+    border: none;
+    background: transparent;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.startOptionsClose img {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.startOptionsDesc {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 0.95rem;
+}
+
+.startOptionsButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.startOptionsPrimary,
+.startOptionsSecondary,
+.startOptionsGhost {
+    height: 3rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+}
+
+.startOptionsPrimary {
+    background: #fb4655;
+    color: #fff;
+    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+}
+
+.startOptionsSecondary {
+    background: #fb4655;
+    color: #fff;
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+}
+
+.startOptionsGhost {
+    background: #fb4655;
+    color: #fff;
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+}
+
+.startOptionsPrimary:disabled,
+.startOptionsSecondary:disabled,
+.startOptionsGhost:disabled {
+    background: #d9d9d9;
+    color: rgba(0, 0, 0, 0.45);
+    border: 1px solid #d9d9d9;
+    box-shadow: none;
+    cursor: not-allowed;
 }
 
 /* ==================== 响应式设计 ==================== */
