@@ -11,6 +11,7 @@ import FooterArea from '../components/Layout/FooterArea';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
 import JoinGroupModal from '../components/JoinGroupModal';
+import FloatingJoinGroup from '../components/FloatingJoinGroup';
 import { getImageUrl } from '../utils/constants';
 import announcementApi from '../api/announcement/announcementApi';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
@@ -742,6 +743,7 @@ const Home: React.FC = () => {
             </div>
 
             <FooterArea />
+            <FloatingJoinGroup />
 
             {/* 签到提示弹窗 */}
             {/* 加群提示弹窗（首次登录） */}
