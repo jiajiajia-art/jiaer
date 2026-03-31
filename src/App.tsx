@@ -19,6 +19,8 @@ import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
 import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
+import AdminPanel from './page/AdminPanel';
+import { AdminRoute } from './components/AdminRoute';
 
 function App() {
   usePlatformDurationTracking();
@@ -58,6 +60,7 @@ function App() {
           <Route path="/warehouse" element={<WareHouse />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

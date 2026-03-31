@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { IoSearch } from 'react-icons/io5';
 import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
-import { IoSearch } from 'react-icons/io5';
 import { getImageUrl } from '../../utils/constants';
 
 const isWebViewEnv = (): boolean => {
@@ -15,15 +15,23 @@ const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [isDesktopLayout, setIsDesktopLayout] = useState(window.innerWidth > 768);
     const { isAuthenticated, initialize, logout, user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
 
-    // 初始化时检查登录状态
     useEffect(() => {
         initialize();
     }, [initialize]);
 
-    // 点击外部关闭下拉菜单
+    useEffect(() => {
+        const handleResize = () => {
+            setIsDesktopLayout(window.innerWidth > 768);
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as HTMLElement;
@@ -40,15 +48,15 @@ const Navbar: React.FC = () => {
         }
     }, [showUserMenu]);
 
-    // 根据当前路径确定激活的导航项
     const getActiveNav = () => {
         const path = location.pathname;
-        // 精确匹配路径
         if (path === '/home' || path === '/') {
             return '首页';
-        } else if (path.startsWith('/create')) {
+        }
+        if (path.startsWith('/create')) {
             return '创作';
-        } else if (path.startsWith('/warehouse')) {
+        }
+        if (path.startsWith('/warehouse')) {
             return '仓库';
         }
         return '';
@@ -91,7 +99,7 @@ const Navbar: React.FC = () => {
                                 }
                                 return;
                             }
-                            handleNavClick('创作')
+                            handleNavClick('创作');
                         }}
                     >
                         创作
@@ -105,7 +113,7 @@ const Navbar: React.FC = () => {
                                 }
                                 return;
                             }
-                            handleNavClick('仓库')
+                            handleNavClick('仓库');
                         }}
                     >
                         仓库
@@ -125,7 +133,8 @@ const Navbar: React.FC = () => {
                                 onClick={() => {
                                     if (isWebViewEnv()) return;
                                     setShowUserMenu(!showUserMenu);
-                                }}                            >
+                                }}
+                            >
                                 <img src={getImageUrl(user?.user.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`} alt="" />
                             </div>
                             {showUserMenu && !isWebViewEnv() && (
@@ -133,13 +142,24 @@ const Navbar: React.FC = () => {
                                     <button
                                         className={styles.menuBtn}
                                         onClick={() => {
-                                            // 实现头像菜单跳转个人中心。
                                             navigate('/profile');
                                             setShowUserMenu(false);
                                         }}
                                     >
                                         个人中心
                                     </button>
+                                    {user?.user?.role === 'admin' && isDesktopLayout && (
+                                        <button
+                                            className={styles.menuBtn}
+                                            onClick={() => {
+                                                // 实现管理员 PC 端管理面板入口
+                                                navigate('/admin');
+                                                setShowUserMenu(false);
+                                            }}
+                                        >
+                                            管理面板
+                                        </button>
+                                    )}
                                     <button
                                         className={`${styles.menuBtn} ${styles.logoutBtn}`}
                                         onClick={() => {

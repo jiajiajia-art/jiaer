@@ -12,6 +12,9 @@ import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
 import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
+import announcementApi from '../api/announcement/announcementApi';
+import type { AnnouncementRecord } from '../api/announcement/announcement.type';
+import AnnouncementModal from '../components/AnnouncementModal';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -44,6 +47,8 @@ const Home: React.FC = () => {
     const hasInitializedRef = useRef(false);
     const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+    const [latestAnnouncement, setLatestAnnouncement] = useState<AnnouncementRecord | null>(null);
+    const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
     const touchDeltaXRef = useRef(0);
@@ -230,6 +235,17 @@ const Home: React.FC = () => {
         }
     }, []);
 
+    const loadLatestAnnouncement = useCallback(async () => {
+        try {
+            const response = await announcementApi.getLatest();
+            if (response.data.success) {
+                setLatestAnnouncement(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取首页公告失败:', error);
+        }
+    }, []);
+
     // 初始加载
     const loadLibraryData = useCallback(async () => {
         // 防止重复加载
@@ -270,6 +286,10 @@ const Home: React.FC = () => {
         loadCarouselData();
     }, [loadCarouselData]);
 
+    useEffect(() => {
+        loadLatestAnnouncement();
+    }, [loadLatestAnnouncement]);
+
     // 使用 libraryDataApi 获取游戏列表数据（无论是否登录都加载）
     useEffect(() => {
         const currentUserId = user?.user?.id;
@@ -281,6 +301,26 @@ const Home: React.FC = () => {
             loadLibraryData();
         }
     }, [user?.user?.id, loadLibraryData]);
+
+    useEffect(() => {
+        if (!latestAnnouncement?.id) {
+            setShowAnnouncementModal(false);
+            return;
+        }
+
+        // 控制同一条公告在当前会话只弹出一次
+        const dismissKey = `announcementDismissed_${latestAnnouncement.id}`;
+        const dismissedInSession = sessionStorage.getItem(dismissKey) === 'true';
+
+        if (dismissedInSession || showJoinGroupModal || showCheckInModal) {
+            if (dismissedInSession) {
+                setShowAnnouncementModal(false);
+            }
+            return;
+        }
+
+        setShowAnnouncementModal(true);
+    }, [latestAnnouncement?.id, showJoinGroupModal, showCheckInModal]);
 
     // 滚动加载更多：使用 Intersection Observer
     useEffect(() => {
@@ -493,6 +533,13 @@ const Home: React.FC = () => {
             setShowCheckInModal(true);
         }
     };
+
+    const handleCloseAnnouncementModal = () => {
+        if (latestAnnouncement?.id) {
+            sessionStorage.setItem(`announcementDismissed_${latestAnnouncement.id}`, 'true');
+        }
+        setShowAnnouncementModal(false);
+    };
     return (
         <div className={styles.pageRoot}>
             {/* 顶部固定导航 */}
@@ -702,6 +749,11 @@ const Home: React.FC = () => {
             <CheckInModal
                 isOpen={showCheckInModal}
                 onClose={() => setShowCheckInModal(false)}
+            />
+            <AnnouncementModal
+                announcement={latestAnnouncement}
+                isOpen={showAnnouncementModal}
+                onClose={handleCloseAnnouncementModal}
             />
             <MobileBottomNav />
         </div>
