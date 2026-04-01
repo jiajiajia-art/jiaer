@@ -132,10 +132,16 @@ export const useGalgameController = () => {
         setInitialMessages([]);
         setGameStarted(false);
         setShowStoryIntro(false);
-    }, [fileId, resetDisplayedSteps]);
+        // 强制重置加载标记，确保数据重新加载
+        presetDataLoadedRef.current = false;
+    }, [fileId]);
 
     const loadPresetData = useCallback(async () => {
-        if (!fileId || presetDataLoadedRef.current) {
+        if (!fileId) {
+            return;
+        }
+        
+        if (presetDataLoadedRef.current) {
             return;
         }
 
@@ -147,18 +153,16 @@ export const useGalgameController = () => {
             if (response.data.data) {
                 setPresetData(response.data.data);
                 setWorldSetting(response.data.data.world);
-                
                 const scenes = response.data.data.scenes.scenes;
+                
                 if (scenes && scenes.length > 0) {
                     let initialScene = scenes[0];
-                    
                     // 直接从历史数据获取 visitedScenes 的最后一个值，而不是使用 hook
                     if (!isReplay && sessionId) {
                         try {
                             const historyResponse = await getGalgamePresetApi.getGalgameHistory(sessionId);
                             if (historyResponse.data?.success && historyResponse.data.visitedScenes) {
                                 const visitedScenes = historyResponse.data.visitedScenes;
-                                console.log(visitedScenes);
                                 
                                 if (Array.isArray(visitedScenes) && visitedScenes.length > 0) {
                                     const lastSceneId = visitedScenes[visitedScenes.length - 1];
@@ -174,7 +178,7 @@ export const useGalgameController = () => {
                                 }
                             }
                         } catch (historyError) {
-                            console.warn('获取历史数据失败，使用默认场景:', historyError);
+                            console.warn('[GalgameController] 获取历史数据失败，使用默认场景:', historyError);
                         }
                     }
                     
@@ -205,9 +209,11 @@ export const useGalgameController = () => {
 
                     setBackgroundImage(sceneImageUrl);
                 }
+            } else {
+                console.warn('[GalgameController] response.data.data 为空');
             }
         } catch (error) {
-            console.error('获取游戏数据失败:', error);
+            console.error('[GalgameController] 获取游戏数据失败:', error);
             presetDataLoadedRef.current = false;
         } finally {
             setIsLoading(false);
@@ -247,7 +253,6 @@ export const useGalgameController = () => {
                 const sceneImageUrl = getImageUrl(sceneImagePath as string);
                 if (sceneImageUrl) {
                     setBackgroundImage(sceneImageUrl);
-                    console.log('[Galgame] 更新场景:', sceneId, '背景图:', sceneImageUrl);
                 }
             }
         } else {
@@ -262,7 +267,6 @@ export const useGalgameController = () => {
             setInitialMessages([]);
             try {
                 localStorage.removeItem(allStepsStorageKey);
-                console.log('[Galgame] 清除本地 allSteps，准备接收新数据');
             } catch (e) {
                 console.warn('[Galgame] 清除本地 allSteps 失败:', e);
             }
@@ -270,7 +274,6 @@ export const useGalgameController = () => {
         onCompleteAllSteps: (steps: any[]) => {
             try {
                 localStorage.setItem(allStepsStorageKey, JSON.stringify(steps));
-                console.log('[Galgame] 存储完整 allSteps，数量:', Array.isArray(steps) ? steps.length : 0);
             } catch (e) {
                 console.warn('[Galgame] 存储 allSteps 失败:', e);
             }
@@ -458,7 +461,6 @@ export const useGalgameController = () => {
                 if (sceneImageUrl) {
                     setBackgroundImage(prev => {
                         if (prev !== sceneImageUrl) {
-                            console.log('[Galgame] 背景图更新（从步骤）:', sceneImageUrl);
                             return sceneImageUrl;
                         }
                         return prev;
@@ -525,7 +527,6 @@ export const useGalgameController = () => {
                         const savedSteps = JSON.parse(rawAllSteps);
                         if (Array.isArray(savedSteps) && savedSteps.length > 0) {
                             const restoredSteps = ensureChoiceStep(savedSteps);
-                            console.log('[Galgame] 使用本地 allSteps 恢复，数量:', restoredSteps.length);
                             setShowStoryIntro(false);
                             setGameStarted(true);
                             resetDisplayedSteps();
@@ -838,7 +839,6 @@ export const useGalgameController = () => {
     const handleExitGame = useCallback(() => {
         try {
             localStorage.removeItem(allStepsStorageKey);
-            console.log('[Galgame] 已清理临时状态数据');
         } catch (e) {
             console.warn('[Galgame] 清理临时状态失败:', e);
         }

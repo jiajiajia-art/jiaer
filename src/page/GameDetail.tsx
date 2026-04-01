@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styles from './GameDetail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
@@ -58,7 +58,7 @@ const GameDetail: React.FC = () => {
     // Hooks
     const { user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
-    const { setFileId, setSessionId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
+    const { setFileId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
     const { setStartedAt } = useTrackingStore();
 
     // 状态
@@ -214,22 +214,24 @@ const GameDetail: React.FC = () => {
         }
 
         setIsLoading(true);
+        
         try {
             const sessionResponse = await createGalgameSessionApi.createGalgamePlaySession({ 
                 fileId: presetId,
-                source: mapSourceForSession(enterSource), // 映射并传递来源
+                source: mapSourceForSession(enterSource),
                 restart,
             });
+            
             if (sessionResponse.data.success) {
                 const startTime = new Date().toISOString();
                 setStartedAt(startTime);
-                return sessionResponse.data.data.session.session_id;
+                const sessionId = sessionResponse.data.data.session.session_id;
+                return sessionId;
             } else {
                 toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
                 return null;
             }
         } catch (error: unknown) {
-            console.error('❌ Galgame Session 创建错误:', error);
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosError = error as { response?: { data?: { message?: string } } };
                 const errorMessage = axiosError.response?.data?.message || '创建游戏失败，请稍后重试';
@@ -289,6 +291,8 @@ const GameDetail: React.FC = () => {
         }
 
         if (normalized === 'customif') {
+            // 进入游戏前清理旧状态
+            useGameStore.getState().clearAll();
             const appId = game.customAppId || fileId;
             if (!appId) {
                 toast.error('缺少自定义 AppID，无法开始游戏');
@@ -299,6 +303,8 @@ const GameDetail: React.FC = () => {
         }
 
         if (normalized === 'TXT') {
+            // 进入游戏前清理旧状态
+            useGameStore.getState().clearAll();
             setFileId(fileId);
             setIsPreset(game.is_preset == 1);
 
@@ -315,19 +321,20 @@ const GameDetail: React.FC = () => {
 
             const sessionId = await createGalgameSession(fileId);
             if (sessionId) {
-                setSessionId(sessionId);
+                useGameStore.getState().setFileId(fileId);
+                useGameStore.getState().setSessionId(sessionId);
                 navigate('/galgame');
             }
             return;
         }
 
-
-
         if (normalized === 'AVG') {
-            setFileId(fileId);
+            // 进入游戏前清理旧状态
+            useGameStore.getState().clearAll();
             const sessionId = await createMapWorldSession(fileId);
             if (sessionId) {
-                setSessionId(sessionId);
+                useGameStore.getState().setFileId(fileId);
+                useGameStore.getState().setSessionId(sessionId);
                 navigate('/galgameMap');
             }
             return;
@@ -376,6 +383,12 @@ const GameDetail: React.FC = () => {
             return;
         }
 
+        // CUSTOM 模式：直接开始，不需要弹窗
+        if (game?.engine === 'CUSTOM') {
+            await startGameInternal();
+            return;
+        }
+
         setIsPlayStatusLoading(true);
         try {
             const status = await fetchPlayStatus();
@@ -391,9 +404,15 @@ const GameDetail: React.FC = () => {
             toast.error('游戏ID无效');
             return;
         }
+        
+        // 进入游戏前清理旧状态
+        useGameStore.getState().clearAll();
+        
         const sessionId = await createGalgameSession(fileId, true);
+        
         if (sessionId) {
-            setSessionId(sessionId);
+            useGameStore.getState().setFileId(fileId);
+            useGameStore.getState().setSessionId(sessionId);
             navigate('/galgame');
         }
     };
@@ -483,7 +502,7 @@ const GameDetail: React.FC = () => {
             } catch (error) {
                 // 用户取消分享或其他错误，继续执行备用方案
                 if ((error as any)?.name !== 'AbortError') {
-                    console.log('原生分享失败，使用备用方案');
+                    // 使用备用方案
                 } else {
                     return; // 用户取消，不执行备用方案
                 }
@@ -537,11 +556,14 @@ const GameDetail: React.FC = () => {
         try {
             if (!fileId) return;
             setIsLoading(true);
+            // 进入游戏前清理旧状态
+            useGameStore.getState().clearAll();
             // 复用可选 saveId 的 /visual/session/create
             const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
             if (resp.data.success) {
                 const sessionId = resp.data.data.session;
-                setSessionId(sessionId);
+                useGameStore.getState().setFileId(fileId);
+                useGameStore.getState().setSessionId(sessionId);
                 navigate('/galgame');
                 return;
             }

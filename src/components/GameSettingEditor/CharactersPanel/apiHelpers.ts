@@ -51,7 +51,7 @@ export const createApiHelpers = (mode: string) => {
                     pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
                 }, {
                     responseType: 'blob',
-                    timeout: 180000,
+                    timeout: 0,
                 });
 
                 // 从 blob 的文件名中获取 variant
@@ -131,7 +131,7 @@ export const createApiHelpers = (mode: string) => {
                     pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
                 }, {
                     responseType: 'blob',
-                    timeout: 180000,
+                    timeout: 0,
                 });
 
                 const variant = (response.headers['x-variant'] as string) || 'base';
@@ -186,7 +186,7 @@ export const createApiHelpers = (mode: string) => {
                         pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
                     },
                     {
-                        timeout: 180000,
+                        timeout: 0,
                     }
                 );
 

@@ -53,6 +53,18 @@ export const useGalgameStep = ({
         currentStepRef.current = currentStep;
     }, [currentStep]);
 
+    // session 切换时重置所有状态
+    useEffect(() => {
+        currentRequestId.current = 0;
+        setCurrentStep(null);
+        setStepQueue([]);
+        setShowNextButton(false);
+        setSelectedOptionIndex(null);
+        setIsWaitingForData(false);
+        setLoading(false);
+        isProcessingStepRef.current = false;
+    }, [sessionId]);
+
     // 刷新用户信息（用于在流式请求完全成功后更新积分等）
     const getUserInfo = useCallback(async () => {
         try {

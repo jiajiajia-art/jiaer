@@ -270,7 +270,7 @@ const worldEditor = {
         fileId: fileId,
       },
       {
-        timeout: 180000,
+        timeout: 0,
       }
     );
   },
@@ -292,7 +292,7 @@ const worldEditor = {
         subsceneId: subsceneId,
       },
       {
-        timeout: 180000,
+        timeout: 0,
       }
     );
   },
@@ -369,7 +369,7 @@ const worldEditor = {
         prompt: prompt,
       },
       {
-        timeout: 180000,
+        timeout: 0,
       }
     );
   },

@@ -134,6 +134,9 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             return;
         }
 
+        // 进入游戏前清理旧状态
+        useGameStore.getState().clearAll();
+
         // 更新 store
         setFileId(fileId);
         setIsPreset(gameDetail?.is_preset == 1);
@@ -162,6 +165,8 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             const fileId = gameDetail?.file_id || gameDetail?.id;
             if (!fileId) return;
             setIsLoading(true);
+            // 进入游戏前清理旧状态
+            useGameStore.getState().clearAll();
             const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
             if (resp.data.success) {
                 const sessionId = resp.data.data.session;

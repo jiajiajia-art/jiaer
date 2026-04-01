@@ -81,12 +81,13 @@ const useGalgameHistory = () => {
     }, [sessionId, fetchHistory]);
 
     useEffect(() => {
-        if (sessionId && !initializedRef.current) {
-            initializedRef.current = true;
+        // 每次 sessionId 变化时，都重置 initializedRef
+        initializedRef.current = false;
+        
+        if (sessionId) {
+            // 新游戏或切换游戏时，获取历史记录
             fetchHistory();
-        }
-
-        if (!sessionId) {
+        } else {
             initializedRef.current = false;
             setHistory([]);
             setLoading(false);

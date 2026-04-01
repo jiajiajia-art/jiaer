@@ -132,26 +132,26 @@ const EditorApi = {
     },
     generateAllImages: (fileId: string, data: GenerateAllImageRequest) => {
         return api.post<AllGameData>(`/visual/generate-images/${fileId}/all`, data, {
-            timeout: 180000,
+            timeout: 0,
         });
     },
     generatePlayerImage: (fileId: string, data: GenerateImageRequest) => {
         return api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/player`, data, {
-            timeout: 180000,
+            timeout: 0,
         });
     },
     generateNpcImage: ( fileId: string, npcId: string, data: GenerateImageRequest) =>
         api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npcId}`, data, {
-            timeout: 180000,
+            timeout: 0,
         }),
     generateSceneImage: (sceneId: string, fileId: string, data: GenerateImageRequest) =>
         api.post<Blob>(`/visual/generate-images/${fileId}/scenes/${encodeURIComponent(sceneId)}`, data, {
             responseType: 'blob',
-            timeout: 180000,
+            timeout: 0,
         }),
     generateVariantImage: (fileId: string, npcId: string, data: GenerateVariantImageRequest) =>
         api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/npcs/${npcId}/variant`, data, {
-            timeout: 180000,
+            timeout: 0,
         }),
     deleteVariantImage: (fileId:string, npcId:string, variant:string) =>
         api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/npcs/${npcId}/image/${variant}`),

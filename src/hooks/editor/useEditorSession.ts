@@ -26,6 +26,9 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
         if (!fileId || !user?.user?.id) return null;
 
         try {
+            // 进入游戏前清理旧状态
+            useGameStore.getState().clearAll();
+
             if (mode === 'worldInteraction') {
                 const sessionResponse = await createWorldSessionApi.createWorldEditSession({ fileId });
                 if (sessionResponse.data.success) {

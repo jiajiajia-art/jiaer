@@ -350,19 +350,17 @@ const Profile: React.FC = () => {
                                     className={styles.userAvatar}
                                     src={userAvatar}
                                     alt="用户头像"
-                                    onClick={() => isMobile && !isUpdatingAvatar && fileInputRef.current?.click()}
-                                    style={{ cursor: isMobile && !isUpdatingAvatar ? 'pointer' : 'default' }}
+                                    onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
+                                    style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
                                 />
                                 <div className={styles.userNameWrapper}>
                                     <div className={styles.userName}>{userName}</div>
-                                    {isMobile && (
-                                        <MdEdit
-                                            className={styles.editNameIcon}
-                                            onClick={handleStartEditName}
-                                        />
-                                    )}
+                                    <MdEdit
+                                        className={styles.editNameIcon}
+                                        onClick={handleStartEditName}
+                                    />
                                 </div>
-                                {userCode && isMobile && (
+                                {userCode && (
                                     <div className={styles.userCode}>
                                         <span className={styles.userCodeText}>Kuran号：{userCode}</span>
                                         <button
