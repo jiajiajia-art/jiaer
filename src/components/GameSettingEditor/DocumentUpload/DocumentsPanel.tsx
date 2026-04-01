@@ -8,6 +8,7 @@ import { useUploadStore } from '../../../store/uploadStore';
 import CreateEmptyGameModal from './CreateEmptyGameModal';
 import GenerateFromIdeaModal from './GenerateFromIdeaModal';
 import type { UploadResult } from '../../../hooks/editor/useFileUpload';
+import { getUploadEtaText } from '../../../utils/etaText';
 
 interface DocumentsPanelProps {
     onFileUpload: (file: File) => Promise<UploadResult>;
@@ -274,6 +275,12 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         currentJob?.status === 'failed'
             ? (currentJob.error || '文件上传或解析失败，请重试')
             : (failedJobSnapshot?.error || null);
+    const uploadEtaText = getUploadEtaText({
+        status: currentJob?.status,
+        elapsedSeconds: currentJob?.elapsedSeconds,
+        estimatedRemainingSeconds: currentJob?.estimatedRemainingSeconds,
+        estimatedTotalSeconds: currentJob?.estimatedTotalSeconds,
+    });
 
     const parseSteps = useMemo(() => [
         {
@@ -423,6 +430,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                     <span className={styles.progressStage}>{stage}</span>
                                 )}
                             </div>
+                            {uploadEtaText && (
+                                <div className={styles.progressMeta}>{uploadEtaText}</div>
+                            )}
 
                             <div className={styles.stepsIndicator}>
                                 {parseSteps.map((step, index) => {

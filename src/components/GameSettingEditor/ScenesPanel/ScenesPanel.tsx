@@ -26,12 +26,16 @@ import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
+import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 
 interface BgmItem {
     id: string;
     name: string;
     description: string;
 }
+
+const SINGLE_SCENE_ETA_SECONDS = 80;
+const BATCH_SCENE_BUFFER_SECONDS = 50;
 
 /**
  * 暂存图片类型 - 用于图片选择/生成后、确认修改前的预览
@@ -190,6 +194,31 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const activeScene = sceneData.length > 0
         ? (sceneData.find(s => s.id === activeSceneId) || sceneData[0])
         : null;
+    const batchSceneGenerationCount = useMemo(() => {
+        const sceneCount = sceneData.filter((scene) => !scene.id.startsWith('temp-')).length;
+        if (mode !== 'worldInteraction') {
+            return sceneCount;
+        }
+
+        const subsceneCount = Object.values(subsceneDataBySceneId).reduce((count, subscenes) => {
+            return count + subscenes.filter((subscene) => !(subscene.id || '').startsWith('temp-')).length;
+        }, 0);
+        return sceneCount + subsceneCount;
+    }, [mode, sceneData, subsceneDataBySceneId]);
+    const singleSceneEtaText = useGenerationEta({
+        active: isGeneratingSingleSceneImage,
+        totalSeconds: SINGLE_SCENE_ETA_SECONDS,
+    });
+    const batchSceneEtaText = useGenerationEta({
+        active: isGeneratingAllSceneImages,
+        totalSeconds: Math.max(
+            SINGLE_SCENE_ETA_SECONDS,
+            batchSceneGenerationCount * SINGLE_SCENE_ETA_SECONDS + BATCH_SCENE_BUFFER_SECONDS,
+        ),
+        totalCount: batchSceneGenerationCount,
+        // 实现批量场景生图的数量提示
+        batchLabel: batchSceneGenerationCount > 0 ? `本次共生成 ${batchSceneGenerationCount} 项` : undefined,
+    });
 
     const getEffectiveImage = (sceneId: string, subsceneId?: string): string | undefined => {
         const targetId = subsceneId || sceneId;
@@ -775,6 +804,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                 setHasUnsavedChanges(true);
                             }}
                             isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === newSceneData.id}
+                            generationEtaText={singleSceneEtaText}
                             onImageClick={() => toast.error('请先确认新增场景，然后再上传图片')}
                             onUploadChange={handlers.handleUploadSceneImage}
                             onRequestRegenerate={() => toast.error('请先确认新增场景，然后再生成图片')}
@@ -788,6 +818,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     bgmLibrary={bgmLibrary}
                                     fileInputRef={sceneFileInputRef}
                                     isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === activeSubsceneDraft.id}
+                                    generationEtaText={singleSceneEtaText}
                                     isAddingNewSubscene={isAddingNewSubscene}
                                     getEffectiveImage={getEffectiveImage}
                                     onImageClick={handlers.handleSceneImageClick}
@@ -806,6 +837,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     bgmLibrary={bgmLibrary}
                                     fileInputRef={sceneFileInputRef}
                                     isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === (activeSceneDraft || activeScene)!.id}
+                                    generationEtaText={singleSceneEtaText}
                                     getEffectiveImage={getEffectiveImage}
                                     onImageClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
@@ -923,6 +955,9 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     <div className={styles.plusLoadingDialog}>
                         <div className={styles.plusLoadingSpinner}></div>
                         <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
+                        {batchSceneEtaText && (
+                            <div className={styles.plusLoadingHint}>{batchSceneEtaText}</div>
+                        )}
                         <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作。</div>
                     </div>
                 </div>

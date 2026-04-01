@@ -23,6 +23,7 @@ import CharacterAttributesPanel, { type CharacterAttributesPanelRef } from './Ch
 import CharactersSidebar from './CharactersSidebar';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { HOST_ADDRESS } from '../../../config';
+import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -34,6 +35,10 @@ const CHARACTER_WORD_LIMITS = {
     appearance: 500,
     background: 800, 
 } as const;
+
+const SINGLE_CHARACTER_ETA_SECONDS = 85;
+const SINGLE_PLAYER_ETA_SECONDS = 75;
+const BATCH_CHARACTER_BUFFER_SECONDS = 45;
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
@@ -463,6 +468,24 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const isCurrentPortraitGenerating = Boolean(
         currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
     );
+    const batchCharacterCount = useMemo(
+        () => characterData.filter((character) => character.id !== 'player' && !character.id.startsWith('temp-')).length,
+        [characterData],
+    );
+    const singleCharacterEtaText = useGenerationEta({
+        active: isCurrentPortraitGenerating,
+        totalSeconds: currentCharacter?.id === 'player' ? SINGLE_PLAYER_ETA_SECONDS : SINGLE_CHARACTER_ETA_SECONDS,
+    });
+    const batchCharacterEtaText = useGenerationEta({
+        active: isGeneratingNpcImages,
+        totalSeconds: Math.max(
+            SINGLE_CHARACTER_ETA_SECONDS,
+            batchCharacterCount * SINGLE_CHARACTER_ETA_SECONDS + BATCH_CHARACTER_BUFFER_SECONDS,
+        ),
+        totalCount: batchCharacterCount,
+        // 实现批量角色生图的数量提示
+        batchLabel: batchCharacterCount > 0 ? `本次共生成 ${batchCharacterCount} 项` : undefined,
+    });
     const isPortraitActionBusy = isUploadingPortrait
         || isSavingCharacter
         || isCurrentPortraitGenerating
@@ -1274,6 +1297,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     <div className={styles.loadingOverlay}>
                                         <div className={styles.loadingSpinner}></div>
                                         <div className={styles.loadingText}>正在生成角色立绘...</div>
+                                        {singleCharacterEtaText && (
+                                            <div className={styles.loadingHint}>{singleCharacterEtaText}</div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1707,6 +1733,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     <div className={styles.plusLoadingDialog}>
                         <div className={styles.plusLoadingSpinner}></div>
                         <div className={styles.plusLoadingText}>正在生成角色立绘...</div>
+                        {batchCharacterEtaText && (
+                            <div className={styles.plusLoadingHint}>{batchCharacterEtaText}</div>
+                        )}
                         <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作。</div>
                     </div>
                 </div>

@@ -24,6 +24,7 @@ interface SceneDetailFormProps {
     bgmLibrary: BgmItem[];
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     isGeneratingForThisScene: boolean;
+    generationEtaText?: string;
     isAddingNewSubscene?: boolean;
     getEffectiveImage?: (sceneId: string, subsceneId?: string) => string | undefined;
     onImageClick: () => void;
@@ -39,6 +40,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     bgmLibrary,
     fileInputRef,
     isGeneratingForThisScene,
+    generationEtaText = '',
     isAddingNewSubscene = false,
     getEffectiveImage,
     onImageClick,
@@ -152,6 +154,9 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                     <div className="loadingOverlay">
                         <div className="loadingSpinner"></div>
                         <div className="loadingText">正在生成场景图片...</div>
+                        {generationEtaText && (
+                            <div className="loadingHint">{generationEtaText}</div>
+                        )}
                     </div>
                 )}
             </div>

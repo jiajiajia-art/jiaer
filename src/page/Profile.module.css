@@ -693,6 +693,13 @@
     color: #6B7280;
 }
 
+.bindAccountStatusText {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.6;
+}
+
 .editNameModalActions {
     margin-top: 14px;
     display: flex;

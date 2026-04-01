@@ -49,6 +49,12 @@ const CreateGame: React.FC = () => {
     const { user } = useAuthStore();
     const navigate = useNavigate();
 
+    const handleOpenBindPhoneGuide = () => {
+        // 实现跳转到“我的”页并拉起浏览器登录账号设置
+        setShowMiniProgramTip(false);
+        navigate('/profile?openBrowserLoginAccount=1');
+    };
+
 
     // 重新获取游戏详情（用于更新价格等数据）
     const refreshGameDetail = useCallback(async () => {
@@ -305,6 +311,9 @@ const CreateGame: React.FC = () => {
                 title="请前往 PC 端操作"
                 message={miniProgramTipMessage}
                 linkUrl={MINI_PROGRAM_CREATOR_PC_URL}
+                bindPhoneActionText="建议先绑定手机号"
+                bindPhoneActionHint="绑定后可在小程序端和 PC 端使用同一个账号。"
+                onBindPhoneAction={handleOpenBindPhoneGuide}
             />
 
             <FooterArea />

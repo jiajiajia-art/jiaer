@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
@@ -54,9 +54,11 @@ const Profile: React.FC = () => {
     const [bindPassword, setBindPassword] = useState('');
     const [bindConfirmPassword, setBindConfirmPassword] = useState('');
     const [isBindingAccount, setIsBindingAccount] = useState(false);
+    const [isBindAccountStatusModalOpen, setIsBindAccountStatusModalOpen] = useState(false);
 
     // 移动端判断
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // 监听窗口大小变化
     useEffect(() => {
@@ -159,9 +161,16 @@ const Profile: React.FC = () => {
     };
 
     // 浏览器登录账号绑定相关函数
+    const clearBindAccountDraft = () => {
+        // 实现浏览器登录账号草稿清理
+        setBindPhone('');
+        setBindPassword('');
+        setBindConfirmPassword('');
+    };
+
     const handleOpenBindAccountModal = () => {
         if (user?.user?.phoneNumber) {
-            toast.success('已绑定浏览器登录账号，可在浏览器用手机号 + 密码登录');
+            setIsBindAccountStatusModalOpen(true);
             return;
         }
         setIsBindAccountModalOpen(true);
@@ -193,9 +202,7 @@ const Profile: React.FC = () => {
                 updateUser(response.data.data);
                 toast.success('绑定成功！可在浏览器用手机号 + 密码登录');
                 setIsBindAccountModalOpen(false);
-                setBindPhone('');
-                setBindPassword('');
-                setBindConfirmPassword('');
+                clearBindAccountDraft();
             } else {
                 toast.error(response.data.message || '绑定失败，请稍后重试');
             }
@@ -211,6 +218,26 @@ const Profile: React.FC = () => {
             setIsBindingAccount(false);
         }
     };
+
+    useEffect(() => {
+        if (!searchParams.get('openBrowserLoginAccount')) {
+            return;
+        }
+
+        if (!isWebViewEnv()) {
+            return;
+        }
+
+        if (!user?.user) {
+            return;
+        }
+
+        // 实现从其他弹窗跳转后自动打开绑定入口
+        handleOpenBindAccountModal();
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('openBrowserLoginAccount');
+        setSearchParams(nextParams, { replace: true });
+    }, [searchParams, setSearchParams, user?.user?.phoneNumber]);
 
 
     const handleCheckIn = async () => {
@@ -506,7 +533,7 @@ const Profile: React.FC = () => {
                                 </div>
                                 <button
                                     className={styles.functionButton}
-                                    onClick={handleOpenBindAccountModal}
+                        onClick={handleOpenBindAccountModal}
                                 >
                                     {user?.user?.phoneNumber ? '已绑定' : '去设置'}
                                 </button>
@@ -602,7 +629,10 @@ const Profile: React.FC = () => {
             {isBindAccountModalOpen && (
                 <div
                     className={styles.editNameModalOverlay}
-                    onClick={() => setIsBindAccountModalOpen(false)}
+                    onClick={() => {
+                        setIsBindAccountModalOpen(false);
+                        clearBindAccountDraft();
+                    }}
                 >
                     <div
                         className={styles.editNameModal}
@@ -641,7 +671,10 @@ const Profile: React.FC = () => {
                             <button
                                 type="button"
                                 className={styles.editNameCancelButton}
-                                onClick={() => setIsBindAccountModalOpen(false)}
+                                onClick={() => {
+                                    setIsBindAccountModalOpen(false);
+                                    clearBindAccountDraft();
+                                }}
                                 disabled={isBindingAccount}
                             >
                                 取消
@@ -653,6 +686,39 @@ const Profile: React.FC = () => {
                                 disabled={isBindingAccount}
                             >
                                 {isBindingAccount ? '绑定中...' : '确认绑定'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isBindAccountStatusModalOpen && (
+                <div
+                    className={styles.editNameModalOverlay}
+                    onClick={() => setIsBindAccountStatusModalOpen(false)}
+                >
+                    <div
+                        className={styles.editNameModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.editNameModalHeader}>
+                            <div className={styles.editNameModalTitle}>浏览器登录账号已绑定</div>
+                        </div>
+                        <div className={styles.editNameModalBody}>
+                            <div className={styles.bindAccountStatusText}>
+                                已绑定手机号：{maskPhoneNumber(user?.user?.phoneNumber)}
+                            </div>
+                            <div className={styles.editNameTips}>
+                                你可以在浏览器端使用该手机号和已设置的密码登录同一个账号。
+                            </div>
+                        </div>
+                        <div className={styles.editNameModalActions}>
+                            <button
+                                type="button"
+                                className={styles.editNameConfirmButton}
+                                onClick={() => setIsBindAccountStatusModalOpen(false)}
+                            >
+                                我知道了
                             </button>
                         </div>
                     </div>

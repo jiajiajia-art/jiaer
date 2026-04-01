@@ -153,3 +153,12 @@ button {
   font-size: 14px;
   font-weight: 500;
 }
+
+.loadingHint {
+  margin-top: 6px;
+  color: rgba(0, 0, 0, 0.58);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  max-width: 220px;
+}

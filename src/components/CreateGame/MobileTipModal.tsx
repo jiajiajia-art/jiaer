@@ -11,6 +11,9 @@ interface MobileTipModalProps {
     icon?: string;
     linkUrl?: string;
     copyButtonText?: string;
+    bindPhoneActionText?: string;
+    bindPhoneActionHint?: string;
+    onBindPhoneAction?: () => void;
 }
 
 const MobileTipModal: React.FC<MobileTipModalProps> = ({
@@ -21,6 +24,9 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
     icon = '💻',
     linkUrl,
     copyButtonText = '复制',
+    bindPhoneActionText,
+    bindPhoneActionHint,
+    onBindPhoneAction,
 }) => {
     const url = linkUrl || new URL(import.meta.env.BASE_URL, window.location.origin).href;
 
@@ -136,6 +142,19 @@ const MobileTipModal: React.FC<MobileTipModalProps> = ({
                             {copyButtonText}
                         </button>
                     </div>
+                    {bindPhoneActionText && onBindPhoneAction && (
+                        <button
+                            type="button"
+                            className={styles.mobileTipBindAction}
+                            onClick={onBindPhoneAction}
+                        >
+                            {/* 实现绑定手机号引导入口 */}
+                            {bindPhoneActionText}
+                        </button>
+                    )}
+                    {bindPhoneActionHint && (
+                        <div className={styles.mobileTipBindHint}>{bindPhoneActionHint}</div>
+                    )}
                 </div>
             </div>
         </div>

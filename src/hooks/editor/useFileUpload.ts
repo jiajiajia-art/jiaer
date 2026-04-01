@@ -28,6 +28,10 @@ interface JobStatusResponseRunning {
     stage?: JobStage;
     progress?: number;
     error?: string;
+    elapsedSeconds?: number;
+    estimatedRemainingSeconds?: number;
+    estimatedTotalSeconds?: number;
+    estimateSource?: string;
 }
 
 interface JobStatusResponseCompleted {
@@ -35,12 +39,20 @@ interface JobStatusResponseCompleted {
     jobId: string;
     fileId: string;
     status: 'completed';
+    elapsedSeconds?: number;
+    estimatedRemainingSeconds?: number;
+    estimatedTotalSeconds?: number;
+    estimateSource?: string;
 }
 
 interface JobStatusResponseFailed {
     success?: boolean;
     status: 'failed';
     error?: string;
+    elapsedSeconds?: number;
+    estimatedRemainingSeconds?: number;
+    estimatedTotalSeconds?: number;
+    estimateSource?: string;
 }
 
 interface UseFileUploadOptions {
@@ -141,6 +153,10 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                         progress: runningData.progress || 0,
                         stage: runningData.stage || (isQueuedOrPending ? '排队中' : '处理中'),
                         error: null,
+                        elapsedSeconds: runningData.elapsedSeconds ?? null,
+                        estimatedRemainingSeconds: runningData.estimatedRemainingSeconds ?? null,
+                        estimatedTotalSeconds: runningData.estimatedTotalSeconds ?? null,
+                        estimateSource: runningData.estimateSource ?? null,
                     });
 
                     setTimeout(() => {
@@ -159,6 +175,10 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                             status: 'completed',
                             progress: 100,
                             stage: '完成',
+                            elapsedSeconds: completedData.elapsedSeconds ?? null,
+                            estimatedRemainingSeconds: completedData.estimatedRemainingSeconds ?? 0,
+                            estimatedTotalSeconds: completedData.estimatedTotalSeconds ?? completedData.elapsedSeconds ?? null,
+                            estimateSource: completedData.estimateSource ?? null,
                         });
 
                         onUploadComplete(completedData.fileId, dataMode).catch((error) => {
@@ -184,6 +204,10 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     updateJob(jobId, {
                         status: 'failed',
                         error: errMsg,
+                        elapsedSeconds: failedData.elapsedSeconds ?? null,
+                        estimatedRemainingSeconds: failedData.estimatedRemainingSeconds ?? null,
+                        estimatedTotalSeconds: failedData.estimatedTotalSeconds ?? null,
+                        estimateSource: failedData.estimateSource ?? null,
                     });
                     toast.error(errMsg);
                     setTimeout(() => {
@@ -285,13 +309,13 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 mode: mode || 'visual',
             });
 
+            startPollingUploadStatus(jobId, file.name, mode || 'visual', uploadStartTime);
+
             if (initialFileId) {
                 updateJob(jobId, {
                     fileId: initialFileId,
                 });
             }
-
-            startPollingUploadStatus(jobId, file.name, mode || 'visual', uploadStartTime);
 
             return {
                 success: true,

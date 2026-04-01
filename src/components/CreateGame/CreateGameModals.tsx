@@ -15,6 +15,7 @@ interface CreateGameModalsProps {
     onCloseMobileTipModal: () => void;
     onSelectGameType: (type: CreatorGameType) => void;
     onOpenMiniProgramTip: (type: Exclude<CreatorGameType, 'txt' | 'rpg'>) => void;
+    onOpenBindPhoneGuide?: () => void;
 }
 
 const AVG_INVITE_CODE = 'AVG2025DEV';
@@ -30,6 +31,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     onCloseMobileTipModal,
     onSelectGameType,
     onOpenMiniProgramTip,
+    onOpenBindPhoneGuide,
 }) => {
     const [isInviteCodeModalOpen, setIsInviteCodeModalOpen] = useState(false);
     const [inviteCodeInput, setInviteCodeInput] = useState('');
@@ -113,7 +115,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             >
                                 <span>AVG</span>
                                 <span className={styles.createTypeOptionLockedTag}>
-                                    {isMiniProgram ? '去 PC 端' : '需邀请码'}
+                                    {isMiniProgram ? '需邀请码' : '需邀请码'}
                                 </span>
                             </button>
                             <button
@@ -122,7 +124,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             >
                                 <span>自定义</span>
                                 <span className={styles.createTypeOptionRecommend}>
-                                    {isMiniProgram ? '去 PC 端' : '新'}
+                                    {isMiniProgram ? '新' : '新'}
                                 </span>
                             </button>
                             <button
@@ -153,6 +155,9 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 title={mobileTipTitle}
                 message={mobileTipMessage}
                 linkUrl={mobileTipLinkUrl}
+                bindPhoneActionText="建议先绑定手机号"
+                bindPhoneActionHint="绑定后可在小程序端和 PC 端使用同一个账号。"
+                onBindPhoneAction={onOpenBindPhoneGuide}
             />
 
             {isInviteCodeModalOpen && (

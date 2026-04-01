@@ -220,6 +220,10 @@ export interface CheckUploadStatusResponse {
   status: string;
   error: string;
   updatedAt: string;
+  elapsedSeconds?: number;
+  estimatedRemainingSeconds?: number;
+  estimatedTotalSeconds?: number;
+  estimateSource?: string;
 }
 
 export interface UploadGameCoverResponse {

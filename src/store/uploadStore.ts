@@ -10,6 +10,10 @@ export interface UploadJob {
     error: string | null;
     startTime: number;
     updatedAt: string | null;
+    elapsedSeconds: number | null;
+    estimatedRemainingSeconds: number | null;
+    estimatedTotalSeconds: number | null;
+    estimateSource: string | null;
 }
 
 interface UploadState {
@@ -53,6 +57,10 @@ export const useUploadStore = create<UploadState>((set, get) => ({
                     error: null,
                     startTime: startTime || Date.now(), // 使用传入的开始时间，如果没有则使用当前时间
                     updatedAt: null,
+                    elapsedSeconds: null,
+                    estimatedRemainingSeconds: null,
+                    estimatedTotalSeconds: null,
+                    estimateSource: null,
                 },
             },
             showProgressModal: true, // 自动显示弹窗

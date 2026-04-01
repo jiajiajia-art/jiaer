@@ -211,6 +211,12 @@
     white-space: nowrap;
 }
 
+.progressMeta {
+    font-size: 0.82rem;
+    color: rgba(0, 0, 0, 0.62);
+    line-height: 1.45;
+}
+
 /* 步骤指示器 */
 .stepsIndicator {
     display: flex;

@@ -55,6 +55,12 @@ const Create: React.FC = () => {
     const [isSettling, setIsSettling] = useState(false);
     const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
 
+    const handleOpenBindPhoneGuide = () => {
+        // 实现跳转到“我的”页并拉起浏览器登录账号设置
+        setIsMobileTipModalOpen(false);
+        navigate('/profile?openBrowserLoginAccount=1');
+    };
+
     const { publishedGames, draftGames } = useMemo(() => {
         const published: UserGameData[] = [];
         const drafts: UserGameData[] = [];
@@ -512,6 +518,7 @@ const Create: React.FC = () => {
                 onCloseMobileTipModal={() => setIsMobileTipModalOpen(false)}
                 onSelectGameType={handleSelectGameType}
                 onOpenMiniProgramTip={openMiniProgramTypeTip}
+                onOpenBindPhoneGuide={handleOpenBindPhoneGuide}
             />
 
             {/* 充值弹窗 */}

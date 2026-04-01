@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUploadStore } from '../../../store/uploadStore';
 import styles from './UploadProgressModal.module.css';
+import { getUploadEtaText } from '../../../utils/etaText';
 
 const UploadProgressModal: React.FC = () => {
     const { jobs, showProgressModal, setShowProgressModal, isMinimized, setIsMinimized, removeJob } = useUploadStore();
@@ -93,7 +94,15 @@ const UploadProgressModal: React.FC = () => {
                 
                 {!isMinimized && (
                     <div className={styles.modalBody}>
-                    {jobList.map((job) => (
+                    {jobList.map((job) => {
+                        const etaText = getUploadEtaText({
+                            status: job.status,
+                            elapsedSeconds: job.elapsedSeconds,
+                            estimatedRemainingSeconds: job.estimatedRemainingSeconds,
+                            estimatedTotalSeconds: job.estimatedTotalSeconds,
+                        });
+
+                        return (
                         <div key={job.jobId} className={styles.jobItem}>
                             <div className={styles.jobHeader}>
                                 <div className={styles.jobInfo}>
@@ -140,6 +149,9 @@ const UploadProgressModal: React.FC = () => {
                                     {formatTime(job.startTime)}
                                 </span>
                             </div>
+                            {etaText && (
+                                <div className={styles.etaText}>{etaText}</div>
+                            )}
                             
                             {job.error && (
                                 <div className={styles.errorMessage}>
@@ -153,7 +165,8 @@ const UploadProgressModal: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    ))}
+                        );
+                    })}
                     </div>
                 )}
             </div>
