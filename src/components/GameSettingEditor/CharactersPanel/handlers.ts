@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 业务逻辑处理函数
  * 提取主要的业务逻辑，降低主文件复杂度
  */
@@ -29,6 +29,14 @@ interface HandlersContext {
     setNpcCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setNpcCostModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setIsLoadingNpcCost: React.Dispatch<React.SetStateAction<boolean>>;
+    // 一键生成结果弹窗
+    setNpcResultModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setNpcGenerationResult: React.Dispatch<React.SetStateAction<{
+        generatedCount: number;
+        totalCount: number;
+        pointsDeducted: number;
+        remainingPoints?: number;
+    } | null>>;
     // 暂存图片 setters
     setPendingImages: React.Dispatch<React.SetStateAction<{ [characterId: string]: { [variant: string]: PendingImage } }>>;
     setHasUnsavedChanges: (value: boolean) => void;
@@ -58,6 +66,8 @@ export const createHandlers = (ctx: HandlersContext) => {
         setNpcCostPoints,
         setNpcCostModalOpen,
         setIsLoadingNpcCost,
+        setNpcResultModalOpen,
+        setNpcGenerationResult,
         setPendingImages,
         setHasUnsavedChanges,
         activeCharacterId,
@@ -812,21 +822,20 @@ export const createHandlers = (ctx: HandlersContext) => {
                 const npcsTotal: number | undefined = results?.npcsTotal ?? results?.total;
                 const errors: number | undefined = typeof results?.errors === 'number' ? results.errors : undefined;
 
-                const usedPoints = npcCostPoints ?? (typeof npcsGenerated === 'number' ? npcsGenerated * 10 : undefined);
+                // 从 results 中获取新的字段
+                const effectiveSuccessful = results?.effectiveSuccessful ?? npcsGenerated ?? 0;
+                const totalSuccessful = results?.totalSuccessful ?? npcsTotal ?? 0;
+                const pointsDeducted = results?.pointsDeducted ?? npcCostPoints;
+                const remainingPoints = results?.remainingPoints;
 
-                if (typeof npcsGenerated === 'number' && typeof npcsTotal === 'number') {
-                    toast.success(
-                        `所有角色立绘生成完成：成功 ${npcsGenerated}/${npcsTotal} 个` +
-                        (typeof errors === 'number' ? `，失败 ${errors} 个` : '') +
-                        (typeof usedPoints === 'number' ? `，本次预计扣除 ${usedPoints} 积分` : '')
-                    );
-                } else {
-                    toast.success(
-                        typeof usedPoints === 'number'
-                            ? `所有角色立绘生成成功，本次预计扣除 ${usedPoints} 积分`
-                            : '所有角色立绘生成成功'
-                    );
-                }
+                // 弹出结果弹窗
+                setNpcGenerationResult({
+                    generatedCount: effectiveSuccessful,
+                    totalCount: totalSuccessful,
+                    pointsDeducted: pointsDeducted ?? 0,
+                    remainingPoints,
+                });
+                setNpcResultModalOpen(true);
                 if (onDataChange) {
                     onDataChange();
                 }

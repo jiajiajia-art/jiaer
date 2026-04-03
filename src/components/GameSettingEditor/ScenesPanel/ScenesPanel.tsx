@@ -26,6 +26,7 @@ import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
 import MusicList, { type MusicItem } from '../UploadMusic/MusicList';
 import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
+import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 
 interface BgmItem {
@@ -84,19 +85,28 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const [sceneCostModalOpen, setSceneCostModalOpen] = useState<boolean>(false);
     const [singleSceneCostModalOpen, setSingleSceneCostModalOpen] = useState<boolean>(false);
     const [worldMapCostModalOpen, setWorldMapCostModalOpen] = useState<boolean>(false);
-    
+    // 一键生成结果弹窗
+    const [sceneResultModalOpen, setSceneResultModalOpen] = useState<boolean>(false);
+    const [sceneGenerationResult, setSceneGenerationResult] = useState<{
+        generatedCount: number;
+        totalCount: number;
+        pointsDeducted: number;
+        remainingPoints?: number;
+    } | null>(null);
+
+
     const [isGeneratingAllSceneImages, setIsGeneratingAllSceneImages] = useState<boolean>(false);
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
     const [generatingSceneId, setGeneratingSceneId] = useState<string | null>(null);
     const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
     const [isLoadingSceneCost, setIsLoadingSceneCost] = useState<boolean>(false);
-    
+
     const [worldMapImageOverride, setWorldMapImageOverride] = useState<string | null>(null);
     const [sceneCostPoints, setSceneCostPoints] = useState<number | null>(null);
-    
+
     const [musicList, setMusicList] = useState<MusicItem[]>([]);
     const [uploadMusicModalOpen, setUploadMusicModalOpen] = useState<boolean>(false);
-    
+
     const sceneFileInputRef = useRef<HTMLInputElement>(null);
     const newSceneFileInputRef = useRef<HTMLInputElement>(null);
     const worldMapFileInputRef = useRef<HTMLInputElement>(null);
@@ -287,6 +297,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setIsGeneratingAllSceneImages,
                 setSceneCostPoints,
                 setIsLoadingSceneCost,
+                setSceneResultModalOpen,
+                setSceneGenerationResult,
                 setPendingImages,
                 setHasUnsavedChanges,
                 sceneFileInputRef,
@@ -932,6 +944,17 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 message={`本次生成场景立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
+            />
+
+            {/* 一键生成场景立绘结果弹窗 */}
+            <GenerateResultModal
+                isOpen={sceneResultModalOpen}
+                onClose={() => setSceneResultModalOpen(false)}
+                title="场景立绘生成结果"
+                generatedCount={sceneGenerationResult?.generatedCount}
+                totalCount={sceneGenerationResult?.totalCount}
+                pointsDeducted={sceneGenerationResult?.pointsDeducted}
+                remainingPoints={sceneGenerationResult?.remainingPoints}
             />
 
             <ConfirmModal

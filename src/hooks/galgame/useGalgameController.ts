@@ -140,7 +140,7 @@ export const useGalgameController = () => {
         if (!fileId) {
             return;
         }
-        
+
         if (presetDataLoadedRef.current) {
             return;
         }

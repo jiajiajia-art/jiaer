@@ -11,6 +11,7 @@ import { RiDeleteBin5Line } from 'react-icons/ri';
 import { withCacheBust, extractImageExtension } from './utils';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import SaveConfirmModal from '../../CommonModal/SaveConfirmModal';
+import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { toast } from 'react-hot-toast';
 import { useGameStore } from '../../../store/gameStore';
 import { useAuthStore } from '../../../store/useAuthStore';
@@ -91,6 +92,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [npcCostModalOpen, setNpcCostModalOpen] = useState<boolean>(false);
     const [npcCostPoints, setNpcCostPoints] = useState<number | null>(null);
     const [isLoadingNpcCost, setIsLoadingNpcCost] = useState<boolean>(false);
+    // 一键生成结果弹窗
+    const [npcResultModalOpen, setNpcResultModalOpen] = useState<boolean>(false);
+    const [npcGenerationResult, setNpcGenerationResult] = useState<{
+        generatedCount: number;
+        totalCount: number;
+        pointsDeducted: number;
+        remainingPoints?: number;
+    } | null>(null);
+
+
     // 单个角色立绘生成积分确认
     const [singleNpcCostModalOpen, setSingleNpcCostModalOpen] = useState<boolean>(false);
     const [pendingCharacterForGenerate, setPendingCharacterForGenerate] = useState<Character | null>(null);
@@ -417,6 +428,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             setNpcCostPoints,
             setNpcCostModalOpen,
             setIsLoadingNpcCost,
+            setNpcResultModalOpen,
+            setNpcGenerationResult,
             setPendingImages,
             setHasUnsavedChanges,
             activeCharacterId,
@@ -1711,6 +1724,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 message={`本次生成角色立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
+            />
+
+            {/* 一键生成角色立绘结果弹窗 */}
+            <GenerateResultModal
+                isOpen={npcResultModalOpen}
+                onClose={() => setNpcResultModalOpen(false)}
+                title="角色立绘生成结果"
+                generatedCount={npcGenerationResult?.generatedCount}
+                totalCount={npcGenerationResult?.totalCount}
+                pointsDeducted={npcGenerationResult?.pointsDeducted}
+                remainingPoints={npcGenerationResult?.remainingPoints}
             />
 
             {/* 差分图片生成积分提示 */}

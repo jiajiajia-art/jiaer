@@ -57,6 +57,14 @@ export interface HandlersContext {
     setIsGeneratingAllSceneImages: React.Dispatch<React.SetStateAction<boolean>>;
     setSceneCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setIsLoadingSceneCost: React.Dispatch<React.SetStateAction<boolean>>;
+    // 一键生成结果弹窗
+    setSceneResultModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setSceneGenerationResult: React.Dispatch<React.SetStateAction<{
+        generatedCount: number;
+        totalCount: number;
+        pointsDeducted: number;
+        remainingPoints?: number;
+    } | null>>;
     setPendingImages: React.Dispatch<React.SetStateAction<{ [sceneId: string]: { [variant: string]: PendingImage } }>>;
     setHasUnsavedChanges: (value: boolean) => void;
 
@@ -120,6 +128,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setIsGeneratingAllSceneImages,
         setSceneCostPoints,
         setIsLoadingSceneCost,
+        setSceneResultModalOpen,
+        setSceneGenerationResult,
         setPendingImages,
         setHasUnsavedChanges,
         // refs
@@ -932,23 +942,20 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 const scenesTotal: number | undefined = results?.scenesTotal ?? results?.total;
                 const errors: number | undefined = typeof results?.errors === 'number' ? results.errors : undefined;
 
-                const usedPoints =
-                    sceneCostPoints ??
-                    (typeof scenesGenerated === 'number' ? scenesGenerated * 10 : undefined);
+                // 从 results 中获取新的字段
+                const effectiveSuccessful = results?.effectiveSuccessful ?? results?.scenesGenerated ?? 0;
+                const totalSuccessful = results?.totalSuccessful ?? results?.scenesTotal ?? 0;
+                const pointsDeducted = results?.pointsDeducted ?? sceneCostPoints;
+                const remainingPoints = results?.remainingPoints;
 
-                if (typeof scenesGenerated === 'number' && typeof scenesTotal === 'number') {
-                    toast.success(
-                        `所有场景立绘生成完成：成功 ${scenesGenerated}/${scenesTotal} 个` +
-                        (typeof errors === 'number' ? `，失败 ${errors} 个` : '') +
-                        (typeof usedPoints === 'number' ? `，本次预计扣除 ${usedPoints} 积分` : '')
-                    );
-                } else {
-                    toast.success(
-                        typeof usedPoints === 'number'
-                            ? `所有场景立绘生成成功，本次预计扣除 ${usedPoints} 积分`
-                            : '所有场景立绘生成成功'
-                    );
-                }
+                // 弹出结果弹窗
+                setSceneGenerationResult({
+                    generatedCount: effectiveSuccessful,
+                    totalCount: totalSuccessful,
+                    pointsDeducted: pointsDeducted ?? 0,
+                    remainingPoints,
+                });
+                setSceneResultModalOpen(true);
             } else {
                 toast.error('当前使用人数过多，请稍后再试');
             }

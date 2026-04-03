@@ -1,0 +1,282 @@
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3200;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modalWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal {
+    width: 760px;
+    min-height: 320px;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-width: 360px;
+    display: flex;
+    flex-direction: column;
+}
+
+.modalHeader {
+    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
+    padding: 6px 32px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+}
+
+.headerContent {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.titleIcon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.icon {
+    width: 32px;
+    height: 32px;
+    filter: brightness(0) invert(1);
+}
+
+.title {
+    font-size: 28px;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.closeButton {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.closeButton img {
+    width: 60px;
+    height: 60px;
+    filter: brightness(0) invert(1);
+}
+
+.closeButton:active {
+    transform: scale(0.95);
+}
+
+.closeButton:hover {
+    opacity: 0.8;
+}
+
+.modalBody {
+    padding: 24px 32px 28px;
+    flex: 1;
+    gap: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #ffffff;
+}
+
+.resultItem {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.resultIcon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.resultText {
+    font-size: 24px;
+    color: var(--primary);
+    text-align: center;
+    line-height: 1.6;
+    font-weight: 500;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    max-width: 480px;
+    justify-content: center;
+}
+
+.confirmButton {
+    width: 220px;
+    height: 56px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    background: #FB4655;
+    border-radius: 8px;
+}
+
+.confirmButton:hover {
+    background: #e63946;
+}
+
+.confirmButton:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+    .modalOverlay {
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .modalWrapper {
+        width: auto;
+        max-width: calc(100vw - 40px);
+        box-sizing: border-box;
+    }
+
+    .modal {
+        width: 95vw;
+        max-width: calc(100vw - 40px);
+        min-height: auto;
+        height: auto;
+        border-radius: 8px;
+        box-sizing: border-box;
+        min-width: 300px;
+    }
+
+    .modalHeader {
+        padding: 16px 20px;
+        min-height: 60px;
+    }
+
+    .titleIcon {
+        gap: 8px;
+    }
+
+    .icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .modalBody {
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .resultIcon {
+        font-size: 20px;
+    }
+
+    .resultText {
+        font-size: 16px;
+    }
+
+    .buttonGroup {
+        gap: 16px;
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .confirmButton {
+        width: 100%;
+        height: 50px;
+        font-size: 16px;
+    }
+
+    .closeButton {
+        width: 36px;
+        height: 36px;
+    }
+
+    .closeButton img {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal {
+        width: 90vw;
+        max-width: none;
+    }
+
+    .modalHeader {
+        padding: 14px 16px;
+    }
+
+    .title {
+        font-size: 18px;
+    }
+
+    .icon {
+        width: auto;
+        height: 30px;
+    }
+
+    .modalBody {
+        padding: 20px 16px;
+    }
+
+    .confirmButton {
+        height: 48px;
+        font-size: 15px;
+    }
+}
