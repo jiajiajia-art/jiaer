@@ -958,7 +958,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         {batchSceneEtaText && (
                             <div className={styles.plusLoadingHint}>{batchSceneEtaText}</div>
                         )}
-                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作。</div>
+                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作</div>
                     </div>
                 </div>
             )}

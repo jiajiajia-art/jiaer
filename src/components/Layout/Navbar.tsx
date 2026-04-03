@@ -7,9 +7,11 @@ import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { getImageUrl } from '../../utils/constants';
 
 const isWebViewEnv = (): boolean => {
-    const win = window as any;
+    const win = window as { __wxjs_environment?: string };
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
+
+type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | '';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
@@ -27,7 +29,6 @@ const Navbar: React.FC = () => {
         const handleResize = () => {
             setIsDesktopLayout(window.innerWidth > 768);
         };
-
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -40,41 +41,30 @@ const Navbar: React.FC = () => {
             }
         };
 
-        if (showUserMenu) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => {
-                document.removeEventListener('mousedown', handleClickOutside);
-            };
-        }
+        if (!showUserMenu) return;
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, [showUserMenu]);
 
-    const getActiveNav = () => {
+    const getActiveNav = (): NavKey => {
         const path = location.pathname;
-        if (path === '/home' || path === '/') {
-            return '首页';
-        }
-        if (path.startsWith('/create')) {
-            return '创作';
-        }
-        if (path.startsWith('/warehouse')) {
-            return '仓库';
-        }
+        if (path === '/home' || path === '/') return 'home';
+        if (path.startsWith('/categories')) return 'categories';
+        if (path.startsWith('/create')) return 'create';
+        if (path.startsWith('/warehouse')) return 'warehouse';
         return '';
     };
 
     const activeNav = getActiveNav();
 
-    const handleNavClick = (navName: string) => {
-        switch (navName) {
-            case '创作':
-                navigate('/create');
-                break;
-            case '仓库':
-                navigate('/warehouse');
-                break;
-            default:
-                break;
+    const requireAuth = (): boolean => {
+        if (isAuthenticated) return true;
+        if (!isWebViewEnv()) {
+            setIsAuthModalOpen(true);
         }
+        return false;
     };
 
     return (
@@ -83,42 +73,40 @@ const Navbar: React.FC = () => {
                 <div className={styles.logo}>
                     <img src={`${import.meta.env.BASE_URL}data/assets/LOGO2.png`} alt="logo" />
                 </div>
+
                 <div className={styles.navLinks}>
                     <div
-                        className={`${styles.navLink} ${activeNav === '首页' ? styles.navLinkActive : ''}`}
+                        className={`${styles.navLink} ${activeNav === 'home' ? styles.navLinkActive : ''}`}
                         onClick={() => navigate('/home')}
                     >
                         首页
                     </div>
                     <div
-                        className={`${styles.navLink} ${activeNav === '创作' ? styles.navLinkActive : ''}`}
+                        className={`${styles.navLink} ${activeNav === 'categories' ? styles.navLinkActive : ''}`}
+                        onClick={() => navigate('/categories')}
+                    >
+                        分类
+                    </div>
+                    <div
+                        className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''}`}
                         onClick={() => {
-                            if (!isAuthenticated) {
-                                if (!isWebViewEnv()) {
-                                    setIsAuthModalOpen(true);
-                                }
-                                return;
-                            }
-                            handleNavClick('创作');
+                            if (!requireAuth()) return;
+                            navigate('/create');
                         }}
                     >
                         创作
                     </div>
                     <div
-                        className={`${styles.navLink} ${activeNav === '仓库' ? styles.navLinkActive : ''}`}
+                        className={`${styles.navLink} ${activeNav === 'warehouse' ? styles.navLinkActive : ''}`}
                         onClick={() => {
-                            if (!isAuthenticated) {
-                                if (!isWebViewEnv()) {
-                                    setIsAuthModalOpen(true);
-                                }
-                                return;
-                            }
-                            handleNavClick('仓库');
+                            if (!requireAuth()) return;
+                            navigate('/warehouse');
                         }}
                     >
                         仓库
                     </div>
                 </div>
+
                 <div className={styles.navRight}>
                     <div className={styles.searchBox}>
                         <input className={styles.searchInput} placeholder="" />
@@ -126,17 +114,22 @@ const Navbar: React.FC = () => {
                             <IoSearch />
                         </span>
                     </div>
+
                     {isAuthenticated ? (
                         <div className={styles.avatarContainer}>
                             <div
                                 className={styles.avatar}
                                 onClick={() => {
                                     if (isWebViewEnv()) return;
-                                    setShowUserMenu(!showUserMenu);
+                                    setShowUserMenu((prev) => !prev);
                                 }}
                             >
-                                <img src={getImageUrl(user?.user.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`} alt="" />
+                                <img
+                                    src={getImageUrl(user?.user.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
+                                    alt=""
+                                />
                             </div>
+
                             {showUserMenu && !isWebViewEnv() && (
                                 <div className={styles.userMenu}>
                                     <button
@@ -152,7 +145,6 @@ const Navbar: React.FC = () => {
                                         <button
                                             className={styles.menuBtn}
                                             onClick={() => {
-                                                // 实现管理员 PC 端管理面板入口
                                                 navigate('/admin');
                                                 setShowUserMenu(false);
                                             }}
@@ -173,7 +165,7 @@ const Navbar: React.FC = () => {
                             )}
                         </div>
                     ) : (
-                        !isWebViewEnv() ? (
+                        !isWebViewEnv() && (
                             <button
                                 className={styles.loginBtn}
                                 onClick={() => {
@@ -184,9 +176,11 @@ const Navbar: React.FC = () => {
                             >
                                 登录
                             </button>
-                        ) : <></>)}
+                        )
+                    )}
                 </div>
             </div>
+
             {!isWebViewEnv() && (
                 <AuthModal
                     isOpen={isAuthModalOpen}

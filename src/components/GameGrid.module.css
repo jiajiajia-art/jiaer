@@ -1,4 +1,3 @@
-/* 一行四个，自动调整宽度 */
 .grid4 {
     display: grid;
     grid-template-columns: repeat(4, 250px);
@@ -7,156 +6,123 @@
 
 .goodsCard {
     width: 250px;
-    height: auto;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    /* cursor: pointer; */
     display: flex;
     flex-direction: column;
+    cursor: pointer;
 }
 
 .goodsImg {
     width: 100%;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    aspect-ratio: 25 / 13;
     position: relative;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 .goodsImg img {
-    width: 250px;
-    height: 130px;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-radius: 10px;
+    display: block;
 }
 
-/* 激励标签（右上角） */
 .incentiveTag {
     position: absolute;
     top: 8px;
-    right: 8px;
-    background: rgba(255, 193, 7, 0.95); /* 黄色 */
+    left: 8px;
+    background: rgba(255, 193, 7, 0.95);
     color: #111;
+    border: 1px solid rgba(255, 193, 7, 1);
+    border-radius: 6px;
     padding: 4px 8px;
-    border-radius: 4px;
     font-size: 12px;
     font-weight: 600;
-    z-index: 2;
-    white-space: nowrap;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 193, 7, 1);
+    z-index: 3;
 }
 
 .incentiveFinished {
-    background: rgba(40, 167, 69, 0.95); /* 绿色 */
+    background: rgba(40, 167, 69, 0.95);
     color: #fff;
     border-color: rgba(40, 167, 69, 1);
 }
 
-/* .gameTag {
+.goodsTypeTag {
     position: absolute;
     top: 8px;
     right: 8px;
-    background: rgba(251, 70, 85, 0.9);
-    color: #ffffff;
+    max-width: 68%;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
     padding: 4px 8px;
-    border-radius: 4px;
     font-size: 12px;
-    font-weight: 500;
-    z-index: 2;
+    line-height: 1.2;
     white-space: nowrap;
-    backdrop-filter: blur(4px);
-} */
-
-.goodsInfo {
-    width: 100%;
-    padding: 10px 5px 5px 5px;
-    position: absolute;
-    bottom: 0px;
-    left: 0px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.00) 0%, #000000 100%);
-    border-radius: 0 0 10px 10px;
-    min-height: 34px;
-    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 3;
 }
 
-.goodsInfoLeft {
+.goodsInfo {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     display: flex;
-    gap: 12px;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px 8px 7px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 2%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+.goodsTheme {
+    max-width: 60%;
+    color: #fff;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.goodsInfoRight {
+    display: flex;
     align-items: center;
-    min-width: 0;
-    flex: 1 1 auto;
+    gap: 10px;
 }
 
 .goodsInfoItem {
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #FFFFFF;
-    font-size: 14px;
-    font-weight: 500;
-    min-width: 0; /* 允许内部文本在 flex 环境下被截断 */
-}
-
-.goodsInfoValue {
-    display: inline-block;
+    color: #fff;
+    font-size: 13px;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.goodsInfoTag {
-    margin-left: auto;
-    max-width: 50%;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    line-height: 1.2;
-    color: #FFFFFF;
-    background: rgba(255, 255, 255, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    backdrop-filter: blur(4px);
-    flex: 0 0 auto;
 }
 
 .goodsInfoItem svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
+}
+
+.goodsInfoValue {
+    white-space: nowrap;
 }
 
 .goodsBody {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
     margin-top: 6px;
 }
 
 .goodsTitleWrap {
-    flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
 }
 
 .goodsTitle {
     font-size: 20px;
     font-weight: 600;
     color: #4c4c4c;
-    margin-bottom: 2px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -170,237 +136,47 @@
     text-overflow: ellipsis;
 }
 
-.goodsPrice {
-    background-image: url('/data/assets/home/价格按钮.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    height: 50px;
-    width: 100px;
-    border-radius: 10px 0 10px 0px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 0px;
-    cursor: pointer;
-    padding: 8px 12px;
-    box-sizing: border-box;
-    line-height: 1;
-}
-
-.goodsPrice:hover {
-    transform: translateY(-2px);
-}
-
-.startGameBtn {
-    font-size: 16px!important;
-    color: #FFFFFF;
-    cursor: pointer;
-}
-
-.goodsPrice button {
-    background-color: transparent;
-    font-size: 18px;
-    /* font-weight: 600 !important; */
-    color: #fff;
-    cursor: pointer;
-}
-
-.priceIcon {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    display: inline-block;
-}
-
-/* 游戏编辑按钮 */
-.gameEditBtn {
-    background-image: url('/data/assets/home/镂空按钮.png');
-    background-size: 100% 100%;
-    background-position: center;
-    background-repeat: no-repeat;
-    height: 50px;
-    width: 100px;
-    border-radius: 10px 0 10px 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    padding: 8px 12px;
-    box-sizing: border-box;
-    font-size: 16px;
-    font-weight: 500;
-    color: #FB4655;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.gameEditBtn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(251, 91, 102, 0.08);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-    pointer-events: none; /* 确保伪元素不阻止点击 */
-    z-index: 0;
-}
-
-.gameEditBtn:hover::before {
-    width: 120px;
-    height: 120px;
-}
-
-.gameEditBtn:hover {
-    transform: translateY(-2px);
-}
-
-
-.gameEditBtn button {
-    background-color: transparent;
-    font-size: 18px;
-    color: #FB4655;
-    cursor: pointer;
-    position: relative;
-    z-index: 1; /* 确保按钮在伪元素之上 */
-    pointer-events: auto; /* 确保按钮可以接收点击事件 */
-}
-
-.goodsPriceText {
-    font-size: 14px;
-    color: #fdbdc0;
-    text-decoration: line-through;
-    line-height: 1.1;
-    margin: 0;
-    padding: 0;
-}
-
-.goodsPriceText img {
-    width: 12px;
-    height: 12px;
-    object-fit: contain;
-    display: inline-block;
-}
-
-.specialPriceText {
-    font-size: 18px;
-    color: #FFFFFF;
-    line-height: 1.1;
-    margin: 0;
-    padding: 0;
-}
-
-.specialPriceText img {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    display: inline-block;
-}
-
-.normalPriceText {
-    font-size: 18px;
-    color: #FFFFFF;
-    line-height: 1.1;
-    margin: 0;
-    padding: 0;
-}
-
-.priceValue {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    text-decoration: inherit;
-}
-
-.priceValue svg {
-    font-size: 10px;
-}
-
 .emptyState {
     grid-column: 1 / -1;
     text-align: center;
     padding: 50px;
-    color: #5E4630;
-}
-
-.emptyState h2 {
-    font-size: 24px;
-    margin-bottom: 10px;
-}
-
-.emptyState p {
-    font-size: 16px;
-    opacity: 0.9;
 }
 
 @media (max-width: 768px) {
     .grid4 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px;
-        height: auto;
+        gap: 8px;
     }
 
     .goodsCard {
         width: 100%;
-        border-radius: 10px;
-        padding: 4px;
     }
 
-    .goodsImg {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 16/9;
-    }
-
-    .goodsImg img {
-        width: 100%;
-        height: 100%;
-        border-radius: 10px;
-        object-fit: cover;
+    .goodsTypeTag {
+        max-width: 72%;
+        font-size: 11px;
     }
 
     .goodsInfo {
-        gap: 5px;
-        padding: 9px 5px 5px 5px;
-        min-height: 30px;
+        padding: 9px 6px 6px;
     }
 
-    /* 移动端：给数字一个上限宽度，避免被右侧标签挤压后出现“挡住/叠在一起”的观感 */
-    .goodsInfoValue {
-        max-width: 72px;
-    }
-
-    .goodsInfoTag {
-        max-width: 42%;
+    .goodsTheme {
+        max-width: 56%;
         font-size: 11px;
-        padding: 2px 7px;
     }
 
-    .goodsInfoLeft {
+    .goodsInfoRight {
         gap: 8px;
     }
 
     .goodsInfoItem {
-        font-size: 13px;
-        gap: 4px;
+        font-size: 12px;
     }
 
     .goodsInfoItem svg {
-        width: 15px;
-        height: 15px;
-    }
-
-    .goodsBody {
-        gap: 6px;
+        width: 14px;
+        height: 14px;
     }
 
     .goodsTitle {
@@ -409,47 +185,5 @@
 
     .goodsSubtitle {
         font-size: 11px;
-    }
-
-    .goodsPrice,
-    .gameEditBtn {
-        width: 72px;
-        height: 36px;
-        border-radius: 10px 0 10px 0;
-        gap: 0px;
-    }
-
-    .goodsPrice button,
-    .gameEditBtn button {
-        font-size: 14px;
-    }
-
-    .gameEditBtn{
-        padding: 0;
-    }
-
-    .goodsPriceText {
-        font-size: 10px;
-        line-height: 1;
-        margin: 0;
-        padding: 0;
-    }
-
-    .specialPriceText {
-        font-size: 14px;
-        line-height: 1;
-        margin: 0;
-        padding: 0;
-    }
-
-    .normalPriceText {
-        font-size: 18px;
-        line-height: 1;
-        margin: 0;
-        padding: 0;
-    }
-
-    .startGameBtn {
-        font-size: 12px!important;
     }
 }

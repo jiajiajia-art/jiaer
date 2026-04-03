@@ -321,6 +321,51 @@
 /* 纵向排列：文件类型选择器 + 上传区域 */
 .uploaderColumn{ display:flex; flex-direction:column; gap:12px; width: 800px; }
 
+.themeTagsPanel {
+  width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.themeTagHint {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.themeTagsWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.themeTagChip {
+  border: 1px solid rgba(17, 24, 39, 0.15);
+  background: #fff;
+  color: #111827;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.themeTagChip:hover {
+  border-color: rgba(224, 61, 75, 0.6);
+  color: var(--primary);
+}
+
+.themeTagChipActive {
+  border-color: var(--primary);
+  background: rgba(224, 61, 75, 0.1);
+  color: var(--primary-dark);
+}
+
+.themeTagError {
+  font-size: 13px;
+  color: var(--primary);
+}
+
 @media (max-width: 1080px){ .uploadGrid{ grid-template-columns: 1fr; } }
 
 .fileRowLine { display:flex; gap:10px; align-items:center; padding:4px 0; }
@@ -357,4 +402,5 @@
   .fileRow { width: 100%; }
   .primaryBtn { width: 100%; height: 44px; font-size: 14px; }
   .uploaderColumn { width: 100%; }
+  .themeTagsPanel { width: 100%; }
 }

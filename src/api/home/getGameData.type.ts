@@ -31,6 +31,8 @@ export interface UserGameData {
     customAppId?: string;
     needDeleted: boolean;
     display_cover_url: string;
+    theme_tag_ids?: number[];
+    theme_tag_names?: string[];
     /** 以下为激励计划相关的可选字段（由服务端逐步补充，前端做兼容） */
     /** 作品激励开始时间（ISO 字符串），为空表示未参与 */
     incentiveStartTime?: string | null;
@@ -63,6 +65,9 @@ export interface UserGameRequest{
 export interface PublicGameRequest {
     limit?: string;
     offset?: string;
+    tagId?: string;
+    mode?: string;
+    sort?: string;
 }
 
 export interface GameDetailRequest {

@@ -21,6 +21,7 @@ import RouteReporter from './components/RouteReporter';
 import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
 import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
+import Categories from './page/Categories';
 
 function App() {
   usePlatformDurationTracking();
@@ -50,6 +51,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/categories" element={<Categories />} />
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />

@@ -16,6 +16,8 @@ import { getImageUrl } from '../utils/constants';
 import announcementApi from '../api/announcement/announcementApi';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
 import AnnouncementModal from '../components/AnnouncementModal';
+import gameTagsApi from '../api/gameTags/gameTagsApi';
+import type { FlatThemeTag } from '../utils/themeTags';
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -50,12 +52,21 @@ const Home: React.FC = () => {
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
     const [latestAnnouncement, setLatestAnnouncement] = useState<AnnouncementRecord | null>(null);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
+    const [isThemeShowcaseDragging, setIsThemeShowcaseDragging] = useState(false);
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
     const touchDeltaXRef = useRef(0);
     const touchDeltaYRef = useRef(0);
     const suppressBannerClickRef = useRef(false);
     const suppressClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const themeShowcaseRef = useRef<HTMLDivElement | null>(null);
+    const themeShowcaseDragStateRef = useRef({
+        isDragging: false,
+        startX: 0,
+        startScrollLeft: 0,
+        moved: false,
+    });
     const hasMultipleCarouselItems = carouselItems.length > 1;
     const carouselRenderItems = hasMultipleCarouselItems
         ? [carouselItems[carouselItems.length - 1], ...carouselItems, carouselItems[0]]
@@ -247,6 +258,22 @@ const Home: React.FC = () => {
         }
     }, []);
 
+    const loadThemeTags = useCallback(async () => {
+        try {
+            const response = await gameTagsApi.getFeaturedGameTags();
+            if (response.data.success) {
+                // 实现首页热门题材读取后台配置
+                setThemeTags((response.data.data || []).map((tag) => ({
+                    id: Number(tag.id),
+                    name: String(tag.name || ''),
+                    parentName: String(tag.parent_name || ''),
+                })).filter((tag) => Number.isFinite(tag.id) && tag.id > 0 && tag.name));
+            }
+        } catch (error) {
+            console.error('加载首页题材标签失败:', error);
+        }
+    }, []);
+
     // 初始加载
     const loadLibraryData = useCallback(async () => {
         // 防止重复加载
@@ -290,6 +317,10 @@ const Home: React.FC = () => {
     useEffect(() => {
         loadLatestAnnouncement();
     }, [loadLatestAnnouncement]);
+
+    useEffect(() => {
+        loadThemeTags();
+    }, [loadThemeTags]);
 
     // 使用 libraryDataApi 获取游戏列表数据（无论是否登录都加载）
     useEffect(() => {
@@ -507,6 +538,51 @@ const Home: React.FC = () => {
         });
     };
 
+    const handleThemeClick = (tagId: number) => {
+        navigate(`/categories?tagId=${tagId}`);
+    };
+
+    const handleThemeShowcaseMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (event.button !== 0 || !themeShowcaseRef.current) return;
+        // 实现首页热门题材拖拽横滑
+        themeShowcaseDragStateRef.current = {
+            isDragging: true,
+            startX: event.clientX,
+            startScrollLeft: themeShowcaseRef.current.scrollLeft,
+            moved: false,
+        };
+        setIsThemeShowcaseDragging(true);
+    }, []);
+
+    const handleThemeShowcaseMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (!themeShowcaseDragStateRef.current.isDragging || !themeShowcaseRef.current) return;
+        const deltaX = event.clientX - themeShowcaseDragStateRef.current.startX;
+        if (Math.abs(deltaX) > 6) {
+            themeShowcaseDragStateRef.current.moved = true;
+        }
+        themeShowcaseRef.current.scrollLeft = themeShowcaseDragStateRef.current.startScrollLeft - deltaX;
+    }, []);
+
+    const stopThemeShowcaseDragging = useCallback(() => {
+        if (!themeShowcaseDragStateRef.current.isDragging) return;
+        themeShowcaseDragStateRef.current.isDragging = false;
+        window.setTimeout(() => {
+            themeShowcaseDragStateRef.current.moved = false;
+        }, 0);
+        setIsThemeShowcaseDragging(false);
+    }, []);
+
+    const handleThemeShowcaseClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (!themeShowcaseDragStateRef.current.moved) return;
+        // 阻止拖拽时误触题材跳转
+        event.preventDefault();
+        event.stopPropagation();
+    }, []);
+
+    const handleOpenCategories = () => {
+        navigate('/categories');
+    };
+
     useEffect(() => {
         return () => {
             if (suppressClickTimerRef.current) {
@@ -551,10 +627,10 @@ const Home: React.FC = () => {
                 {/* 右侧商城内容 */}
                 <div className={styles.main}>
                     <div className={styles.todayWrap}>
-                        <div className={styles.carouselContainer}>
+                        <div className={`${styles.carouselContainer} ${styles.carouselContainerPc}`}>
                             {carouselItems.length > 0 ? (
                                 <>
-                                    <div className={styles.carouselWrapper}>
+                                    <div className={`${styles.carouselWrapper} ${styles.carouselWrapperPc}`}>
                                         <div
                                             className={`${styles.carouselTrack} ${!isTransitionEnabled ? styles.carouselTrackNoTransition : ''}`}
                                             style={{ transform: `translateX(-${currentSlide * 100}%)` }}
@@ -659,6 +735,34 @@ const Home: React.FC = () => {
                             ) : (
                                 <div className={styles.carouselEmpty} />
                             )}
+                        </div>
+                    </div>
+
+                    {/* 实现移动端与 PC 共用热门题材展示 */}
+                    <div className={styles.themeShowcase}>
+                        <div className={styles.themeShowcaseHeader}>
+                            <h3>热门题材</h3>
+                            <button type="button" onClick={handleOpenCategories}>查看全部</button>
+                        </div>
+                        <div
+                            ref={themeShowcaseRef}
+                            className={`${styles.themeShowcaseList} ${isThemeShowcaseDragging ? styles.themeShowcaseListDragging : ''}`}
+                            onMouseDown={handleThemeShowcaseMouseDown}
+                            onMouseMove={handleThemeShowcaseMouseMove}
+                            onMouseUp={stopThemeShowcaseDragging}
+                            onMouseLeave={stopThemeShowcaseDragging}
+                            onClickCapture={handleThemeShowcaseClickCapture}
+                        >
+                            {themeTags.slice(0, 12).map((tag) => (
+                                <button
+                                    key={tag.id}
+                                    type="button"
+                                    className={styles.themeShowcaseItem}
+                                    onClick={() => handleThemeClick(tag.id)}
+                                >
+                                    {tag.name}
+                                </button>
+                            ))}
                         </div>
                     </div>
 

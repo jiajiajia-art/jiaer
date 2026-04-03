@@ -612,6 +612,42 @@
     display: inline-block;
 }
 
+.statBoxWithAction {
+    /* 实现结算按钮与积分同行布局 */
+    height: auto;
+    min-height: 100px;
+}
+
+.statActionRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.settleButton {
+    /* 实现待结算奖励积分按钮样式 */
+    min-height: 34px;
+    padding: 0 14px;
+    background-color: #FB4655;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settleButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(251, 70, 85, 0.24);
+}
+
 /* 发布作品模块 */
 .shopSection {
     width: 1080px;
@@ -675,6 +711,10 @@
     .statBox {
         width: 100%;
         max-width: 100%;
+    }
+
+    .statBoxWithAction {
+        min-height: 112px;
     }
 
     .sectionHeader {
@@ -824,12 +864,29 @@
         height: 90px;
     }
 
+    .statBoxWithAction {
+        height: 90px;
+        min-height: 90px;
+    }
+
     .statValue {
         font-size: 26px;
     }
 
     .statLabel {
         font-size: 14px;
+    }
+
+    .statActionRow {
+        /* 实现移动端积分与结算按钮同一水平线 */
+        align-items: center;
+        gap: 8px;
+    }
+
+    .settleButton {
+        min-height: 28px;
+        padding: 0 12px;
+        font-size: 12px;
     }
 
     .sectionHeader {

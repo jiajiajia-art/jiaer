@@ -1,0 +1,254 @@
+.pageRoot {
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1920px;
+    margin: 0 auto;
+}
+
+.mainContent {
+    display: flex;
+    margin-bottom: 220px;
+}
+
+.main {
+    width: 100%;
+    max-width: 1140px;
+    margin: 80px auto 0;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.backButton {
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(26, 29, 33, 0.14);
+    border-radius: 999px;
+    background: #fff;
+    color: #1a1d21;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.backButton svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.filtersPanel {
+    display: flex;
+}
+
+.filtersCard {
+    width: 100%;
+    padding: 20px;
+    border: 1px solid rgba(26, 29, 33, 0.08);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top left, rgba(224, 61, 75, 0.12), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 246, 244, 0.98));
+    box-shadow: 0 18px 48px rgba(26, 29, 33, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.filtersCardHead {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(26, 29, 33, 0.08);
+}
+
+.filtersTitle {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.35;
+    color: #1a1d21;
+}
+
+.backButtonInCard {
+    flex-shrink: 0;
+}
+
+.filtersTitleMobile {
+    margin-left: auto;
+    text-align: right;
+}
+
+.filterSection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.filterTitle {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1a1d21;
+}
+
+.chipRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tagChip {
+    border: 1px solid rgba(26, 29, 33, 0.14);
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: #fff;
+    color: #1a1d21;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: all 0.2s ease;
+}
+
+.tagChip:hover {
+    border-color: rgba(224, 61, 75, 0.55);
+    color: var(--primary);
+}
+
+.tagChipActive {
+    border-color: var(--primary);
+    background: rgba(224, 61, 75, 0.1);
+    color: var(--primary-dark);
+}
+
+.themeScrollRow {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
+    user-select: none;
+}
+
+.themeScrollRow::-webkit-scrollbar {
+    display: none;
+}
+
+.themeScrollRowDragging {
+    cursor: grabbing;
+}
+
+.tagSummaryRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.tagSummaryText {
+    font-size: 13px;
+    color: #4b5563;
+}
+
+.listBlock {
+    min-height: 320px;
+}
+
+.loadingMore {
+    margin-top: 14px;
+}
+
+.loadMoreTrigger {
+    height: 1px;
+}
+
+@media (max-width: 768px) {
+    .pageRoot {
+        min-height: 100vh;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    }
+
+    .mainContent {
+        margin-bottom: 0;
+    }
+
+    .main {
+        margin-top: 0;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .filtersCard {
+        padding: 14px;
+        border-radius: 20px;
+        gap: 14px;
+    }
+
+    .filtersCardHead {
+        /* 实现移动端框内返回与标题定位 */
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 12px;
+        gap: 12px;
+    }
+
+    .filtersTitle {
+        font-size: 20px;
+        line-height: 1.4;
+    }
+
+    .backButtonInCard {
+        margin-top: 1px;
+    }
+
+    .filtersTitleMobile {
+        /* 实现移动端标题位置微调 */
+        max-width: calc(100% - 52px);
+        margin-top: 4px;
+    }
+
+    .chipRow {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .chipRow::-webkit-scrollbar {
+        display: none;
+    }
+
+    .themeScrollRow {
+        padding-bottom: 4px;
+        scrollbar-width: none;
+        cursor: auto;
+    }
+
+    .themeScrollRow::-webkit-scrollbar {
+        display: none;
+    }
+
+    .themeScrollRowDragging {
+        cursor: auto;
+    }
+
+    .treeColumnTitle {
+        padding: 10px 12px;
+    }
+
+    .treeNodeButton {
+        padding: 11px 12px;
+    }
+}

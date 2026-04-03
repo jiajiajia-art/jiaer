@@ -8,6 +8,8 @@ import styles from './CustomIFCreate.module.css';
 import UploadProgress from '../components/CreateGame/UploadProgress';
 import toast from 'react-hot-toast';
 import getGameDataApi from '../api/home/getGameData';
+import gameTagsApi from '../api/gameTags/gameTagsApi';
+import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
 
 const CustomIFCreate: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -17,6 +19,9 @@ const CustomIFCreate: React.FC = () => {
   const [appId, setAppId] = useState<string>('');
   const [, setEntryUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
+  const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
+  const [themeTagError, setThemeTagError] = useState<string>('');
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -33,6 +38,26 @@ const CustomIFCreate: React.FC = () => {
   }, [isEditMode, appIdFromQuery]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const fetchThemeTags = async () => {
+      try {
+        const resp = await gameTagsApi.getGameTagsTree();
+        if (!resp.data?.success || cancelled) return;
+        setAvailableThemeTags(flattenThemeTags(resp.data.data || []));
+      } catch (err) {
+        console.error('加载作品标签失败:', err);
+      }
+    };
+
+    void fetchThemeTags();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const loadGameTitle = async () => {
       if (!isEditMode || !appIdFromQuery) return;
       try {
@@ -41,6 +66,12 @@ const CustomIFCreate: React.FC = () => {
         if (data && typeof data.title === 'string') {
           setTitle(data.title);
         }
+        const existingTagIds = Array.isArray(data?.theme_tag_ids)
+          ? (data.theme_tag_ids || [])
+            .map((id) => Number(id))
+            .filter((id) => Number.isInteger(id) && id > 0)
+          : [];
+        setSelectedThemeTagIds(existingTagIds.slice(0, 2));
       } catch (error) {
         console.error('加载游戏信息失败:', error);
         // 失败时不打断流程，仅提示
@@ -74,6 +105,24 @@ const CustomIFCreate: React.FC = () => {
     setMultiFiles([]);
     setEntryPath('');
     setMultiStats({ count: 0, bytes: 0, selCount: 0, selBytes: 0 });
+  };
+
+  const handleThemeTagToggle = (tagId: number) => {
+    setSelectedThemeTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        const next = prev.filter((id) => id !== tagId);
+        if (next.length > 0) {
+          setThemeTagError('');
+        }
+        return next;
+      }
+      if (prev.length >= 2) {
+        toast.error('作品标签最多选择 2 个');
+        return prev;
+      }
+      setThemeTagError('');
+      return [...prev, tagId];
+    });
   };
   // 旧的 zip/dir 选择器删除；保留单文件选择器以支持点击选择
   const singleRef = fileRef; // 语义别名：单文件 index.html 选择器
@@ -214,71 +263,112 @@ const CustomIFCreate: React.FC = () => {
     setError('');
     if (creating) return;
     try {
-      // 校验输入
+      // 实现作品标签必填与数量限制
+      if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
+        setThemeTagError('请选择 1~2 个作品标签');
+        toast.error('作品标签为必填，且最多选择 2 个');
+        return;
+      }
+      setThemeTagError('');
+
       if (sourceType === 'single') {
         const file = singleFile || fileRef.current?.files?.[0];
-        if (!file) { setError('请上传 index.html'); return; }
+        if (!file) {
+          setError('请上传 index.html');
+          return;
+        }
       } else {
-        if (multiFiles.length === 0) { setError('未选择任何文件'); return; }
-        const sel = multiFiles.filter(i=> i.selected);
-        if (sel.length === 0) { setError('请至少选择一个文件'); return; }
-        if (entryPath && !sel.some(i=> i.path === entryPath)) { setError(`必须选择入口文件：${entryPath}`); return; }
+        if (multiFiles.length === 0) {
+          setError('未选择任何文件');
+          return;
+        }
+        const sel = multiFiles.filter((item) => item.selected);
+        if (sel.length === 0) {
+          setError('请至少选择一个文件');
+          return;
+        }
+        if (entryPath && !sel.some((item) => item.path === entryPath)) {
+          setError(`入口文件未被选中：${entryPath}`);
+          return;
+        }
       }
+
       setCreating(true);
       setIsUploading(true);
       setLastUploadOk(false);
       startFakeProgress();
+
       let id = appIdFromQuery || appId;
-      // 创建模式：先创建 App；编辑模式：直接使用已有 appId
+      // 实现新建模式下自动创建 appId 后再执行上传
       if (!isEditMode && !id) {
-        const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ title: title || '我的游戏' }) });
+        const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title || '我的游戏' }),
+        });
         if (!resp.ok) throw new Error(await resp.text());
         const meta = await resp.json();
         id = meta?.appId || meta?.data?.appId || '';
-        if (!id) throw new Error('服务端未返回 appId');
+        if (!id) throw new Error('创建应用失败：未返回 appId');
         setAppId(id);
-        try { localStorage.setItem(DRAFT_KEY, id); } catch {}
+        try {
+          localStorage.setItem(DRAFT_KEY, id);
+        } catch {}
       }
-      // 2) upload ui（根据模式构建表单）
+
       const fd = new FormData();
-      // 标题：后端 /ui/upload 已支持 title 字段，用于更新 manifest.name / 游戏名称
       if (title.trim()) {
         fd.append('title', title.trim());
       }
-      if (manifestText.trim()) fd.append('manifest', manifestText);
-      if (sourceType === 'single'){
+      if (manifestText.trim()) {
+        fd.append('manifest', manifestText);
+      }
+
+      if (sourceType === 'single') {
         const file = (singleFile || fileRef.current?.files?.[0])!;
-        const size = file.size || 0; if (size<=0) throw new Error('选择的 index.html 文件为空');
+        if ((file.size || 0) <= 0) {
+          throw new Error('选择的 index.html 文件为空');
+        }
         fd.append('index', file, file.name || 'index.html');
       } else {
-        // 多文件上传（客户端已获取文件清单）
         fd.append('mode', 'multi');
-        // 若能唯一识别入口，提供 entryPath 以便后端确定入口
-        if (entryPath) fd.append('entryPath', entryPath);
-        for(const it of multiFiles.filter(i=> i.selected)){
-          fd.append('files[]', it.file, it.path.split('/').pop()||'file');
+        if (entryPath) {
+          fd.append('entryPath', entryPath);
+        }
+        for (const it of multiFiles.filter((item) => item.selected)) {
+          fd.append('files[]', it.file, it.path.split('/').pop() || 'file');
           fd.append('paths[]', it.path);
         }
       }
-      // fetch with abort support
+
       abortRef.current = new AbortController();
-      const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, { method:'POST', body: fd, signal: abortRef.current.signal });
+      const up = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/ui/upload`, {
+        method: 'POST',
+        body: fd,
+        signal: abortRef.current.signal,
+      });
       if (!up.ok) throw new Error(await up.text());
+
       const upJson = await up.json();
       console.log('[CustomIF upload]', upJson);
       const entry = upJson?.entry || upJson?.entryUrl || `/public/custom/apps/${id}/ui/index.html`;
       setEntryUrl(entry);
+
+      await gameTagsApi.setGameTagsForGame({
+        fileId: String(id),
+        tagIds: selectedThemeTagIds,
+      });
+
       setLastUploadOk(true);
       setProgressText('上传完成');
       setProgress(100);
       stopFakeProgress();
-      // 保持覆盖层不消失，展示操作按钮
       setIsUploading(true);
       toast.success('上传成功');
-      // 上传成功后清理草稿标记
-      try { localStorage.removeItem(DRAFT_KEY); } catch {}
-    } catch (e:any) {
-      // 尝试解析后端错误
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {}
+    } catch (e: any) {
       let msg = String(e?.message || e);
       try {
         const j = JSON.parse(msg);
@@ -294,10 +384,14 @@ const CustomIFCreate: React.FC = () => {
       setConfirmOpen(false);
     }
   };
-
-  // 点击“创建并上传/上传新版本”时的入口（多文件需二次确认）
-  const handleCreate = () => {
+const handleCreate = () => {
     setError('');
+    if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
+      setThemeTagError('请选择 1~2 个作品标签');
+      toast.error('作品标签为必填，且最多选择 2 个');
+      return;
+    }
+    setThemeTagError('');
     if (sourceType === 'single') return void doUpload();
     if (multiFiles.length === 0) { setError('请先选择 ZIP 或目录'); return; }
     setConfirmOpen(true);
@@ -338,6 +432,29 @@ const CustomIFCreate: React.FC = () => {
                   onChange={(e) => setTitle(e.target.value)}
                   autoComplete="off"
                 />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>作品标签</label>
+                <div className={styles.themeTagsPanel}>
+                  <div className={styles.themeTagHint}>最少选择 1 个，最多选择 2 个</div>
+                  <div className={styles.themeTagsWrap}>
+                    {availableThemeTags.map((tag) => {
+                      const active = selectedThemeTagIds.includes(tag.id);
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
+                          onClick={() => handleThemeTagToggle(tag.id)}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {themeTagError && <div className={styles.themeTagError}>{themeTagError}</div>}
+                </div>
               </div>
 
             {/* 版本号输入已移除：由服务端管理当前激活版本 */}

@@ -10,7 +10,7 @@ import ImageCropModal from '../../CommonModal/ImageCropModal';
 interface CoverUploadProps {
     fileId?: string;
     coverUrl?: string;
-    onCoverUploaded?: (coverUrl: string) => void; // 上传成功后的回调
+    onCoverUploaded?: (coverUrl: string) => void;
 }
 
 const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUploaded }) => {
@@ -18,25 +18,29 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
     const [coverError, setCoverError] = useState<string | null>(null);
-    const isUploadingRef = useRef<boolean>(false); // 防止重复上传
+    const isUploadingRef = useRef<boolean>(false);
     const previousCoverUrlRef = useRef<string | undefined>(coverUrl);
+    const objectPreviewRef = useRef<string | null>(null);
 
-    // 裁剪相关状态
     const [showCropModal, setShowCropModal] = useState<boolean>(false);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
-    // 当 coverUrl prop 变化时，同步更新预览（例如父组件刷新数据后）
     useEffect(() => {
         if (coverUrl) {
             setCoverPreview(coverUrl);
         }
     }, [coverUrl]);
 
+    useEffect(() => () => {
+        if (objectPreviewRef.current) {
+            URL.revokeObjectURL(objectPreviewRef.current);
+        }
+    }, []);
+
     const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        // 防止重复上传
         if (isUploadingRef.current || coverUploading) {
             return;
         }
@@ -52,11 +56,10 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
         }
 
         setCoverError(null);
-        previousCoverUrlRef.current = coverPreview && !coverPreview.startsWith('data:image/') 
+        previousCoverUrlRef.current = coverPreview && !coverPreview.startsWith('data:image/') && !coverPreview.startsWith('blob:')
             ? coverPreview
             : coverUrl;
 
-        // 读取图片并打开裁剪弹窗
         const reader = new FileReader();
         reader.onloadend = () => {
             const dataUrl = reader.result as string;
@@ -64,8 +67,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
             setShowCropModal(true);
         };
         reader.readAsDataURL(file);
-
-        // 清空 input 值，允许重复选择同一文件
         event.target.value = '';
     };
 
@@ -73,10 +74,17 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
         coverInputRef.current?.click();
     };
 
-    const handleRemoveCover = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleRemoveCover = (event: React.MouseEvent) => {
+        event.stopPropagation();
         setCoverPreview(null);
-        coverInputRef.current && (coverInputRef.current.value = '');
+        setCoverError(null);
+        if (objectPreviewRef.current) {
+            URL.revokeObjectURL(objectPreviewRef.current);
+            objectPreviewRef.current = null;
+        }
+        if (coverInputRef.current) {
+            coverInputRef.current.value = '';
+        }
     };
 
     const uploadCover = useCallback(async (file: File) => {
@@ -85,7 +93,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
             return;
         }
 
-        // 防止重复上传
         if (isUploadingRef.current) {
             return;
         }
@@ -95,17 +102,20 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
             setCoverUploading(true);
             setCoverError(null);
             const response = await EditorApi.uploadGameCover(fileId, file);
-            if (response.data.success) {
+            if (response.data.success && response.data.data?.coverUrl) {
                 toast.success('封面上传成功');
-                // 使用返回的 coverUrl 更新预览
-                if (response.data.data?.coverUrl) {
-                    if (previousCoverUrlRef.current) {
-                        bumpCacheBust(previousCoverUrlRef.current);
-                    }
-                    setCoverPreview(response.data.data.coverUrl);
-                    // 通知父组件封面已更新
-                    onCoverUploaded?.(response.data.data.coverUrl);
+                // 同步最新封面地址
+                if (previousCoverUrlRef.current) {
+                    bumpCacheBust(previousCoverUrlRef.current);
                 }
+                if (objectPreviewRef.current) {
+                    URL.revokeObjectURL(objectPreviewRef.current);
+                    objectPreviewRef.current = null;
+                }
+                setCoverPreview(response.data.data.coverUrl);
+                onCoverUploaded?.(response.data.data.coverUrl);
+            } else {
+                setCoverError(response.data.message || '封面上传成功，但未获取到最新封面地址');
             }
         } catch (error) {
             console.error('上传封面失败:', error);
@@ -116,29 +126,30 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
         }
     }, [fileId, onCoverUploaded]);
 
-    // 裁剪完成回调
     const handleCropComplete = useCallback((croppedBlob: Blob) => {
         if (croppedBlob) {
-            // 使用裁剪后的 blob 创建新文件
             const croppedFile = new File([croppedBlob], 'cover.jpg', {
                 type: 'image/jpeg',
             });
-            // 保存本地预览
+
+            if (objectPreviewRef.current) {
+                URL.revokeObjectURL(objectPreviewRef.current);
+            }
             const previewUrl = URL.createObjectURL(croppedBlob);
+            objectPreviewRef.current = previewUrl;
             setCoverPreview(previewUrl);
-            // 上传裁剪后的图片
-            uploadCover(croppedFile);
+            void uploadCover(croppedFile);
         }
-        // 清理状态
+
         setShowCropModal(false);
         setImageToCrop(null);
     }, [uploadCover]);
 
-    // 关闭裁剪弹窗
     const handleCloseCropModal = useCallback(() => {
         setShowCropModal(false);
         setImageToCrop(null);
     }, []);
+
     return (
         <div className={styles.uploadCover}>
             <p className={styles.eyebrow}>Step 2</p>
@@ -154,15 +165,14 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                 />
                 {coverPreview ? (
                     <div className={styles.coverPreviewContainer}>
-                        <img 
+                        <img
                             src={
-                                // 本地预览（base64 或 blob://）直接使用；否则使用服务器URL
                                 (coverPreview.startsWith('data:image/') || coverPreview.startsWith('blob:'))
-                                    ? coverPreview 
+                                    ? coverPreview
                                     : addImageTimestamp(getImageUrl(coverPreview))
-                            } 
-                            alt="封面预览" 
-                            className={styles.coverPreview} 
+                            }
+                            alt="封面预览"
+                            className={styles.coverPreview}
                         />
                         <div className={styles.coverActions}>
                             <button
@@ -187,7 +197,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                 <p className={styles.coverErrorText}>{coverError}</p>
             )}
 
-            {/* 图片裁剪弹窗 */}
             {imageToCrop && (
                 <ImageCropModal
                     isOpen={showCropModal}
@@ -204,4 +213,3 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
 };
 
 export default CoverUpload;
-

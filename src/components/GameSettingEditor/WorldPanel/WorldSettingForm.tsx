@@ -10,6 +10,8 @@ interface WorldSettingFormProps {
     playerRole: string;
     opening: string;
     openingPlot: string;
+    themeTags: Array<{ id: number; name: string; parentName: string; pathLabel?: string }>;
+    selectedThemeTagIds: number[];
     targetOutputLength?: number;
     minOutputLength?: number;
     maxOutputLength?: number;
@@ -18,11 +20,13 @@ interface WorldSettingFormProps {
     onEraChange: (value: string) => void;
     onOpeningChange: (value: string) => void;
     onOpeningPlotChange: (value: string) => void;
+    onThemeTagToggle: (tagId: number) => void;
     onTargetOutputLengthChange: (value: number | undefined) => void;
     onMinOutputLengthChange: (value: number | undefined) => void;
     onMaxOutputLengthChange: (value: number | undefined) => void;
     openingError?: string;
     openingPlotError?: string;
+    themeTagError?: string;
 }
 
 const WORD_LIMITS = {
@@ -41,6 +45,8 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     playerRole,
     opening,
     openingPlot,
+    themeTags,
+    selectedThemeTagIds,
     targetOutputLength,
     minOutputLength,
     maxOutputLength,
@@ -49,11 +55,13 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     onEraChange,
     onOpeningChange,
     onOpeningPlotChange,
+    onThemeTagToggle,
     onTargetOutputLengthChange,
     onMinOutputLengthChange,
     onMaxOutputLengthChange,
     openingError,
     openingPlotError,
+    themeTagError,
 }) => {
     const titleWords = useWordCount(title);
     const taglineWords = useWordCount(tagline);
@@ -102,6 +110,33 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             {...taglineLimit}
                         />
                     </label>
+
+                    {/* 修复题材按钮误命中首个标签 */}
+                    <div className={styles.wide}>
+                        <div className={styles.fieldTopRow}>
+                            <span className={styles.fieldLabel}>作品标签<span className={styles.required}>*</span></span>
+                            <span className={styles.fieldHint}>最少 1 个，最多 2 个</span>
+                        </div>
+                        <div className={styles.themeTagsWrap}>
+                            {themeTags.map((tag) => {
+                                const selected = selectedThemeTagIds.includes(tag.id);
+                                return (
+                                    <button
+                                        key={tag.id}
+                                        type="button"
+                                        className={`${styles.themeTagChip} ${selected ? styles.themeTagChipActive : ''}`}
+                                        onClick={() => onThemeTagToggle(tag.id)}
+                                        title={tag.pathLabel || tag.name}
+                                    >
+                                        {tag.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {themeTagError && (
+                            <div className={styles.errorMessage}>{themeTagError}</div>
+                        )}
+                    </div>
 
                     <label className={styles.wide}>
                         <div className={styles.fieldTopRow}>

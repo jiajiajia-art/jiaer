@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useImperativeHandle } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useImperativeHandle } from 'react';
 import styles from './WorldPanel.module.css';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -12,6 +12,9 @@ import StorylinesSection, { type StoryLine } from './StorylinesSection';
 import StorylineModal from './StorylineModal';
 import ToneSection from './ToneSection';
 import { getPlayerImageUrl } from '../../../utils/constants';
+import getGameDataApi from '../../../api/home/getGameData';
+import gameTagsApi from '../../../api/gameTags/gameTagsApi';
+import { flattenThemeTags, type FlatThemeTag } from '../../../utils/themeTags';
 
 export interface WorldPanelRef {
     checkBeforeLeave: () => boolean;
@@ -36,6 +39,41 @@ function getPlayer(data: AllGameData | WorldInteractionGameData | null | undefin
     }
     return undefined;
 }
+
+const normalizeThemeTagIds = (ids: unknown): number[] =>
+    Array.isArray(ids)
+        ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+        : [];
+
+const isSameThemeTagIds = (left: number[], right: number[]) =>
+    JSON.stringify([...left].sort((a, b) => a - b)) === JSON.stringify([...right].sort((a, b) => a - b));
+
+const resolveInitialThemeTagIds = (
+    data: AllGameData | WorldInteractionGameData | null | undefined,
+    themeTags: FlatThemeTag[],
+    persistedThemeTagIds: number[] = [],
+): number[] => {
+    const detailTagIds = normalizeThemeTagIds(
+        persistedThemeTagIds.length > 0
+            ? persistedThemeTagIds
+            : (data as { theme_tag_ids?: number[] } | undefined)?.theme_tag_ids,
+    );
+    if (detailTagIds.length > 0) {
+        const validThemeTagIds = new Set(themeTags.map((tag) => tag.id));
+        return detailTagIds.filter((id) => validThemeTagIds.has(id));
+    }
+
+    const themeNames = Array.isArray((data?.worldSetting as { Theme?: string[] } | undefined)?.Theme)
+        ? (((data?.worldSetting as { Theme?: string[] } | undefined)?.Theme) || []).map((name) => String(name))
+        : [];
+    if (themeNames.length === 0 || themeTags.length === 0) {
+        return [];
+    }
+
+    return themeTags
+        .filter((tag) => themeNames.includes(tag.name))
+        .map((tag) => tag.id);
+};
 
 const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     gameData,
@@ -65,13 +103,24 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const [editingStoryline, setEditingStoryline] = useState<StoryLine | null>(null);
     const [openingError, setOpeningError] = useState<string>('');
     const [openingPlotError, setOpeningPlotError] = useState<string>('');
+    const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
+    const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
+    const [persistedThemeTagIds, setPersistedThemeTagIds] = useState<number[]>([]);
+    const [themeTagError, setThemeTagError] = useState<string>('');
 
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
     const lastWorldSettingSnapshotRef = useRef<string | null>(null);
+    const originalThemeTagIdsRef = useRef<number[]>([]);
+    const hasTouchedThemeTagsRef = useRef(false);
 
     const currentFileId = gameData?.fileId || fileId;
     const isWorldInteractionMode = mode === 'worldInteraction';
+    const displayThemeTags = React.useMemo(
+        // 实现 Step2 展示全部可选末级标签
+        () => availableThemeTags,
+        [availableThemeTags],
+    );
 
     const {
         setHasUnsavedChanges,
@@ -90,6 +139,57 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     }), [getCheckBeforeLeave]);
 
     useEffect(() => {
+        let cancelled = false;
+
+        const fetchThemeTags = async () => {
+            try {
+                const resp = await gameTagsApi.getGameTagsTree();
+                if (!resp.data?.success || cancelled) return;
+                const tags = flattenThemeTags(resp.data.data || []);
+                setAvailableThemeTags(tags);
+            } catch (error) {
+                console.error('加载作品标签失败:', error);
+            }
+        };
+
+        void fetchThemeTags();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchSelectedThemeTags = async () => {
+            if (!currentFileId) {
+                setPersistedThemeTagIds([]);
+                return;
+            }
+
+            try {
+                const resp = await getGameDataApi.getGameDetail({ fileId: currentFileId });
+                if (!resp.data?.success || cancelled) return;
+                const nextThemeTagIds = normalizeThemeTagIds(resp.data.data?.theme_tag_ids);
+                // 实现编辑页作品标签回显
+                setPersistedThemeTagIds(nextThemeTagIds);
+            } catch (error) {
+                if (!cancelled) {
+                    console.error('加载编辑作品标签失败:', error);
+                    setPersistedThemeTagIds([]);
+                }
+            }
+        };
+
+        void fetchSelectedThemeTags();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [currentFileId]);
+
+    useEffect(() => {
         if (!gameData?.worldSetting || !gameData?.fileId) return;
 
         const nextFileId = gameData.fileId;
@@ -101,6 +201,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             lastFileIdRef.current = nextFileId;
             lastWorldSettingSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
+            hasTouchedThemeTagsRef.current = false;
         } else if (lastWorldSettingSnapshotRef.current !== currentWorldSettingSnapshot) {
             lastWorldSettingSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
@@ -149,10 +250,48 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
             }
         }
-    }, [gameData, isWorldInteractionMode]);
+        const initialThemeTagIds = resolveInitialThemeTagIds(gameData, displayThemeTags, persistedThemeTagIds);
+        originalThemeTagIdsRef.current = initialThemeTagIds;
+        setSelectedThemeTagIds(initialThemeTagIds);
+        setThemeTagError('');
+    }, [displayThemeTags, gameData, isWorldInteractionMode, persistedThemeTagIds]);
+
+    useEffect(() => {
+        if (!gameData?.worldSetting) return;
+
+        const initialThemeTagIds = resolveInitialThemeTagIds(gameData, displayThemeTags, persistedThemeTagIds);
+        if (!isSameThemeTagIds(initialThemeTagIds, originalThemeTagIdsRef.current)) {
+            if (hasTouchedThemeTagsRef.current) {
+                return;
+            }
+            // 实现题材回填同步
+            originalThemeTagIdsRef.current = initialThemeTagIds;
+            setSelectedThemeTagIds(initialThemeTagIds);
+            setThemeTagError('');
+        }
+    }, [displayThemeTags, gameData, persistedThemeTagIds]);
 
     const handleToneChange = (value: string) => {
         setToneValue(value);
+    };
+
+    const handleThemeTagToggle = (tagId: number) => {
+        hasTouchedThemeTagsRef.current = true;
+        setSelectedThemeTagIds((prev) => {
+            if (prev.includes(tagId)) {
+                const next = prev.filter((id) => id !== tagId);
+                if (next.length > 0) {
+                    setThemeTagError('');
+                }
+                return next;
+            }
+            if (prev.length >= 2) {
+                toast.error('作品标签最多选择 2 个');
+                return prev;
+            }
+            setThemeTagError('');
+            return [...prev, tagId];
+        });
     };
 
     const reorderStorylines = (items: StoryLine[]): StoryLine[] => {
@@ -257,6 +396,9 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             title: line.tag,
             description: line.content,
         }));
+        const themeNames = selectedThemeTagIds
+            .map((id) => availableThemeTags.find((tag) => tag.id === id)?.name || '')
+            .filter((name) => !!name);
 
         if (mode === 'visual') {
             const currentPlayer = player || { name: '', gender: '', appearance: '' };
@@ -276,6 +418,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 preamble: opening,
                 initialPlot: openingPlot,
                 literary: toneValue ?? '',
+                Theme: themeNames,
                 keyEvents,
                 player: currentPlayer,
                 llmConfig,
@@ -308,6 +451,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             preamble: opening,
             initialPlot: openingPlot,
             literary: toneValue ?? '',
+            Theme: themeNames,
             keyEvents,
             player: worldPlayer,
         } as unknown as WorldWorldSetting;
@@ -324,6 +468,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         targetOutputLength,
         title,
         toneValue,
+        availableThemeTags,
+        selectedThemeTagIds,
     ]);
 
     const getWorldSettingData = useCallback((): Partial<VisualWorldSetting> | Partial<WorldWorldSetting> | null => {
@@ -397,8 +543,10 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (!originalDataRef.current) {
             return;
         }
-        setHasUnsavedChanges(getWorldSettingData() !== null);
-    }, [getWorldSettingData, setHasUnsavedChanges]);
+        // 实现题材修改纳入未保存检测
+        const hasThemeTagChanges = !isSameThemeTagIds(selectedThemeTagIds, originalThemeTagIdsRef.current);
+        setHasUnsavedChanges(getWorldSettingData() !== null || hasThemeTagChanges);
+    }, [getWorldSettingData, selectedThemeTagIds, setHasUnsavedChanges]);
 
     useEffect(() => {
         if (!onGetData) {
@@ -407,12 +555,16 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         onGetData(() => {
             const worldSettingDiff = getWorldSettingData();
-            if (!worldSettingDiff) return null;
-            return { worldSetting: worldSettingDiff } as Partial<AllGameData | WorldInteractionGameData>;
+            return {
+                worldSetting: worldSettingDiff || undefined,
+                // 透传当前题材选择
+                themeTagIds: selectedThemeTagIds,
+                // 透传原始题材快照
+                originalThemeTagIds: originalThemeTagIdsRef.current,
+            } as Partial<AllGameData | WorldInteractionGameData> & { themeTagIds: number[]; originalThemeTagIds: number[] };
         });
-    }, [getWorldSettingData, onGetData]);
+    }, [getWorldSettingData, onGetData, selectedThemeTagIds]);
 
-    // 统一处理世界观表单提交校验。
     const handleConfirmSubmit = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
 
@@ -432,6 +584,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         }
         setOpeningPlotError('');
 
+        // 实现作品标签必填与数量限制
+        if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
+            setThemeTagError('请选择 1~2 个作品标签');
+            toast.error('作品标签为必填，且最多选择 2 个');
+            return;
+        }
+        setThemeTagError('');
+
         if (isWorldInteractionMode && storylines.length === 0) {
             setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
             setIsStorylineExpanded(true);
@@ -441,7 +601,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setStorylineError('');
 
         handleSubmit?.();
-    }, [handleSubmit, isWorldInteractionMode, opening, openingPlot, storylines.length]);
+    }, [handleSubmit, isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, storylines.length]);
 
     return (
         <div className={styles.panelContent}>
@@ -455,15 +615,15 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
             <div className={styles.panelHeader}>
                 <div>
-                    <h2>世界观 & 表单化设定</h2>
-                    <p className={styles.subtitle}>所有内容均来自 AI 解析，请校对这些内容</p>
+                    <h2>世界观设定 & 叙事风格</h2>
+                    <p className={styles.subtitle}>请完善世界观基础信息，帮助 AI 更准确生成剧情与演出细节</p>
                 </div>
             </div>
 
             {SaveConfirmModalComponent}
 
             <div className={styles.formContainer}>
-                {/* 实现世界观设定标题与右上角确认按钮。 */}
+                {/* 实现世界观设定标题与右上角确认按钮 */}
                 <div className={styles.cardHead}>
                     <strong className={styles.cardTitle}>世界观设定</strong>
                     {handleSubmit && (
@@ -486,6 +646,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         playerRole={playerRole}
                         opening={opening}
                         openingPlot={openingPlot}
+                        themeTags={displayThemeTags}
+                        selectedThemeTagIds={selectedThemeTagIds}
                         targetOutputLength={targetOutputLength}
                         minOutputLength={minOutputLength}
                         maxOutputLength={maxOutputLength}
@@ -504,11 +666,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                                 setOpeningPlotError('');
                             }
                         }}
+                        onThemeTagToggle={handleThemeTagToggle}
                         onTargetOutputLengthChange={setTargetOutputLength}
                         onMinOutputLengthChange={setMinOutputLength}
                         onMaxOutputLengthChange={setMaxOutputLength}
                         openingError={openingError}
                         openingPlotError={openingPlotError}
+                        themeTagError={themeTagError}
                     />
 
                     <StorylinesSection

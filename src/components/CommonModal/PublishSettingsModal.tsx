@@ -31,21 +31,29 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [coverError, setCoverError] = useState<string | null>(null);
     const [description, setDescription] = useState<string>('');
 
-    // 当模态框打开且有 fileId 时，获取游戏描述
     useEffect(() => {
-        if (isOpen && fileId) {
-            const fetchGameDescription = async () => {
-                try {
-                    const response = await getGameDataApi.getGameDetail({ fileId });
-                    if (response.data.success && response.data.data?.description) {
-                        setDescription(response.data.data.description);
-                    }
-                } catch (error) {
-                    console.error('获取游戏描述失败:', error);
+        if (!isOpen) return;
+        // 同步发布弹窗封面回显
+        setCoverPreview(coverUrl || null);
+    }, [coverUrl, isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || !fileId) return;
+
+        const fetchGameDetail = async () => {
+            try {
+                const response = await getGameDataApi.getGameDetail({ fileId });
+                if (response.data.success && response.data.data) {
+                    // 同步发布弹窗最新详情
+                    setDescription(response.data.data.description || '');
+                    setCoverPreview(response.data.data.cover_url || null);
                 }
-            };
-            fetchGameDescription();
-        }
+            } catch (error) {
+                console.error('获取发布详情失败:', error);
+            }
+        };
+
+        void fetchGameDetail();
     }, [isOpen, fileId]);
 
     const uploadCover = useCallback(async (file: File) => {
@@ -53,6 +61,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             setCoverError('缺少文件ID，无法上传封面');
             return;
         }
+
         try {
             setCoverUploading(true);
             setCoverError(null);
@@ -64,6 +73,8 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 if (onCoverUploaded) {
                     onCoverUploaded();
                 }
+            } else {
+                setCoverError(response.data.message || '封面上传失败，请重试');
             }
         } catch (error) {
             console.error('上传封面失败:', error);
@@ -76,27 +87,25 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     if (!isOpen) return null;
 
     const handleSubmit = () => {
-        // 必填校验：封面图片
+        // 实现封面必填校验
         if (!coverPreview) {
             toast.error('请上传封面图片');
             return;
         }
 
-        // 必填校验：游戏简介
         const trimmed = description.trim();
         if (!trimmed) {
             toast.error('请填写游戏简介');
             return;
         }
         if (trimmed.length > DESCRIPTION_MAX_LENGTH) {
-            toast.error(`简介不能超过 ${DESCRIPTION_MAX_LENGTH} 字`);
+            toast.error(`简介不能超过 ${DESCRIPTION_MAX_LENGTH} 个字符`);
             return;
         }
 
         onPublish(trimmed);
     };
 
-    // 封面上传相关处理函数
     const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -117,15 +126,16 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             setCoverPreview(reader.result as string);
         };
         reader.readAsDataURL(file);
-        uploadCover(file);
+        void uploadCover(file);
     };
 
     const handleCoverClick = () => {
         coverInputRef.current?.click();
     };
 
-    const handleRemoveCover = () => {
-        coverInputRef.current && (coverInputRef.current.value = '');
+    const handleReplaceCover = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        coverInputRef.current?.click();
     };
 
     return (
@@ -137,73 +147,75 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 <h2 className={styles.modalTitle}>发布设置</h2>
 
                 <div className={styles.formContent}>
-                        <div className={styles.coverFormGroup}>
-                            <label className={styles.label}>封面图片</label>
-                            <div 
-                                className={`${styles.coverUploadArea} ${(coverUploading || !fileId) ? styles.coverUploadAreaDisabled : ''}`}
-                                onClick={handleCoverClick}
-                            >
-                                <input
-                                    ref={coverInputRef}
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/jpg,image/webp"
-                                    hidden
-                                    onChange={handleCoverSelect}
-                                    disabled={coverUploading || !fileId}
-                                />
-                                {coverPreview ? (
-                                    <div className={styles.coverPreviewContainer}>
-                                        <img 
-                                            src={
-                                                coverPreview.startsWith('data:image/') 
-                                                    ? coverPreview 
-                                                    : addImageTimestamp(getImageUrl(coverPreview))
-                                            } 
-                                            alt="封面预览" 
-                                            className={styles.coverPreview} 
-                                        />
-                                        <div className={styles.coverActions}>
-                                            <button
-                                                type="button"
-                                                className={styles.removeCoverBtn}
-                                                onClick={handleRemoveCover}
-                                                disabled={coverUploading}
-                                            >
-                                                替换
-                                            </button>
-                                        </div>
+                    <div className={styles.coverFormGroup}>
+                        <label className={styles.label}>封面图片</label>
+                        <div
+                            className={`${styles.coverUploadArea} ${(coverUploading || !fileId) ? styles.coverUploadAreaDisabled : ''}`}
+                            onClick={handleCoverClick}
+                        >
+                            <input
+                                ref={coverInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/jpg,image/webp"
+                                hidden
+                                onChange={handleCoverSelect}
+                                disabled={coverUploading || !fileId}
+                            />
+                            {coverPreview ? (
+                                <div className={styles.coverPreviewContainer}>
+                                    <img
+                                        src={
+                                            coverPreview.startsWith('data:image/')
+                                                ? coverPreview
+                                                : addImageTimestamp(getImageUrl(coverPreview))
+                                        }
+                                        alt="封面预览"
+                                        className={styles.coverPreview}
+                                    />
+                                    <div className={styles.coverActions}>
+                                        <button
+                                            type="button"
+                                            className={styles.removeCoverBtn}
+                                            onClick={handleReplaceCover}
+                                            disabled={coverUploading}
+                                        >
+                                            更换
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div className={styles.coverPlaceholder}>
-                                        <BsUpload className={styles.coverUploadIcon} size={32} />
-                                        <p className={styles.coverUploadText}>点击上传封面图片</p>
-                                        <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
-                                    </div>
-                                )}
-                            </div>
-                            {coverError && (
-                                <p className={styles.coverErrorText}>{coverError}</p>
+                                </div>
+                            ) : (
+                                <div className={styles.coverPlaceholder}>
+                                    <BsUpload className={styles.coverUploadIcon} size={32} />
+                                    <p className={styles.coverUploadText}>点击上传封面图片</p>
+                                    <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
+                                </div>
                             )}
                         </div>
-                        <div className={styles.descriptionFormGroup}>
-                            <label className={styles.label}>游戏简介</label>
-                            <textarea
-                                className={styles.descriptionInput}
-                                placeholder={`请输入描述（不超过${DESCRIPTION_MAX_LENGTH}字符）`}
-                                value={description}
-                                maxLength={DESCRIPTION_MAX_LENGTH}
-                                onChange={(e) => setDescription(e.target.value)}
-                            />
-                            <div className={styles.descriptionMetaRow}>
-                                <span className={styles.descriptionCount}>
-                                    {description.length}/{DESCRIPTION_MAX_LENGTH}
-                                </span>
-                            </div>
+                        {coverError && (
+                            <p className={styles.coverErrorText}>{coverError}</p>
+                        )}
+                    </div>
+
+                    <div className={styles.descriptionFormGroup}>
+                        <label className={styles.label}>游戏简介</label>
+                        <textarea
+                            className={styles.descriptionInput}
+                            placeholder={`请输入描述（不超过 ${DESCRIPTION_MAX_LENGTH} 字符）`}
+                            value={description}
+                            maxLength={DESCRIPTION_MAX_LENGTH}
+                            onChange={(e) => setDescription(e.target.value)}
+                        />
+                        <div className={styles.descriptionMetaRow}>
+                            <span className={styles.descriptionCount}>
+                                {description.length}/{DESCRIPTION_MAX_LENGTH}
+                            </span>
                         </div>
-                        <div className={styles.buttonGroup}>
-                            <button className={styles.publishBtn} onClick={handleSubmit}>
-                                发布
-                            </button>
+                    </div>
+
+                    <div className={styles.buttonGroup}>
+                        <button className={styles.publishBtn} onClick={handleSubmit}>
+                            发布
+                        </button>
                     </div>
                 </div>
             </div>
@@ -212,4 +224,3 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 };
 
 export default PublishSettingsModal;
-

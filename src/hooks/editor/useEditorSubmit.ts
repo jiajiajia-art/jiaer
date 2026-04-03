@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../api/galgame/EditorData';
 import worldEditor from '../../api/worldInteraction/worldEditor';
+import gameTagsApi from '../../api/gameTags/gameTagsApi';
 import type { AllGameData, WorldSetting as GalgameWorldSetting } from '../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData, WorldSetting as WIWorldSetting } from '../../api/worldInteraction/worldInteractionApi.type';
 import type { Scene as ApiScene } from '../../api/galgame/getGalgamePreset.type';
@@ -23,6 +24,20 @@ interface UseEditorSubmitReturn {
     scenesPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
 }
 
+interface WorldPanelSubmitData {
+    worldSetting?: Partial<GalgameWorldSetting> | Partial<WIWorldSetting>;
+    themeTagIds?: number[];
+    originalThemeTagIds?: number[];
+}
+
+const normalizeThemeTagIds = (ids?: number[]) =>
+    Array.isArray(ids)
+        ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
+        : [];
+
+const isSameThemeTagIds = (left: number[], right: number[]) =>
+    JSON.stringify([...left].sort((a, b) => a - b)) === JSON.stringify([...right].sort((a, b) => a - b));
+
 export const useEditorSubmit = ({
     fileId,
     gameData,
@@ -31,9 +46,9 @@ export const useEditorSubmit = ({
     onDataRefresh,
 }: UseEditorSubmitOptions): UseEditorSubmitReturn => {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const worldPanelGetDataRef = useRef<() => Partial<AllGameData | WorldInteractionGameData> | null>(null);
-    const charactersPanelGetDataRef = useRef<() => Partial<AllGameData | WorldInteractionGameData> | null>(null);
-    const scenesPanelGetDataRef = useRef<() => Partial<AllGameData | WorldInteractionGameData> | null>(null);
+    const worldPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
+    const charactersPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
+    const scenesPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
 
     const handleSubmit = useCallback(async () => {
         if (!fileId || !gameData) {
@@ -43,24 +58,45 @@ export const useEditorSubmit = ({
 
         setIsSubmitting(true);
         try {
-            let response: any = null;
+            let response: { data?: { success?: boolean } } | null = null;
 
             switch (activePanel) {
                 case 'world':
                     if (worldPanelGetDataRef.current) {
-                        const worldData = worldPanelGetDataRef.current();
+                        const worldData = worldPanelGetDataRef.current() as WorldPanelSubmitData | null;
+                        const themeTagIds = normalizeThemeTagIds(worldData?.themeTagIds);
+                        const originalThemeTagIds = normalizeThemeTagIds(worldData?.originalThemeTagIds);
+                        const hasThemeTagChanges = !isSameThemeTagIds(themeTagIds, originalThemeTagIds);
+
+                        // 实现题材必填校验
+                        if (themeTagIds.length < 1 || themeTagIds.length > 2) {
+                            toast.error('作品标签为必填，且最多选择 2 个');
+                            setIsSubmitting(false);
+                            return;
+                        }
+
                         if (worldData?.worldSetting) {
-                            const worldSettingDiff = worldData.worldSetting;
-                            
                             if (mode === 'worldInteraction') {
-                                response = await worldEditor.updateWorldSetting(fileId, worldSettingDiff as Partial<WIWorldSetting>);
+                                response = await worldEditor.updateWorldSetting(fileId, worldData.worldSetting as Partial<WIWorldSetting>);
                             } else {
-                                response = await EditorApi.updateWorldSetting(fileId, worldSettingDiff as Partial<GalgameWorldSetting>);
+                                response = await EditorApi.updateWorldSetting(fileId, worldData.worldSetting as Partial<GalgameWorldSetting>);
                             }
-                        } else {
+                        } else if (!hasThemeTagChanges) {
                             toast.error('没有需要保存的修改');
                             setIsSubmitting(false);
                             return;
+                        }
+
+                        // 实现题材标签独立保存
+                        if (worldData?.worldSetting || hasThemeTagChanges) {
+                            await gameTagsApi.setGameTagsForGame({
+                                fileId,
+                                tagIds: themeTagIds,
+                            });
+                        }
+
+                        if (!response) {
+                            response = { data: { success: true } };
                         }
                     }
                     break;
@@ -70,13 +106,13 @@ export const useEditorSubmit = ({
                         if (npcData?.npcSetting) {
                             const npcs = npcData.npcSetting.npcs;
                             if (npcs && npcs.length > 0) {
-                                const updatePromises = npcs.map(npc =>
-                                    mode === 'worldInteraction' 
-                                        ? worldEditor.updateNpc(fileId, npc as any)
-                                        : EditorApi.updateNpc(fileId, npc as any)
-                                );
+                                const updatePromises = npcs.map((npc) => (
+                                    mode === 'worldInteraction'
+                                        ? worldEditor.updateNpc(fileId, npc as never)
+                                        : EditorApi.updateNpc(fileId, npc as never)
+                                ));
                                 const results = await Promise.all(updatePromises);
-                                if (results.every(r => r.data?.success)) {
+                                if (results.every((r) => r.data?.success)) {
                                     response = { data: { success: true } };
                                 }
                             }
@@ -89,25 +125,24 @@ export const useEditorSubmit = ({
                         if (sceneData?.sceneSetting) {
                             const scenes = sceneData.sceneSetting.scenes;
                             if (scenes && scenes.length > 0) {
-                                const updatePromises = scenes.map(scene => {
+                                const updatePromises = scenes.map((scene) => {
                                     if (mode === 'worldInteraction') {
-                                        return worldEditor.updateScene(fileId, scene as any);
-                                    } else {
-                                        const apiScene: ApiScene = {
-                                            id: scene.id,
-                                            name: scene.name,
-                                            type: 'type' in scene ? (scene.type || '') : '',
-                                            description: scene.description || '',
-                                            images: scene.image,
-                                            soundtrack: scene.soundtrack,
-                                            npcs: [],
-                                            events: [],
-                                        };
-                                        return EditorApi.updateScene(fileId, apiScene);
+                                        return worldEditor.updateScene(fileId, scene as never);
                                     }
+                                    const apiScene: ApiScene = {
+                                        id: scene.id,
+                                        name: scene.name,
+                                        type: 'type' in scene ? (scene.type || '') : '',
+                                        description: scene.description || '',
+                                        images: scene.image,
+                                        soundtrack: scene.soundtrack,
+                                        npcs: [],
+                                        events: [],
+                                    };
+                                    return EditorApi.updateScene(fileId, apiScene);
                                 });
                                 const results = await Promise.all(updatePromises);
-                                if (results.every(r => r.data?.success)) {
+                                if (results.every((r) => r.data?.success)) {
                                     response = { data: { success: true } };
                                 }
                             }

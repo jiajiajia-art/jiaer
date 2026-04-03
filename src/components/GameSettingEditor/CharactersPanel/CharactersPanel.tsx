@@ -111,6 +111,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         targetCharacterId?: string | null;
     } | null>(null);
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
+    const [personalityInputValue, setPersonalityInputValue] = useState('');
 
     // 暂存图片状态 - 用于图片上传/生成后、确认前的预览
     const [pendingImages, setPendingImages] = useState<{ [characterId: string]: { [variant: string]: PendingImage } }>({});
@@ -439,6 +440,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     }, [activeCharacterId, isAddingNew]);
 
+    useEffect(() => {
+        // 保留用户输入态，确认保存时再统一格式
+        setPersonalityInputValue(currentCharacter?.personality.join(' / ') ?? '');
+    }, [currentCharacter?.id, currentCharacter?.personality, isAddingNew]);
+
     // 获取当前角色的属性设置（仅在 worldInteraction 模式下）
     const isWorldInteractionMode = mode === 'worldInteraction';
     const attributeSetting = isWorldInteractionMode && gameData && 'attributeSetting' in gameData
@@ -469,7 +475,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
     );
     const batchCharacterCount = useMemo(
-        () => characterData.filter((character) => character.id !== 'player' && !character.id.startsWith('temp-')).length,
+        () => characterData.filter((character) => !character.id.startsWith('temp-')).length,
         [characterData],
     );
     const singleCharacterEtaText = useGenerationEta({
@@ -508,12 +514,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     const handleFieldChange = (field: keyof Character, value: string) => {
-        if (field === 'personality') {
-            const tags = normalizePersonalityTags(value);
-            updateField(field, tags);
-        } else {
-            updateField(field, value);
-        }
+        updateField(field, value);
         setHasUnsavedChanges(true);
 
         // 清除该字段的错误状态
@@ -526,11 +527,23 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     };
 
+    const buildCharacterToSave = useCallback((character: Character | null | undefined): Character | null => {
+        if (!character) {
+            return null;
+        }
+
+        return {
+            ...character,
+            // 用户确认修改后再统一性格标签格式
+            personality: normalizePersonalityTags(personalityInputValue),
+        };
+    }, [personalityInputValue]);
+
     // 字数统计
     const nameWords = useWordCount(currentCharacter?.name ?? '');
     const genderWords = useWordCount(currentCharacter?.gender ?? '');
     const identityWords = useWordCount(currentCharacter?.identity ?? '');
-    const personalityWords = useWordCount(currentCharacter?.personality.join(' / ') ?? '');
+    const personalityWords = useWordCount(personalityInputValue);
     const speechWords = useWordCount(currentCharacter?.speech ?? '');
     const appearanceWords = useWordCount(currentCharacter?.appearance ?? '');
     const backgroundWords = useWordCount(currentCharacter?.background ?? '');
@@ -545,8 +558,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     
     // 性格标签特殊处理（需要分割后限制）
     const personalityLimit = useWordLimit(CHARACTER_WORD_LIMITS.personality, (value) => {
-        const tags = normalizePersonalityTags(value);
-        updateField('personality', tags);
+        setPersonalityInputValue(value);
         setHasUnsavedChanges(true);
     });
 
@@ -702,9 +714,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
         setIsSavingCharacter(true);
         try {
-            const characterToSave = isAddingNew && newCharacterData
+            const rawCharacterToSave = isAddingNew && newCharacterData
                 ? newCharacterData
                 : currentCharacter;
+            const characterToSave = buildCharacterToSave(rawCharacterToSave);
+            if (!characterToSave) {
+                return false;
+            }
 
             if (!validateRequiredFields(characterToSave)) {
                 return false;
@@ -1398,8 +1414,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     </div>
                                     <textarea
                                         rows={2}
-                                        value={currentCharacter.personality.join(' / ')}
+                                        value={personalityInputValue}
                                         {...personalityLimit}
+                                        onBlur={() => {
+                                            updateField('personality', normalizePersonalityTags(personalityInputValue));
+                                        }}
                                         placeholder="输入性格标签，用 / 或 ，分隔"
                                     />
                                 </label>
@@ -1736,7 +1755,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         {batchCharacterEtaText && (
                             <div className={styles.plusLoadingHint}>{batchCharacterEtaText}</div>
                         )}
-                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作。</div>
+                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作</div>
                     </div>
                 </div>
             )}

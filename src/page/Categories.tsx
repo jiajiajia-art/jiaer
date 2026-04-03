@@ -1,0 +1,388 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import Navbar from '../components/Layout/Navbar';
+import FooterArea from '../components/Layout/FooterArea';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import GameGrid from '../components/GameGrid';
+import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
+import libraryDataApi from '../api/home/getGameData';
+import type { UserGameData } from '../api/home/getGameData.type';
+import gameTagsApi from '../api/gameTags/gameTagsApi';
+import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import styles from './Categories.module.css';
+
+const PAGE_SIZE = 12;
+const DEFAULT_MODE = 'all';
+const DEFAULT_SORT = 'hot';
+
+type CategoryMode = 'all' | 'role-playing' | 'custom';
+type CategorySort = 'hot' | 'recommended' | 'latest';
+
+const MODE_OPTIONS: Array<{ value: CategoryMode; label: string }> = [
+    { value: 'all', label: '全部' },
+    { value: 'role-playing', label: 'Role-Playing' },
+    { value: 'custom', label: '自定义' },
+];
+
+const SORT_OPTIONS: Array<{ value: CategorySort; label: string }> = [
+    { value: 'hot', label: '最热' },
+    { value: 'recommended', label: '推荐' },
+    { value: 'latest', label: '最新' },
+];
+
+const getInitialMobileState = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 768px)').matches;
+};
+
+const normalizeMode = (value: string | null): CategoryMode => {
+    if (value === 'role-playing') return 'role-playing';
+    if (value === 'custom') return 'custom';
+    return DEFAULT_MODE;
+};
+
+const normalizeSort = (value: string | null): CategorySort => {
+    // 兼容旧链接的 sort=all
+    if (value === 'recommended') return 'recommended';
+    if (value === 'latest') return 'latest';
+    return DEFAULT_SORT;
+};
+
+const normalizeTagId = (value: string | null): number | null => {
+    if (!value || value === 'all') return null;
+    const parsedTagId = Number(value);
+    return Number.isInteger(parsedTagId) && parsedTagId > 0 ? parsedTagId : null;
+};
+
+const Categories: React.FC = () => {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
+    const [games, setGames] = useState<UserGameData[]>([]);
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [isMobilePage, setIsMobilePage] = useState<boolean>(getInitialMobileState);
+    const [isThemeDragging, setIsThemeDragging] = useState(false);
+
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+    const latestRequestIdRef = useRef(0);
+    const themeScrollRef = useRef<HTMLDivElement | null>(null);
+    const themeDragStateRef = useRef({
+        isDragging: false,
+        startX: 0,
+        startScrollLeft: 0,
+        moved: false,
+    });
+
+    const selectedMode = useMemo(() => normalizeMode(searchParams.get('mode')), [searchParams]);
+    const selectedSort = useMemo(() => normalizeSort(searchParams.get('sort')), [searchParams]);
+    const selectedTagId = useMemo(() => normalizeTagId(searchParams.get('tagId')), [searchParams]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const mediaQuery = window.matchMedia('(max-width: 768px)');
+        const handleChange = (event: MediaQueryListEvent) => {
+            setIsMobilePage(event.matches);
+        };
+        setIsMobilePage(mediaQuery.matches);
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
+        }
+
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const fetchTags = async () => {
+            try {
+                const response = await gameTagsApi.getGameTagsTree();
+                if (!response.data?.success || cancelled) return;
+                // 只展示可选题材，隐藏父题材
+                setThemeTags(flattenThemeTags(response.data.data || []));
+            } catch (error) {
+                console.error('加载题材分类失败:', error);
+            }
+        };
+
+        void fetchTags();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const requestFilters = useMemo(() => ({
+        mode: selectedMode,
+        sort: selectedSort,
+        tagId: selectedTagId,
+    }), [selectedMode, selectedSort, selectedTagId]);
+
+    const loadGames = useCallback(async (
+        targetPage: number,
+        filters: { mode: CategoryMode; sort: CategorySort; tagId: number | null },
+        initial = false,
+    ) => {
+        const requestId = ++latestRequestIdRef.current;
+
+        if (initial) {
+            setIsLoading(true);
+        } else {
+            setIsLoadingMore(true);
+        }
+
+        try {
+            const response = await libraryDataApi.getGameData('no-discount', {
+                limit: String(PAGE_SIZE),
+                offset: String(targetPage * PAGE_SIZE),
+                mode: filters.mode,
+                sort: filters.sort,
+                tagId: filters.tagId ? String(filters.tagId) : 'all',
+            });
+
+            if (requestId !== latestRequestIdRef.current) return;
+
+            if (response.data.success && response.data.data) {
+                const list = response.data.data;
+                if (initial) {
+                    setGames(list);
+                } else {
+                    setGames((prev) => [...prev, ...list]);
+                }
+                setHasMore(list.length === PAGE_SIZE);
+                setPage(list.length > 0 ? targetPage + 1 : targetPage);
+                return;
+            }
+
+            if (initial) setGames([]);
+            setHasMore(false);
+        } catch (error) {
+            console.error('加载分类剧本失败:', error);
+            if (initial) setGames([]);
+            setHasMore(false);
+        } finally {
+            setIsLoading(false);
+            setIsLoadingMore(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        setPage(0);
+        setHasMore(true);
+        void loadGames(0, requestFilters, true);
+    }, [loadGames, requestFilters]);
+
+    const loadMore = useCallback(() => {
+        if (isLoading || isLoadingMore || !hasMore) return;
+        void loadGames(page, requestFilters, false);
+    }, [hasMore, isLoading, isLoadingMore, loadGames, page, requestFilters]);
+
+    useEffect(() => {
+        if (!loadMoreTriggerRef.current) return;
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+        }
+
+        observerRef.current = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    loadMore();
+                }
+            },
+            {
+                root: null,
+                rootMargin: '200px',
+                threshold: 0.1,
+            },
+        );
+
+        observerRef.current.observe(loadMoreTriggerRef.current);
+        return () => {
+            observerRef.current?.disconnect();
+        };
+    }, [loadMore]);
+
+    const updateFilters = useCallback((next: Partial<{
+        mode: CategoryMode;
+        sort: CategorySort;
+        tagId: number | null;
+    }>) => {
+        const nextMode = next.mode ?? selectedMode;
+        const nextSort = next.sort ?? selectedSort;
+        const nextTagId = Object.prototype.hasOwnProperty.call(next, 'tagId')
+            ? next.tagId ?? null
+            : selectedTagId;
+
+        const nextParams = new URLSearchParams();
+        nextParams.set('mode', nextMode);
+        nextParams.set('sort', nextSort);
+        nextParams.set('tagId', nextTagId ? String(nextTagId) : 'all');
+        setSearchParams(nextParams);
+    }, [selectedMode, selectedSort, selectedTagId, setSearchParams]);
+
+    const handleBack = () => {
+        navigate('/home');
+    };
+
+    const handleThemeMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (isMobilePage || event.button !== 0 || !themeScrollRef.current) return;
+        // 实现桌面端按住拖动题材
+        themeDragStateRef.current = {
+            isDragging: true,
+            startX: event.clientX,
+            startScrollLeft: themeScrollRef.current.scrollLeft,
+            moved: false,
+        };
+        setIsThemeDragging(true);
+    }, [isMobilePage]);
+
+    const handleThemeMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (!themeDragStateRef.current.isDragging || !themeScrollRef.current) return;
+        const deltaX = event.clientX - themeDragStateRef.current.startX;
+        if (Math.abs(deltaX) > 6) {
+            themeDragStateRef.current.moved = true;
+        }
+        themeScrollRef.current.scrollLeft = themeDragStateRef.current.startScrollLeft - deltaX;
+    }, []);
+
+    const stopThemeDragging = useCallback(() => {
+        if (!themeDragStateRef.current.isDragging) return;
+        themeDragStateRef.current.isDragging = false;
+        window.setTimeout(() => {
+            themeDragStateRef.current.moved = false;
+        }, 0);
+        setIsThemeDragging(false);
+    }, []);
+
+    const handleThemeClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+        if (!themeDragStateRef.current.moved) return;
+        event.preventDefault();
+        event.stopPropagation();
+    }, []);
+
+    const renderChipRow = <T extends string>(
+        options: Array<{ value: T; label: string }>,
+        activeValue: T,
+        onSelect: (value: T) => void,
+    ) => (
+        <div className={styles.chipRow}>
+            {options.map((option) => (
+                <button
+                    key={option.value}
+                    type="button"
+                    className={`${styles.tagChip} ${activeValue === option.value ? styles.tagChipActive : ''}`}
+                    onClick={() => onSelect(option.value)}
+                >
+                    {option.label}
+                </button>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className={styles.pageRoot}>
+            {!isMobilePage && <Navbar />}
+
+            <div className={styles.mainContent}>
+                <div className={styles.main}>
+                    <div className={styles.filtersPanel}>
+                        <div className={styles.filtersCard}>
+                            <div className={styles.filtersCardHead}>
+                                {/* 实现移动端框内返回与标题布局 */}
+                                {isMobilePage && (
+                                    <button
+                                        type="button"
+                                        className={`${styles.backButton} ${styles.backButtonInCard}`}
+                                        onClick={handleBack}
+                                        aria-label="返回首页"
+                                        title="返回首页"
+                                    >
+                                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                                            <path d="M15 6L9 12L15 18" />
+                                        </svg>
+                                    </button>
+                                )}
+                                <h2 className={`${styles.filtersTitle} ${isMobilePage ? styles.filtersTitleMobile : ''}`}>题材分类</h2>
+                            </div>
+
+                            <section className={styles.filterSection}>
+                                <div className={styles.filterTitle}>模式</div>
+                                {renderChipRow(MODE_OPTIONS, selectedMode, (mode) => updateFilters({ mode }))}
+                            </section>
+
+                            <section className={styles.filterSection}>
+                                <div className={styles.filterTitle}>排序</div>
+                                {renderChipRow(SORT_OPTIONS, selectedSort, (sort) => updateFilters({ sort }))}
+                            </section>
+
+                            <section className={styles.filterSection}>
+                                <div className={styles.filterTitle}>题材</div>
+                                <div
+                                    ref={themeScrollRef}
+                                    className={`${styles.themeScrollRow} ${isThemeDragging ? styles.themeScrollRowDragging : ''}`}
+                                    onMouseDown={handleThemeMouseDown}
+                                    onMouseMove={handleThemeMouseMove}
+                                    onMouseUp={stopThemeDragging}
+                                    onMouseLeave={stopThemeDragging}
+                                    onClickCapture={handleThemeClickCapture}
+                                >
+                                    {/* 实现题材第三层横向拖动 */}
+                                    <button
+                                        type="button"
+                                        className={`${styles.tagChip} ${selectedTagId === null ? styles.tagChipActive : ''}`}
+                                        onClick={() => updateFilters({ tagId: null })}
+                                    >
+                                        全部
+                                    </button>
+                                    {themeTags.map((tag) => (
+                                        <button
+                                            key={tag.id}
+                                            type="button"
+                                            className={`${styles.tagChip} ${selectedTagId === tag.id ? styles.tagChipActive : ''}`}
+                                            onClick={() => updateFilters({ tagId: tag.id })}
+                                            title={tag.pathLabel || tag.name}
+                                        >
+                                            {tag.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <div className={styles.listBlock}>
+                        {isLoading ? (
+                            <GameGridSkeleton count={8} />
+                        ) : (
+                            <>
+                                <GameGrid games={games} />
+                                {isLoadingMore && (
+                                    <div className={styles.loadingMore}>
+                                        <GameGridSkeleton count={4} />
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    <div
+                        ref={loadMoreTriggerRef}
+                        className={styles.loadMoreTrigger}
+                        style={{ visibility: hasMore ? 'visible' : 'hidden' }}
+                    />
+                </div>
+            </div>
+
+            {!isMobilePage && <FooterArea />}
+            <MobileBottomNav />
+        </div>
+    );
+};
+
+export default Categories;

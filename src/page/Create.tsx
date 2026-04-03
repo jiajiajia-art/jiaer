@@ -362,32 +362,23 @@ const Create: React.FC = () => {
                                 </div>
                                 <div className={styles.statValue}>{stats.totalClicks}</div>
                             </div>
-                            <div className={styles.statBox}>
-                                <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                        <span>待结算奖励积分</span>
-                                    </div>
+                            <div className={`${styles.statBox} ${stats.totalAmount > 0 ? styles.statBoxWithAction : ''}`}>
+                                <div className={styles.statLabel}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                    <span>待结算奖励积分</span>
+                                </div>
+                                <div className={styles.statActionRow}>
+                                    <div className={styles.statValue}>{stats.totalAmount}</div>
                                     {stats.totalAmount > 0 && (
                                         <button
                                             type="button"
+                                            className={styles.settleButton}
                                             onClick={() => setIsSettleModalOpen(true)}
-                                            style={{
-                                                padding: '6px 12px',
-                                                backgroundColor: '#FB4655',
-                                                color: '#fff',
-                                                border: 'none',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
-                                                cursor: 'pointer',
-                                                fontWeight: 500,
-                                            }}
                                         >
                                             结算
                                         </button>
                                     )}
                                 </div>
-                                <div className={styles.statValue}>{stats.totalAmount}</div>
                             </div>
                             {stats.isIncentive && (
                                 <div className={styles.statBox}>
