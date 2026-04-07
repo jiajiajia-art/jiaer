@@ -54,6 +54,60 @@ const normalizeTagId = (value: string | null): number | null => {
     return Number.isInteger(parsedTagId) && parsedTagId > 0 ? parsedTagId : null;
 };
 
+const getGameUniqueKey = (game: UserGameData, fallbackIndex?: number): string => {
+    const fileId = String(game.file_id || '').trim();
+    if (fileId) return `file:${fileId}`;
+
+    const id = String(game.id || '').trim();
+    if (id) return `id:${id}`;
+
+    return `fallback:${fallbackIndex ?? 0}`;
+};
+
+/*
+const dedupeGames = (list: UserGameData[]): UserGameData[] => {
+    // 实现 分类页作品列表去重
+    // 实现 分类页作品列表去重
+    // 实现 分类页作品列表去重
+    const uniqueGames = new Map<string, UserGameData>();
+    // 实现 分类页作品列表去重
+    const uniqueGames = new Map<string, UserGameData>();
+    list.forEach((game, index) => {
+        const uniqueKey = getGameUniqueKey(game, index);
+        if (!uniqueGames.has(uniqueKey)) {
+            uniqueGames.set(uniqueKey, game);
+        }
+    });
+    return Array.from(uniqueGames.values());
+};
+
+const mergeUniqueGames = (currentGames: UserGameData[], nextGames: UserGameData[]): UserGameData[] => {
+    // 实现 同页数据合并去重
+    // 实现 同页数据合并去重
+    // 实现 同页数据合并去重
+    // 实现 同页数据合并去重
+    return dedupeGames([...currentGames, ...nextGames]);
+};
+
+*/
+
+const dedupeGames = (list: UserGameData[]): UserGameData[] => {
+    // 实现 分类页作品列表去重
+    const uniqueGames = new Map<string, UserGameData>();
+    list.forEach((game, index) => {
+        const uniqueKey = getGameUniqueKey(game, index);
+        if (!uniqueGames.has(uniqueKey)) {
+            uniqueGames.set(uniqueKey, game);
+        }
+    });
+    return Array.from(uniqueGames.values());
+};
+
+const mergeUniqueGames = (currentGames: UserGameData[], nextGames: UserGameData[]): UserGameData[] => {
+    // 实现 同页数据合并去重
+    return dedupeGames([...currentGames, ...nextGames]);
+};
+
 const Categories: React.FC = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -69,6 +123,9 @@ const Categories: React.FC = () => {
     const observerRef = useRef<IntersectionObserver | null>(null);
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
     const latestRequestIdRef = useRef(0);
+    const activeRequestKeysRef = useRef<Set<string>>(new Set());
+    const isLoadingRef = useRef(false);
+    const isLoadingMoreRef = useRef(false);
     const themeScrollRef = useRef<HTMLDivElement | null>(null);
     const themeDragStateRef = useRef({
         isDragging: false,
@@ -118,6 +175,54 @@ const Categories: React.FC = () => {
         };
     }, []);
 
+    useEffect(() => {
+        const scrollContainer = themeScrollRef.current;
+        if (!scrollContainer) return;
+
+        let frameId = 0;
+
+        // 实现 渲染完成后定位选中题材
+        frameId = window.requestAnimationFrame(() => {
+            const selectedTagKey = selectedTagId === null ? 'all' : String(selectedTagId);
+            const selectedButton = scrollContainer.querySelector<HTMLButtonElement>(`[data-tag-id="${selectedTagKey}"]`);
+            if (!selectedButton) return;
+
+            const containerLeft = scrollContainer.scrollLeft;
+            const containerRight = containerLeft + scrollContainer.clientWidth;
+            const buttonLeft = selectedButton.offsetLeft;
+            const buttonRight = buttonLeft + selectedButton.offsetWidth;
+
+            let nextScrollLeft: number | null = null;
+
+            // 实现 仅在超出可视区时滚动
+            if (buttonLeft < containerLeft) {
+                nextScrollLeft = buttonLeft;
+            } else if (buttonRight > containerRight) {
+                nextScrollLeft = buttonRight - scrollContainer.clientWidth;
+            }
+
+            if (nextScrollLeft === null) return;
+
+            const maxScrollLeft = Math.max(0, scrollContainer.scrollWidth - scrollContainer.clientWidth);
+            const safeScrollLeft = Math.min(Math.max(nextScrollLeft, 0), maxScrollLeft);
+
+            // 实现 选中题材自动滚动到可视区域
+            if (typeof scrollContainer.scrollTo === 'function') {
+                scrollContainer.scrollTo({
+                    left: safeScrollLeft,
+                    behavior: 'smooth',
+                });
+                return;
+            }
+
+            scrollContainer.scrollLeft = safeScrollLeft;
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frameId);
+        };
+    }, [selectedTagId, themeTags]);
+
     const requestFilters = useMemo(() => ({
         mode: selectedMode,
         sort: selectedSort,
@@ -129,11 +234,19 @@ const Categories: React.FC = () => {
         filters: { mode: CategoryMode; sort: CategorySort; tagId: number | null },
         initial = false,
     ) => {
+        const requestKey = `${filters.mode}|${filters.sort}|${filters.tagId ?? 'all'}|${targetPage}|${initial ? 'initial' : 'append'}`;
+        if (activeRequestKeysRef.current.has(requestKey)) {
+            return;
+        }
+
+        activeRequestKeysRef.current.add(requestKey);
         const requestId = ++latestRequestIdRef.current;
 
         if (initial) {
+            isLoadingRef.current = true;
             setIsLoading(true);
         } else {
+            isLoadingMoreRef.current = true;
             setIsLoadingMore(true);
         }
 
@@ -149,13 +262,13 @@ const Categories: React.FC = () => {
             if (requestId !== latestRequestIdRef.current) return;
 
             if (response.data.success && response.data.data) {
-                const list = response.data.data;
+                const list = dedupeGames(response.data.data);
                 if (initial) {
                     setGames(list);
                 } else {
-                    setGames((prev) => [...prev, ...list]);
+                    setGames((prev) => mergeUniqueGames(prev, list));
                 }
-                setHasMore(list.length === PAGE_SIZE);
+                setHasMore(response.data.data.length === PAGE_SIZE);
                 setPage(list.length > 0 ? targetPage + 1 : targetPage);
                 return;
             }
@@ -167,6 +280,12 @@ const Categories: React.FC = () => {
             if (initial) setGames([]);
             setHasMore(false);
         } finally {
+            activeRequestKeysRef.current.delete(requestKey);
+            if (initial) {
+                isLoadingRef.current = false;
+            } else {
+                isLoadingMoreRef.current = false;
+            }
             setIsLoading(false);
             setIsLoadingMore(false);
         }
@@ -175,11 +294,25 @@ const Categories: React.FC = () => {
     useEffect(() => {
         setPage(0);
         setHasMore(true);
+        isLoadingMoreRef.current = false;
         void loadGames(0, requestFilters, true);
     }, [loadGames, requestFilters]);
 
+    /*
     const loadMore = useCallback(() => {
-        if (isLoading || isLoadingMore || !hasMore) return;
+        // 实现 懒加载重复触发拦截
+        // 实现 懒加载重复触发拦截
+        // 实现 懒加载重复触发拦截
+        if (isLoadingRef.current || isLoadingMoreRef.current || isLoading || isLoadingMore || !hasMore) return;
+        // 实现 懒加载重复触发拦截
+        if (isLoadingRef.current || isLoadingMoreRef.current || isLoading || isLoadingMore || !hasMore) return;
+        void loadGames(page, requestFilters, false);
+    }, [hasMore, isLoading, isLoadingMore, loadGames, page, requestFilters]);
+    */
+
+    const loadMore = useCallback(() => {
+        // 实现 懒加载重复触发拦截
+        if (isLoadingRef.current || isLoadingMoreRef.current || isLoading || isLoadingMore || !hasMore) return;
         void loadGames(page, requestFilters, false);
     }, [hasMore, isLoading, isLoadingMore, loadGames, page, requestFilters]);
 
@@ -335,6 +468,7 @@ const Categories: React.FC = () => {
                                     {/* 实现题材第三层横向拖动 */}
                                     <button
                                         type="button"
+                                        data-tag-id="all"
                                         className={`${styles.tagChip} ${selectedTagId === null ? styles.tagChipActive : ''}`}
                                         onClick={() => updateFilters({ tagId: null })}
                                     >
@@ -344,6 +478,7 @@ const Categories: React.FC = () => {
                                         <button
                                             key={tag.id}
                                             type="button"
+                                            data-tag-id={String(tag.id)}
                                             className={`${styles.tagChip} ${selectedTagId === tag.id ? styles.tagChipActive : ''}`}
                                             onClick={() => updateFilters({ tagId: tag.id })}
                                             title={tag.pathLabel || tag.name}

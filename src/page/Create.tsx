@@ -1,28 +1,29 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import styles from './Create.module.css';
-import Navbar from '../components/Layout/Navbar';
-import FooterArea from '../components/Layout/FooterArea';
-import GameGrid from '../components/GameGrid';
-import { useAuthStore } from '../store/useAuthStore';
-import getGameDataApi from '../api/home/getGameData';
-import type { UserGameData } from '../api/home/getGameData.type';
+import React, { useEffect, useMemo, useState } from 'react';
 import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { MdContentCopy } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import styles from './Create.module.css';
+import Navbar from '../components/Layout/Navbar';
+import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
-import statisticsApi from '../api/statistics/statisticsApi';
+import GameGrid from '../components/GameGrid';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import CreateGameModals from '../components/CreateGame/CreateGameModals';
-import toast from 'react-hot-toast';
-import payApi from '../api/pay/payApi';
-import { auth } from '../api/account/authApi';
-import { useEditorStore } from '../store/editorStore';
-import { useGameStore } from '../store/gameStore';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
+import { useAuthStore } from '../store/useAuthStore';
+import { useEditorStore } from '../store/editorStore';
+import { useGameStore } from '../store/gameStore';
+import getGameDataApi from '../api/home/getGameData';
+import type { UserGameData } from '../api/home/getGameData.type';
+import statisticsApi from '../api/statistics/statisticsApi';
+import payApi from '../api/pay/payApi';
+import { auth } from '../api/account/authApi';
+import GameAction from '../api/rpgGame/gameAction';
 import {
     getMiniProgramCreatorBlockedMessage,
     isMiniProgramCreatorTypeSupported,
@@ -36,14 +37,15 @@ const Create: React.FC = () => {
     const { clearState } = useEditorStore();
     const { clearAll } = useGameStore();
     const navigate = useNavigate();
+
     const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
-    const [isLoadingMyGames, setIsLoadingMyGames] = useState<boolean>(true);
+    const [isLoadingMyGames, setIsLoadingMyGames] = useState(true);
     const [stats, setStats] = useState({
         totalCreated: 0,
         totalViews: 0,
         totalClicks: 0,
-        totalAmount: 0, // 积分奖励总收益
-        totalIncentiveAmount: 0, // 激励总收益（结算总收益-激励）
+        totalAmount: 0,
+        totalIncentiveAmount: 0,
         pendingIncome: 0,
         isIncentive: false,
     });
@@ -54,12 +56,14 @@ const Create: React.FC = () => {
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
     const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
+    const [isDraftManageMode, setIsDraftManageMode] = useState(false);
+    const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
+    const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
+    const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
 
-    const handleOpenBindPhoneGuide = () => {
-        // 实现跳转到“我的”页并拉起浏览器登录账号设置
-        setIsMobileTipModalOpen(false);
-        navigate('/profile?openBrowserLoginAccount=1');
-    };
+    const userName = user?.user?.nickname || user?.user?.name || '未设置昵称';
+    const userCode = user?.user?.userCode;
+    const isMiniProgram = isMiniProgramEnv();
 
     const { publishedGames, draftGames } = useMemo(() => {
         const published: UserGameData[] = [];
@@ -79,11 +83,15 @@ const Create: React.FC = () => {
         };
     }, [fileMetas]);
 
-    // 加载我的游戏数据
+    const getGameManageId = (game: UserGameData) => String(game.file_id || game.id || '');
+    const selectedDraftCount = selectedDraftIds.length;
+    const isAllDraftsSelected = draftGames.length > 0 && selectedDraftCount === draftGames.length;
+
     const loadMyGames = async () => {
         if (!user?.user?.id) {
             return;
         }
+
         setIsLoadingMyGames(true);
         try {
             const response = await getGameDataApi.getUserData({ limit: 100 });
@@ -104,6 +112,7 @@ const Create: React.FC = () => {
         if (!user?.user?.id) {
             return;
         }
+
         try {
             const response = await statisticsApi.getALLGameStats();
             if (response.data.success && response.data.data) {
@@ -118,7 +127,7 @@ const Create: React.FC = () => {
                 });
             }
         } catch (error) {
-            console.error('获取我的游戏列表错误:', error);
+            console.error('获取我的游戏统计错误:', error);
         }
     };
 
@@ -137,65 +146,144 @@ const Create: React.FC = () => {
         loadMyGames();
         getGameTotalStats();
         getUserInfo();
-    }, [user?.user.id]);
+    }, [user?.user?.id]);
 
-    // 暂时隐藏
-    // const renderGameActions = (game: UserGameData) => {
-    //     const isPublic = game.is_public === 1;
+    useEffect(() => {
+        if (draftGames.length === 0) {
+            setIsDraftManageMode(false);
+            setSelectedDraftIds([]);
+            return;
+        }
 
-    //     return (
-    //         <button
-    //             type="button"
-    //             onClick={(e) => {
-    //                 e.stopPropagation();
-    //                 if (!game.file_id) return;
-    //                 navigate(`/createGame?mode=stats&gameId=${game.file_id}`);
-    //             }}
-    //         >
-    //             {isPublic ? '查看数据' : '继续编辑'}
-    //         </button>
-    //     );
-    // };
+        setSelectedDraftIds((prev) => prev.filter((id) => draftGames.some((game) => getGameManageId(game) === id)));
+    }, [draftGames]);
 
-    const userName = user?.user?.nickname || user?.user?.name || '未设置';
-    const userCode = user?.user?.userCode;
+    const handleOpenBindPhoneGuide = () => {
+        setIsMobileTipModalOpen(false);
+        navigate('/profile?openBrowserLoginAccount=1');
+    };
 
     const handleCopyUserCode = async () => {
         if (!userCode) return;
+
         try {
             await navigator.clipboard.writeText(userCode);
             toast.success('Kuran号已复制');
         } catch (error) {
-            console.error('复制 Kuran号 失败:', error);
+            console.error('复制 Kuran 号失败:', error);
             toast.error('复制失败，请稍后重试');
         }
     };
 
     const handleRecharge = async (amount: number) => {
-        const response = await payApi.getPayQrCode({
-            amount: amount,
-        });
+        const response = await payApi.getPayQrCode({ amount });
         if (response.data.code === 200 && response.data.data) {
             getUserInfo();
             return {
                 qrDataUrl: response.data.data.qrDataUrl,
-                outTradeNo: response.data.data.outTradeNo
+                outTradeNo: response.data.data.outTradeNo,
             };
-        } else {
-            toast.error('充值失败！');
-            return null;
+        }
+
+        toast.error('充值失败');
+        return null;
+    };
+
+    const handleOpenDraftManage = () => {
+        // 实现草稿管理模式
+        setIsDraftManageMode(true);
+    };
+
+    const handleCloseDraftManage = () => {
+        // 实现退出管理模式
+        setIsDraftManageMode(false);
+        setSelectedDraftIds([]);
+    };
+
+    const handleToggleDraftSelect = (game: UserGameData) => {
+        const draftId = getGameManageId(game);
+        if (!draftId) return;
+
+        // 实现草稿批量选择
+        setSelectedDraftIds((prev) => (
+            prev.includes(draftId)
+                ? prev.filter((id) => id !== draftId)
+                : [...prev, draftId]
+        ));
+    };
+
+    const handleToggleSelectAllDrafts = () => {
+        // 实现草稿全选切换
+        if (isAllDraftsSelected) {
+            setSelectedDraftIds([]);
+            return;
+        }
+
+        setSelectedDraftIds(draftGames.map((game) => getGameManageId(game)).filter(Boolean));
+    };
+
+    const handleDraftCardClick = (game: UserGameData) => {
+        if (isDraftManageMode) {
+            handleToggleDraftSelect(game);
+            return;
+        }
+
+        const gameId = game.file_id || game.id;
+        if (!gameId) return;
+        navigate(`/createGame?mode=stats&gameId=${gameId}`);
+    };
+
+    const handleConfirmBatchDeleteDrafts = async () => {
+        if (selectedDraftIds.length === 0 || isBatchDeletingDrafts) {
+            return;
+        }
+
+        setIsBatchDeletingDrafts(true);
+        try {
+            const deletingIds = [...selectedDraftIds];
+            const results = await Promise.allSettled(
+                deletingIds.map((draftId) => GameAction.deleteGame(draftId))
+            );
+
+            const successIds = results
+                .map((result, index) => (result.status === 'fulfilled' ? deletingIds[index] : null))
+                .filter((draftId): draftId is string => Boolean(draftId));
+            const failedIds = deletingIds.filter((draftId) => !successIds.includes(draftId));
+
+            await loadMyGames();
+
+            if (successIds.length > 0) {
+                toast.success(`已删除 ${successIds.length} 个草稿`);
+            }
+            if (failedIds.length > 0) {
+                toast.error(`有 ${failedIds.length} 个草稿删除失败，请稍后重试`);
+            }
+
+            // 实现批量删除确认
+            setIsBatchDeleteConfirmOpen(false);
+
+            if (failedIds.length === 0) {
+                handleCloseDraftManage();
+            } else {
+                setSelectedDraftIds(failedIds);
+            }
+        } catch (error) {
+            console.error('批量删除草稿失败:', error);
+            toast.error('批量删除失败，请稍后重试');
+        } finally {
+            setIsBatchDeletingDrafts(false);
         }
     };
 
     const handleSettle = async () => {
         if (isSettling) return;
-        
+
         setIsSettling(true);
         try {
             const response = await auth.settlePoints();
             if (response.data.success && response.data.data) {
                 const settlementAmount = response.data.data.settlementAmount || 0;
-                toast.success(`结算成功！已结算 ${settlementAmount} 积分`);
+                toast.success(`结算成功，已结算 ${settlementAmount} 积分`);
                 await getGameTotalStats();
                 await getUserInfo();
                 setIsSettleModalOpen(false);
@@ -210,16 +298,12 @@ const Create: React.FC = () => {
         }
     };
 
-    const isMiniProgram = isMiniProgramEnv();
-
     const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom'>) => {
-        // 小程序端暂不开放 AVG / 自定义编辑，统一引导去 PC 端。
         setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
         setIsMobileTipModalOpen(true);
     };
 
     const handleSelectGameType = (type: CreatorGameType) => {
-        // 小程序端当前只允许 TXT 模式进入创作者编辑器。
         if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
             if (type === 'avg' || type === 'custom') {
                 openMiniProgramTypeTip(type);
@@ -229,6 +313,7 @@ const Create: React.FC = () => {
         }
 
         clearAll();
+
         if (type === 'rpg') {
             navigate('/createGame');
         } else if (type === 'txt') {
@@ -241,6 +326,7 @@ const Create: React.FC = () => {
             clearState();
             navigate('/gameSettingsEditor?mode=worldInteraction');
         }
+
         setIsCreateTypeModalOpen(false);
     };
 
@@ -264,7 +350,7 @@ const Create: React.FC = () => {
                                                     type="button"
                                                     className={styles.userCodeCopyButton}
                                                     onClick={handleCopyUserCode}
-                                                    title="复制Kuran号"
+                                                    title="复制 Kuran 号"
                                                 >
                                                     <MdContentCopy />
                                                 </button>
@@ -286,7 +372,7 @@ const Create: React.FC = () => {
                                 </div>
 
                                 <div className={styles.creatorHeroActions}>
-                                    {/* 实现移动端操作按钮同行布局。 */}
+                                    {/* 适配移动端按钮并排布局 */}
                                     <div className={styles.createGameButtonRow}>
                                         <button
                                             className={`${styles.payButton} ${styles.mobilePayButton}`}
@@ -296,10 +382,7 @@ const Create: React.FC = () => {
                                         </button>
                                         <button
                                             className={styles.createGameButtonItem}
-                                            onClick={() => {
-                                                // 小程序端进入创作者首页后统一走模式选择弹窗。
-                                                setIsCreateTypeModalOpen(true);
-                                            }}
+                                            onClick={() => setIsCreateTypeModalOpen(true)}
                                         >
                                             <HiOutlineLightBulb />
                                             <span>创作游戏</span>
@@ -307,7 +390,7 @@ const Create: React.FC = () => {
                                         <button
                                             className={styles.helpButton}
                                             onClick={() => setIsPDFModalOpen(true)}
-                                            title="PDF模板指引"
+                                            title="PDF 模板指引"
                                         >
                                             <span className={styles.helpIcon}>?</span>
                                         </button>
@@ -317,7 +400,6 @@ const Create: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 我的数据模块 */}
                     <div className={styles.statsSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
@@ -338,7 +420,8 @@ const Create: React.FC = () => {
                                 className={`${styles.more} ${styles.moreText}`}
                             >
                                 每晚12:00更新
-                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />                            </button>
+                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
+                            </button>
                         </div>
                         <div className={styles.statsGrid}>
                             <div className={styles.statBox}>
@@ -405,7 +488,6 @@ const Create: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 发布作品模块 */}
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
@@ -466,13 +548,44 @@ const Create: React.FC = () => {
                                 src={`${import.meta.env.BASE_URL}data/assets/home/分界线移动端.png`}
                                 alt=""
                             />
-                            <button
-                                type="button"
-                                className={`${styles.more} ${styles.moreText}`}
-                            >
-                                更多
-                                <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
-                            </button>
+                            {draftGames.length > 0 && (
+                                <div className={styles.draftManageActions}>
+                                    {isDraftManageMode ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className={styles.draftManageButton}
+                                                onClick={handleToggleSelectAllDrafts}
+                                            >
+                                                {isAllDraftsSelected ? '取消全选' : '全选'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`${styles.draftManageButton} ${styles.draftDeleteButton}`}
+                                                onClick={() => setIsBatchDeleteConfirmOpen(true)}
+                                                disabled={selectedDraftCount === 0 || isBatchDeletingDrafts}
+                                            >
+                                                {isBatchDeletingDrafts ? '删除中...' : `批量删除${selectedDraftCount > 0 ? `(${selectedDraftCount})` : ''}`}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={styles.draftManageButton}
+                                                onClick={handleCloseDraftManage}
+                                            >
+                                                完成
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            className={styles.draftManageButton}
+                                            onClick={handleOpenDraftManage}
+                                        >
+                                            管理
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         {isLoadingMyGames ? (
                             <GameGridSkeleton count={8} />
@@ -481,23 +594,30 @@ const Create: React.FC = () => {
                                 开始创作你的第一个作品吧
                             </div>
                         ) : (
-                            <GameGrid
-                                games={draftGames}
-                                onGameClick={(game) => {
-                                    const gameId = game.file_id || game.id;
-                                    if (!gameId) return;
-                                    navigate(`/createGame?mode=stats&gameId=${gameId}`);
-                                }}
-                            />
+                            <div className={styles.draftSectionBody}>
+                                {isDraftManageMode && (
+                                    <div className={styles.draftManageTip}>
+                                        {/* 适配移动端操作栏 */}
+                                        已选择 {selectedDraftCount} 个草稿
+                                    </div>
+                                )}
+                                <GameGrid
+                                    games={draftGames}
+                                    onGameClick={handleDraftCardClick}
+                                    selectable={true}
+                                    selectedIds={selectedDraftIds}
+                                    onToggleSelect={handleToggleDraftSelect}
+                                    isSelectionMode={isDraftManageMode}
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
-            <MobileBottomNav />
 
+            <MobileBottomNav />
             <FooterArea />
 
-            {/* 创作游戏相关弹窗 */}
             <CreateGameModals
                 isCreateTypeModalOpen={isCreateTypeModalOpen}
                 isMobileTipModalOpen={isMobileTipModalOpen}
@@ -512,25 +632,35 @@ const Create: React.FC = () => {
                 onOpenBindPhoneGuide={handleOpenBindPhoneGuide}
             />
 
-            {/* 充值弹窗 */}
             <RechargeModal
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
             />
 
-            {/* 结算确认弹窗 */}
             <ConfirmModal
                 isOpen={isSettleModalOpen}
                 onConfirm={handleSettle}
                 onCancel={() => setIsSettleModalOpen(false)}
                 title="确认结算"
                 message={`确定要结算当前总收益 ${stats.totalAmount} 积分吗？结算后积分将转入账户余额。`}
-                confirmButtonText={isSettling ? "结算中..." : "确认结算"}
+                confirmButtonText={isSettling ? '结算中...' : '确认结算'}
                 cancelButtonText="取消"
             />
 
-            {/* PDF模板指引弹窗 */}
+            <ConfirmModal
+                isOpen={isBatchDeleteConfirmOpen}
+                onConfirm={handleConfirmBatchDeleteDrafts}
+                onCancel={() => {
+                    if (isBatchDeletingDrafts) return;
+                    setIsBatchDeleteConfirmOpen(false);
+                }}
+                title="批量删除草稿"
+                message={`确定要删除已选中的 ${selectedDraftCount} 个草稿吗？删除后不可恢复。`}
+                confirmButtonText={isBatchDeletingDrafts ? '删除中...' : '确认删除'}
+                cancelButtonText="取消"
+            />
+
             <PDFTemplateModal
                 isOpen={isPDFModalOpen}
                 onClose={() => setIsPDFModalOpen(false)}

@@ -5,7 +5,7 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Character, Variation, PendingImage } from './types';
-import type { NPC, GenerateImgeResponse } from '../../../api/galgame/EditorData.type';
+import type { NPC, GenerateImgeResponse, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import { npcToCharacter, playerToCharacter, bumpCacheBust, stringifyPersonalityTags } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
@@ -26,6 +26,7 @@ interface HandlersContext {
     setIsGeneratingSingleNpcImage: React.Dispatch<React.SetStateAction<boolean>>;
     setGeneratingCharacterId: React.Dispatch<React.SetStateAction<string | null>>;
     setIsGeneratingNpcImages: React.Dispatch<React.SetStateAction<boolean>>;
+    setNpcBatchJobStatus: React.Dispatch<React.SetStateAction<BatchImageJobStatus | null>>;
     setNpcCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setNpcCostModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setIsLoadingNpcCost: React.Dispatch<React.SetStateAction<boolean>>;
@@ -63,6 +64,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         setIsGeneratingSingleNpcImage,
         setGeneratingCharacterId,
         setIsGeneratingNpcImages,
+        setNpcBatchJobStatus,
         setNpcCostPoints,
         setNpcCostModalOpen,
         setIsLoadingNpcCost,
@@ -183,6 +185,39 @@ export const createHandlers = (ctx: HandlersContext) => {
             }
         } catch (error) {
             console.error('刷新用户积分失败:', error);
+        }
+    };
+
+    const delay = (ms: number) =>
+        new Promise((resolve) => window.setTimeout(resolve, ms));
+
+    const pollNpcBatchJob = async (jobId: string) => {
+        while (true) {
+            const response = await api.getNpcBatchJobStatus(jobId);
+            const jobStatus = response.data;
+
+            if (!jobStatus?.success && jobStatus?.status === 'unknown') {
+                throw new Error(jobStatus.message || '批量任务不存在或已过期');
+            }
+
+            if (jobStatus) {
+                // 实现批量任务状态刷新
+                setNpcBatchJobStatus(jobStatus);
+            }
+
+            if (jobStatus) {
+                setNpcBatchJobStatus(jobStatus);
+            }
+
+            if (jobStatus?.status === 'completed') {
+                return jobStatus;
+            }
+
+            if (jobStatus?.status === 'failed') {
+                throw new Error(jobStatus.error || '批量生成人物立绘失败');
+            }
+
+            await delay(2000);
         }
     };
 
@@ -806,7 +841,7 @@ export const createHandlers = (ctx: HandlersContext) => {
     };
 
     // 批量生成所有NPC图片
-    const generateAllNpcImages = async (npcCostPoints: number | null) => {
+    const legacyGenerateAllNpcImages = async (npcCostPoints: number | null) => {
         if (!fileId) {
             toast.error('缺少必要数据，无法生成');
             return;
@@ -821,6 +856,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 const npcsGenerated: number | undefined = results?.npcsGenerated ?? results?.generated;
                 const npcsTotal: number | undefined = results?.npcsTotal ?? results?.total;
                 const errors: number | undefined = typeof results?.errors === 'number' ? results.errors : undefined;
+                void errors;
 
                 // 从 results 中获取新的字段
                 const effectiveSuccessful = results?.effectiveSuccessful ?? npcsGenerated ?? 0;
@@ -871,6 +907,89 @@ export const createHandlers = (ctx: HandlersContext) => {
             setIsLoadingNpcCost(false);
         }
     };
+
+    // 实现批量人物立绘任务轮询
+    const generateAllNpcImages = async (npcCostPoints: number | null) => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法生成');
+            return;
+        }
+
+        try {
+            setIsGeneratingNpcImages(true);
+            setNpcBatchJobStatus(null);
+
+            const startResponse = await api.startGenerateAllNpcImages(fileId);
+            const startData = startResponse.data;
+            if (!startData?.success || !startData.jobId) {
+                toast.error(startData?.message || '当前使用人数过多，请稍后再试');
+                return;
+            }
+
+            // 实现批量任务初始状态
+            setNpcBatchJobStatus({
+                success: true,
+                jobId: startData.jobId,
+                fileId: startData.fileId,
+                status: startData.status,
+                totalCount: startData.totalCount,
+                completedCount: 0,
+                failedCount: 0,
+                progress: 0,
+                estimatedRemainingSeconds: null,
+                estimatedTotalSeconds: null,
+            });
+
+            setNpcBatchJobStatus({
+                success: true,
+                jobId: startData.jobId,
+                fileId: startData.fileId,
+                status: startData.status,
+                totalCount: startData.totalCount,
+                completedCount: 0,
+                failedCount: 0,
+                progress: 0,
+                estimatedRemainingSeconds: null,
+                estimatedTotalSeconds: null,
+            });
+
+            await pollNpcBatchJob(startData.jobId);
+
+            const resultResponse = await api.getNpcBatchJobResult(startData.jobId);
+            const jobResult = resultResponse.data?.result;
+            const results = jobResult?.results;
+            if (!resultResponse.data?.success || !jobResult || !results) {
+                throw new Error(resultResponse.data?.error || '批量结果读取失败');
+            }
+
+            // 兼容人物批量结果统计
+            const effectiveSuccessful = Number(results.effectiveSuccessful ?? results.npcsGenerated ?? 0);
+            const totalSuccessful = Number(results.totalSuccessful ?? results.npcsTotal ?? startData.totalCount ?? 0);
+            const pointsDeducted = Number(results.pointsDeducted ?? npcCostPoints ?? 0);
+            const remainingPoints = typeof results.remainingPoints === 'number'
+                ? results.remainingPoints
+                : undefined;
+
+            setNpcGenerationResult({
+                generatedCount: effectiveSuccessful,
+                totalCount: totalSuccessful,
+                pointsDeducted,
+                remainingPoints,
+            });
+            setNpcResultModalOpen(true);
+            if (onDataChange) {
+                onDataChange();
+            }
+            await refreshUserPoints();
+        } catch (error) {
+            toast.error('生成所有角色立绘失败，请检查网络连接');
+        } finally {
+            setIsGeneratingNpcImages(false);
+            setNpcBatchJobStatus(null);
+        }
+    };
+
+    void legacyGenerateAllNpcImages;
 
     return {
         confirmEdit,

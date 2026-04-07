@@ -39,6 +39,8 @@ const CreateGame: React.FC = () => {
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showPriceModal, setShowPriceModal] = useState(false);
+    const [showUnpublishEditModal, setShowUnpublishEditModal] = useState(false);
+    const [isUnpublishingForEdit, setIsUnpublishingForEdit] = useState(false);
     const [showMiniProgramTip, setShowMiniProgramTip] = useState(false);
     const [miniProgramTipMessage, setMiniProgramTipMessage] = useState('');
 
@@ -223,6 +225,51 @@ const CreateGame: React.FC = () => {
         }
     }
 
+    const handleEditGame = () => {
+        if (!gameDetail) return;
+
+        // 实现 已发布作品编辑前拦截
+        if (gameDetail.is_public === 1) {
+            setShowUnpublishEditModal(true);
+            return;
+        }
+
+        editGame();
+    };
+
+    const handleConfirmUnpublishEdit = async () => {
+        const fileId = gameDetail?.file_id || gameDetail?.id;
+        if (!fileId || isUnpublishingForEdit) return;
+
+        try {
+            setIsUnpublishingForEdit(true);
+            const response = await GameAction.unpublishGame({ fileId });
+
+            if (!response.data.success) {
+                toast.error(response.data.message || '下架游戏失败');
+                return;
+            }
+
+            setShowUnpublishEditModal(false);
+            setGameDetail((prev) => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    is_public: 0,
+                };
+            });
+
+            // 实现 下架后再进入编辑页
+            editGame();
+            toast.success('游戏已下架现在可以进行编辑了！');
+        } catch (error) {
+            console.error('下架后编辑失败:', error);
+            toast.error('下架游戏失败');
+        } finally {
+            setIsUnpublishingForEdit(false);
+        }
+    };
+
     const handlePriceAdjust = async (price: number | null, specialPrice: number | null) => {
         try {
             const fileId = gameDetail?.file_id || gameDetail?.id;
@@ -264,7 +311,7 @@ const CreateGame: React.FC = () => {
                             <GameStatsView
                                 gameDetail={gameDetail}
                                 heroBackground={heroBackground}
-                                onEdit={() => editGame()}
+                                onEdit={handleEditGame}
                                 onDelete={handleDeleteGame}
                                 isDeleting={isDeleting}
                                 onPublish={() => setShowPublishModal(true)}
@@ -293,6 +340,19 @@ const CreateGame: React.FC = () => {
                 isOpen={showDeleteModal}
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setShowDeleteModal(false)}
+            />
+
+            <ConfirmModal
+                isOpen={showUnpublishEditModal}
+                onConfirm={handleConfirmUnpublishEdit}
+                onCancel={() => {
+                    if (isUnpublishingForEdit) return;
+                    setShowUnpublishEditModal(false);
+                }}
+                title="编辑提示"
+                message={`当前作品已发布，\n需要将作品先下架才能继续编辑游戏!`}
+                confirmButtonText={isUnpublishingForEdit ? '下架中...' : '下架编辑'}
+                cancelButtonText="取消编辑"
             />
 
             {gameDetail && (

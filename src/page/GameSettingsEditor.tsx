@@ -238,7 +238,9 @@ const GameSettingsEditor = () => {
 
         // 从世界观面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'world' && panelId !== 'world' && worldPanelRef.current) {
-            const canLeave = worldPanelRef.current.checkBeforeLeave();
+            const canLeave = worldPanelRef.current.checkBeforeLeave(() => {
+                void handlePanelChange(panelId);
+            });
             if (!canLeave) {
                 return;
             }
@@ -272,8 +274,8 @@ const GameSettingsEditor = () => {
         setShowPublishModal(false);
     }, [handlePublishGame]);
 
-    const checkActivePanelBeforeTest = useCallback(async (): Promise<boolean> => {
-        // 测试体验前复用各面板的未保存检查，避免改动未保存直接开局
+    const checkActivePanelBeforeAction = useCallback(async (): Promise<boolean> => {
+        // 实现操作前统一复用当前面板未保存检查
         if (activePanel === 'functionalNPCs' && functionalNPCsPanelRef.current) {
             return await Promise.resolve(functionalNPCsPanelRef.current.checkBeforeLeave());
         }
@@ -331,7 +333,7 @@ const GameSettingsEditor = () => {
                             onClick={async (e) => {
                                 console.log('点击测试体验');
                                 e.preventDefault();
-                                const canStartTest = await checkActivePanelBeforeTest();
+                                const canStartTest = await checkActivePanelBeforeAction();
                                 if (!canStartTest) {
                                     return;
                                 }
@@ -343,8 +345,14 @@ const GameSettingsEditor = () => {
                         </button>
                         <button
                             className={styles.primary}
-                            onClick={(e) => {
+                            onClick={async (e) => {
                                 e.preventDefault();
+                                // 实现直接发布前未保存校验
+                                const canOpenPublishModal = await checkActivePanelBeforeAction();
+                                // 阻止未保存状态直接进入发布弹窗
+                                if (!canOpenPublishModal) {
+                                    return;
+                                }
                                 setShowPublishModal(true);
                             }}
                             disabled={!fileId || !gameData || isSubmitting || isLoadingData}

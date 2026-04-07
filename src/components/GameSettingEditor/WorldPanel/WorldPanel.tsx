@@ -17,14 +17,14 @@ import gameTagsApi from '../../../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../../../utils/themeTags';
 
 export interface WorldPanelRef {
-    checkBeforeLeave: () => boolean;
+    checkBeforeLeave: (action?: () => void) => boolean;
 }
 
 interface WorldPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
     isLoading?: boolean;
     onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
-    handleSubmit?: () => void;
+    handleSubmit?: (options?: { onSuccess?: () => void }) => Promise<boolean>;
     isSubmitting?: boolean;
     fileId?: string;
     mode: 'visual' | 'worldInteraction' | undefined;
@@ -113,6 +113,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const lastWorldSettingSnapshotRef = useRef<string | null>(null);
     const originalThemeTagIdsRef = useRef<number[]>([]);
     const hasTouchedThemeTagsRef = useRef(false);
+    const saveWorldSettingChangesRef = useRef<(() => Promise<boolean>) | null>(null);
 
     const currentFileId = gameData?.fileId || fileId;
     const isWorldInteractionMode = mode === 'worldInteraction';
@@ -128,9 +129,10 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         getCheckBeforeLeave,
     } = useUnsavedChanges({
         onSave: async () => {
-            if (handleSubmit) {
-                await handleSubmit();
+            if (saveWorldSettingChangesRef.current) {
+                return await saveWorldSettingChangesRef.current();
             }
+            return false;
         },
     });
 
@@ -539,6 +541,79 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         return Object.keys(diff).length > 0 ? diff : null;
     }, [gameData, getFullWorldSettingData, mode]);
 
+    const syncSavedBaseline = useCallback((
+        savedWorldSetting: VisualWorldSetting | WorldWorldSetting,
+        savedThemeTagIds: number[],
+    ) => {
+        // 实现世界观保存后同步基线
+        originalDataRef.current = JSON.parse(JSON.stringify(savedWorldSetting));
+        lastWorldSettingSnapshotRef.current = JSON.stringify(savedWorldSetting);
+        originalThemeTagIdsRef.current = [...savedThemeTagIds];
+        hasTouchedThemeTagsRef.current = false;
+        setPersistedThemeTagIds([...savedThemeTagIds]);
+        setHasUnsavedChanges(false);
+    }, [setHasUnsavedChanges]);
+
+    const validateWorldSettingBeforeSave = useCallback(() => {
+        const openingTrimmed = opening.trim();
+        if (!openingTrimmed) {
+            setOpeningError('开场白为必填字段，请填写后再提交');
+            toast.error('开场白为必填字段，请填写后再提交');
+            return false;
+        }
+        setOpeningError('');
+
+        const openingPlotTrimmed = openingPlot.trim();
+        if (!openingPlotTrimmed) {
+            setOpeningPlotError('开场剧情为必填字段，请填写后再提交');
+            toast.error('开场剧情为必填字段，请填写后再提交');
+            return false;
+        }
+        setOpeningPlotError('');
+
+        // 实现题材标签保存校验
+        if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
+            setThemeTagError('请选择 1~2 个作品标签');
+            toast.error('作品标签为必填，且最多选择 2 个');
+            return false;
+        }
+        setThemeTagError('');
+
+        if (isWorldInteractionMode && storylines.length === 0) {
+            setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
+            setIsStorylineExpanded(true);
+            toast.error('请至少添加一条故事线（世界交互模式下为必填）');
+            return false;
+        }
+        setStorylineError('');
+        return true;
+    }, [isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, storylines.length]);
+
+    const saveWorldSettingChanges = useCallback(async () => {
+        if (!handleSubmit) {
+            return false;
+        }
+
+        if (!validateWorldSettingBeforeSave()) {
+            return false;
+        }
+
+        const fullWorldSetting = getFullWorldSettingData();
+        if (!fullWorldSetting) {
+            toast.error('没有需要保存的世界观数据');
+            return false;
+        }
+
+        const nextThemeTagIds = [...selectedThemeTagIds];
+        return await handleSubmit({
+            onSuccess: () => {
+                syncSavedBaseline(fullWorldSetting, nextThemeTagIds);
+            },
+        });
+    }, [getFullWorldSettingData, handleSubmit, selectedThemeTagIds, syncSavedBaseline, validateWorldSettingBeforeSave]);
+
+    saveWorldSettingChangesRef.current = saveWorldSettingChanges;
+
     useEffect(() => {
         if (!originalDataRef.current) {
             return;
@@ -565,43 +640,10 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         });
     }, [getWorldSettingData, onGetData, selectedThemeTagIds]);
 
-    const handleConfirmSubmit = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    const handleConfirmSubmit = useCallback(async (event: React.MouseEvent<HTMLButtonElement>) => {
         event.preventDefault();
-
-        const openingTrimmed = opening.trim();
-        if (!openingTrimmed) {
-            setOpeningError('开场白为必填字段，请填写后再提交');
-            toast.error('开场白为必填字段，请填写后再提交');
-            return;
-        }
-        setOpeningError('');
-
-        const openingPlotTrimmed = openingPlot.trim();
-        if (!openingPlotTrimmed) {
-            setOpeningPlotError('开场剧情为必填字段，请填写后再提交');
-            toast.error('开场剧情为必填字段，请填写后再提交');
-            return;
-        }
-        setOpeningPlotError('');
-
-        // 实现作品标签必填与数量限制
-        if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
-            setThemeTagError('请选择 1~2 个作品标签');
-            toast.error('作品标签为必填，且最多选择 2 个');
-            return;
-        }
-        setThemeTagError('');
-
-        if (isWorldInteractionMode && storylines.length === 0) {
-            setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
-            setIsStorylineExpanded(true);
-            toast.error('请至少添加一条故事线（世界交互模式下为必填）');
-            return;
-        }
-        setStorylineError('');
-
-        handleSubmit?.();
-    }, [handleSubmit, isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, storylines.length]);
+        await saveWorldSettingChanges();
+    }, [saveWorldSettingChanges]);
 
     return (
         <div className={styles.panelContent}>

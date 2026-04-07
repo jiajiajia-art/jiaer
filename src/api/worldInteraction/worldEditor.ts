@@ -7,6 +7,8 @@ import type {
 import type { Scene, SubScene } from "./mapWorldData.type";
 import type {
   AddFunctionalNpcResponse,
+  BatchImageJobResult,
+  BatchImageJobStatus,
   CalculatePointsResponse,
   FunctionalNpcPatch,
   GenerateAllFunctionImageResponse,
@@ -14,6 +16,7 @@ import type {
   GenerateFunctionImageResponse,
   GetMusicListResponse,
   NpcSlot,
+  StartBatchImageJobResponse,
   UploadMusicResponse,
   UploadNpcImageResponse,
   UploadPlayerImageResponse,
@@ -134,6 +137,27 @@ const worldEditor = {
       {
         timeout: 1500000,
       }
+    );
+  },
+  startGenerateAllSceneImages: (fileId: string) => {
+    return api.post<StartBatchImageJobResponse>(
+      `/world-interaction/images/generate-scenes-subscenes/start`,
+      {
+        fileId: fileId,
+      },
+      {
+        timeout: 0,
+      }
+    );
+  },
+  getSceneBatchJobStatus: (jobId: string) => {
+    return api.get<BatchImageJobStatus>(
+      `/world-interaction/images/jobs/${jobId}/status`
+    );
+  },
+  getSceneBatchJobResult: (jobId: string) => {
+    return api.get<BatchImageJobResult>(
+      `/world-interaction/images/jobs/${jobId}/result`
     );
   },
   uploadSubSceneImage: (

@@ -16,8 +16,14 @@ import { getImageUrl } from '../utils/constants';
 import announcementApi from '../api/announcement/announcementApi';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
 import AnnouncementModal from '../components/AnnouncementModal';
+import bannerApi from '../api/banner/bannerApi';
+import type { BannerItem } from '../api/banner/banner.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import type { FlatThemeTag } from '../utils/themeTags';
+
+type CarouselItem = UserGameData | BannerItem;
+
+const isBannerCarouselItem = (item: CarouselItem): item is BannerItem => 'image_url' in item;
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -48,12 +54,14 @@ const Home: React.FC = () => {
     const isLoadingMoreAllRef = useRef(false);
     const lastUserIdRef = useRef<string | number | undefined>(undefined);
     const hasInitializedRef = useRef(false);
-    const [carouselItems, setCarouselItems] = useState<UserGameData[]>([]);
+    const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
     const [latestAnnouncement, setLatestAnnouncement] = useState<AnnouncementRecord | null>(null);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
     const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
     const [isThemeShowcaseDragging, setIsThemeShowcaseDragging] = useState(false);
+    const [carouselRefreshKey, setCarouselRefreshKey] = useState(0);
+    const [carouselImageRetryMap, setCarouselImageRetryMap] = useState<Record<string, number>>({});
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
     const touchDeltaXRef = useRef(0);
@@ -74,6 +82,35 @@ const Home: React.FC = () => {
     const currentLogicalSlide = hasMultipleCarouselItems
         ? ((currentSlide - 1 + carouselItems.length) % carouselItems.length)
         : 0;
+
+    const getCarouselSlidePosition = useCallback((slide: number, itemCount: number) => {
+        if (itemCount <= 1) return 0;
+        if (!Number.isFinite(slide)) return 1;
+        const logicalIndex = ((slide - 1) % itemCount + itemCount) % itemCount;
+        return logicalIndex + 1;
+    }, []);
+
+    const getCarouselImageStateKey = useCallback((item: CarouselItem, index: number) => {
+        const imageId = getCarouselItemId(item, index);
+        const imageUrl = getCarouselItemImage(item) || '';
+        return `${imageId}-${imageUrl}`;
+    }, []);
+
+    const getCarouselImageSrc = useCallback((item: CarouselItem, index: number) => {
+        const baseUrl = getImageUrl(getCarouselItemImage(item));
+        if (!baseUrl) return '';
+
+        const imageStateKey = getCarouselImageStateKey(item, index);
+        const retryVersion = carouselImageRetryMap[imageStateKey] || 0;
+        const reloadVersion = carouselRefreshKey + retryVersion;
+
+        if (reloadVersion <= 0) {
+            return baseUrl;
+        }
+
+        const separator = baseUrl.includes('?') ? '&' : '?';
+        return `${baseUrl}${separator}carouselReload=${reloadVersion}`;
+    }, [carouselImageRetryMap, carouselRefreshKey, getCarouselImageStateKey]);
 
     // 监听用户登出，重置检查状态
     useEffect(() => {
@@ -241,10 +278,30 @@ const Home: React.FC = () => {
     }, []);
 
     const loadCarouselData = useCallback(async () => {
-        const response = await libraryDataApi.getCarouselData();
-        if (response.data.success && response.data.data) {
-            setCarouselItems(response.data.data);
+        try {
+            const bannerResponse = await bannerApi.getLatest();
+            const bannerItems = bannerResponse.data.data?.banners || [];
+            if (bannerResponse.data.success && bannerItems.length > 0) {
+                // 实现双端统一读取轮播图
+                setCarouselItems(bannerItems);
+                return;
+            }
+        } catch (error) {
+            console.error('加载首页轮播图失败，准备回退旧轮播:', error);
         }
+
+        try {
+            const response = await libraryDataApi.getCarouselData();
+            if (response.data.success && response.data.data) {
+                // 实现轮播图兜底回退
+                setCarouselItems(response.data.data);
+                return;
+            }
+        } catch (error) {
+            console.error('加载首页旧轮播图失败:', error);
+        }
+
+        setCarouselItems([]);
     }, []);
 
     const loadLatestAnnouncement = useCallback(async () => {
@@ -417,6 +474,7 @@ const Home: React.FC = () => {
             setIsTransitionEnabled(true);
             setCurrentSlide(0);
         }
+        setCarouselImageRetryMap({});
     }, [hasMultipleCarouselItems, carouselItems.length]);
 
     // autoplay
@@ -426,6 +484,41 @@ const Home: React.FC = () => {
             clearCarouselInterval();
         };
     }, [restartCarouselAutoPlay, clearCarouselInterval]);
+
+    const handleCarouselResume = useCallback(() => {
+        // 实现 页面恢复后重建轮播状态
+        setIsTransitionEnabled(true);
+        setCurrentSlide((prev) => getCarouselSlidePosition(prev, carouselItems.length));
+        // 实现 轮播图图片强制重载
+        setCarouselImageRetryMap({});
+        setCarouselRefreshKey((prev) => prev + 1);
+        void loadCarouselData();
+        restartCarouselAutoPlay();
+    }, [carouselItems.length, getCarouselSlidePosition, loadCarouselData, restartCarouselAutoPlay]);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // 实现 页面隐藏时暂停自动轮播
+                clearCarouselInterval();
+                return;
+            }
+
+            handleCarouselResume();
+        };
+
+        const handlePageShow = () => {
+            handleCarouselResume();
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('pageshow', handlePageShow);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('pageshow', handlePageShow);
+        };
+    }, [clearCarouselInterval, handleCarouselResume]);
 
     // manual switching
     const goToSlide = (logicalIndex: number) => {
@@ -470,6 +563,18 @@ const Home: React.FC = () => {
         if (currentSlide === 0) {
             setIsTransitionEnabled(false);
             setCurrentSlide(carouselItems.length);
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsTransitionEnabled(true);
+                });
+            });
+            return;
+        }
+
+        if (currentSlide < 0 || currentSlide > carouselItems.length + 1) {
+            // 实现 恢复后轮播索引兜底
+            setIsTransitionEnabled(false);
+            setCurrentSlide(getCarouselSlidePosition(currentSlide, carouselItems.length));
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     setIsTransitionEnabled(true);
@@ -537,6 +642,59 @@ const Home: React.FC = () => {
             state: { source: 'main_page' },
         });
     };
+
+    const navigateToBannerLink = (linkUrl: string) => {
+        const safeLink = linkUrl.trim();
+        if (!safeLink) return;
+
+        if (safeLink.startsWith('http://') || safeLink.startsWith('https://')) {
+            window.open(safeLink, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        if (safeLink.startsWith('/')) {
+            navigate(safeLink);
+        }
+    };
+
+    const handleCarouselItemClick = (item: CarouselItem) => {
+        if (isBannerCarouselItem(item)) {
+            navigateToBannerLink(item.link_url || '');
+            return;
+        }
+        navigateToGameDetail(item);
+    };
+
+    const getCarouselItemId = (item: CarouselItem, index: number) => (
+        isBannerCarouselItem(item)
+            ? item.id || `banner-${index}`
+            : item.file_id || item.id || `carousel-${index}`
+    );
+
+    const getCarouselItemImage = (item: CarouselItem) => (
+        isBannerCarouselItem(item) ? item.image_url : item.cover_url
+    );
+
+    const isCarouselItemClickable = (item: CarouselItem) => (
+        isBannerCarouselItem(item) ? Boolean(item.link_url?.trim()) : Boolean(item.file_id || item.id)
+    );
+
+    const handleCarouselImageError = useCallback((item: CarouselItem, index: number) => {
+        const imageStateKey = getCarouselImageStateKey(item, index);
+
+        setCarouselImageRetryMap((prev) => {
+            const currentRetryCount = prev[imageStateKey] || 0;
+            if (currentRetryCount >= 1) {
+                return prev;
+            }
+
+            // 实现 轮播图图片失败后补一次重载
+            return {
+                ...prev,
+                [imageStateKey]: currentRetryCount + 1,
+            };
+        });
+    }, [getCarouselImageStateKey]);
 
     const handleThemeClick = (tagId: number) => {
         navigate(`/categories?tagId=${tagId}`);
@@ -641,25 +799,33 @@ const Home: React.FC = () => {
                                             onTouchCancel={resetTouchState}
                                         >
                                             {carouselRenderItems.map((item, idx) => {
-                                                const imageId = item.file_id || item.id || `carousel-${idx}`;
-                                                const gameId = item.file_id || item.id;
+                                                const imageId = getCarouselItemId(item, idx);
+                                                const canClick = isCarouselItemClickable(item);
+                                                const imageStateKey = getCarouselImageStateKey(item, idx);
+                                                const retryVersion = carouselImageRetryMap[imageStateKey] || 0;
                                                 return (
                                                     <div
                                                         key={`${imageId}-${idx}`}
-                                                        className={`${styles.carouselSlide} ${gameId ? styles.carouselSlideClickable : ''}`}
+                                                        className={`${styles.carouselSlide} ${canClick ? styles.carouselSlideClickable : ''}`}
                                                         onClick={(event) => {
                                                             if (suppressBannerClickRef.current) {
                                                                 event.preventDefault();
                                                                 event.stopPropagation();
                                                                 return;
                                                             }
-                                                            navigateToGameDetail(item);
+                                                            handleCarouselItemClick(item);
                                                         }}
                                                     >
                                                         <div className={styles.carouselImage}>
                                                             <img
-                                                                src={getImageUrl(item.cover_url)}
+                                                                key={`${imageStateKey}-${carouselRefreshKey}-${retryVersion}`}
+                                                                src={getCarouselImageSrc(item, idx)}
                                                                 alt={item.title}
+                                                                loading="eager"
+                                                                decoding="async"
+                                                                onError={() => {
+                                                                    handleCarouselImageError(item, idx);
+                                                                }}
                                                             />
                                                         </div>
                                                         <div className={styles.carouselContent}>

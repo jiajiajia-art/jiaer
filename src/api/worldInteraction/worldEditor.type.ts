@@ -40,6 +40,63 @@ export interface GenerateALLSceneImage {
   };
 }
 
+export interface BatchImageJobPayload {
+  success: boolean;
+  message: string;
+  results: {
+    npcsGenerated?: number;
+    npcsTotal?: number;
+    scenesGenerated?: number;
+    scenesTotal?: number;
+    effectiveSuccessful?: number;
+    totalSuccessful?: number;
+    totalGenerated?: number;
+    totalImages?: number;
+    pointsDeducted?: number;
+    remainingPoints?: number | null;
+    [key: string]: unknown;
+  };
+  details?: unknown;
+  errors?: unknown;
+}
+
+export interface StartBatchImageJobResponse {
+  success: boolean;
+  jobId: string;
+  fileId: string;
+  status: 'running' | 'queued' | 'pending' | 'completed';
+  totalCount: number;
+  message?: string;
+  error?: string;
+}
+
+export interface BatchImageJobStatus {
+  success: boolean;
+  jobId: string;
+  fileId?: string;
+  status: 'running' | 'queued' | 'pending' | 'completed' | 'failed' | 'unknown';
+  totalCount: number;
+  completedCount: number;
+  failedCount: number;
+  progress?: number;
+  startedAt?: string;
+  updatedAt?: string;
+  elapsedSeconds?: number | null;
+  estimatedRemainingSeconds?: number | null;
+  estimatedTotalSeconds?: number | null;
+  result?: BatchImageJobPayload | null;
+  error?: string | null;
+  message?: string;
+}
+
+export interface BatchImageJobResult {
+  success: boolean;
+  jobId: string;
+  fileId: string;
+  result: BatchImageJobPayload;
+  error?: string;
+}
+
 export interface CalculatePointsResponse {
   success: boolean;
   message: string;

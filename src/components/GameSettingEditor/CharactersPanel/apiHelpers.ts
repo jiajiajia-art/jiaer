@@ -153,6 +153,22 @@ export const createApiHelpers = (mode: string) => {
                     pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
                 });
         },
+        startGenerateAllNpcImages: async (fileId: string) => {
+            return EditorApi.startGenerateAllImages(fileId, {
+                generateNPCs: true,
+                generateScenes: false,
+                generateVariants: false,
+                generatePlayer: true,
+                removeBg: true,
+                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+            });
+        },
+        getNpcBatchJobStatus: async (jobId: string) => {
+            return EditorApi.getGenerateAllImagesJobStatus(jobId);
+        },
+        getNpcBatchJobResult: async (jobId: string) => {
+            return EditorApi.getGenerateAllImagesJobResult(jobId);
+        },
 
         calculateNpcPoints: async (fileId: string) => {
             return isWorldInteraction

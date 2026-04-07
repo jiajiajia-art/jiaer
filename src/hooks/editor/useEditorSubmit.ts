@@ -18,7 +18,7 @@ interface UseEditorSubmitOptions {
 
 interface UseEditorSubmitReturn {
     isSubmitting: boolean;
-    handleSubmit: () => Promise<void>;
+    handleSubmit: (options?: { onSuccess?: () => void }) => Promise<boolean>;
     worldPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
     charactersPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
     scenesPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
@@ -50,10 +50,10 @@ export const useEditorSubmit = ({
     const charactersPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
     const scenesPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
 
-    const handleSubmit = useCallback(async () => {
+    const handleSubmit = useCallback(async (options?: { onSuccess?: () => void }) => {
         if (!fileId || !gameData) {
             toast.error('缺少必要数据，无法提交');
-            return;
+            return false;
         }
 
         setIsSubmitting(true);
@@ -72,7 +72,7 @@ export const useEditorSubmit = ({
                         if (themeTagIds.length < 1 || themeTagIds.length > 2) {
                             toast.error('作品标签为必填，且最多选择 2 个');
                             setIsSubmitting(false);
-                            return;
+                            return false;
                         }
 
                         if (worldData?.worldSetting) {
@@ -84,15 +84,19 @@ export const useEditorSubmit = ({
                         } else if (!hasThemeTagChanges) {
                             toast.error('没有需要保存的修改');
                             setIsSubmitting(false);
-                            return;
+                            return false;
                         }
 
                         // 实现题材标签独立保存
                         if (worldData?.worldSetting || hasThemeTagChanges) {
-                            await gameTagsApi.setGameTagsForGame({
+                            const tagResponse = await gameTagsApi.setGameTagsForGame({
                                 fileId,
                                 tagIds: themeTagIds,
                             });
+                            if (!tagResponse.data?.success) {
+                                toast.error('作品标签保存失败，请重试');
+                                return false;
+                            }
                         }
 
                         if (!response) {
@@ -152,18 +156,23 @@ export const useEditorSubmit = ({
                 default:
                     toast.error('当前面板不支持提交');
                     setIsSubmitting(false);
-                    return;
+                    return false;
             }
 
             if (response && response.data?.success) {
+                // 实现保存成功后先同步前端基线
+                options?.onSuccess?.();
                 toast.success('修改已保存');
                 await onDataRefresh();
+                return true;
             } else {
                 toast.error('保存失败，请重试');
+                return false;
             }
         } catch (error) {
             console.error('更新数据时出错:', error);
             toast.error('保存失败，请重试');
+            return false;
         } finally {
             setIsSubmitting(false);
         }

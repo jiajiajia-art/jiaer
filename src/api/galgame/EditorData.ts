@@ -12,6 +12,9 @@ import type {
     CheckUploadStatusResponse,
     UploadFileResponse,
     GenerateImageRequest,
+    StartBatchImageJobResponse,
+    BatchImageJobStatus,
+    BatchImageJobResult,
     UploadGameCoverResponse,
     StoryStructure,
     DynamicEntry,
@@ -134,6 +137,17 @@ const EditorApi = {
         return api.post<AllGameData>(`/visual/generate-images/${fileId}/all`, data, {
             timeout: 0,
         });
+    },
+    startGenerateAllImages: (fileId: string, data: GenerateAllImageRequest) => {
+        return api.post<StartBatchImageJobResponse>(`/visual/generate-images/${fileId}/all/start`, data, {
+            timeout: 0,
+        });
+    },
+    getGenerateAllImagesJobStatus: (jobId: string) => {
+        return api.get<BatchImageJobStatus>(`/visual/generate-images/jobs/${jobId}/status`);
+    },
+    getGenerateAllImagesJobResult: (jobId: string) => {
+        return api.get<BatchImageJobResult>(`/visual/generate-images/jobs/${jobId}/result`);
     },
     generatePlayerImage: (fileId: string, data: GenerateImageRequest) => {
         return api.post<GenerateImgeResponse>(`/visual/generate-images/${fileId}/player`, data, {

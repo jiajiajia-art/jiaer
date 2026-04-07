@@ -103,6 +103,29 @@ export const createSceneApiHelpers = (mode: string) => {
                 pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
             });
         },
+        startGenerateAllSceneImages: async (fileId: string) => {
+            if (isWorldInteraction) {
+                return worldEditor.startGenerateAllSceneImages(fileId);
+            }
+            return EditorApi.startGenerateAllImages(fileId, {
+                generateNPCs: false,
+                generateScenes: true,
+                generateVariants: false,
+                generatePlayer: false,
+                removeBg: true,
+                pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+            });
+        },
+        getSceneBatchJobStatus: async (jobId: string) => {
+            return isWorldInteraction
+                ? worldEditor.getSceneBatchJobStatus(jobId)
+                : EditorApi.getGenerateAllImagesJobStatus(jobId);
+        },
+        getSceneBatchJobResult: async (jobId: string) => {
+            return isWorldInteraction
+                ? worldEditor.getSceneBatchJobResult(jobId)
+                : EditorApi.getGenerateAllImagesJobResult(jobId);
+        },
 
         calculateScenePoints: async (fileId: string) => {
             return isWorldInteraction

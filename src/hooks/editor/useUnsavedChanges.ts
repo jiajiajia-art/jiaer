@@ -3,14 +3,14 @@ import SaveConfirmModal from '../../components/CommonModal/SaveConfirmModal';
 import { toast } from 'react-hot-toast';
 
 export interface UnsavedChangesRef {
-    checkBeforeLeave: () => boolean;
+    checkBeforeLeave: (action?: () => void) => boolean;
 }
 
 interface UseUnsavedChangesOptions {
     /**
      * 保存方法，当用户选择保存时调用
      */
-    onSave?: () => Promise<void>;
+    onSave?: () => Promise<boolean | void>;
     /**
      * 是否启用未保存修改检测
      */
@@ -45,7 +45,7 @@ interface UseUnsavedChangesReturn {
     /**
      * 获取 checkBeforeLeave 函数（用于 useImperativeHandle）
      */
-    getCheckBeforeLeave: () => () => boolean;
+    getCheckBeforeLeave: () => (action?: () => void) => boolean;
 }
 
 /**
@@ -101,12 +101,17 @@ export function useUnsavedChanges(
 
     // 获取 checkBeforeLeave 函数（用于 useImperativeHandle）
     const getCheckBeforeLeave = useCallback(() => {
-        return () => {
+        return (action?: () => void) => {
             const hasChanges = hasUnsavedChangesRef.current;
             const isBlocking = isBlockingSwitchRef.current;
             
             if (hasChanges && !isBlocking && enabled) {
-                setPendingAction(null);
+                // 实现保存后继续原操作
+                if (action) {
+                    setPendingAction(() => action);
+                } else {
+                    setPendingAction(null);
+                }
                 setSaveConfirmModalOpen(true);
                 setIsBlockingSwitch(true);
                 return false;
@@ -126,7 +131,10 @@ export function useUnsavedChanges(
         onSave: async () => {
             if (onSave) {
                 try {
-                    await onSave();
+                    const saveResult = await onSave();
+                    if (saveResult === false) {
+                        return;
+                    }
                     setSaveConfirmModalOpen(false);
                     setIsBlockingSwitch(false);
                     setHasUnsavedChanges(false);

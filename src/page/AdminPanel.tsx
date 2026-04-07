@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
-import FooterArea from '../components/Layout/FooterArea';
 import AnnouncementModal from '../components/AnnouncementModal';
+import AdminBannerManager from '../components/AdminBannerManager';
 import announcementApi from '../api/announcement/announcementApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import type { AnnouncementPayload, AnnouncementRecord, AnnouncementSection, AnnouncementSummary } from '../api/announcement/announcement.type';
@@ -10,7 +10,7 @@ import type { AdminGameTagRecord, FeaturedGameTag } from '../api/gameTags/gameTa
 import styles from './AdminPanel.module.css';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'themes' | 'points';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'points';
 
 const createEmptySection = (): AnnouncementSection => ({ subtitle: '', body: '' });
 
@@ -29,7 +29,7 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
     return fallback;
 };
 
-const moveById = <T extends { id: number }>(list: T[], fromId: number, toId: number): T[] => {
+const moveById = <T extends { id: number | string }>(list: T[], fromId: number | string, toId: number | string): T[] => {
     const fromIndex = list.findIndex((item) => item.id === fromId);
     const toIndex = list.findIndex((item) => item.id === toId);
     if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return list;
@@ -41,6 +41,7 @@ const moveById = <T extends { id: number }>(list: T[], fromId: number, toId: num
 
 const AdminPanel: React.FC = () => {
     const [activeTab, setActiveTab] = useState<AdminTab>('announcements');
+
     const [history, setHistory] = useState<AnnouncementSummary[]>([]);
     const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
     const [editorMode, setEditorMode] = useState<EditorMode>('new');
@@ -53,6 +54,7 @@ const AdminPanel: React.FC = () => {
     const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
     const [previewAnnouncement, setPreviewAnnouncement] = useState<AnnouncementRecord | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
     const [themeKeyword, setThemeKeyword] = useState('');
     const [themeTags, setThemeTags] = useState<AdminGameTagRecord[]>([]);
     const [featuredThemeTags, setFeaturedThemeTags] = useState<FeaturedGameTag[]>([]);
@@ -66,12 +68,6 @@ const AdminPanel: React.FC = () => {
     const [hasFeaturedChanges, setHasFeaturedChanges] = useState(false);
     const createThemeCardRef = useRef<HTMLElement | null>(null);
     const [featuredThemeCardHeight, setFeaturedThemeCardHeight] = useState<number | null>(null);
-
-    const currentModeText = useMemo(() => {
-        if (editorMode === 'draft') return '当前编辑：公告草稿';
-        if (editorMode === 'published') return '当前编辑：已发布公告的新版本';
-        return '当前编辑：新建公告';
-    }, [editorMode]);
 
     const previewDraftRecord = useMemo<AnnouncementRecord>(() => {
         const safeSections = sections.filter((section) => section.subtitle.trim() || section.body.trim());
@@ -99,7 +95,7 @@ const AdminPanel: React.FC = () => {
                 setFeaturedThemeCardHeight(null);
                 return;
             }
-            // 实现热门题材跟随新增题材自然高度
+            // 实现热门题材卡片高度同步
             setFeaturedThemeCardHeight(createThemeCardRef.current.offsetHeight);
         };
 
@@ -162,7 +158,7 @@ const AdminPanel: React.FC = () => {
             setIsLoadingThemes(true);
             const response = await gameTagsApi.getAdminGameTags(keyword.trim() || undefined);
             const data = response.data.data;
-            // 过滤父题材，只保留可直接使用的题材
+            // 实现父题材过滤，只保留可直接使用的题材
             const availableTags = (data?.tags || []).filter((tag) => Number(tag.child_count) === 0);
             const availableTagIds = new Set(availableTags.map((tag) => Number(tag.id)));
             setThemeTags(availableTags);
@@ -182,7 +178,9 @@ const AdminPanel: React.FC = () => {
 
     useEffect(() => {
         if (activeTab !== 'themes') return undefined;
-        const timer = window.setTimeout(() => { void loadThemeAdminData(themeKeyword); }, 250);
+        const timer = window.setTimeout(() => {
+            void loadThemeAdminData(themeKeyword);
+        }, 250);
         return () => window.clearTimeout(timer);
     }, [activeTab, themeKeyword, loadThemeAdminData]);
 
@@ -191,7 +189,10 @@ const AdminPanel: React.FC = () => {
             setIsLoadingDetail(true);
             const response = await announcementApi.getAdminDetail(id);
             const record = response.data.data;
-            if (!record) return toast.error('公告详情不存在');
+            if (!record) {
+                toast.error('公告详情不存在');
+                return;
+            }
             applyRecordToEditor(record);
         } catch (error) {
             toast.error(extractErrorMessage(error, '公告详情加载失败'));
@@ -204,7 +205,10 @@ const AdminPanel: React.FC = () => {
         try {
             const response = await announcementApi.getAdminDetail(id);
             const record = response.data.data;
-            if (!record) return toast.error('公告详情不存在');
+            if (!record) {
+                toast.error('公告详情不存在');
+                return;
+            }
             setPreviewAnnouncement(record);
             setIsPreviewOpen(true);
         } catch (error) {
@@ -224,7 +228,10 @@ const AdminPanel: React.FC = () => {
             const payload = buildPayload('draft');
             const response = editorMode === 'draft' && draftId ? await announcementApi.update(draftId, payload) : await announcementApi.create(payload);
             const record = response.data.data;
-            if (!record) return toast.error('公告草稿保存失败');
+            if (!record) {
+                toast.error('公告草稿保存失败');
+                return;
+            }
             applyRecordToEditor(record);
             await loadHistory(record.id);
             toast.success('公告草稿已保存');
@@ -244,7 +251,10 @@ const AdminPanel: React.FC = () => {
                     ? await announcementApi.publishCopy(publishedSourceId, { title, sections })
                     : await announcementApi.create(buildPayload('published'));
             const record = response.data.data;
-            if (!record) return toast.error('公告发布失败');
+            if (!record) {
+                toast.error('公告发布失败');
+                return;
+            }
             applyRecordToEditor(record);
             await loadHistory(record.id);
             toast.success('公告发布成功');
@@ -281,10 +291,13 @@ const AdminPanel: React.FC = () => {
 
     const handleCreateThemeTag = async () => {
         const trimmedName = newThemeName.trim();
-        if (!trimmedName) return toast.error('请先填写题材名称');
+        if (!trimmedName) {
+            toast.error('请先填写题材名称');
+            return;
+        }
         try {
             setIsSavingThemes(true);
-            // 创建平铺题材
+            // 实现新增题材
             await gameTagsApi.createAdminGameTag({ name: trimmedName, code: newThemeCode.trim() || undefined });
             setNewThemeName('');
             setNewThemeCode('');
@@ -299,7 +312,10 @@ const AdminPanel: React.FC = () => {
 
     const handleDeleteThemeTag = async (tag: AdminGameTagRecord) => {
         const blockedReason = tag.child_count > 0 ? '该题材下还有子题材，不能删除' : tag.game_count > 0 ? '该题材下已有作品，不能删除' : '';
-        if (blockedReason) return toast.error(blockedReason);
+        if (blockedReason) {
+            toast.error(blockedReason);
+            return;
+        }
         if (!window.confirm(`确认删除题材「${tag.name}」吗？`)) return;
         try {
             setIsSavingThemes(true);
@@ -314,13 +330,19 @@ const AdminPanel: React.FC = () => {
     };
 
     const handleToggleFeaturedTag = (tag: AdminGameTagRecord) => {
-        if (tag.child_count > 0) return toast.error('热门题材只能选择可直接展示的题材');
+        if (tag.child_count > 0) {
+            toast.error('热门题材只能选择可直接展示的题材');
+            return;
+        }
         const exists = featuredThemeTags.some((item) => Number(item.id) === Number(tag.id));
         let nextFeaturedTags: FeaturedGameTag[];
         if (exists) {
             nextFeaturedTags = featuredThemeTags.filter((item) => Number(item.id) !== Number(tag.id));
         } else {
-            if (featuredThemeTags.length >= featuredLimit) return toast.error(`热门题材最多只能设置 ${featuredLimit} 个`);
+            if (featuredThemeTags.length >= featuredLimit) {
+                toast.error(`热门题材最多只能设置 ${featuredLimit} 个`);
+                return;
+            }
             nextFeaturedTags = [...featuredThemeTags, {
                 id: Number(tag.id),
                 code: String(tag.code || ''),
@@ -393,19 +415,25 @@ const AdminPanel: React.FC = () => {
             <div className={styles.pageBody}>
                 <div className={styles.workspace}>
                     <aside className={styles.sidebar}>
+                        <div className={styles.sidebarHeader}>
+                            {/* 实现管理面板头部标题 */}
+                            <div className={styles.sidebarTitle}>管理面板</div>
+                            <div className={styles.sidebarDivider} />
+                        </div>
                         <button type="button" className={`${styles.navItem} ${activeTab === 'announcements' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('announcements')}>
                             <span className={styles.navTitle}>公告系统</span>
-                            <span className={styles.navDesc}>发布、编辑、预览、删除历史公告</span>
+                        </button>
+                        <button type="button" className={`${styles.navItem} ${activeTab === 'banners' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('banners')}>
+                            <span className={styles.navTitle}>轮播图管理</span>
                         </button>
                         <button type="button" className={`${styles.navItem} ${activeTab === 'themes' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('themes')}>
                             <span className={styles.navTitle}>题材管理</span>
-                            <span className={styles.navDesc}>管理热门题材、题材增删查和拖拽排序</span>
                         </button>
                         <button type="button" className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('points')}>
                             <span className={styles.navTitle}>积分修改</span>
-                            <span className={styles.navDesc}>独立功能区预留，后续待接入</span>
                         </button>
                     </aside>
+
                     <div className={styles.contentArea}>
                         {activeTab === 'announcements' && (
                             <div className={styles.panelStack}>
@@ -416,16 +444,16 @@ const AdminPanel: React.FC = () => {
                                     </div>
                                     <button type="button" className={styles.primaryGhostButton} onClick={resetEditor}>新建草稿</button>
                                 </section>
+
                                 <div className={styles.panelGrid}>
                                     <section className={styles.card}>
                                         <div className={styles.cardHeader}>
                                             <div>
                                                 <h3 className={styles.cardTitle}>历史公告</h3>
-                                                <p className={styles.cardDesc}>支持编辑、预览弹窗、删除历史记录。</p>
                                             </div>
                                         </div>
                                         <div className={styles.historyList}>
-                                            {isLoadingHistory ? <div className={styles.emptyState}>公告历史加载中...</div> : history.length === 0 ? <div className={styles.emptyState}>还没有公告记录，先创建一条草稿。</div> : history.map((item) => (
+                                            {isLoadingHistory ? <div className={styles.emptyState}>公告历史加载中...</div> : history.length === 0 ? <div className={styles.emptyState}>还没有公告记录，先创建一条草稿</div> : history.map((item) => (
                                                 <article key={item.id} className={`${styles.historyCard} ${selectedHistoryId === item.id ? styles.historyCardActive : ''}`}>
                                                     <div className={styles.historyMeta}>
                                                         <span className={`${styles.statusTag} ${item.status === 'published' ? styles.statusPublished : styles.statusDraft}`}>{item.status === 'published' ? '已发布' : '草稿'}</span>
@@ -441,11 +469,11 @@ const AdminPanel: React.FC = () => {
                                             ))}
                                         </div>
                                     </section>
+
                                     <section className={styles.card}>
                                         <div className={styles.cardHeader}>
                                             <div>
                                                 <h3 className={styles.cardTitle}>公告编辑</h3>
-                                                <p className={styles.cardDesc}>{currentModeText}</p>
                                             </div>
                                             {isLoadingDetail ? <span className={styles.loadingText}>正在载入...</span> : null}
                                         </div>
@@ -456,7 +484,6 @@ const AdminPanel: React.FC = () => {
                                             <div className={styles.sectionHeader}>
                                                 <div>
                                                     <div className={styles.fieldLabel}>内容分段</div>
-                                                    <div className={styles.sectionHint}>支持多个小标题和正文段落。</div>
                                                 </div>
                                                 <button type="button" className={styles.secondaryButton} onClick={() => setSections((prev) => [...prev, createEmptySection()])}>添加分段</button>
                                             </div>
@@ -480,6 +507,9 @@ const AdminPanel: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
+                        {activeTab === 'banners' && <AdminBannerManager />}
+
                         {activeTab === 'themes' && (
                             <div className={styles.panelStack}>
                                 <section className={styles.heroCard}>
@@ -489,12 +519,12 @@ const AdminPanel: React.FC = () => {
                                     </div>
                                     <button type="button" className={styles.primaryGhostButton} onClick={() => void loadThemeAdminData(themeKeyword)} disabled={isLoadingThemes || isSavingThemes}>刷新题材</button>
                                 </section>
+
                                 <div className={styles.themePanelGrid}>
                                     <section ref={createThemeCardRef} className={styles.card}>
                                         <div className={styles.cardHeader}>
                                             <div>
                                                 <h3 className={styles.cardTitle}>新增题材</h3>
-                                                <p className={styles.cardDesc}>这里只新增可直接使用的题材，不再绑定父题材；不填编码时系统自动生成。</p>
                                             </div>
                                         </div>
                                         <div className={styles.themeForm}>
@@ -516,14 +546,19 @@ const AdminPanel: React.FC = () => {
                                         <div className={styles.cardHeader}>
                                             <div>
                                                 <h3 className={styles.cardTitle}>热门题材</h3>
-                                                <p className={styles.cardDesc}>拖拽调整首页热门题材顺序，选择完成后点击保存。</p>
                                             </div>
                                             <span className={styles.themeCounter}>{featuredThemeTags.length}/{featuredLimit}</span>
                                         </div>
                                         <div className={styles.featuredThemeList}>
-                                            {/* 实现热门题材框内滚动 */}
                                             {featuredThemeTags.length === 0 ? <div className={styles.emptyState}>当前还没有配置热门题材。</div> : featuredThemeTags.map((tag) => (
-                                                <div key={tag.id} className={styles.featuredThemeCard} draggable onDragStart={() => setDraggingFeaturedId(Number(tag.id))} onDragOver={(event) => event.preventDefault()} onDrop={() => handleFeaturedDrop(Number(tag.id))}>
+                                                <div
+                                                    key={tag.id}
+                                                    className={styles.featuredThemeCard}
+                                                    draggable
+                                                    onDragStart={() => setDraggingFeaturedId(Number(tag.id))}
+                                                    onDragOver={(event) => event.preventDefault()}
+                                                    onDrop={() => handleFeaturedDrop(Number(tag.id))}
+                                                >
                                                     <div>
                                                         <div className={styles.featuredThemeName}>{tag.name}</div>
                                                         <div className={styles.featuredThemeMeta}>编码：{tag.code || '-'}</div>
@@ -537,29 +572,41 @@ const AdminPanel: React.FC = () => {
                                         </div>
                                     </section>
                                 </div>
+
                                 <section className={styles.card}>
                                     <div className={styles.cardHeader}>
                                         <div>
                                             <h3 className={styles.cardTitle}>全部题材</h3>
-                                            <p className={styles.cardDesc}>支持搜索查询。清空搜索后可拖拽排序；删除前会校验题材下是否已有作品。</p>
                                         </div>
                                     </div>
                                     <div className={styles.themeToolbar}>
                                         <input className={styles.textInput} value={themeKeyword} onChange={(event) => setThemeKeyword(event.target.value)} placeholder="输入题材名称或编码" />
-                                        <div className={styles.themeHint}>{themeKeyword.trim() ? '搜索结果仅供查询，清空搜索后可拖拽排序。' : '拖拽题材卡片即可调整题材展示顺序。'}</div>
                                     </div>
                                     <div className={styles.themeList}>
-                                        {/* 实现全部题材定长列表 */}
                                         {isLoadingThemes ? <div className={styles.emptyState}>题材列表加载中...</div> : themeTags.length === 0 ? <div className={styles.emptyState}>暂无题材数据。</div> : themeTags.map((tag) => {
                                             const deleteDisabled = tag.game_count > 0 || tag.child_count > 0;
                                             return (
-                                                <article key={tag.id} className={styles.themeCard} draggable={!themeKeyword.trim()} onDragStart={() => setDraggingThemeId(Number(tag.id))} onDragOver={(event) => event.preventDefault()} onDrop={() => handleThemeDrop(Number(tag.id))}>
+                                                <article
+                                                    key={tag.id}
+                                                    className={styles.themeCard}
+                                                    draggable={!themeKeyword.trim()}
+                                                    onDragStart={() => setDraggingThemeId(Number(tag.id))}
+                                                    onDragOver={(event) => event.preventDefault()}
+                                                    onDrop={() => handleThemeDrop(Number(tag.id))}
+                                                >
                                                     <div className={styles.themeCardTop}>
                                                         <div>
                                                             <div className={styles.themeCardTitle}>{tag.name}</div>
                                                             <div className={styles.themeCardMeta}>编码：{tag.code || '-'}</div>
                                                         </div>
-                                                        <button type="button" className={featuredThemeIdSet.has(Number(tag.id)) ? styles.primaryButton : styles.secondaryButton} onClick={() => handleToggleFeaturedTag(tag)} disabled={tag.child_count > 0}>{featuredThemeIdSet.has(Number(tag.id)) ? '已设为热门' : '加入热门'}</button>
+                                                        <button
+                                                            type="button"
+                                                            className={featuredThemeIdSet.has(Number(tag.id)) ? styles.primaryButton : styles.secondaryButton}
+                                                            onClick={() => handleToggleFeaturedTag(tag)}
+                                                            disabled={tag.child_count > 0}
+                                                        >
+                                                            {featuredThemeIdSet.has(Number(tag.id)) ? '已设为热门' : '加入热门'}
+                                                        </button>
                                                     </div>
                                                     <div className={styles.themeStats}>
                                                         <span>排序：{tag.sort_order}</span>
@@ -575,6 +622,7 @@ const AdminPanel: React.FC = () => {
                                 </section>
                             </div>
                         )}
+
                         {activeTab === 'points' && (
                             <section className={styles.pointsCard}>
                                 <div className={styles.sectionBadge}>积分修改</div>
@@ -589,8 +637,9 @@ const AdminPanel: React.FC = () => {
                     </div>
                 </div>
             </div>
+
             <AnnouncementModal announcement={previewAnnouncement} isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} badgeText="公告预览" />
-            <FooterArea />
+            {/* 隐藏管理页底部公共区块 */}
         </div>
     );
 };

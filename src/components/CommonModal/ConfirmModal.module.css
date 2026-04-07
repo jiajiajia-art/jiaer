@@ -113,6 +113,8 @@
     text-align: center;
     line-height: 1.6;
     font-weight: 500;
+    /* 实现 弹窗文案换行显示 */
+    white-space: pre-line;
 }
 
 .buttonGroup {

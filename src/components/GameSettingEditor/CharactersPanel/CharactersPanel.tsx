@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import styles from './CharactersPanel.module.css';
 import { IMAGE_GENERATION_COST } from '../../../utils/constants';
-import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -25,6 +25,7 @@ import CharactersSidebar from './CharactersSidebar';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { HOST_ADDRESS } from '../../../config';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
+import { useBatchImageProgressText } from '../../../hooks/editor/useBatchImageProgressText';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -81,6 +82,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
+    const [npcBatchJobStatus, setNpcBatchJobStatus] = useState<BatchImageJobStatus | null>(null);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
     const [isUploadingPortrait, setIsUploadingPortrait] = useState<boolean>(false);
@@ -425,6 +427,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             setIsGeneratingSingleNpcImage,
             setGeneratingCharacterId,
             setIsGeneratingNpcImages,
+            setNpcBatchJobStatus,
             setNpcCostPoints,
             setNpcCostModalOpen,
             setIsLoadingNpcCost,
@@ -487,15 +490,15 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const isCurrentPortraitGenerating = Boolean(
         currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
     );
-    const batchCharacterCount = useMemo(
-        () => characterData.filter((character) => !character.id.startsWith('temp-')).length,
-        [characterData],
-    );
     const singleCharacterEtaText = useGenerationEta({
         active: isCurrentPortraitGenerating,
         totalSeconds: currentCharacter?.id === 'player' ? SINGLE_PLAYER_ETA_SECONDS : SINGLE_CHARACTER_ETA_SECONDS,
     });
-    const batchCharacterEtaText = useGenerationEta({
+    const batchCharacterCount = useMemo(
+        () => characterData.filter((character) => !character.id.startsWith('temp-')).length,
+        [characterData],
+    );
+    const legacyBatchCharacterEtaText = useGenerationEta({
         active: isGeneratingNpcImages,
         totalSeconds: Math.max(
             SINGLE_CHARACTER_ETA_SECONDS,
@@ -505,6 +508,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         // 实现批量角色生图的数量提示
         batchLabel: batchCharacterCount > 0 ? `本次共生成 ${batchCharacterCount} 项` : undefined,
     });
+    const batchCharacterEtaText = useBatchImageProgressText(npcBatchJobStatus);
+    void legacyBatchCharacterEtaText;
     const isPortraitActionBusy = isUploadingPortrait
         || isSavingCharacter
         || isCurrentPortraitGenerating
@@ -1052,7 +1057,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
         setNpcCostModalOpen(false);
         await generateAllNpcImages();
-        onDataChange?.();
     };
 
     const regenerateSingleNpcImage = async (character: Character) => {

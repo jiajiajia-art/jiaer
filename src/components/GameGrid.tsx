@@ -13,6 +13,10 @@ interface GameGridProps {
     primaryStat?: 'uv' | 'pv';
     isIncentive?: boolean;
     showIncentiveUI?: boolean;
+    selectable?: boolean;
+    selectedIds?: string[];
+    onToggleSelect?: (game: UserGameData) => void;
+    isSelectionMode?: boolean;
 }
 
 const GameGrid: React.FC<GameGridProps> = ({
@@ -20,6 +24,10 @@ const GameGrid: React.FC<GameGridProps> = ({
     onGameClick,
     primaryStat = 'pv',
     showIncentiveUI = false,
+    selectable = false,
+    selectedIds = [],
+    onToggleSelect,
+    isSelectionMode = false,
 }) => {
     const navigate = useNavigate();
 
@@ -41,7 +49,6 @@ const GameGrid: React.FC<GameGridProps> = ({
 
     const getThemeLabel = (meta: UserGameData): string => {
         const names = Array.isArray(meta.theme_tag_names) ? meta.theme_tag_names.filter(Boolean) : [];
-        // 实现“全部”题材隐藏逻辑，仅显示具体题材
         const specificNames = names
             .map((name) => String(name).trim())
             .filter((name) => name && name !== '全部');
@@ -91,11 +98,19 @@ const GameGrid: React.FC<GameGridProps> = ({
         return typeof amount === 'number' ? amount : (meta.total_uv_count ?? 0) * 5;
     };
 
+    const getSelectableId = (game: UserGameData) => String(game.file_id || game.id || '');
+
     const handleCardClick = (game: UserGameData) => {
+        if (selectable && isSelectionMode && onToggleSelect) {
+            onToggleSelect(game);
+            return;
+        }
+
         if (onGameClick) {
             onGameClick(game);
             return;
         }
+
         const gameId = game.file_id || game.id;
         if (!gameId) return;
         navigate(`/game/${gameId}`, { state: { source: 'main_page' } });
@@ -120,10 +135,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                 const PrimaryIcon = showIncentive ? RiMoneyCnyCircleLine : IoGameControllerOutline;
                 const typeLabel = getTypeLabel(meta);
                 const themeLabel = getThemeLabel(meta);
+                const selectableId = getSelectableId(meta);
+                const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
 
                 return (
                     <div
-                        className={styles.goodsCard}
+                        className={`${styles.goodsCard} ${isSelectionMode ? styles.goodsCardSelectable : ''} ${isSelected ? styles.goodsCardSelected : ''}`}
                         key={meta.file_id || meta.id || String(idx)}
                         onClick={() => handleCardClick(meta)}
                     >
@@ -134,6 +151,25 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     : `${import.meta.env.BASE_URL}data/events/welcome.png`}
                                 alt={meta.title || `剧情${idx + 1}`}
                             />
+
+                            {selectable && isSelectionMode && selectableId && (
+                                <>
+                                    <div className={`${styles.selectionMask} ${isSelected ? styles.selectionMaskActive : ''}`} />
+                                    <button
+                                        type="button"
+                                        className={`${styles.selectionToggle} ${isSelected ? styles.selectionToggleActive : ''}`}
+                                        aria-label={isSelected ? '取消选择草稿' : '选择草稿'}
+                                        aria-pressed={isSelected}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            onToggleSelect?.(meta);
+                                        }}
+                                    >
+                                        {/* 实现草稿批量选择 */}
+                                        <span className={styles.selectionToggleInner} />
+                                    </button>
+                                </>
+                            )}
 
                             {showIncentive && (
                                 <div
