@@ -134,15 +134,30 @@
     gap: 10px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: 4px;
-    scrollbar-width: none;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(26, 29, 33, 0.28) rgba(26, 29, 33, 0.08);
     -webkit-overflow-scrolling: touch;
     cursor: grab;
     user-select: none;
 }
 
 .themeScrollRow::-webkit-scrollbar {
-    display: none;
+    height: 8px;
+}
+
+.themeScrollRow::-webkit-scrollbar-track {
+    background: rgba(26, 29, 33, 0.08);
+    border-radius: 999px;
+}
+
+.themeScrollRow::-webkit-scrollbar-thumb {
+    background: rgba(26, 29, 33, 0.28);
+    border-radius: 999px;
+}
+
+.themeScrollRow::-webkit-scrollbar-thumb:hover {
+    background: rgba(26, 29, 33, 0.42);
 }
 
 .themeScrollRowDragging {
@@ -231,13 +246,13 @@
     }
 
     .themeScrollRow {
-        padding-bottom: 4px;
-        scrollbar-width: none;
+        padding-bottom: 8px;
+        scrollbar-width: thin;
         cursor: auto;
     }
 
     .themeScrollRow::-webkit-scrollbar {
-        display: none;
+        height: 6px;
     }
 
     .themeScrollRowDragging {

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import FloatingJoinGroup from '../components/FloatingJoinGroup';
 import GameGrid from '../components/GameGrid';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import libraryDataApi from '../api/home/getGameData';
@@ -515,6 +516,7 @@ const Categories: React.FC = () => {
             </div>
 
             {!isMobilePage && <FooterArea />}
+            <FloatingJoinGroup />
             <MobileBottomNav />
         </div>
     );

@@ -272,7 +272,7 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
             >
-                <span className={styles.label}>加群交流</span>
+                <span className={styles.label}>加入群聊</span>
 
                 <span className={styles.iconStack} aria-hidden="true">
                     <span className={styles.iconWrap}>
