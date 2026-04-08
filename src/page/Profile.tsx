@@ -8,7 +8,7 @@ import payApi from '../api/pay/payApi';
 import Navbar from '../components/Layout/Navbar';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
-import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup, MdEdit, MdContentCopy } from 'react-icons/md';
+import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup, MdEdit, MdContentCopy, MdCampaign } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
@@ -555,6 +555,19 @@ const Profile: React.FC = () => {
                         </div>
 
                         {/* 退出登录 */}
+                        <div className={styles.functionItem}>
+                            <div className={styles.functionIcon}>
+                                <MdCampaign />
+                            </div>
+                            <div className={styles.functionText}>
+                                <div className={styles.functionTitle}>推广分享</div>
+                                <div className={styles.functionDesc}>查看推广活动、提交推广成果，并跟踪奖励审核进度</div>
+                            </div>
+                            <button className={styles.functionButton} onClick={() => navigate('/promotions')}>
+                                进入
+                            </button>
+                        </div>
+
                         {
                             !isWebViewEnv() && (
 

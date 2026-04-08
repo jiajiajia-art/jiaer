@@ -1,0 +1,402 @@
+.pageRoot {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top left, rgba(182, 155, 116, 0.18), transparent 26%),
+        linear-gradient(180deg, #faf6f1 0%, #f6efe7 100%);
+}
+
+.pageBody {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 108px 0 96px;
+}
+
+.hero {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px;
+    border-radius: 28px;
+    background: linear-gradient(135deg, rgba(255, 248, 240, 0.96) 0%, rgba(245, 232, 218, 0.96) 100%);
+    border: 1px solid rgba(182, 155, 116, 0.22);
+    box-shadow: 0 18px 46px rgba(82, 52, 32, 0.08);
+}
+
+.badge {
+    display: inline-flex;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(182, 155, 116, 0.16);
+    color: #8e6443;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.title {
+    margin: 16px 0 0;
+    font-size: 34px;
+    color: #2d2017;
+}
+
+.desc {
+    margin: 14px 0 0;
+    max-width: 720px;
+    color: #6d5647;
+    line-height: 1.8;
+}
+
+.tabRow {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.tabButton {
+    padding: 11px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(182, 155, 116, 0.26);
+    background: rgba(255, 255, 255, 0.82);
+    color: #58453a;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tabButtonActive {
+    background: linear-gradient(135deg, #c9733f 0%, #e08a4f 100%);
+    color: #fff;
+    border-color: transparent;
+}
+
+.content {
+    margin-top: 24px;
+    display: grid;
+    gap: 18px;
+}
+
+.activityGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.card,
+.submissionCard,
+.modalCard {
+    border-radius: 26px;
+    border: 1px solid rgba(182, 155, 116, 0.2);
+    background: rgba(255, 251, 247, 0.94);
+    box-shadow: 0 14px 36px rgba(82, 52, 32, 0.08);
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cover {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    background: #efe5db;
+}
+
+.cardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+}
+
+.cardTitle {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2d2017;
+}
+
+.cardSummary {
+    color: #6d5647;
+    line-height: 1.8;
+    min-height: 54px;
+}
+
+.infoGrid {
+    display: grid;
+    gap: 8px;
+}
+
+.infoItem {
+    color: #5f4a3c;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.configRow,
+.metaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chip,
+.statusTag {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(201, 115, 63, 0.12);
+    color: #9a5b33;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.actionRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+    border: none;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.primaryButton {
+    background: linear-gradient(135deg, #c9733f 0%, #e08a4f 100%);
+    color: #fff;
+}
+
+.secondaryButton {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(182, 155, 116, 0.24);
+    color: #3b2d23;
+}
+
+.dangerButton {
+    background: rgba(189, 69, 69, 0.1);
+    color: #a13636;
+}
+
+.disabledButton {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.noticeText {
+    color: #9a5b33;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+.submissionList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.submissionCard {
+    padding: 20px;
+}
+
+.submissionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.submissionTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2d2017;
+}
+
+.submissionMeta {
+    margin-top: 12px;
+    display: grid;
+    gap: 10px;
+    color: #5f4a3c;
+}
+
+.payloadBlock {
+    display: grid;
+    gap: 8px;
+}
+
+.payloadLabel {
+    color: #8e6443;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.payloadList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.payloadItem {
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: rgba(201, 115, 63, 0.08);
+    color: #4a372b;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.mediaPreview {
+    width: 84px;
+    height: 84px;
+    border-radius: 14px;
+    object-fit: cover;
+    background: #eee2d5;
+}
+
+.videoLink {
+    color: #9a5b33;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.emptyState {
+    padding: 28px;
+    text-align: center;
+    border-radius: 22px;
+    background: rgba(255, 251, 247, 0.9);
+    color: #6d5647;
+    border: 1px dashed rgba(182, 155, 116, 0.24);
+}
+
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(19, 16, 14, 0.58);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 1500;
+}
+
+.modalCard {
+    width: min(620px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    padding: 24px;
+}
+
+.modalTitle {
+    margin: 0;
+    font-size: 24px;
+    color: #2d2017;
+}
+
+.formGrid {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #493729;
+    font-weight: 700;
+}
+
+.input,
+.textarea {
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid rgba(182, 155, 116, 0.22);
+    background: #fff;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    font-size: 14px;
+    color: #3a2c22;
+}
+
+.textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.uploadHint {
+    color: #7a6354;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.statusPending {
+    background: rgba(201, 115, 63, 0.14);
+    color: #a65f2b;
+}
+
+.statusApproved {
+    background: rgba(69, 157, 104, 0.14);
+    color: #2d8c58;
+}
+
+.statusRejected {
+    background: rgba(183, 58, 58, 0.14);
+    color: #a93434;
+}
+
+@media (max-width: 860px) {
+    .hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .activityGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .pageBody {
+        width: calc(100% - 20px);
+        padding: 96px 0 108px;
+    }
+
+    .title {
+        font-size: 28px;
+    }
+
+    .hero,
+    .card,
+    .submissionCard,
+    .modalCard {
+        border-radius: 22px;
+    }
+
+    .hero {
+        padding: 20px;
+    }
+
+    .cover {
+        height: 180px;
+    }
+
+    .submissionHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

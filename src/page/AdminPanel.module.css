@@ -135,6 +135,10 @@
     text-align: center;
 }
 
+.navTitle + .navTitle {
+    display: none;
+}
+
 .contentArea {
     min-width: 0;
 }
@@ -213,6 +217,14 @@
     margin-bottom: 18px;
 }
 
+.cardHeaderActions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .cardTitle {
     margin: 0;
     color: var(--admin-text);
@@ -250,6 +262,27 @@
     background: var(--admin-surface-strong);
     box-shadow: 0 8px 22px rgba(117, 72, 39, 0.06);
     min-width: 0;
+}
+
+.listFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.paginationSummary {
+    color: var(--admin-text-soft);
+    font-size: 13px;
+}
+
+.paginationActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .historyCardActive {
@@ -570,7 +603,6 @@
     justify-content: space-between;
     gap: 16px;
     padding: 16px 18px;
-    cursor: grab;
 }
 
 .featuredThemeName,
@@ -599,7 +631,47 @@
     flex-direction: column;
     gap: 14px;
     padding: 18px;
-    cursor: grab;
+}
+
+.themeCardCompact {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.themeCardMain {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.themeCardInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.themeCardStatsCompact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    color: var(--admin-text-soft);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.themeActionsCompact {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .themeCardTop,
@@ -616,6 +688,154 @@
     justify-content: flex-start;
     color: var(--admin-text-soft);
     font-size: 13px;
+}
+
+.sortModalOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(45, 28, 18, 0.38);
+    backdrop-filter: blur(6px);
+}
+
+.sortModal {
+    width: min(680px, 100%);
+    height: min(720px, calc(100vh - 48px));
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 24px;
+    border-radius: 28px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-surface);
+    box-shadow: 0 28px 70px rgba(69, 42, 24, 0.22);
+    box-sizing: border-box;
+}
+
+.sortModalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.sortModalBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--admin-accent-soft);
+    color: var(--admin-accent-strong);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.sortModalTitle {
+    margin: 14px 0 0;
+    color: var(--admin-text);
+    font-size: 28px;
+    line-height: 1.2;
+}
+
+.sortModalDescription {
+    margin: 12px 0 0;
+    color: var(--admin-text-soft);
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.sortList {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scroll-behavior: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 6px;
+}
+
+.sortItem {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) 96px;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(205, 157, 120, 0.22);
+    background: var(--admin-surface-strong);
+    box-shadow: 0 10px 26px rgba(117, 72, 39, 0.08);
+    cursor: grab;
+}
+
+.sortItemDragging {
+    opacity: 0.72;
+    border-color: rgba(201, 115, 63, 0.42);
+    box-shadow: 0 16px 32px rgba(201, 115, 63, 0.16);
+}
+
+.sortItemOrder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    background: rgba(201, 115, 63, 0.12);
+    color: var(--admin-accent-strong);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.sortItemContent {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sortItemName {
+    color: var(--admin-text);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.sortItemMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: var(--admin-text-soft);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.sortItemHandle {
+    justify-self: end;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    background: rgba(255, 252, 248, 0.94);
+    border: 1px solid rgba(205, 157, 120, 0.32);
+    color: var(--admin-text-soft);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sortModalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
 }
 
 @media (max-width: 1100px) {
@@ -641,6 +861,17 @@
 
     .historyList {
         max-height: none;
+    }
+
+    .themeCardCompact,
+    .themeCardMain {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .themeActionsCompact {
+        width: 100%;
+        justify-content: flex-start;
     }
 }
 
@@ -680,11 +911,41 @@
     }
 
     .actionRow,
-    .historyActions {
+    .historyActions,
+    .paginationActions {
         justify-content: flex-start;
+    }
+
+    .listFooter {
+        align-items: flex-start;
     }
 
     .heroTitle {
         font-size: 24px;
+    }
+
+    .sortModalOverlay {
+        padding: 12px;
+    }
+
+    .sortModal {
+        height: min(720px, calc(100vh - 24px));
+        padding: 18px;
+        border-radius: 22px;
+    }
+
+    .sortModalHeader,
+    .sortModalFooter {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sortItem {
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .sortItemHandle {
+        grid-column: 1 / -1;
+        justify-self: flex-start;
     }
 }

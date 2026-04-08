@@ -1,0 +1,512 @@
+.panelStack {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.heroCard,
+.card {
+    background: rgba(255, 250, 245, 0.92);
+    border: 1px solid rgba(222, 191, 166, 0.45);
+    border-radius: 28px;
+    box-shadow: 0 18px 40px rgba(181, 135, 92, 0.14);
+}
+
+.heroCard {
+    padding: 30px 34px;
+}
+
+.card {
+    padding: 28px;
+}
+
+.sectionBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(209, 147, 99, 0.14);
+    color: #a5602f;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.heroTitle {
+    margin: 18px 0 12px;
+    font-size: 24px;
+    color: #2e241d;
+}
+
+.heroDesc,
+.cardDesc,
+.itemMeta,
+.emptyState {
+    color: #705b4b;
+    line-height: 1.7;
+}
+
+.tabRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.tabButton,
+.tabButtonActive,
+.primaryButton,
+.secondaryButton {
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-weight: 700;
+}
+
+.tabButton,
+.tabButtonActive {
+    border: 1px solid rgba(215, 182, 156, 0.45);
+    padding: 12px 22px;
+    font-size: 15px;
+}
+
+.tabButton {
+    background: rgba(255, 247, 240, 0.95);
+    color: #8b664d;
+}
+
+.tabButtonActive {
+    border-color: transparent;
+    background: linear-gradient(135deg, #b56f3b, #d79c68);
+    color: #fffaf4;
+    box-shadow: 0 14px 24px rgba(181, 111, 59, 0.22);
+}
+
+.primaryButton,
+.secondaryButton {
+    padding: 10px 18px;
+    font-size: 14px;
+}
+
+.primaryButton {
+    border: none;
+    background: linear-gradient(135deg, #b56f3b, #d79c68);
+    color: #fffaf4;
+}
+
+.secondaryButton {
+    border: 1px solid rgba(220, 195, 175, 0.88);
+    background: rgba(255, 253, 250, 0.96);
+    color: #4c3d31;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.cardTitle {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: #2e241d;
+}
+
+.specialGrid {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.1fr);
+    gap: 24px;
+}
+
+.formArea {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #4c3d31;
+}
+
+.textInput,
+.textArea,
+.select {
+    width: 100%;
+    border-radius: 18px;
+    border: 1px solid rgba(220, 195, 175, 0.88);
+    background: rgba(255, 253, 250, 0.96);
+    color: #34281f;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+.textInput,
+.select {
+    min-height: 50px;
+    padding: 0 16px;
+}
+
+.textArea {
+    min-height: 140px;
+    padding: 14px 16px;
+    resize: vertical;
+}
+
+.userCard {
+    padding: 20px;
+    border-radius: 22px;
+    background: rgba(255, 252, 249, 0.96);
+    border: 1px solid rgba(228, 205, 187, 0.7);
+}
+
+.userName {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2e241d;
+    margin-bottom: 8px;
+}
+
+.actionRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.reviewTableWrapper {
+    overflow-x: auto;
+    border-radius: 22px;
+    border: 1px solid rgba(228, 205, 187, 0.72);
+    background: rgba(255, 252, 249, 0.96);
+}
+
+.reviewTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+}
+
+.rewardStatusCol {
+    width: 15%;
+}
+
+.rewardTitleCol {
+    /* 实现活动名称列宽对齐投稿审核 */
+    width: 20%;
+}
+
+.rewardAccountCol {
+    width: 10%;
+}
+
+.rewardPointsCol {
+    width: 10%;
+}
+
+.rewardDetailCol {
+    width: 15%;
+}
+
+.rewardOperateCol {
+    width: 15%;
+}
+
+.reviewTable th,
+.reviewTable td {
+    padding: 14px 12px;
+    border-bottom: 1px solid rgba(205, 157, 120, 0.18);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.reviewTable th {
+    color: #6f5a49;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(246, 236, 224, 0.72);
+    white-space: nowrap;
+}
+
+.reviewTable tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.reviewTableRow {
+    background: rgba(255, 252, 248, 0.98);
+}
+
+.reviewTable tbody tr:hover {
+    background: rgba(250, 241, 232, 0.48);
+}
+
+.paginationBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.rewardTitleCell,
+.rewardAccountCell {
+    color: #2e241d;
+    font-size: 14px;
+    line-height: 1.6;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.rewardTitleCell {
+    font-weight: 700;
+}
+
+.rewardPointsCell {
+    color: #2e241d;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.reviewDetailCell,
+.reviewOperateCell {
+    white-space: nowrap;
+}
+
+.reviewDetailButton {
+    min-width: 84px;
+    padding: 9px 14px;
+}
+
+.statusTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.statusPending {
+    background: rgba(209, 147, 99, 0.16);
+    color: #a5602f;
+}
+
+.statusIssued {
+    background: rgba(69, 157, 104, 0.14);
+    color: #2d8c58;
+}
+
+.emptyState {
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(250, 242, 234, 0.92);
+}
+
+.detailOverlay,
+.confirmOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(45, 28, 18, 0.34);
+    backdrop-filter: blur(6px);
+}
+
+.detailDialog,
+.confirmDialog {
+    width: min(960px, 100%);
+    border-radius: 30px;
+    border: 1px solid rgba(222, 191, 166, 0.45);
+    background: rgba(255, 250, 245, 0.98);
+    box-shadow: 0 20px 56px rgba(98, 59, 33, 0.1);
+}
+
+.detailDialog {
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    padding: 24px;
+}
+
+.confirmDialog {
+    width: min(520px, 100%);
+    padding: 28px;
+}
+
+.confirmTitle {
+    color: #2e241d;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.confirmDesc {
+    margin-top: 12px;
+    color: #705b4b;
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.confirmHighlight {
+    color: #a5602f;
+    font-weight: 700;
+}
+
+.detailBody {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.detailSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid rgba(205, 157, 120, 0.22);
+    background: linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%);
+}
+
+.detailSectionTitle {
+    color: #2f241d;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.detailGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 14px;
+}
+
+.detailField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.detailLabel {
+    color: #6f5a49;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.detailValue {
+    color: #2f241d;
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.detailTextBlock {
+    color: #2f241d;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.detailLinkList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.detailLinkItem {
+    color: #aa5a2d;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.detailLinkItem:hover {
+    text-decoration: underline;
+}
+
+.detailMediaGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.detailImage,
+.detailVideo {
+    width: 100%;
+    border-radius: 18px;
+    background: rgba(205, 157, 120, 0.16);
+}
+
+.detailImage {
+    display: block;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+.detailVideo {
+    max-height: 260px;
+}
+
+@media (max-width: 1100px) {
+    .specialGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .detailGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .heroCard,
+    .card {
+        padding: 22px 18px;
+        border-radius: 22px;
+    }
+
+    .heroTitle {
+        font-size: 21px;
+    }
+
+    .cardHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .reviewTable {
+        min-width: 900px;
+    }
+
+    .detailOverlay,
+    .confirmOverlay {
+        padding: 12px;
+    }
+
+    .detailDialog {
+        max-height: calc(100vh - 24px);
+        padding: 18px;
+        border-radius: 24px;
+    }
+
+    .confirmDialog {
+        border-radius: 24px;
+        padding: 22px 18px;
+    }
+}

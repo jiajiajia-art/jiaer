@@ -22,6 +22,7 @@ import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking
 import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
 import Categories from './page/Categories';
+import PromotionCenter from './page/PromotionCenter';
 
 function App() {
   usePlatformDurationTracking();
@@ -62,7 +63,11 @@ function App() {
           <Route path="/warehouse" element={<WareHouse />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/promotions" element={<PromotionCenter />} />
           <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/points" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

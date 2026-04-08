@@ -1,18 +1,45 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import AnnouncementModal from '../components/AnnouncementModal';
 import AdminBannerManager from '../components/AdminBannerManager';
+import Pagination from '../components/Pagination';
+import PromotionAdminManager from '../components/PromotionAdminManager';
+import PointsAdminManager from '../components/PointsAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
-import type { AnnouncementPayload, AnnouncementRecord, AnnouncementSection, AnnouncementSummary } from '../api/announcement/announcement.type';
+import type {
+    AnnouncementPayload,
+    AnnouncementRecord,
+    AnnouncementSection,
+    AnnouncementSummary,
+} from '../api/announcement/announcement.type';
 import type { AdminGameTagRecord, FeaturedGameTag } from '../api/gameTags/gameTagsApi.type';
 import styles from './AdminPanel.module.css';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'points';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points';
+type SortModalMode = 'featured' | 'all' | null;
+
+interface SortDraftItem {
+    id: number;
+    name: string;
+    code: string;
+    sort_order: number;
+    game_count?: number;
+    featured_sort_order?: number | null;
+}
 
 const createEmptySection = (): AnnouncementSection => ({ subtitle: '', body: '' });
+const ANNOUNCEMENT_PAGE_SIZE = 3;
+const THEME_PAGE_SIZE = 10;
+
+const resolveAdminTab = (pathname: string): AdminTab => {
+    if (pathname.startsWith('/admin/promotions')) return 'promotions';
+    if (pathname.startsWith('/admin/points')) return 'points';
+    return 'announcements';
+};
 
 const formatTime = (value: string | null): string => {
     if (!value) return '未发布';
@@ -29,18 +56,39 @@ const extractErrorMessage = (error: unknown, fallback: string): string => {
     return fallback;
 };
 
+const clampPage = (page: number, totalItems: number, pageSize: number): number => {
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    return Math.min(Math.max(page, 1), totalPages);
+};
+
 const moveById = <T extends { id: number | string }>(list: T[], fromId: number | string, toId: number | string): T[] => {
     const fromIndex = list.findIndex((item) => item.id === fromId);
     const toIndex = list.findIndex((item) => item.id === toId);
     if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return list;
+
     const next = [...list];
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
     return next;
 };
 
+const filterLeafThemeTags = (tags: AdminGameTagRecord[]): AdminGameTagRecord[] => tags.filter((tag) => Number(tag.child_count) === 0);
+
+const toSortDraftItem = (
+    tag: Pick<AdminGameTagRecord, 'id' | 'name' | 'code' | 'sort_order' | 'game_count' | 'featured_sort_order'> | FeaturedGameTag,
+): SortDraftItem => ({
+    id: Number(tag.id),
+    name: String(tag.name || ''),
+    code: String(tag.code || ''),
+    sort_order: Number(tag.sort_order) || 0,
+    game_count: 'game_count' in tag ? Number(tag.game_count) || 0 : undefined,
+    featured_sort_order: 'featured_sort_order' in tag ? tag.featured_sort_order ?? null : null,
+});
+
 const AdminPanel: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<AdminTab>('announcements');
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<AdminTab>(() => resolveAdminTab(window.location.pathname));
 
     const [history, setHistory] = useState<AnnouncementSummary[]>([]);
     const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
@@ -54,6 +102,7 @@ const AdminPanel: React.FC = () => {
     const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
     const [previewAnnouncement, setPreviewAnnouncement] = useState<AnnouncementRecord | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [historyPage, setHistoryPage] = useState(1);
 
     const [themeKeyword, setThemeKeyword] = useState('');
     const [themeTags, setThemeTags] = useState<AdminGameTagRecord[]>([]);
@@ -61,13 +110,20 @@ const AdminPanel: React.FC = () => {
     const [featuredLimit, setFeaturedLimit] = useState(12);
     const [isLoadingThemes, setIsLoadingThemes] = useState(false);
     const [isSavingThemes, setIsSavingThemes] = useState(false);
+    const [isPreparingSortModal, setIsPreparingSortModal] = useState(false);
     const [newThemeName, setNewThemeName] = useState('');
     const [newThemeCode, setNewThemeCode] = useState('');
-    const [draggingThemeId, setDraggingThemeId] = useState<number | null>(null);
-    const [draggingFeaturedId, setDraggingFeaturedId] = useState<number | null>(null);
     const [hasFeaturedChanges, setHasFeaturedChanges] = useState(false);
+    const [sortModalMode, setSortModalMode] = useState<SortModalMode>(null);
+    const [sortDraftItems, setSortDraftItems] = useState<SortDraftItem[]>([]);
+    const [draggingSortId, setDraggingSortId] = useState<number | null>(null);
     const createThemeCardRef = useRef<HTMLElement | null>(null);
     const [featuredThemeCardHeight, setFeaturedThemeCardHeight] = useState<number | null>(null);
+    const sortListRef = useRef<HTMLDivElement | null>(null);
+    const autoScrollFrameRef = useRef<number | null>(null);
+    const autoScrollDirectionRef = useRef<-1 | 0 | 1>(0);
+    const lastSortTargetIdRef = useRef<number | null>(null);
+    const [themePage, setThemePage] = useState(1);
 
     const previewDraftRecord = useMemo<AnnouncementRecord>(() => {
         const safeSections = sections.filter((section) => section.subtitle.trim() || section.body.trim());
@@ -83,6 +139,38 @@ const AdminPanel: React.FC = () => {
     }, [editorMode, sections, selectedHistoryId, title]);
 
     const featuredThemeIdSet = useMemo(() => new Set(featuredThemeTags.map((tag) => Number(tag.id))), [featuredThemeTags]);
+    const isSortModalOpen = sortModalMode !== null;
+    const isAllSortMode = sortModalMode === 'all';
+    const historyTotalPages = useMemo(() => Math.max(1, Math.ceil(history.length / ANNOUNCEMENT_PAGE_SIZE)), [history.length]);
+    const pagedHistory = useMemo(() => {
+        const startIndex = (historyPage - 1) * ANNOUNCEMENT_PAGE_SIZE;
+        return history.slice(startIndex, startIndex + ANNOUNCEMENT_PAGE_SIZE);
+    }, [history, historyPage]);
+    const themeTotalPages = useMemo(() => Math.max(1, Math.ceil(themeTags.length / THEME_PAGE_SIZE)), [themeTags.length]);
+    const pagedThemeTags = useMemo(() => {
+        const startIndex = (themePage - 1) * THEME_PAGE_SIZE;
+        return themeTags.slice(startIndex, startIndex + THEME_PAGE_SIZE);
+    }, [themePage, themeTags]);
+
+    const sortModalMeta = useMemo(() => {
+        if (sortModalMode === 'featured') {
+            return {
+                badge: '热门题材排序',
+                title: '调整热门题材展示顺序',
+                description: '拖动列表项调整首页热门题材顺序，保存后会同步更新热门排序。',
+            };
+        }
+
+        if (sortModalMode === 'all') {
+            return {
+                badge: '全部题材排序',
+                title: '调整全部题材展示顺序',
+                description: '拖动列表项调整题材顺序，保存后会更新管理面板和前台使用顺序。',
+            };
+        }
+
+        return { badge: '', title: '', description: '' };
+    }, [sortModalMode]);
 
     useEffect(() => {
         if (activeTab !== 'themes' || typeof window === 'undefined') {
@@ -95,7 +183,6 @@ const AdminPanel: React.FC = () => {
                 setFeaturedThemeCardHeight(null);
                 return;
             }
-            // 实现热门题材卡片高度同步
             setFeaturedThemeCardHeight(createThemeCardRef.current.offsetHeight);
         };
 
@@ -158,8 +245,8 @@ const AdminPanel: React.FC = () => {
             setIsLoadingThemes(true);
             const response = await gameTagsApi.getAdminGameTags(keyword.trim() || undefined);
             const data = response.data.data;
-            // 实现父题材过滤，只保留可直接使用的题材
-            const availableTags = (data?.tags || []).filter((tag) => Number(tag.child_count) === 0);
+            // 实现 父题材过滤
+            const availableTags = filterLeafThemeTags(data?.tags || []);
             const availableTagIds = new Set(availableTags.map((tag) => Number(tag.id)));
             setThemeTags(availableTags);
             setFeaturedThemeTags((data?.featuredTags || []).filter((tag) => availableTagIds.has(Number(tag.id))));
@@ -177,12 +264,115 @@ const AdminPanel: React.FC = () => {
     }, [loadHistory]);
 
     useEffect(() => {
+        // 实现公告分页
+        setHistoryPage((prev) => clampPage(prev, history.length, ANNOUNCEMENT_PAGE_SIZE));
+    }, [history.length]);
+
+    useEffect(() => {
+        if (selectedHistoryId === null) return;
+        const selectedIndex = history.findIndex((item) => item.id === selectedHistoryId);
+        if (selectedIndex < 0) return;
+        setHistoryPage(Math.floor(selectedIndex / ANNOUNCEMENT_PAGE_SIZE) + 1);
+    }, [history, selectedHistoryId]);
+
+    useEffect(() => {
+        setActiveTab(resolveAdminTab(location.pathname));
+    }, [location.pathname]);
+
+    useEffect(() => {
         if (activeTab !== 'themes') return undefined;
         const timer = window.setTimeout(() => {
             void loadThemeAdminData(themeKeyword);
         }, 250);
         return () => window.clearTimeout(timer);
     }, [activeTab, themeKeyword, loadThemeAdminData]);
+
+    useEffect(() => {
+        // 实现题材分页
+        setThemePage((prev) => clampPage(prev, themeTags.length, THEME_PAGE_SIZE));
+    }, [themeTags.length]);
+
+    useEffect(() => {
+        setThemePage(1);
+    }, [themeKeyword]);
+
+    const stopSortAutoScroll = useCallback(() => {
+        // 实现 停止自动滚动
+        if (autoScrollFrameRef.current !== null) {
+            window.cancelAnimationFrame(autoScrollFrameRef.current);
+            autoScrollFrameRef.current = null;
+        }
+        autoScrollDirectionRef.current = 0;
+    }, []);
+
+    const startSortAutoScroll = useCallback((direction: -1 | 1) => {
+        if (autoScrollDirectionRef.current === direction && autoScrollFrameRef.current !== null) return;
+
+        stopSortAutoScroll();
+        autoScrollDirectionRef.current = direction;
+
+        const step = () => {
+            const container = sortListRef.current;
+            if (!container) {
+                stopSortAutoScroll();
+                return;
+            }
+
+            const maxScrollTop = container.scrollHeight - container.clientHeight;
+            const nextScrollTop = Math.max(0, Math.min(maxScrollTop, container.scrollTop + direction * 14));
+            container.scrollTop = nextScrollTop;
+
+            if (nextScrollTop <= 0 || nextScrollTop >= maxScrollTop) {
+                stopSortAutoScroll();
+                return;
+            }
+
+            autoScrollFrameRef.current = window.requestAnimationFrame(step);
+        };
+
+        autoScrollFrameRef.current = window.requestAnimationFrame(step);
+    }, [stopSortAutoScroll]);
+
+    const updateSortAutoScroll = useCallback((clientY: number) => {
+        const container = sortListRef.current;
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const threshold = 48;
+
+        if (clientY <= rect.top + threshold) {
+            // 实现 触顶触底自动滚动
+            startSortAutoScroll(-1);
+            return;
+        }
+
+        if (clientY >= rect.bottom - threshold) {
+            // 实现 触顶触底自动滚动
+            startSortAutoScroll(1);
+            return;
+        }
+
+        stopSortAutoScroll();
+    }, [startSortAutoScroll, stopSortAutoScroll]);
+
+    useEffect(() => () => {
+        stopSortAutoScroll();
+    }, [stopSortAutoScroll]);
+
+    const handleTabChange = (tab: AdminTab) => {
+        setActiveTab(tab);
+        if (tab === 'promotions') {
+            navigate('/admin/promotions/list');
+            return;
+        }
+        if (tab === 'points') {
+            navigate('/admin/points');
+            return;
+        }
+        if (location.pathname !== '/admin') {
+            navigate('/admin');
+        }
+    };
 
     const loadAnnouncementDetail = async (id: number) => {
         try {
@@ -285,7 +475,9 @@ const AdminPanel: React.FC = () => {
         setThemeTags((prev) => prev.map((tag) => ({
             ...tag,
             is_featured: nextFeaturedIdSet.has(Number(tag.id)),
-            featured_sort_order: nextFeaturedIdSet.has(Number(tag.id)) ? nextFeaturedTags.findIndex((item) => Number(item.id) === Number(tag.id)) : null,
+            featured_sort_order: nextFeaturedIdSet.has(Number(tag.id))
+                ? nextFeaturedTags.findIndex((item) => Number(item.id) === Number(tag.id))
+                : null,
         })));
     };
 
@@ -297,7 +489,6 @@ const AdminPanel: React.FC = () => {
         }
         try {
             setIsSavingThemes(true);
-            // 实现新增题材
             await gameTagsApi.createAdminGameTag({ name: trimmedName, code: newThemeCode.trim() || undefined });
             setNewThemeName('');
             setNewThemeCode('');
@@ -311,7 +502,11 @@ const AdminPanel: React.FC = () => {
     };
 
     const handleDeleteThemeTag = async (tag: AdminGameTagRecord) => {
-        const blockedReason = tag.child_count > 0 ? '该题材下还有子题材，不能删除' : tag.game_count > 0 ? '该题材下已有作品，不能删除' : '';
+        const blockedReason = tag.child_count > 0
+            ? '该题材下还有子题材，不能删除'
+            : tag.game_count > 0
+                ? '该题材下已有作品，不能删除'
+                : '';
         if (blockedReason) {
             toast.error(blockedReason);
             return;
@@ -334,8 +529,10 @@ const AdminPanel: React.FC = () => {
             toast.error('热门题材只能选择可直接展示的题材');
             return;
         }
+
         const exists = featuredThemeTags.some((item) => Number(item.id) === Number(tag.id));
         let nextFeaturedTags: FeaturedGameTag[];
+
         if (exists) {
             nextFeaturedTags = featuredThemeTags.filter((item) => Number(item.id) !== Number(tag.id));
         } else {
@@ -343,16 +540,20 @@ const AdminPanel: React.FC = () => {
                 toast.error(`热门题材最多只能设置 ${featuredLimit} 个`);
                 return;
             }
-            nextFeaturedTags = [...featuredThemeTags, {
-                id: Number(tag.id),
-                code: String(tag.code || ''),
-                name: String(tag.name || ''),
-                sort_order: Number(tag.sort_order) || 0,
-                parent_id: tag.parent_id ?? null,
-                parent_name: tag.parent_name ?? null,
-                featured_sort_order: featuredThemeTags.length,
-            }];
+            nextFeaturedTags = [
+                ...featuredThemeTags,
+                {
+                    id: Number(tag.id),
+                    code: String(tag.code || ''),
+                    name: String(tag.name || ''),
+                    sort_order: Number(tag.sort_order) || 0,
+                    parent_id: tag.parent_id ?? null,
+                    parent_name: tag.parent_name ?? null,
+                    featured_sort_order: featuredThemeTags.length,
+                },
+            ];
         }
+
         setFeaturedThemeTags(nextFeaturedTags);
         syncThemeTagsWithFeatured(nextFeaturedTags);
         setHasFeaturedChanges(true);
@@ -376,37 +577,115 @@ const AdminPanel: React.FC = () => {
         }
     };
 
-    const handleThemeDrop = async (targetId: number) => {
-        if (draggingThemeId === null || draggingThemeId === targetId || themeKeyword.trim()) {
-            setDraggingThemeId(null);
-            return;
-        }
-        const nextThemeTags = moveById(themeTags, draggingThemeId, targetId);
-        setThemeTags(nextThemeTags);
-        setDraggingThemeId(null);
+    const fetchAllSortableThemeTags = useCallback(async () => {
+        const response = await gameTagsApi.getAdminGameTags();
+        return filterLeafThemeTags(response.data.data?.tags || []);
+    }, []);
+
+    const resetSortModalState = useCallback(() => {
+        setSortModalMode(null);
+        setSortDraftItems([]);
+        setDraggingSortId(null);
+        lastSortTargetIdRef.current = null;
+    }, []);
+
+    const closeSortModal = useCallback(() => {
+        // 实现 关闭弹窗时还原草稿状态
+        stopSortAutoScroll();
+        resetSortModalState();
+    }, [resetSortModalState, stopSortAutoScroll]);
+
+    const handleOpenFeaturedSortModal = () => {
+        // 打开排序弹窗
+        if (featuredThemeTags.length === 0) return;
+        setSortDraftItems(featuredThemeTags.map((tag) => toSortDraftItem(tag)));
+        setDraggingSortId(null);
+        lastSortTargetIdRef.current = null;
+        setSortModalMode('featured');
+    };
+
+    const handleOpenAllSortModal = async () => {
+        if (isLoadingThemes || isSavingThemes || isPreparingSortModal || themeTags.length === 0) return;
+
         try {
-            setIsSavingThemes(true);
-            // 实现题材拖拽排序
-            await gameTagsApi.reorderAdminGameTags(nextThemeTags.map((tag) => Number(tag.id)));
-            toast.success('题材排序已更新');
+            setIsPreparingSortModal(true);
+            // 打开排序弹窗
+            const sortableTags = themeKeyword.trim() ? await fetchAllSortableThemeTags() : themeTags;
+            setSortDraftItems(sortableTags.map((tag) => toSortDraftItem(tag)));
+            setDraggingSortId(null);
+            lastSortTargetIdRef.current = null;
+            setSortModalMode('all');
         } catch (error) {
-            toast.error(extractErrorMessage(error, '题材排序更新失败'));
-            await loadThemeAdminData(themeKeyword);
+            toast.error(extractErrorMessage(error, '排序列表加载失败'));
         } finally {
-            setIsSavingThemes(false);
+            setIsPreparingSortModal(false);
         }
     };
 
-    const handleFeaturedDrop = (targetId: number) => {
-        if (draggingFeaturedId === null || draggingFeaturedId === targetId) {
-            setDraggingFeaturedId(null);
-            return;
+    const handleSortItemDragStart = (itemId: number) => {
+        setDraggingSortId(itemId);
+        lastSortTargetIdRef.current = null;
+    };
+
+    const handleSortItemDragOver = (event: React.DragEvent<HTMLDivElement>, targetId: number) => {
+        if (draggingSortId === null) return;
+
+        event.preventDefault();
+        updateSortAutoScroll(event.clientY);
+
+        if (draggingSortId === targetId || lastSortTargetIdRef.current === targetId) return;
+
+        setSortDraftItems((prev) => {
+            // 实现 弹窗内拖拽排序
+            const next = moveById(prev, draggingSortId, targetId);
+            if (next === prev) return prev;
+            lastSortTargetIdRef.current = targetId;
+            return next;
+        });
+    };
+
+    const handleSortListDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        if (draggingSortId === null) return;
+        event.preventDefault();
+        updateSortAutoScroll(event.clientY);
+    };
+
+    const handleSortItemDropEnd = () => {
+        stopSortAutoScroll();
+        setDraggingSortId(null);
+        lastSortTargetIdRef.current = null;
+    };
+
+    const handleSaveSortModal = async () => {
+        if (!sortModalMode || sortDraftItems.length === 0) return;
+
+        try {
+            setIsSavingThemes(true);
+
+            if (sortModalMode === 'featured') {
+                // 实现 热门题材排序保存
+                const response = await gameTagsApi.replaceFeaturedGameTags(sortDraftItems.map((item) => item.id));
+                const data = response.data.data;
+                const nextFeaturedTags = data?.featuredTags || [];
+                setFeaturedThemeTags(nextFeaturedTags);
+                setFeaturedLimit(data?.featuredLimit || featuredLimit);
+                syncThemeTagsWithFeatured(nextFeaturedTags);
+                setHasFeaturedChanges(false);
+                toast.success('热门题材排序已保存');
+                closeSortModal();
+                return;
+            }
+
+            // 实现 全部题材排序保存
+            await gameTagsApi.reorderAdminGameTags(sortDraftItems.map((item) => item.id));
+            await loadThemeAdminData(themeKeyword);
+            toast.success('全部题材排序已保存');
+            closeSortModal();
+        } catch (error) {
+            toast.error(extractErrorMessage(error, '排序保存失败'));
+        } finally {
+            setIsSavingThemes(false);
         }
-        const nextFeaturedTags = moveById(featuredThemeTags, draggingFeaturedId, targetId);
-        setFeaturedThemeTags(nextFeaturedTags);
-        syncThemeTagsWithFeatured(nextFeaturedTags);
-        setHasFeaturedChanges(true);
-        setDraggingFeaturedId(null);
     };
 
     return (
@@ -416,21 +695,43 @@ const AdminPanel: React.FC = () => {
                 <div className={styles.workspace}>
                     <aside className={styles.sidebar}>
                         <div className={styles.sidebarHeader}>
-                            {/* 实现管理面板头部标题 */}
                             <div className={styles.sidebarTitle}>管理面板</div>
                             <div className={styles.sidebarDivider} />
                         </div>
-                        <button type="button" className={`${styles.navItem} ${activeTab === 'announcements' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('announcements')}>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'announcements' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('announcements')}
+                        >
                             <span className={styles.navTitle}>公告系统</span>
                         </button>
-                        <button type="button" className={`${styles.navItem} ${activeTab === 'banners' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('banners')}>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'banners' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('banners')}
+                        >
                             <span className={styles.navTitle}>轮播图管理</span>
                         </button>
-                        <button type="button" className={`${styles.navItem} ${activeTab === 'themes' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('themes')}>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'themes' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('themes')}
+                        >
                             <span className={styles.navTitle}>题材管理</span>
                         </button>
-                        <button type="button" className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`} onClick={() => setActiveTab('points')}>
-                            <span className={styles.navTitle}>积分修改</span>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'promotions' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('promotions')}
+                        >
+                            <span className={styles.navTitle}>推广管理</span>
+                        </button>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('points')}
+                        >
+                            <span className={styles.navTitle}>积分管理</span>
                         </button>
                     </aside>
 
@@ -453,21 +754,47 @@ const AdminPanel: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className={styles.historyList}>
-                                            {isLoadingHistory ? <div className={styles.emptyState}>公告历史加载中...</div> : history.length === 0 ? <div className={styles.emptyState}>还没有公告记录，先创建一条草稿</div> : history.map((item) => (
+                                            {isLoadingHistory ? <div className={styles.emptyState}>公告历史加载中...</div> : null}
+                                            {!isLoadingHistory && history.length === 0 ? <div className={styles.emptyState}>还没有公告记录，先创建一条草稿。</div> : null}
+                                            {!isLoadingHistory && pagedHistory.map((item) => (
                                                 <article key={item.id} className={`${styles.historyCard} ${selectedHistoryId === item.id ? styles.historyCardActive : ''}`}>
                                                     <div className={styles.historyMeta}>
-                                                        <span className={`${styles.statusTag} ${item.status === 'published' ? styles.statusPublished : styles.statusDraft}`}>{item.status === 'published' ? '已发布' : '草稿'}</span>
-                                                        <span className={styles.historyTime}>{item.status === 'published' ? `发布时间 ${formatTime(item.publishedAt)}` : `更新时间 ${formatTime(item.updatedAt)}`}</span>
+                                                        <span className={`${styles.statusTag} ${item.status === 'published' ? styles.statusPublished : styles.statusDraft}`}>
+                                                            {item.status === 'published' ? '已发布' : '草稿'}
+                                                        </span>
+                                                        <span className={styles.historyTime}>
+                                                            {item.status === 'published'
+                                                                ? `发布时间 ${formatTime(item.publishedAt)}`
+                                                                : `更新时间 ${formatTime(item.updatedAt)}`}
+                                                        </span>
                                                     </div>
                                                     <div className={styles.historyTitle}>{item.title}</div>
                                                     <div className={styles.historyActions}>
-                                                        <button type="button" className={styles.actionButton} onClick={() => loadAnnouncementDetail(item.id)}>编辑</button>
-                                                        <button type="button" className={styles.actionButton} onClick={() => openPreviewByRecord(item.id)}>预览</button>
-                                                        <button type="button" className={styles.dangerButton} onClick={() => handleDeleteAnnouncement(item.id)} disabled={isSubmittingAnnouncement}>删除</button>
+                                                        <button type="button" className={styles.actionButton} onClick={() => void loadAnnouncementDetail(item.id)}>编辑</button>
+                                                        <button type="button" className={styles.actionButton} onClick={() => void openPreviewByRecord(item.id)}>预览</button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.dangerButton}
+                                                            onClick={() => void handleDeleteAnnouncement(item.id)}
+                                                            disabled={isSubmittingAnnouncement}
+                                                        >
+                                                            删除
+                                                        </button>
                                                     </div>
                                                 </article>
                                             ))}
                                         </div>
+                                        {!isLoadingHistory && history.length > 0 ? (
+                                            <Pagination
+                                                className={styles.listFooter}
+                                                currentPage={historyPage}
+                                                totalPages={historyTotalPages}
+                                                onPageChange={setHistoryPage}
+                                                disabled={isLoadingHistory || isSubmittingAnnouncement}
+                                                showPageNumbers={false}
+                                                summary={`\u7b2c ${historyPage} \u9875\uff0c\u5171 ${historyTotalPages} \u9875\uff0c\u5171 ${history.length} \u6761\u8bb0\u5f55`}
+                                            />
+                                        ) : null}
                                     </section>
 
                                     <section className={styles.card}>
@@ -478,29 +805,70 @@ const AdminPanel: React.FC = () => {
                                             {isLoadingDetail ? <span className={styles.loadingText}>正在载入...</span> : null}
                                         </div>
                                         <div className={styles.formArea}>
-                                            <label className={styles.fieldLabel}>大标题
-                                                <input className={styles.textInput} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="请输入公告大标题" />
+                                            <label className={styles.fieldLabel}>
+                                                大标题
+                                                <input
+                                                    className={styles.textInput}
+                                                    value={title}
+                                                    onChange={(event) => setTitle(event.target.value)}
+                                                    placeholder="请输入公告大标题"
+                                                />
                                             </label>
                                             <div className={styles.sectionHeader}>
                                                 <div>
                                                     <div className={styles.fieldLabel}>内容分段</div>
                                                 </div>
-                                                <button type="button" className={styles.secondaryButton} onClick={() => setSections((prev) => [...prev, createEmptySection()])}>添加分段</button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.secondaryButton}
+                                                    onClick={() => setSections((prev) => [...prev, createEmptySection()])}
+                                                >
+                                                    添加分段
+                                                </button>
                                             </div>
                                             {sections.map((section, index) => (
                                                 <div key={`section-${index}`} className={styles.sectionEditor}>
                                                     <div className={styles.sectionEditorHeader}>
                                                         <span className={styles.sectionIndex}>分段 {index + 1}</span>
-                                                        <button type="button" className={styles.linkButton} onClick={() => setSections((prev) => prev.length === 1 ? [createEmptySection()] : prev.filter((_, currentIndex) => currentIndex !== index))}>删除</button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.linkButton}
+                                                            onClick={() => setSections((prev) => prev.length === 1 ? [createEmptySection()] : prev.filter((_, currentIndex) => currentIndex !== index))}
+                                                        >
+                                                            删除
+                                                        </button>
                                                     </div>
-                                                    <input className={styles.textInput} value={section.subtitle} onChange={(event) => updateSection(index, 'subtitle', event.target.value)} placeholder="请输入小标题" />
-                                                    <textarea className={styles.textArea} value={section.body} onChange={(event) => updateSection(index, 'body', event.target.value)} placeholder="请输入正文内容" />
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={section.subtitle}
+                                                        onChange={(event) => updateSection(index, 'subtitle', event.target.value)}
+                                                        placeholder="请输入小标题"
+                                                    />
+                                                    <textarea
+                                                        className={styles.textArea}
+                                                        value={section.body}
+                                                        onChange={(event) => updateSection(index, 'body', event.target.value)}
+                                                        placeholder="请输入正文内容"
+                                                    />
                                                 </div>
                                             ))}
                                             <div className={styles.actionRow}>
-                                                <button type="button" className={styles.secondaryButton} onClick={() => { setPreviewAnnouncement(previewDraftRecord); setIsPreviewOpen(true); }}>预览弹窗</button>
-                                                <button type="button" className={styles.secondaryButton} onClick={handleSaveDraft} disabled={isSubmittingAnnouncement}>保存草稿</button>
-                                                <button type="button" className={styles.primaryButton} onClick={handlePublish} disabled={isSubmittingAnnouncement}>{editorMode === 'published' ? '发布新版本' : '发布公告'}</button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.secondaryButton}
+                                                    onClick={() => {
+                                                        setPreviewAnnouncement(previewDraftRecord);
+                                                        setIsPreviewOpen(true);
+                                                    }}
+                                                >
+                                                    预览弹窗
+                                                </button>
+                                                <button type="button" className={styles.secondaryButton} onClick={() => void handleSaveDraft()} disabled={isSubmittingAnnouncement}>
+                                                    保存草稿
+                                                </button>
+                                                <button type="button" className={styles.primaryButton} onClick={() => void handlePublish()} disabled={isSubmittingAnnouncement}>
+                                                    {editorMode === 'published' ? '发布新版本' : '发布公告'}
+                                                </button>
                                             </div>
                                         </div>
                                     </section>
@@ -517,7 +885,14 @@ const AdminPanel: React.FC = () => {
                                         <div className={styles.sectionBadge}>题材管理</div>
                                         <h2 className={styles.heroTitle}>管理可用题材与首页热门题材顺序</h2>
                                     </div>
-                                    <button type="button" className={styles.primaryGhostButton} onClick={() => void loadThemeAdminData(themeKeyword)} disabled={isLoadingThemes || isSavingThemes}>刷新题材</button>
+                                    <button
+                                        type="button"
+                                        className={styles.primaryGhostButton}
+                                        onClick={() => void loadThemeAdminData(themeKeyword)}
+                                        disabled={isLoadingThemes || isSavingThemes}
+                                    >
+                                        刷新题材
+                                    </button>
                                 </section>
 
                                 <div className={styles.themePanelGrid}>
@@ -528,17 +903,32 @@ const AdminPanel: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className={styles.themeForm}>
-                                            <label className={styles.fieldLabel}>题材名称
-                                                <input className={styles.textInput} value={newThemeName} onChange={(event) => setNewThemeName(event.target.value)} placeholder="例如：悬疑推理" />
+                                            <label className={styles.fieldLabel}>
+                                                题材名称
+                                                <input
+                                                    className={styles.textInput}
+                                                    value={newThemeName}
+                                                    onChange={(event) => setNewThemeName(event.target.value)}
+                                                    placeholder="例如：悬疑推理"
+                                                />
                                             </label>
-                                            <label className={styles.fieldLabel}>题材编码
-                                                <input className={styles.textInput} value={newThemeCode} onChange={(event) => setNewThemeCode(event.target.value)} placeholder="可选，不填自动生成" />
+                                            <label className={styles.fieldLabel}>
+                                                题材编码
+                                                <input
+                                                    className={styles.textInput}
+                                                    value={newThemeCode}
+                                                    onChange={(event) => setNewThemeCode(event.target.value)}
+                                                    placeholder="可选，不填自动生成"
+                                                />
                                             </label>
                                             <div className={styles.actionRowLeft}>
-                                                <button type="button" className={styles.primaryButton} onClick={handleCreateThemeTag} disabled={isSavingThemes}>创建题材</button>
+                                                <button type="button" className={styles.primaryButton} onClick={() => void handleCreateThemeTag()} disabled={isSavingThemes}>
+                                                    创建题材
+                                                </button>
                                             </div>
                                         </div>
                                     </section>
+
                                     <section
                                         className={`${styles.card} ${styles.featuredThemePanelCard}`}
                                         style={featuredThemeCardHeight ? { height: `${featuredThemeCardHeight}px` } : undefined}
@@ -547,28 +937,39 @@ const AdminPanel: React.FC = () => {
                                             <div>
                                                 <h3 className={styles.cardTitle}>热门题材</h3>
                                             </div>
-                                            <span className={styles.themeCounter}>{featuredThemeTags.length}/{featuredLimit}</span>
+                                            <div className={styles.cardHeaderActions}>
+                                                <span className={styles.themeCounter}>{featuredThemeTags.length}/{featuredLimit}</span>
+                                                <button
+                                                    type="button"
+                                                    className={styles.secondaryButton}
+                                                    onClick={handleOpenFeaturedSortModal}
+                                                    disabled={featuredThemeTags.length === 0 || isSavingThemes}
+                                                >
+                                                    排序
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className={styles.featuredThemeList}>
                                             {featuredThemeTags.length === 0 ? <div className={styles.emptyState}>当前还没有配置热门题材。</div> : featuredThemeTags.map((tag) => (
-                                                <div
-                                                    key={tag.id}
-                                                    className={styles.featuredThemeCard}
-                                                    draggable
-                                                    onDragStart={() => setDraggingFeaturedId(Number(tag.id))}
-                                                    onDragOver={(event) => event.preventDefault()}
-                                                    onDrop={() => handleFeaturedDrop(Number(tag.id))}
-                                                >
+                                                <div key={tag.id} className={styles.featuredThemeCard}>
                                                     <div>
                                                         <div className={styles.featuredThemeName}>{tag.name}</div>
                                                         <div className={styles.featuredThemeMeta}>编码：{tag.code || '-'}</div>
                                                     </div>
-                                                    <button type="button" className={styles.dangerButton} onClick={() => handleToggleFeaturedTag({ ...tag, is_featured: true, game_count: 0, child_count: 0, featured_sort_order: tag.featured_sort_order ?? 0 })}>移除</button>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.dangerButton}
+                                                        onClick={() => handleToggleFeaturedTag({ ...tag, is_featured: true, game_count: 0, child_count: 0, featured_sort_order: tag.featured_sort_order ?? 0 })}
+                                                    >
+                                                        移除
+                                                    </button>
                                                 </div>
                                             ))}
                                         </div>
                                         <div className={`${styles.actionRowLeft} ${styles.featuredThemeActions}`}>
-                                            <button type="button" className={styles.primaryButton} onClick={handleSaveFeaturedTags} disabled={!hasFeaturedChanges || isSavingThemes}>保存热门题材</button>
+                                            <button type="button" className={styles.primaryButton} onClick={() => void handleSaveFeaturedTags()} disabled={!hasFeaturedChanges || isSavingThemes}>
+                                                保存热门题材
+                                            </button>
                                         </div>
                                     </section>
                                 </div>
@@ -578,24 +979,34 @@ const AdminPanel: React.FC = () => {
                                         <div>
                                             <h3 className={styles.cardTitle}>全部题材</h3>
                                         </div>
+                                        <div className={styles.cardHeaderActions}>
+                                            <button
+                                                type="button"
+                                                className={styles.secondaryButton}
+                                                onClick={() => void handleOpenAllSortModal()}
+                                                disabled={isLoadingThemes || isSavingThemes || isPreparingSortModal || themeTags.length === 0}
+                                            >
+                                                {isPreparingSortModal ? '加载中...' : '排序'}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className={styles.themeToolbar}>
-                                        <input className={styles.textInput} value={themeKeyword} onChange={(event) => setThemeKeyword(event.target.value)} placeholder="输入题材名称或编码" />
+                                        <input
+                                            className={styles.textInput}
+                                            value={themeKeyword}
+                                            onChange={(event) => setThemeKeyword(event.target.value)}
+                                            placeholder="输入题材名称或编码"
+                                        />
                                     </div>
                                     <div className={styles.themeList}>
-                                        {isLoadingThemes ? <div className={styles.emptyState}>题材列表加载中...</div> : themeTags.length === 0 ? <div className={styles.emptyState}>暂无题材数据。</div> : themeTags.map((tag) => {
+                                        {isLoadingThemes ? <div className={styles.emptyState}>题材列表加载中...</div> : null}
+                                        {!isLoadingThemes && themeTags.length === 0 ? <div className={styles.emptyState}>暂无题材数据。</div> : null}
+                                        {!isLoadingThemes && pagedThemeTags.map((tag) => {
                                             const deleteDisabled = tag.game_count > 0 || tag.child_count > 0;
                                             return (
-                                                <article
-                                                    key={tag.id}
-                                                    className={styles.themeCard}
-                                                    draggable={!themeKeyword.trim()}
-                                                    onDragStart={() => setDraggingThemeId(Number(tag.id))}
-                                                    onDragOver={(event) => event.preventDefault()}
-                                                    onDrop={() => handleThemeDrop(Number(tag.id))}
-                                                >
-                                                    <div className={styles.themeCardTop}>
-                                                        <div>
+                                                <article key={tag.id} className={`${styles.themeCard} ${styles.themeCardCompact}`}>
+                                                    <div className={styles.themeCardMain}>
+                                                        <div className={styles.themeCardInfo}>
                                                             <div className={styles.themeCardTitle}>{tag.name}</div>
                                                             <div className={styles.themeCardMeta}>编码：{tag.code || '-'}</div>
                                                         </div>
@@ -613,33 +1024,103 @@ const AdminPanel: React.FC = () => {
                                                         <span>作品数：{tag.game_count}</span>
                                                     </div>
                                                     <div className={styles.themeActions}>
-                                                        <button type="button" className={styles.dangerButton} onClick={() => handleDeleteThemeTag(tag)} disabled={deleteDisabled || isSavingThemes}>删除</button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.dangerButton}
+                                                            onClick={() => void handleDeleteThemeTag(tag)}
+                                                            disabled={deleteDisabled || isSavingThemes}
+                                                        >
+                                                            删除
+                                                        </button>
                                                     </div>
                                                 </article>
                                             );
                                         })}
                                     </div>
+                                    {!isLoadingThemes && themeTags.length > 0 ? (
+                                        <Pagination
+                                            className={styles.listFooter}
+                                            currentPage={themePage}
+                                            totalPages={themeTotalPages}
+                                            onPageChange={setThemePage}
+                                            disabled={isLoadingThemes || isSavingThemes}
+                                            summary={`\u7b2c ${themePage} \u9875\uff0c\u5171 ${themeTotalPages} \u9875\uff0c\u5171 ${themeTags.length} \u6761\u8bb0\u5f55`}
+                                        />
+                                    ) : null}
                                 </section>
                             </div>
                         )}
 
-                        {activeTab === 'points' && (
-                            <section className={styles.pointsCard}>
-                                <div className={styles.sectionBadge}>积分修改</div>
-                                <h2 className={styles.heroTitle}>独立功能区已预留</h2>
-                                <p className={styles.heroDesc}>积分修改功能待接入。</p>
-                                <div className={styles.pointsPlaceholder}>
-                                    <div className={styles.pointsTitle}>积分修改功能待接入</div>
-                                    <div className={styles.pointsDesc}>当前版本仅保留页面框架，不接入任何积分写库接口，避免误改用户积分。</div>
-                                </div>
-                            </section>
-                        )}
+                        {activeTab === 'promotions' && <PromotionAdminManager />}
+
+                        {activeTab === 'points' && <PointsAdminManager />}
                     </div>
                 </div>
             </div>
 
             <AnnouncementModal announcement={previewAnnouncement} isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} badgeText="公告预览" />
-            {/* 隐藏管理页底部公共区块 */}
+
+            {isSortModalOpen && (
+                <div
+                    className={styles.sortModalOverlay}
+                    onClick={(event) => {
+                        if (event.target === event.currentTarget && !isSavingThemes) {
+                            closeSortModal();
+                        }
+                    }}
+                >
+                    <div className={styles.sortModal} role="dialog" aria-modal="true" aria-label={sortModalMeta.title}>
+                        <div className={styles.sortModalHeader}>
+                            <div>
+                                <div className={styles.sortModalBadge}>{sortModalMeta.badge}</div>
+                                <h3 className={styles.sortModalTitle}>{sortModalMeta.title}</h3>
+                                <p className={styles.sortModalDescription}>{sortModalMeta.description}</p>
+                            </div>
+                            <button type="button" className={styles.secondaryButton} onClick={closeSortModal} disabled={isSavingThemes}>
+                                关闭
+                            </button>
+                        </div>
+
+                        <div
+                            ref={sortListRef}
+                            className={styles.sortList}
+                            onDragOver={handleSortListDragOver}
+                            onDrop={handleSortItemDropEnd}
+                        >
+                            {sortDraftItems.map((item, index) => (
+                                <div
+                                    key={item.id}
+                                    className={`${styles.sortItem} ${draggingSortId === item.id ? styles.sortItemDragging : ''}`}
+                                    draggable={!isSavingThemes}
+                                    onDragStart={() => handleSortItemDragStart(item.id)}
+                                    onDragOver={(event) => handleSortItemDragOver(event, item.id)}
+                                    onDragEnd={handleSortItemDropEnd}
+                                    onDrop={handleSortItemDropEnd}
+                                >
+                                    <div className={styles.sortItemOrder}>{index + 1}</div>
+                                    <div className={styles.sortItemContent}>
+                                        <div className={styles.sortItemName}>{item.name}</div>
+                                        <div className={styles.sortItemMeta}>
+                                            <span>编码：{item.code || '-'}</span>
+                                            {isAllSortMode ? <span>作品数：{item.game_count || 0}</span> : null}
+                                        </div>
+                                    </div>
+                                    <div className={styles.sortItemHandle}>拖动排序</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className={styles.sortModalFooter}>
+                            <button type="button" className={styles.secondaryButton} onClick={closeSortModal} disabled={isSavingThemes}>
+                                取消
+                            </button>
+                            <button type="button" className={styles.primaryButton} onClick={() => void handleSaveSortModal()} disabled={isSavingThemes || sortDraftItems.length === 0}>
+                                {isSavingThemes ? '保存中...' : '保存排序'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
