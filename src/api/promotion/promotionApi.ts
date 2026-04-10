@@ -10,6 +10,8 @@ import type {
     AdminManualPointAdjustResult,
     AdminPointsLookupMode,
     AdminPointsUserLookupResult,
+    HomePromotionTicker,
+    HomePromotionTickerPayload,
     PromotionActivity,
     PromotionActivityPayload,
     PromotionRewardTask,
@@ -31,6 +33,9 @@ const promotionApi = {
     detail: (id: number) =>
         api.get<ApiResponse<PromotionActivity>>(`/auth/promotions/${id}`),
 
+    getHomeTicker: () =>
+        api.get<ApiResponse<HomePromotionTicker | null>>('/auth/promotions/home-ticker'),
+
     mySubmissions: () =>
         api.get<ApiResponse<PromotionSubmission[]>>('/auth/promotions/my-submissions'),
 
@@ -51,6 +56,12 @@ const promotionApi = {
 
     adminCreate: (payload: PromotionActivityPayload) =>
         api.post<ApiResponse<PromotionActivity>>('/admin/promotions', payload),
+
+    adminGetHomeTicker: () =>
+        api.get<ApiResponse<HomePromotionTicker>>('/admin/promotions/home-ticker'),
+
+    adminUpdateHomeTicker: (payload: HomePromotionTickerPayload) =>
+        api.put<ApiResponse<HomePromotionTicker>>('/admin/promotions/home-ticker', payload),
 
     adminUpdate: (id: number, payload: PromotionActivityPayload) =>
         api.put<ApiResponse<PromotionActivity>>(`/admin/promotions/${id}`, payload),

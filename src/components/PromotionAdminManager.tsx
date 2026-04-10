@@ -5,6 +5,7 @@ import promotionApi from '../api/promotion/promotionApi';
 import type {
   AdminPromotionSubmissionFilters,
   AdminPromotionSubmissionPagination,
+  HomePromotionTicker,
   PromotionActivity,
   PromotionActivityPayload,
   PromotionActivityPeriodFilter,
@@ -18,11 +19,11 @@ import Pagination from './Pagination';
 import styles from './PromotionAdminManager.module.css';
 import { getImageUrl } from '../utils/constants';
 
-type PromotionAdminView = 'create' | 'list' | 'reviews';
+type PromotionAdminView = 'create' | 'list' | 'reviews' | 'ticker';
 type ReviewDraft = { reviewStatus: PromotionReviewStatus; reviewRemark: string };
 type ReviewFilters = Required<Pick<AdminPromotionSubmissionFilters, 'activityPeriod' | 'reviewStatus' | 'keyword' | 'page'>> & { activityId?: number };
 
-const emptyConfig: PromotionSubmissionConfig = { acceptLinks: true, acceptImages: false, acceptVideos: false };
+const emptyConfig: PromotionSubmissionConfig = { acceptTexts: false, acceptLinks: true, acceptImages: false, acceptVideos: false };
 const defaultReviewFilters: ReviewFilters = { activityId: undefined, activityPeriod: 'all', reviewStatus: 'all', keyword: '', page: 1 };
 const emptyPagination: AdminPromotionSubmissionPagination = { page: 1, pageSize: 10, total: 0, totalPages: 1 };
 const statusLabelMap: Record<PromotionReviewStatus, string> = {
@@ -37,7 +38,6 @@ const createEmptyForm = (): PromotionActivityPayload => ({
   title: '',
   coverImageUrl: '',
   summary: '',
-  contentBody: '',
   detailLinkUrl: '',
   submissionConfig: { ...emptyConfig },
   isLongTerm: true,
@@ -49,6 +49,14 @@ const createEmptyForm = (): PromotionActivityPayload => ({
   rewardPoints: 10,
   status: 'draft',
   sortOrder: 0,
+});
+
+const createEmptyHomeTicker = (): HomePromotionTicker => ({
+  id: null,
+  text: '',
+  linkUrl: '/promotions',
+  createdAt: null,
+  updatedAt: null,
 });
 
 const formatTime = (value?: string | null) => {
@@ -96,7 +104,7 @@ const PromotionAdminManager: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams<{ promotionView?: string }>();
-  const currentView = (params.promotionView === 'create' || params.promotionView === 'reviews' || params.promotionView === 'list'
+  const currentView = (params.promotionView === 'create' || params.promotionView === 'reviews' || params.promotionView === 'list' || params.promotionView === 'ticker'
     ? params.promotionView
     : 'list') as PromotionAdminView;
 
@@ -115,6 +123,9 @@ const PromotionAdminManager: React.FC = () => {
   const [detailSubmission, setDetailSubmission] = useState<PromotionSubmission | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [savingReviewIds, setSavingReviewIds] = useState<Record<number, boolean>>({});
+  const [homeTicker, setHomeTicker] = useState<HomePromotionTicker>(createEmptyHomeTicker());
+  const [isLoadingHomeTicker, setIsLoadingHomeTicker] = useState(false);
+  const [isSavingHomeTicker, setIsSavingHomeTicker] = useState(false);
 
   const selectedActivity = useMemo(() => activities.find((item) => item.id === selectedActivityId) || null, [activities, selectedActivityId]);
 
@@ -168,13 +179,18 @@ const PromotionAdminManager: React.FC = () => {
     }
   }, [appliedReviewFilters, currentView]);
 
+  useEffect(() => {
+    if (currentView === 'ticker') {
+      void loadHomeTicker();
+    }
+  }, [currentView]);
+
   const handleSelectActivity = (activity: PromotionActivity) => {
     setSelectedActivityId(activity.id);
     setForm({
       title: activity.title,
       coverImageUrl: activity.coverImageUrl,
       summary: activity.summary,
-      contentBody: activity.contentBody,
       detailLinkUrl: activity.detailLinkUrl,
       submissionConfig: { ...activity.submissionConfig },
       isLongTerm: activity.isLongTerm,
@@ -198,10 +214,9 @@ const PromotionAdminManager: React.FC = () => {
   const validateForm = () => {
     if (!form.title.trim()) return toast.error('活动标题不能为空'), false;
     if (!form.summary.trim()) return toast.error('活动摘要不能为空'), false;
-    if (!form.contentBody.trim()) return toast.error('活动正文不能为空'), false;
     if (!form.coverImageUrl.trim()) return toast.error('活动封面不能为空'), false;
     if (!isValidDetailLink(form.detailLinkUrl)) return toast.error('活动详情跳转地址仅支持站内路径或 http/https 链接'), false;
-    if (!form.submissionConfig.acceptLinks && !form.submissionConfig.acceptImages && !form.submissionConfig.acceptVideos) return toast.error('请至少启用一种投稿方式'), false;
+    if (!form.submissionConfig.acceptTexts && !form.submissionConfig.acceptLinks && !form.submissionConfig.acceptImages && !form.submissionConfig.acceptVideos) return toast.error('请至少启用一种投稿方式'), false;
 
     if (!form.isLongTerm) {
       if (!form.startAt || !form.endAt) return toast.error('非长期活动必须填写开始和结束时间'), false;
@@ -260,6 +275,43 @@ const PromotionAdminManager: React.FC = () => {
       await loadActivities();
     } catch (error) {
       toast.error(getErrorMessage(error, '推广活动删除失败'));
+    }
+  };
+
+  const loadHomeTicker = async () => {
+    try {
+      setIsLoadingHomeTicker(true);
+      const response = await promotionApi.adminGetHomeTicker();
+      setHomeTicker(response.data.data || createEmptyHomeTicker());
+    } catch (error) {
+      toast.error(getErrorMessage(error, '首页滚动通知加载失败'));
+    } finally {
+      setIsLoadingHomeTicker(false);
+    }
+  };
+
+  const handleSaveHomeTicker = async () => {
+    const text = homeTicker.text.trim();
+    const linkUrl = homeTicker.linkUrl.trim() || '/promotions';
+
+    if (!text) {
+      toast.error('首页滚动通知文案不能为空');
+      return;
+    }
+    if (!isValidDetailLink(linkUrl)) {
+      toast.error('首页滚动通知跳转地址仅支持站内路径或 http/https 链接');
+      return;
+    }
+
+    try {
+      setIsSavingHomeTicker(true);
+      const response = await promotionApi.adminUpdateHomeTicker({ text, linkUrl });
+      setHomeTicker(response.data.data || { ...homeTicker, text, linkUrl });
+      toast.success('首页滚动通知保存成功');
+    } catch (error) {
+      toast.error(getErrorMessage(error, '首页滚动通知保存失败'));
+    } finally {
+      setIsSavingHomeTicker(false);
     }
   };
 
@@ -392,6 +444,7 @@ const PromotionAdminManager: React.FC = () => {
 
   const renderHeaderButtons = () => (
     <div className={styles.headerActions}>
+      <button type="button" className={`${styles.secondaryButton} ${currentView === 'ticker' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/ticker')}>首页滚动通知</button>
       <button type="button" className={`${styles.secondaryButton} ${currentView === 'create' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/create')}>新增活动</button>
       <button type="button" className={`${styles.secondaryButton} ${currentView === 'list' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/list')}>管理活动</button>
       <button type="button" className={`${styles.secondaryButton} ${currentView === 'reviews' ? styles.secondaryButtonActive : ''}`} onClick={() => navigate('/admin/promotions/reviews')}>投稿审核</button>
@@ -404,7 +457,6 @@ const PromotionAdminManager: React.FC = () => {
       <div className={styles.formArea}>
         <label className={styles.fieldLabel}>活动标题<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
         <label className={styles.fieldLabel}>活动摘要<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
-        <label className={styles.fieldLabel}>活动正文<textarea className={styles.textArea} value={form.contentBody} onChange={(event) => setForm((prev) => ({ ...prev, contentBody: event.target.value }))} /></label>
         <label className={styles.fieldLabel}>活动详情跳转地址<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx 或 https://example.com" /></label>
         <label className={styles.fieldLabel}>活动封面<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => void handleUploadCover(event.target.files?.[0] || null)} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt="活动封面" />}</label>
         <label className={styles.fieldLabel}>活动时间<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />长期活动</label></label>
@@ -425,6 +477,8 @@ const PromotionAdminManager: React.FC = () => {
         <label className={styles.fieldLabel}>排序值<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
         <label className={styles.fieldLabel}>发布状态<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">草稿</option><option value="published">已发布</option></select></label>
         <div className={styles.fieldLabel}>投稿方式配置<div className={styles.toggleRow}>
+          {/* 实现文本投稿配置 */}
+          <label className={styles.switchLabel}><input type="checkbox" checked={form.submissionConfig.acceptTexts} onChange={(event) => setForm((prev) => ({ ...prev, submissionConfig: { ...prev.submissionConfig, acceptTexts: event.target.checked } }))} />上传文本</label>
           <label className={styles.switchLabel}><input type="checkbox" checked={form.submissionConfig.acceptLinks} onChange={(event) => setForm((prev) => ({ ...prev, submissionConfig: { ...prev.submissionConfig, acceptLinks: event.target.checked } }))} />上传链接</label>
           <label className={styles.switchLabel}><input type="checkbox" checked={form.submissionConfig.acceptImages} onChange={(event) => setForm((prev) => ({ ...prev, submissionConfig: { ...prev.submissionConfig, acceptImages: event.target.checked } }))} />上传图片</label>
           <label className={styles.switchLabel}><input type="checkbox" checked={form.submissionConfig.acceptVideos} onChange={(event) => setForm((prev) => ({ ...prev, submissionConfig: { ...prev.submissionConfig, acceptVideos: event.target.checked } }))} />上传视频</label>
@@ -541,6 +595,86 @@ const PromotionAdminManager: React.FC = () => {
     </section>
   );
 
+  const renderTickerSettings = () => (
+    <section className={styles.card}>
+      <div className={styles.cardHeader}>
+        <div>
+          <h3 className={styles.cardTitle}>首页滚动通知</h3>
+          <p className={styles.cardDesc}>配置首页轮播图下方的喇叭滚动文案与跳转地址。</p>
+        </div>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => void loadHomeTicker()}
+          disabled={isLoadingHomeTicker || isSavingHomeTicker}
+        >
+          刷新配置
+        </button>
+      </div>
+
+      {isLoadingHomeTicker ? (
+        <div className={styles.emptyState}>正在加载首页滚动通知...</div>
+      ) : (
+        <div className={styles.formArea}>
+          <label className={styles.fieldLabel}>
+            通知文案
+            <textarea
+              className={styles.textArea}
+              value={homeTicker.text}
+              placeholder="请输入首页轮播图下方展示的滚动文案"
+              onChange={(event) => setHomeTicker((prev) => ({ ...prev, text: event.target.value }))}
+            />
+          </label>
+          <label className={styles.fieldLabel}>
+            跳转地址
+            <input
+              className={styles.textInput}
+              value={homeTicker.linkUrl}
+              placeholder="/promotions 或 https://example.com"
+              onChange={(event) => setHomeTicker((prev) => ({ ...prev, linkUrl: event.target.value }))}
+            />
+            <span className={styles.tickerHint}>支持站内路径 `/xxx`，也支持 `http://` 或 `https://` 外链。</span>
+          </label>
+          <div className={styles.tickerPreview}>
+            <div className={styles.tickerPreviewLabel}>效果预览</div>
+            <div className={styles.tickerPreviewBar}>
+              <span className={styles.tickerPreviewIcon} aria-hidden="true">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 10V14H7L12 18V6L7 10H4Z" />
+                  <path d="M16 9C17.2 10.2 17.2 13.8 16 15" />
+                  <path d="M18.5 6.5C21 9 21 15 18.5 17.5" />
+                </svg>
+              </span>
+              <span className={styles.tickerPreviewText}>{homeTicker.text.trim() || '这里会显示首页滚动通知文案'}</span>
+            </div>
+          </div>
+          <div className={styles.tickerMeta}>
+            默认跳转地址：`/promotions`
+            {homeTicker.updatedAt ? ` · 最近更新：${formatTime(homeTicker.updatedAt)}` : ''}
+          </div>
+          <div className={styles.actionRow}>
+            <button
+              type="button"
+              className={styles.secondaryButton}
+              onClick={() => setHomeTicker(createEmptyHomeTicker())}
+              disabled={isSavingHomeTicker}
+            >
+              重置默认值
+            </button>
+            <button
+              type="button"
+              className={styles.primaryButton}
+              onClick={() => void handleSaveHomeTicker()}
+              disabled={isSavingHomeTicker}
+            >
+              {isSavingHomeTicker ? '保存中...' : '保存首页滚动通知'}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
   const renderSubmissionDetailModal = () => {
     if (detailSubmissionId === null) return null;
 
@@ -599,6 +733,17 @@ const PromotionAdminManager: React.FC = () => {
               </section>
 
               <section className={styles.detailSection}>
+                <div className={styles.detailSectionTitle}>投稿文本</div>
+                {submission.submitPayload.texts.length === 0 ? <div className={styles.detailTextBlock}>无内容</div> : (
+                  <div className={styles.detailLinkList}>
+                    {submission.submitPayload.texts.map((item, index) => (
+                      <div key={`${submission.id}-text-${index}`} className={styles.detailTextBlock}>{item}</div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className={styles.detailSection}>
                 <div className={styles.detailSectionTitle}>投稿链接</div>
                 {submission.submitPayload.links.length === 0 ? <div className={styles.detailTextBlock}>无内容</div> : (
                   <div className={styles.detailLinkList}>
@@ -644,6 +789,7 @@ const PromotionAdminManager: React.FC = () => {
         {currentView === 'create' && renderForm()}
         {currentView === 'list' && renderActivityList()}
         {currentView === 'reviews' && renderReviews()}
+        {currentView === 'ticker' && renderTickerSettings()}
       </div>
       {renderSubmissionDetailModal()}
     </>

@@ -411,6 +411,19 @@ const PointsAdminManager: React.FC = () => {
                             </section>
 
                             <section className={styles.detailSection}>
+                                <div className={styles.detailSectionTitle}>投稿文本</div>
+                                {!submission || submission.submitPayload.texts.length === 0 ? (
+                                    <div className={styles.detailTextBlock}>无内容</div>
+                                ) : (
+                                    <div className={styles.detailLinkList}>
+                                        {submission.submitPayload.texts.map((item, index) => (
+                                            <div key={`${detailTask.id}-text-${index}`} className={styles.detailTextBlock}>{item}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className={styles.detailSection}>
                                 <div className={styles.detailSectionTitle}>投稿链接</div>
                                 {!submission || submission.submitPayload.links.length === 0 ? (
                                     <div className={styles.detailTextBlock}>无内容</div>

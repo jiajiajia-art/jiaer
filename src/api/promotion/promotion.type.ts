@@ -1,7 +1,21 @@
 export interface PromotionSubmissionConfig {
+    acceptTexts: boolean;
     acceptLinks: boolean;
     acceptImages: boolean;
     acceptVideos: boolean;
+}
+
+export interface HomePromotionTicker {
+    id: number | null;
+    text: string;
+    linkUrl: string;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export interface HomePromotionTickerPayload {
+    text: string;
+    linkUrl: string;
 }
 
 export type PromotionActivityStatus = 'draft' | 'published';
@@ -14,7 +28,7 @@ export interface PromotionActivity {
     title: string;
     coverImageUrl: string;
     summary: string;
-    contentBody: string;
+    contentBody?: string;
     detailLinkUrl: string;
     submissionConfig: PromotionSubmissionConfig;
     isLongTerm: boolean;
@@ -34,6 +48,7 @@ export interface PromotionActivity {
 }
 
 export interface PromotionSubmissionPayload {
+    texts: string[];
     links: string[];
     images: string[];
     videos: string[];
@@ -124,7 +139,7 @@ export interface PromotionActivityPayload {
     title: string;
     coverImageUrl: string;
     summary: string;
-    contentBody: string;
+    contentBody?: string;
     detailLinkUrl: string;
     submissionConfig: PromotionSubmissionConfig;
     isLongTerm: boolean;

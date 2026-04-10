@@ -434,6 +434,21 @@ const Profile: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* 实现推广分享入口前移 */}
+                        <div className={styles.functionItem}>
+                            <div className={styles.functionIcon}>
+                                <MdCampaign />
+                            </div>
+                            <div className={styles.functionText}>
+                                <div className={styles.functionTitle}>推广分享</div>
+                                {/* 实现推广文案更新 */}
+                                <div className={styles.functionDesc}>参加推广活动，赚取海量积分和奖励</div>
+                            </div>
+                            <button className={styles.functionButton} onClick={() => navigate('/promotions')}>
+                                进入
+                            </button>
+                        </div>
+
                         {/* 观看广告 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -551,20 +566,6 @@ const Profile: React.FC = () => {
                             </div>
                             <button className={styles.functionButton} onClick={handleJoinGroup}>
                                 加入
-                            </button>
-                        </div>
-
-                        {/* 退出登录 */}
-                        <div className={styles.functionItem}>
-                            <div className={styles.functionIcon}>
-                                <MdCampaign />
-                            </div>
-                            <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>推广分享</div>
-                                <div className={styles.functionDesc}>查看推广活动、提交推广成果，并跟踪奖励审核进度</div>
-                            </div>
-                            <button className={styles.functionButton} onClick={() => navigate('/promotions')}>
-                                进入
                             </button>
                         </div>
 

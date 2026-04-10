@@ -59,6 +59,7 @@ const PromotionCenter: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedActivity, setSelectedActivity] = useState<PromotionActivity | null>(null);
+    const [textInput, setTextInput] = useState('');
     const [linkInputs, setLinkInputs] = useState(['']);
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
     const [videoFiles, setVideoFiles] = useState<FileList | null>(null);
@@ -87,6 +88,7 @@ const PromotionCenter: React.FC = () => {
 
     const resetSubmitState = () => {
         setSelectedActivity(null);
+        setTextInput('');
         setLinkInputs(['']);
         setImageFiles(null);
         setVideoFiles(null);
@@ -112,9 +114,11 @@ const PromotionCenter: React.FC = () => {
         }
 
         const formData = new FormData();
+        const trimmedText = textInput.trim();
         const trimmedLinks = linkInputs.map((item) => item.trim()).filter(Boolean);
 
-        // 实现 动态投稿字段渲染后的表单提交
+        // 实现文本与多类型投稿组装
+        if (trimmedText) formData.append('texts', trimmedText);
         trimmedLinks.forEach((item) => formData.append('links', item));
         Array.from(imageFiles || []).forEach((file) => formData.append('images', file));
         Array.from(videoFiles || []).forEach((file) => formData.append('videos', file));
@@ -186,6 +190,7 @@ const PromotionCenter: React.FC = () => {
                                                 <div className={styles.infoItem}>奖励积分：审核通过后发放 {activity.rewardPoints} 积分</div>
                                             </div>
                                             <div className={styles.configRow}>
+                                                {activity.submissionConfig.acceptTexts && <span className={styles.chip}>文本投稿</span>}
                                                 {activity.submissionConfig.acceptLinks && <span className={styles.chip}>链接投稿</span>}
                                                 {activity.submissionConfig.acceptImages && <span className={styles.chip}>图片投稿</span>}
                                                 {activity.submissionConfig.acceptVideos && <span className={styles.chip}>视频投稿</span>}
@@ -228,6 +233,16 @@ const PromotionCenter: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className={styles.submissionMeta}>
+                                        {submission.submitPayload.texts.length > 0 && (
+                                            <div className={styles.payloadBlock}>
+                                                <div className={styles.payloadLabel}>投稿文本</div>
+                                                <div className={styles.payloadList}>
+                                                    {submission.submitPayload.texts.map((item, index) => (
+                                                        <div key={`${submission.id}-text-${index}`} className={styles.payloadItem}>{item}</div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                         {submission.submitPayload.links.length > 0 && (
                                             <div className={styles.payloadBlock}>
                                                 <div className={styles.payloadLabel}>投稿链接</div>
@@ -282,6 +297,18 @@ const PromotionCenter: React.FC = () => {
                             <div className={styles.noticeText}>{selectedActivity.availabilityText}</div>
                         )}
                         <div className={styles.formGrid}>
+                            {selectedActivity.submissionConfig.acceptTexts && (
+                                <label className={styles.fieldLabel}>
+                                    文本投稿
+                                    <textarea
+                                        className={styles.input}
+                                        value={textInput}
+                                        placeholder="请输入你的推广文本内容"
+                                        onChange={(event) => setTextInput(event.target.value)}
+                                    />
+                                    <div className={styles.uploadHint}>可直接提交文本内容，支持和其他投稿方式一起提交。</div>
+                                </label>
+                            )}
                             {selectedActivity.submissionConfig.acceptLinks && (
                                 <label className={styles.fieldLabel}>
                                     链接投稿

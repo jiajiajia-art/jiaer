@@ -316,6 +316,115 @@
     margin-top: 38px;
 }
 
+.homeTicker {
+    --home-ticker-gap: 32px;
+    width: 1080px;
+    margin: 16px auto 0;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    text-align: left;
+    background:
+        linear-gradient(135deg, rgba(255, 250, 244, 0.98) 0%, rgba(249, 239, 227, 0.94) 100%);
+    box-shadow: 0 14px 34px rgba(98, 59, 33, 0.08);
+    border: 1px solid rgba(201, 139, 92, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.homeTicker:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 18px 38px rgba(98, 59, 33, 0.12);
+}
+
+.homeTickerIcon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(224, 61, 75, 0.1);
+    color: #cf4d59;
+}
+
+.homeTickerIcon svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.homeTickerViewport {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    display: block;
+}
+
+.homeTickerTrack {
+    min-width: max-content;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--home-ticker-gap);
+}
+
+.homeTickerTrackScrolling {
+    animation: homeTickerMarquee 18s linear infinite;
+    will-change: transform;
+}
+
+.homeTickerGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--home-ticker-gap);
+    flex-shrink: 0;
+}
+
+.homeTickerText {
+    display: block;
+    color: #2f241d;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.homeTickerTextStatic {
+    max-width: 100%;
+}
+
+.homeTickerDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(207, 77, 89, 0.35);
+}
+
+.homeTickerAction {
+    flex-shrink: 0;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+@keyframes homeTickerMarquee {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(calc(-50% - (var(--home-ticker-gap) / 2)));
+    }
+}
+
 .sectionHeader {
     display: flex;
     justify-content: space-between;
@@ -726,6 +835,11 @@
 }
 
 @media (max-width: 1080px) {
+    .homeTicker {
+        width: calc(100% - 20px);
+        margin: 14px auto 0;
+    }
+
     .themeShowcase {
         width: calc(100% - 20px);
         margin: 14px auto 0;
@@ -737,6 +851,33 @@
 }
 
 @media (max-width: 768px) {
+    .homeTicker {
+        --home-ticker-gap: 24px;
+        width: calc(100% - 24px);
+        margin: 12px auto 0;
+        padding: 12px 14px;
+        gap: 10px;
+        border-radius: 16px;
+    }
+
+    .homeTickerIcon {
+        width: 34px;
+        height: 34px;
+    }
+
+    .homeTickerIcon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .homeTickerText {
+        font-size: 13px;
+    }
+
+    .homeTickerAction {
+        font-size: 12px;
+    }
+
     .themeShowcase {
         /* 实现移动端热门题材展示 */
         width: calc(100% - 24px);
