@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { IoSearch } from 'react-icons/io5';
+import { IoMailOutline, IoSearch } from 'react-icons/io5';
 import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
+import { useMessageStore } from '../../store/useMessageStore';
 import { getImageUrl } from '../../utils/constants';
 
 const isWebViewEnv = (): boolean => {
@@ -20,15 +21,27 @@ const Navbar: React.FC = () => {
     const [isDesktopLayout, setIsDesktopLayout] = useState(window.innerWidth > 768);
     const { isAuthenticated, initialize, logout, user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
+    const { unreadCount, refreshUnreadCount, clearUnreadCount } = useMessageStore();
 
     useEffect(() => {
         initialize();
     }, [initialize]);
 
     useEffect(() => {
+        if (isAuthenticated) {
+            // 实现消息未读数刷新
+            void refreshUnreadCount();
+            return;
+        }
+
+        clearUnreadCount();
+    }, [clearUnreadCount, isAuthenticated, refreshUnreadCount]);
+
+    useEffect(() => {
         const handleResize = () => {
             setIsDesktopLayout(window.innerWidth > 768);
         };
+
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -58,6 +71,7 @@ const Navbar: React.FC = () => {
     };
 
     const activeNav = getActiveNav();
+    const unreadBadgeText = unreadCount > 99 ? '99+' : (unreadCount > 0 ? String(unreadCount) : '');
 
     const requireAuth = (): boolean => {
         if (isAuthenticated) return true;
@@ -116,53 +130,65 @@ const Navbar: React.FC = () => {
                     </div>
 
                     {isAuthenticated ? (
-                        <div className={styles.avatarContainer}>
-                            <div
-                                className={styles.avatar}
-                                onClick={() => {
-                                    if (isWebViewEnv()) return;
-                                    setShowUserMenu((prev) => !prev);
-                                }}
+                        <div className={styles.userActions}>
+                            <button
+                                type="button"
+                                className={styles.messageButton}
+                                onClick={() => navigate('/messages')}
+                                aria-label="消息中心"
                             >
-                                <img
-                                    src={getImageUrl(user?.user.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
-                                    alt=""
-                                />
-                            </div>
+                                <IoMailOutline />
+                                {unreadBadgeText ? <span className={styles.messageBadge}>{unreadBadgeText}</span> : null}
+                            </button>
 
-                            {showUserMenu && !isWebViewEnv() && (
-                                <div className={styles.userMenu}>
-                                    <button
-                                        className={styles.menuBtn}
-                                        onClick={() => {
-                                            navigate('/profile');
-                                            setShowUserMenu(false);
-                                        }}
-                                    >
-                                        个人中心
-                                    </button>
-                                    {user?.user?.role === 'admin' && isDesktopLayout && (
+                            <div className={styles.avatarContainer}>
+                                <div
+                                    className={styles.avatar}
+                                    onClick={() => {
+                                        if (isWebViewEnv()) return;
+                                        setShowUserMenu((prev) => !prev);
+                                    }}
+                                >
+                                    <img
+                                        src={getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
+                                        alt=""
+                                    />
+                                </div>
+
+                                {showUserMenu && !isWebViewEnv() && (
+                                    <div className={styles.userMenu}>
                                         <button
                                             className={styles.menuBtn}
                                             onClick={() => {
-                                                navigate('/admin');
+                                                navigate('/profile');
                                                 setShowUserMenu(false);
                                             }}
                                         >
-                                            管理面板
+                                            个人中心
                                         </button>
-                                    )}
-                                    <button
-                                        className={`${styles.menuBtn} ${styles.logoutBtn}`}
-                                        onClick={() => {
-                                            logout();
-                                            setShowUserMenu(false);
-                                        }}
-                                    >
-                                        退出登录
-                                    </button>
-                                </div>
-                            )}
+                                        {user?.user?.role === 'admin' && isDesktopLayout && (
+                                            <button
+                                                className={styles.menuBtn}
+                                                onClick={() => {
+                                                    navigate('/admin');
+                                                    setShowUserMenu(false);
+                                                }}
+                                            >
+                                                管理面板
+                                            </button>
+                                        )}
+                                        <button
+                                            className={`${styles.menuBtn} ${styles.logoutBtn}`}
+                                            onClick={() => {
+                                                logout();
+                                                setShowUserMenu(false);
+                                            }}
+                                        >
+                                            退出登录
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         !isWebViewEnv() && (

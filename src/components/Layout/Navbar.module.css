@@ -136,6 +136,51 @@
     position: relative;
 }
 
+.userActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.messageButton {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.messageButton:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.messageBadge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #fb4655;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.3);
+}
+
 .avatar {
     width: 48px;
     height: 48px;
@@ -277,7 +322,7 @@
     .searchBox {
         flex: 1;
         min-width: 0;
-        max-width: 70%;
+        max-width: 62%;
         height: 28px;
         padding-left: 8px;
         padding-right: 0;
@@ -296,6 +341,26 @@
         width: 40px;
         min-width: 40px;
         font-size: 14px;
+    }
+
+    .userActions {
+        gap: 8px;
+    }
+
+    .messageButton {
+        width: 36px;
+        height: 36px;
+        font-size: 17px;
+        flex-shrink: 0;
+    }
+
+    .messageBadge {
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        top: -3px;
+        right: -4px;
+        font-size: 10px;
     }
 
     .avatar {
