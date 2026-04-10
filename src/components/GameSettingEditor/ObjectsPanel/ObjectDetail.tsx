@@ -3,7 +3,7 @@ import styles from './ObjectDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
-import { getImageUrl, IMAGE_GENERATION_COST, normalizeIcon as normalizeIconUtil } from '../../../utils/constants';
+import { getImageUrl, CHARACTER_GENERATION_COST, normalizeIcon as normalizeIconUtil } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
@@ -678,7 +678,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                         onClick={handleGenerateImageClick}
                                         disabled={isCurrentPanelGenerating}
                                     >
-                                        {isCurrentPanelGenerating ? '生成中...' : `${IMAGE_GENERATION_COST} 积分 AI生成`}
+                                        {isCurrentPanelGenerating ? '生成中...' : `${CHARACTER_GENERATION_COST} 积分 AI生成`}
                                     </button>
                                 </div>
                                 <div className={styles.imagePreviewSection}>
@@ -888,7 +888,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 onConfirm={handleConfirmGenerateImage}
                 onCancel={handleCancelGenerateImage}
                 title="积分扣除确认"
-                message={`本次生成图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                message={`本次生成图片将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

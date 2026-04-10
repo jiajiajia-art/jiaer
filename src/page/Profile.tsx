@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -7,12 +7,25 @@ import { auth } from '../api/account/authApi';
 import payApi from '../api/pay/payApi';
 import Navbar from '../components/Layout/Navbar';
 import RechargeModal from '../components/Purchase/RechargeModal';
+import CheckInModal from '../components/CheckInModal';
+import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
-import { MdPlayCircleOutline, MdPersonAddAlt1, MdOutlineQrCodeScanner, MdGroup, MdEdit, MdContentCopy, MdCampaign } from 'react-icons/md';
+import {
+    MdCampaign,
+    MdCardMembership,
+    MdContentCopy,
+    MdEdit,
+    MdGroup,
+    MdOutlineQrCodeScanner,
+    MdPersonAddAlt1,
+    MdPlayCircleOutline,
+} from 'react-icons/md';
 import toast from 'react-hot-toast';
 import JoinGroupModal from '../components/JoinGroupModal';
 import { getImageUrl } from '../utils/constants';
-import type { User } from '../api/account/auth.type';
+import type { SubscriptionRedeemResult, User } from '../api/account/auth.type';
+import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKeysApi.type';
+import type { PayOrderRequest } from '../api/pay/pay.type';
 
 const isWebViewEnv = (): boolean => {
     const win = window as any;
@@ -28,6 +41,16 @@ const maskPhoneNumber = (phone?: string): string => {
     return `${phone.slice(0, 3)}****${phone.slice(-4)}`;
 };
 
+const formatDate = (value?: string | null): string => {
+    if (!value) return '-';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
 const Profile: React.FC = () => {
     const { user, logout, updateUser } = useAuthStore();
     const navigate = useNavigate();
@@ -35,20 +58,21 @@ const Profile: React.FC = () => {
     const [inputInviteCode, setInputInviteCode] = useState('');
     const [showInputInviteCode, setShowInputInviteCode] = useState(false);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+    const [showRedeemInput, setShowRedeemInput] = useState(false);
+    const [redeemKey, setRedeemKey] = useState('');
+    const [isRedeemingMembership, setIsRedeemingMembership] = useState(false);
+    const [redeemSuccessPlanId, setRedeemSuccessPlanId] = useState<SubscriptionRedeemResult['planId'] | null>(null);
 
-    // 积分充值相关状态
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+    const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
 
-    // 昵称编辑相关状态
     const [isEditingName, setIsEditingName] = useState(false);
     const [editName, setEditName] = useState('');
     const [isUpdatingName, setIsUpdatingName] = useState(false);
 
-    // 头像上传相关状态
     const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 浏览器登录账号绑定相关状态
     const [isBindAccountModalOpen, setIsBindAccountModalOpen] = useState(false);
     const [bindPhone, setBindPhone] = useState('');
     const [bindPassword, setBindPassword] = useState('');
@@ -56,11 +80,9 @@ const Profile: React.FC = () => {
     const [isBindingAccount, setIsBindingAccount] = useState(false);
     const [isBindAccountStatusModalOpen, setIsBindAccountStatusModalOpen] = useState(false);
 
-    // 移动端判断
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // 监听窗口大小变化
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -68,13 +90,12 @@ const Profile: React.FC = () => {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    
+
     const handleLogout = () => {
         logout();
         navigate('/home');
     };
 
-    // 获取用户信息并更新
     const getUserInfo = async () => {
         try {
             const response = await auth.getUserInfo();
@@ -86,7 +107,7 @@ const Profile: React.FC = () => {
                 }
             }
         } catch (error) {
-            console.error('获取用户信息失败:', error);
+            console.error('get user info failed:', error);
         }
     };
 
@@ -104,14 +125,47 @@ const Profile: React.FC = () => {
             await navigator.clipboard.writeText(userCode);
             toast.success('Kuran号已复制');
         } catch (error) {
-            console.error('复制 Kuran号 失败:', error);
+            console.error('copy Kuran code failed:', error);
             toast.error('复制失败，请稍后重试');
         }
     };
 
     const handleWatchAd = () => {
-        // TODO: 实现观看广告逻辑
         toast.error('观看广告功能开发中');
+    };
+
+    const handleRedeemMembership = async () => {
+        const key = redeemKey.trim().toUpperCase();
+        if (!key) {
+            toast.error('请输入兑换码');
+            return;
+        }
+
+        try {
+            setIsRedeemingMembership(true);
+            const response = await auth.redeemSubscriptionKey({ redeemKey: key });
+            if (response.data.success && response.data.data) {
+                const result = response.data.data;
+                setRedeemKey('');
+                setShowRedeemInput(false);
+                setRedeemSuccessPlanId(result.planId as SubscriptionPlanId);
+                const userRes = await auth.getUserInfo();
+                if (userRes.data.success && userRes.data.data) {
+                    updateUser(userRes.data.data);
+                }
+            } else {
+                toast.error(response.data.message || '兑换失败');
+            }
+        } catch (error: unknown) {
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string } } };
+                toast.error(axiosError.response?.data?.message || '兑换失败，请稍后重试');
+            } else {
+                toast.error('兑换失败，请稍后重试');
+            }
+        } finally {
+            setIsRedeemingMembership(false);
+        }
     };
 
     const handleCopyInviteCode = () => {
@@ -129,17 +183,11 @@ const Profile: React.FC = () => {
             return;
         }
 
-        console.log('提交邀请码:', inputInviteCode);
-
         try {
             const response = await auth.useInviteCode({ inviteCode: inputInviteCode });
-            console.log('完整响应:', response);
-            console.log('响应数据:', response.data);
-
             if (response.data.success) {
                 toast.success('邀请码提交成功');
                 getUserInfo();
-                // 提交成功后隐藏输入框
                 setShowInputInviteCode(false);
                 setInputInviteCode('');
             } else {
@@ -160,9 +208,7 @@ const Profile: React.FC = () => {
         setShowJoinGroupModal(true);
     };
 
-    // 浏览器登录账号绑定相关函数
     const clearBindAccountDraft = () => {
-        // 实现浏览器登录账号草稿清理
         setBindPhone('');
         setBindPassword('');
         setBindConfirmPassword('');
@@ -183,7 +229,7 @@ const Profile: React.FC = () => {
             return;
         }
         if (bindPassword.length < 6) {
-            toast.error('密码至少需要6位');
+            toast.error('密码至少需6位');
             return;
         }
         if (bindPassword !== bindConfirmPassword) {
@@ -200,7 +246,7 @@ const Profile: React.FC = () => {
 
             if (response.data.success && response.data.data) {
                 updateUser(response.data.data);
-                toast.success('绑定成功！可在浏览器用手机号 + 密码登录');
+                toast.success('绑定成功！可在浏览器用手Q号 + 密码登录');
                 setIsBindAccountModalOpen(false);
                 clearBindAccountDraft();
             } else {
@@ -232,29 +278,17 @@ const Profile: React.FC = () => {
             return;
         }
 
-        // 实现从其他弹窗跳转后自动打开绑定入口
         handleOpenBindAccountModal();
         const nextParams = new URLSearchParams(searchParams);
         nextParams.delete('openBrowserLoginAccount');
         setSearchParams(nextParams, { replace: true });
     }, [searchParams, setSearchParams, user?.user?.phoneNumber]);
 
-
-    const handleCheckIn = async () => {
-        console.log("user?.hasSignedIn", user?.user?.hasSignedIn);
-
-        if (user?.user?.hasSignedIn) {
-            toast.error('今日已签到');
-            return;
-        }
-        const response = await auth.checkIn();
-        if (response.data.success) {
-            toast.success('签到成功，获得9积分');
-            getUserInfo();
-        }
+    const handleCheckInSuccess = () => {
+        updateUser({ hasSignedIn: true });
+        getUserInfo();
     };
 
-    // 昵称编辑相关函数
     const handleStartEditName = () => {
         if (!user) {
             toast.error('请先登录');
@@ -291,14 +325,13 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || '昵称修改失败');
             }
         } catch (error) {
-            console.error('修改昵称失败:', error);
+            console.error('update nickname failed:', error);
             toast.error('昵称修改失败，请稍后重试');
         } finally {
             setIsUpdatingName(false);
         }
     };
 
-    // 头像上传相关函数
     const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -324,7 +357,7 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || '头像更新失败');
             }
         } catch (error) {
-            console.error('更新头像失败:', error);
+            console.error('update avatar failed:', error);
             toast.error('头像更新失败，请稍后重试');
         } finally {
             setIsUpdatingAvatar(false);
@@ -334,21 +367,18 @@ const Profile: React.FC = () => {
         }
     };
 
-    // 积分充值相关函数
-    const handleRecharge = async (amount: number) => {
-        const response = await payApi.getPayQrCode({
-            amount: amount,
-        });
+    const handleRecharge = async (order: PayOrderRequest) => {
+        const response = await payApi.getPayQrCode(order);
         if (response.data.code === 200 && response.data.data) {
             getUserInfo();
             return {
                 qrDataUrl: response.data.data.qrDataUrl,
-                outTradeNo: response.data.data.outTradeNo
+                outTradeNo: response.data.data.outTradeNo,
             };
-        } else {
-            toast.error('充值失败！');
-            return null;
         }
+
+        toast.error('充值失败！');
+        return null;
     };
 
     return (
@@ -356,7 +386,6 @@ const Profile: React.FC = () => {
             <Navbar />
             <div className={styles.mainContent}>
                 <div className={styles.main}>
-                    {/* 用户信息展示区域 */}
                     <div className={styles.userProfileSection}>
                         <div className={styles.userProfileBackground}>
                             <div
@@ -376,60 +405,56 @@ const Profile: React.FC = () => {
                                 <img
                                     className={styles.userAvatar}
                                     src={userAvatar}
-                                    alt="用户头像"
+                                    alt={'用户头像'}
                                     onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
                                     style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
                                 />
                                 <div className={styles.userNameWrapper}>
                                     <div className={styles.userName}>{userName}</div>
-                                    <MdEdit
-                                        className={styles.editNameIcon}
-                                        onClick={handleStartEditName}
-                                    />
+                                    <MdEdit className={styles.editNameIcon} onClick={handleStartEditName} />
                                 </div>
-                                {userCode && (
-                                    <div className={styles.userCode}>
-                                        <span className={styles.userCodeText}>Kuran号：{userCode}</span>
-                                        <button
-                                            type="button"
-                                            className={styles.userCodeCopyButton}
-                                            onClick={handleCopyUserCode}
-                                            title="复制Kuran号"
-                                        >
-                                            <MdContentCopy />
-                                        </button>
-                                    </div>
-                                )}
+                                <div className={styles.memberCodeWrapper}>
+                                    {user?.user?.isMember && user?.user?.memberEndAt ? (
+                                        <div className={styles.memberInfo}>
+                                            <span className={styles.memberBadge}>VIP</span>
+                                            <span className={styles.memberExpire}>{`到期时间：${formatDate(user.user.memberEndAt)}`}</span>
+                                        </div>
+                                    ) : null}
+                                    {userCode && (
+                                        <div className={styles.userCode}>
+                                            <span className={styles.userCodeText}>{`Kuran号：${userCode}`}</span>
+                                            <button
+                                                type="button"
+                                                className={styles.userCodeCopyButton}
+                                                onClick={handleCopyUserCode}
+                                                title={'复制 Kuran 号'}
+                                            >
+                                                <MdContentCopy />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* 功能列表 */}
                     <div className={styles.functionList}>
-                        {/* 积分展示与充值 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <RiCopperCoinLine />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>我的积分</div>
-                                <div className={styles.functionDesc}>当前积分：{user?.user?.points ?? 0}</div>
+                                <div className={styles.functionTitle}>{'我的积分'}</div>
+                                <div className={styles.functionDesc}>{`当前积分：${user?.user?.points ?? 0}`}</div>
                             </div>
                             <div className={styles.pointsActions}>
                                 {isMobile && (
-                                    <button
-                                        className={styles.payButton}
-                                        onClick={() => setIsRechargeModalOpen(true)}
-                                    >
-                                        <span>充值</span>
+                                    <button className={styles.payButton} onClick={() => setIsRechargeModalOpen(true)}>
+                                        <span>{'充值'}</span>
                                     </button>
                                 )}
-                                <button
-                                    className={`${styles.functionButton} ${user?.user?.hasSignedIn ? styles.functionButtonSignedIn : styles.functionButtonCheckIn}`}
-                                    onClick={handleCheckIn}
-                                    disabled={user?.user?.hasSignedIn}
-                                >
-                                    {user?.user?.hasSignedIn ? '已签到' : '每日签到'}
+                                <button className={styles.functionButton} onClick={() => setIsCheckInModalOpen(true)}>
+                                    {'签到'}
                                 </button>
                             </div>
                         </div>
@@ -455,33 +480,27 @@ const Profile: React.FC = () => {
                                 <MdPlayCircleOutline />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>观看广告</div>
-                                <div className={styles.functionDesc}>每看完一个可获得8积分</div>
+                                <div className={styles.functionTitle}>{'观看广告'}</div>
+                                <div className={styles.functionDesc}>{'每看一个可获得8积分'}</div>
                             </div>
                             <button className={styles.functionButton} onClick={handleWatchAd}>
-                                观看
+                                {'观看'}
                             </button>
                         </div>
 
-                        {/* 我的邀请码 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <MdOutlineQrCodeScanner />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>
-                                    我的邀请码： <span>{user?.user?.inviteCode ? user?.user?.inviteCode : inviteCode}</span>
-                                </div>
-                                <div className={styles.functionDesc}>
-                                    朋友使用后双方+30积分
-                                </div>
+                                <div className={styles.functionTitle}>{`我的邀请码：${user?.user?.inviteCode ? user?.user?.inviteCode : inviteCode}`}</div>
+                                <div className={styles.functionDesc}>{'朋友使用后双方+30积分'}</div>
                             </div>
                             <button className={styles.functionButton} onClick={handleCopyInviteCode}>
-                                复制
+                                {'复制'}
                             </button>
                         </div>
 
-                        {/* 输入邀请码 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <MdPersonAddAlt1 />
@@ -489,13 +508,11 @@ const Profile: React.FC = () => {
                             {!showInputInviteCode ? (
                                 <>
                                     <div className={styles.functionText}>
-                                        <div className={styles.functionTitle}>输入邀请码</div>
-                                        <div className={styles.functionDesc}>
-                                            仅限一次，朋友使用后双方+30积分
-                                        </div>
+                                        <div className={styles.functionTitle}>{'输入邀请码'}</div>
+                                        <div className={styles.functionDesc}>{'仅限一次，朋友使用后双方+30积分'}</div>
                                     </div>
                                     <button className={styles.functionButton} onClick={() => setShowInputInviteCode(true)}>
-                                        输入
+                                        {'输入'}
                                     </button>
                                 </>
                             ) : (
@@ -503,14 +520,12 @@ const Profile: React.FC = () => {
                                     <input
                                         type="text"
                                         className={styles.inviteInput}
-                                        placeholder="请输入邀请码"
+                                        placeholder={'请输入邀请码'}
                                         value={inputInviteCode}
                                         onChange={(e) => setInputInviteCode(e.target.value)}
                                         onBlur={(e) => {
-                                            // 检查失去焦点的目标是否是提交按钮
                                             const relatedTarget = e.relatedTarget as HTMLElement;
                                             if (!relatedTarget || !relatedTarget.closest('button')) {
-                                                // 延迟处理，避免与提交按钮点击冲突
                                                 setTimeout(() => {
                                                     setShowInputInviteCode(false);
                                                     setInputInviteCode('');
@@ -526,96 +541,126 @@ const Profile: React.FC = () => {
                                             e.preventDefault();
                                         }}
                                     >
-                                        提交
+                                        {'提交'}
                                     </button>
-                                </>)}
-
+                                </>
+                            )}
                         </div>
 
-                        {/* 浏览器登录账号绑定 */}
+                        <div className={styles.functionItem}>
+                            <div className={styles.functionIcon}>
+                                <MdCardMembership />
+                            </div>
+                            {!showRedeemInput ? (
+                                <>
+                                    <div className={styles.functionText}>
+                                        <div className={styles.functionTitle}>{'会员卡兑换'}</div>
+                                        <div className={styles.functionDesc}>{'输入兑换码可开通月卡、季卡、年卡'}</div>
+                                    </div>
+                                    <button className={styles.functionButton} onClick={() => setShowRedeemInput(true)}>
+                                        {'兑换'}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        className={styles.inviteInput}
+                                        placeholder={'请输入兑换码'}
+                                        value={redeemKey}
+                                        onChange={(e) => setRedeemKey(e.target.value)}
+                                        onBlur={(e) => {
+                                            const relatedTarget = e.relatedTarget as HTMLElement;
+                                            if (!relatedTarget || !relatedTarget.closest('button')) {
+                                                setTimeout(() => {
+                                                    setShowRedeemInput(false);
+                                                    setRedeemKey('');
+                                                }, 200);
+                                            }
+                                        }}
+                                        autoFocus
+                                    />
+                                    <button
+                                        className={styles.functionButton}
+                                        onClick={handleRedeemMembership}
+                                        disabled={isRedeemingMembership}
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                        }}
+                                    >
+                                        {isRedeemingMembership ? '兑换中...' : '兑换'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+
                         {isWebViewEnv() && (
                             <div className={styles.functionItem}>
                                 <div className={styles.functionIcon}>
                                     <MdPersonAddAlt1 />
                                 </div>
                                 <div className={styles.functionText}>
-                                    <div className={styles.functionTitle}>浏览器登录账号</div>
+                                    <div className={styles.functionTitle}>{'浏览器登录账号'}</div>
                                     <div className={styles.functionDesc}>
                                         {user?.user?.phoneNumber
                                             ? `已绑定手机号：${maskPhoneNumber(user?.user?.phoneNumber)}，可在浏览器登录`
                                             : '设置手机号和密码，用于在浏览器中登录同一账号'}
                                     </div>
                                 </div>
-                                <button
-                                    className={styles.functionButton}
-                        onClick={handleOpenBindAccountModal}
-                                >
+                                <button className={styles.functionButton} onClick={handleOpenBindAccountModal}>
                                     {user?.user?.phoneNumber ? '已绑定' : '去设置'}
                                 </button>
                             </div>
                         )}
 
-                        {/* 加入用户群 */}
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <MdGroup />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>加入用户群</div>
-                                <div className={styles.functionDesc}>加群获取20积分，掌握最新资讯</div>
+                                <div className={styles.functionTitle}>{'加入用户群'}</div>
+                                <div className={styles.functionDesc}>{'加群可获得20积分，及时掌握最新资讯'}</div>
                             </div>
                             <button className={styles.functionButton} onClick={handleJoinGroup}>
-                                加入
+                                {'加入'}
                             </button>
                         </div>
 
-                        {
-                            !isWebViewEnv() && (
-
-                                <div className={styles.functionItem}>
-                                    <div className={styles.functionIcon}>
-                                        <RiLogoutCircleRLine />
-                                    </div>
-                                    <div className={styles.functionText}>
-                                        <div className={styles.functionTitle}>退出登录</div>
-                                        <div className={styles.functionDesc}>退出当前账号</div>
-                                    </div>
-                                    <button className={styles.functionButton} onClick={handleLogout}>
-                                        退出
-                                    </button>
+                        {!isWebViewEnv() && (
+                            <div className={styles.functionItem}>
+                                <div className={styles.functionIcon}>
+                                    <RiLogoutCircleRLine />
                                 </div>
-                            )
-                        }
+                                <div className={styles.functionText}>
+                                    <div className={styles.functionTitle}>{'退出登录'}</div>
+                                    <div className={styles.functionDesc}>{'退出当前账号'}</div>
+                                </div>
+                                <button className={styles.functionButton} onClick={handleLogout}>
+                                    {'退出'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
             <MobileBottomNav />
 
-            {/* 修改昵称弹窗 */}
             {isEditingName && (
-                <div
-                    className={styles.editNameModalOverlay}
-                    onClick={handleCancelEditName}
-                >
-                    <div
-                        className={styles.editNameModal}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className={styles.editNameModalOverlay} onClick={handleCancelEditName}>
+                    <div className={styles.editNameModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>修改昵称</div>
+                            <div className={styles.editNameModalTitle}>{'修改昵称'}</div>
                         </div>
                         <div className={styles.editNameModalBody}>
                             <input
                                 className={styles.editNameInput}
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                placeholder="请输入新的昵称"
+                                placeholder={'请输入新的昵称'}
                                 maxLength={20}
                                 autoFocus
                             />
-                            <div className={styles.editNameTips}>
-                                昵称长度建议 1-20 个字符，避免包含敏感或违规内容。
-                            </div>
+                            <div className={styles.editNameTips}>{'昵称长度建议 1-20 个字符，避免包含敏感或违规内容。'}</div>
                         </div>
                         <div className={styles.editNameModalActions}>
                             <button
@@ -624,7 +669,7 @@ const Profile: React.FC = () => {
                                 onClick={handleCancelEditName}
                                 disabled={isUpdatingName}
                             >
-                                取消
+                                {'取消'}
                             </button>
                             <button
                                 type="button"
@@ -639,7 +684,6 @@ const Profile: React.FC = () => {
                 </div>
             )}
 
-            {/* 浏览器登录账号绑定弹窗 */}
             {isBindAccountModalOpen && (
                 <div
                     className={styles.editNameModalOverlay}
@@ -648,17 +692,14 @@ const Profile: React.FC = () => {
                         clearBindAccountDraft();
                     }}
                 >
-                    <div
-                        className={styles.editNameModal}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className={styles.editNameModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>设置浏览器登录账号</div>
+                            <div className={styles.editNameModalTitle}>{'设置浏览器登录账号'}</div>
                         </div>
                         <div className={styles.editNameModalBody}>
                             <input
                                 className={styles.editNameInput}
-                                placeholder="请输入手机号"
+                                placeholder={'请输入手机号'}
                                 value={bindPhone}
                                 onChange={(e) => setBindPhone(e.target.value)}
                                 maxLength={11}
@@ -666,20 +707,18 @@ const Profile: React.FC = () => {
                             <input
                                 type="password"
                                 className={styles.editNameInput}
-                                placeholder="请设置密码（至少6位）"
+                                placeholder={'请设置密码（至少6位）'}
                                 value={bindPassword}
                                 onChange={(e) => setBindPassword(e.target.value)}
                             />
                             <input
                                 type="password"
                                 className={styles.editNameInput}
-                                placeholder="请再次输入密码"
+                                placeholder={'请再次输入密码'}
                                 value={bindConfirmPassword}
                                 onChange={(e) => setBindConfirmPassword(e.target.value)}
                             />
-                            <div className={styles.editNameTips}>
-                                绑定后，可在浏览器访问本站时使用手机号 + 密码登录同一账号。
-                            </div>
+                            <div className={styles.editNameTips}>{'绑定后，可在浏览器访问本站时使用手机号 + 已设置的密码登录同一账号。'}</div>
                         </div>
                         <div className={styles.editNameModalActions}>
                             <button
@@ -691,7 +730,7 @@ const Profile: React.FC = () => {
                                 }}
                                 disabled={isBindingAccount}
                             >
-                                取消
+                                {'取消'}
                             </button>
                             <button
                                 type="button"
@@ -707,24 +746,14 @@ const Profile: React.FC = () => {
             )}
 
             {isBindAccountStatusModalOpen && (
-                <div
-                    className={styles.editNameModalOverlay}
-                    onClick={() => setIsBindAccountStatusModalOpen(false)}
-                >
-                    <div
-                        className={styles.editNameModal}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                <div className={styles.editNameModalOverlay} onClick={() => setIsBindAccountStatusModalOpen(false)}>
+                    <div className={styles.editNameModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>浏览器登录账号已绑定</div>
+                            <div className={styles.editNameModalTitle}>{'浏览器登录账号已绑定'}</div>
                         </div>
                         <div className={styles.editNameModalBody}>
-                            <div className={styles.bindAccountStatusText}>
-                                已绑定手机号：{maskPhoneNumber(user?.user?.phoneNumber)}
-                            </div>
-                            <div className={styles.editNameTips}>
-                                你可以在浏览器端使用该手机号和已设置的密码登录同一个账号。
-                            </div>
+                            <div className={styles.bindAccountStatusText}>{`已绑定手机号：${maskPhoneNumber(user?.user?.phoneNumber)}`}</div>
+                            <div className={styles.editNameTips}>{'你可以在浏览器端使用该手机号和已设置的密码登录同一个账号。'}</div>
                         </div>
                         <div className={styles.editNameModalActions}>
                             <button
@@ -732,21 +761,31 @@ const Profile: React.FC = () => {
                                 className={styles.editNameConfirmButton}
                                 onClick={() => setIsBindAccountStatusModalOpen(false)}
                             >
-                                我知道了
+                                {'我知道了'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* 加入用户群弹窗（复用组件，双二维码、仅取消按钮） */}
             <JoinGroupModal isOpen={showJoinGroupModal} onClose={() => setShowJoinGroupModal(false)} />
 
-            {/* 积分充值弹窗 */}
             <RechargeModal
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
+            />
+
+            <CheckInModal
+                isOpen={isCheckInModalOpen}
+                onClose={() => setIsCheckInModalOpen(false)}
+                onSignInSuccess={handleCheckInSuccess}
+            />
+
+            <MembershipRedeemResultModal
+                isOpen={redeemSuccessPlanId !== null}
+                onClose={() => setRedeemSuccessPlanId(null)}
+                planId={redeemSuccessPlanId ?? 'month'}
             />
         </div>
     );

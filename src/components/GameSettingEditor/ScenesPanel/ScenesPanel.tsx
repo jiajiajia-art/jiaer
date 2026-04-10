@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
-import { getImageUrl, getMusicUrlWithHost, IMAGE_GENERATION_COST } from '../../../utils/constants';
-import type { AllGameData, BatchImageJobStatus as VisualBatchImageJobStatus } from '../../../api/galgame/EditorData.type';
+import { getImageUrl, getMusicUrlWithHost, SCENE_GENERATION_COST } from '../../../utils/constants';
+import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { SceneSetting as VisualSceneSetting } from '../../../api/galgame/EditorData.type';
 import type { SceneSetting as WorldSceneSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
-import type { BatchImageJobStatus as WorldBatchImageJobStatus } from '../../../api/worldInteraction/worldEditor.type';
 import { 
     getScenes, 
     getSceneById, 
@@ -29,15 +28,12 @@ import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
-import { useBatchImageProgressText } from '../../../hooks/editor/useBatchImageProgressText';
 
 interface BgmItem {
     id: string;
     name: string;
     description: string;
 }
-
-type SceneBatchJobStatus = VisualBatchImageJobStatus | WorldBatchImageJobStatus;
 
 const SINGLE_SCENE_ETA_SECONDS = 80;
 const BATCH_SCENE_BUFFER_SECONDS = 50;
@@ -100,7 +96,6 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
 
     const [isGeneratingAllSceneImages, setIsGeneratingAllSceneImages] = useState<boolean>(false);
-    const [sceneBatchJobStatus, setSceneBatchJobStatus] = useState<SceneBatchJobStatus | null>(null);
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
     const [generatingSceneId, setGeneratingSceneId] = useState<string | null>(null);
     const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
@@ -224,7 +219,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         active: isGeneratingSingleSceneImage,
         totalSeconds: SINGLE_SCENE_ETA_SECONDS,
     });
-    const legacyBatchSceneEtaText = useGenerationEta({
+    const batchSceneEtaText = useGenerationEta({
         active: isGeneratingAllSceneImages,
         totalSeconds: Math.max(
             SINGLE_SCENE_ETA_SECONDS,
@@ -234,9 +229,6 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         // 实现批量场景生图的数量提示
         batchLabel: batchSceneGenerationCount > 0 ? `本次共生成 ${batchSceneGenerationCount} 项` : undefined,
     });
-
-    const batchSceneEtaText = useBatchImageProgressText(sceneBatchJobStatus);
-    void legacyBatchSceneEtaText;
 
     const getEffectiveImage = (sceneId: string, subsceneId?: string): string | undefined => {
         const targetId = subsceneId || sceneId;
@@ -303,7 +295,6 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setIsGeneratingWorldMap,
                 setWorldMapImageOverride,
                 setIsGeneratingAllSceneImages,
-                setSceneBatchJobStatus,
                 setSceneCostPoints,
                 setIsLoadingSceneCost,
                 setSceneResultModalOpen,
@@ -734,7 +725,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         <span className={styles.buttonMainText}>
                             {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
                         </span>
-                        <span className={styles.buttonSubText}>{IMAGE_GENERATION_COST}积分/张</span>
+                        <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}积分/张</span>
                     </div>
                 </button>
             </div>
@@ -950,7 +941,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handleConfirmSingleSceneGenerate}
                 onCancel={handleCancelSingleSceneGenerate}
                 title="积分扣除确认"
-                message={`本次生成场景立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                message={`本次生成场景立绘将扣除 ${SCENE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />
@@ -971,7 +962,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handleConfirmGenerateWorldMap}
                 onCancel={handleCancelGenerateWorldMap}
                 title="积分扣除确认"
-                message={`本次生成大地图将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                message={`本次生成大地图将扣除 ${SCENE_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

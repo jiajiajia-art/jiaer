@@ -8,6 +8,7 @@ import type {
     Player,
     GenerateVariantImageRequest,
     GenerateAllImageRequest,
+    GenerateAllImagesResponse,
     GenerateImgeResponse,
     CheckUploadStatusResponse,
     UploadFileResponse,
@@ -134,9 +135,13 @@ const EditorApi = {
         });
     },
     generateAllImages: (fileId: string, data: GenerateAllImageRequest) => {
-        return api.post<AllGameData>(`/visual/generate-images/${fileId}/all`, data, {
+        return api.post<GenerateAllImagesResponse | ApiResponse<GenerateAllImagesResponse>>(
+            `/visual/generate-images/${fileId}/all`,
+            data,
+            {
             timeout: 0,
-        });
+            }
+        );
     },
     startGenerateAllImages: (fileId: string, data: GenerateAllImageRequest) => {
         return api.post<StartBatchImageJobResponse>(`/visual/generate-images/${fileId}/all/start`, data, {

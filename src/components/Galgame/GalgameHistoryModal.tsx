@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MdRefresh, MdEdit, MdCheck, MdClose } from 'react-icons/md';
 import type { HistoryWithId } from '../../hooks/galgame/useGalgameHistory';
 import { processGameTags } from '../../utils/textUtils';
@@ -55,6 +55,28 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
             });
         }
     }, [isOpen, history]);
+
+    const processedAssistantContent = useMemo(() => {
+        if (!isOpen) return [];
+
+        return history.map((item, index) => {
+            if (item.role === 'user') {
+                return item.content || '';
+            }
+
+            const start = performance.now();
+            const processed = processGameTags(item.content || '');
+            const duration = performance.now() - start;
+
+            if (duration > 20) {
+                console.warn(
+                    `[GalgameHistoryModal] processGameTags slow: ${duration.toFixed(2)}ms, index=${index}, content.length=${item.content?.length || 0}`
+                );
+            }
+
+            return processed;
+        });
+    }, [history, isOpen]);
 
     if (!isOpen) return null;
 
@@ -119,7 +141,7 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
                             {history.map((item, index) => {
                                 const isUser = item.role === 'user';
                                 const isEditing = editingIndex === index;
-                                
+
                                 // 用户消息 - 右侧气泡
                                 if (isUser) {
                                     return (
@@ -130,10 +152,7 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
                                         </div>
                                     );
                                 }
-                                
-                                // 助手消息 - 左侧气泡（使用统一的 processGameTags 处理游戏标签）
-                                const processedContent = processGameTags(item.content || '');
-                                
+                                const processedContent = processedAssistantContent[index] || '';
                                 return (
                                     <div key={item.id} className={styles.messageWrapper}>
                                         <div className={styles.assistantBubbleWrapper}>

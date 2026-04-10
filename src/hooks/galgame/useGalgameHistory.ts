@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { History } from "../../api/galgame/getGalgamePreset.type";
-import { v4 as uuidv4 } from 'uuid';
 import { useGameStore } from "../../store/gameStore";
 import { HOST_ADDRESS } from "../../config";
 import toast from "react-hot-toast";
@@ -95,9 +94,10 @@ const useGalgameHistory = () => {
     }, [sessionId]);
 
     const historyWithId = useMemo<HistoryWithId[]>(() => {
-        return history.map((item) => ({
+        const sessionPrefix = sessionId || 'session';
+        return history.map((item, index) => ({
             ...item,
-            id: uuidv4(),
+            id: `${sessionPrefix}-${index}-${item.role}`,
         }));
     }, [history, sessionId]);
 

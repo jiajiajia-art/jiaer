@@ -355,7 +355,7 @@ const PromotionCenter: React.FC = () => {
                 </div>
             )}
 
-            <MobileBottomNav />
+            <MobileBottomNav hidden />
         </div>
     );
 };

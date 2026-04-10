@@ -105,6 +105,41 @@
     gap: 8px;
 }
 
+.memberInfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: -8px;
+}
+
+.memberCodeWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.memberBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f8df9c 0%, #d7b26d 100%);
+    color: #5f4211;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.memberExpire {
+    font-size: 13px;
+    color: #f4f4f4;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
 .editNameIcon {
     font-size: 20px;
     color: #fff;
@@ -363,6 +398,37 @@
     border-color: #B69B74;
 }
 
+.redeemInput {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    background: #fff;
+    color: #262626;
+}
+
+.redeemInput:focus {
+    border-color: #B69B74;
+    background: #fff;
+    color: #262626;
+}
+
+.redeemResultBadge {
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(182, 155, 116, 0.16);
+    color: #8a6a46;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .inviteInput::placeholder {
     color: #999;
 }
@@ -439,6 +505,22 @@
         font-size: 20px;
     }
 
+    .memberInfo {
+        gap: 6px;
+    }
+
+    .memberExpire {
+        font-size: 12px;
+    }
+
+    .memberCodeWrapper {
+        gap: 4px;
+    }
+
+    .userCode {
+        font-size: 14px;
+    }
+
     .functionList {
         padding: 0 10px;
     }
@@ -468,6 +550,11 @@
     }
 
     .inviteInput {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    .redeemInput {
         padding: 6px 10px;
         font-size: 13px;
     }

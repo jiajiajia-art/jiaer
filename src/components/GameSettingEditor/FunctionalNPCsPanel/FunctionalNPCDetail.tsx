@@ -4,7 +4,7 @@ import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import { toast } from 'react-hot-toast';
 import type { AbilityNode, Action } from '../../../api/worldInteraction/worldInteractionApi.type';
-import { getImageUrl, IMAGE_GENERATION_COST } from '../../../utils/constants';
+import { getImageUrl, CHARACTER_GENERATION_COST } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';
 import worldEditor from '../../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../../store/gameStore';
@@ -599,7 +599,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                                             disabled={isGenerating}
                                         >
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" style={{ width: '16px', height: '16px' }} />
-                                            {isGenerating ? '生成中...' : `${IMAGE_GENERATION_COST} AI生成`}
+                                            {isGenerating ? '生成中...' : `${CHARACTER_GENERATION_COST} AI生成`}
                                         </button>
                                     </div>
                                     {/* 右侧：图片预览 + 上传按钮 */}
@@ -736,7 +736,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                 onConfirm={handleConfirmGenerateImage}
                 onCancel={handleCancelGenerateImage}
                 title="积分扣除确认"
-                message={`本次生成图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                message={`本次生成图片将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

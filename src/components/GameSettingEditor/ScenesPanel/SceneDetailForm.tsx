@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import styles from './SceneDetailForm.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
-import { IMAGE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
+import { SCENE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_MAP_IMAGE } from '../../../utils/constants';
 import { withCacheBust } from '../../../utils/imageCache';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { isMiniProgramEnv } from '../../../utils/miniProgram';
@@ -182,7 +182,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             alt=""
                             className={styles.priceIcon}
                         />
-                        <span>{IMAGE_GENERATION_COST} AI生成</span>
+                        <span>{SCENE_GENERATION_COST} AI生成</span>
                     </button>
                 )}
             </div>

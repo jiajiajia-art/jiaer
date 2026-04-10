@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Home.module.css';
 import Navbar from '../components/Layout/Navbar';
@@ -14,6 +14,7 @@ import CheckInModal from '../components/CheckInModal';
 import JoinGroupModal from '../components/JoinGroupModal';
 import FloatingJoinGroup from '../components/FloatingJoinGroup';
 import { getImageUrl } from '../utils/constants';
+import { auth } from '../api/account/authApi';
 import announcementApi from '../api/announcement/announcementApi';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
 import AnnouncementModal from '../components/AnnouncementModal';
@@ -46,7 +47,7 @@ const Home: React.FC = () => {
     const [allPage, setAllPage] = useState(0);
     const [currentSlide, setCurrentSlide] = useState(1);
     const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
-    const { user, isAuthenticated } = useAuthStore();
+    const { user, isAuthenticated, updateUser } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -132,7 +133,22 @@ const Home: React.FC = () => {
         }
     }, [user?.user?.id]);
 
-    // 棣栫櫥寮圭獥锛氬姞鍏ョ敤鎴风兢锛堜粎棣栨鐧诲綍鏄剧ず涓€娆★級
+    const checkShouldShowCheckInModal = useCallback(async (): Promise<boolean> => {
+        try {
+            const response = await auth.getSignInStatus();
+            if (response.data.success && response.data.data) {
+                const signedInToday = response.data.data.signedInToday;
+                updateUser({ hasSignedIn: signedInToday });
+                return !signedInToday;
+            }
+        } catch (error) {
+            console.error('获取签到状态失败:', error);
+        }
+
+        return !(user?.user?.hasSignedIn ?? false);
+    }, [updateUser, user?.user?.hasSignedIn]);
+
+    // 首登弹窗：加入用户群（仅首次登录显示一次）
     useEffect(() => {
         const uid = user?.user?.id;
         if (!uid) return;
@@ -164,19 +180,16 @@ const Home: React.FC = () => {
         const hasCheckedInSession = sessionStorage.getItem(sessionKey);
 
         if (!hasCheckedInSession) {
-            const today = new Date().toDateString();
-            const checkInKey = `checkIn_${user.user.id}_${today}`;
-            const lastCheckInDate = localStorage.getItem(checkInKey);
-            const isCheckedIn = lastCheckInDate === today;
-
-            if (!isCheckedIn) {
-                setShowCheckInModal(true);
-            }
-
             sessionStorage.setItem(sessionKey, 'true');
             hasCheckedInSessionRef.current = true;
+            void (async () => {
+                const shouldShowCheckInModal = await checkShouldShowCheckInModal();
+                if (shouldShowCheckInModal) {
+                    setShowCheckInModal(true);
+                }
+            })();
         }
-    }, [user?.user?.id]);
+    }, [checkShouldShowCheckInModal, user?.user?.id]);
 
 
     // 鍔犺浇闄愭椂浼樻儬鏁版嵁
@@ -921,9 +934,18 @@ const Home: React.FC = () => {
         const hasCheckInModalShownThisSession = sessionStorage.getItem(checkInSessionKey);
         if (!isCheckedIn && !hasCheckInModalShownThisSession) {
             sessionStorage.setItem(checkInSessionKey, 'true');
-            setShowCheckInModal(true);
+            void (async () => {
+                const shouldShowCheckInModal = await checkShouldShowCheckInModal();
+                if (shouldShowCheckInModal) {
+                    setShowCheckInModal(true);
+                }
+            })();
         }
     };
+
+    const handleHomeCheckInSuccess = useCallback(() => {
+        updateUser({ hasSignedIn: true });
+    }, [updateUser]);
 
     const handleCloseAnnouncementModal = () => {
         if (latestAnnouncement?.id) {
@@ -1216,6 +1238,8 @@ const Home: React.FC = () => {
             <CheckInModal
                 isOpen={showCheckInModal}
                 onClose={() => setShowCheckInModal(false)}
+                onSignInSuccess={handleHomeCheckInSuccess}
+                variant="simple"
             />
             <AnnouncementModal
                 announcement={latestAnnouncement}

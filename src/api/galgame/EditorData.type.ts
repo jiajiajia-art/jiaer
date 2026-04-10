@@ -198,6 +198,35 @@ export interface GenerateAllImageRequest {
   pluginType: string;
 }
 
+export interface GenerateCategoryProgress {
+  total: number;
+  effective: number;
+}
+
+export interface GenerateAllImagesSummary {
+  totalRequested: number;
+  totalEffective: number;
+  totalErrors: number;
+}
+
+export interface GenerateAllImagesPoints {
+  deducted: number;
+  remaining: number;
+}
+
+export interface GenerateAllImagesResponse {
+  success: boolean;
+  message: string;
+  npcs?: GenerateCategoryProgress;
+  scenes?: GenerateCategoryProgress;
+  player?: GenerateCategoryProgress;
+  variants?: GenerateCategoryProgress;
+  summary?: GenerateAllImagesSummary;
+  points?: GenerateAllImagesPoints;
+  details?: unknown;
+  errors?: unknown;
+}
+
 export interface BatchImageJobPayload {
   success: boolean;
   message: string;

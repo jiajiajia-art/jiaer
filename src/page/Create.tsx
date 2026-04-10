@@ -22,6 +22,7 @@ import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import statisticsApi from '../api/statistics/statisticsApi';
 import payApi from '../api/pay/payApi';
+import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
 import GameAction from '../api/rpgGame/gameAction';
 import {
@@ -175,8 +176,8 @@ const Create: React.FC = () => {
         }
     };
 
-    const handleRecharge = async (amount: number) => {
-        const response = await payApi.getPayQrCode({ amount });
+    const handleRecharge = async (order: PayOrderRequest) => {
+        const response = await payApi.getPayQrCode(order);
         if (response.data.code === 200 && response.data.data) {
             getUserInfo();
             return {

@@ -39,7 +39,7 @@ const navItems: Array<{
     },
 ];
 
-const MobileBottomNav: React.FC = () => {
+const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, initialize } = useAuthStore();
@@ -87,6 +87,8 @@ const MobileBottomNav: React.FC = () => {
                 break;
         }
     };
+
+    if (hidden) return null;
 
     return (
         <div className={styles.container}>

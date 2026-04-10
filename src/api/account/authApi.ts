@@ -1,7 +1,19 @@
 // src/api/auth.ts
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
-import type { AuthResponse, LoginRequest, SignupRequest, BindAccountRequest, User, SendCodeRequest, ResetPasswordRequest, SettlePointsResponse } from "./auth.type";
+import type {
+  AuthResponse,
+  BindAccountRequest,
+  CheckInResponse,
+  LoginRequest,
+  MembershipSignInStatus,
+  ResetPasswordRequest,
+  SendCodeRequest,
+  SettlePointsResponse,
+  SignupRequest,
+  SubscriptionRedeemResult,
+  User,
+} from "./auth.type";
 
 export const auth = {
   signup: (data: SignupRequest) =>
@@ -23,7 +35,10 @@ export const auth = {
     api.post<ApiResponse<User>>('/auth/update/username', { newUserName: newUserName }),
 
   checkIn: () =>
-    api.post<ApiResponse<null>>('/auth/user/signin'),
+    api.post<ApiResponse<CheckInResponse | null>>('/auth/user/signin'),
+
+  getSignInStatus: () =>
+    api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),
 
   useInviteCode: (data: { inviteCode: string }) =>
     api.post<ApiResponse<null>>('/auth/invite/use-code', data),
@@ -44,4 +59,7 @@ export const auth = {
 
   settlePoints: () =>
     api.post<ApiResponse<SettlePointsResponse>>('/auth/games/points/settle'),
+
+  redeemSubscriptionKey: (data: { redeemKey: string }) =>
+    api.post<ApiResponse<SubscriptionRedeemResult>>('/subscriptions/redeem', data),
 };

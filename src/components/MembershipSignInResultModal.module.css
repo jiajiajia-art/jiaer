@@ -1,0 +1,121 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2100;
+}
+
+.content {
+    width: min(92vw, 560px);
+    background: #fff;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.closeButton {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: #f1f1f1;
+    color: #666;
+    cursor: pointer;
+}
+
+.title {
+    margin: 0;
+    text-align: center;
+    font-size: 24px;
+    color: #1f2937;
+}
+
+.subtitle {
+    margin: 12px 0 16px;
+    text-align: center;
+    color: #6b7280;
+}
+
+.placeholder {
+    text-align: center;
+    color: #6b7280;
+    padding: 18px 0;
+}
+
+.scheduleContainer {
+    margin-top: 12px;
+}
+
+.scheduleList {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.scheduleItem {
+    border-radius: 12px;
+    background: #f3f4f6;
+    padding: 10px 6px;
+    text-align: center;
+}
+
+.scheduleItemToday {
+    background: #ffe8ea;
+}
+
+.scheduleItemCompleted {
+    background: #e8f8ed;
+}
+
+.dayBadge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.scheduleDay {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.schedulePoints {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ef4444;
+}
+
+.progressBar {
+    margin-top: 14px;
+    height: 6px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: linear-gradient(90deg, #fb4655 0%, #ff7b6b 100%);
+}
+
+.progressText {
+    margin: 10px 0 0;
+    text-align: center;
+    color: #4b5563;
+    font-size: 13px;
+}

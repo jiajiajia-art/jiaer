@@ -7,6 +7,7 @@ import AdminBannerManager from '../components/AdminBannerManager';
 import Pagination from '../components/Pagination';
 import PromotionAdminManager from '../components/PromotionAdminManager';
 import PointsAdminManager from '../components/PointsAdminManager';
+import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import type {
@@ -19,7 +20,7 @@ import type { AdminGameTagRecord, FeaturedGameTag } from '../api/gameTags/gameTa
 import styles from './AdminPanel.module.css';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'subscriptions';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -38,6 +39,7 @@ const THEME_PAGE_SIZE = 10;
 const resolveAdminTab = (pathname: string): AdminTab => {
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
+    if (pathname.startsWith('/admin/subscriptions')) return 'subscriptions';
     return 'announcements';
 };
 
@@ -367,6 +369,10 @@ const AdminPanel: React.FC = () => {
         }
         if (tab === 'points') {
             navigate('/admin/points');
+            return;
+        }
+        if (tab === 'subscriptions') {
+            navigate('/admin/subscriptions');
             return;
         }
         if (location.pathname !== '/admin') {
@@ -733,6 +739,13 @@ const AdminPanel: React.FC = () => {
                         >
                             <span className={styles.navTitle}>积分管理</span>
                         </button>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'subscriptions' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('subscriptions')}
+                        >
+                            <span className={styles.navTitle}>会员管理</span>
+                        </button>
                     </aside>
 
                     <div className={styles.contentArea}>
@@ -1054,6 +1067,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'promotions' && <PromotionAdminManager />}
 
                         {activeTab === 'points' && <PointsAdminManager />}
+
+                        {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
                     </div>
                 </div>
             </div>

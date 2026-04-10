@@ -3,6 +3,33 @@ import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
 import toast from 'react-hot-toast';
+import type { PayOrderRequest, PlanId } from '../../api/pay/pay.type';
+
+type RechargeTabType = 'points' | 'membership';
+
+interface MembershipPlan {
+    planId: PlanId;
+    name: string;
+    price: number;
+}
+
+const MEMBERSHIP_PLANS: MembershipPlan[] = [
+    {
+        planId: 'month',
+        name: '月卡',
+        price: 28,
+    },
+    {
+        planId: 'season',
+        name: '季卡',
+        price: 78,
+    },
+    {
+        planId: 'year',
+        name: '年卡',
+        price: 248,
+    },
+];
 
 interface WechatMiniProgram {
     postMessage: (data: Record<string, unknown>) => void;
@@ -19,7 +46,7 @@ interface WindowWithWx extends Window {
 interface RechargeModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onRecharge: (amount: number) => Promise<{ qrDataUrl: string; outTradeNo: string } | null>;
+    onRecharge: (order: PayOrderRequest) => Promise<{ qrDataUrl: string; outTradeNo: string } | null>;
 }
 
 const FIXED_AMOUNTS = [5, 10, 15];
@@ -34,72 +61,27 @@ const isMiniProgramEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-// type MiniPayParams = {
-//     timeStamp: string;
-//     nonceStr: string;
-//     package: string;
-//     signType: string;
-//     paySign: string;
-// };
-
-// const invokeWeixinPay = (payParams: MiniPayParams): Promise<'ok' | 'cancel' | 'fail'> => {
-//     const win = window as any;
-
-//     const doInvoke = () =>
-//         new Promise<'ok' | 'cancel' | 'fail'>((resolve) => {
-//             const bridge = win.WeixinJSBridge;
-//             if (!bridge?.invoke) {
-//                 resolve('fail');
-//                 return;
-//             }
-
-//             bridge.invoke('getBrandWCPayRequest', payParams, (res: any) => {
-//                 const msg = String(res?.err_msg || '');
-//                 if (msg.includes(':ok')) resolve('ok');
-//                 else if (msg.includes(':cancel')) resolve('cancel');
-//                 else resolve('fail');
-//             });
-//         });
-
-//     if (win.WeixinJSBridge?.invoke) {
-//         return doInvoke();
-//     }
-
-//     return new Promise<'ok' | 'cancel' | 'fail'>((resolve) => {
-//         const onReady = async () => {
-//             document.removeEventListener('WeixinJSBridgeReady', onReady);
-//             resolve(await doInvoke());
-//         };
-//         document.addEventListener('WeixinJSBridgeReady', onReady, false);
-
-//         // 兜底：如果一直等不到 Ready，就认为失败，避免“没反应”
-//         window.setTimeout(() => {
-//             document.removeEventListener('WeixinJSBridgeReady', onReady);
-//             resolve('fail');
-//         }, 3000);
-//     });
-// };
-
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge }) => {
     const closeAndReload = useCallback(() => {
         onClose();
         window.location.reload();
     }, [onClose]);
 
-    // 用 ref 做“同步锁”和“实时输入值”，避免 React state 异步批处理导致的偶发旧值提交
     const inFlightRef = useRef(false);
     const isComposingRef = useRef(false);
     const amountInputRef = useRef<HTMLInputElement | null>(null);
 
-    // 单一真相来源：金额只由这个输入字符串决定（固定金额按钮也只是写入这个值）
     const [amountText, setAmountText] = useState<string>('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [, setIsLoading] = useState(false);
     const [inputError, setInputError] = useState<string>('');
-    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+    const [qrCodeUrl,  setQrCodeUrl] = useState<string | null>(null);
     const [orderId, setOrderId] = useState<string | null>(null);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'polling' | 'success' | 'failed'>('idle');
     const [pollingError, setPollingError] = useState<string>('');
     const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
+
+    const [rechargeTab, setRechargeTab] = useState<RechargeTabType>('points');
+    const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
 
     useEffect(() => {
         if (!isOpen) {
@@ -111,6 +93,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setPaymentStatus('idle');
             setPollingError('');
             setTimeLeft(COUNTDOWN_SECONDS);
+            setRechargeTab('points');
+            setSelectedPlanIndex(-1);
         }
     }, [isOpen]);
 
@@ -191,12 +175,72 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
+        // 会员卡充值分支
+        if (rechargeTab === 'membership') {
+            if (selectedPlanIndex < 0 || selectedPlanIndex >= MEMBERSHIP_PLANS.length) {
+                toast.error('请选择要购买的会员卡套餐');
+                return;
+            }
+            const selectedPlan = MEMBERSHIP_PLANS[selectedPlanIndex];
+            const orderData: PayOrderRequest = {
+                orderType: 'subscription',
+                planId: selectedPlan.planId,
+            };
+
+            inFlightRef.current = true;
+            setIsLoading(true);
+            try {
+                if (isMiniProgramEnv()) {
+                    setPaymentStatus('polling');
+                    setPollingError('');
+                    const response = await payApi.createMiniOrder(orderData);
+                    const data = response.data;
+                    if (data.code === 200 && data.data) {
+                        const { outTradeNo, payParams } = data.data;
+                        setOrderId(outTradeNo);
+                        const mp = (window as WindowWithWx).wx?.miniProgram;
+                        if (mp && typeof mp.postMessage === 'function') {
+                            const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
+                            mp.navigateTo({
+                                url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
+                            });
+                            toast.success('正在跳转支付页面...');
+                        } else {
+                            toast.error('当前小程序环境不支持支付，请稍后重试');
+                        }
+                        setPaymentStatus('failed');
+                        setPollingError(data.message || '发起微信支付失败，请重试。');
+                    }
+                    setIsLoading(false);
+                    return;
+                } else if (onRecharge) {
+                    const result = await onRecharge(orderData);
+                    const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
+                    if (result && qrDataUrl) {
+                        setQrCodeUrl(qrDataUrl);
+                        setOrderId(result.outTradeNo);
+                        setPaymentStatus('polling');
+                        setPollingError('');
+                        setTimeLeft(COUNTDOWN_SECONDS);
+                    }
+                }
+            } catch (error) {
+                console.error('充值失败:', error);
+                setPaymentStatus('failed');
+                setPollingError('发起支付请求失败，请稍后重试。');
+            } finally {
+                setIsLoading(false);
+                inFlightRef.current = false;
+            }
+            return;
+        }
+
+        // 积分充值分支
         if (isComposingRef.current) {
             toast.error('请输入完成后再提交');
             return;
         }
 
-        // 金额读取：只认一个来源（输入框实时 value / amountText），避免“固定金额状态残留”导致偶发旧值
         const raw = (amountInputRef.current?.value ?? amountText ?? '').trim();
         const parsed = parseFloat(raw || '0');
         const amount: number | null = !isNaN(parsed) ? parsed : null;
@@ -213,22 +257,26 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
+        const orderData: PayOrderRequest = {
+            orderType: 'points',
+            amount,
+            description: `积分充值 ${amount} 元`,
+        };
+
         inFlightRef.current = true;
         setIsLoading(true);
         try {
             if (isMiniProgramEnv()) {
                 setPaymentStatus('polling');
                 setPollingError('');
-                const response = await payApi.createMiniOrder({ amount });
+                const response = await payApi.createMiniOrder(orderData);
                 const data = response.data;
                 if (data.code === 200 && data.data) {
                     const { outTradeNo, payParams } = data.data;
                     setOrderId(outTradeNo);
-                    // 只负责发消息，不拉起支付
                     const mp = (window as WindowWithWx).wx?.miniProgram;
                     if (mp && typeof mp.postMessage === 'function') {
                         const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
-
                         mp.navigateTo({
                             url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
                         });
@@ -242,7 +290,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 setIsLoading(false);
                 return;
             } else if (onRecharge) {
-                const result = await onRecharge(amount);
+                const result = await onRecharge(orderData);
                 const qrDataUrl = normalizeQrCodeUrl(result?.qrDataUrl ?? null);
                 if (result && qrDataUrl) {
                     setQrCodeUrl(qrDataUrl);
@@ -281,7 +329,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     setPollingError('');
                     return;
                 }
-
             } catch {
                 setPollingError('查询支付状态失败，稍后自动重试...');
             }
@@ -347,6 +394,137 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const currentAmount = getCurrentAmount();
     const currentPoints = currentAmount ? calculatePoints(currentAmount) : 0;
     const selectedPresetAmount = FIXED_AMOUNTS.includes(currentAmount || NaN) ? currentAmount : null;
+    const selectedPlan = selectedPlanIndex >= 0 ? MEMBERSHIP_PLANS[selectedPlanIndex] : null;
+
+    const pointsTabContent = (
+        <>
+            <div className={styles.fixedAmounts}>
+                <div className={styles.amountsLabel}>选择充值金额</div>
+                <div className={styles.amountsGrid}>
+                    {FIXED_AMOUNTS.map((amount) => (
+                        <button
+                            key={amount}
+                            type="button"
+                            className={`${styles.amountBtn} ${selectedPresetAmount === amount ? styles.amountBtnActive : ''}`}
+                            onClick={() => handleFixedAmountClick(amount)}
+                        >
+                            <div className={styles.amountValue}>￥{amount}</div>
+                            <div className={styles.amountPoints}>{calculatePoints(amount)}积分</div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className={styles.customAmount}>
+                <div className={styles.customLabel}>或输入自定义金额</div>
+                <div className={styles.customInputWrapper}>
+                    <span className={styles.currencySymbol}>￥</span>
+                    <input
+                        type="text"
+                        className={`${styles.customInput} ${inputError ? styles.inputError : ''}`}
+                        placeholder="请输入金额"
+                        value={amountText}
+                        onChange={handleCustomAmountChange}
+                        onCompositionStart={() => {
+                            isComposingRef.current = true;
+                        }}
+                        onCompositionEnd={() => {
+                            isComposingRef.current = false;
+                        }}
+                        maxLength={10}
+                        ref={amountInputRef}
+                    />
+                </div>
+                {inputError && (
+                    <div className={styles.amountHint}>
+                        <span className={styles.errorText}>{inputError}</span>
+                    </div>
+                )}
+            </div>
+
+            {currentAmount && currentAmount >= MIN_AMOUNT && (
+                <div className={styles.rechargeSummary}>
+                    <div className={styles.summaryRow}>
+                        <span className={styles.summaryLabel}>充值金额：</span>
+                        <span className={styles.summaryValue}>￥{currentAmount.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.summaryRow}>
+                        <span className={styles.summaryLabel}>获得积分：</span>
+                        <span className={styles.summaryValue}>{currentPoints}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* <button
+                type="submit"
+                className={styles.submitBtn}
+                disabled={!currentAmount || currentAmount < MIN_AMOUNT || isLoading}
+            >
+                {isLoading ? '处理中...' : `确认充值 ￥${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
+            </button> */}
+            <button type="button" className={styles.submitBtn} disabled>
+                请进入推广分享页面进入活动进行充值
+            </button>
+        </>
+    );
+
+    const membershipTabContent = (
+        <>
+            <div className={styles.plansList}>
+                {MEMBERSHIP_PLANS.map((plan, index) => (
+                    <button
+                        key={plan.planId}
+                        type="button"
+                        className={`${styles.planItem} ${selectedPlanIndex === index ? styles.planItemActive : ''}`}
+                        onClick={() => setSelectedPlanIndex(index)}
+                    >
+                        <span className={styles.planItemName}>{plan.name}</span>
+                        <span className={styles.planItemPrice}>￥{plan.price}</span>
+                    </button>
+                ))}
+            </div>
+
+            {selectedPlan && (
+                <div className={styles.rechargeSummary}>
+                    <div className={styles.summaryRow}>
+                        <span className={styles.summaryLabel}>套餐名称：</span>
+                        <span className={styles.summaryValue}>{selectedPlan.name}</span>
+                    </div>
+                    <div className={styles.summaryRow}>
+                        <span className={styles.summaryLabel}>充值金额：</span>
+                        <span className={styles.summaryValue}>￥{selectedPlan.price.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.benefitSection}>
+                        <div className={styles.benefitTitle}>会员权益</div>
+                        <div className={styles.benefitItem}>
+                            <span className={styles.benefitIcon}>✓</span>
+                            <span>每个游戏前100回合免积分</span>
+                        </div>
+                        {selectedPlanIndex > 0 && (
+                            <div className={styles.benefitItem}>
+                                <span className={styles.benefitIcon}>★</span>
+                                <span>
+                                    {selectedPlanIndex === 1 && '每日签到：18 / 18 / 58 / 18 / 38 / 58 / 78 积分（7天循环）'}
+                                    {selectedPlanIndex === 2 && '每日签到：28 / 28 / 68 / 28 / 48 / 68 / 88 积分（7天循环）'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* <button
+                type="submit"
+                className={styles.submitBtn}
+                disabled={selectedPlanIndex < 0 || isLoading}
+            >
+                {isLoading ? '处理中...' : selectedPlan ? `确认购买 ${selectedPlan.name}` : '请选择套餐'}
+            </button> */}
+            <button type="button" className={styles.submitBtn} disabled>
+                请进入推广分享页面进入活动进行充值
+            </button>
+        </>
+    );
 
     const formContent = (
         <div className={styles.modalOverlay} onClick={closeAndReload}>
@@ -357,71 +535,25 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
                 <h2 className={styles.title}>账户充值</h2>
 
-                <form className={styles.form} onSubmit={handleSubmit}>
-                    <div className={styles.fixedAmounts}>
-                        <div className={styles.amountsLabel}>选择充值金额</div>
-                        <div className={styles.amountsGrid}>
-                            {FIXED_AMOUNTS.map((amount) => (
-                                <button
-                                    key={amount}
-                                    type="button"
-                                    className={`${styles.amountBtn} ${selectedPresetAmount === amount ? styles.amountBtnActive : ''}`}
-                                    onClick={() => handleFixedAmountClick(amount)}
-                                >
-                                    <div className={styles.amountValue}>￥{amount}</div>
-                                    <div className={styles.amountPoints}>{calculatePoints(amount)}积分</div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className={styles.customAmount}>
-                        <div className={styles.customLabel}>或输入自定义金额</div>
-                        <div className={styles.customInputWrapper}>
-                            <span className={styles.currencySymbol}>￥</span>
-                            <input
-                                type="text"
-                                className={`${styles.customInput} ${inputError ? styles.inputError : ''}`}
-                                placeholder="请输入金额"
-                                value={amountText}
-                                onChange={handleCustomAmountChange}
-                                onCompositionStart={() => {
-                                    isComposingRef.current = true;
-                                }}
-                                onCompositionEnd={() => {
-                                    isComposingRef.current = false;
-                                }}
-                                maxLength={10}
-                                ref={amountInputRef}
-                            />
-                        </div>
-                        {inputError && (
-                            <div className={styles.amountHint}>
-                                <span className={styles.errorText}>{inputError}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {currentAmount && currentAmount >= MIN_AMOUNT && (
-                        <div className={styles.rechargeSummary}>
-                            <div className={styles.summaryRow}>
-                                <span className={styles.summaryLabel}>充值金额：</span>
-                                <span className={styles.summaryValue}>￥{currentAmount.toFixed(2)}</span>
-                            </div>
-                            <div className={styles.summaryRow}>
-                                <span className={styles.summaryLabel}>获得积分：</span>
-                                <span className={styles.summaryValue}>{currentPoints}</span>
-                            </div>
-                        </div>
-                    )}
-
+                <div className={styles.tabBar}>
                     <button
-                        type="submit"
-                        className={styles.submitBtn}
-                        disabled={!currentAmount || currentAmount < MIN_AMOUNT || isLoading}
+                        type="button"
+                        className={`${styles.tabBtn} ${rechargeTab === 'points' ? styles.tabBtnActive : ''}`}
+                        onClick={() => setRechargeTab('points')}
                     >
-                        {isLoading ? '处理中...' : `确认充值 ￥${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
+                        积分充值
                     </button>
+                    <button
+                        type="button"
+                        className={`${styles.tabBtn} ${rechargeTab === 'membership' ? styles.tabBtnActive : ''}`}
+                        onClick={() => setRechargeTab('membership')}
+                    >
+                        会员卡充值
+                    </button>
+                </div>
+
+                <form className={styles.form} onSubmit={handleSubmit}>
+                    {rechargeTab === 'points' ? pointsTabContent : membershipTabContent}
                 </form>
             </div>
         </div>

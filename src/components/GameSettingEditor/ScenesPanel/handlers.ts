@@ -55,7 +55,6 @@ export interface HandlersContext {
     setIsGeneratingWorldMap: React.Dispatch<React.SetStateAction<boolean>>;
     setWorldMapImageOverride: React.Dispatch<React.SetStateAction<string | null>>;
     setIsGeneratingAllSceneImages: React.Dispatch<React.SetStateAction<boolean>>;
-    setSceneBatchJobStatus: React.Dispatch<React.SetStateAction<BatchSceneJobStatus | null>>;
     setSceneCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setIsLoadingSceneCost: React.Dispatch<React.SetStateAction<boolean>>;
     // 一键生成结果弹窗
@@ -97,21 +96,6 @@ export interface PendingImage {
     variant: string;
 }
 
-interface BatchSceneJobStatus {
-    success: boolean;
-    jobId: string;
-    fileId?: string;
-    status: 'running' | 'queued' | 'pending' | 'completed' | 'failed' | 'unknown';
-    totalCount: number;
-    completedCount: number;
-    failedCount: number;
-    progress?: number;
-    estimatedRemainingSeconds?: number | null;
-    estimatedTotalSeconds?: number | null;
-    error?: string | null;
-    message?: string;
-}
-
 export const createSceneHandlers = (ctx: HandlersContext) => {
     const {
         fileId,
@@ -142,7 +126,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setIsGeneratingWorldMap,
         setWorldMapImageOverride,
         setIsGeneratingAllSceneImages,
-        setSceneBatchJobStatus,
         setSceneCostPoints,
         setIsLoadingSceneCost,
         setSceneResultModalOpen,
@@ -184,39 +167,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 设置暂存图片（支持 File、Blob、URL）
-    const delay = (ms: number) =>
-        new Promise((resolve) => window.setTimeout(resolve, ms));
-
-    const pollSceneBatchJob = async (jobId: string) => {
-        while (true) {
-            const response = await api.getSceneBatchJobStatus(jobId);
-            const jobStatus = response.data;
-
-            if (!jobStatus?.success && jobStatus?.status === 'unknown') {
-                throw new Error(jobStatus.message || '批量任务不存在或已过期');
-            }
-
-            if (jobStatus) {
-                // 实现场景批量任务状态刷新
-                setSceneBatchJobStatus(jobStatus);
-            }
-
-            if (jobStatus) {
-                setSceneBatchJobStatus(jobStatus);
-            }
-
-            if (jobStatus?.status === 'completed') {
-                return jobStatus;
-            }
-
-            if (jobStatus?.status === 'failed') {
-                throw new Error(jobStatus.error || '批量生成场景立绘失败');
-            }
-
-            await delay(2000);
-        }
-    };
-
     const setPendingImage = async (
         sceneId: string,
         imageData: string | File | Blob | ArrayBuffer,
@@ -976,7 +926,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 批量生成场景立绘 + 积分试算
-    const legacyGenerateAllSceneImages = async (sceneCostPoints: number | null) => {
+    const generateAllSceneImages = async (sceneCostPoints: number | null) => {
         if (!fileId) {
             toast.error('缺少必要数据，无法生成');
             return;
@@ -987,25 +937,32 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 const respAny: any = response.data;
                 const payload = respAny.data || respAny;
-                const results = payload?.results;
-                const scenesGenerated: number | undefined = results?.scenesGenerated ?? results?.generated;
-                const scenesTotal: number | undefined = results?.scenesTotal ?? results?.total;
-                const errors: number | undefined = typeof results?.errors === 'number' ? results.errors : undefined;
-                void scenesGenerated;
-                void scenesTotal;
-                void errors;
 
                 // 从 results 中获取新的字段
-                const effectiveSuccessful = results?.effectiveSuccessful ?? results?.scenesGenerated ?? 0;
-                const totalSuccessful = results?.totalSuccessful ?? results?.scenesTotal ?? 0;
-                const pointsDeducted = results?.pointsDeducted ?? sceneCostPoints;
-                const remainingPoints = results?.remainingPoints;
+                const sceneTotalRaw = Number(payload?.scenes?.total ?? 0);
+                const sceneTotal = Number.isFinite(sceneTotalRaw) ? Math.max(0, sceneTotalRaw) : 0;
+                const sceneEffectiveRaw = Number(
+                    payload?.scenes?.effective ?? 0
+                );
+                const sceneEffective = Number.isFinite(sceneEffectiveRaw) ? Math.max(0, sceneEffectiveRaw) : 0;
+                const generatedCount = sceneTotal > 0 ? Math.min(sceneEffective, sceneTotal) : sceneEffective;
+
+                const pointsDeductedRaw = Number(
+                    payload?.points?.deducted ?? sceneCostPoints ?? 0
+                );
+                const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
+
+                const remainingPointsRaw = payload?.points?.remaining;
+                const remainingPointsValue = Number(remainingPointsRaw);
+                const remainingPoints = Number.isFinite(remainingPointsValue)
+                    ? Math.max(0, remainingPointsValue)
+                    : undefined;
 
                 // 弹出结果弹窗
                 setSceneGenerationResult({
-                    generatedCount: effectiveSuccessful,
-                    totalCount: totalSuccessful,
-                    pointsDeducted: pointsDeducted ?? 0,
+                    generatedCount,
+                    totalCount: sceneTotal,
+                    pointsDeducted,
                     remainingPoints,
                 });
                 setSceneResultModalOpen(true);
@@ -1043,97 +1000,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         await generateAllSceneImages(sceneCostPoints);
         await refreshUserPoints();
     };
-
-    // 实现场景批量立绘任务轮询
-    const generateAllSceneImages = async (sceneCostPoints: number | null) => {
-        if (!fileId) {
-            toast.error('缺少必要数据，无法生成');
-            return;
-        }
-
-        try {
-            setIsGeneratingAllSceneImages(true);
-            setSceneBatchJobStatus(null);
-
-            const startResponse = await api.startGenerateAllSceneImages(fileId);
-            const startData = startResponse.data;
-            if (!startData?.success || !startData.jobId) {
-                toast.error(startData?.message || '当前使用人数过多，请稍后再试');
-                return;
-            }
-
-            // 实现场景批量任务初始状态
-            setSceneBatchJobStatus({
-                success: true,
-                jobId: startData.jobId,
-                fileId: startData.fileId,
-                status: startData.status,
-                totalCount: startData.totalCount,
-                completedCount: 0,
-                failedCount: 0,
-                progress: 0,
-                estimatedRemainingSeconds: null,
-                estimatedTotalSeconds: null,
-            });
-
-            setSceneBatchJobStatus({
-                success: true,
-                jobId: startData.jobId,
-                fileId: startData.fileId,
-                status: startData.status,
-                totalCount: startData.totalCount,
-                completedCount: 0,
-                failedCount: 0,
-                progress: 0,
-                estimatedRemainingSeconds: null,
-                estimatedTotalSeconds: null,
-            });
-
-            await pollSceneBatchJob(startData.jobId);
-
-            const resultResponse = await api.getSceneBatchJobResult(startData.jobId);
-            const jobResult = resultResponse.data?.result;
-            const results = jobResult?.results;
-            if (!resultResponse.data?.success || !jobResult || !results) {
-                throw new Error(resultResponse.data?.error || '批量结果读取失败');
-            }
-
-            // 兼容 visual 和 worldInteraction 两种结果统计
-            const effectiveSuccessful = Number(
-                results.effectiveSuccessful
-                ?? results.scenesGenerated
-                ?? results.totalGenerated
-                ?? 0,
-            );
-            const totalSuccessful = Number(
-                results.totalSuccessful
-                ?? results.scenesTotal
-                ?? results.totalImages
-                ?? startData.totalCount
-                ?? 0,
-            );
-            const pointsDeducted = Number(results.pointsDeducted ?? sceneCostPoints ?? 0);
-            const remainingPoints = typeof results.remainingPoints === 'number'
-                ? results.remainingPoints
-                : undefined;
-
-            setSceneGenerationResult({
-                generatedCount: effectiveSuccessful,
-                totalCount: totalSuccessful,
-                pointsDeducted,
-                remainingPoints,
-            });
-            setSceneResultModalOpen(true);
-        } catch (error) {
-            console.error('批量生成场景立绘失败:', error);
-            toast.error('生成所有场景立绘失败，请检查网络连接');
-        } finally {
-            setIsGeneratingAllSceneImages(false);
-            setSceneBatchJobStatus(null);
-        }
-    };
-
-    void legacyGenerateAllSceneImages;
 
     return {
         // 本地字段更新
@@ -1180,5 +1046,3 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         confirmGenerateAllSceneImages,
     };
 };
-
-

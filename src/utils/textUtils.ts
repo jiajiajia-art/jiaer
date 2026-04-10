@@ -125,144 +125,285 @@ export const parseColorMarkup = (text: string): ColorMarkupPart[] => {
 // 【核心函数3】处理游戏结构标签（用于历史记录展示）
 // 将 [NARRATION:], [DIALOGUE:] 等转换为可读文本
 // ============================================================
+interface ParsedGameTag {
+    name: string;
+    payload: string;
+    start: number;
+    end: number;
+    raw: string;
+    hasPayload: boolean;
+}
+
+const GAME_TAG_NAME_REGEX = /^[A-Z_]+$/;
+
+const findGameTagCloseIndex = (text: string, payloadStart: number): number => {
+    let nestedDepth = 0;
+    let inQuote = false;
+
+    for (let i = payloadStart; i < text.length; i++) {
+        const char = text[i];
+        const previousChar = i > 0 ? text[i - 1] : '';
+
+        if (char === '"' && previousChar !== '\\') {
+            inQuote = !inQuote;
+            continue;
+        }
+
+        if (inQuote) continue;
+
+        if (char === '[') {
+            nestedDepth++;
+            continue;
+        }
+
+        if (char === ']') {
+            if (nestedDepth === 0) {
+                return i;
+            }
+            nestedDepth--;
+        }
+    }
+
+    return -1;
+};
+
+const parseGameTagAt = (text: string, start: number): ParsedGameTag | null => {
+    if (text[start] !== '[') return null;
+
+    let cursor = start + 1;
+    while (cursor < text.length && text[cursor] !== ':' && text[cursor] !== ']') {
+        cursor++;
+    }
+    if (cursor >= text.length) return null;
+
+    const rawName = text.slice(start + 1, cursor).trim();
+    if (!rawName) return null;
+
+    const name = rawName.toUpperCase();
+    if (!GAME_TAG_NAME_REGEX.test(name)) return null;
+
+    if (text[cursor] === ']') {
+        return {
+            name,
+            payload: '',
+            start,
+            end: cursor,
+            raw: text.slice(start, cursor + 1),
+            hasPayload: false,
+        };
+    }
+
+    const payloadStart = cursor + 1;
+    const closeIndex = findGameTagCloseIndex(text, payloadStart);
+    if (closeIndex < 0) return null;
+
+    return {
+        name,
+        payload: text.slice(payloadStart, closeIndex),
+        start,
+        end: closeIndex,
+        raw: text.slice(start, closeIndex + 1),
+        hasPayload: true,
+    };
+};
+
+const formatDialoguePayload = (payload: string): string => {
+    const firstComma = payload.indexOf(',');
+    if (firstComma < 0) {
+        return payload.trim();
+    }
+
+    const speaker = payload.slice(0, firstComma).trim();
+    const remainder = payload.slice(firstComma + 1).trim();
+    if (!remainder) return speaker;
+
+    const quoteStart = remainder.indexOf('"');
+    const quoteEnd = quoteStart >= 0 ? remainder.lastIndexOf('"') : -1;
+
+    let meta = '';
+    let dialogueText = '';
+
+    if (quoteStart >= 0 && quoteEnd > quoteStart) {
+        meta = remainder.slice(0, quoteStart).trim().replace(/,?\s*$/, '');
+        dialogueText = remainder.slice(quoteStart + 1, quoteEnd).trim();
+    } else {
+        dialogueText = remainder.replace(/^["']|["']$/g, '').trim();
+    }
+
+    const displayName = meta || speaker;
+    if (displayName && dialogueText) {
+        return `${displayName}：“${dialogueText}”`;
+    }
+
+    return dialogueText || displayName;
+};
+
+const normalizeOptionPayload = (payload: string): string => {
+    let value = payload.trim();
+    if (!value) return '';
+
+    const quoted = value.match(/"([\s\S]*?)"/);
+    if (quoted && quoted[1]?.trim()) {
+        return quoted[1].trim();
+    }
+
+    value = value.replace(/^["']|["']$/g, '').trim();
+    return value;
+};
+
+const findEndChoiceStartIndex = (text: string, from: number): number => {
+    let cursor = from;
+    while (cursor < text.length) {
+        const openIndex = text.indexOf('[', cursor);
+        if (openIndex < 0) return -1;
+
+        const tag = parseGameTagAt(text, openIndex);
+        if (!tag) {
+            cursor = openIndex + 1;
+            continue;
+        }
+
+        if (tag.name === 'END_CHOICE' && !tag.hasPayload) {
+            return openIndex;
+        }
+
+        cursor = tag.end + 1;
+    }
+
+    return -1;
+};
+
+interface ProcessTagContext {
+    collectOptions: boolean;
+}
+
+interface OptionStore {
+    mainOptions: string[];
+    options: string[];
+}
+
+const processGameTagText = (content: string, context: ProcessTagContext, optionStore: OptionStore): string => {
+    let result = '';
+    let cursor = 0;
+
+    while (cursor < content.length) {
+        const openIndex = content.indexOf('[', cursor);
+        if (openIndex < 0) {
+            result += content.slice(cursor);
+            break;
+        }
+
+        result += content.slice(cursor, openIndex);
+        const tag = parseGameTagAt(content, openIndex);
+
+        if (!tag) {
+            result += content[openIndex];
+            cursor = openIndex + 1;
+            continue;
+        }
+
+        switch (tag.name) {
+            case 'NARRATION':
+            case 'TRANSITION':
+                result += tag.payload.trim();
+                cursor = tag.end + 1;
+                break;
+
+            case 'DIALOGUE':
+                result += formatDialoguePayload(tag.payload);
+                cursor = tag.end + 1;
+                break;
+
+            case 'SCENE_CHANGE':
+                result += tag.payload.trim() ? `场景切换：${tag.payload.trim()}` : '';
+                cursor = tag.end + 1;
+                break;
+
+            case 'MAIN_OPTION': {
+                if (context.collectOptions) {
+                    const optionText = normalizeOptionPayload(tag.payload);
+                    if (optionText) {
+                        optionStore.mainOptions.push(optionText);
+                    }
+                }
+                cursor = tag.end + 1;
+                break;
+            }
+
+            case 'OPTION': {
+                if (context.collectOptions) {
+                    const optionText = normalizeOptionPayload(tag.payload);
+                    if (optionText) {
+                        optionStore.options.push(optionText);
+                    }
+                }
+                cursor = tag.end + 1;
+                break;
+            }
+
+            case 'CHOICE': {
+                const title = tag.payload.trim();
+                const endChoiceStart = findEndChoiceStartIndex(content, tag.end + 1);
+
+                if (endChoiceStart >= 0) {
+                    const innerContent = content.slice(tag.end + 1, endChoiceStart);
+                    const cleanedInner = processGameTagText(innerContent, { collectOptions: false }, optionStore).trim();
+                    if (title) {
+                        result += `【${title}】\n`;
+                    }
+                    if (cleanedInner) {
+                        result += cleanedInner;
+                    }
+                    cursor = endChoiceStart + '[END_CHOICE]'.length;
+                } else {
+                    if (title) {
+                        result += `【${title}】\n`;
+                    }
+                    cursor = tag.end + 1;
+                }
+                break;
+            }
+
+            case 'END_CHOICE':
+                cursor = tag.end + 1;
+                break;
+
+            default:
+                result += tag.raw;
+                cursor = tag.end + 1;
+                break;
+        }
+    }
+
+    return result;
+};
+
 export const processGameTags = (content: string): string => {
     if (!content) return '';
-    
-    let result = content;
-    
-    // 处理 NARRATION 标签 - 保留内容
-    result = result.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
-        return text ? text.trim() : '';
-    });
-    
 
-    result = result.replace(
-        /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
-        (_match, speaker, meta, text) => {
-            const speakerId = speaker ? String(speaker).trim() : '';
-            const metaText = meta ? String(meta).trim() : '';
-            const displayName = metaText
-                ? metaText.replace(/,?\s*$/, '')
-                : speakerId;
-            const finalText = text ? String(text).trim() : '';
-            if (displayName && finalText) {
-                return `${displayName}："${finalText}"`;
-            }
-            return finalText;
-        }
-    );
-    // 向后兼容旧格式 [DIALOGUE: speaker, "..."]
-    result = result.replace(
-        /\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\s*\]/gi,
-        (_match, speaker, text) => {
-            const displayName = speaker ? String(speaker).trim() : '';
-            const finalText = text ? String(text).trim() : '';
-            if (displayName && finalText) {
-                return `${displayName}："${finalText}"`;
-            }
-            return finalText;
-        }
-    );
-    
-    // 处理 TRANSITION 标签 - 保留内容
-    result = result.replace(/\[TRANSITION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
-        return text ? text.trim() : '';
-    });
-    
-    // 处理 CHOICE 块
-    result = result.replace(/\[CHOICE:([^\]]*)\]([\s\S]*?)\[END_CHOICE\]/gi, (_match, title, innerContent) => {
-        let choiceText = '';
-        if (title) {
-            choiceText += `【${title.trim()}】\n`;
-        }
-        let cleanedContent = innerContent.replace(/\[MAIN_OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
-        cleanedContent = cleanedContent.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, '');
-        // 处理内容中的其他标签
-        cleanedContent = cleanedContent.replace(
-            /\[DIALOGUE:\s*([^,\]]+),([\s\S]*?)"([\s\S]*?)"\s*\]/gi,
-            (_m: string, speaker: string, meta: string, text: string) => {
-                const speakerId = speaker ? String(speaker).trim() : '';
-                const metaText = meta ? String(meta).trim() : '';
-                const displayName = metaText
-                    ? metaText.replace(/,?\s*$/, '')
-                    : speakerId;
-                const finalText = text ? String(text).trim() : '';
-                if (displayName && finalText) {
-                    return `${displayName}："${finalText}"`;
-                }
-                return finalText;
-            }
-        );
-        // 兼容旧格式
-        cleanedContent = cleanedContent.replace(
-            /\[DIALOGUE:\s*([^,\]]+),\s*"([^"]*(?:<[^>]*>[^"]*)*?)"\s*\]/gi,
-            (_m: string, speaker: string, text: string) => {
-                const displayName = speaker ? String(speaker).trim() : '';
-                const finalText = text ? String(text).trim() : '';
-                if (displayName && finalText) {
-                    return `${displayName}："${finalText}"`;
-                }
-                return finalText;
-            }
-        );
-        cleanedContent = cleanedContent.replace(/\[NARRATION:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_m: string, text: string) => {
-            return text ? text.trim() : '';
-        });
-        choiceText += cleanedContent.trim();
-        return choiceText;
-    });
-    
-    // 处理单独的 CHOICE 标签
-    result = result.replace(/\[CHOICE:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, title) => {
-        return title ? `【${title.trim()}】\n` : '';
-    });
-    
-    // 处理 MAIN_OPTION 和 OPTION 标签（转换为选项列表格式）
-    const mainOptions: string[] = [];
-    const options: string[] = [];
-    
-    // 先提取 MAIN_OPTION（主选项，需要优先显示）
-    result = result.replace(/\[MAIN_OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
-        if (text) {
-            mainOptions.push(text.trim());
-        }
-        return '';
-    });
-    
-    // 再提取 OPTION（普通选项）
-    result = result.replace(/\[OPTION:\s*"?([^"\]]*(?:<[^>]*>[^"\]]*)*?)"?\]/gi, (_match, text) => {
-        if (text) {
-            options.push(text.trim());
-        }
-        return '';
-    });
-    
-    // 处理 SCENE_CHANGE 标签
-    result = result.replace(/\[SCENE_CHANGE:\s*((?:[^\[\]]*|\[[^\]]*\])*)\]/gi, (_match, text) => {
-        return text ? `场景切换：${text.trim()}` : '';
-    });
-    
-    // 清理多余的换行和空格
+    const optionStore: OptionStore = {
+        mainOptions: [],
+        options: [],
+    };
+
+    let result = processGameTagText(content, { collectOptions: true }, optionStore);
     result = result.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
-    
-    // 如果有选项，添加到末尾（主选项优先显示）
-    if (mainOptions.length > 0 || options.length > 0) {
+
+    if (optionStore.mainOptions.length > 0 || optionStore.options.length > 0) {
         result += '\n\n选项：\n';
         let optionIndex = 1;
-        
-        // 先显示主选项（标记为推荐）
-        mainOptions.forEach((opt) => {
-            result += `${optionIndex}. 【推荐】${opt}\n`;
+
+        optionStore.mainOptions.forEach((option) => {
+            result += `${optionIndex}. 【推荐】${option}\n`;
             optionIndex++;
         });
-        
-        // 再显示普通选项
-        options.forEach((opt) => {
-            result += `${optionIndex}. ${opt}\n`;
+
+        optionStore.options.forEach((option) => {
+            result += `${optionIndex}. ${option}\n`;
             optionIndex++;
         });
     }
-    
+
     return result;
 };
 

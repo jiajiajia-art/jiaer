@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import styles from './CharactersPanel.module.css';
-import { IMAGE_GENERATION_COST } from '../../../utils/constants';
-import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
+import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
+import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -25,7 +25,6 @@ import CharactersSidebar from './CharactersSidebar';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { HOST_ADDRESS } from '../../../config';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
-import { useBatchImageProgressText } from '../../../hooks/editor/useBatchImageProgressText';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -82,7 +81,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
-    const [npcBatchJobStatus, setNpcBatchJobStatus] = useState<BatchImageJobStatus | null>(null);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
     const [isUploadingPortrait, setIsUploadingPortrait] = useState<boolean>(false);
@@ -427,7 +425,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             setIsGeneratingSingleNpcImage,
             setGeneratingCharacterId,
             setIsGeneratingNpcImages,
-            setNpcBatchJobStatus,
             setNpcCostPoints,
             setNpcCostModalOpen,
             setIsLoadingNpcCost,
@@ -490,15 +487,15 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const isCurrentPortraitGenerating = Boolean(
         currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
     );
-    const singleCharacterEtaText = useGenerationEta({
-        active: isCurrentPortraitGenerating,
-        totalSeconds: currentCharacter?.id === 'player' ? SINGLE_PLAYER_ETA_SECONDS : SINGLE_CHARACTER_ETA_SECONDS,
-    });
     const batchCharacterCount = useMemo(
         () => characterData.filter((character) => !character.id.startsWith('temp-')).length,
         [characterData],
     );
-    const legacyBatchCharacterEtaText = useGenerationEta({
+    const singleCharacterEtaText = useGenerationEta({
+        active: isCurrentPortraitGenerating,
+        totalSeconds: currentCharacter?.id === 'player' ? SINGLE_PLAYER_ETA_SECONDS : SINGLE_CHARACTER_ETA_SECONDS,
+    });
+    const batchCharacterEtaText = useGenerationEta({
         active: isGeneratingNpcImages,
         totalSeconds: Math.max(
             SINGLE_CHARACTER_ETA_SECONDS,
@@ -508,8 +505,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         // 实现批量角色生图的数量提示
         batchLabel: batchCharacterCount > 0 ? `本次共生成 ${batchCharacterCount} 项` : undefined,
     });
-    const batchCharacterEtaText = useBatchImageProgressText(npcBatchJobStatus);
-    void legacyBatchCharacterEtaText;
     const isPortraitActionBusy = isUploadingPortrait
         || isSavingCharacter
         || isCurrentPortraitGenerating
@@ -1057,6 +1052,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
         setNpcCostModalOpen(false);
         await generateAllNpcImages();
+        onDataChange?.();
     };
 
     const regenerateSingleNpcImage = async (character: Character) => {
@@ -1229,7 +1225,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         <span className={styles.buttonMainText}>
                             {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
                         </span>
-                        <span className={styles.buttonSubText}>{IMAGE_GENERATION_COST}积分/张</span>
+                        <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}积分/张</span>
                     </div>
                 </button>
             </div>
@@ -1356,7 +1352,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             alt=""
                                             className={styles.priceIcon}
                                         />
-                                        <span>{IMAGE_GENERATION_COST} AI生成</span>
+                                        <span>{CHARACTER_GENERATION_COST} AI生成</span>
                                     </button>
                                 )}
                             </div>
@@ -1578,7 +1574,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                 alt=""
                                                                 className={styles.priceIcon}
                                                             />
-                                                            <span>{isGeneratingVariation && generatingVariationId === variation.id ? '生成中...' : `${IMAGE_GENERATION_COST} AI生成`}</span>
+                                                            <span>{isGeneratingVariation && generatingVariationId === variation.id ? '生成中...' : `${CHARACTER_GENERATION_COST} AI生成`}</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1725,7 +1721,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 onConfirm={confirmSingleNpcGenerate}
                 onCancel={cancelSingleNpcGenerate}
                 title="积分扣除确认"
-                message={`本次生成角色立绘将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                message={`本次生成角色立绘将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />
@@ -1747,7 +1743,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 onConfirm={confirmVariationGenerate}
                 onCancel={cancelVariationGenerate}
                 title="积分扣除确认"
-                message={`本次生成差分图片将扣除 ${IMAGE_GENERATION_COST} 积分，是否继续？`}
+                message={`本次生成差分图片将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />

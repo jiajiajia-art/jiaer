@@ -1,3 +1,33 @@
+export type MembershipPlanId = 'month' | 'season' | 'year';
+
+export interface MembershipSignInStatus {
+  signedInToday: boolean;
+  canClaim: boolean;
+  streakDay: number;
+  nextStreakDay: number;
+  planId: MembershipPlanId | null;
+  tierRank: number | null;
+  basePoints: number;
+  bonusPoints: number;
+  totalPointsToday: number;
+  baseSchedule: number[];
+  bonusSchedule: number[];
+  displaySchedule: number[];
+}
+
+export interface CheckInResponse {
+  rewardPoints?: number;
+  signInStatus?: MembershipSignInStatus | null;
+  activePlanId?: MembershipPlanId | null;
+  tierRank?: number | null;
+  cycleDay?: number;
+  cycleLength?: number;
+  signedToday?: boolean;
+  todayBonusPoints?: number;
+  signinBonusSchedule?: number[] | null;
+  endAt?: string | null;
+}
+
 // 用户信息
 export interface User {
   name: string;
@@ -14,6 +44,9 @@ export interface User {
   points: number;
   inviteCode: string;
   hasSignedIn: boolean;
+  isMember?: boolean;
+  memberPlan?: MembershipPlanId | null;
+  memberEndAt?: string | null;
 }
 
 // 注册请求
@@ -65,4 +98,12 @@ export interface SettlePointsResponse {
   settlementTime: string;
   lastSettlementTime: string | null;
   gameCount: number;
+}
+
+export interface SubscriptionRedeemResult {
+  planId: MembershipPlanId;
+  tierRank: number;
+  startAt: string;
+  endAt: string;
+  remainingDays: number;
 }
