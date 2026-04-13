@@ -105,6 +105,107 @@
     transition: background-color 9999s ease-in-out 0s;
 }
 
+/* ========== 发放 Key 表单布局 ========== */
+.createFormWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.createFormRow {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+}
+
+.createFormRow:first-child {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.createFormRow:last-child {
+    grid-template-columns: 1.5fr 1.5fr auto;
+    align-items: end;
+}
+
+/* 字段标签文字 */
+.fieldLabelText {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #4c3d31;
+}
+
+/* 可选标签样式 */
+.optionalTag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(209, 147, 99, 0.12);
+    color: #9e7455;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* 指定兑换人：占 2 列 */
+.targetUserCodeField {
+    grid-column: span 1;
+}
+
+/* 创建按钮容器 */
+.createAction {
+    display: flex;
+    align-items: flex-end;
+}
+
+.createAction .primaryButton {
+    min-width: 140px;
+    padding: 12px 24px;
+    white-space: nowrap;
+}
+
+/* ========== 响应式布局 ========== */
+@media (max-width: 1200px) {
+    .createFormRow:first-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 2;
+    }
+
+    .createFormRow:last-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .createAction {
+        grid-column: span 2;
+        justify-content: stretch;
+    }
+
+    .createAction .primaryButton {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .createFormRow:first-child,
+    .createFormRow:last-child {
+        grid-template-columns: 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 1;
+    }
+
+    .createAction {
+        grid-column: span 1;
+    }
+}
+
+/* ========== 旧样式（保留兼容） ========== */
 .inlineGrid,
 .filterGrid {
     display: grid;
@@ -120,16 +221,12 @@
     margin-bottom: 14px;
 }
 
-.createFormGrid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(160px, 1fr)) auto;
-    gap: 14px;
-    align-items: end;
-}
-
-.createAction {
-    display: flex;
-    align-items: flex-end;
+.formHint {
+    display: inline-block;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: #7a6758;
 }
 
 .actionRow {
@@ -278,8 +375,16 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .createFormGrid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .createFormRow:first-child {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 2;
+    }
+
+    .createFormRow:last-child {
+        grid-template-columns: 1fr 1fr;
     }
 }
 
@@ -299,15 +404,12 @@
         grid-template-columns: 1fr;
     }
 
-    .createFormGrid {
+    .createFormRow:first-child,
+    .createFormRow:last-child {
         grid-template-columns: 1fr;
     }
 
-    .createAction {
-        justify-content: stretch;
-    }
-
-    .createAction .primaryButton {
-        width: 100%;
+    .createFormRow:first-child .fieldLabel:last-child {
+        grid-column: span 1;
     }
 }

@@ -416,7 +416,11 @@ const Profile: React.FC = () => {
                                 <div className={styles.memberCodeWrapper}>
                                     {user?.user?.isMember && user?.user?.memberEndAt ? (
                                         <div className={styles.memberInfo}>
-                                            <span className={styles.memberBadge}>VIP</span>
+                                            <span className={styles.memberBadge}>
+                                                {user?.user?.memberPlan === 'month' ? '月卡会员' :
+                                                user?.user?.memberPlan === 'season' ? '季卡会员' :
+                                                user?.user?.memberPlan === 'year' ? '年卡会员' : 'VIP'}
+                                            </span>
                                             <span className={styles.memberExpire}>{`到期时间：${formatDate(user.user.memberEndAt)}`}</span>
                                         </div>
                                     ) : null}

@@ -1239,7 +1239,6 @@ const Home: React.FC = () => {
                 isOpen={showCheckInModal}
                 onClose={() => setShowCheckInModal(false)}
                 onSignInSuccess={handleHomeCheckInSuccess}
-                variant="simple"
             />
             <AnnouncementModal
                 announcement={latestAnnouncement}

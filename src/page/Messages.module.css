@@ -148,6 +148,8 @@
     flex: 1;
     min-width: 0;
     line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .stateTag {
@@ -175,6 +177,8 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .messageFooter {

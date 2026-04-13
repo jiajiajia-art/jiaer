@@ -115,6 +115,7 @@ const SubscriptionAdminManager: React.FC = () => {
     const [count, setCount] = useState('1');
     const [expireAt, setExpireAt] = useState('');
     const [channel, setChannel] = useState('');
+    const [issuedToUserCode, setIssuedToUserCode] = useState('');
     const [isCreating, setIsCreating] = useState(false);
 
     const [planFilter, setPlanFilter] = useState<FilterPlan>('all');
@@ -177,6 +178,7 @@ const SubscriptionAdminManager: React.FC = () => {
         const payload: CreateSubscriptionKeysPayload = { planId, count: nextCount };
         if (normalizedExpireAt) payload.expireAt = normalizedExpireAt;
         if (channel.trim()) payload.metadata = { channel: channel.trim() };
+        if (issuedToUserCode.trim()) payload.userCode = issuedToUserCode.trim();
 
         try {
             setIsCreating(true);
@@ -246,31 +248,51 @@ const SubscriptionAdminManager: React.FC = () => {
                     </div>
                 </div>
 
-                <div className={styles.createFormGrid}>
-                    <label className={styles.fieldLabel}>
-                        会员类型
-                        <select className={styles.select} value={planId} onChange={(event) => setPlanId(event.target.value as SubscriptionPlanId)}>
-                            <option value="month">月卡</option>
-                            <option value="season">季卡</option>
-                            <option value="year">年卡</option>
-                        </select>
-                    </label>
-                    <label className={styles.fieldLabel}>
-                        数量
-                        <input className={styles.textInput} type="number" min={1} max={500} value={count} onChange={(event) => setCount(event.target.value)} />
-                    </label>
-                    <label className={styles.fieldLabel}>
-                        过期时间（可选）
-                        <input className={styles.textInput} type="datetime-local" value={expireAt} onChange={(event) => setExpireAt(event.target.value)} />
-                    </label>
-                    <label className={styles.fieldLabel}>
-                        渠道标记（可选）
-                        <input className={styles.textInput} value={channel} onChange={(event) => setChannel(event.target.value)} placeholder="用于标记更具体的活动" />
-                    </label>
-                    <div className={styles.createAction}>
-                        <button type="button" className={styles.primaryButton} onClick={() => void handleCreateKeys()} disabled={isCreating}>
-                            {isCreating ? '创建中...' : '创建 Key'}
-                        </button>
+                <div className={styles.createFormWrap}>
+                    <div className={styles.createFormRow}>
+                        <label className={styles.fieldLabel}>
+                            <span className={styles.fieldLabelText}>会员类型</span>
+                            <select className={styles.select} value={planId} onChange={(event) => setPlanId(event.target.value as SubscriptionPlanId)}>
+                                <option value="month">月卡</option>
+                                <option value="season">季卡</option>
+                                <option value="year">年卡</option>
+                            </select>
+                        </label>
+                        <label className={styles.fieldLabel}>
+                            <span className={styles.fieldLabelText}>数量</span>
+                            <input
+                                className={styles.textInput}
+                                type="number"
+                                min={1}
+                                max={500}
+                                value={count}
+                                onChange={(event) => setCount(event.target.value)}
+                            />
+                        </label>
+                        <label className={styles.fieldLabel}>
+                            <span className={styles.fieldLabelText}>过期时间</span>
+                            <input className={styles.textInput} type="datetime-local" value={expireAt} onChange={(event) => setExpireAt(event.target.value)} />
+                        </label>
+                    </div>
+                    <div className={styles.createFormRow}>
+                        <label className={styles.fieldLabel}>
+                            <span className={styles.fieldLabelText}>渠道标记 <span className={styles.optionalTag}>可选</span></span>
+                            <input className={styles.textInput} value={channel} onChange={(event) => setChannel(event.target.value)} placeholder="用于标记更具体的活动" />
+                        </label>
+                        <label className={`${styles.fieldLabel} ${styles.targetUserCodeField}`}>
+                            <span className={styles.fieldLabelText}>指定兑换人 <span className={styles.optionalTag}>可选</span></span>
+                            <input
+                                className={styles.textInput}
+                                value={issuedToUserCode}
+                                onChange={(event) => setIssuedToUserCode(event.target.value)}
+                                placeholder="输入后该 Key 仅限指定用户兑换"
+                            />
+                        </label>
+                        <div className={styles.createAction}>
+                            <button type="button" className={styles.primaryButton} onClick={() => void handleCreateKeys()} disabled={isCreating}>
+                                {isCreating ? '创建中...' : '创建 Key'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -420,7 +442,7 @@ const SubscriptionAdminManager: React.FC = () => {
                                             <td>{statusLabelMap[item.status]}</td>
                                             <td>{disabled ? '是' : '否'}</td>
                                             <td>{formatTime(item.expire_at)}</td>
-                                            <td>{item.redeemed_by_user_id ?? '-'}</td>
+                                            <td>{item.redeemed_by_user_code ?? '-'}</td>
                                             <td>{formatTime(item.redeemed_at)}</td>
                                             <td title={item.metadata_json || ''}>{formatMetadataSummary(item.metadata_json)}</td>
                                             <td>{item.created_by || '-'}</td>

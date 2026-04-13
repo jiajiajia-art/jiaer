@@ -7,7 +7,10 @@ export interface CreateSubscriptionKeysPayload {
     count?: number;
     expireAt?: string;
     issuedToUserId?: string | number;
+    issuedToUserCode?: string;
     metadata?: Record<string, unknown>;
+    /** 仅创建 Key，传了则创建后立即派发给该用户 */
+    userCode?: string;
 }
 
 export interface CreatedSubscriptionKeyRecord {
@@ -35,7 +38,7 @@ export interface AdminSubscriptionKeyRecord {
     expire_at: string | null;
     disabled: number;
     source_order_no: string | null;
-    redeemed_by_user_id: string | number | null;
+    redeemed_by_user_code: string | null;
     redeemed_at: string | null;
     created_by: string | null;
     metadata_json: string | null;

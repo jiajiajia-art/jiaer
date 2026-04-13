@@ -463,7 +463,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 {isLoading ? '处理中...' : `确认充值 ￥${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
             </button> */}
             <button type="button" className={styles.submitBtn} disabled>
-                请进入推广分享页面进入活动进行充值
+            临时维护
+            请进交流群/活动页获取
             </button>
         </>
     );
@@ -521,7 +522,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 {isLoading ? '处理中...' : selectedPlan ? `确认购买 ${selectedPlan.name}` : '请选择套餐'}
             </button> */}
             <button type="button" className={styles.submitBtn} disabled>
-                请进入推广分享页面进入活动进行充值
+            临时维护
+            请进交流群/活动页获取
             </button>
         </>
     );

@@ -8,14 +8,12 @@ interface CheckInModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSignInSuccess?: () => void;
-    variant?: 'full' | 'simple';
 }
 
 const CheckInModal: React.FC<CheckInModalProps> = ({
     isOpen,
     onClose,
     onSignInSuccess,
-    variant = 'full',
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingStatus, setIsFetchingStatus] = useState(false);
@@ -79,73 +77,6 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
             setIsLoading(false);
         }
     };
-
-    if (variant === 'simple') {
-        return (
-            <div className={styles.overlay} onClick={onClose}>
-                <div className={`${styles.content} ${styles.simpleContent}`} onClick={(event) => event.stopPropagation()}>
-                    <div className={styles.simpleIconWrapper}>
-                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="签到" />
-                    </div>
-
-                    <h3 className={styles.simpleTitle}>每日签到</h3>
-
-                    {isFetchingStatus && !isStatusReady ? (
-                        <p className={styles.loadingText}>正在加载签到信息...</p>
-                    ) : !isStatusReady ? (
-                        <>
-                            <p className={styles.loadingText}>签到信息加载失败，请重试</p>
-                            <div className={styles.simpleButtonContainer}>
-                                <button
-                                    type="button"
-                                    className={styles.simpleLaterButton}
-                                    onClick={onClose}
-                                    disabled={isLoading}
-                                >
-                                    稍后
-                                </button>
-                                <button
-                                    type="button"
-                                    className={styles.simpleSignInButton}
-                                    onClick={() => {
-                                        void fetchSignInStatus();
-                                    }}
-                                    disabled={isLoading || isFetchingStatus}
-                                >
-                                    重试
-                                </button>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <p className={styles.simpleDesc}>
-                                签到即可获得 <span className={styles.simplePoints}>{todayPoints}积分</span>
-                            </p>
-
-                            <div className={styles.simpleButtonContainer}>
-                                <button
-                                    type="button"
-                                    className={styles.simpleLaterButton}
-                                    onClick={onClose}
-                                    disabled={isLoading}
-                                >
-                                    稍后
-                                </button>
-                                <button
-                                    type="button"
-                                    className={styles.simpleSignInButton}
-                                    onClick={handleCheckIn}
-                                    disabled={isLoading || isFetchingStatus || signedInToday}
-                                >
-                                    {signedInToday ? '已签到' : (isLoading ? '签到中...' : '立即签到')}
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className={styles.overlay} onClick={onClose}>
