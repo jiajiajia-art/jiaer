@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import styles from './HomeGameFilterBar.module.css';
 import type { FlatThemeTag } from '../utils/themeTags';
 import {
@@ -20,13 +20,16 @@ type HomeGameFilterBarProps = {
     onTagChange: (tagId: number | null) => void;
 };
 
+const ALL_LABEL = '\u5168\u90e8';
 const FILTER_TITLES = {
-    sort: '排序',
-    mode: '玩法分类',
-    tag: '作品标签',
+    sort: '\u6392\u5e8f',
+    mode: '\u6a21\u5f0f',
+    tag: '\u9898\u6750',
 } as const;
-
-const CHECK_MARK = '✓';
+const CHECK_MARK = '\u2713';
+const MOBILE_BREAKPOINT = 768;
+const MOBILE_SAFE_MARGIN = 16;
+const DESKTOP_SAFE_MARGIN = 24;
 
 const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
     sort,
@@ -38,13 +41,17 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
     onTagChange,
 }) => {
     const rootRef = useRef<HTMLDivElement | null>(null);
+    const tagGroupRef = useRef<HTMLDivElement | null>(null);
+    const tagTriggerRef = useRef<HTMLButtonElement | null>(null);
+    const tagMenuRef = useRef<HTMLDivElement | null>(null);
     const [openDropdown, setOpenDropdown] = useState<DropdownKey>(null);
+    const [tagMenuStyle, setTagMenuStyle] = useState<React.CSSProperties | undefined>(undefined);
 
     const tagOptions = useMemo(() => ([
         {
             value: null as number | null,
-            label: '全部',
-            title: '全部',
+            label: ALL_LABEL,
+            title: ALL_LABEL,
         },
         ...themeTags.map((tag) => ({
             value: Number(tag.id),
@@ -54,17 +61,21 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
     ]), [themeTags]);
 
     const selectedSortLabel = useMemo(
-        () => HOME_LIST_SORT_OPTIONS.find((option) => option.value === sort)?.label || '最热',
+        () => HOME_LIST_SORT_OPTIONS.find((option) => option.value === sort)?.label || HOME_LIST_SORT_OPTIONS[0]?.label || FILTER_TITLES.sort,
         [sort],
     );
-    const selectedModeLabel = useMemo(
-        () => HOME_LIST_MODE_OPTIONS.find((option) => option.value === mode)?.label || '全部',
+    const selectedModeOption = useMemo(
+        () => HOME_LIST_MODE_OPTIONS.find((option) => option.value === mode) || null,
         [mode],
     );
+    const selectedModeValueLabel = selectedModeOption?.label || ALL_LABEL;
+    const selectedModeTriggerLabel = mode === 'all' ? FILTER_TITLES.mode : selectedModeValueLabel;
     const selectedTag = useMemo(
         () => tagOptions.find((option) => option.value === tagId) || tagOptions[0],
         [tagId, tagOptions],
     );
+    const selectedTagValueLabel = selectedTag?.label || ALL_LABEL;
+    const selectedTagTriggerLabel = tagId === null ? FILTER_TITLES.tag : selectedTagValueLabel;
 
     useEffect(() => {
         if (!openDropdown) return;
@@ -89,6 +100,64 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
             document.removeEventListener('keydown', handleKeyDown);
         };
     }, [openDropdown]);
+
+    const updateTagMenuPosition = useCallback(() => {
+        const tagGroup = tagGroupRef.current;
+        const tagTrigger = tagTriggerRef.current;
+        const tagMenu = tagMenuRef.current;
+
+        if (!tagGroup || !tagTrigger || !tagMenu) return;
+
+        const viewportWidth = window.innerWidth;
+        const safeMargin = viewportWidth <= MOBILE_BREAKPOINT ? MOBILE_SAFE_MARGIN : DESKTOP_SAFE_MARGIN;
+        const tagGroupRect = tagGroup.getBoundingClientRect();
+        const tagTriggerRect = tagTrigger.getBoundingClientRect();
+        const menuWidth = tagMenu.getBoundingClientRect().width || tagMenu.offsetWidth;
+        const minLeft = safeMargin - tagGroupRect.left;
+        const maxLeft = viewportWidth - safeMargin - tagGroupRect.left - menuWidth;
+        const preferredLeft = tagTriggerRect.left - tagGroupRect.left;
+        const nextLeft = Math.min(Math.max(preferredLeft, minLeft), Math.max(minLeft, maxLeft));
+        const nextLeftValue = `${Math.round(nextLeft)}px`;
+        const nextMaxWidth = `${Math.round(Math.max(168, viewportWidth - safeMargin * 2))}px`;
+
+        setTagMenuStyle((previousStyle) => {
+            if (
+                previousStyle?.left === nextLeftValue
+                && previousStyle?.right === 'auto'
+                && previousStyle?.maxWidth === nextMaxWidth
+            ) {
+                return previousStyle;
+            }
+
+            return {
+                left: nextLeftValue,
+                right: 'auto',
+                maxWidth: nextMaxWidth,
+            };
+        });
+    }, []);
+
+    useLayoutEffect(() => {
+        if (openDropdown !== 'tag') {
+            setTagMenuStyle(undefined);
+            return;
+        }
+
+        // Keep the tag dropdown aligned with its trigger on narrow screens.
+        updateTagMenuPosition();
+
+        const handleViewportChange = () => {
+            updateTagMenuPosition();
+        };
+
+        window.addEventListener('resize', handleViewportChange);
+        window.addEventListener('scroll', handleViewportChange, true);
+
+        return () => {
+            window.removeEventListener('resize', handleViewportChange);
+            window.removeEventListener('scroll', handleViewportChange, true);
+        };
+    }, [openDropdown, updateTagMenuPosition, tagOptions.length]);
 
     const toggleDropdown = (key: Exclude<DropdownKey, null>) => {
         setOpenDropdown((prev) => (prev === key ? null : key));
@@ -122,7 +191,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('sort')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'sort'}
-                    aria-label={`${FILTER_TITLES.sort}，当前${selectedSortLabel}`}
+                    aria-label={`${FILTER_TITLES.sort}\uff0c\u5f53\u524d${selectedSortLabel}`}
                     onClick={() => toggleDropdown('sort')}
                 >
                     <span className={styles.triggerText}>{selectedSortLabel}</span>
@@ -133,7 +202,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     </span>
                 </button>
                 {openDropdown === 'sort' ? (
-                    <div className={styles.menu} role="menu" aria-label="排序选项">
+                    <div className={styles.menu} role="menu" aria-label="\u6392\u5e8f\u9009\u9879">
                         {HOME_LIST_SORT_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -159,10 +228,10 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('mode')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'mode'}
-                    aria-label={`${FILTER_TITLES.mode}，当前${selectedModeLabel}`}
+                    aria-label={`${FILTER_TITLES.mode}\uff0c\u5f53\u524d${selectedModeValueLabel}`}
                     onClick={() => toggleDropdown('mode')}
                 >
-                    <span className={styles.triggerText}>{selectedModeLabel}</span>
+                    <span className={styles.triggerText}>{selectedModeTriggerLabel}</span>
                     <span className={styles.triggerArrow} aria-hidden="true">
                         <svg viewBox="0 0 16 16">
                             <path d="M3.5 5.5L8 10l4.5-4.5" />
@@ -170,7 +239,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     </span>
                 </button>
                 {openDropdown === 'mode' ? (
-                    <div className={styles.menu} role="menu" aria-label="玩法分类选项">
+                    <div className={styles.menu} role="menu" aria-label="\u6a21\u5f0f\u9009\u9879">
                         {HOME_LIST_MODE_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -190,16 +259,17 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
 
             <div className={styles.divider} aria-hidden="true" />
 
-            <div className={`${styles.group} ${styles.groupWide}`}>
+            <div ref={tagGroupRef} className={`${styles.group} ${styles.groupWide}`}>
                 <button
+                    ref={tagTriggerRef}
                     type="button"
                     className={getTriggerClassName('tag')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'tag'}
-                    aria-label={`${FILTER_TITLES.tag}，当前${selectedTag.label}`}
+                    aria-label={`${FILTER_TITLES.tag}\uff0c\u5f53\u524d${selectedTagValueLabel}`}
                     onClick={() => toggleDropdown('tag')}
                 >
-                    <span className={styles.triggerText}>{selectedTag.label}</span>
+                    <span className={styles.triggerText}>{selectedTagTriggerLabel}</span>
                     <span className={styles.triggerArrow} aria-hidden="true">
                         <svg viewBox="0 0 16 16">
                             <path d="M3.5 5.5L8 10l4.5-4.5" />
@@ -207,7 +277,13 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     </span>
                 </button>
                 {openDropdown === 'tag' ? (
-                    <div className={`${styles.menu} ${styles.menuWide}`} role="menu" aria-label="作品标签选项">
+                    <div
+                        ref={tagMenuRef}
+                        className={`${styles.menu} ${styles.menuWide}`}
+                        role="menu"
+                        aria-label="\u9898\u6750\u9009\u9879"
+                        style={tagMenuStyle}
+                    >
                         {tagOptions.map((option) => (
                             <button
                                 key={String(option.value ?? 'all')}

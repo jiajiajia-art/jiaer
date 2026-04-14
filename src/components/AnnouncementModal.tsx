@@ -9,15 +9,38 @@ interface AnnouncementModalProps {
     badgeText?: string;
 }
 
+const formatAnnouncementDate = (announcement: AnnouncementRecord): string | null => {
+    const dateSource = announcement.publishedAt || announcement.updatedAt || announcement.createdAt;
+
+    if (!dateSource) {
+        return null;
+    }
+
+    const parsedDate = new Date(dateSource);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return null;
+    }
+
+    return new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(parsedDate);
+};
+
 const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
     announcement,
     isOpen,
     onClose,
-    badgeText = '首页公告',
+    badgeText = '\u9996\u9875\u516c\u544a',
 }) => {
     if (!isOpen || !announcement) {
         return null;
     }
+
+    const displayDate = formatAnnouncementDate(announcement);
+    const titleId = `announcement-modal-title-${announcement.id}`;
 
     return (
         <div
@@ -30,19 +53,23 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                 onClick={(event) => event.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
-                aria-label={badgeText}
+                aria-labelledby={titleId}
             >
                 <button
                     type="button"
                     className={styles.closeButton}
                     onClick={onClose}
+                    aria-label="\u5173\u95ed\u516c\u544a"
                 >
-                    关闭
+                    <span aria-hidden="true">{'\u00D7'}</span>
                 </button>
 
                 <div className={styles.header}>
-                    <div className={styles.badge}>{badgeText}</div>
-                    <h2 className={styles.title}>{announcement.title}</h2>
+                    <div className={styles.headerMeta}>
+                        <div className={styles.badge}>{badgeText}</div>
+                        {displayDate ? <div className={styles.date}>{displayDate}</div> : null}
+                    </div>
+                    <h2 id={titleId} className={styles.title}>{announcement.title}</h2>
                 </div>
 
                 <div className={styles.content}>
@@ -54,6 +81,16 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                             <p className={styles.body}>{section.body}</p>
                         </section>
                     ))}
+                </div>
+
+                <div className={styles.footer}>
+                    <button
+                        type="button"
+                        className={styles.confirmButton}
+                        onClick={onClose}
+                    >
+                        {'\u6211\u77e5\u9053\u4e86'}
+                    </button>
                 </div>
             </div>
         </div>

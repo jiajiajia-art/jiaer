@@ -128,9 +128,10 @@
 }
 
 .menuWide {
+    /* Let the script clamp the tag menu to the visible viewport. */
     min-width: min(300px, 76vw);
-    right: 0;
-    left: auto;
+    left: 0;
+    right: auto;
 }
 
 .groupWide .trigger {
@@ -237,6 +238,7 @@
 
     .menuWide {
         min-width: min(280px, calc(100vw - 48px));
+        max-width: calc(100vw - 32px);
     }
 
     .groupWide .trigger {

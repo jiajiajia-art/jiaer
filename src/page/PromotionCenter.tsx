@@ -388,11 +388,7 @@ const PromotionCenter: React.FC = () => {
                 <section className={styles.hero}>
                     <div>
                         <div className={styles.badge}>推广分享</div>
-                        <h1 className={styles.title}>自由推广，完成投稿后获取积分奖励</h1>
-                        <p className={styles.desc}>
-                            在这里查看当前推广活动、活动详情和你的投稿记录。点击消息中心的投稿状态消息后，
-                            会直接切到“我的投稿”并定位到对应内容。
-                        </p>
+                        <h1 className={styles.title}>完成投稿后获取积分奖励</h1>
                     </div>
                     <div className={styles.metaRow}>
                         <span className={styles.chip}>已发布活动 {activities.length}</span>
