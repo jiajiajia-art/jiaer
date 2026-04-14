@@ -10,33 +10,25 @@ import libraryDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import {
+    HOME_LIST_MODE_OPTIONS,
+    HOME_LIST_SORT_OPTIONS,
+    normalizeHomeListMode,
+    normalizeHomeListSort,
+    normalizeHomeListTagId,
+    type HomeListMode,
+    type HomeListSort,
+} from '../utils/gameBrowseFilters';
 import styles from './Categories.module.css';
 
 const PAGE_SIZE = 12;
-const DEFAULT_MODE = 'all';
-const DEFAULT_SORT = 'hot';
-
-type CategoryMode = 'all' | 'role-playing' | 'custom';
-type CategorySort = 'hot' | 'recommended' | 'latest';
-
-const MODE_OPTIONS: Array<{ value: CategoryMode; label: string }> = [
-    { value: 'all', label: '全部' },
-    { value: 'role-playing', label: 'Role-Playing' },
-    { value: 'custom', label: '自定义' },
-];
-
-const SORT_OPTIONS: Array<{ value: CategorySort; label: string }> = [
-    { value: 'hot', label: '最热' },
-    { value: 'recommended', label: '推荐' },
-    { value: 'latest', label: '最新' },
-];
 
 const getInitialMobileState = (): boolean => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 768px)').matches;
 };
 
-const normalizeMode = (value: string | null): CategoryMode => {
+/*
     if (value === 'role-playing') return 'role-playing';
     if (value === 'custom') return 'custom';
     return DEFAULT_MODE;
@@ -54,6 +46,7 @@ const normalizeTagId = (value: string | null): number | null => {
     const parsedTagId = Number(value);
     return Number.isInteger(parsedTagId) && parsedTagId > 0 ? parsedTagId : null;
 };
+*/
 
 const getGameUniqueKey = (game: UserGameData, fallbackIndex?: number): string => {
     const fileId = String(game.file_id || '').trim();
@@ -135,9 +128,9 @@ const Categories: React.FC = () => {
         moved: false,
     });
 
-    const selectedMode = useMemo(() => normalizeMode(searchParams.get('mode')), [searchParams]);
-    const selectedSort = useMemo(() => normalizeSort(searchParams.get('sort')), [searchParams]);
-    const selectedTagId = useMemo(() => normalizeTagId(searchParams.get('tagId')), [searchParams]);
+    const selectedMode = useMemo(() => normalizeHomeListMode(searchParams.get('mode')), [searchParams]);
+    const selectedSort = useMemo(() => normalizeHomeListSort(searchParams.get('sort')), [searchParams]);
+    const selectedTagId = useMemo(() => normalizeHomeListTagId(searchParams.get('tagId')), [searchParams]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -232,7 +225,7 @@ const Categories: React.FC = () => {
 
     const loadGames = useCallback(async (
         targetPage: number,
-        filters: { mode: CategoryMode; sort: CategorySort; tagId: number | null },
+        filters: { mode: HomeListMode; sort: HomeListSort; tagId: number | null },
         initial = false,
     ) => {
         const requestKey = `${filters.mode}|${filters.sort}|${filters.tagId ?? 'all'}|${targetPage}|${initial ? 'initial' : 'append'}`;
@@ -343,8 +336,8 @@ const Categories: React.FC = () => {
     }, [loadMore]);
 
     const updateFilters = useCallback((next: Partial<{
-        mode: CategoryMode;
-        sort: CategorySort;
+        mode: HomeListMode;
+        sort: HomeListSort;
         tagId: number | null;
     }>) => {
         const nextMode = next.mode ?? selectedMode;
@@ -447,12 +440,12 @@ const Categories: React.FC = () => {
 
                             <section className={styles.filterSection}>
                                 <div className={styles.filterTitle}>模式</div>
-                                {renderChipRow(MODE_OPTIONS, selectedMode, (mode) => updateFilters({ mode }))}
+                                {renderChipRow(HOME_LIST_MODE_OPTIONS, selectedMode, (mode) => updateFilters({ mode }))}
                             </section>
 
                             <section className={styles.filterSection}>
                                 <div className={styles.filterTitle}>排序</div>
-                                {renderChipRow(SORT_OPTIONS, selectedSort, (sort) => updateFilters({ sort }))}
+                                {renderChipRow(HOME_LIST_SORT_OPTIONS, selectedSort, (sort) => updateFilters({ sort }))}
                             </section>
 
                             <section className={styles.filterSection}>
@@ -497,7 +490,10 @@ const Categories: React.FC = () => {
                             <GameGridSkeleton count={8} />
                         ) : (
                             <>
-                                <GameGrid games={games} />
+                                <GameGrid
+                                    games={games}
+                                    emptyText="暂无符合当前筛选条件的作品"
+                                />
                                 {isLoadingMore && (
                                     <div className={styles.loadingMore}>
                                         <GameGridSkeleton count={4} />

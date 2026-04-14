@@ -1,4 +1,5 @@
 .pageRoot {
+    --home-navbar-height: var(--app-desktop-navbar-height);
     width: 100%;
     min-height: 100vh;
     max-width: 1920px;
@@ -29,9 +30,13 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 1080px;
+    max-width: none;
     margin: 0 auto;
     overflow: visible;
+}
+
+.homeWideSections {
+    width: 100%;
 }
 
 .todayWrap {
@@ -39,6 +44,7 @@
     max-width: 1920px;
     position: relative;
     padding: 0;
+    margin-top: var(--home-navbar-height);
     flex-shrink: 0;
     left: 50%;
     transform: translateX(-50%);
@@ -64,9 +70,10 @@
 
 .carouselTrack {
     display: flex;
-    width: 100%;
     height: 100%;
-    transition: transform 0.5s ease-in-out;
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+    backface-visibility: hidden;
 }
 
 .carouselTrackNoTransition {
@@ -81,6 +88,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    will-change: transform, opacity, filter;
+    backface-visibility: hidden;
 }
 
 .carouselSlideClickable {
@@ -103,6 +113,14 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.carouselSlideCurrent,
+.carouselSlideAdjacent,
+.carouselSlideFar {
+    opacity: 1;
 }
 
 .carouselImagePlaceholder {
@@ -127,16 +145,23 @@
     }
 }
 
+@keyframes carousel-mobile-image-fade {
+    from {
+        opacity: 0.72;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
 .carouselContent {
-    width: 100%;
-    max-width: 1080px;
-    margin: 0 auto;
-    position: relative;
+    position: absolute;
+    inset: 0;
     z-index: 2;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 10px;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 0 10px 72px;
     box-sizing: border-box;
 }
 
@@ -145,7 +170,7 @@
     color: white;
     width: 100%;
     max-width: 1080px;
-    margin: 0 auto;
+    margin: 0;
     padding: 0 10px;
     box-sizing: border-box;
 }
@@ -153,6 +178,7 @@
 .carouselTitle {
     font-size: 72px;
     margin: 0 0 20px 0;
+    line-height: 1.1;
     text-shadow: 
     0 0 6px rgba(0, 0, 0, 0.4),
     0 0 12px rgba(0, 0, 0, 0.35),
@@ -260,7 +286,7 @@
     box-shadow:
         0 10px 28px rgba(0, 0, 0, 0.28),
         inset 0 1px 0 rgba(255, 255, 255, 0.38);
-    transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    transition: opacity 0.28s ease, visibility 0.28s ease, transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .carouselNavButton:hover {
@@ -304,57 +330,101 @@
 
 .carouselEmpty {
     width: 100%;
-    height: 520px;
+    height: 100%;
     background: #f5f5f5;
-    border-radius: 16px;
+    border-radius: 12px;
 }
 
 /* 商城区域外层容器（用于多层边框） */
 .shopSection {
-    width: 1080px;
+    width: 100%;
     margin: 0 auto;
     margin-top: 38px;
 }
 
 .homeTicker {
     --home-ticker-gap: 32px;
-    width: 1080px;
+    width: 100%;
     margin: 16px auto 0;
-    padding: 12px 16px;
-    border: none;
-    border-radius: 16px;
-    display: flex;
+    padding: 14px 18px 14px 22px;
+    border: 1px solid rgba(224, 61, 75, 0.22);
+    border-radius: 20px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
     cursor: pointer;
     text-align: left;
     background:
-        linear-gradient(135deg, rgba(255, 250, 244, 0.98) 0%, rgba(249, 239, 227, 0.94) 100%);
-    box-shadow: 0 14px 34px rgba(98, 59, 33, 0.08);
-    border: 1px solid rgba(201, 139, 92, 0.18);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+        radial-gradient(circle at 0% 50%, rgba(224, 61, 75, 0.22) 0%, rgba(224, 61, 75, 0.08) 18%, transparent 48%),
+        linear-gradient(135deg, rgba(35, 16, 22, 0.98) 0%, rgba(28, 32, 41, 0.98) 54%, rgba(22, 25, 33, 0.98) 100%);
+    box-shadow:
+        0 16px 38px rgba(15, 17, 24, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.homeTicker::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--primary-light) 0%, var(--primary) 55%, var(--primary-dark) 100%);
+    box-shadow: 0 0 18px rgba(224, 61, 75, 0.4);
+    opacity: 0.96;
+}
+
+.homeTicker::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 88% 50%, rgba(255, 255, 255, 0.08), transparent 26%),
+        linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.04) 100%);
+    pointer-events: none;
+    z-index: -1;
 }
 
 .homeTicker:hover {
     transform: translateY(-1px);
-    box-shadow: 0 18px 38px rgba(98, 59, 33, 0.12);
+    border-color: rgba(224, 61, 75, 0.32);
+    box-shadow:
+        0 22px 44px rgba(15, 17, 24, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.homeTicker:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.92);
+    outline-offset: 2px;
 }
 
 .homeTickerIcon {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    background: rgba(224, 61, 75, 0.1);
-    color: #cf4d59;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 36%),
+        linear-gradient(135deg, rgba(255, 102, 118, 0.26) 0%, rgba(224, 61, 75, 0.18) 100%);
+    border: 1px solid rgba(255, 120, 133, 0.2);
+    color: #ff7d89;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 10px 24px rgba(224, 61, 75, 0.16);
 }
 
 .homeTickerIcon svg {
-    width: 20px;
-    height: 20px;
+    width: 21px;
+    height: 21px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.8;
@@ -390,11 +460,12 @@
 
 .homeTickerText {
     display: block;
-    color: #2f241d;
+    color: rgba(255, 246, 247, 0.94);
     font-size: 15px;
     font-weight: 600;
-    line-height: 1.6;
+    line-height: 1.5;
     white-space: nowrap;
+    letter-spacing: 0.01em;
 }
 
 .homeTickerTextStatic {
@@ -402,18 +473,34 @@
 }
 
 .homeTickerDot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 999px;
-    background: rgba(207, 77, 89, 0.35);
+    background: linear-gradient(135deg, rgba(255, 180, 186, 0.9) 0%, rgba(224, 61, 75, 0.88) 100%);
+    box-shadow: 0 0 12px rgba(224, 61, 75, 0.32);
 }
 
 .homeTickerAction {
     flex-shrink: 0;
-    color: var(--primary);
-    font-size: 14px;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 13px;
     font-weight: 700;
     white-space: nowrap;
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
+    box-shadow: 0 12px 24px rgba(224, 61, 75, 0.22);
+    letter-spacing: 0.04em;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.homeTicker:hover .homeTickerAction {
+    transform: translateX(2px);
+    box-shadow: 0 14px 28px rgba(224, 61, 75, 0.28);
 }
 
 @keyframes homeTickerMarquee {
@@ -430,7 +517,7 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 22px;
-    width: 1080px;
+    width: 100%;
     gap: 10px;
 }
 
@@ -494,7 +581,246 @@
 }
 
 /* 在 1080px 以下时，缩小内容并隐藏溢出部分，左侧对齐 */
+@media (min-width: 769px) {
+    .homeWideSections {
+        width: min(var(--app-desktop-shell-max), calc(100vw - 2 * var(--app-desktop-gutter)));
+        margin: 0;
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+        box-sizing: border-box;
+    }
+
+    .homeWideSections .homeTicker {
+        margin-top: 18px;
+        padding: 16px 22px 16px 24px;
+        gap: 18px;
+        border-radius: 22px;
+    }
+
+    .homeWideSections .homeTickerIcon {
+        width: 46px;
+        height: 46px;
+    }
+
+    .homeWideSections .homeTickerText {
+        font-size: 16px;
+    }
+
+    .homeWideSections .homeTickerAction {
+        min-height: 40px;
+        padding: 0 18px;
+        font-size: 14px;
+    }
+
+    .homeWideSections .themeShowcase {
+        margin-top: 18px;
+        padding: 28px 30px 30px;
+        border-radius: 24px;
+    }
+
+    .homeWideSections .themeShowcaseList {
+        gap: 14px;
+        padding-bottom: 6px;
+    }
+
+    .homeWideSections .themeShowcaseItem {
+        padding: 11px 20px;
+        font-size: 15px;
+    }
+
+    .homeWideSections .themeShowcaseTitle {
+        font-size: 28px;
+    }
+
+    .homeWideSections .themeShowcaseMoreLink {
+        font-size: 15px;
+    }
+
+    .homeWideSections .shopSection {
+        margin-top: 40px;
+    }
+
+    .carouselContainerPc {
+        /* 实现 PC 端主卡尺寸变量 */
+        --desktop-slide-width: 0px;
+        --desktop-slide-gap: 28px;
+        --desktop-banner-radius: 12px;
+    }
+
+    .carouselWrapperPc {
+        overflow: hidden;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .carouselTrack {
+        display: block;
+        align-items: center;
+    }
+
+    .carouselSlide {
+        width: var(--desktop-slide-width);
+        height: auto;
+        aspect-ratio: 9 / 5;
+        position: absolute;
+        margin: 0;
+        border-radius: var(--desktop-banner-radius);
+        transition:
+            transform 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.45s ease,
+            filter 0.45s ease;
+        box-shadow:
+            0 26px 50px rgba(0, 0, 0, 0.28),
+            0 0 0 1px rgba(255, 255, 255, 0.08);
+        transform-origin: center center;
+    }
+
+    .carouselSlideCurrent {
+        opacity: 1;
+        filter: saturate(1);
+    }
+
+    .carouselSlideAdjacent {
+        opacity: 0.58;
+        filter: saturate(0.86);
+    }
+
+    .carouselSlideFar {
+        opacity: 0.3;
+        filter: saturate(0.72);
+    }
+
+    .carouselImage {
+        border-radius: inherit;
+    }
+
+    .carouselContent {
+        max-width: 100%;
+        padding: 0 28px;
+    }
+
+    .carouselInfo {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .carouselNavButtonLeft {
+        left: calc(50% - (var(--desktop-slide-width) / 2) - 72px);
+    }
+
+    .carouselNavButtonRight {
+        right: calc(50% - (var(--desktop-slide-width) / 2) - 72px);
+    }
+}
+
+@media (min-width: 769px) {
+    .carouselContainerPc {
+        position: relative;
+    }
+
+    .carouselWrapperPc::before,
+    .carouselWrapperPc::after {
+        content: none;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 32px;
+        pointer-events: none;
+    }
+
+    .carouselWrapperPc::before {
+        /* 实现 PC 端固定展示框光影 */
+        width: calc(var(--desktop-slide-width) + 28px);
+        aspect-ratio: 9 / 5;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+        box-shadow:
+            0 28px 80px rgba(0, 0, 0, 0.42),
+            0 0 0 1px rgba(255, 255, 255, 0.08);
+        z-index: 2;
+    }
+
+    .carouselWrapperPc::after {
+        /* 实现 PC 端固定展示框边框 */
+        width: calc(var(--desktop-slide-width) + 18px);
+        aspect-ratio: 9 / 5;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.28),
+            inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+        z-index: 4;
+    }
+
+    .carouselTrack {
+        position: relative;
+        z-index: 3;
+    }
+
+    .carouselSlide {
+        transition:
+            transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 0.55s ease,
+            filter 0.55s ease;
+    }
+
+    .carouselSlideAdjacent {
+        opacity: 0.54;
+    }
+
+    .carouselSlideFar {
+        opacity: 0.24;
+    }
+
+    .carouselContent {
+        align-items: flex-end;
+        justify-content: flex-start;
+        padding: 0 42px 84px;
+    }
+
+    .carouselInfo {
+        /* 实现 PC 端文案下移 */
+        width: min(68%, 560px);
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .carouselTitle {
+        font-size: 40px;
+        line-height: 1.12;
+        margin: 0 0 10px 0;
+    }
+
+    .carouselDescription {
+        width: 100%;
+        max-width: 520px;
+        font-size: 16px;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .carouselNavButton {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    .carouselContainerPc:hover .carouselNavButton {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
 @media (max-width: 1080px) {
+    .homeWideSections {
+        width: 100%;
+        position: static;
+        left: 0;
+        transform: none;
+    }
+
     .pageRoot {
         overflow-x: hidden;
 
@@ -567,6 +893,7 @@
 /* 手机端适配 (768px以下) */
 @media (max-width: 768px) {
     .pageRoot {
+        --home-navbar-height: 60px;
         width: 100%;
         min-width: auto;
         height: 100vh;
@@ -595,12 +922,17 @@
     .todayWrap {
         width: 100vw;
         padding: 0;
+        margin-top: 0;
         margin-bottom: 10px;
     }
 
     .carouselContainer {
+        /* 实现移动端 16:9 banner 比例 */
         width: 100vw;
-        height: 360px;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        min-height: 210px;
+        max-height: 320px;
         overflow: hidden;
     }
 
@@ -608,6 +940,7 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
+        background: linear-gradient(180deg, #181b21 0%, #232730 100%);
     }
 
     .carouselImage img {
@@ -617,15 +950,19 @@
         object-position: center; /* 从中间裁剪，避免只看到一侧 */
     }
 
+    .carouselImageLoaded img {
+        animation: carousel-mobile-image-fade 0.22s ease;
+    }
+
     .carouselContent {
-        max-width: 100%;
-        padding: 0 20px;
+        padding: 0 20px 54px;
     }
 
     .carouselInfo {
+        width: min(82%, 320px);
         max-width: 100%;
-        padding: 0 20px;
-        margin-top: 60px;
+        padding: 0;
+        margin: 0;
     }
 
     .carouselTitle {
@@ -737,52 +1074,62 @@
 
 /* 题材功能新增样式 */
 .themeShowcase {
-    width: 1080px;
+    width: 100%;
     margin: 16px auto 0;
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(26, 29, 33, 0.08);
-    background:
-        radial-gradient(circle at 0% 0%, rgba(224, 61, 75, 0.08), transparent 40%),
-        #fff;
+    position: relative;
+    isolation: isolate;
+    padding: 30px 28px 30px;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(20, 24, 31, 0.98) 0%, rgba(16, 20, 27, 0.96) 100%);
+    box-shadow:
+        0 22px 54px rgba(8, 11, 16, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
 }
 
-.themeShowcaseHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+.themeShowcase::before,
+.themeShowcase::after {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    pointer-events: none;
+    z-index: 0;
 }
 
-.themeShowcaseHeader h3 {
-    font-size: 20px;
-    line-height: 1;
-    margin: 0;
-    color: #1a1d21;
+.themeShowcase::before {
+    top: -120px;
+    left: -48px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, var(--primary-glow) 0%, rgba(224, 61, 75, 0.12) 42%, transparent 74%);
+    opacity: 0.95;
 }
 
-.themeShowcaseHeader button {
-    border: none;
-    background: transparent;
-    color: var(--primary);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+.themeShowcase::after {
+    right: -120px;
+    bottom: -180px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 35%, transparent 72%);
+    opacity: 0.85;
 }
 
 .themeShowcaseList {
-    /* 实现热门题材单行横滑 */
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: nowrap;
-    gap: 10px;
+    gap: 12px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding-bottom: 2px;
+    padding: 8px 0 6px;
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
     cursor: grab;
     user-select: none;
+    scroll-snap-type: x proximity;
 }
 
 .themeShowcaseList::-webkit-scrollbar {
@@ -794,31 +1141,300 @@
 }
 
 .themeShowcaseItem {
-    border: 1px solid rgba(26, 29, 33, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 999px;
-    background: #fff;
-    color: #1a1d21;
-    padding: 8px 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    color: rgba(255, 255, 255, 0.82);
+    padding: 10px 18px;
     white-space: nowrap;
     flex: 0 0 auto;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     text-align: center;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all 0.2s ease;
+    scroll-snap-align: start;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transition:
+        transform 0.22s ease,
+        border-color 0.22s ease,
+        background 0.22s ease,
+        color 0.22s ease,
+        box-shadow 0.22s ease;
 }
 
 .themeShowcaseItem:hover {
-    border-color: rgba(224, 61, 75, 0.55);
-    color: var(--primary);
     transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    box-shadow:
+        0 16px 34px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.themeShowcaseItemActive,
+.themeShowcaseItemActive:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.18);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
+    color: #ffffff;
+    box-shadow:
+        0 18px 36px rgba(224, 61, 75, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.themeShowcaseItem:focus-visible,
+.themeShowcaseMoreLink:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.92);
+    outline-offset: 2px;
+}
+
+.themeShowcaseTitleRow {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 22px;
+}
+
+.themeShowcaseTitleGroup {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.themeShowcaseTitleMarker {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 72%, var(--primary-dark) 100%);
+    box-shadow:
+        0 0 0 4px rgba(224, 61, 75, 0.12),
+        0 8px 18px rgba(224, 61, 75, 0.28);
+}
+
+.themeShowcaseTitle {
+    min-width: 0;
+    margin: 0;
+    color: #ffffff;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+    font-family: 'QingNiaoFont', 'Sarasa Gothic Rounded', 'Microsoft YaHei', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.themeShowcaseMoreLink {
+    flex: 0 0 auto;
+    border: none;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.themeShowcaseMoreLink:hover {
+    color: #ffffff;
+    transform: translateX(2px);
+}
+
+.themeShowcaseMoreLink span:first-child {
+    font-size: 0;
+}
+
+.themeShowcaseMoreLink span:first-child::before {
+    content: '\0067E5\00770B\0066F4\00591A';
+    font-size: 14px;
+}
+
+.themeShowcaseMoreArrow {
+    font-size: 0;
+}
+
+.themeShowcaseMoreArrow::before {
+    content: '\203A';
+    font-size: 18px;
+    line-height: 1;
+    color: var(--primary-light);
+}
+
+.themeShowcasePreview {
+    position: relative;
+    z-index: 1;
+    margin-top: 18px;
+}
+
+@media (min-width: 769px) {
+    .homeTicker {
+        border-color: rgba(224, 61, 75, 0.16);
+        background:
+            radial-gradient(circle at 0% 50%, rgba(224, 61, 75, 0.12) 0%, rgba(224, 61, 75, 0.04) 18%, transparent 48%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
+        box-shadow:
+            0 16px 36px rgba(224, 61, 75, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.86);
+    }
+
+    .homeTicker::before {
+        box-shadow: 0 0 8px rgba(224, 61, 75, 0.16);
+    }
+
+    .homeTicker::after {
+        background:
+            radial-gradient(circle at 88% 50%, rgba(255, 255, 255, 0.42), transparent 28%),
+            linear-gradient(90deg, transparent 0%, rgba(224, 61, 75, 0.05) 100%);
+    }
+
+    .homeTicker:hover {
+        border-color: rgba(224, 61, 75, 0.24);
+        box-shadow:
+            0 20px 42px rgba(224, 61, 75, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    }
+
+    .homeTicker:focus-visible {
+        outline: 2px solid rgba(224, 61, 75, 0.32);
+    }
+
+    .homeTickerIcon {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 244, 245, 0.88) 100%);
+        border-color: rgba(224, 61, 75, 0.18);
+        color: var(--primary);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.94),
+            0 10px 22px rgba(224, 61, 75, 0.12);
+    }
+
+    .homeTickerText {
+        color: #5b2430;
+    }
+
+    .homeTickerDot {
+        box-shadow: 0 0 8px rgba(224, 61, 75, 0.18);
+    }
+
+    .homeTickerAction {
+        border: 1px solid rgba(224, 61, 75, 0.18);
+        color: var(--primary-dark);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 241, 243, 0.92) 100%);
+        box-shadow: 0 12px 24px rgba(224, 61, 75, 0.12);
+    }
+
+    .homeTicker:hover .homeTickerAction {
+        box-shadow: 0 14px 28px rgba(224, 61, 75, 0.16);
+    }
+
+    .themeShowcase {
+        border-color: rgba(224, 61, 75, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 249, 250, 0.92) 100%);
+        box-shadow:
+            0 20px 44px rgba(224, 61, 75, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    }
+
+    .themeShowcase::before {
+        background: radial-gradient(circle, rgba(224, 61, 75, 0.08) 0%, rgba(224, 61, 75, 0.03) 40%, transparent 74%);
+        opacity: 0.88;
+    }
+
+    .themeShowcase::after {
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 240, 243, 0.18) 34%, transparent 72%);
+        opacity: 1;
+    }
+
+    .themeShowcaseItem {
+        border-color: rgba(224, 61, 75, 0.18);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 246, 247, 0.86) 100%);
+        color: var(--primary-dark);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: 0 10px 24px rgba(224, 61, 75, 0.08);
+    }
+
+    .themeShowcaseItem:hover {
+        border-color: rgba(224, 61, 75, 0.34);
+        color: var(--primary);
+        box-shadow: 0 14px 28px rgba(224, 61, 75, 0.12);
+    }
+
+    .themeShowcaseItemActive,
+    .themeShowcaseItemActive:hover {
+        border-color: rgba(224, 61, 75, 0.36);
+        background: linear-gradient(180deg, rgba(255, 246, 247, 0.98) 0%, rgba(255, 236, 239, 0.94) 100%);
+        color: var(--primary-dark);
+        box-shadow:
+            0 12px 24px rgba(224, 61, 75, 0.14),
+            inset 0 1px 0 rgba(255, 255, 255, 0.82);
+    }
+
+    .themeShowcaseItem:focus-visible,
+    .themeShowcaseMoreLink:focus-visible {
+        outline: 2px solid rgba(224, 61, 75, 0.38);
+    }
+
+    .themeShowcaseTitleMarker {
+        box-shadow:
+            0 0 0 4px rgba(224, 61, 75, 0.1),
+            0 8px 18px rgba(224, 61, 75, 0.18);
+    }
+
+    .themeShowcaseTitle {
+        color: #111827;
+    }
+
+    .themeShowcaseMoreLink {
+        color: var(--primary-dark);
+    }
+
+    .themeShowcaseMoreLink:hover {
+        color: var(--primary);
+    }
+
+    .themeShowcaseMoreArrow::before {
+        color: var(--primary);
+    }
+}
+
+.mobileJoinGroupSection {
+    display: none;
+}
+
+.mobileJoinGroupCard {
+    display: none;
+}
+
+.mobileJoinGroupContent {
+    min-width: 0;
+}
+
+.mobileJoinGroupTitle,
+.mobileJoinGroupDesc,
+.mobileJoinGroupAction {
+    display: block;
 }
 
 @media (min-width: 769px) {
     .carouselContainerPc {
         /* 实现 PC 轮播图新样式，避免影响移动端 */
-        height: 520px;
-        padding: 34px 120px 24px;
+        height: 540px;
+        padding: 24px 0 28px;
         background:
             radial-gradient(circle at 10% 10%, rgba(224, 61, 75, 0.26), transparent 36%),
             radial-gradient(circle at 90% 90%, rgba(0, 0, 0, 0.36), transparent 42%),
@@ -827,10 +1443,17 @@
     }
 
     .carouselWrapperPc {
-        border-radius: 24px;
-        box-shadow:
-            0 20px 48px rgba(0, 0, 0, 0.35),
-            0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        border-radius: var(--desktop-banner-radius);
+        box-shadow: none;
+    }
+
+    .carouselWrapperPc::before,
+    .carouselWrapperPc::after {
+        content: none !important;
+        display: none !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        background: none !important;
     }
 }
 
@@ -843,75 +1466,315 @@
     .themeShowcase {
         width: calc(100% - 20px);
         margin: 14px auto 0;
+        padding: 26px 22px 24px;
+        border-radius: 20px;
+    }
+
+    .themeShowcaseTitle {
+        font-size: 24px;
     }
 
     .carouselContainerPc {
-        padding: 24px 26px 18px;
+        height: 460px;
+        padding: 20px 0 22px;
     }
 }
 
 @media (max-width: 768px) {
     .homeTicker {
-        --home-ticker-gap: 24px;
+        --home-ticker-gap: 18px;
         width: calc(100% - 24px);
-        margin: 12px auto 0;
-        padding: 12px 14px;
-        gap: 10px;
-        border-radius: 16px;
+        margin: 6px auto 0;
+        padding: 6px 10px 6px 14px;
+        gap: 8px;
+        border-radius: 14px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        border-color: rgba(224, 61, 75, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
+        box-shadow: 0 5px 14px rgba(224, 61, 75, 0.08);
+    }
+
+    .homeTicker::before {
+        left: 7px;
+        top: 5px;
+        bottom: 5px;
+        width: 2px;
+        box-shadow: 0 0 6px rgba(224, 61, 75, 0.14);
+    }
+
+    .homeTicker::after {
+        content: none;
     }
 
     .homeTickerIcon {
-        width: 34px;
-        height: 34px;
+        width: 24px;
+        height: 24px;
+        background: none;
+        border: none;
+        color: var(--primary);
+        box-shadow: none;
     }
 
     .homeTickerIcon svg {
-        width: 18px;
-        height: 18px;
+        width: 15px;
+        height: 15px;
     }
 
     .homeTickerText {
-        font-size: 13px;
+        font-size: 12px;
+        line-height: 1.35;
+        color: #5b2430;
+    }
+
+    .homeTickerDot {
+        width: 5px;
+        height: 5px;
+        box-shadow: 0 0 6px rgba(224, 61, 75, 0.2);
     }
 
     .homeTickerAction {
-        font-size: 12px;
+        min-width: 18px;
+        min-height: 18px;
+        padding: 0;
+        border-radius: 0;
+        font-size: 0;
+        color: transparent;
+        background: none;
+        box-shadow: none;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .homeTickerAction::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-top: 1.5px solid rgba(224, 61, 75, 0.86);
+        border-right: 1.5px solid rgba(224, 61, 75, 0.86);
+        transform: rotate(45deg);
+        display: block;
+    }
+
+    .homeTicker:hover {
+        transform: none;
+        border-color: rgba(224, 61, 75, 0.12);
+        box-shadow: 0 5px 14px rgba(224, 61, 75, 0.08);
+    }
+
+    .homeTicker:hover .homeTickerAction {
+        transform: none;
+        box-shadow: none;
     }
 
     .themeShowcase {
-        /* 实现移动端热门题材展示 */
         width: calc(100% - 24px);
-        margin: 12px auto 0;
-        padding: 14px;
-        border-radius: 16px;
+        margin: 6px auto 0;
+        padding: 0;
+        border-radius: 18px;
+        border: none;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
     }
 
-    .themeShowcaseHeader {
-        margin-bottom: 12px;
+    .themeShowcase::before {
+        content: none;
     }
 
-    .themeShowcaseHeader h3 {
-        font-size: 18px;
-    }
-
-    .themeShowcaseHeader button {
-        font-size: 13px;
+    .themeShowcase::after {
+        content: none;
     }
 
     .themeShowcaseList {
-        /* 实现移动端热门题材横向滚动 */
-        gap: 8px;
-        padding-bottom: 0;
+        gap: 10px;
+        padding: 6px 0 2px;
         cursor: auto;
     }
 
     .themeShowcaseItem {
-        padding: 8px 14px;
+        padding: 10px 16px;
         font-size: 13px;
+        border: 1px solid rgba(224, 61, 75, 0.26);
+        background: transparent;
+        color: var(--primary-dark);
+        box-shadow: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+
+    .themeShowcaseTitleRow {
+        margin-top: 14px;
+        gap: 10px;
+        padding-left: 4px;
+    }
+
+    .themeShowcaseTitleGroup {
+        gap: 10px;
+    }
+
+    .themeShowcaseTitleMarker {
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+    }
+
+    .themeShowcaseTitle {
+        font-size: 18px;
+        color: #111827;
+    }
+
+    .themeShowcaseItem:hover {
+        border-color: rgba(224, 61, 75, 0.48);
+        color: var(--primary);
+        box-shadow:
+            0 8px 18px rgba(224, 61, 75, 0.14);
+    }
+
+    .themeShowcaseItem:focus-visible,
+    .themeShowcaseMoreLink:focus-visible {
+        outline: 2px solid rgba(224, 61, 75, 0.38);
+        outline-offset: 2px;
+    }
+
+    .themeShowcaseItemActive,
+    .themeShowcaseItemActive:hover {
+        border-color: rgba(224, 61, 75, 0.92);
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
+        color: #ffffff;
+        box-shadow: none;
+    }
+
+    .themeShowcaseMoreLink {
+        color: var(--primary-dark);
+    }
+
+    .themeShowcaseMoreLink:hover {
+        color: var(--primary);
+    }
+
+    .themeShowcaseMoreLink span:first-child::before {
+        font-size: 13px;
+    }
+
+    .themeShowcaseMoreArrow::before {
+        font-size: 16px;
+    }
+
+    .themeShowcasePreview {
+        margin-top: 14px;
+    }
+
+    /* 实现移动端白底卡片样式 */
+    .mobileJoinGroupSection {
+        width: calc(100% - 24px);
+        margin: 12px auto 0;
+        display: block;
+    }
+
+    .mobileJoinGroupCard {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        margin-top: 0;
+        padding: 14px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow:
+            0 12px 28px rgba(15, 23, 42, 0.12),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        text-align: left;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .mobileJoinGroupCard:focus {
+        outline: none;
+    }
+
+    .mobileJoinGroupCard:focus-visible {
+        outline: 2px solid rgba(224, 61, 75, 0.38);
+        outline-offset: 2px;
+    }
+
+    .mobileJoinGroupCard:active {
+        transform: scale(0.99);
+        box-shadow:
+            0 8px 20px rgba(15, 23, 42, 0.14),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+    }
+
+    .mobileJoinGroupIcon {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, #f4f5f7 0%, #e8ebf0 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+        flex-shrink: 0;
+    }
+
+    .mobileJoinGroupIcon svg {
+        width: 28px;
+        height: 28px;
+        fill: #e03d4b;
+        display: block;
+    }
+
+    .mobileJoinGroupContent {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .mobileJoinGroupTitle {
+        color: #111827;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .mobileJoinGroupDesc {
+        color: #6b7280;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .mobileJoinGroupAction {
+        min-width: 92px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 68%, var(--primary-dark) 100%);
+        box-shadow: 0 12px 24px rgba(224, 61, 75, 0.24);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
     }
 
     .carouselContainerPc {
         padding: 0;
         background: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .mobileJoinGroupCard {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .mobileJoinGroupAction {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin-top: 2px;
     }
 }

@@ -13,8 +13,15 @@ const isWebViewEnv = (): boolean => {
 };
 
 type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | '';
+type NavbarProps = {
+    mobileVariant?: 'default' | 'home-overlay';
+    mobileOverlayScrolled?: boolean;
+};
 
-const Navbar: React.FC = () => {
+const Navbar: React.FC<NavbarProps> = ({
+    mobileVariant = 'default',
+    mobileOverlayScrolled = false,
+}) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -72,6 +79,14 @@ const Navbar: React.FC = () => {
 
     const activeNav = getActiveNav();
     const unreadBadgeText = unreadCount > 99 ? '99+' : (unreadCount > 0 ? String(unreadCount) : '');
+    const logoSrc = `${import.meta.env.BASE_URL}data/assets/${isDesktopLayout ? 'LOGO2.png' : 'LOGO2-mobile.png'}`;
+    const navbarContainerClassName = [
+        styles.navbarContainer,
+        mobileVariant === 'home-overlay' ? styles.navbarContainerMobileHome : '',
+        mobileVariant === 'home-overlay' && !mobileOverlayScrolled
+            ? styles.navbarContainerMobileHomeOverlayActive
+            : '',
+    ].filter(Boolean).join(' ');
 
     const requireAuth = (): boolean => {
         if (isAuthenticated) return true;
@@ -82,10 +97,10 @@ const Navbar: React.FC = () => {
     };
 
     return (
-        <div className={styles.navbarContainer}>
+        <div className={navbarContainerClassName}>
             <div className={styles.navbar}>
                 <div className={styles.logo}>
-                    <img src={`${import.meta.env.BASE_URL}data/assets/LOGO2.png`} alt="logo" />
+                    <img src={logoSrc} alt="logo" />
                 </div>
 
                 <div className={styles.navLinks}>

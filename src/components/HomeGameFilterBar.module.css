@@ -1,0 +1,268 @@
+.bar {
+    position: relative;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    margin-top: 18px;
+    padding: 10px 16px;
+    border-radius: 24px;
+    border: 1px solid rgba(224, 61, 75, 0.12);
+    background:
+        radial-gradient(circle at 10% 18%, rgba(255, 255, 255, 0.9), transparent 32%),
+        radial-gradient(circle at 0% 50%, rgba(224, 61, 75, 0.08) 0%, rgba(224, 61, 75, 0.02) 18%, transparent 44%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 248, 249, 0.94) 100%);
+    box-shadow:
+        0 18px 40px rgba(224, 61, 75, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    overflow: visible;
+}
+
+.group {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.groupWide {
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.divider {
+    width: 1px;
+    height: 24px;
+    margin: 0 6px;
+    background: linear-gradient(180deg, transparent 0%, rgba(224, 61, 75, 0.18) 24%, rgba(224, 61, 75, 0.18) 76%, transparent 100%);
+    flex: 0 0 auto;
+}
+
+.trigger {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.trigger:hover {
+    color: #111827;
+    background: rgba(224, 61, 75, 0.06);
+}
+
+.triggerOpen,
+.triggerChanged {
+    color: var(--primary-dark);
+}
+
+.triggerChanged {
+    background: rgba(224, 61, 75, 0.08);
+}
+
+.triggerOpen {
+    transform: translateY(-1px);
+}
+
+.triggerText {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.triggerArrow {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    transition: transform 0.2s ease;
+}
+
+.triggerOpen .triggerArrow {
+    transform: rotate(180deg);
+}
+
+.triggerArrow svg {
+    width: 100%;
+    height: 100%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    min-width: 188px;
+    max-height: min(55vh, 420px);
+    padding: 10px;
+    border-radius: 18px;
+    border: 1px solid rgba(224, 61, 75, 0.12);
+    display: grid;
+    gap: 6px;
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(255, 247, 248, 0.97) 100%);
+    box-shadow:
+        0 20px 44px rgba(224, 61, 75, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.94);
+    overflow-y: auto;
+}
+
+.menuWide {
+    min-width: min(300px, 76vw);
+    right: 0;
+    left: auto;
+}
+
+.groupWide .trigger {
+    max-width: min(220px, 32vw);
+}
+
+.menuItem {
+    width: 100%;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: transparent;
+    color: #374151;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.menuItem:hover {
+    background: rgba(224, 61, 75, 0.06);
+    color: #111827;
+}
+
+.menuItemActive {
+    background: linear-gradient(135deg, rgba(255, 123, 136, 0.12) 0%, rgba(224, 61, 75, 0.14) 100%);
+    color: var(--primary-dark);
+}
+
+.menuItemLabel {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.menuItemCheck {
+    flex: 0 0 auto;
+    color: var(--primary);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.trigger:focus-visible,
+.menuItem:focus-visible {
+    outline: 2px solid rgba(224, 61, 75, 0.38);
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .bar {
+        margin-top: 12px;
+        padding: 6px 10px;
+        border-radius: 18px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        flex-wrap: wrap;
+        row-gap: 6px;
+        background: #ffffff;
+        box-shadow:
+            0 12px 28px rgba(15, 23, 42, 0.12),
+            inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+        overflow: visible;
+    }
+
+    .divider {
+        height: 20px;
+        background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.14) 18%, rgba(15, 23, 42, 0.14) 82%, transparent 100%);
+    }
+
+    .trigger {
+        min-height: 38px;
+        padding: 0 10px;
+        color: #111827;
+        font-size: 14px;
+        background: transparent;
+    }
+
+    .trigger:hover {
+        color: #111827;
+        background: rgba(15, 23, 42, 0.04);
+    }
+
+    .triggerChanged {
+        color: var(--primary-dark);
+        background: rgba(224, 61, 75, 0.08);
+    }
+
+    .menu {
+        top: calc(100% + 10px);
+        min-width: 168px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: #ffffff;
+        box-shadow:
+            0 16px 32px rgba(15, 23, 42, 0.16),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+
+    .menuWide {
+        min-width: min(280px, calc(100vw - 48px));
+    }
+
+    .groupWide .trigger {
+        max-width: min(156px, 42vw);
+    }
+
+    .menuItem {
+        color: #374151;
+    }
+
+    .menuItem:hover {
+        background: rgba(15, 23, 42, 0.05);
+        color: #111827;
+    }
+
+    .menuItemActive {
+        background: linear-gradient(135deg, rgba(255, 123, 136, 0.12) 0%, rgba(224, 61, 75, 0.14) 100%);
+        color: var(--primary-dark);
+    }
+
+    .menuItemCheck {
+        color: var(--primary);
+    }
+
+    .trigger:focus-visible,
+    .menuItem:focus-visible {
+        outline: 2px solid rgba(224, 61, 75, 0.38);
+    }
+}

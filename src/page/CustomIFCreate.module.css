@@ -7,16 +7,16 @@
 
 .mainContent {
   display: flex;
-  min-height: calc(100vh - 80px);
-  width: 100%;
-  max-width: 1080px;
+  min-height: calc(100vh - var(--app-desktop-navbar-height));
+  width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+  max-width: none;
   margin: 0 auto;
   margin-bottom: 120px;
 }
 
 .main {
   flex: 1;
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - var(--app-desktop-navbar-height));
   padding: 20px 0 10px 0;
   box-sizing: border-box;
   width: 100%;
@@ -26,7 +26,7 @@
   display: flex;
   flex-direction: column;
   gap: 26px;
-  margin-top: 80px; /* keep content clear of fixed navbar */
+  margin-top: var(--app-desktop-navbar-height); /* keep content clear of fixed navbar */
 }
 
 .formGroup {
@@ -65,12 +65,12 @@
 }
 
 .textInput {
-  width: 380px;
+  width: min(100%, 520px);
   height: 30px;
 }
 
 .textarea {
-  width: 800px;
+  width: min(100%, 1120px);
   height: 130px;
   resize: vertical;
 }
@@ -79,7 +79,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 800px;
+  width: min(100%, 1120px);
 }
 
 .fileInput {
@@ -107,7 +107,7 @@
 }
 
 .primaryBtn {
-  width: 800px;
+  width: min(100%, 1120px);
   height: 44px;
   border: none;
   border-radius: 8px;
@@ -319,10 +319,10 @@
 .pickedText{ color:#4b5563; font-size:12px; }
 
 /* 纵向排列：文件类型选择器 + 上传区域 */
-.uploaderColumn{ display:flex; flex-direction:column; gap:12px; width: 800px; }
+.uploaderColumn{ display:flex; flex-direction:column; gap:12px; width: min(100%, 1120px); }
 
 .themeTagsPanel {
-  width: 800px;
+  width: min(100%, 1120px);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -387,6 +387,7 @@
 
 @media (max-width: 768px) {
   .mainContent {
+    width: 100%;
     max-width: 100%;
     padding: 0 10px;
     min-height: auto;

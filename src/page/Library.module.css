@@ -17,13 +17,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    max-width: 1080px;
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
     margin: 0 auto;
     overflow: visible;
     padding: 20px;
     box-sizing: border-box;
-    margin-top: 80px;
+    margin-top: var(--app-desktop-navbar-height);
 }
 
 /* 中等屏幕适配 (769px - 1080px) */
@@ -49,6 +49,8 @@
     }
 
     .main {
+        width: 100%;
+        max-width: 100%;
         margin-top: 60px;
         padding: 10px;
     }

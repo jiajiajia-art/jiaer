@@ -1,20 +1,51 @@
 /* 固定导航条 */
 .navbarContainer {
-    height: 80px;
+    --navbar-inner-max: var(--app-desktop-navbar-max);
+    --navbar-main-gap: clamp(40px, 4vw, 72px);
+    --navbar-link-gap: clamp(12px, 1.1vw, 16px);
+    --navbar-link-min: 96px;
+    --navbar-link-padding-x: 14px;
+    --navbar-search-width: clamp(420px, 30vw, 560px);
+    --navbar-right-gap: 18px;
+    --navbar-surface: linear-gradient(180deg, rgba(14, 17, 22, 0.96) 0%, rgba(24, 28, 35, 0.94) 100%);
+    --navbar-border: rgba(255, 255, 255, 0.08);
+    --navbar-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+    --navbar-text: rgba(255, 255, 255, 0.78);
+    --navbar-text-strong: #fff;
+    --navbar-search-bg: rgba(255, 255, 255, 0.08);
+    --navbar-search-border: rgba(255, 255, 255, 0.14);
+    --navbar-search-input: rgba(255, 255, 255, 0.94);
+    --navbar-search-placeholder: rgba(255, 255, 255, 0.46);
+    --navbar-search-icon-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+    --navbar-search-icon-color: #fff;
+    --navbar-action-bg: rgba(255, 255, 255, 0.08);
+    --navbar-action-bg-hover: rgba(255, 255, 255, 0.14);
+    --navbar-action-border: rgba(255, 255, 255, 0.14);
+    --navbar-action-text: #fff;
+    --navbar-login-bg: rgba(255, 255, 255, 0.08);
+    --navbar-login-bg-hover: rgba(255, 255, 255, 0.14);
+    --navbar-login-border: rgba(255, 255, 255, 0.14);
+    --navbar-login-text: #fff;
+    --navbar-menu-bg: rgba(255, 255, 255, 0.97);
+    --navbar-menu-border: rgba(17, 24, 39, 0.08);
+    --navbar-menu-shadow: 0 16px 32px rgba(5, 10, 18, 0.2);
+    height: var(--app-desktop-navbar-height);
     display: flex;
     justify-content: center;
     margin: 0;
     margin-bottom: 0;
     z-index: 1000;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--navbar-surface);
+    border-bottom: 1px solid var(--navbar-border);
+    box-shadow: var(--navbar-shadow);
     max-width: 1920px;
-    color: #fff;
+    color: var(--navbar-text);
     position: fixed;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 1920px;
-    padding: 0 20px;
+    width: min(100%, 1920px);
+    padding: 0 10px;
     box-sizing: border-box;
 }
 
@@ -22,7 +53,8 @@
     .navbarContainer {
         left: 0;
         transform: none;
-        width: 1080px;
+        width: 100%;
+        max-width: none;
         padding: 0 10px;
     }
 
@@ -33,20 +65,28 @@
     }
 }
 
+@media (min-width: 1081px) {
+    .navbarContainer {
+        padding: 0 var(--app-desktop-gutter);
+    }
+}
+
 .navbar {
-    width: 1080px;
+    width: min(var(--navbar-inner-max), 100%);
+    max-width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 30px;
+    gap: var(--navbar-main-gap);
     margin: 0 auto;
+    min-width: 0;
 }
 
 .logo {
     width: 160px;
     height: 86px;
-    /* display: none; */
+    flex-shrink: 0;
 }
 
 .logo img {
@@ -60,11 +100,14 @@
     display: flex;
     align-items: center;
     height: 100%;
+    gap: var(--navbar-link-gap);
+    min-width: 0;
 }
 
 .navLink {
-    width: 80px;
+    min-width: var(--navbar-link-min);
     height: 100%;
+    padding: 0 var(--navbar-link-padding-x);
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -76,31 +119,39 @@
     justify-content: center;
     align-items: center;
     font-size: 20px;
+    color: var(--navbar-text);
+}
+
+.navLink:hover {
+    color: var(--navbar-text-strong);
 }
 
 .navLinkActive {
+    color: var(--navbar-text-strong);
     border-bottom: 4px solid var(--primary);
 }
 
 .navRight {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: var(--navbar-right-gap);
     flex: 1;
     justify-content: flex-end;
-    margin-right: 20px;
+    min-width: 0;
 }
 
 .searchBox {
     display: flex;
     align-items: center;
     height: 30px;
-    width: 300px;
+    width: var(--navbar-search-width);
+    max-width: 100%;
     gap: 8px;
-    border: 1px solid #282828;
+    border: 1px solid var(--navbar-search-border);
     border-radius: 18px;
     padding-right: 0px;
     padding-left: 10px;
+    background: var(--navbar-search-bg);
 }
 
 .searchIcon {
@@ -109,8 +160,8 @@
     width: 60px;
     min-width: 60px;
     font-size: 18px;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.3);
+    color: var(--navbar-search-icon-color);
+    background: var(--navbar-search-icon-bg);
     border-radius: 20px;
     display: flex;
     align-items: center;
@@ -125,11 +176,11 @@
     background: transparent;
     outline: none;
     font-size: 14px;
-    color: #fff;
+    color: var(--navbar-search-input);
 }
 
 .searchInput::placeholder {
-    color: #fff;
+    color: var(--navbar-search-placeholder);
 }
 
 .avatarContainer {
@@ -145,10 +196,10 @@
 .messageButton {
     width: 42px;
     height: 42px;
-    border: none;
+    border: 1px solid var(--navbar-action-border);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.12);
-    color: #fff;
+    background: var(--navbar-action-bg);
+    color: var(--navbar-action-text);
     font-size: 20px;
     display: flex;
     align-items: center;
@@ -160,7 +211,7 @@
 
 .messageButton:hover {
     transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--navbar-action-bg-hover);
 }
 
 .messageBadge {
@@ -204,9 +255,10 @@
     position: absolute;
     top: calc(100% + 10px);
     right: 0;
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--navbar-menu-bg);
+    border: 1px solid var(--navbar-menu-border);
     border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--navbar-menu-shadow);
     min-width: 120px;
     z-index: 1000;
     animation: slideDown 0.3s ease-out;
@@ -266,23 +318,47 @@
     padding: 0 !important;
     margin: 0 !important;
     flex: none !important;
-    color: #fff;
-    border: none;
+    color: var(--navbar-login-text);
+    border: 1px solid var(--navbar-login-border);
     border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
-    background: none;
+    background: var(--navbar-login-bg);
 }
 
 .loginBtn:hover {
     transform: translateY(-2px);
+    background: var(--navbar-login-bg-hover);
+}
+
+.navbarContainerMobileHome {
+    transition: background 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease, backdrop-filter 0.28s ease, -webkit-backdrop-filter 0.28s ease;
 }
 
 @media (max-width: 768px) {
     .navbarContainer {
+        --navbar-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(244, 246, 249, 0.94) 100%);
+        --navbar-border: rgba(26, 29, 33, 0.08);
+        --navbar-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+        --navbar-text: #1f2933;
+        --navbar-text-strong: #111827;
+        --navbar-search-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 247, 250, 0.88) 100%);
+        --navbar-search-border: rgba(26, 29, 33, 0.08);
+        --navbar-search-input: #1f2933;
+        --navbar-search-placeholder: rgba(26, 29, 33, 0.45);
+        --navbar-search-icon-bg: linear-gradient(180deg, #2c3440 0%, #1f2732 100%);
+        --navbar-search-icon-color: #fff;
+        --navbar-action-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(238, 242, 247, 0.92) 100%);
+        --navbar-action-bg-hover: rgba(244, 247, 250, 0.98);
+        --navbar-action-border: rgba(26, 29, 33, 0.1);
+        --navbar-action-text: #1f2933;
+        --navbar-login-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(238, 242, 247, 0.94) 100%);
+        --navbar-login-bg-hover: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(233, 238, 244, 0.96) 100%);
+        --navbar-login-border: rgba(26, 29, 33, 0.1);
+        --navbar-login-text: #111827;
         width: 100vw;
         height: 60px;
         padding: 0 12px;
@@ -326,6 +402,7 @@
         height: 28px;
         padding-left: 8px;
         padding-right: 0;
+        box-shadow: 0 8px 16px rgba(148, 163, 184, 0.08);
     }
 
     .searchInput {
@@ -352,6 +429,7 @@
         height: 36px;
         font-size: 17px;
         flex-shrink: 0;
+        box-shadow: 0 6px 14px rgba(148, 163, 184, 0.1);
     }
 
     .messageBadge {
@@ -384,5 +462,40 @@
         max-height: 32px !important;
         font-size: 14px;
         flex-shrink: 0;
+        box-shadow: 0 6px 14px rgba(148, 163, 184, 0.08);
+    }
+
+    .navbarContainerMobileHomeOverlayActive {
+        --navbar-surface: linear-gradient(180deg, rgba(11, 16, 25, 0.34) 0%, rgba(11, 16, 25, 0.18) 56%, rgba(11, 16, 25, 0.02) 100%);
+        --navbar-border: transparent;
+        --navbar-shadow: none;
+        --navbar-text: rgba(255, 255, 255, 0.88);
+        --navbar-text-strong: #ffffff;
+        --navbar-search-bg: rgba(12, 20, 32, 0.22);
+        --navbar-search-border: rgba(255, 255, 255, 0.22);
+        --navbar-search-input: rgba(255, 255, 255, 0.96);
+        --navbar-search-placeholder: rgba(255, 255, 255, 0.56);
+        --navbar-search-icon-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.1) 100%);
+        --navbar-search-icon-color: #ffffff;
+        --navbar-action-bg: rgba(12, 20, 32, 0.24);
+        --navbar-action-bg-hover: rgba(12, 20, 32, 0.34);
+        --navbar-action-border: rgba(255, 255, 255, 0.22);
+        --navbar-action-text: #ffffff;
+        --navbar-login-bg: rgba(12, 20, 32, 0.24);
+        --navbar-login-bg-hover: rgba(12, 20, 32, 0.34);
+        --navbar-login-border: rgba(255, 255, 255, 0.22);
+        --navbar-login-text: #ffffff;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .navbarContainerMobileHomeOverlayActive .logo img {
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.38));
+    }
+
+    .navbarContainerMobileHomeOverlayActive .searchBox,
+    .navbarContainerMobileHomeOverlayActive .messageButton,
+    .navbarContainerMobileHomeOverlayActive .loginBtn {
+        box-shadow: none;
     }
 }

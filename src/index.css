@@ -1,4 +1,8 @@
 :root {
+  --app-desktop-navbar-max: 1580px;
+  --app-desktop-shell-max: 1560px;
+  --app-desktop-gutter: clamp(24px, 2vw, 40px);
+  --app-desktop-navbar-height: 80px;
   /* 主题色 */
   --primary: #E03D4B;
   --primary-light: #FF5A67;

@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { flushSync } from 'react-dom';
 import styles from './Home.module.css';
+import HomeThemePreviewRail from '../components/HomeThemePreviewRail';
 import Navbar from '../components/Layout/Navbar';
 import GameGrid from '../components/GameGrid';
 import libraryDataApi from '../api/home/getGameData';
@@ -13,6 +15,7 @@ import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
 import CheckInModal from '../components/CheckInModal';
 import JoinGroupModal from '../components/JoinGroupModal';
 import FloatingJoinGroup from '../components/FloatingJoinGroup';
+import HomeGameFilterBar from '../components/HomeGameFilterBar';
 import { getImageUrl } from '../utils/constants';
 import { auth } from '../api/account/authApi';
 import announcementApi from '../api/announcement/announcementApi';
@@ -21,13 +24,73 @@ import AnnouncementModal from '../components/AnnouncementModal';
 import bannerApi from '../api/banner/bannerApi';
 import type { BannerItem } from '../api/banner/banner.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
+import specialThemeTagsApi from '../api/specialThemeTags/specialThemeTagsApi';
 import type { HomePromotionTicker } from '../api/promotion/promotion.type';
-import type { FlatThemeTag } from '../utils/themeTags';
+import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import type { SpecialThemeAutoSort, SpecialThemeTagRecord } from '../api/specialThemeTags/specialThemeTagsApi.type';
+import {
+    DEFAULT_HOME_LIST_FILTERS,
+    getHomeListFilterKey,
+    type HomeListFilters,
+    type HomeListMode,
+    type HomeListSort,
+} from '../utils/gameBrowseFilters';
 
 type CarouselItem = UserGameData | BannerItem;
 
 const isBannerCarouselItem = (item: CarouselItem): item is BannerItem => 'image_url' in item;
 const PROTECTED_PATH_PREFIXES = ['/analytics', '/create', '/createGame', '/warehouse', '/profile', '/promotions', '/admin', '/galgame', '/galgameMap', '/customif'];
+const DESKTOP_CAROUSEL_BREAKPOINT = 768;
+const MOBILE_NAVBAR_HEIGHT = 60;
+const DESKTOP_CAROUSEL_RATIO = 9 / 5;
+const CAROUSEL_AUTOPLAY_INTERVAL = 7000;
+
+type DesktopCarouselMetrics = {
+    isDesktop: boolean;
+    viewportWidth: number;
+    slideWidth: number;
+    slideGap: number;
+};
+
+type CarouselNavAction =
+    | { type: 'next' }
+    | { type: 'prev' }
+    | { type: 'slide'; logicalIndex: number };
+
+type HomeShowcaseTag = {
+    key: string;
+    id: number;
+    kind: 'special' | 'featured';
+    name: string;
+    configMode?: 'manual' | 'auto';
+    autoSort?: SpecialThemeAutoSort | null;
+};
+
+const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const normalizeShowcaseTagName = (name: string) => String(name || '').trim().toLowerCase();
+const getGameUniqueKey = (game: UserGameData, fallbackIndex?: number): string => {
+    const fileId = String(game.file_id || '').trim();
+    if (fileId) return `file:${fileId}`;
+
+    const id = String(game.id || '').trim();
+    if (id) return `id:${id}`;
+
+    return `fallback:${fallbackIndex ?? 0}`;
+};
+// 实现 PC 端轮播环形索引
+const getLoopCarouselIndex = (index: number, itemCount: number) => {
+    if (itemCount <= 1) return 0;
+    return ((index % itemCount) + itemCount) % itemCount;
+};
+// 实现 PC 端相邻卡片状态计算
+const getCircularCarouselDistance = (currentIndex: number, targetIndex: number, itemCount: number) => {
+    if (itemCount <= 1) return 0;
+    const forwardDistance = (targetIndex - currentIndex + itemCount) % itemCount;
+    const backwardDistance = forwardDistance - itemCount;
+    return Math.abs(forwardDistance) <= Math.abs(backwardDistance)
+        ? forwardDistance
+        : backwardDistance;
+};
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
@@ -45,11 +108,18 @@ const Home: React.FC = () => {
     const [hasMoreAll, setHasMoreAll] = useState(true);
     const [specialPage, setSpecialPage] = useState(0);
     const [allPage, setAllPage] = useState(0);
+    const [allGamesFilters, setAllGamesFilters] = useState<HomeListFilters>(DEFAULT_HOME_LIST_FILTERS);
     const [currentSlide, setCurrentSlide] = useState(1);
+    const [desktopCurrentSlide, setDesktopCurrentSlide] = useState(0);
     const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
     const { user, isAuthenticated, updateUser } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const carouselIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const carouselTrackRef = useRef<HTMLDivElement | null>(null);
+    const isCarouselResettingRef = useRef(false);
+    const pendingCarouselNavRef = useRef<CarouselNavAction | null>(null);
+    const mainContentRef = useRef<HTMLDivElement | null>(null);
+    const todayWrapRef = useRef<HTMLDivElement | null>(null);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const hasCheckedInSessionRef = useRef(false);
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -59,6 +129,7 @@ const Home: React.FC = () => {
     const isLoadingMoreAllRef = useRef(false);
     const lastUserIdRef = useRef<string | number | undefined>(undefined);
     const hasInitializedRef = useRef(false);
+    const latestAllGamesRequestIdRef = useRef(0);
     const [carouselItems, setCarouselItems] = useState<CarouselItem[]>([]);
     const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
     const [latestAnnouncement, setLatestAnnouncement] = useState<AnnouncementRecord | null>(null);
@@ -66,34 +137,115 @@ const Home: React.FC = () => {
     const [homeTicker, setHomeTicker] = useState<HomePromotionTicker | null>(null);
     const [isTickerOverflowing, setIsTickerOverflowing] = useState(false);
     const [pendingTickerLink, setPendingTickerLink] = useState<string | null>(null);
-    const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
+    const [featuredThemeTags, setFeaturedThemeTags] = useState<FlatThemeTag[]>([]);
+    const [allThemeTags, setAllThemeTags] = useState<FlatThemeTag[]>([]);
+    const [specialThemeTags, setSpecialThemeTags] = useState<SpecialThemeTagRecord[]>([]);
+    const [hasLoadedHomeShowcaseTags, setHasLoadedHomeShowcaseTags] = useState(false);
+    const [activeShowcaseTagKey, setActiveShowcaseTagKey] = useState<string | null>(null);
+    const [showcaseGamesCache, setShowcaseGamesCache] = useState<Record<string, UserGameData[]>>({});
+    const [showcaseLoadingKey, setShowcaseLoadingKey] = useState<string | null>(null);
     const [isThemeShowcaseDragging, setIsThemeShowcaseDragging] = useState(false);
-    const [carouselRefreshKey, setCarouselRefreshKey] = useState(0);
     const [carouselImageRetryMap, setCarouselImageRetryMap] = useState<Record<string, number>>({});
+    const [carouselImageLoadedMap, setCarouselImageLoadedMap] = useState<Record<string, boolean>>({});
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
     const touchDeltaXRef = useRef(0);
     const touchDeltaYRef = useRef(0);
     const suppressBannerClickRef = useRef(false);
     const suppressClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const carouselImagePreloadRef = useRef<Set<string>>(new Set());
+    const carouselImageLoadedMapRef = useRef<Record<string, boolean>>({});
+    const carouselImageRetryMapRef = useRef<Record<string, number>>({});
+    const carouselImagePreloadPromiseRef = useRef<Map<string, Promise<boolean>>>(new Map());
+    const pendingMobileCarouselNavRef = useRef<{ token: number; action: CarouselNavAction } | null>(null);
+    const queuedMobileCarouselActionRef = useRef<CarouselNavAction | null>(null);
+    const mobileCarouselNavTokenRef = useRef(0);
+    const isMobileCarouselTransitioningRef = useRef(false);
+    const requestCarouselNavActionRef = useRef<(action: CarouselNavAction) => void>(() => undefined);
     const pendingTickerAuthRef = useRef(false);
     const homeTickerViewportRef = useRef<HTMLSpanElement | null>(null);
     const homeTickerMeasureTextRef = useRef<HTMLSpanElement | null>(null);
     const navigateToHomeTickerLinkRef = useRef<(linkUrl: string, allowAuthPrompt?: boolean) => void>(() => undefined);
     const themeShowcaseRef = useRef<HTMLDivElement | null>(null);
+    const carouselViewportRef = useRef<HTMLDivElement | null>(null);
+    const hasInitializedShowcaseDefaultRef = useRef(false);
+    const wasDesktopCarouselRef = useRef(false);
     const themeShowcaseDragStateRef = useRef({
         isDragging: false,
         startX: 0,
         startScrollLeft: 0,
         moved: false,
     });
+    const [desktopCarouselMetrics, setDesktopCarouselMetrics] = useState<DesktopCarouselMetrics>({
+        isDesktop: false,
+        viewportWidth: 0,
+        slideWidth: 0,
+        slideGap: 0,
+    });
+    const [isMobileViewport, setIsMobileViewport] = useState(() => window.innerWidth <= DESKTOP_CAROUSEL_BREAKPOINT);
+    const [isMobileHomeNavbarScrolled, setIsMobileHomeNavbarScrolled] = useState(false);
     const hasMultipleCarouselItems = carouselItems.length > 1;
-    const carouselRenderItems = hasMultipleCarouselItems
+    const isDesktopCarousel = desktopCarouselMetrics.isDesktop && desktopCarouselMetrics.slideWidth > 0;
+    const mobileCarouselRenderItems = hasMultipleCarouselItems
         ? [carouselItems[carouselItems.length - 1], ...carouselItems, carouselItems[0]]
         : carouselItems;
+    const carouselRenderItems = isDesktopCarousel ? carouselItems : mobileCarouselRenderItems;
     const currentLogicalSlide = hasMultipleCarouselItems
         ? ((currentSlide - 1 + carouselItems.length) % carouselItems.length)
         : 0;
+    const activeCarouselSlide = isDesktopCarousel
+        ? getLoopCarouselIndex(desktopCurrentSlide, carouselItems.length)
+        : currentLogicalSlide;
+    const homeShowcaseTags = useMemo<HomeShowcaseTag[]>(() => {
+        const specialTags = specialThemeTags.map((tag) => ({
+            key: `special-${tag.id}`,
+            id: Number(tag.id),
+            kind: 'special' as const,
+            name: String(tag.name || ''),
+            configMode: tag.config_mode,
+            autoSort: tag.auto_sort,
+        })).filter((tag) => tag.name);
+        const featuredTags = featuredThemeTags.map((tag) => ({
+            key: `featured-${tag.id}`,
+            id: Number(tag.id),
+            kind: 'featured' as const,
+            name: String(tag.name || ''),
+        })).filter((tag) => tag.name);
+
+        const usedNames = new Set<string>();
+        const mergedTags: HomeShowcaseTag[] = [];
+
+        // 实现首页标签去重，特殊标签优先展示
+        [...specialTags, ...featuredTags].forEach((tag) => {
+            const normalizedName = normalizeShowcaseTagName(tag.name);
+            if (!normalizedName || usedNames.has(normalizedName)) return;
+
+            usedNames.add(normalizedName);
+            mergedTags.push(tag);
+        });
+
+        return mergedTags;
+    }, [featuredThemeTags, specialThemeTags]);
+    const activeShowcaseTag = useMemo(
+        () => homeShowcaseTags.find((tag) => tag.key === activeShowcaseTagKey) || null,
+        [activeShowcaseTagKey, homeShowcaseTags],
+    );
+    const activeShowcaseGames = activeShowcaseTag
+        ? (showcaseGamesCache[activeShowcaseTag.key] || [])
+        : [];
+    const themePreviewResetKey = `${activeShowcaseTagKey || 'none'}-${showcaseLoadingKey === activeShowcaseTagKey ? 'loading' : 'ready'}`;
+    const allGamesFilterKey = useMemo(
+        () => getHomeListFilterKey(allGamesFilters),
+        [allGamesFilters],
+    );
+
+    useEffect(() => {
+        carouselImageLoadedMapRef.current = carouselImageLoadedMap;
+    }, [carouselImageLoadedMap]);
+
+    useEffect(() => {
+        carouselImageRetryMapRef.current = carouselImageRetryMap;
+    }, [carouselImageRetryMap]);
 
     const getCarouselSlidePosition = useCallback((slide: number, itemCount: number) => {
         if (itemCount <= 1) return 0;
@@ -102,27 +254,314 @@ const Home: React.FC = () => {
         return logicalIndex + 1;
     }, []);
 
-    const getCarouselImageStateKey = useCallback((item: CarouselItem, index: number) => {
-        const imageId = getCarouselItemId(item, index);
-        const imageUrl = getCarouselItemImage(item) || '';
-        return `${imageId}-${imageUrl}`;
+    const updateDesktopCarouselMetrics = useCallback(() => {
+        const viewport = carouselViewportRef.current;
+        if (!viewport) return;
+
+        const viewportWidth = viewport.clientWidth;
+        const viewportHeight = viewport.clientHeight;
+
+        if (viewportWidth <= DESKTOP_CAROUSEL_BREAKPOINT || viewportHeight === 0) {
+            setDesktopCarouselMetrics((prev) => (
+                prev.isDesktop || prev.viewportWidth !== 0 || prev.slideWidth !== 0 || prev.slideGap !== 0
+                    ? { isDesktop: false, viewportWidth: 0, slideWidth: 0, slideGap: 0 }
+                    : prev
+            ));
+            return;
+        }
+
+        const slideGap = Math.round(clampValue(viewportWidth * 0.024, 20, 32));
+        const sidePeek = clampValue(viewportWidth * 0.12, 56, 180);
+        const maxSlideWidth = Math.max(viewportWidth - sidePeek * 2, 320);
+        const preferredSlideWidth = Math.min(
+            viewportHeight * DESKTOP_CAROUSEL_RATIO,
+            viewportWidth * 0.72,
+            maxSlideWidth,
+        );
+        const slideWidth = Math.round(Math.max(preferredSlideWidth, 320));
+
+        setDesktopCarouselMetrics((prev) => {
+            const nextMetrics: DesktopCarouselMetrics = {
+                isDesktop: true,
+                viewportWidth,
+                slideWidth,
+                slideGap,
+            };
+
+            if (
+                prev.isDesktop === nextMetrics.isDesktop
+                && prev.viewportWidth === nextMetrics.viewportWidth
+                && prev.slideWidth === nextMetrics.slideWidth
+                && prev.slideGap === nextMetrics.slideGap
+            ) {
+                return prev;
+            }
+
+            return nextMetrics;
+        });
     }, []);
 
-    const getCarouselImageSrc = useCallback((item: CarouselItem, index: number) => {
+    const updateMobileHomeNavbarState = useCallback(() => {
+        const nextIsMobileViewport = window.innerWidth <= DESKTOP_CAROUSEL_BREAKPOINT;
+        setIsMobileViewport((prev) => (prev === nextIsMobileViewport ? prev : nextIsMobileViewport));
+
+        if (!nextIsMobileViewport) {
+            setIsMobileHomeNavbarScrolled(false);
+            return;
+        }
+
+        const scrollTop = mainContentRef.current?.scrollTop ?? 0;
+        const bannerHeight = todayWrapRef.current?.offsetHeight ?? 0;
+        const overlayThreshold = Math.max(bannerHeight - MOBILE_NAVBAR_HEIGHT, 0);
+        const nextIsScrolled = scrollTop > overlayThreshold;
+
+        setIsMobileHomeNavbarScrolled((prev) => (prev === nextIsScrolled ? prev : nextIsScrolled));
+    }, []);
+
+    useEffect(() => {
+        updateDesktopCarouselMetrics();
+
+        const viewport = carouselViewportRef.current;
+        if (!viewport || typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateDesktopCarouselMetrics);
+            return () => {
+                window.removeEventListener('resize', updateDesktopCarouselMetrics);
+            };
+        }
+
+        // 实现桌面端轮播尺寸监听
+        const resizeObserver = new ResizeObserver(() => {
+            updateDesktopCarouselMetrics();
+        });
+
+        resizeObserver.observe(viewport);
+        window.addEventListener('resize', updateDesktopCarouselMetrics);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updateDesktopCarouselMetrics);
+        };
+    }, [carouselItems.length, updateDesktopCarouselMetrics]);
+
+    useEffect(() => {
+        updateMobileHomeNavbarState();
+
+        const handleResize = () => {
+            updateMobileHomeNavbarState();
+        };
+
+        const mainContentElement = mainContentRef.current;
+        const todayWrapElement = todayWrapRef.current;
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', handleResize);
+            return () => {
+                window.removeEventListener('resize', handleResize);
+            };
+        }
+
+        const resizeObserver = new ResizeObserver(() => {
+            updateMobileHomeNavbarState();
+        });
+
+        if (mainContentElement) {
+            resizeObserver.observe(mainContentElement);
+        }
+
+        if (todayWrapElement) {
+            resizeObserver.observe(todayWrapElement);
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [carouselItems.length, updateMobileHomeNavbarState]);
+
+    const handleMainContentScroll = useCallback(() => {
+        if (!isMobileViewport) return;
+        updateMobileHomeNavbarState();
+    }, [isMobileViewport, updateMobileHomeNavbarState]);
+
+    const getDesktopCarouselDistance = useCallback((itemIndex: number) => (
+        getCircularCarouselDistance(
+            getLoopCarouselIndex(desktopCurrentSlide, carouselItems.length),
+            itemIndex,
+            carouselItems.length,
+        )
+    ), [carouselItems.length, desktopCurrentSlide]);
+
+    const getDesktopCarouselSlideStyle = useCallback((itemIndex: number): React.CSSProperties | undefined => {
+        if (!isDesktopCarousel) return undefined;
+
+        // 实现首尾无缝衔接
+        const distance = getDesktopCarouselDistance(itemIndex);
+        const absDistance = Math.abs(distance);
+        const step = desktopCarouselMetrics.slideWidth + desktopCarouselMetrics.slideGap;
+        const scale = absDistance === 0 ? 1 : absDistance === 1 ? 0.92 : 0.84;
+
+        return {
+            width: `${desktopCarouselMetrics.slideWidth}px`,
+            left: '50%',
+            top: '50%',
+            zIndex: Math.max(1, 20 - absDistance),
+            transform: `translate3d(-50%, -50%, 0) translate3d(${Math.round(distance * step)}px, 0, 0) scale(${scale})`,
+        };
+    }, [desktopCarouselMetrics.slideGap, desktopCarouselMetrics.slideWidth, getDesktopCarouselDistance, isDesktopCarousel]);
+
+    const getCarouselSlideStateClass = useCallback((renderIndex: number) => {
+        if (isDesktopCarousel) {
+            const renderDistance = Math.abs(getDesktopCarouselDistance(renderIndex));
+
+            if (renderDistance === 0) return styles.carouselSlideCurrent;
+            if (renderDistance === 1) return styles.carouselSlideAdjacent;
+            return styles.carouselSlideFar;
+        }
+
+        const renderDistance = Math.abs(renderIndex - currentSlide);
+
+        if (renderDistance === 0) return styles.carouselSlideCurrent;
+        if (renderDistance === 1) return styles.carouselSlideAdjacent;
+        return styles.carouselSlideFar;
+    }, [currentSlide, getDesktopCarouselDistance, isDesktopCarousel]);
+
+    const getCarouselImageStateKey = useCallback((item: CarouselItem) => {
+        // 实现图片资源稳定标识
+        const imageUrl = isBannerCarouselItem(item) ? item.image_url || '' : item.cover_url || '';
+        const stableItemId = isBannerCarouselItem(item)
+            ? item.id || item.link_url || item.title || imageUrl
+            : item.file_id || item.id || item.title || imageUrl;
+        return `${stableItemId}-${imageUrl}`;
+    }, []);
+
+    const buildCarouselImageSrc = useCallback((item: CarouselItem, retryVersion: number) => {
         const baseUrl = getImageUrl(getCarouselItemImage(item));
         if (!baseUrl) return '';
 
-        const imageStateKey = getCarouselImageStateKey(item, index);
-        const retryVersion = carouselImageRetryMap[imageStateKey] || 0;
-        const reloadVersion = carouselRefreshKey + retryVersion;
-
-        if (reloadVersion <= 0) {
+        if (retryVersion <= 0) {
             return baseUrl;
         }
 
         const separator = baseUrl.includes('?') ? '&' : '?';
-        return `${baseUrl}${separator}carouselReload=${reloadVersion}`;
-    }, [carouselImageRetryMap, carouselRefreshKey, getCarouselImageStateKey]);
+        return `${baseUrl}${separator}carouselReload=${retryVersion}`;
+    }, []);
+
+    const getCarouselImageSrc = useCallback((item: CarouselItem) => {
+        const imageStateKey = getCarouselImageStateKey(item);
+        return buildCarouselImageSrc(item, carouselImageRetryMap[imageStateKey] || 0);
+    }, [buildCarouselImageSrc, carouselImageRetryMap, getCarouselImageStateKey]);
+
+    const markCarouselImageLoaded = useCallback((imageStateKey: string) => {
+        setCarouselImageLoadedMap((prev) => {
+            if (prev[imageStateKey]) {
+                return prev;
+            }
+
+            const nextMap = { ...prev, [imageStateKey]: true };
+            carouselImageLoadedMapRef.current = nextMap;
+            return nextMap;
+        });
+    }, []);
+
+    const preloadCarouselImage = useCallback((item: CarouselItem): Promise<boolean> => {
+        if (isDesktopCarousel) {
+            return Promise.resolve(true);
+        }
+
+        const imageStateKey = getCarouselImageStateKey(item);
+        if (carouselImageLoadedMapRef.current[imageStateKey]) {
+            return Promise.resolve(true);
+        }
+
+        const retryVersion = carouselImageRetryMapRef.current[imageStateKey] || 0;
+        const imageSrc = buildCarouselImageSrc(item, retryVersion);
+        if (!imageSrc) {
+            return Promise.resolve(false);
+        }
+
+        const preloadTaskKey = `${imageStateKey}-${retryVersion}`;
+        const existingPromise = carouselImagePreloadPromiseRef.current.get(preloadTaskKey);
+        if (existingPromise) {
+            return existingPromise;
+        }
+
+        // 实现移动端 banner 图片预加载
+        const preloadPromise = new Promise<boolean>((resolve) => {
+            carouselImagePreloadRef.current.add(imageSrc);
+            const image = new Image();
+            image.decoding = 'async';
+
+            const clearPreloadState = () => {
+                carouselImagePreloadRef.current.delete(imageSrc);
+                carouselImagePreloadPromiseRef.current.delete(preloadTaskKey);
+            };
+
+            const resolveLoaded = () => {
+                clearPreloadState();
+                markCarouselImageLoaded(imageStateKey);
+                resolve(true);
+            };
+
+            image.onload = () => {
+                if (typeof image.decode === 'function') {
+                    image.decode().catch(() => undefined).finally(resolveLoaded);
+                    return;
+                }
+                resolveLoaded();
+            };
+
+            image.onerror = () => {
+                clearPreloadState();
+
+                setCarouselImageRetryMap((prev) => {
+                    const currentRetryCount = prev[imageStateKey] || 0;
+                    if (currentRetryCount >= 1) {
+                        return prev;
+                    }
+
+                    const nextMap = { ...prev, [imageStateKey]: currentRetryCount + 1 };
+                    carouselImageRetryMapRef.current = nextMap;
+                    return nextMap;
+                });
+
+                resolve(false);
+            };
+
+            image.src = imageSrc;
+
+            if (image.complete) {
+                if (typeof image.decode === 'function') {
+                    image.decode().catch(() => undefined).finally(resolveLoaded);
+                    return;
+                }
+                resolveLoaded();
+            }
+        });
+
+        carouselImagePreloadPromiseRef.current.set(preloadTaskKey, preloadPromise);
+        return preloadPromise;
+    }, [buildCarouselImageSrc, getCarouselImageStateKey, isDesktopCarousel, markCarouselImageLoaded]);
+
+    const waitForCarouselImageReady = useCallback(async (item: CarouselItem) => {
+        if (isDesktopCarousel) {
+            return true;
+        }
+
+        const imageStateKey = getCarouselImageStateKey(item);
+        if (carouselImageLoadedMapRef.current[imageStateKey]) {
+            return true;
+        }
+
+        const firstAttemptReady = await preloadCarouselImage(item);
+        if (firstAttemptReady) {
+            return true;
+        }
+
+        // 实现移动端目标图片就绪后再切换
+        return preloadCarouselImage(item);
+    }, [getCarouselImageStateKey, isDesktopCarousel, preloadCarouselImage]);
 
     // 鐩戝惉鐢ㄦ埛鐧诲嚭锛岄噸缃鏌ョ姸鎬?
     useEffect(() => {
@@ -244,20 +683,25 @@ const Home: React.FC = () => {
             setIsLoadingMoreSpecial(false);
             isLoadingMoreSpecialRef.current = false;
         }
+
+        return [];
     }, []);
 
     // 鍔犺浇鍏ㄩ儴娓告垙鏁版嵁
-    const loadAllGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {
-        const MAX_RETRIES = 1;
-        const RETRY_DELAY = 1000;
-        const PAGE_SIZE = 12;
-        const offset = page * PAGE_SIZE;
+    const loadAllGames = useCallback(async (
+        page: number,
+        filters: HomeListFilters,
+        isInitial = false,
+    ) => {
+        const pageSize = 12;
+        const offset = page * pageSize;
+        const requestId = ++latestAllGamesRequestIdRef.current;
 
         if (isInitial) {
             setIsLoadingAll(true);
         } else {
             if (isLoadingMoreAllRef.current) {
-                return;
+                return [];
             }
             isLoadingMoreAllRef.current = true;
             setIsLoadingMoreAll(true);
@@ -265,40 +709,57 @@ const Home: React.FC = () => {
 
         try {
             const response = await libraryDataApi.getGameData('no-discount', {
-                limit: String(PAGE_SIZE),
-                offset: String(offset)
+                limit: String(pageSize),
+                offset: String(offset),
+                mode: filters.mode,
+                sort: filters.sort,
+                tagId: filters.tagId ? String(filters.tagId) : 'all',
             });
 
+            if (requestId !== latestAllGamesRequestIdRef.current) {
+                return [];
+            }
+
             if (response.data.success && response.data.data) {
-                const newGames = response.data.data;
+                const nextGames = response.data.data;
                 if (isInitial) {
-                    setAllGames(newGames);
+                    setAllGames(nextGames);
                 } else {
-                    setAllGames(prev => [...prev, ...newGames]);
+                    setAllGames((prev) => {
+                        const uniqueGames = new Map<string, UserGameData>();
+                        [...prev, ...nextGames].forEach((game, index) => {
+                            uniqueGames.set(getGameUniqueKey(game, index), game);
+                        });
+                        return Array.from(uniqueGames.values());
+                    });
                 }
                 
                 // 濡傛灉杩斿洖鐨勬暟鎹皯浜?PAGE_SIZE锛岃鏄庢病鏈夋洿澶氫簡
-                setHasMoreAll(newGames.length === PAGE_SIZE);
-                if (newGames.length > 0) {
-                    setAllPage(page + 1); // 椤电爜閫掑
-                }
+                setHasMoreAll(nextGames.length === pageSize);
+                setAllPage(nextGames.length > 0 ? page + 1 : page);
+                return nextGames;
             } else {
                 throw new Error('鑾峰彇鍏ㄩ儴娓告垙鍒楄〃澶辫触');
             }
         } catch (error) {
-            console.error('鑾峰彇鍏ㄩ儴娓告垙鍒楄〃澶辫触:', error);
-            if (retryCount < MAX_RETRIES) {
-                setTimeout(() => {
-                    loadAllGames(page, isInitial, retryCount + 1);
-                }, RETRY_DELAY);
-            } else if (isInitial) {
+            if (requestId !== latestAllGamesRequestIdRef.current) {
+                return [];
+            }
+
+            console.error('获取首页全部游戏列表失败:', error);
+            if (isInitial) {
                 setAllGames([]);
             }
+            setHasMoreAll(false);
         } finally {
-            setIsLoadingAll(false);
-            setIsLoadingMoreAll(false);
-            isLoadingMoreAllRef.current = false;
+            if (requestId === latestAllGamesRequestIdRef.current) {
+                setIsLoadingAll(false);
+                setIsLoadingMoreAll(false);
+                isLoadingMoreAllRef.current = false;
+            }
         }
+
+        return [];
     }, []);
 
     const loadCarouselData = useCallback(async () => {
@@ -351,42 +812,145 @@ const Home: React.FC = () => {
         }
     }, []);
 
-    const loadThemeTags = useCallback(async () => {
+    const loadFeaturedThemeTags = useCallback(async (): Promise<FlatThemeTag[]> => {
         try {
             const response = await gameTagsApi.getFeaturedGameTags();
             if (response.data.success) {
                 // 实现首页热门题材读取后台配置
-                setThemeTags((response.data.data || []).map((tag) => ({
+                return (response.data.data || []).map((tag) => ({
                     id: Number(tag.id),
                     name: String(tag.name || ''),
                     parentName: String(tag.parent_name || ''),
-                })).filter((tag) => Number.isFinite(tag.id) && tag.id > 0 && tag.name));
+                })).filter((tag) => Number.isFinite(tag.id) && tag.id > 0 && tag.name);
             }
         } catch (error) {
             console.error('鍔犺浇棣栭〉棰樻潗鏍囩澶辫触:', error);
         }
+        return [];
     }, []);
 
     // 鍒濆鍔犺浇
-    const loadLibraryData = useCallback(async () => {
-        // 闃叉閲嶅鍔犺浇
-        if (isLoadingRef.current) {
-            return;
+    const loadAllThemeTags = useCallback(async (): Promise<FlatThemeTag[]> => {
+        try {
+            const response = await gameTagsApi.getGameTagsTree();
+            if (response.data.success) {
+                return flattenThemeTags(response.data.data || []);
+            }
+        } catch (error) {
+            console.error('加载首页作品标签失败:', error);
         }
-        isLoadingRef.current = true;
-        isLoadingMoreSpecialRef.current = false;
-        isLoadingMoreAllRef.current = false;
+        return [];
+    }, []);
 
-        setSpecialPage(0);
-        setAllPage(0);
-        setHasMoreSpecial(true);
-        setHasMoreAll(true);
-        await Promise.allSettled([
-            loadSpecialGames(0, true),
-            loadAllGames(0, true),
+    const loadSpecialThemeTags = useCallback(async (): Promise<SpecialThemeTagRecord[]> => {
+        try {
+            const response = await specialThemeTagsApi.getPublicTags();
+            if (response.data.success) {
+                // 实现首页特殊标签读取
+                return (response.data.data || []).filter((tag) => Number(tag.id) > 0 && String(tag.name || '').trim());
+            }
+        } catch (error) {
+            console.error('加载首页特殊标签失败:', error);
+        }
+        return [];
+    }, []);
+
+    const loadHomeShowcaseTags = useCallback(async () => {
+        setHasLoadedHomeShowcaseTags(false);
+        /*
+
+        // 实现首页展示标签并发初始化
+        const [featuredResult, specialResult] = await Promise.allSettled([
+        // 实现首页展示标签并发初始化
+        const [featuredResult, specialResult] = await Promise.allSettled([
+        const [featuredResult, specialResult] = await Promise.allSettled([ // 实现首页展示标签并发初始化
+            loadThemeTags(),
+            loadThemeTags(),
+            loadSpecialThemeTags(),
         ]);
-        isLoadingRef.current = false;
-    }, [loadSpecialGames, loadAllGames]);
+
+        */
+        const [featuredResult, specialResult] = await Promise.allSettled([
+            loadFeaturedThemeTags(),
+            loadSpecialThemeTags(),
+        ]);
+
+        let nextFeaturedThemeTags: FlatThemeTag[] = [];
+        let nextSpecialThemeTags: SpecialThemeTagRecord[] = [];
+
+        if (featuredResult.status === 'fulfilled') {
+            nextFeaturedThemeTags = featuredResult.value;
+        } else {
+            console.error('加载首页热门题材失败:', featuredResult.reason);
+        }
+
+        if (specialResult.status === 'fulfilled') {
+            nextSpecialThemeTags = specialResult.value;
+        } else {
+            console.error('加载首页特殊标签失败:', specialResult.reason);
+        }
+
+        setFeaturedThemeTags(nextFeaturedThemeTags);
+        setSpecialThemeTags(nextSpecialThemeTags);
+        setHasLoadedHomeShowcaseTags(true);
+    }, [loadFeaturedThemeTags, loadSpecialThemeTags]);
+
+    const loadShowcaseGames = useCallback(async (showcaseTag: HomeShowcaseTag) => {
+        if (!showcaseTag) return;
+        if (Object.prototype.hasOwnProperty.call(showcaseGamesCache, showcaseTag.key)) return;
+
+        setShowcaseLoadingKey(showcaseTag.key);
+
+        try {
+            let games: UserGameData[] = [];
+            if (showcaseTag.kind === 'special') {
+                const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12);
+                if (response.data.success) {
+                    // 实现普通热门题材剧本预览读取
+                    games = response.data.data || [];
+                    // 实现特殊标签剧本预览读取
+                    games = response.data.data || [];
+                }
+            } else {
+                const response = await libraryDataApi.getGameData('no-discount', {
+                    limit: '12',
+                    offset: '0',
+                    mode: 'all',
+                    sort: 'hot',
+                    tagId: String(showcaseTag.id),
+                });
+                if (response.data.success) {
+                    // 实现普通热门题材剧本预览读取
+                    games = response.data.data || [];
+                }
+                if (response.data.success) {
+                    // 实现普通热门题材剧本预览读取
+                    games = response.data.data || [];
+                }
+            }
+
+            setShowcaseGamesCache((prev) => ({
+                ...prev,
+                [showcaseTag.key]: games.slice(0, 12),
+            }));
+        } catch (error) {
+            console.error('加载首页题材预览失败:', error);
+            setShowcaseGamesCache((prev) => ({
+                ...prev,
+                [showcaseTag.key]: [],
+            }));
+        } finally {
+            setShowcaseLoadingKey((prev) => (prev === showcaseTag.key ? null : prev));
+        }
+    }, [showcaseGamesCache]);
+
+    const updateAllGamesFilters = useCallback((updater: (prev: HomeListFilters) => HomeListFilters) => {
+        setAllGamesFilters((prev) => {
+            const next = updater(prev);
+            return getHomeListFilterKey(prev) === getHomeListFilterKey(next) ? prev : next;
+        });
+    }, []);
+    const loadLibraryData = useCallback(() => undefined, []);
 
     // 鍔犺浇鏇村闄愭椂浼樻儬
     const loadMoreSpecial = useCallback(() => {
@@ -397,10 +961,10 @@ const Home: React.FC = () => {
 
     // 鍔犺浇鏇村鍏ㄩ儴娓告垙
     const loadMoreAll = useCallback(() => {
-        if (!isLoadingMoreAllRef.current && !isLoadingMoreAll && hasMoreAll) {
-            loadAllGames(allPage, false);
+        if (!isLoadingAll && !isLoadingMoreAllRef.current && !isLoadingMoreAll && hasMoreAll) {
+            void loadAllGames(allPage, allGamesFilters, false);
         }
-    }, [isLoadingMoreAll, hasMoreAll, allPage, loadAllGames]);
+    }, [allGamesFilters, allPage, hasMoreAll, isLoadingAll, isLoadingMoreAll, loadAllGames]);
 
     // 鍔犺浇杞挱鍥炬暟鎹紙鏃犺鏄惁鐧诲綍閮藉姞杞斤級
     useEffect(() => {
@@ -416,8 +980,86 @@ const Home: React.FC = () => {
     }, [loadHomeTicker]);
 
     useEffect(() => {
-        loadThemeTags();
-    }, [loadThemeTags]);
+        void loadHomeShowcaseTags();
+    }, [loadHomeShowcaseTags]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const syncAllThemeTags = async () => {
+            const tags = await loadAllThemeTags();
+            if (!cancelled) {
+                setAllThemeTags(tags);
+            }
+        };
+
+        void syncAllThemeTags();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [loadAllThemeTags]);
+
+    /*
+
+    useEffect(() => {
+        if (!hasLoadedHomeShowcaseTags) return;
+
+        if (homeShowcaseTags.length === 0) {
+            setActiveShowcaseTagKey(null);
+            setActiveShowcaseTagKey(homeShowcaseTags[0].key);
+            // * /
+            setActiveShowcaseTagKey(homeShowcaseTags[0].key);
+            hasInitializedShowcaseDefaultRef.current = true;
+            return;
+        }
+
+        if (!hasInitializedShowcaseDefaultRef.current) {
+            /*
+            // 实现首页默认标签初始化锁定
+            hasInitializedShowcaseDefaultRef.current = true;
+            // 实现首页默认标签初始化锁定
+            hasInitializedShowcaseDefaultRef.current = true;
+            setActiveShowcaseTagKey(homeShowcaseTags[0].key);
+            hasInitializedShowcaseDefaultRef.current = true; // 实现首页默认标签初始化锁定
+            setActiveShowcaseTagKey(homeShowcaseTags[0].key);
+            return;
+        }
+
+        setActiveShowcaseTagKey((prev) => (
+            prev && homeShowcaseTags.some((tag) => tag.key === prev)
+                ? prev
+                : homeShowcaseTags[0].key
+        ));
+    }, [hasLoadedHomeShowcaseTags, homeShowcaseTags]);
+
+    */
+
+    useEffect(() => {
+        if (!hasLoadedHomeShowcaseTags) return;
+
+        if (homeShowcaseTags.length === 0) {
+            setActiveShowcaseTagKey(null);
+            return;
+        }
+
+        if (!hasInitializedShowcaseDefaultRef.current) {
+            setActiveShowcaseTagKey(homeShowcaseTags[0].key);
+            hasInitializedShowcaseDefaultRef.current = true;
+            return;
+        }
+
+        setActiveShowcaseTagKey((prev) => (
+            prev && homeShowcaseTags.some((tag) => tag.key === prev)
+                ? prev
+                : homeShowcaseTags[0].key
+        ));
+    }, [hasLoadedHomeShowcaseTags, homeShowcaseTags]);
+
+    useEffect(() => {
+        if (!activeShowcaseTag) return;
+        void loadShowcaseGames(activeShowcaseTag);
+    }, [activeShowcaseTag, loadShowcaseGames]);
 
     const measureTickerOverflow = useCallback(() => {
         const tickerText = homeTicker?.text?.trim();
@@ -503,6 +1145,23 @@ const Home: React.FC = () => {
             loadLibraryData();
         }
     }, [user?.user?.id, loadLibraryData]);
+
+    useEffect(() => {
+        isLoadingMoreSpecialRef.current = false;
+        setSpecialPage(0);
+        setHasMoreSpecial(true);
+        void loadSpecialGames(0, true);
+    }, [loadSpecialGames, user?.user?.id]);
+
+    useEffect(() => {
+        latestAllGamesRequestIdRef.current += 1;
+        isLoadingMoreAllRef.current = false;
+        setIsLoadingMoreAll(false);
+        setAllGames([]);
+        setAllPage(0);
+        setHasMoreAll(true);
+        void loadAllGames(0, allGamesFilters, true);
+    }, [allGamesFilterKey, loadAllGames, user?.user?.id]);
 
     useEffect(() => {
         if (!latestAnnouncement?.id) {
@@ -597,21 +1256,100 @@ const Home: React.FC = () => {
         if (!hasMultipleCarouselItems) return;
 
         carouselIntervalRef.current = setInterval(() => {
-            setIsTransitionEnabled(true);
-            setCurrentSlide((prev) => prev + 1);
-        }, 5000);
-    }, [clearCarouselInterval, hasMultipleCarouselItems]);
+            if (isDesktopCarousel) {
+                // 实现自动播放切换
+                setIsTransitionEnabled(true);
+                setDesktopCurrentSlide((prev) => getLoopCarouselIndex(prev + 1, carouselItems.length));
+                return;
+            }
+
+            // 实现移动端待执行切换
+            clearCarouselInterval();
+            requestCarouselNavActionRef.current({ type: 'next' });
+        }, CAROUSEL_AUTOPLAY_INTERVAL);
+    }, [carouselItems.length, clearCarouselInterval, hasMultipleCarouselItems, isDesktopCarousel]);
 
     useEffect(() => {
         if (hasMultipleCarouselItems) {
             setIsTransitionEnabled(true);
             setCurrentSlide(1);
+            setDesktopCurrentSlide(0);
         } else {
             setIsTransitionEnabled(true);
             setCurrentSlide(0);
+            setDesktopCurrentSlide(0);
         }
+        isCarouselResettingRef.current = false;
+        isMobileCarouselTransitioningRef.current = false;
+        pendingCarouselNavRef.current = null;
+        pendingMobileCarouselNavRef.current = null;
+        queuedMobileCarouselActionRef.current = null;
+        mobileCarouselNavTokenRef.current = 0;
+        carouselImagePreloadRef.current.clear();
+        carouselImagePreloadPromiseRef.current.clear();
         setCarouselImageRetryMap({});
+        setCarouselImageLoadedMap({});
+        carouselImageRetryMapRef.current = {};
+        carouselImageLoadedMapRef.current = {};
     }, [hasMultipleCarouselItems, carouselItems.length]);
+
+    useEffect(() => {
+        if (isDesktopCarousel || carouselItems.length === 0) {
+            return;
+        }
+
+        // 实现移动端相邻图片预热
+        const targetIndexes = hasMultipleCarouselItems
+            ? [currentLogicalSlide, currentLogicalSlide - 1, currentLogicalSlide + 1]
+            : [0];
+        const uniqueIndexes = [...new Set(
+            targetIndexes.map((index) => getLoopCarouselIndex(index, carouselItems.length)),
+        )];
+
+        uniqueIndexes.forEach((index) => {
+            const item = carouselItems[index];
+            if (item) {
+                preloadCarouselImage(item);
+            }
+        });
+    }, [carouselItems, currentLogicalSlide, hasMultipleCarouselItems, isDesktopCarousel, preloadCarouselImage]);
+
+    const getMobileCarouselTargetIndex = useCallback((action: CarouselNavAction) => {
+        if (carouselItems.length <= 1) {
+            return 0;
+        }
+
+        if (action.type === 'slide') {
+            return getLoopCarouselIndex(action.logicalIndex, carouselItems.length);
+        }
+
+        if (action.type === 'prev') {
+            return getLoopCarouselIndex(currentLogicalSlide - 1, carouselItems.length);
+        }
+
+        return getLoopCarouselIndex(currentLogicalSlide + 1, carouselItems.length);
+    }, [carouselItems.length, currentLogicalSlide]);
+
+    useEffect(() => {
+        const wasDesktopCarousel = wasDesktopCarouselRef.current;
+        if (wasDesktopCarousel === isDesktopCarousel) {
+            return;
+        }
+
+        isMobileCarouselTransitioningRef.current = false;
+        pendingCarouselNavRef.current = null;
+        pendingMobileCarouselNavRef.current = null;
+        queuedMobileCarouselActionRef.current = null;
+        mobileCarouselNavTokenRef.current = 0;
+
+        if (isDesktopCarousel) {
+            setDesktopCurrentSlide(hasMultipleCarouselItems ? currentLogicalSlide : 0);
+        } else {
+            setCurrentSlide(hasMultipleCarouselItems ? desktopCurrentSlide + 1 : 0);
+        }
+
+        wasDesktopCarouselRef.current = isDesktopCarousel;
+    }, [currentLogicalSlide, desktopCurrentSlide, hasMultipleCarouselItems, isDesktopCarousel]);
 
     // autoplay
     useEffect(() => {
@@ -622,15 +1360,20 @@ const Home: React.FC = () => {
     }, [restartCarouselAutoPlay, clearCarouselInterval]);
 
     const handleCarouselResume = useCallback(() => {
-        // 瀹炵幇 椤甸潰鎭㈠鍚庨噸寤鸿疆鎾姸鎬?
+        // 实现页面恢复后继续轮播，不强制刷新图片
+        isMobileCarouselTransitioningRef.current = false;
+        pendingCarouselNavRef.current = null;
+        pendingMobileCarouselNavRef.current = null;
+        queuedMobileCarouselActionRef.current = null;
+        mobileCarouselNavTokenRef.current += 1;
         setIsTransitionEnabled(true);
-        setCurrentSlide((prev) => getCarouselSlidePosition(prev, carouselItems.length));
-        // 瀹炵幇 杞挱鍥惧浘鐗囧己鍒堕噸杞?
-        setCarouselImageRetryMap({});
-        setCarouselRefreshKey((prev) => prev + 1);
-        void loadCarouselData();
+        if (isDesktopCarousel) {
+            setDesktopCurrentSlide((prev) => getLoopCarouselIndex(prev, carouselItems.length));
+        } else {
+            setCurrentSlide((prev) => getCarouselSlidePosition(prev, carouselItems.length));
+        }
         restartCarouselAutoPlay();
-    }, [carouselItems.length, getCarouselSlidePosition, loadCarouselData, restartCarouselAutoPlay]);
+    }, [carouselItems.length, getCarouselSlidePosition, isDesktopCarousel, restartCarouselAutoPlay]);
 
     useEffect(() => {
         const handleVisibilityChange = () => {
@@ -656,68 +1399,224 @@ const Home: React.FC = () => {
         };
     }, [clearCarouselInterval, handleCarouselResume]);
 
-    // manual switching
-    const goToSlide = (logicalIndex: number) => {
-        if (!hasMultipleCarouselItems) {
-            setCurrentSlide(0);
+    const preloadMobileCarouselActionTarget = useCallback((action: CarouselNavAction) => {
+        if (isDesktopCarousel || carouselItems.length === 0) {
             return;
         }
-        const safeIndex = ((logicalIndex % carouselItems.length) + carouselItems.length) % carouselItems.length;
+
+        const targetLogicalIndex = getMobileCarouselTargetIndex(action);
+        const targetItem = carouselItems[targetLogicalIndex];
+        if (!targetItem) {
+            return;
+        }
+
+        // 实现目标图片预热
+        void waitForCarouselImageReady(targetItem);
+    }, [carouselItems, getMobileCarouselTargetIndex, isDesktopCarousel, waitForCarouselImageReady]);
+
+    const queueLatestMobileCarouselAction = useCallback((action: CarouselNavAction) => {
+        pendingMobileCarouselNavRef.current = null;
+        mobileCarouselNavTokenRef.current += 1;
+        // 缓存最后一次滑动
+        queuedMobileCarouselActionRef.current = action;
+        preloadMobileCarouselActionTarget(action);
+    }, [preloadMobileCarouselActionTarget]);
+
+    const flushQueuedMobileCarouselAction = useCallback(() => {
+        const queuedAction = queuedMobileCarouselActionRef.current;
+        const pendingAction = pendingCarouselNavRef.current;
+        queuedMobileCarouselActionRef.current = null;
+        pendingCarouselNavRef.current = null;
+
+        const nextAction = queuedAction ?? pendingAction;
+        if (nextAction) {
+            // 实现边界复位后继续执行
+            requestCarouselNavActionRef.current(nextAction);
+        }
+    }, []);
+
+    const performCarouselNavAction = useCallback((action: CarouselNavAction) => {
+        if (!hasMultipleCarouselItems) {
+            setCurrentSlide(0);
+            setDesktopCurrentSlide(0);
+            return;
+        }
+
         setIsTransitionEnabled(true);
-        setCurrentSlide(safeIndex + 1);
+
+        if (isDesktopCarousel) {
+            if (action.type === 'slide') {
+                setDesktopCurrentSlide(getLoopCarouselIndex(action.logicalIndex, carouselItems.length));
+            } else if (action.type === 'prev') {
+                setDesktopCurrentSlide((prev) => getLoopCarouselIndex(prev - 1, carouselItems.length));
+            } else {
+                setDesktopCurrentSlide((prev) => getLoopCarouselIndex(prev + 1, carouselItems.length));
+            }
+
+            // 实现手动切换后重置自动播放
+            restartCarouselAutoPlay();
+            return;
+        }
+
+        const maxMobileSlide = carouselItems.length + 1;
+        let nextSlide = currentSlide;
+
+        if (action.type === 'slide') {
+            const safeIndex = ((action.logicalIndex % carouselItems.length) + carouselItems.length) % carouselItems.length;
+            nextSlide = safeIndex + 1;
+        } else if (action.type === 'prev') {
+            nextSlide = Math.max(0, currentSlide - 1);
+        } else {
+            nextSlide = Math.min(maxMobileSlide, currentSlide + 1);
+        }
+
+        if (nextSlide !== currentSlide) {
+            // 实现移动端过渡锁
+            isMobileCarouselTransitioningRef.current = true;
+            setCurrentSlide(nextSlide);
+        }
+
         restartCarouselAutoPlay();
+    }, [carouselItems.length, currentSlide, hasMultipleCarouselItems, isDesktopCarousel, restartCarouselAutoPlay]);
+
+    const queueMobileCarouselNavAction = useCallback((action: CarouselNavAction) => {
+        if (carouselItems.length === 0) {
+            restartCarouselAutoPlay();
+            return;
+        }
+
+        pendingMobileCarouselNavRef.current = null;
+        mobileCarouselNavTokenRef.current += 1;
+
+        const targetLogicalIndex = getMobileCarouselTargetIndex(action);
+        const targetItem = carouselItems[targetLogicalIndex];
+        if (!targetItem) {
+            restartCarouselAutoPlay();
+            return;
+        }
+
+        // 实现移动端待执行切换
+        const imageStateKey = getCarouselImageStateKey(targetItem);
+        if (carouselImageLoadedMapRef.current[imageStateKey]) {
+            if (isCarouselResettingRef.current || isMobileCarouselTransitioningRef.current) {
+                queueLatestMobileCarouselAction(action);
+                return;
+            }
+
+            performCarouselNavAction(action);
+            return;
+        }
+
+        const token = mobileCarouselNavTokenRef.current;
+        pendingMobileCarouselNavRef.current = { token, action };
+
+        void waitForCarouselImageReady(targetItem).then((isReady) => {
+            const pendingMobileAction = pendingMobileCarouselNavRef.current;
+            if (!pendingMobileAction || pendingMobileAction.token !== token) {
+                return;
+            }
+
+            pendingMobileCarouselNavRef.current = null;
+
+            if (!isReady) {
+                restartCarouselAutoPlay();
+                return;
+            }
+
+            if (isCarouselResettingRef.current || isMobileCarouselTransitioningRef.current) {
+                queueLatestMobileCarouselAction(action);
+                return;
+            }
+
+            // 实现移动端目标图片就绪后再切换
+            performCarouselNavAction(action);
+        });
+    }, [carouselItems, getCarouselImageStateKey, getMobileCarouselTargetIndex, performCarouselNavAction, queueLatestMobileCarouselAction, restartCarouselAutoPlay, waitForCarouselImageReady]);
+
+    const requestCarouselNavAction = useCallback((action: CarouselNavAction) => {
+        if (!hasMultipleCarouselItems) {
+            setCurrentSlide(0);
+            setDesktopCurrentSlide(0);
+            return;
+        }
+
+        if (isDesktopCarousel) {
+            performCarouselNavAction(action);
+            return;
+        }
+
+        clearCarouselInterval();
+
+        if (isCarouselResettingRef.current || isMobileCarouselTransitioningRef.current) {
+            // 缓存过渡阶段最后一次滑动
+            queueLatestMobileCarouselAction(action);
+            return;
+        }
+
+        queueMobileCarouselNavAction(action);
+    }, [clearCarouselInterval, hasMultipleCarouselItems, isDesktopCarousel, performCarouselNavAction, queueLatestMobileCarouselAction, queueMobileCarouselNavAction]);
+    requestCarouselNavActionRef.current = requestCarouselNavAction;
+
+    const restoreCarouselAfterReset = useCallback((targetSlide: number) => {
+        isCarouselResettingRef.current = true;
+
+        flushSync(() => {
+            setIsTransitionEnabled(false);
+            setCurrentSlide(targetSlide);
+        });
+
+        // 实现轮播边界无感复位
+        void carouselTrackRef.current?.offsetHeight;
+
+        flushSync(() => {
+            setIsTransitionEnabled(true);
+        });
+
+        isCarouselResettingRef.current = false;
+        isMobileCarouselTransitioningRef.current = false;
+        flushQueuedMobileCarouselAction();
+    }, [flushQueuedMobileCarouselAction]);
+
+    // manual switching
+    const goToSlide = (logicalIndex: number) => {
+        requestCarouselNavAction({ type: 'slide', logicalIndex });
     };
 
     const goToPrevSlide = () => {
-        if (!hasMultipleCarouselItems) return;
-        setIsTransitionEnabled(true);
-        setCurrentSlide((prev) => prev - 1);
-        restartCarouselAutoPlay();
+        requestCarouselNavAction({ type: 'prev' });
     };
 
     const goToNextSlide = () => {
-        if (!hasMultipleCarouselItems) return;
-        setIsTransitionEnabled(true);
-        setCurrentSlide((prev) => prev + 1);
-        restartCarouselAutoPlay();
+        requestCarouselNavAction({ type: 'next' });
     };
 
-    const handleCarouselTransitionEnd = () => {
+    const handleCarouselTransitionEnd = useCallback((event: React.TransitionEvent<HTMLDivElement>) => {
         if (!hasMultipleCarouselItems) return;
+        if (isDesktopCarousel) return;
+        if (event.target !== event.currentTarget || event.propertyName !== 'transform') {
+            // 只处理轮播轨道自身的位移动画结束
+            return;
+        }
 
         if (currentSlide === carouselItems.length + 1) {
-            setIsTransitionEnabled(false);
-            setCurrentSlide(1);
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setIsTransitionEnabled(true);
-                });
-            });
+            restoreCarouselAfterReset(1);
             return;
         }
 
         if (currentSlide === 0) {
-            setIsTransitionEnabled(false);
-            setCurrentSlide(carouselItems.length);
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setIsTransitionEnabled(true);
-                });
-            });
+            restoreCarouselAfterReset(carouselItems.length);
             return;
         }
 
         if (currentSlide < 0 || currentSlide > carouselItems.length + 1) {
             // 瀹炵幇 鎭㈠鍚庤疆鎾储寮曞厹搴?
-            setIsTransitionEnabled(false);
-            setCurrentSlide(getCarouselSlidePosition(currentSlide, carouselItems.length));
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setIsTransitionEnabled(true);
-                });
-            });
+            restoreCarouselAfterReset(getCarouselSlidePosition(currentSlide, carouselItems.length));
+            return;
         }
-    };
+
+        isMobileCarouselTransitioningRef.current = false;
+        flushQueuedMobileCarouselAction();
+    }, [carouselItems.length, currentSlide, flushQueuedMobileCarouselAction, getCarouselSlidePosition, hasMultipleCarouselItems, isDesktopCarousel, restoreCarouselAfterReset]);
 
     const handleCarouselTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
         if (e.touches.length !== 1) return;
@@ -848,8 +1747,13 @@ const Home: React.FC = () => {
         isBannerCarouselItem(item) ? Boolean(item.link_url?.trim()) : Boolean(item.file_id || item.id)
     );
 
-    const handleCarouselImageError = useCallback((item: CarouselItem, index: number) => {
-        const imageStateKey = getCarouselImageStateKey(item, index);
+    const handleCarouselImageLoad = useCallback((item: CarouselItem) => {
+        const imageStateKey = getCarouselImageStateKey(item);
+        markCarouselImageLoaded(imageStateKey);
+    }, [getCarouselImageStateKey, markCarouselImageLoaded]);
+
+    const handleCarouselImageError = useCallback((item: CarouselItem) => {
+        const imageStateKey = getCarouselImageStateKey(item);
 
         setCarouselImageRetryMap((prev) => {
             const currentRetryCount = prev[imageStateKey] || 0;
@@ -858,16 +1762,19 @@ const Home: React.FC = () => {
             }
 
             // 瀹炵幇 杞挱鍥惧浘鐗囧け璐ュ悗琛ヤ竴娆￠噸杞?
-            return {
+            const nextMap = {
                 ...prev,
                 [imageStateKey]: currentRetryCount + 1,
             };
+            carouselImageRetryMapRef.current = nextMap;
+            return nextMap;
         });
     }, [getCarouselImageStateKey]);
 
-    const handleThemeClick = (tagId: number) => {
-        navigate(`/categories?tagId=${tagId}`);
-    };
+    const handleThemeClick = useCallback((tag: HomeShowcaseTag) => {
+        // 实现首页标签切换时刷新横向预览区
+        setActiveShowcaseTagKey(tag.key);
+    }, []);
 
     const handleThemeShowcaseMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (event.button !== 0 || !themeShowcaseRef.current) return;
@@ -906,9 +1813,55 @@ const Home: React.FC = () => {
         event.stopPropagation();
     }, []);
 
-    const handleOpenCategories = () => {
-        navigate('/categories');
-    };
+    const handleThemeShowcaseWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+        if (!themeShowcaseRef.current || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+        // 实现标签条滚轮横向滚动
+        themeShowcaseRef.current.scrollLeft += event.deltaY;
+        event.preventDefault();
+    }, []);
+
+    const handleShowcaseMoreClick = useCallback(() => {
+        if (!activeShowcaseTag) return;
+
+        const searchParams = new URLSearchParams({
+            mode: 'all',
+            sort: 'hot',
+            tagId: 'all',
+        });
+
+        if (activeShowcaseTag.kind === 'featured') {
+            searchParams.set('sort', 'hot');
+            searchParams.set('tagId', String(activeShowcaseTag.id));
+        } else if (activeShowcaseTag.configMode === 'auto') {
+            searchParams.set('sort', activeShowcaseTag.autoSort || 'hot');
+        } else {
+            searchParams.set('sort', 'recommended');
+        }
+
+        navigate(`/categories?${searchParams.toString()}`);
+    }, [activeShowcaseTag, navigate]);
+
+    const handleAllGamesSortChange = useCallback((sort: HomeListSort) => {
+        updateAllGamesFilters((prev) => ({
+            ...prev,
+            sort,
+        }));
+    }, [updateAllGamesFilters]);
+
+    const handleAllGamesModeChange = useCallback((mode: HomeListMode) => {
+        updateAllGamesFilters((prev) => ({
+            ...prev,
+            mode,
+        }));
+    }, [updateAllGamesFilters]);
+
+    const handleAllGamesTagChange = useCallback((tagId: number | null) => {
+        updateAllGamesFilters((prev) => ({
+            ...prev,
+            tagId,
+        }));
+    }, [updateAllGamesFilters]);
 
     useEffect(() => {
         return () => {
@@ -953,24 +1906,53 @@ const Home: React.FC = () => {
         }
         setShowAnnouncementModal(false);
     };
+
+    const desktopCarouselStyle = isDesktopCarousel
+        ? ({
+            '--desktop-slide-width': `${desktopCarouselMetrics.slideWidth}px`,
+            '--desktop-slide-gap': `${desktopCarouselMetrics.slideGap}px`,
+        } as React.CSSProperties)
+        : undefined;
+
+    const carouselTrackStyle: React.CSSProperties = isDesktopCarousel
+        ? {
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+        }
+        : {
+            transform: `translate3d(-${currentSlide * 100}%, 0, 0)`,
+        };
+
     return (
         <div className={styles.pageRoot}>
             {/* 椤堕儴鍥哄畾瀵艰埅 */}
-            <Navbar />
+            <Navbar mobileVariant="home-overlay" mobileOverlayScrolled={isMobileHomeNavbarScrolled} />
 
             {/* 涓讳綋 */}
-            <div className={styles.mainContent}>
+            <div
+                ref={mainContentRef}
+                className={styles.mainContent}
+                onScroll={handleMainContentScroll}
+            >
                 {/* 鍙充晶鍟嗗煄鍐呭 */}
                 <div className={styles.main}>
-                    <div className={styles.todayWrap}>
-                        <div className={`${styles.carouselContainer} ${styles.carouselContainerPc}`}>
+                    <div ref={todayWrapRef} className={styles.todayWrap}>
+                        <div
+                            className={`${styles.carouselContainer} ${styles.carouselContainerPc}`}
+                            style={desktopCarouselStyle}
+                        >
                             {carouselItems.length > 0 ? (
                                 <>
-                                    <div className={`${styles.carouselWrapper} ${styles.carouselWrapperPc}`}>
+                                    <div
+                                        ref={carouselViewportRef}
+                                        className={`${styles.carouselWrapper} ${styles.carouselWrapperPc}`}
+                                    >
                                         <div
+                                            ref={carouselTrackRef}
                                             className={`${styles.carouselTrack} ${!isTransitionEnabled ? styles.carouselTrackNoTransition : ''}`}
-                                            style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                                            onTransitionEnd={handleCarouselTransitionEnd}
+                                            style={carouselTrackStyle}
+                                            onTransitionEnd={isDesktopCarousel ? undefined : handleCarouselTransitionEnd}
                                             onTouchStart={handleCarouselTouchStart}
                                             onTouchMove={handleCarouselTouchMove}
                                             onTouchEnd={handleCarouselTouchEnd}
@@ -979,12 +1961,14 @@ const Home: React.FC = () => {
                                             {carouselRenderItems.map((item, idx) => {
                                                 const imageId = getCarouselItemId(item, idx);
                                                 const canClick = isCarouselItemClickable(item);
-                                                const imageStateKey = getCarouselImageStateKey(item, idx);
+                                                const imageStateKey = getCarouselImageStateKey(item);
                                                 const retryVersion = carouselImageRetryMap[imageStateKey] || 0;
+                                                const isImageLoaded = Boolean(carouselImageLoadedMap[imageStateKey]);
                                                 return (
                                                     <div
                                                         key={`${imageId}-${idx}`}
-                                                        className={`${styles.carouselSlide} ${canClick ? styles.carouselSlideClickable : ''}`}
+                                                        className={`${styles.carouselSlide} ${getCarouselSlideStateClass(idx)} ${canClick ? styles.carouselSlideClickable : ''}`}
+                                                        style={getDesktopCarouselSlideStyle(idx)}
                                                         onClick={(event) => {
                                                             if (suppressBannerClickRef.current) {
                                                                 event.preventDefault();
@@ -994,15 +1978,20 @@ const Home: React.FC = () => {
                                                             handleCarouselItemClick(item);
                                                         }}
                                                     >
-                                                        <div className={styles.carouselImage}>
+                                                        <div
+                                                            className={`${styles.carouselImage} ${!isDesktopCarousel && isImageLoaded ? styles.carouselImageLoaded : ''}`}
+                                                        >
                                                             <img
-                                                                key={`${imageStateKey}-${carouselRefreshKey}-${retryVersion}`}
-                                                                src={getCarouselImageSrc(item, idx)}
+                                                                key={`${imageStateKey}-${retryVersion}`}
+                                                                src={getCarouselImageSrc(item)}
                                                                 alt={item.title}
                                                                 loading="eager"
                                                                 decoding="async"
+                                                                onLoad={() => {
+                                                                    handleCarouselImageLoad(item);
+                                                                }}
                                                                 onError={() => {
-                                                                    handleCarouselImageError(item, idx);
+                                                                    handleCarouselImageError(item);
                                                                 }}
                                                             />
                                                         </div>
@@ -1068,7 +2057,7 @@ const Home: React.FC = () => {
                                             {carouselItems.map((_, index) => (
                                                 <button
                                                     key={index}
-                                                    className={`${styles.carouselIndicator} ${currentLogicalSlide === index ? styles.carouselIndicatorActive : ''}`}
+                                                    className={`${styles.carouselIndicator} ${activeCarouselSlide === index ? styles.carouselIndicatorActive : ''}`}
                                                     onClick={() => goToSlide(index)}
                                                     aria-label={`切换到第 ${index + 1} 张`}
                                                 />
@@ -1082,75 +2071,152 @@ const Home: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 实现移动端与 PC 共用热门题材展示 */}
-                    {homeTicker?.text?.trim() ? (
-                        <button
-                            type="button"
-                            className={styles.homeTicker}
-                            onClick={handleHomeTickerClick}
-                            aria-label={`打开首页滚动通知：${homeTicker.text}`}
-                        >
-                            <span className={styles.homeTickerIcon} aria-hidden="true">
-                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M4 10V14H7L12 18V6L7 10H4Z" />
-                                    <path d="M16 9C17.2 10.2 17.2 13.8 16 15" />
-                                    <path d="M18.5 6.5C21 9 21 15 18.5 17.5" />
-                                </svg>
-                            </span>
-                            <span ref={homeTickerViewportRef} className={styles.homeTickerViewport}>
-                                {isTickerOverflowing ? (
-                                    <span className={`${styles.homeTickerTrack} ${styles.homeTickerTrackScrolling}`}>
-                                        <span className={styles.homeTickerGroup}>
-                                            <span ref={homeTickerMeasureTextRef} className={styles.homeTickerText}>{homeTicker.text}</span>
-                                            <span className={styles.homeTickerDot} aria-hidden="true" />
+                    <div className={styles.homeWideSections}>
+                        {/* 实现移动端与 PC 共用热门题材展示 */}
+                        {homeTicker?.text?.trim() ? (
+                            <button
+                                type="button"
+                                className={styles.homeTicker}
+                                onClick={handleHomeTickerClick}
+                                aria-label={`打开首页滚动通知：${homeTicker.text}`}
+                            >
+                                <span className={styles.homeTickerIcon} aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 10V14H7L12 18V6L7 10H4Z" />
+                                        <path d="M16 9C17.2 10.2 17.2 13.8 16 15" />
+                                        <path d="M18.5 6.5C21 9 21 15 18.5 17.5" />
+                                    </svg>
+                                </span>
+                                <span ref={homeTickerViewportRef} className={styles.homeTickerViewport}>
+                                    {isTickerOverflowing ? (
+                                        <span className={`${styles.homeTickerTrack} ${styles.homeTickerTrackScrolling}`}>
+                                            <span className={styles.homeTickerGroup}>
+                                                <span ref={homeTickerMeasureTextRef} className={styles.homeTickerText}>{homeTicker.text}</span>
+                                                <span className={styles.homeTickerDot} aria-hidden="true" />
+                                            </span>
+                                            <span className={styles.homeTickerGroup} aria-hidden="true">
+                                                <span className={styles.homeTickerText}>{homeTicker.text}</span>
+                                                <span className={styles.homeTickerDot} aria-hidden="true" />
+                                            </span>
                                         </span>
-                                        <span className={styles.homeTickerGroup} aria-hidden="true">
-                                            <span className={styles.homeTickerText}>{homeTicker.text}</span>
-                                            <span className={styles.homeTickerDot} aria-hidden="true" />
+                                    ) : (
+                                        <span
+                                            ref={homeTickerMeasureTextRef}
+                                            className={`${styles.homeTickerText} ${styles.homeTickerTextStatic}`}
+                                        >
+                                            {homeTicker.text}
                                         </span>
-                                    </span>
-                                ) : (
-                                    <span
-                                        ref={homeTickerMeasureTextRef}
-                                        className={`${styles.homeTickerText} ${styles.homeTickerTextStatic}`}
+                                    )}
+                                </span>
+                                <span className={styles.homeTickerAction}>查看</span>
+                            </button>
+                        ) : null}
+
+                        <div className={styles.themeShowcase}>{/*
+                                <h3>热门题材</h3>
+                                <button type="button" onClick={handleOpenCategories}>查看全部</button>
+                            </div>
+                            */}<div
+                                ref={themeShowcaseRef}
+                                className={`${styles.themeShowcaseList} ${isThemeShowcaseDragging ? styles.themeShowcaseListDragging : ''}`}
+                                onMouseDown={handleThemeShowcaseMouseDown}
+                                onMouseMove={handleThemeShowcaseMouseMove}
+                                onMouseUp={stopThemeShowcaseDragging}
+                                onMouseLeave={stopThemeShowcaseDragging}
+                                onClickCapture={handleThemeShowcaseClickCapture}
+                                onWheel={handleThemeShowcaseWheel}
+                            >
+                                {homeShowcaseTags.map((tag) => (
+                                    <button
+                                        key={tag.key}
+                                        type="button"
+                                        className={`${styles.themeShowcaseItem} ${activeShowcaseTagKey === tag.key ? styles.themeShowcaseItemActive : ''}`}
+                                        onClick={() => handleThemeClick(tag)}
                                     >
-                                        {homeTicker.text}
-                                    </span>
-                                )}
-                            </span>
-                            <span className={styles.homeTickerAction}>查看</span>
-                        </button>
-                    ) : null}
-
-                    <div className={styles.themeShowcase}>
-                        <div className={styles.themeShowcaseHeader}>
-                            <h3>热门题材</h3>
-                            <button type="button" onClick={handleOpenCategories}>查看全部</button>
+                                        {tag.name}
+                                    </button>
+                                ))}
+                            </div>
+                            {homeShowcaseTags.length > 0 ? (
+                                <div className={styles.themeShowcaseTitleRow}>
+                                    <div className={styles.themeShowcaseTitleGroup}>
+                                        <span className={styles.themeShowcaseTitleMarker} aria-hidden="true" />
+                                        <h3 className={styles.themeShowcaseTitle}>
+                                            {activeShowcaseTag?.name || ''}
+                                        </h3>
+                                    </div>
+                                    {activeShowcaseTag ? (
+                                        <button
+                                            type="button"
+                                            aria-label="\u67E5\u770B\u66F4\u591A"
+                                            className={styles.themeShowcaseMoreLink}
+                                            onClick={handleShowcaseMoreClick}
+                                        >
+                                            <span>查看更多</span>
+                                            <span className={styles.themeShowcaseMoreArrow} aria-hidden="true">›</span>
+                                        </button>
+                                    ) : null}
+                                </div>
+                            ) : null}
+                            <div className={styles.themeShowcasePreview}>
+                                <HomeThemePreviewRail
+                                    games={activeShowcaseGames}
+                                    onMoreClick={handleShowcaseMoreClick}
+                                    resetKey={themePreviewResetKey}
+                                    emptyText={showcaseLoadingKey === activeShowcaseTag?.key ? '正在加载剧本...' : '当前标签暂未配置剧本'}
+                                />
+                            </div>
+                            {/* 实现首页移动端加群入口 */}
                         </div>
-                        <div
-                            ref={themeShowcaseRef}
-                            className={`${styles.themeShowcaseList} ${isThemeShowcaseDragging ? styles.themeShowcaseListDragging : ''}`}
-                            onMouseDown={handleThemeShowcaseMouseDown}
-                            onMouseMove={handleThemeShowcaseMouseMove}
-                            onMouseUp={stopThemeShowcaseDragging}
-                            onMouseLeave={stopThemeShowcaseDragging}
-                            onClickCapture={handleThemeShowcaseClickCapture}
-                        >
-                            {themeTags.slice(0, 12).map((tag) => (
-                                <button
-                                    key={tag.id}
-                                    type="button"
-                                    className={styles.themeShowcaseItem}
-                                    onClick={() => handleThemeClick(tag.id)}
-                                >
-                                    {tag.name}
-                                </button>
-                            ))}
+                        {!isMobileViewport ? (
+                            <HomeGameFilterBar
+                                sort={allGamesFilters.sort}
+                                mode={allGamesFilters.mode}
+                                tagId={allGamesFilters.tagId}
+                                themeTags={allThemeTags}
+                                onSortChange={handleAllGamesSortChange}
+                                onModeChange={handleAllGamesModeChange}
+                                onTagChange={handleAllGamesTagChange}
+                            />
+                        ) : null}
+                        <div className={styles.mobileJoinGroupSection}>
+                            <button
+                                type="button"
+                                className={styles.mobileJoinGroupCard}
+                                onClick={() => setShowJoinGroupModal(true)}
+                                aria-label="打开官方群聊二维码"
+                            >
+                                <span className={styles.mobileJoinGroupIcon} aria-hidden="true">
+                                    <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M217.9 356.5c-14.1 0-25.5 11.4-25.5 25.5s11.4 25.5 25.5 25.5 25.5-11.4 25.5-25.5-11.4-25.5-25.5-25.5zM217.4 433.7c-11.2 0-20.4 9.2-20.4 20.4v174.4c0 11.2 9.2 20.4 20.4 20.4s20.4-9.2 20.4-20.4V454.1c0-11.2-9.2-20.4-20.4-20.4z" />
+                                        <path d="M878.7 379.5v-86c0-96.3-57.5-153.7-153.7-153.7H218c-96.3 0-153.7 57.5-153.7 153.7v320.7C64.3 710.5 121.8 768 218 768h45.8v120.4L449.9 768h11.2c17.2 11.3 39 17.5 64.6 17.5h161.6l130.7 85v-85.1h33.5c66.6 0 107.9-41.3 107.9-107.9V484.8c-0.1-56.9-30.3-95.3-80.7-105.3zM417.8 484.8v192.8c0 16.2 2.5 31 7.2 44l-106.1 70.1v-74.9h-101c-67.7-0.3-102.2-34.8-102.5-102.5V293.5c0.3-67.7 34.8-102.2 102.5-102.5H725c67.7 0.3 102.2 34.8 102.5 102.5v83.3H525.7c-66.5 0.1-107.9 41.4-107.9 108z m490.4 192.7c-0.2 38.6-18.2 56.6-56.7 56.7h-87.2v40.3l-61-40.3H525.7c-38.5-0.2-56.6-18.2-56.7-56.7V484.8c0.2-38.6 18.2-56.6 56.7-56.7h325.7c38.5 0.2 56.6 18.2 56.7 56.7v192.7z" />
+                                        <path d="M851.4 428.1H525.7c-38.5 0.2-56.6 18.2-56.7 56.7v192.8c0.2 38.5 18.2 56.6 56.7 56.7h177.5l61 40.3v-40.3h87.2c38.5-0.2 56.6-18.2 56.7-56.7V484.8c-0.1-38.6-18.1-56.6-56.7-56.7zM567 627.4c-21.1 0-38.3-17.2-38.3-38.3 0-21.1 17.2-38.3 38.3-38.3 21.1 0 38.3 17.2 38.3 38.3 0 21.1-17.2 38.3-38.3 38.3z m122.2 0c-21.1 0-38.3-17.2-38.3-38.3 0-21.1 17.2-38.3 38.3-38.3 21.1 0 38.3 17.2 38.3 38.3 0 21.1-17.2 38.3-38.3 38.3z m122.3 0c-21.1 0-38.3-17.2-38.3-38.3 0-21.1 17.2-38.3 38.3-38.3 21.1 0 38.3 17.2 38.3 38.3 0 21.1-17.2 38.3-38.3 38.3z" />
+                                    </svg>
+                                </span>
+                                <span className={styles.mobileJoinGroupContent}>
+                                    <span className={styles.mobileJoinGroupTitle}>官方精选交流群</span>
+                                    <span className={styles.mobileJoinGroupDesc}>一起讨论剧情，分享心得</span>
+                                </span>
+                                <span className={styles.mobileJoinGroupAction}>
+                                    {/* 复用现有加群弹窗 */}
+                                    立即加入
+                                </span>
+                            </button>
+                            {isMobileViewport ? (
+                                <HomeGameFilterBar
+                                    sort={allGamesFilters.sort}
+                                    mode={allGamesFilters.mode}
+                                    tagId={allGamesFilters.tagId}
+                                    themeTags={allThemeTags}
+                                    onSortChange={handleAllGamesSortChange}
+                                    onModeChange={handleAllGamesModeChange}
+                                    onTagChange={handleAllGamesTagChange}
+                                />
+                            ) : null}
                         </div>
-                    </div>
 
-                    {/* 闄愭椂浼樻儬妯″潡 */}
-                    {/* <div className={styles.shopSection}>
+                        {/* 闄愭椂浼樻儬妯″潡 */}
+                        {/* <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/闄愭椂浼樻儬.png`} alt="闄愭椂浼樻儬" />
@@ -1168,23 +2234,24 @@ const Home: React.FC = () => {
                             </button>
                         </div>
                         {isLoadingSpecial ? (
-                            <GameGridSkeleton count={8} />
+                            <GameGridSkeleton count={8} layoutVariant="homeWide" />
                         ) : (
                             <>
                                 <GameGrid
                                     games={fileMetas}
+                                    layoutVariant="homeWide"
                                 />
                                 {isLoadingMoreSpecial && (
                                     <div style={{ padding: '20px', textAlign: 'center' }}>
-                                        <GameGridSkeleton count={8} />
+                                        <GameGridSkeleton count={8} layoutVariant="homeWide" />
                                     </div>
                                 )}
                             </>
                         )}
                     </div> */}
 
-                    {/* 鍏ㄩ儴娓告垙妯″潡 */}
-                    <div className={styles.shopSection}>
+                        {/* 鍏ㄩ儴娓告垙妯″潡 */}
+                        <div className={styles.shopSection}>
                         {/* <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/鍏ㄩ儴娓告垙.png`} alt="鍏ㄩ儴娓告垙" />
@@ -1201,20 +2268,23 @@ const Home: React.FC = () => {
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/绠ご.png`} alt="" />
                             </button>
                         </div> */}
-                        {isLoadingAll ? (
-                            <GameGridSkeleton count={8} />
-                        ) : (
-                            <>
-                                <GameGrid
-                                    games={allGames}
-                                />
-                                {isLoadingMoreAll && (
-                                    <div style={{ padding: '20px', textAlign: 'center' }}>
-                                        <GameGridSkeleton count={8} />
-                                    </div>
-                                )}
-                            </>
-                        )}
+                            {isLoadingAll ? (
+                                <GameGridSkeleton count={8} layoutVariant="homeWide" />
+                            ) : (
+                                <>
+                                    <GameGrid
+                                        games={allGames}
+                                        layoutVariant="homeWide"
+                                        emptyText="暂无符合当前筛选条件的作品"
+                                    />
+                                    {isLoadingMoreAll && (
+                                        <div style={{ padding: '20px', textAlign: 'center' }}>
+                                            <GameGridSkeleton count={8} layoutVariant="homeWide" />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {/* 婊氬姩鍔犺浇瑙﹀彂鍣?*/}

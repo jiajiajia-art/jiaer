@@ -11,9 +11,9 @@
 }
 
 .main {
-    width: 100%;
-    max-width: 1140px;
-    margin: 80px auto 0;
+    width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+    max-width: none;
+    margin: var(--app-desktop-navbar-height) auto 0;
     padding: 20px;
     box-sizing: border-box;
     display: flex;
@@ -52,7 +52,7 @@
     width: 100%;
     padding: 20px;
     border: 1px solid rgba(26, 29, 33, 0.08);
-    border-radius: 24px;
+    border-radius: 18px;
     background:
         radial-gradient(circle at top left, rgba(224, 61, 75, 0.12), transparent 32%),
         linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(252, 246, 244, 0.98));
@@ -164,6 +164,21 @@
     cursor: grabbing;
 }
 
+@media (min-width: 769px) {
+    .themeScrollRow {
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        overscroll-behavior-x: contain;
+    }
+
+    .themeScrollRow::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+}
+
 .tagSummaryRow {
     display: flex;
     align-items: center;
@@ -199,6 +214,8 @@
     }
 
     .main {
+        width: 100%;
+        max-width: 100%;
         margin-top: 0;
         padding: 12px;
         gap: 12px;
@@ -206,7 +223,7 @@
 
     .filtersCard {
         padding: 14px;
-        border-radius: 20px;
+        border-radius: 16px;
         gap: 14px;
     }
 

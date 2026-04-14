@@ -7,9 +7,11 @@ import AdminBannerManager from '../components/AdminBannerManager';
 import Pagination from '../components/Pagination';
 import PromotionAdminManager from '../components/PromotionAdminManager';
 import PointsAdminManager from '../components/PointsAdminManager';
+import SpecialThemeTagManager from '../components/SpecialThemeTagManager';
 import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
+import promotionApi from '../api/promotion/promotionApi';
 import type {
     AnnouncementPayload,
     AnnouncementRecord,
@@ -62,6 +64,8 @@ const clampPage = (page: number, totalItems: number, pageSize: number): number =
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     return Math.min(Math.max(page, 1), totalPages);
 };
+
+const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
 
 const moveById = <T extends { id: number | string }>(list: T[], fromId: number | string, toId: number | string): T[] => {
     const fromIndex = list.findIndex((item) => item.id === fromId);
@@ -126,6 +130,8 @@ const AdminPanel: React.FC = () => {
     const autoScrollDirectionRef = useRef<-1 | 0 | 1>(0);
     const lastSortTargetIdRef = useRef<number | null>(null);
     const [themePage, setThemePage] = useState(1);
+    const [pendingPromotionReviewCount, setPendingPromotionReviewCount] = useState(0);
+    const [pendingPromotionRewardCount, setPendingPromotionRewardCount] = useState(0);
 
     const previewDraftRecord = useMemo<AnnouncementRecord>(() => {
         const safeSections = sections.filter((section) => section.subtitle.trim() || section.body.trim());
@@ -261,9 +267,31 @@ const AdminPanel: React.FC = () => {
         }
     }, []);
 
+    const refreshAdminBadgeCounts = useCallback(async () => {
+        try {
+            // 实现 管理端数字标统一刷新
+            const [submissionResponse, rewardTaskResponse] = await Promise.all([
+                promotionApi.adminSubmissions({ reviewStatus: 'pending_review', page: 1 }),
+                promotionApi.adminRewardTasks({ page: 1 }),
+            ]);
+
+            const nextPendingReviewCount = Number(submissionResponse.data.data?.pagination?.total || 0);
+            const nextPendingRewardCount = Number(rewardTaskResponse.data.data?.summary?.pendingCount || 0);
+
+            setPendingPromotionReviewCount(nextPendingReviewCount);
+            setPendingPromotionRewardCount(nextPendingRewardCount);
+        } catch (error) {
+            console.error('Failed to refresh admin badge counts.', error);
+        }
+    }, []);
+
     useEffect(() => {
         void loadHistory();
     }, [loadHistory]);
+
+    useEffect(() => {
+        void refreshAdminBadgeCounts();
+    }, [refreshAdminBadgeCounts]);
 
     useEffect(() => {
         // 实现公告分页
@@ -280,6 +308,21 @@ const AdminPanel: React.FC = () => {
     useEffect(() => {
         setActiveTab(resolveAdminTab(location.pathname));
     }, [location.pathname]);
+
+    useEffect(() => {
+        if (activeTab === 'promotions' || activeTab === 'points') {
+            void refreshAdminBadgeCounts();
+        }
+    }, [activeTab, refreshAdminBadgeCounts]);
+
+    useEffect(() => {
+        const handleWindowFocus = () => {
+            void refreshAdminBadgeCounts();
+        };
+
+        window.addEventListener('focus', handleWindowFocus);
+        return () => window.removeEventListener('focus', handleWindowFocus);
+    }, [refreshAdminBadgeCounts]);
 
     useEffect(() => {
         if (activeTab !== 'themes') return undefined;
@@ -730,6 +773,9 @@ const AdminPanel: React.FC = () => {
                             className={`${styles.navItem} ${activeTab === 'promotions' ? styles.navItemActive : ''}`}
                             onClick={() => handleTabChange('promotions')}
                         >
+                            {pendingPromotionReviewCount > 0 ? (
+                                <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionReviewCount)}</span>
+                            ) : null}
                             <span className={styles.navTitle}>推广管理</span>
                         </button>
                         <button
@@ -737,6 +783,9 @@ const AdminPanel: React.FC = () => {
                             className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`}
                             onClick={() => handleTabChange('points')}
                         >
+                            {pendingPromotionRewardCount > 0 ? (
+                                <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionRewardCount)}</span>
+                            ) : null}
                             <span className={styles.navTitle}>积分管理</span>
                         </button>
                         <button
@@ -893,6 +942,8 @@ const AdminPanel: React.FC = () => {
 
                         {activeTab === 'themes' && (
                             <div className={styles.panelStack}>
+                                <SpecialThemeTagManager />
+
                                 <section className={styles.heroCard}>
                                     <div>
                                         <div className={styles.sectionBadge}>题材管理</div>
@@ -1064,9 +1115,19 @@ const AdminPanel: React.FC = () => {
                             </div>
                         )}
 
-                        {activeTab === 'promotions' && <PromotionAdminManager />}
+                        {activeTab === 'promotions' && (
+                            <PromotionAdminManager
+                                pendingReviewCount={pendingPromotionReviewCount}
+                                onRefreshCounts={refreshAdminBadgeCounts}
+                            />
+                        )}
 
-                        {activeTab === 'points' && <PointsAdminManager />}
+                        {activeTab === 'points' && (
+                            <PointsAdminManager
+                                pendingRewardCount={pendingPromotionRewardCount}
+                                onRefreshCounts={refreshAdminBadgeCounts}
+                            />
+                        )}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
                     </div>

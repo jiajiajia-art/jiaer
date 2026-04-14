@@ -37,8 +37,14 @@ const getRewardTaskStatusLabel = (status: PromotionRewardTask['status']) => {
 };
 
 const getRewardTaskDisplayName = (task: PromotionRewardTask) => task.nickname || task.userCode || task.phoneNumber || '-';
+const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
 
-const PointsAdminManager: React.FC = () => {
+type PointsAdminManagerProps = {
+    pendingRewardCount: number;
+    onRefreshCounts: () => Promise<void>;
+};
+
+const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCount, onRefreshCounts }) => {
     const [activeTab, setActiveTab] = useState<PointsTab>('activity');
     const [rewardTasks, setRewardTasks] = useState<PromotionRewardTask[]>([]);
     const [rewardTaskPagination, setRewardTaskPagination] = useState<AdminPromotionRewardTaskPagination>(emptyRewardTaskPagination);
@@ -87,7 +93,10 @@ const PointsAdminManager: React.FC = () => {
             setIssuingTaskId(taskId);
             await promotionApi.adminIssueRewardTask(taskId);
             toast.success('活动积分发放成功');
-            await loadRewardTasks(rewardTaskPagination.page);
+            await Promise.all([
+                loadRewardTasks(rewardTaskPagination.page),
+                onRefreshCounts().catch(() => undefined),
+            ]);
         } catch (error) {
             toast.error(getErrorMessage(error, '活动积分发放失败'));
         } finally {
@@ -103,7 +112,10 @@ const PointsAdminManager: React.FC = () => {
             const skippedCount = Number(response.data.data?.skippedCount || 0);
             toast.success(`批量发放完成，成功 ${issuedCount} 条，跳过 ${skippedCount} 条`);
             setIsBatchConfirmOpen(false);
-            await loadRewardTasks(rewardTaskPagination.page);
+            await Promise.all([
+                loadRewardTasks(rewardTaskPagination.page),
+                onRefreshCounts().catch(() => undefined),
+            ]);
         } catch (error) {
             toast.error(getErrorMessage(error, '活动积分批量发放失败'));
         } finally {
@@ -505,13 +517,16 @@ const PointsAdminManager: React.FC = () => {
                 </section>
 
                 <div className={styles.tabRow}>
-                    <button
-                        type="button"
-                        className={`${styles.tabButton} ${activeTab === 'activity' ? styles.tabButtonActive : ''}`}
-                        onClick={() => setActiveTab('activity')}
-                    >
-                        活动积分管理
-                    </button>
+                    <div className={styles.tabButtonWrap}>
+                        <button
+                            type="button"
+                            className={`${styles.tabButton} ${activeTab === 'activity' ? styles.tabButtonActive : ''}`}
+                            onClick={() => setActiveTab('activity')}
+                        >
+                            活动积分管理
+                        </button>
+                        {pendingRewardCount > 0 ? <span className={styles.actionBadge}>{formatBadgeCount(pendingRewardCount)}</span> : null}
+                    </div>
                     <button
                         type="button"
                         className={`${styles.tabButton} ${activeTab === 'special' ? styles.tabButtonActive : ''}`}

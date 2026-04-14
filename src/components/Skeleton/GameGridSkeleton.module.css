@@ -1,12 +1,16 @@
 .skeletonGrid {
     display: grid;
-    grid-template-columns: repeat(4, 250px);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
     width: 100%;
 }
 
+.skeletonGridHomeWide {
+    width: 100%;
+}
+
 .skeletonCard {
-    width: 250px;
+    width: 100%;
     border-radius: 8px;
     overflow: hidden;
     background: #fff;
@@ -17,8 +21,8 @@
 
 .coverSkeleton {
     width: 100%;
-    height: 130px;
-    border-radius: 10px;
+    aspect-ratio: 4 / 3;
+    border-radius: 8px;
     background: linear-gradient(90deg, #ededed 25%, #f5f5f5 37%, #ededed 63%);
     background-size: 400% 100%;
     animation: skeleton-loading 1.5s ease-in-out infinite;
@@ -29,7 +33,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: 10px;
+    border-radius: 8px;
     box-shadow: inset 0 -40px 30px -30px rgba(0, 0, 0, 0.35);
 }
 
@@ -89,13 +93,54 @@
     }
 }
 
+@media screen and (min-width: 769px) {
+    .skeletonGrid {
+        gap: 24px;
+    }
+
+    .skeletonCard {
+        min-width: 0;
+    }
+
+    .skeletonGridHomeWide {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 24px;
+    }
+
+    .skeletonCardHomeWide {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media screen and (min-width: 1280px) {
+    .skeletonGrid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media screen and (min-width: 1440px) {
+    .skeletonGridHomeWide {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
 @media screen and (max-width: 1080px) {
     .skeletonGrid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 18px;
     }
 
+    .skeletonGridHomeWide {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 24px;
+    }
+
     .skeletonCard {
+        width: 100%;
+    }
+
+    .skeletonCardHomeWide {
         width: 100%;
     }
 }
@@ -113,15 +158,9 @@
 
     .skeletonCard {
         width: 100%;
-        border-radius: 10px;
+        border-radius: 8px;
         padding: 4px;
         box-sizing: border-box;
-    }
-
-    .coverSkeleton {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 16 / 9;
     }
 
     .titleSkeleton,

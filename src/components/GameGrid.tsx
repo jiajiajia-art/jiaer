@@ -7,6 +7,8 @@ import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
 
+type GameGridLayoutVariant = 'default' | 'homeWide';
+
 interface GameGridProps {
     games: UserGameData[];
     onGameClick?: (game: UserGameData) => void;
@@ -17,6 +19,8 @@ interface GameGridProps {
     selectedIds?: string[];
     onToggleSelect?: (game: UserGameData) => void;
     isSelectionMode?: boolean;
+    layoutVariant?: GameGridLayoutVariant;
+    emptyText?: string;
 }
 
 const GameGrid: React.FC<GameGridProps> = ({
@@ -28,8 +32,20 @@ const GameGrid: React.FC<GameGridProps> = ({
     selectedIds = [],
     onToggleSelect,
     isSelectionMode = false,
+    layoutVariant = 'default',
+    emptyText,
 }) => {
     const navigate = useNavigate();
+    const gridClassName = [
+        styles.grid4,
+        layoutVariant === 'homeWide' ? styles.gridHomeWide : '',
+    ].filter(Boolean).join(' ');
+    const cardClassName = (isSelected: boolean) => [
+        styles.goodsCard,
+        layoutVariant === 'homeWide' ? styles.goodsCardHomeWide : '',
+        isSelectionMode ? styles.goodsCardSelectable : '',
+        isSelected ? styles.goodsCardSelected : '',
+    ].filter(Boolean).join(' ');
 
     const getTypeLabel = (meta: UserGameData): string => {
         const raw = String(meta.game_tags || (meta as { engine?: string }).engine || '').toUpperCase();
@@ -119,13 +135,13 @@ const GameGrid: React.FC<GameGridProps> = ({
     if (games.length === 0) {
         return (
             <div className={styles.emptyState}>
-                <p />
+                {emptyText ? <p className={styles.emptyStateText}>{emptyText}</p> : <p />}
             </div>
         );
     }
 
     return (
-        <div className={styles.grid4}>
+        <div className={gridClassName}>
             {games.map((meta, idx) => {
                 const status = getIncentiveStatus(meta);
                 const showIncentive = showIncentiveUI && status !== 'none';
@@ -140,7 +156,7 @@ const GameGrid: React.FC<GameGridProps> = ({
 
                 return (
                     <div
-                        className={`${styles.goodsCard} ${isSelectionMode ? styles.goodsCardSelectable : ''} ${isSelected ? styles.goodsCardSelected : ''}`}
+                        className={cardClassName(isSelected)}
                         key={meta.file_id || meta.id || String(idx)}
                         onClick={() => handleCardClick(meta)}
                     >

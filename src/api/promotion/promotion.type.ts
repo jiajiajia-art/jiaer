@@ -3,6 +3,10 @@ export interface PromotionSubmissionConfig {
     acceptLinks: boolean;
     acceptImages: boolean;
     acceptVideos: boolean;
+    requireTexts: boolean;
+    requireLinks: boolean;
+    requireImages: boolean;
+    requireVideos: boolean;
 }
 
 export interface HomePromotionTicker {

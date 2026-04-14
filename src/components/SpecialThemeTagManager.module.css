@@ -1,0 +1,374 @@
+.manager {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(205, 157, 120, 0.16);
+    box-shadow: 0 18px 44px rgba(117, 72, 39, 0.08);
+}
+
+.sectionBadge {
+    display: inline-flex;
+    width: fit-content;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(201, 115, 63, 0.12);
+    color: #9b4c21;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.title {
+    margin: 0;
+    color: #2b2119;
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.description {
+    margin: 8px 0 0;
+    color: #7a6a59;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.createCard,
+.listCard,
+.editorCard {
+    padding: 20px;
+    border-radius: 16px;
+    background: rgba(255, 252, 248, 0.92);
+    border: 1px solid rgba(205, 157, 120, 0.18);
+}
+
+.createCard {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    align-items: end;
+}
+
+.workspace {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 18px;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.cardTitle {
+    color: #2b2119;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.cardMeta {
+    margin-top: 6px;
+    color: #8a7b6a;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #584637;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.input,
+.select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(205, 157, 120, 0.28);
+    background: #fff;
+    color: #2b2119;
+    font-size: 14px;
+    outline: none;
+}
+
+.input:focus,
+.select:focus {
+    border-color: rgba(201, 115, 63, 0.56);
+    box-shadow: 0 0 0 3px rgba(201, 115, 63, 0.12);
+}
+
+.primaryButton,
+.secondaryButton,
+.dangerButton {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.primaryButton {
+    background: linear-gradient(135deg, #d56e3f 0%, #b8542b 100%);
+    color: #fff;
+    box-shadow: 0 12px 24px rgba(184, 84, 43, 0.2);
+}
+
+.secondaryButton {
+    background: #fff;
+    border-color: rgba(205, 157, 120, 0.28);
+    color: #5f4c3b;
+}
+
+.dangerButton {
+    background: rgba(198, 67, 73, 0.08);
+    border-color: rgba(198, 67, 73, 0.2);
+    color: #b73d45;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.dangerButton:disabled {
+    opacity: 0.56;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.tagList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.tagItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(205, 157, 120, 0.18);
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tagItemActive {
+    border-color: rgba(201, 115, 63, 0.42);
+    box-shadow: 0 10px 24px rgba(201, 115, 63, 0.12);
+}
+
+.tagOrder {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(201, 115, 63, 0.12);
+    color: #b45a31;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.tagInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tagName {
+    color: #2b2119;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.tagMode {
+    color: #8a7b6a;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.editorForm {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.manualPanel {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.manualHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.limitText {
+    color: #b45a31;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.searchPanel {
+    max-height: 240px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.searchItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(205, 157, 120, 0.18);
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.searchItemTitle {
+    color: #2b2119;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.searchItemMeta {
+    color: #8a7b6a;
+    font-size: 12px;
+}
+
+.searchEmpty,
+.emptyState {
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.8);
+    color: #8a7b6a;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.selectedGameList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selectedGameItem {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(205, 157, 120, 0.18);
+    background: #fff;
+}
+
+.selectedGameOrder {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(201, 115, 63, 0.12);
+    color: #b45a31;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.selectedGameInfo {
+    min-width: 0;
+}
+
+.selectedGameTitle {
+    color: #2b2119;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.selectedGameMeta {
+    margin-top: 4px;
+    color: #8a7b6a;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.actionRow {
+    margin-top: 18px;
+    display: flex;
+    gap: 12px;
+}
+
+@media (max-width: 1180px) {
+    .createCard,
+    .editorForm,
+    .workspace {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .manager,
+    .createCard,
+    .listCard,
+    .editorCard {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .headerRow,
+    .cardHeader,
+    .manualHeader,
+    .actionRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tagItem,
+    .selectedGameItem {
+        grid-template-columns: 1fr;
+    }
+
+    .tagOrder,
+    .selectedGameOrder {
+        width: 30px;
+        height: 30px;
+    }
+}

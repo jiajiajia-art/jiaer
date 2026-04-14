@@ -1,11 +1,16 @@
 .grid4 {
     display: grid;
-    grid-template-columns: repeat(4, 250px);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
+    width: 100%;
+}
+
+.gridHomeWide {
+    width: 100%;
 }
 
 .goodsCard {
-    width: 250px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     cursor: pointer;
@@ -22,9 +27,9 @@
 
 .goodsImg {
     width: 100%;
-    aspect-ratio: 25 / 13;
+    aspect-ratio: 4 / 3;
     position: relative;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
 }
 
@@ -205,6 +210,47 @@
     grid-column: 1 / -1;
     text-align: center;
     padding: 50px;
+}
+
+.emptyStateText {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #6b7280;
+}
+
+@media (min-width: 769px) {
+    .grid4 {
+        gap: 24px;
+        align-items: start;
+    }
+
+    .goodsCard {
+        min-width: 0;
+    }
+
+    .gridHomeWide {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 24px;
+        align-items: start;
+    }
+
+    .goodsCardHomeWide {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (min-width: 1280px) {
+    .grid4 {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1440px) {
+    .gridHomeWide {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 768px) {

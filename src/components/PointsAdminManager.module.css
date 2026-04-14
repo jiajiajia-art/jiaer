@@ -8,7 +8,7 @@
 .card {
     background: rgba(255, 250, 245, 0.92);
     border: 1px solid rgba(222, 191, 166, 0.45);
-    border-radius: 28px;
+    border-radius: 22px;
     box-shadow: 0 18px 40px rgba(181, 135, 92, 0.14);
 }
 
@@ -51,6 +51,11 @@
     flex-wrap: wrap;
 }
 
+.tabButtonWrap {
+    position: relative;
+    display: inline-flex;
+}
+
 .tabButton,
 .tabButtonActive,
 .primaryButton,
@@ -78,6 +83,24 @@
     background: linear-gradient(135deg, #b56f3b, #d79c68);
     color: #fffaf4;
     box-shadow: 0 14px 24px rgba(181, 111, 59, 0.22);
+}
+
+.actionBadge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #d64545 0%, #f06745 100%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 10px 22px rgba(214, 69, 69, 0.24);
 }
 
 .primaryButton,
@@ -167,7 +190,7 @@
 
 .userCard {
     padding: 20px;
-    border-radius: 22px;
+    border-radius: 16px;
     background: rgba(255, 252, 249, 0.96);
     border: 1px solid rgba(228, 205, 187, 0.7);
 }
@@ -188,7 +211,7 @@
 
 .reviewTableWrapper {
     overflow-x: auto;
-    border-radius: 22px;
+    border-radius: 16px;
     border: 1px solid rgba(228, 205, 187, 0.72);
     background: rgba(255, 252, 249, 0.96);
 }
@@ -334,7 +357,7 @@
 .detailDialog,
 .confirmDialog {
     width: min(960px, 100%);
-    border-radius: 30px;
+    border-radius: 24px;
     border: 1px solid rgba(222, 191, 166, 0.45);
     background: rgba(255, 250, 245, 0.98);
     box-shadow: 0 20px 56px rgba(98, 59, 33, 0.1);
@@ -380,7 +403,7 @@
     flex-direction: column;
     gap: 12px;
     padding: 18px;
-    border-radius: 22px;
+    border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.22);
     background: linear-gradient(180deg, rgba(255, 252, 248, 0.98) 0%, rgba(250, 241, 232, 0.96) 100%);
 }
@@ -478,7 +501,7 @@
     .heroCard,
     .card {
         padding: 22px 18px;
-        border-radius: 22px;
+        border-radius: 18px;
     }
 
     .heroTitle {
@@ -502,11 +525,11 @@
     .detailDialog {
         max-height: calc(100vh - 24px);
         padding: 18px;
-        border-radius: 24px;
+        border-radius: 20px;
     }
 
     .confirmDialog {
-        border-radius: 24px;
+        border-radius: 20px;
         padding: 22px 18px;
     }
 }
