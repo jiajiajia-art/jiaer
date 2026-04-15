@@ -301,14 +301,12 @@ const Create: React.FC = () => {
         }
     };
 
-    const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom'>) => {
     const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st'>) => {
         // 小程序端暂不开放 AVG / 自定义编辑，统一引导去 PC 端。
         setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
         setIsMobileTipModalOpen(true);
     };
 
-    const handleSelectGameType = (type: CreatorGameType) => {
     const handleSelectGameType = async (type: CreatorGameType) => {
         // 小程序端当前只允许 TXT 模式进入创作者编辑器。
         if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
