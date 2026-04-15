@@ -8,6 +8,17 @@
   justify-content: center;
 }
 
+.container::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
 .canvas {
   display: block;
   width: 100%;
@@ -40,5 +51,18 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .container::after {
+    height: var(--mobile-content-image-guard-height);
+    background: var(--mobile-content-image-guard-dark-gradient);
+  }
+
+  .canvas,
+  .fallbackImage {
+    transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
+    transform-origin: center center;
+  }
 }
 

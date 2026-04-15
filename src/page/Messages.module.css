@@ -252,6 +252,27 @@
     flex-shrink: 0;
 }
 
+.promotionCoverWrap {
+    position: relative;
+    width: 112px;
+    height: 112px;
+    border-radius: 18px;
+    overflow: hidden;
+    flex-shrink: 0;
+    isolation: isolate;
+}
+
+.promotionCoverWrap::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
 .promotionCover {
     object-fit: cover;
     background: #fdecee;
@@ -344,9 +365,20 @@
     }
 
     .promotionCover,
+    .promotionCoverWrap,
     .promotionCoverPlaceholder {
         width: 100%;
         height: 180px;
+    }
+
+    .promotionCoverWrap::after {
+        height: var(--mobile-content-image-guard-height-sm);
+        background: var(--mobile-content-image-guard-light-gradient);
+    }
+
+    .promotionCoverWrap .promotionCover {
+        transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
+        transform-origin: center center;
     }
 
     .messageMeta {

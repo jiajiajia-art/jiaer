@@ -154,6 +154,16 @@
     margin: 0 auto;
 }
 
+.heroSection::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0;
+    pointer-events: none;
+}
+
 /* ==================== 内容区域 ==================== */
 .contentSection {
     flex: 1;
@@ -681,6 +691,12 @@
     .heroSection {
         min-height: 17.5rem;
         max-height: 25rem;
+        background-position: center calc(50% - 14px);
+    }
+
+    .heroSection::after {
+        height: var(--mobile-content-image-guard-height);
+        background: var(--mobile-content-image-guard-dark-gradient);
     }
 
     .contentSection {
@@ -776,6 +792,7 @@
     .heroSection {
         min-height: 15.625rem;
         max-height: 21.875rem;
+        background-position: center calc(50% - 16px);
     }
 
     .contentSection {

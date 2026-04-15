@@ -335,11 +335,13 @@ const Messages: React.FC = () => {
                                         onClick={() => void handleOpenPromotion(item)}
                                     >
                                         <div className={styles.messageLayout}>
-                                            <img
-                                                className={styles.promotionCover}
-                                                src={getImageUrl(item.coverImageUrl)}
-                                                alt={item.title}
-                                            />
+                                            <div className={styles.promotionCoverWrap}>
+                                                <img
+                                                    className={styles.promotionCover}
+                                                    src={getImageUrl(item.coverImageUrl)}
+                                                    alt={item.title}
+                                                />
+                                            </div>
                                             <div className={styles.messageMain}>
                                                 <div className={styles.messageHeader}>
                                                     <div className={styles.titleBlock}>
@@ -370,11 +372,13 @@ const Messages: React.FC = () => {
                                 >
                                     <div className={styles.messageLayout}>
                                         {coverImageUrl ? (
+                                            <div className={styles.promotionCoverWrap}>
                                             <img
                                                 className={styles.promotionCover}
                                                 src={coverImageUrl}
                                                 alt={item.activityTitle || '投稿状态消息'}
                                             />
+                                            </div>
                                         ) : (
                                             <div className={styles.promotionCoverPlaceholder}>投稿</div>
                                         )}

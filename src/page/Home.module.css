@@ -1765,6 +1765,23 @@
         padding: 0;
         background: none;
     }
+
+    .carouselImage::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--mobile-content-image-guard-height);
+        background: var(--mobile-content-image-guard-dark-gradient);
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    .carouselImage img {
+        transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
+        transform-origin: center center;
+    }
 }
 
 @media (max-width: 380px) {

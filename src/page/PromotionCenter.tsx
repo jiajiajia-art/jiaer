@@ -440,7 +440,9 @@ const PromotionCenter: React.FC = () => {
 
                                     return (
                                         <article key={activity.id} className={styles.card}>
-                                            <img className={styles.cover} src={getImageUrl(activity.coverImageUrl)} alt={activity.title} />
+                                            <div className={`${styles.imageGuard} ${styles.imageGuardLight}`}>
+                                                <img className={styles.cover} src={getImageUrl(activity.coverImageUrl)} alt={activity.title} />
+                                            </div>
                                             <div className={styles.cardBody}>
                                                 <div className={styles.cardTitleRow}>
                                                     <div className={styles.cardTitle}>{activity.title}</div>
@@ -534,7 +536,9 @@ const PromotionCenter: React.FC = () => {
                                                 <div className={styles.payloadLabel}>投稿图片</div>
                                                 <div className={styles.payloadList}>
                                                     {submission.submitPayload.images.map((item) => (
+                                                        <div key={item} className={`${styles.imageGuard} ${styles.imageGuardLight} ${styles.mediaPreviewWrap}`}>
                                                         <img key={item} className={styles.mediaPreview} src={getImageUrl(item)} alt="投稿图片" />
+                                                        </div>
                                                     ))}
                                                 </div>
                                             </div>
