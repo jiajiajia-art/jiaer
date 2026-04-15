@@ -41,13 +41,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
 };
 
-const normalizeInternalLink = (linkUrl: string) => {
-    if (!linkUrl.trim()) {
-        return '/promotions';
-    }
-
-    return linkUrl.startsWith('/') ? linkUrl : `/${linkUrl}`;
-};
+const normalizeInternalLink = (linkUrl: string) => (linkUrl.startsWith('/') ? linkUrl : `/${linkUrl}`);
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -128,11 +122,16 @@ const Messages: React.FC = () => {
             sortTime: getAnnouncementSortTime(item),
         }));
 
-        const promotions = (messageCenter?.promotions || []).map((item) => ({
-            ...item,
-            itemType: 'promotion' as const,
-            sortTime: item.publishedAt || item.updatedAt || item.createdAt || null,
-        }));
+        const promotions = (messageCenter?.promotions || []).map((item) => {
+            const hasDetailLink = Boolean(item.detailLinkUrl?.trim());
+
+            return {
+                ...item,
+                summary: item.summary || (hasDetailLink ? '' : 'Activity details are not available yet.'),
+                itemType: 'promotion' as const,
+                sortTime: item.publishedAt || item.updatedAt || item.createdAt || null,
+            };
+        });
 
         const promotionSubmissionNotifications = (messageCenter?.promotionSubmissionNotifications || []).map((item) => ({
             ...item,
@@ -235,6 +234,10 @@ const Messages: React.FC = () => {
         await markMessageAsRead('promotion', promotion.sourceId, promotion.isRead);
 
         const targetLink = (promotion.detailLinkUrl || '').trim();
+        if (!targetLink) {
+            return;
+        }
+
         if (targetLink.startsWith('http://') || targetLink.startsWith('https://')) {
             window.open(targetLink, '_blank', 'noopener,noreferrer');
             return;

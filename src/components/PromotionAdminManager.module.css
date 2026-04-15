@@ -145,6 +145,13 @@
     font-size: 13px;
 }
 
+.fieldHint {
+    margin-top: -8px;
+    color: var(--admin-text-soft, #6f5a49);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
 .reviewSummaryLabel {
     color: var(--admin-text-soft, #6f5a49);
     font-size: 12px;

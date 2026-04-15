@@ -3,6 +3,8 @@ import type {
     UserGameResponse,
     UserGameRequest,
     PublicGameRequest,
+    PublicGameSearchRequest,
+    PublicGameSearchResponse,
     GameDetailRequest,
     GameDetailResponse,
     WareHouseResponse,
@@ -18,6 +20,9 @@ const getGameDataApi = {
     },
     getCarouselData: () => {
         return api.get<UserGameResponse>(`/auth/games/featured`);
+    },
+    searchPublicGames: (data: PublicGameSearchRequest) => {
+        return api.get<PublicGameSearchResponse>(`/auth/games/search`, { params: data });
     },
     getGameDetail: (data: GameDetailRequest) => {
         return api.get<GameDetailResponse>(`/auth/games/info`, { params: data });

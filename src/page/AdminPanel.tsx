@@ -38,10 +38,12 @@ const createEmptySection = (): AnnouncementSection => ({ subtitle: '', body: '' 
 const ANNOUNCEMENT_PAGE_SIZE = 3;
 const THEME_PAGE_SIZE = 10;
 
-const resolveAdminTab = (pathname: string): AdminTab => {
+const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
     if (pathname.startsWith('/admin/subscriptions')) return 'subscriptions';
+    const tabParam = new URLSearchParams(search).get('tab');
+    if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes') return tabParam;
     return 'announcements';
 };
 
@@ -94,7 +96,10 @@ const toSortDraftItem = (
 const AdminPanel: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<AdminTab>(() => resolveAdminTab(window.location.pathname));
+    const activeTab = useMemo<AdminTab>(
+        () => resolveAdminTab(location.pathname, location.search),
+        [location.pathname, location.search],
+    );
 
     const [history, setHistory] = useState<AnnouncementSummary[]>([]);
     const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(null);
@@ -306,10 +311,6 @@ const AdminPanel: React.FC = () => {
     }, [history, selectedHistoryId]);
 
     useEffect(() => {
-        setActiveTab(resolveAdminTab(location.pathname));
-    }, [location.pathname]);
-
-    useEffect(() => {
         if (activeTab === 'promotions' || activeTab === 'points') {
             void refreshAdminBadgeCounts();
         }
@@ -405,7 +406,6 @@ const AdminPanel: React.FC = () => {
     }, [stopSortAutoScroll]);
 
     const handleTabChange = (tab: AdminTab) => {
-        setActiveTab(tab);
         if (tab === 'promotions') {
             navigate('/admin/promotions/list');
             return;
@@ -418,8 +418,11 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/subscriptions');
             return;
         }
-        if (location.pathname !== '/admin') {
-            navigate('/admin');
+
+        const nextSearch = tab === 'announcements' ? '' : `?tab=${tab}`;
+        const nextUrl = `/admin${nextSearch}`;
+        if (`${location.pathname}${location.search}` !== nextUrl) {
+            navigate(nextUrl);
         }
     };
 

@@ -251,17 +251,19 @@ const PromotionCenter: React.FC = () => {
     };
 
     const openDetail = (activity: PromotionActivity) => {
-        if (!activity.detailLinkUrl) {
+        const detailLinkUrl = activity.detailLinkUrl.trim();
+
+        if (!detailLinkUrl) {
             toast.error('当前活动暂未配置详情地址');
             return;
         }
 
-        if (activity.detailLinkUrl.startsWith('http://') || activity.detailLinkUrl.startsWith('https://')) {
-            window.open(activity.detailLinkUrl, '_blank', 'noopener,noreferrer');
+        if (detailLinkUrl.startsWith('http://') || detailLinkUrl.startsWith('https://')) {
+            window.open(detailLinkUrl, '_blank', 'noopener,noreferrer');
             return;
         }
 
-        const detailPath = activity.detailLinkUrl.startsWith('/') ? activity.detailLinkUrl : `/${activity.detailLinkUrl}`;
+        const detailPath = detailLinkUrl.startsWith('/') ? detailLinkUrl : `/${detailLinkUrl}`;
         window.location.href = `${window.location.origin}/funloom${detailPath}`;
     };
 
@@ -452,9 +454,11 @@ const PromotionCenter: React.FC = () => {
                                                     <div className={styles.noticeText}>{activity.availabilityText}</div>
                                                 ) : null}
                                                 <div className={styles.actionRow}>
-                                                    <button type="button" className={styles.secondaryButton} onClick={() => openDetail(activity)}>
+                                                    {activity.detailLinkUrl.trim() ? (
+                                                        <button type="button" className={styles.secondaryButton} onClick={() => openDetail(activity)}>
                                                         活动详情
-                                                    </button>
+                                                        </button>
+                                                    ) : null}
                                                     <button
                                                         type="button"
                                                         className={`${styles.primaryButton} ${activity.canSubmit === false ? styles.disabledButton : ''}`}

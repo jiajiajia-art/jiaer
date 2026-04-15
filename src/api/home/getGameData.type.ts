@@ -70,6 +70,26 @@ export interface PublicGameRequest {
     sort?: string;
 }
 
+export interface PublicGameSearchRequest {
+    q: string;
+    page?: number;
+    pageSize?: number;
+    sort?: 'relevance' | 'newest' | 'rating_desc' | 'price_asc';
+}
+
+export interface PublicGameSearchPagination {
+    page: number;
+    pageSize: number;
+    total: number;
+    hasMore: boolean;
+}
+
+export interface PublicGameSearchResponse {
+    success: boolean;
+    data: UserGameData[];
+    pagination: PublicGameSearchPagination;
+}
+
 export interface GameDetailRequest {
     fileId: string;
 }

@@ -324,6 +324,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
     if (!validateForm()) return;
     const normalizedForm: PromotionActivityPayload = {
       ...form,
+      detailLinkUrl: form.detailLinkUrl.trim(),
       // 实现 投稿方式配置规范化
       submissionConfig: normalizeSubmissionConfig(form.submissionConfig),
     };
@@ -546,7 +547,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       <div className={styles.formArea}>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u6807\u9898'}<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u6458\u8981'}<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u8be6\u60c5\u8df3\u8f6c\u5730\u5740'}<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
+        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u8be6\u60c5\u8df3\u8f6c\u5730\u5740\uff08\u53ef\u9009\uff09'}<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u5c01\u9762'}<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => void handleUploadCover(event.target.files?.[0] || null)} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt={'\u6d3b\u52a8\u5c01\u9762'} />}</label>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u65f6\u95f4'}<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />{'\u957f\u671f\u6d3b\u52a8'}</label></label>
         {!form.isLongTerm && (
