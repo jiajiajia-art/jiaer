@@ -113,6 +113,17 @@ const hasAnyAcceptedSubmissionContent = (activity: PromotionActivity, payload: S
     || (activity.submissionConfig.acceptVideos && payload.videos.length > 0)
 );
 
+const getSubmissionLimitSummary = (activity: PromotionActivity) => {
+    if (activity.submissionLimitType === 'once_per_activity') {
+        return '\u6d3b\u52a8\u671f\u5185\u9650\u5236\u4e00\u6b21';
+    }
+    if (activity.submissionLimitType === 'rolling_window') {
+        return `\u6bcf ${activity.submissionLimitDays} \u5929\u9650 ${activity.submissionLimitCount} \u6b21`;
+    }
+    return '\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21';
+};
+void buildLimitSummary;
+
 const getImportableGameId = (game: UserGameData) => String(game.file_id || game.id || '').trim();
 
 const buildPromotionStatusBadge = (activity: PromotionActivity): PromotionActivityStatusBadge | null => {
@@ -144,6 +155,7 @@ const buildPromotionStatusBadge = (activity: PromotionActivity): PromotionActivi
 
 const PromotionCenter: React.FC = () => {
     const [searchParams] = useSearchParams();
+    const buildLimitSummary = getSubmissionLimitSummary;
     const [activeTab, setActiveTab] = useState<PromotionTab>('activities');
     const [activities, setActivities] = useState<PromotionActivity[]>([]);
     const [submissions, setSubmissions] = useState<PromotionSubmission[]>([]);

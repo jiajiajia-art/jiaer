@@ -25,7 +25,7 @@ export interface HomePromotionTickerPayload {
 export type PromotionActivityStatus = 'draft' | 'published';
 export type PromotionReviewStatus = 'pending_review' | 'approved' | 'rejected' | 'reward_pending' | 'reward_issued';
 export type PromotionRewardTaskStatus = 'pending_issue' | 'issued' | 'cancelled';
-export type PromotionSubmissionLimitType = 'unlimited' | 'rolling_window';
+export type PromotionSubmissionLimitType = 'unlimited' | 'rolling_window' | 'once_per_activity';
 
 export interface PromotionActivity {
     id: number;

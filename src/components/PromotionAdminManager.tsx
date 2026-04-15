@@ -127,6 +127,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const isValidDetailLink = (value: string) => !value.trim() || value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://');
+const buildOncePerActivityLimitSummary = () => '\u6d3b\u52a8\u671f\u5185\u9650\u5236\u4e00\u6b21';
 const buildLimitSummary = (activity: PromotionActivity) => activity.submissionLimitType === 'rolling_window' ? `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次` : '活动期内无限次';
 const buildTimeSummary = (activity: PromotionActivity) => activity.isLongTerm ? '长期活动' : `${formatTime(activity.startAt)} - ${formatTime(activity.endAt)}`;
 const getSubmissionDisplayName = (submission: PromotionSubmission) => submission.nickname || submission.userCode || submission.phoneNumber || '-';
@@ -138,6 +139,16 @@ const getSubmissionStatusClass = (status: PromotionReviewStatus) => (
       : ''
 );
 const formatBadgeCount = (count: number) => (count > 99 ? '99+' : String(count));
+void buildLimitSummary;
+const getSubmissionLimitSummary = (activity: PromotionActivity) => {
+  if (activity.submissionLimitType === 'once_per_activity') {
+    return buildOncePerActivityLimitSummary();
+  }
+  if (activity.submissionLimitType === 'rolling_window') {
+    return `\u6bcf ${activity.submissionLimitDays} \u5929\u9650 ${activity.submissionLimitCount} \u6b21`;
+  }
+  return '\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21';
+};
 
 type PromotionAdminManagerProps = {
   pendingReviewCount: number;
@@ -151,6 +162,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
   const currentView = (params.promotionView === 'create' || params.promotionView === 'reviews' || params.promotionView === 'list' || params.promotionView === 'ticker'
     ? params.promotionView
     : 'list') as PromotionAdminView;
+  const buildLimitSummary = getSubmissionLimitSummary;
 
   const [activities, setActivities] = useState<PromotionActivity[]>([]);
   const [submissions, setSubmissions] = useState<PromotionSubmission[]>([]);
@@ -556,7 +568,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
             <label className={styles.fieldLabel}>{'\u7ed3\u675f\u65f6\u95f4'}<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.endAt)} onChange={(event) => setForm((prev) => ({ ...prev, endAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
           </div>
         )}
-        <label className={styles.fieldLabel}>{'\u6295\u7a3f\u6b21\u6570\u9650\u5236'}<select className={styles.select} value={form.submissionLimitType} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitType: event.target.value as PromotionSubmissionLimitType, submissionLimitDays: event.target.value === 'rolling_window' ? (prev.submissionLimitDays || 1) : null, submissionLimitCount: event.target.value === 'rolling_window' ? (prev.submissionLimitCount || 1) : null }))}><option value="unlimited">{'\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21'}</option><option value="rolling_window">{'\u6bcf a \u5929\u9650 b \u6b21'}</option></select></label>
+        <label className={styles.fieldLabel}>{'\u6295\u7a3f\u6b21\u6570\u9650\u5236'}<select className={styles.select} value={form.submissionLimitType} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitType: event.target.value as PromotionSubmissionLimitType, submissionLimitDays: event.target.value === 'rolling_window' ? (prev.submissionLimitDays || 1) : null, submissionLimitCount: event.target.value === 'rolling_window' ? (prev.submissionLimitCount || 1) : null }))}><option value="unlimited">{'\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21'}</option><option value="once_per_activity">{'\u6d3b\u52a8\u671f\u5185\u9650\u5236\u4e00\u6b21'}</option><option value="rolling_window">{'\u6bcf a \u5929\u9650 b \u6b21'}</option></select></label>
         {form.submissionLimitType === 'rolling_window' && (
           <div className={styles.inlineGrid}>
             <label className={styles.fieldLabel}>{'a \u5929'}<input className={styles.textInput} type="number" value={form.submissionLimitDays ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitDays: Number(event.target.value || 0) }))} /></label>

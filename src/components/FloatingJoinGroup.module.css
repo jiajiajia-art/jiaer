@@ -168,6 +168,29 @@
     color: #4b5563;
 }
 
+.promotionHintButton {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #2563eb;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.6;
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.promotionHintButton:hover {
+    color: #1d4ed8;
+    opacity: 0.92;
+}
+
+.promotionHintButton:active {
+    opacity: 1;
+}
+
 .closeButton {
     min-width: 120px;
     padding: 12px 20px;
@@ -284,6 +307,11 @@
 
     .modalTitle {
         font-size: 18px;
+    }
+
+    .promotionHintButton {
+        font-size: 14px;
+        line-height: 1.5;
     }
 
     .closeButton {

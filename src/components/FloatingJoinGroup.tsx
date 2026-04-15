@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./FloatingJoinGroup.module.css";
+import { useNavigate } from "react-router-dom";
 
 interface FloatingJoinGroupProps {
     qrSrc?: string;
@@ -20,6 +21,7 @@ const MOBILE_BUTTON_WIDTH = 72;
 const MOBILE_BUTTON_HEIGHT = 88;
 const MOBILE_DRAG_THRESHOLD = 6;
 const MOBILE_POSITION_STORAGE_KEY = "floatingJoinGroupMobilePosition";
+const PROMOTION_HINT_LABEL = "\u5df2\u7ecf\u52a0\u7fa4\uff1f\u53bb\u6295\u7a3f\u7fa4\u804a\u5929\u622a\u56fe\u76f4\u63a5\u9886\u79ef\u5206";
 
 const getDefaultMobilePosition = (): MobilePosition => {
     if (typeof window === "undefined") {
@@ -36,6 +38,7 @@ const getDefaultMobilePosition = (): MobilePosition => {
 };
 
 const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc }) => {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isMobileViewport, setIsMobileViewport] = useState(
         () => typeof window !== "undefined" && window.innerWidth <= MOBILE_BREAKPOINT
@@ -246,6 +249,11 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
         setIsOpen(true);
     };
 
+    const handleNavigateToPromotions = () => {
+        setIsOpen(false);
+        navigate("/promotions");
+    };
+
     // 只有移动端会以内联样式覆盖位置，桌面端仍使用 CSS 的右侧固定布局。
     const buttonStyle = isMobileViewport && mobilePosition
         ? {
@@ -340,6 +348,14 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
                                 <div className={styles.qrLabel}>微信</div>
                             </div>
                         </div>
+
+                        <button
+                            type="button"
+                            className={styles.promotionHintButton}
+                            onClick={handleNavigateToPromotions}
+                        >
+                            {PROMOTION_HINT_LABEL}
+                        </button>
 
                         <button
                             type="button"
