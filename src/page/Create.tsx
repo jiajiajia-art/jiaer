@@ -25,6 +25,8 @@ import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
 import GameAction from '../api/rpgGame/gameAction';
+import { HOST_ADDRESS } from '../config';
+import { authFetch } from '../api/base';
 import {
     getMiniProgramCreatorBlockedMessage,
     isMiniProgramCreatorTypeSupported,
@@ -300,13 +302,17 @@ const Create: React.FC = () => {
     };
 
     const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom'>) => {
+    const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st'>) => {
+        // 小程序端暂不开放 AVG / 自定义编辑，统一引导去 PC 端。
         setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
         setIsMobileTipModalOpen(true);
     };
 
     const handleSelectGameType = (type: CreatorGameType) => {
+    const handleSelectGameType = async (type: CreatorGameType) => {
+        // 小程序端当前只允许 TXT 模式进入创作者编辑器。
         if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
-            if (type === 'avg' || type === 'custom') {
+            if (type === 'avg' || type === 'custom' || type === 'st') {
                 openMiniProgramTypeTip(type);
             }
             setIsCreateTypeModalOpen(false);
@@ -323,9 +329,26 @@ const Create: React.FC = () => {
         } else if (type === 'custom') {
             clearState();
             navigate('/customif/create');
+        } else if (type === 'st') {
+            clearState();
+            navigate('/st/create');
         } else if (type === 'avg') {
             clearState();
-            navigate('/gameSettingsEditor?mode=worldInteraction');
+            try {
+                const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: '我的AVG游戏', engine: 'AVG' }),
+                });
+                const data = await resp.json();
+                const appId = data?.appId || data?.data?.appId;
+                if (!resp.ok || !appId) {
+                    throw new Error(data?.message || '创建 AVG 失败');
+                }
+                navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
+            } catch (error: any) {
+                toast.error(String(error?.message || error || '创建 AVG 失败'));
+            }
         }
 
         setIsCreateTypeModalOpen(false);

@@ -39,16 +39,8 @@ html,
   font-family: 'Sarasa Gothic Rounded', 'Source Han Rounded SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-html,
-body {
-  height: 100%;
-}
-
-body {
-  /* background: #fff; */
-  color: #333;
-  overflow: hidden;
-}
+html, body { height: 100%; }
+body { background: #ffffff; color: #333; overflow: hidden; }
 
 #root {
   min-height: 100vh;

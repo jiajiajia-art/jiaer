@@ -214,15 +214,21 @@ const CreateGame: React.FC = () => {
             return;
         }
 
-        // 按游戏类型选择编辑器
-        if (normalizedEngine === 'AVG') {
-            setFileId(gameId)
-            navigate(`/gameSettingsEditor?mode=worldInteraction`);
-        } else {
-            setFileId(gameId);
-            setIsPreset(gameDetail?.is_preset == 1);
-            navigate(`/gameSettingsEditor`);
+        // ST/AVG（自由模式引擎）：跳转到 ST 管理页（编辑模式）
+        if (normalizedEngine === 'ST' || normalizedEngine === 'AVG') {
+            const appId = (gameDetail as any)?.customAppId || gameDetail?.file_id;
+            if (!appId) {
+                alert('缺少 AppID，无法编辑');
+                return;
+            }
+            navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
+            return;
         }
+
+        // 其他类型按原编辑器处理
+        setFileId(gameId);
+        setIsPreset(gameDetail?.is_preset == 1);
+        navigate(`/gameSettingsEditor`);
     }
 
     const handleEditGame = () => {

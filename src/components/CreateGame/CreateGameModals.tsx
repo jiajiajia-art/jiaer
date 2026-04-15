@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import React from 'react';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
 import type { CreatorGameType } from '../../utils/miniProgram';
@@ -18,8 +17,6 @@ interface CreateGameModalsProps {
     onOpenBindPhoneGuide?: () => void;
 }
 
-const AVG_INVITE_CODE = 'AVG2025DEV';
-
 const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     isCreateTypeModalOpen,
     isMobileTipModalOpen,
@@ -33,10 +30,6 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     onOpenMiniProgramTip,
     onOpenBindPhoneGuide,
 }) => {
-    const [isInviteCodeModalOpen, setIsInviteCodeModalOpen] = useState(false);
-    const [inviteCodeInput, setInviteCodeInput] = useState('');
-    const [inviteCodeError, setInviteCodeError] = useState('');
-
     const handleAvgClick = () => {
         if (isMiniProgram) {
             // 小程序端只开放 TXT，AVG 统一引导去 PC 端。
@@ -44,9 +37,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
             onOpenMiniProgramTip('avg');
             return;
         }
-
-        setIsInviteCodeModalOpen(true);
-        setInviteCodeError('');
+        onSelectGameType('avg');
     };
 
     const handleCustomClick = () => {
@@ -59,31 +50,6 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
 
         onSelectGameType('custom');
     };
-
-    const handleInviteCodeConfirm = () => {
-        if (!inviteCodeInput.trim()) {
-            setInviteCodeError('请输入邀请码');
-            return;
-        }
-
-        if (inviteCodeInput.trim() === AVG_INVITE_CODE) {
-            setIsInviteCodeModalOpen(false);
-            setInviteCodeInput('');
-            setInviteCodeError('');
-            onSelectGameType('avg');
-            toast.success('验证成功');
-        } else {
-            setInviteCodeError('邀请码错误，请重新输入');
-            setInviteCodeInput('');
-        }
-    };
-
-    const handleInviteCodeCancel = () => {
-        setIsInviteCodeModalOpen(false);
-        setInviteCodeInput('');
-        setInviteCodeError('');
-    };
-
     return (
         <>
             {isCreateTypeModalOpen && (
@@ -110,7 +76,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 <span className={styles.createTypeOptionRecommend}>推荐</span>
                             </button>
                             <button
-                                className={`${styles.createTypeOption} ${styles.createTypeOptionRequiresCode}`}
+                                className={styles.createTypeOption}
                                 onClick={handleAvgClick}
                             >
                                 <span>AVG</span>

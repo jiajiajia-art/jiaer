@@ -11,6 +11,8 @@ import Library from './page/Library';
 import Galgame from './page/Galgame';
 import GameSettingsEditor from './page/GameSettingsEditor';
 import GalgameMap from './page/GalgameMap';
+import StGameCreate from './page/StGameCreate';
+import StGame from './page/StGame';
 import UploadProgressModal from './components/GameSettingEditor/DocumentUpload/UploadProgressModal';
 import CustomIF from './page/CustomIF';
 import CustomIFCreate from './page/CustomIFCreate';
@@ -75,6 +77,8 @@ function App() {
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />
           <Route path="/customif/:appId" element={<CustomIF />} />
+          <Route path="/st/create" element={<StGameCreate />} />
+          <Route path="/st/:appId" element={<StGame />} />
         </Route>
       </Routes>
       <ScrollToTop />
