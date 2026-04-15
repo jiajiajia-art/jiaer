@@ -72,6 +72,7 @@ function App() {
           <Route path="/admin/promotions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/promotions/:promotionView" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/points" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/creator-incentives" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />

@@ -171,7 +171,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             if (resp.data.success) {
                 const sessionId = resp.data.data.session;
                 setSessionId(sessionId);
-                navigate('/galgame');
+                navigate('/galgame', { state: { saveEntry: 'load' } });
                 return;
             }
             alert(resp.data.message || '加载存档失败');

@@ -564,7 +564,7 @@ const GameDetail: React.FC = () => {
                 const sessionId = resp.data.data.session;
                 useGameStore.getState().setFileId(fileId);
                 useGameStore.getState().setSessionId(sessionId);
-                navigate('/galgame');
+                navigate('/galgame', { state: { saveEntry: 'load' } });
                 return;
             }
             toast.error(resp.data.message || '加载存档失败');

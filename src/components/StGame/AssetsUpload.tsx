@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import styles from '../../page/CustomIFCreate.module.css';
 import { HOST_ADDRESS } from '../../config';
 import { authFetch } from '../../api/base';
@@ -20,7 +20,6 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
   const [multiFiles, setMultiFiles] = useState<MultiItem[]>([]);
   const [multiStats, setMultiStats] = useState<{ count: number; bytes: number; selCount: number; selBytes: number }>({ count: 0, bytes: 0, selCount: 0, selBytes: 0 });
   const [error, setError] = useState('');
-  const [dragOver, setDragOver] = useState(false);
   const [creating, setCreating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -93,7 +92,7 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
   }
 
   const onZoneDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); setDragOver(false);
+    e.preventDefault();
     const items = e.dataTransfer.items;
     if (items && items.length){
       // @ts-ignore
@@ -216,8 +215,8 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
         </div>
         <div className={styles.dropZoneLarge}
              onClick={onZoneClick}
-             onDragOver={(e)=>{e.preventDefault(); setDragOver(true);}}
-             onDragLeave={(e)=>{e.preventDefault(); setDragOver(false);}}
+             onDragOver={(e)=>{e.preventDefault();}}
+             onDragLeave={(e)=>{e.preventDefault();}}
              onDrop={onZoneDrop}
         >
           <div className={styles.dropZoneInner}>
@@ -265,7 +264,7 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
           ref={dirRef}
           type="file"
           multiple
-          webkitdirectory="true"
+          {...({ webkitdirectory: "true" } as React.InputHTMLAttributes<HTMLInputElement>)}
           style={{ display: 'none' }}
           onChange={(e)=>{
             const files = Array.from(e.target.files||[]);

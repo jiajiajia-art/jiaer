@@ -9,6 +9,7 @@ import PromotionAdminManager from '../components/PromotionAdminManager';
 import PointsAdminManager from '../components/PointsAdminManager';
 import SpecialThemeTagManager from '../components/SpecialThemeTagManager';
 import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
+import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import promotionApi from '../api/promotion/promotionApi';
@@ -22,7 +23,7 @@ import type { AdminGameTagRecord, FeaturedGameTag } from '../api/gameTags/gameTa
 import styles from './AdminPanel.module.css';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'subscriptions';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -41,6 +42,7 @@ const THEME_PAGE_SIZE = 10;
 const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
+    if (pathname.startsWith('/admin/creator-incentives')) return 'creatorIncentives';
     if (pathname.startsWith('/admin/subscriptions')) return 'subscriptions';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes') return tabParam;
@@ -412,6 +414,10 @@ const AdminPanel: React.FC = () => {
         }
         if (tab === 'points') {
             navigate('/admin/points');
+            return;
+        }
+        if (tab === 'creatorIncentives') {
+            navigate('/admin/creator-incentives');
             return;
         }
         if (tab === 'subscriptions') {
@@ -793,6 +799,13 @@ const AdminPanel: React.FC = () => {
                         </button>
                         <button
                             type="button"
+                            className={`${styles.navItem} ${activeTab === 'creatorIncentives' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('creatorIncentives')}
+                        >
+                            <span className={styles.navTitle}>创作者激励</span>
+                        </button>
+                        <button
+                            type="button"
                             className={`${styles.navItem} ${activeTab === 'subscriptions' ? styles.navItemActive : ''}`}
                             onClick={() => handleTabChange('subscriptions')}
                         >
@@ -1131,6 +1144,8 @@ const AdminPanel: React.FC = () => {
                                 onRefreshCounts={refreshAdminBadgeCounts}
                             />
                         )}
+
+                        {activeTab === 'creatorIncentives' && <CreatorIncentiveAdminManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
                     </div>

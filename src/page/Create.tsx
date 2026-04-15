@@ -188,7 +188,7 @@ const Create: React.FC = () => {
             };
         }
 
-        toast.error('充值失败');
+        toast.error(response.data.message || '充值失败');
         return null;
     };
 
@@ -658,6 +658,7 @@ const Create: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
+                isFirstCharge={user?.user?.firstCharge}
             />
 
             <ConfirmModal

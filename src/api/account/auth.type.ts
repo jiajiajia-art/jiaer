@@ -44,6 +44,7 @@ export interface User {
   points: number;
   inviteCode: string;
   hasSignedIn: boolean;
+  firstCharge?: boolean;
   isMember?: boolean;
   memberPlan?: MembershipPlanId | null;
   memberEndAt?: string | null;
