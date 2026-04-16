@@ -3,25 +3,24 @@ import { useStepStreamResponse } from '../story/useStepStreamResponse';
 import { authFetch } from '../../api/base';
 import { HOST_ADDRESS } from '../../config';
 import { useAuthStore } from '../../store/useAuthStore';
-import { toast } from 'react-hot-toast';
-import { OPTION_COST, INPUT_COST } from '../../utils/constants';
 import { auth } from '../../api/account/authApi';
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
     historyLength?: number;
     onMessagesClear?: () => void;
-    // 后端流式返回 complete 时携带的 allSteps
+    // allSteps callback from stream complete event
     onCompleteAllSteps?: (steps: any[]) => void;
     onStreamComplete?: () => void;
-    onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
-    // 回放模式：用于结束时不再显示“AI 推演中”并可通知业务层
+    // Called after error alert is shown
+    onErrorAfterAlert?: (error: string) => void;
+    // Replay mode: avoid showing "AI generating" on queue exhausted
     isReplay?: boolean;
     onExhausted?: () => void;
 }
 
-export const useGalgameStep = ({ 
-    sessionId, 
+export const useGalgameStep = ({
+    sessionId,
     historyLength,
     onMessagesClear,
     onCompleteAllSteps,
@@ -36,24 +35,24 @@ export const useGalgameStep = ({
     const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
     const [isWaitingForData, setIsWaitingForData] = useState(false);
     const [loading, setLoading] = useState(false);
-    
+
     const currentRequestId = useRef(0);
     const currentStepRef = useRef<any>(null);
     const isProcessingStepRef = useRef(false);
-    const { user, updateUser } = useAuthStore();
+    const { updateUser } = useAuthStore();
 
-    // 记录历史中 assistant 回合数，用于前几回合免费
+    // Track assistant round count from history
     const historyLengthRef = useRef<number>(historyLength ?? 0);
     useEffect(() => {
         historyLengthRef.current = historyLength ?? 0;
     }, [historyLength]);
 
-    // 同步 currentStep 到 ref
+    // Sync currentStep to ref
     useEffect(() => {
         currentStepRef.current = currentStep;
     }, [currentStep]);
 
-    // session 切换时重置所有状态
+    // Reset all state when session changes
     useEffect(() => {
         currentRequestId.current = 0;
         setCurrentStep(null);
@@ -65,7 +64,7 @@ export const useGalgameStep = ({
         isProcessingStepRef.current = false;
     }, [sessionId]);
 
-    // 刷新用户信息（用于在流式请求完全成功后更新积分等）
+    // Refresh user info after stream success
     const getUserInfo = useCallback(async () => {
         try {
             const response = await auth.getUserInfo();
@@ -73,7 +72,7 @@ export const useGalgameStep = ({
                 updateUser(response.data.data);
             }
         } catch (error) {
-            console.error('[Galgame] 获取用户信息错误:', error);
+            console.error('[Galgame] Failed to fetch user info:', error);
         }
     }, [updateUser]);
 
@@ -82,23 +81,22 @@ export const useGalgameStep = ({
         setSelectedOptionIndex,
         setIsWaitingForData,
         currentRequestId,
-        // Galgame 不需要 mission 检测
+        // Galgame does not need mission flag handling
         onMissionFlag: undefined,
         onCompleteAllSteps,
-        // Galgame 需要在没有 choice 时兜底补一个空 choice，便于展示自定义输入
+        // Add fallback empty choice step if stream has no explicit choice
         enableFallbackEmptyChoice: true,
     });
 
     const showStep = useCallback(async (step: any) => {
         if (!step) return;
-
         setCurrentStep(step);
         setIsWaitingForData(false);
         setSelectedOptionIndex(null);
         setShowNextButton(step.type !== 'choice');
     }, []);
 
-    // 当队列中有 step 且当前没有显示的 step 时，自动显示第一个
+    // Auto show next step when queue has data and no active step
     useEffect(() => {
         if (stepQueue.length === 0) return;
         if (currentStep && !isWaitingForData) return;
@@ -106,7 +104,7 @@ export const useGalgameStep = ({
 
         const nextStep = stepQueue[0];
         isProcessingStepRef.current = true;
-        setStepQueue(prev => prev.slice(1));
+        setStepQueue((prev) => prev.slice(1));
 
         void (async () => {
             await showStep(nextStep);
@@ -114,96 +112,104 @@ export const useGalgameStep = ({
         })();
     }, [stepQueue, currentStep, isWaitingForData, showStep]);
 
-    // 处理流式请求（Galgame 专用接口）
-    const handleStreamAction = useCallback(async (
-        action: string,
-        options?: {
-            onBeforeRequest?: () => void;
-            onSuccess?: () => void;
-            onFirstStep?: () => void;
-            onError?: (error: string) => void;
-            deduct?: boolean;
-        }
-    ) => {
-        if (!sessionId) {
-            options?.onError?.('没有 sessionId，无法发送请求...');
-            return;
-        }
-
-        try {
-            const requestId = ++currentRequestId.current;
-            
-            // 新请求开始，无论当前是否为 choice 都清空当前 step，避免阻塞后续队列消费
-            setCurrentStep(null);
-            setStepQueue([]);
-            setShowNextButton(false);
-            setIsWaitingForData(true);
-            setLoading(true);
-
-            onMessagesClear?.();
-            options?.onBeforeRequest?.();
-
-            const requestBody: any = { action };
-            if (options?.deduct) {
-                requestBody.deduct = true;
+    // Handle stream request (galgame endpoint)
+    const handleStreamAction = useCallback(
+        async (
+            action: string,
+            options?: {
+                onBeforeRequest?: () => void;
+                onSuccess?: () => void;
+                onFirstStep?: () => void;
+                onError?: (error: string) => void;
+                deduct?: boolean;
+            }
+        ) => {
+            if (!sessionId) {
+                options?.onError?.('No sessionId, cannot send request.');
+                return;
             }
 
-            const response = await authFetch(
-                `${HOST_ADDRESS}/api/visual/session/${sessionId}/action/stream`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                }
-            );
+            try {
+                const requestId = ++currentRequestId.current;
 
-            if (response.ok) {
-                await processStreamResponse(response, requestId, {
-                    onSuccess: async () => {
-                        if (options?.onSuccess) {
-                            await options.onSuccess();
-                        }
-                        // 流式结束后回调，用于刷新历史记录等
-                        if (onStreamComplete) {
-                            try {
-                                await onStreamComplete();
-                            } catch (e) {
-                                console.error('流式结束回调执行失败:', e);
+                // Start fresh for new request so previous step does not block queue
+                setCurrentStep(null);
+                setStepQueue([]);
+                setShowNextButton(false);
+                setIsWaitingForData(true);
+                setLoading(true);
+
+                onMessagesClear?.();
+                options?.onBeforeRequest?.();
+
+                const requestBody: any = { action };
+                if (options?.deduct) {
+                    requestBody.deduct = true;
+                }
+
+                const response = await authFetch(
+                    `${HOST_ADDRESS}/api/visual/session/${sessionId}/action/stream`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody),
+                    }
+                );
+
+                if (response.ok) {
+                    await processStreamResponse(response, requestId, {
+                        onSuccess: async () => {
+                            if (options?.onSuccess) {
+                                await options.onSuccess();
                             }
-                        }
-                        await getUserInfo();
-                    },
-                    onError: options?.onError,
-                    onFirstStep: options?.onFirstStep,
-                    onErrorAfterAlert: onErrorAfterAlert
-                });
-            } else {
-                const errorMsg = `请求失败: ${response.statusText}`;
+                            if (onStreamComplete) {
+                                try {
+                                    await onStreamComplete();
+                                } catch (e) {
+                                    console.error('Failed to run onStreamComplete:', e);
+                                }
+                            }
+                            await getUserInfo();
+                            setLoading(false);
+                        },
+                        onError: (error) => {
+                            setLoading(false);
+                            options?.onError?.(error);
+                        },
+                        onFirstStep: options?.onFirstStep,
+                        onErrorAfterAlert,
+                    });
+                } else {
+                    const errorMsg = `Request failed: ${response.statusText}`;
+                    setLoading(false);
+                    setSelectedOptionIndex(null);
+                    setIsWaitingForData(false);
+                    options?.onError?.(errorMsg);
+                }
+            } catch (error) {
+                const errorMsg = `Request error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+                console.error('[Galgame] handleStreamAction error:', errorMsg);
                 setLoading(false);
                 setSelectedOptionIndex(null);
                 setIsWaitingForData(false);
                 options?.onError?.(errorMsg);
             }
-        } catch (error) {
-            const errorMsg = `请求错误: ${error instanceof Error ? error.message : '未知错误'}`;
-            console.error('❌', errorMsg);
-            setLoading(false);
-            setSelectedOptionIndex(null);
-            setIsWaitingForData(false);
-            options?.onError?.(errorMsg);
-        }
-    }, [sessionId, processStreamResponse, onMessagesClear]);
+        },
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo]
+    );
 
-    // 处理下一步
+    // Handle next step in queue
     const handleNextStep = useCallback(() => {
-        setStepQueue(prev => {
+        setStepQueue((prev) => {
             if (prev.length === 0) {
                 setCurrentStep(null);
                 setShowNextButton(false);
                 if (isReplay) {
-                    // 回放模式下，播放完毕不应再进入等待流式的状态
+                    // Replay mode: queue exhausted means finish replay
                     setIsWaitingForData(false);
-                    try { onExhausted && onExhausted(); } catch {}
+                    try {
+                        onExhausted && onExhausted();
+                    } catch {}
                 } else {
                     setIsWaitingForData(true);
                 }
@@ -220,138 +226,127 @@ export const useGalgameStep = ({
         });
     }, [showStep, isReplay, onExhausted]);
 
-    const FREE_ROUNDS = 5;
+    // const FREE_ROUNDS = 30;
 
-    // 处理选择选项
-    const handleChoiceOption = useCallback(async (option: { text: string; nextId: string }, optionIndex: number) => {
-        setSelectedOptionIndex(optionIndex);
-        setIsWaitingForData(true);
-        setShowNextButton(false);
-
-        const assistantRounds = historyLengthRef.current || 0;
-        const isFreeRound = assistantRounds < FREE_ROUNDS;
-
-        if (!isFreeRound) {
-            const needPoints = OPTION_COST;
-            if (!user?.user.points || user.user.points < needPoints) {
-                toast.error("积分不足");
-                setIsWaitingForData(false);
-                setSelectedOptionIndex(null);
-                return;
-            }
-        }
-
-        await handleStreamAction(option.text, {
-            onError: (error) => {
-                console.error('❌ 选择处理错误:', error);
-                setIsWaitingForData(false);
-                setSelectedOptionIndex(null);
-            },
-        });
-    }, [handleStreamAction, user?.user.points]);
-
-    // 处理输入框发送
-    const handleChoiceSend = useCallback(async (inputText: string) => {
-        if (!inputText.trim()) {
-            return;
-        }
-
-        setIsWaitingForData(true);
-        setShowNextButton(false);
-        
-        const assistantRounds = historyLengthRef.current || 0;
-        const isFreeRound = assistantRounds < FREE_ROUNDS;
-
-        if (!isFreeRound) {
-            const needPoints = INPUT_COST;
-            if (!user?.user.points || user.user.points < needPoints) {
-                toast.error("积分不足");
-                setIsWaitingForData(false);
-                return;
-            }
-        }
-
-        await handleStreamAction(inputText, {
-            onError: (error) => {
-                console.error('❌ 输入发送错误:', error);
-                setIsWaitingForData(false);
-            },
-            deduct: true,
-        });
-    }, [handleStreamAction, user?.user.points]);
-
-    // 处理重新生成
-    const handleRegenerate = useCallback(async (
-        messageIndex: number,
-        options?: {
-            onBeforeRequest?: () => void;
-            onSuccess?: () => void;
-            onError?: (error: string) => void;
-        }
-    ) => {
-        if (!sessionId) {
-            options?.onError?.('没有 sessionId，无法发送请求...');
-            return;
-        }
-
-        try {
-            const requestId = ++currentRequestId.current;
-            
-            setCurrentStep(null);
-            setStepQueue([]);
-            setShowNextButton(false);
+    // Handle selecting a choice option
+    const handleChoiceOption = useCallback(
+        async (option: { text: string; nextId: string }, optionIndex: number) => {
+            setSelectedOptionIndex(optionIndex);
             setIsWaitingForData(true);
-            setLoading(true);
+            setShowNextButton(false);
+            // Frontend points validation is temporarily disabled.
+            // Backend should decide whether points are sufficient.
 
-            onMessagesClear?.();
-            options?.onBeforeRequest?.();
+            await handleStreamAction(option.text, {
+                onError: (error) => {
+                    console.error('[Galgame] choice option error:', error);
+                    setIsWaitingForData(false);
+                    setSelectedOptionIndex(null);
+                },
+            });
+        },
+        [handleStreamAction]
+    );
 
-            // 重新生成接口
-            const response = await authFetch(
-                `${HOST_ADDRESS}/api/visual/session/${sessionId}/regenerate`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "historyIndex": messageIndex })
-                }
-            );
+    // Handle custom input send
+    const handleChoiceSend = useCallback(
+        async (inputText: string) => {
+            if (!inputText.trim()) {
+                return;
+            }
 
-            if (response.ok) {
-                await processStreamResponse(response, requestId, {
-                    onSuccess: async () => {
-                        if (options?.onSuccess) {
-                            await options.onSuccess();
-                        }
-                        // 流式结束后回调，用于刷新历史记录等
-                        if (onStreamComplete) {
-                            try {
-                                await onStreamComplete();
-                            } catch (e) {
-                                console.error('流式结束回调执行失败:', e);
+            setIsWaitingForData(true);
+            setShowNextButton(false);
+            // Frontend points validation is temporarily disabled.
+            // Backend should decide whether points are sufficient.
+
+            await handleStreamAction(inputText, {
+                onError: (error) => {
+                    console.error('[Galgame] custom input error:', error);
+                    setIsWaitingForData(false);
+                },
+                deduct: true,
+            });
+        },
+        [handleStreamAction]
+    );
+
+    // Handle regenerate from a history index
+    const handleRegenerate = useCallback(
+        async (
+            messageIndex: number,
+            options?: {
+                onBeforeRequest?: () => void;
+                onSuccess?: () => void;
+                onError?: (error: string) => void;
+            }
+        ) => {
+            if (!sessionId) {
+                options?.onError?.('No sessionId, cannot send request.');
+                return;
+            }
+
+            try {
+                const requestId = ++currentRequestId.current;
+
+                setCurrentStep(null);
+                setStepQueue([]);
+                setShowNextButton(false);
+                setIsWaitingForData(true);
+                setLoading(true);
+
+                onMessagesClear?.();
+                options?.onBeforeRequest?.();
+
+                const response = await authFetch(
+                    `${HOST_ADDRESS}/api/visual/session/${sessionId}/regenerate`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ historyIndex: messageIndex }),
+                    }
+                );
+
+                if (response.ok) {
+                    await processStreamResponse(response, requestId, {
+                        onSuccess: async () => {
+                            if (options?.onSuccess) {
+                                await options.onSuccess();
                             }
-                        }
-                        // 重新生成成功后也刷新一次用户信息
-                        await getUserInfo();
-                    },
-                    onError: options?.onError,
-                    onErrorAfterAlert: onErrorAfterAlert
-                });
-            } else {
-                const errorMsg = `请求失败: ${response.statusText}`;
+                            if (onStreamComplete) {
+                                try {
+                                    await onStreamComplete();
+                                } catch (e) {
+                                    console.error('Failed to run onStreamComplete:', e);
+                                }
+                            }
+                            await getUserInfo();
+                            setLoading(false);
+                        },
+                        onError: (error) => {
+                            setLoading(false);
+                            options?.onError?.(error);
+                        },
+                        onErrorAfterAlert,
+                    });
+                } else {
+                    const errorMsg = `Request failed: ${response.statusText}`;
+                    setLoading(false);
+                    setSelectedOptionIndex(null);
+                    setIsWaitingForData(false);
+                    options?.onError?.(errorMsg);
+                }
+            } catch (error) {
+                const errorMsg = `Request error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+                console.error('[Galgame] handleRegenerate error:', errorMsg);
                 setLoading(false);
                 setSelectedOptionIndex(null);
                 setIsWaitingForData(false);
                 options?.onError?.(errorMsg);
             }
-        } catch (error) {
-            const errorMsg = `请求错误: ${error instanceof Error ? error.message : '未知错误'}`;
-            console.error('❌', errorMsg);
-            setLoading(false);
-            setSelectedOptionIndex(null);
-            setIsWaitingForData(false);
-            options?.onError?.(errorMsg);
-        }
-    }, [sessionId, processStreamResponse, onMessagesClear]);
+        },
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo]
+    );
 
     return {
         currentStep,
@@ -369,6 +364,6 @@ export const useGalgameStep = ({
         setShowNextButton,
         currentRequestId,
         processStreamResponse,
-        setStepQueue
+        setStepQueue,
     };
 };

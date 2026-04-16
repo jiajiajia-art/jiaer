@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
@@ -41,10 +41,10 @@ const MEMBERSHIP_PLANS: MembershipPlan[] = [
 const FIRST_CHARGE_PLANS: FirstChargePlan[] = [
     { planId: 'pr_1', amount: 1, firstChargePoints: 19 },
     { planId: 'pr_6', amount: 6, firstChargePoints: 60, noFirstChargeBonus: true },
-    { planId: 'pr_24', amount: 24, firstChargePoints: 480 },
-    { planId: 'pr_45', amount: 45, firstChargePoints: 900 },
-    { planId: 'pr_95', amount: 95, firstChargePoints: 1900 },
-    { planId: 'pr_198', amount: 198, firstChargePoints: 3960 },
+    { planId: 'pr_24', amount: 24, firstChargePoints: 240 },
+    { planId: 'pr_45', amount: 45, firstChargePoints: 450 },
+    { planId: 'pr_95', amount: 95, firstChargePoints: 950 },
+    { planId: 'pr_198', amount: 198, firstChargePoints: 1980 },
 ];
 
 interface WechatMiniProgram {
@@ -64,6 +64,7 @@ interface RechargeModalProps {
     onClose: () => void;
     onRecharge: (order: PayOrderRequest) => Promise<{ qrDataUrl: string; outTradeNo: string } | null>;
     isFirstCharge?: boolean;
+    fixedTab?: RechargeTabType;
 }
 
 const POINTS_PER_YUAN = 10;
@@ -77,7 +78,7 @@ const isMiniProgramEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstCharge }) => {
+const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstCharge, fixedTab }) => {
     const closeAndReload = useCallback(() => {
         onClose();
         window.location.reload();
@@ -96,7 +97,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [pollingError, setPollingError] = useState<string>('');
     const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
 
-    const [rechargeTab, setRechargeTab] = useState<RechargeTabType>('points');
+    const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'points');
     const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
     const [selectedFirstChargePlanId, setSelectedFirstChargePlanId] = useState<PointsPlanId | null>(null);
 
@@ -110,11 +111,17 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setPaymentStatus('idle');
             setPollingError('');
             setTimeLeft(COUNTDOWN_SECONDS);
-            setRechargeTab('points');
+            setRechargeTab(fixedTab ?? 'points');
             setSelectedPlanIndex(-1);
             setSelectedFirstChargePlanId(null);
         }
-    }, [isOpen]);
+    }, [isOpen, fixedTab]);
+
+    useEffect(() => {
+        if (isOpen && fixedTab && rechargeTab !== fixedTab) {
+            setRechargeTab(fixedTab);
+        }
+    }, [isOpen, fixedTab, rechargeTab]);
 
     const handleFixedAmountClick = (plan: FirstChargePlan) => {
         setAmountText(String(plan.amount));
@@ -664,22 +671,24 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
                 <h2 className={styles.title}>账户充值</h2>
 
-                <div className={styles.tabBar}>
-                    <button
-                        type="button"
-                        className={`${styles.tabBtn} ${rechargeTab === 'points' ? styles.tabBtnActive : ''}`}
-                        onClick={() => setRechargeTab('points')}
-                    >
-                        积分充值
-                    </button>
-                    <button
-                        type="button"
-                        className={`${styles.tabBtn} ${rechargeTab === 'membership' ? styles.tabBtnActive : ''}`}
-                        onClick={() => setRechargeTab('membership')}
-                    >
-                        会员卡充值
-                    </button>
-                </div>
+                {!fixedTab && (
+                    <div className={styles.tabBar}>
+                        <button
+                            type="button"
+                            className={`${styles.tabBtn} ${rechargeTab === 'points' ? styles.tabBtnActive : ''}`}
+                            onClick={() => setRechargeTab('points')}
+                        >
+                            积分充值
+                        </button>
+                        <button
+                            type="button"
+                            className={`${styles.tabBtn} ${rechargeTab === 'membership' ? styles.tabBtnActive : ''}`}
+                            onClick={() => setRechargeTab('membership')}
+                        >
+                            会员卡充值
+                        </button>
+                    </div>
+                )}
 
                 <form className={styles.form} onSubmit={handleSubmit}>
                     {rechargeTab === 'points' ? pointsTabContent : membershipTabContent}

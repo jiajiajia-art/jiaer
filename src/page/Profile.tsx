@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -9,6 +9,7 @@ import Navbar from '../components/Layout/Navbar';
 import RechargeModal from '../components/Purchase/RechargeModal';
 import CheckInModal from '../components/CheckInModal';
 import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
+import InviteRewardModal from '../components/InviteRewardModal';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdCampaign,
@@ -16,7 +17,6 @@ import {
     MdContentCopy,
     MdEdit,
     MdGroup,
-    MdOutlineQrCodeScanner,
     MdPersonAddAlt1,
     MdPlayCircleOutline,
 } from 'react-icons/md';
@@ -66,7 +66,13 @@ const Profile: React.FC = () => {
     const [redeemSuccessPlanId, setRedeemSuccessPlanId] = useState<SubscriptionRedeemResult['planId'] | null>(null);
 
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+    const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+    const [isInviteRewardModalOpen, setIsInviteRewardModalOpen] = useState(false);
+    const [inviteStats, setInviteStats] = useState<{ inviteCount: number; claimedPoints: number }>({
+        inviteCount: 0,
+        claimedPoints: 0,
+    });
 
     const [isEditingName, setIsEditingName] = useState(false);
     const [editName, setEditName] = useState('');
@@ -143,13 +149,34 @@ const Profile: React.FC = () => {
         }
     };
 
+    const getInviteStats = async () => {
+        try {
+            const response = await auth.getInviteStats();
+            if (response.data.success && response.data.data) {
+                const claimedPoints = (response.data.data.rewards || [])
+                    .filter((item) => item.claimed)
+                    .reduce((sum, item) => sum + item.points, 0);
+                setInviteStats({
+                    inviteCount: Math.max(0, response.data.data.inviteCount || 0),
+                    claimedPoints,
+                });
+                return;
+            }
+            setInviteStats({ inviteCount: 0, claimedPoints: 0 });
+        } catch {
+            setInviteStats({ inviteCount: 0, claimedPoints: 0 });
+        }
+    };
+
     useEffect(() => {
         getUserInfo();
+        void getInviteStats();
     }, []);
 
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
     const userCode = user?.user?.userCode;
+    const inviteDisplayCode = user?.user?.inviteCode || inviteCode || '002436';
 
     const handleCopyUserCode = async () => {
         if (!userCode) return;
@@ -201,8 +228,8 @@ const Profile: React.FC = () => {
     };
 
     const handleCopyInviteCode = () => {
-        if (inviteCode) {
-            navigator.clipboard.writeText(inviteCode);
+        if (inviteDisplayCode) {
+            navigator.clipboard.writeText(inviteDisplayCode);
             toast.success('邀请码已复制');
         } else {
             toast.error('暂无邀请码');
@@ -501,15 +528,55 @@ const Profile: React.FC = () => {
                                 <div className={styles.functionDesc}>{`当前积分：${user?.user?.points ?? 0}`}</div>
                             </div>
                             <div className={styles.pointsActions}>
-                                {isMobile && (
+                                {/* {isMobile && (
                                     <button className={styles.payButton} onClick={() => setIsRechargeModalOpen(true)}>
                                         <span>{'充值'}</span>
                                     </button>
-                                )}
+                                )} */}
                                 <button className={styles.functionButton} onClick={() => setIsCheckInModalOpen(true)}>
                                     {'签到'}
                                 </button>
                             </div>
+                        </div>
+
+                        <div className={styles.inviteCampaignSection}>
+                            <div className={styles.inviteCampaignHeader}>
+                                <div className={styles.inviteCampaignIcon}>
+                                    <MdCampaign />
+                                </div>
+                                <div className={styles.inviteCampaignTitle}>邀请好友注册，双方各得 30 积分！</div>
+                            </div>
+                            <div className={styles.inviteCampaignCodeRow}>
+                                <div className={styles.inviteCampaignCode}>{inviteDisplayCode}</div>
+                                <button type="button" className={styles.inviteCampaignCopyBtn} onClick={handleCopyInviteCode}>
+                                    复制邀请码
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                className={styles.inviteCampaignRewardBtn}
+                                onClick={() => setIsInviteRewardModalOpen(true)}
+                            >
+                                领取额外奖励
+                            </button>
+                            <div className={styles.inviteCampaignMeta}>
+                                <span>
+                                    已邀请 <span style={{ fontSize: '1.5em', fontWeight: 'bold' }}>{inviteStats.inviteCount}</span> 人，获取 <span>{inviteStats.inviteCount}</span> * 30 积分
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className={styles.functionItem}>
+                            <div className={styles.functionIcon}>
+                                <MdCardMembership />
+                            </div>
+                            <div className={styles.functionText}>
+                                <div className={styles.functionTitle}>开通会员</div>
+                                <div className={styles.functionDesc}>月卡/季卡/年卡，立即开通会员权益</div>
+                            </div>
+                            <button className={styles.functionButton} onClick={() => setIsMembershipRechargeModalOpen(true)}>
+                                开通
+                            </button>
                         </div>
 
                         {/* 实现推广分享入口前移 */}
@@ -518,7 +585,7 @@ const Profile: React.FC = () => {
                                 <MdCampaign />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>推广分享</div>
+                                <div className={styles.functionTitle}>激励活动</div>
                                 {/* 实现推广文案更新 */}
                                 <div className={styles.functionDesc}>参加推广活动，赚取海量积分和奖励</div>
                             </div>
@@ -541,7 +608,7 @@ const Profile: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className={styles.functionItem}>
+                        {/* <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
                                 <MdOutlineQrCodeScanner />
                             </div>
@@ -552,7 +619,7 @@ const Profile: React.FC = () => {
                             <button className={styles.functionButton} onClick={handleCopyInviteCode}>
                                 {'复制'}
                             </button>
-                        </div>
+                        </div> */}
 
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -830,10 +897,26 @@ const Profile: React.FC = () => {
                 isFirstCharge={user?.user?.firstCharge}
             />
 
+            <RechargeModal
+                isOpen={isMembershipRechargeModalOpen}
+                onClose={() => setIsMembershipRechargeModalOpen(false)}
+                onRecharge={handleRecharge}
+                fixedTab="membership"
+            />
+
             <CheckInModal
                 isOpen={isCheckInModalOpen}
                 onClose={() => setIsCheckInModalOpen(false)}
                 onSignInSuccess={handleCheckInSuccess}
+            />
+
+            <InviteRewardModal
+                isOpen={isInviteRewardModalOpen}
+                onClose={() => setIsInviteRewardModalOpen(false)}
+                onClaimSuccess={() => {
+                    void getUserInfo();
+                    void getInviteStats();
+                }}
             />
 
             <MembershipRedeemResultModal

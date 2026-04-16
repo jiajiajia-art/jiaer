@@ -501,7 +501,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>待结算激励收益</span>
+                                            <span>待结算奖励收益</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.pendingIncome}</div>
