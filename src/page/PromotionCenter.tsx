@@ -126,6 +126,64 @@ void buildLimitSummary;
 
 const getImportableGameId = (game: UserGameData) => String(game.file_id || game.id || '').trim();
 
+const getActivitySubmissionAvailability = (
+    activity: PromotionActivity,
+    mySubmissions: PromotionSubmission[],
+): Pick<PromotionActivity, 'canSubmit' | 'availabilityText'> => {
+    if (activity.canSubmit === false) {
+        return {
+            canSubmit: false,
+            availabilityText: activity.availabilityText || '\u5f53\u524d\u6d3b\u52a8\u6682\u4e0d\u53ef\u6295\u7a3f',
+        };
+    }
+
+    const activitySubmissions = mySubmissions.filter((submission) => submission.activityId === activity.id);
+
+    if (activity.submissionLimitType === 'once_per_activity' && activitySubmissions.length > 0) {
+        return {
+            canSubmit: false,
+            availabilityText: '\u5f53\u524d\u6d3b\u52a8\u6bcf\u4e2a\u8d26\u53f7\u4ec5\u53ef\u6295\u7a3f\u4e00\u6b21',
+        };
+    }
+
+    if (activity.submissionLimitType === 'rolling_window') {
+        const limitDays = Number(activity.submissionLimitDays || 0);
+        const limitCount = Number(activity.submissionLimitCount || 0);
+
+        if (limitDays > 0 && limitCount > 0) {
+            const submittedAfter = Date.now() - limitDays * DAY_IN_MS;
+            const submissionCountInWindow = activitySubmissions.filter((submission) => {
+                if (!submission.submittedAt) {
+                    return false;
+                }
+
+                const submittedAt = new Date(submission.submittedAt).getTime();
+                return !Number.isNaN(submittedAt) && submittedAt >= submittedAfter;
+            }).length;
+
+            if (submissionCountInWindow >= limitCount) {
+                return {
+                    canSubmit: false,
+                    availabilityText: `\u5f53\u524d\u6d3b\u52a8\u6bcf ${activity.submissionLimitDays} \u5929\u4ec5\u53ef\u6295\u7a3f ${activity.submissionLimitCount} \u6b21`,
+                };
+            }
+        }
+    }
+
+    return {
+        canSubmit: true,
+        availabilityText: activity.availabilityText || '',
+    };
+};
+
+const hydrateActivitySubmissionAvailability = (
+    activityList: PromotionActivity[],
+    mySubmissions: PromotionSubmission[],
+): PromotionActivity[] => activityList.map((activity) => ({
+    ...activity,
+    ...getActivitySubmissionAvailability(activity, mySubmissions),
+}));
+
 const buildPromotionStatusBadge = (activity: PromotionActivity): PromotionActivityStatusBadge | null => {
     // 实现 活动状态标识计算
     if (activity.canSubmit === false) {
@@ -189,8 +247,14 @@ const PromotionCenter: React.FC = () => {
                 promotionApi.mySubmissions(),
             ]);
 
-            setActivities((activityResponse.data.data || []).map(normalizeSubmissionConfig));
-            setSubmissions(submissionResponse.data.data || []);
+            const nextSubmissions = submissionResponse.data.data || [];
+            const nextActivities = hydrateActivitySubmissionAvailability(
+                (activityResponse.data.data || []).map(normalizeSubmissionConfig),
+                nextSubmissions,
+            );
+
+            setActivities(nextActivities);
+            setSubmissions(nextSubmissions);
         } catch (error) {
             toast.error(getErrorMessage(error, '推广数据加载失败'));
         } finally {
@@ -253,6 +317,14 @@ const PromotionCenter: React.FC = () => {
 
     const submissionCount = submissions.length;
 
+    const resolveActivitySubmissionState = useCallback((activity: PromotionActivity) => {
+        const latestActivity = activities.find((item) => item.id === activity.id) || activity;
+        return {
+            ...latestActivity,
+            ...getActivitySubmissionAvailability(latestActivity, submissions),
+        };
+    }, [activities, submissions]);
+
     const resetSubmitState = () => {
         setSelectedActivity(null);
         setTextInput('');
@@ -261,6 +333,16 @@ const PromotionCenter: React.FC = () => {
         setVideoFiles(null);
         setIsGameImportOpen(false);
     };
+
+    const handleStartSubmission = useCallback((activity: PromotionActivity) => {
+        const nextActivity = resolveActivitySubmissionState(activity);
+        if (nextActivity.canSubmit === false) {
+            toast.error(nextActivity.availabilityText || '\u5f53\u524d\u6d3b\u52a8\u6682\u4e0d\u53ef\u6295\u7a3f');
+            return;
+        }
+
+        setSelectedActivity(nextActivity);
+    }, [resolveActivitySubmissionState]);
 
     const openDetail = (activity: PromotionActivity) => {
         const detailLinkUrl = activity.detailLinkUrl.trim();
@@ -349,8 +431,11 @@ const PromotionCenter: React.FC = () => {
 
     const handleSubmit = async () => {
         if (!selectedActivity) return;
-        if (selectedActivity.canSubmit === false) {
-            toast.error(selectedActivity.availabilityText || '当前活动暂不可投稿');
+        const currentActivity = resolveActivitySubmissionState(selectedActivity);
+
+        if (currentActivity.canSubmit === false) {
+            setSelectedActivity(currentActivity);
+            toast.error(currentActivity.availabilityText || '\u5f53\u524d\u6d3b\u52a8\u6682\u4e0d\u53ef\u6295\u7a3f');
             return;
         }
 
@@ -363,14 +448,14 @@ const PromotionCenter: React.FC = () => {
             images: Array.from(imageFiles || []),
             videos: Array.from(videoFiles || []),
         };
-        const missingRequiredItems = getMissingRequiredSubmissionItems(selectedActivity, submissionPayload);
+        const missingRequiredItems = getMissingRequiredSubmissionItems(currentActivity, submissionPayload);
 
         if (missingRequiredItems.length > 0) {
             toast.error(`缺少必填投稿内容：${missingRequiredItems.join('、')}`);
             return;
         }
 
-        if (!hasAnyAcceptedSubmissionContent(selectedActivity, submissionPayload)) {
+        if (!hasAnyAcceptedSubmissionContent(currentActivity, submissionPayload)) {
             toast.error('请至少提交一种推广内容');
             return;
         }
@@ -383,7 +468,7 @@ const PromotionCenter: React.FC = () => {
 
         try {
             setIsSubmitting(true);
-            await promotionApi.submit(selectedActivity.id, formData);
+            await promotionApi.submit(currentActivity.id, formData);
             toast.success('投稿成功');
             resetSubmitState();
             await loadData();
@@ -476,8 +561,8 @@ const PromotionCenter: React.FC = () => {
                                                     <button
                                                         type="button"
                                                         className={`${styles.primaryButton} ${activity.canSubmit === false ? styles.disabledButton : ''}`}
-                                                        onClick={() => setSelectedActivity(activity)}
-                                                        disabled={activity.canSubmit === false}
+                                                        onClick={() => handleStartSubmission(activity)}
+                                                        aria-disabled={activity.canSubmit === false}
                                                     >
                                                         立即投稿
                                                     </button>

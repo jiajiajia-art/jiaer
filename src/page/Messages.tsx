@@ -230,11 +230,17 @@ const Messages: React.FC = () => {
         setSelectedAnnouncement({ ...announcement, isRead: true });
     }, [markMessageAsRead]);
 
+    const handleAnnouncementLinkNavigate = useCallback((path: string) => {
+        setSelectedAnnouncement(null);
+        navigate(path);
+    }, [navigate]);
+
     const handleOpenPromotion = useCallback(async (promotion: MessagePromotion) => {
         await markMessageAsRead('promotion', promotion.sourceId, promotion.isRead);
 
         const targetLink = (promotion.detailLinkUrl || '').trim();
         if (!targetLink) {
+            navigate('/promotions');
             return;
         }
 
@@ -413,6 +419,7 @@ const Messages: React.FC = () => {
                 announcement={selectedAnnouncement}
                 isOpen={Boolean(selectedAnnouncement)}
                 onClose={() => setSelectedAnnouncement(null)}
+                onNavigateLink={handleAnnouncementLinkNavigate}
                 badgeText="消息公告"
             />
             <MobileBottomNav />

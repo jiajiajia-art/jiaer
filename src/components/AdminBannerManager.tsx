@@ -2,7 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast';
 import bannerApi from '../api/banner/bannerApi';
 import type { BannerGameOption, BannerItem, BannerRecord } from '../api/banner/banner.type';
+import { useImageCropper } from '../hooks/useImageCropper';
 import { getImageUrl } from '../utils/constants';
+import { MAX_UPLOAD_IMAGE_SIZE } from '../utils/uploadImageCrop';
+import ImageCropModal from './CommonModal/ImageCropModal';
 import styles from './AdminBannerManager.module.css';
 
 const BANNER_LIMIT = 3;
@@ -92,6 +95,7 @@ const AdminBannerManager: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isPublishing, setIsPublishing] = useState(false);
     const [uploadingBannerId, setUploadingBannerId] = useState<string | null>(null);
+    const [croppingBannerItemId, setCroppingBannerItemId] = useState<string | null>(null);
     const blurTimerRef = useRef<number | null>(null);
 
     const activeKeyword = activeSearchItemId ? (searchKeywordMap[activeSearchItemId] || '') : '';
@@ -166,6 +170,23 @@ const AdminBannerManager: React.FC = () => {
         () => bannerItems.find((item) => item.id === activeBannerId) || bannerItems[0] || null,
         [activeBannerId, bannerItems],
     );
+
+    const {
+        cropPreset,
+        pendingCropFile,
+        openCropper,
+        closeCropper,
+        handleCropComplete,
+    } = useImageCropper({
+        preset: 'homeBanner',
+        onCropped: async (croppedFile) => {
+            if (!croppingBannerItemId) {
+                return;
+            }
+            await handleBannerImageUpload(croppingBannerItemId, croppedFile);
+            setCroppingBannerItemId(null);
+        },
+    });
 
     const activeBannerIndex = useMemo(
         () => bannerItems.findIndex((item) => item.id === activeBannerItem?.id),
@@ -278,6 +299,27 @@ const AdminBannerManager: React.FC = () => {
         } finally {
             setUploadingBannerId(null);
         }
+    };
+
+    const handleBannerImageSelectForCrop = (itemId: string, file: File | null) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file.');
+            return;
+        }
+
+        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
+            toast.error('Image size must be under 5MB.');
+            return;
+        }
+
+        setCroppingBannerItemId(itemId);
+        void openCropper(file).catch((error) => {
+            console.error('open banner cropper failed:', error);
+            toast.error('Failed to load image.');
+            setCroppingBannerItemId(null);
+        });
     };
 
     const handleAddBannerItem = () => {
@@ -548,7 +590,7 @@ const AdminBannerManager: React.FC = () => {
                                         className={styles.fileInput}
                                         onChange={(event) => {
                                             const file = event.target.files?.[0] || null;
-                                            void handleBannerImageUpload(activeBannerItem.id, file);
+                                            handleBannerImageSelectForCrop(activeBannerItem.id, file);
                                             event.currentTarget.value = '';
                                         }}
                                     />
@@ -619,6 +661,23 @@ const AdminBannerManager: React.FC = () => {
                     </div>
                 </section>
             </div>
+            {pendingCropFile ? (
+                <ImageCropModal
+                    isOpen
+                    imageSrc={pendingCropFile.imageSrc}
+                    title={cropPreset.title}
+                    description={cropPreset.description}
+                    aspectRatio={cropPreset.aspectRatio}
+                    aspectLabel={cropPreset.aspectLabel}
+                    defaultCropScale={cropPreset.defaultCropScale}
+                    mimeType={pendingCropFile.mimeType}
+                    onClose={() => {
+                        setCroppingBannerItemId(null);
+                        closeCropper();
+                    }}
+                    onCropComplete={handleCropComplete}
+                />
+            ) : null}
         </div>
     );
 };

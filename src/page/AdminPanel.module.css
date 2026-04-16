@@ -372,6 +372,12 @@
     font-weight: 700;
 }
 
+.fieldHint {
+    color: var(--admin-text-soft);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .textInput,
 .textArea {
     width: 100%;
@@ -414,6 +420,11 @@
     border-radius: 16px;
     border: 1px solid rgba(205, 157, 120, 0.24);
     background: linear-gradient(180deg, rgba(255, 248, 241, 0.88) 0%, rgba(250, 240, 229, 0.84) 100%);
+}
+
+.sectionEditorActions {
+    display: flex;
+    justify-content: flex-start;
 }
 
 .sectionEditorHeader {
@@ -733,6 +744,24 @@
     background: var(--admin-surface);
     box-shadow: 0 28px 70px rgba(69, 42, 24, 0.22);
     box-sizing: border-box;
+}
+
+.linkInsertModal {
+    width: min(560px, 100%);
+    height: auto;
+    min-height: 0;
+}
+
+.linkInsertForm {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.formError {
+    color: #b54545;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
 .sortModalHeader {

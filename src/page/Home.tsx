@@ -1912,6 +1912,14 @@ const Home: React.FC = () => {
         setShowAnnouncementModal(false);
     };
 
+    const handleAnnouncementLinkNavigate = useCallback((path: string) => {
+        if (latestAnnouncement?.id) {
+            sessionStorage.setItem(`announcementDismissed_${latestAnnouncement.id}`, 'true');
+        }
+        setShowAnnouncementModal(false);
+        navigateToHomeTickerLink(path);
+    }, [latestAnnouncement?.id, navigateToHomeTickerLink]);
+
     const desktopCarouselStyle = isDesktopCarousel
         ? ({
             '--desktop-slide-width': `${desktopCarouselMetrics.slideWidth}px`,
@@ -2319,6 +2327,7 @@ const Home: React.FC = () => {
                 announcement={latestAnnouncement}
                 isOpen={showAnnouncementModal}
                 onClose={handleCloseAnnouncementModal}
+                onNavigateLink={handleAnnouncementLinkNavigate}
             />
             <MobileBottomNav />
         </div>

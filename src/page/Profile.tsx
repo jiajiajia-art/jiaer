@@ -26,6 +26,9 @@ import { getImageUrl } from '../utils/constants';
 import type { SubscriptionRedeemResult, User } from '../api/account/auth.type';
 import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKeysApi.type';
 import type { PayOrderRequest } from '../api/pay/pay.type';
+import { useImageCropper } from '../hooks/useImageCropper';
+import { MAX_UPLOAD_IMAGE_SIZE } from '../utils/uploadImageCrop';
+import ImageCropModal from '../components/CommonModal/ImageCropModal';
 
 const isWebViewEnv = (): boolean => {
     const win = window as any;
@@ -72,6 +75,36 @@ const Profile: React.FC = () => {
 
     const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const {
+        cropPreset,
+        pendingCropFile,
+        openCropper,
+        closeCropper,
+        handleCropComplete,
+    } = useImageCropper({
+        preset: 'avatar',
+        onCropped: async (croppedFile) => {
+            try {
+                setIsUpdatingAvatar(true);
+                const response = await auth.updateUserAvatar(croppedFile);
+                if (response.data.success && response.data.data) {
+                    await getUserInfo();
+                    toast.success('头像更新');
+                } else {
+                    toast.error(response.data.message || 'Failed to update avatar.');
+                }
+            } catch (error) {
+                console.error('update avatar failed:', error);
+                toast.error('Failed to update avatar.');
+            } finally {
+                setIsUpdatingAvatar(false);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
+        },
+    });
 
     const [isBindAccountModalOpen, setIsBindAccountModalOpen] = useState(false);
     const [bindPhone, setBindPhone] = useState('');
@@ -367,6 +400,28 @@ const Profile: React.FC = () => {
         }
     };
 
+    const handleAvatarChangeForCrop = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file.');
+            return;
+        }
+
+        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
+            toast.error('Image size must be under 5MB.');
+            return;
+        }
+
+        void openCropper(file).catch((error) => {
+            console.error('open avatar cropper failed:', error);
+            toast.error('Failed to load image.');
+        });
+    };
+    void handleAvatarChange;
+
     const handleRecharge = async (order: PayOrderRequest) => {
         const response = await payApi.getPayQrCode(order);
         if (response.data.code === 200 && response.data.data) {
@@ -399,7 +454,7 @@ const Profile: React.FC = () => {
                                     type="file"
                                     ref={fileInputRef}
                                     accept="image/*"
-                                    onChange={handleAvatarChange}
+                                    onChange={handleAvatarChangeForCrop}
                                     style={{ display: 'none' }}
                                 />
                                 <img
@@ -792,6 +847,20 @@ const Profile: React.FC = () => {
                 onClose={() => setRedeemSuccessPlanId(null)}
                 planId={redeemSuccessPlanId ?? 'month'}
             />
+            {pendingCropFile ? (
+                <ImageCropModal
+                    isOpen
+                    imageSrc={pendingCropFile.imageSrc}
+                    title={cropPreset.title}
+                    description={cropPreset.description}
+                    aspectRatio={cropPreset.aspectRatio}
+                    aspectLabel={cropPreset.aspectLabel}
+                    defaultCropScale={cropPreset.defaultCropScale}
+                    mimeType={pendingCropFile.mimeType}
+                    onClose={closeCropper}
+                    onCropComplete={handleCropComplete}
+                />
+            ) : null}
         </div>
     );
 };

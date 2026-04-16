@@ -18,6 +18,9 @@ import type {
 import Pagination from './Pagination';
 import styles from './PromotionAdminManager.module.css';
 import { getImageUrl } from '../utils/constants';
+import { useImageCropper } from '../hooks/useImageCropper';
+import { MAX_UPLOAD_IMAGE_SIZE } from '../utils/uploadImageCrop';
+import ImageCropModal from './CommonModal/ImageCropModal';
 
 type PromotionAdminView = 'create' | 'list' | 'reviews' | 'ticker';
 type ReviewDraft = { reviewStatus: PromotionReviewStatus; reviewRemark: string };
@@ -183,6 +186,19 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
   const [isLoadingHomeTicker, setIsLoadingHomeTicker] = useState(false);
   const [isSavingHomeTicker, setIsSavingHomeTicker] = useState(false);
 
+  const {
+    cropPreset,
+    pendingCropFile,
+    openCropper,
+    closeCropper,
+    handleCropComplete,
+  } = useImageCropper({
+    preset: 'promotionCover',
+    onCropped: async (croppedFile) => {
+      await handleUploadCover(croppedFile);
+    },
+  });
+
   const selectedActivity = useMemo(() => activities.find((item) => item.id === selectedActivityId) || null, [activities, selectedActivityId]);
 
   useEffect(() => {
@@ -330,6 +346,25 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
     } catch (error) {
       toast.error(getErrorMessage(error, '活动封面上传失败'));
     }
+  };
+
+  const handleUploadCoverForCrop = (file: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file.');
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
+      toast.error('Image size must be under 5MB.');
+      return;
+    }
+
+    void openCropper(file).catch((error) => {
+      console.error('open promotion cover cropper failed:', error);
+      toast.error('Failed to load image.');
+    });
   };
 
   const handleSave = async () => {
@@ -560,7 +595,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u6807\u9898'}<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u6458\u8981'}<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u8be6\u60c5\u8df3\u8f6c\u5730\u5740\uff08\u53ef\u9009\uff09'}<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u5c01\u9762'}<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => void handleUploadCover(event.target.files?.[0] || null)} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt={'\u6d3b\u52a8\u5c01\u9762'} />}</label>
+        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u5c01\u9762'}<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => { handleUploadCoverForCrop(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt={'\u6d3b\u52a8\u5c01\u9762'} />}</label>
         <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u65f6\u95f4'}<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />{'\u957f\u671f\u6d3b\u52a8'}</label></label>
         {!form.isLongTerm && (
           <div className={styles.inlineGrid}>
@@ -910,6 +945,20 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         {currentView === 'ticker' && renderTickerSettings()}
       </div>
       {renderSubmissionDetailModal()}
+      {pendingCropFile ? (
+        <ImageCropModal
+          isOpen
+          imageSrc={pendingCropFile.imageSrc}
+          title={cropPreset.title}
+          description={cropPreset.description}
+          aspectRatio={cropPreset.aspectRatio}
+          aspectLabel={cropPreset.aspectLabel}
+          defaultCropScale={cropPreset.defaultCropScale}
+          mimeType={pendingCropFile.mimeType}
+          onClose={closeCropper}
+          onCropComplete={handleCropComplete}
+        />
+      ) : null}
     </>
   );
 };
