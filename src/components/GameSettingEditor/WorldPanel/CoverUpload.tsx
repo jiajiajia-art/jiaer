@@ -5,7 +5,7 @@ import EditorApi from '../../../api/galgame/EditorData';
 import { useImageCropper } from '../../../hooks/useImageCropper';
 import { getImageUrl } from '../../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
-import { fileToDataUrl, MAX_UPLOAD_IMAGE_SIZE } from '../../../utils/uploadImageCrop';
+import { fileToDataUrl } from '../../../utils/uploadImageCrop';
 import ImageCropModal from '../../CommonModal/ImageCropModal';
 import styles from './WorldPanel.module.css';
 
@@ -82,11 +82,6 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
             return;
         }
 
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            setCoverError('Image size must be under 5MB.');
-            return;
-        }
-
         setCoverError(null);
         void openCropper(file).catch((error) => {
             console.error('open world cover cropper failed:', error);
@@ -136,7 +131,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                                 onClick={handleReplaceCover}
                                 disabled={coverUploading}
                             >
-                                Replace
+                                更换
                             </button>
                         </div>
                     </div>

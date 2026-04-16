@@ -4,7 +4,6 @@ import styles from './GameForm.module.css';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
 import { useImageCropper } from '../../hooks/useImageCropper';
-import { MAX_UPLOAD_IMAGE_SIZE } from '../../utils/uploadImageCrop';
 import ImageCropModal from '../CommonModal/ImageCropModal';
 
 export interface GameFormData {
@@ -259,10 +258,6 @@ const GameForm: React.FC<GameFormProps> = ({
             alert('Please upload a supported image file.');
             return;
         }
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            alert('Image size must be under 5MB.');
-            return;
-        }
 
         void openCropper(file);
     };
@@ -278,10 +273,6 @@ const GameForm: React.FC<GameFormProps> = ({
         const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
         if (!allowedTypes.includes(file.type)) {
             alert('Please upload a supported image file.');
-            return;
-        }
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            alert('Image size must be under 5MB.');
             return;
         }
 

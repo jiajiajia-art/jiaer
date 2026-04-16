@@ -8,6 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { StConfig, STRegexScript, STCharBookEntry } from '../utils/stRender';
 import AssetsUpload from '../components/StGame/AssetsUpload';
 import getGameDataApi from '../api/home/getGameData';
+import gameTagsApi from '../api/gameTags/gameTagsApi';
+import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -23,6 +25,17 @@ const emptyConfig: StConfig = {
   },
 };
 
+const THEME_TAG_MIN = 1;
+const THEME_TAG_MAX = 2;
+
+const normalizeThemeTagIds = (value: unknown): number[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item > 0)
+    .slice(0, THEME_TAG_MAX);
+};
+
 const StGameCreate: React.FC = () => {
   const nav = useNavigate();
   const [params] = useSearchParams();
@@ -34,6 +47,9 @@ const StGameCreate: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
+  const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
+  const [themeTagError, setThemeTagError] = useState('');
 
   const scripts: STRegexScript[] = ((cfg.extensions?.regex_scripts) || []) as STRegexScript[];
   const entries: STCharBookEntry[] = (((cfg.extensions?.character_book)?.entries) || []) as STCharBookEntry[];
@@ -109,6 +125,22 @@ const StGameCreate: React.FC = () => {
     };
   }, [appIdFromQuery]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await gameTagsApi.getGameTagsTree();
+        if (!resp.data?.success || cancelled) return;
+        setAvailableThemeTags(flattenThemeTags(resp.data.data || []));
+      } catch {
+        // ignore theme tag load errors
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // 补充：与自定义模式一致，编辑模式下通过 /auth/games/info 读取游戏信息（用于标题等元数据）
   useEffect(() => {
     let destroyed = false;
@@ -128,11 +160,59 @@ const StGameCreate: React.FC = () => {
     return () => { destroyed = true; };
   }, [appIdFromQuery]);
 
+  useEffect(() => {
+    let destroyed = false;
+    (async () => {
+      if (!appIdFromQuery) return;
+      try {
+        const resp = await getGameDataApi.getGameDetail({ fileId: appIdFromQuery });
+        const data: any = resp?.data?.data;
+        if (!destroyed) {
+          setSelectedThemeTagIds(normalizeThemeTagIds(data?.theme_tag_ids));
+        }
+      } catch {
+        // ignore theme tag hydrate errors
+      }
+    })();
+    return () => { destroyed = true; };
+  }, [appIdFromQuery]);
+
+  const handleThemeTagToggle = (tagId: number) => {
+    setSelectedThemeTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        const next = prev.filter((id) => id !== tagId);
+        if (next.length >= THEME_TAG_MIN) {
+          setThemeTagError('');
+        }
+        return next;
+      }
+      if (prev.length >= THEME_TAG_MAX) {
+        setThemeTagError('\u8BF7\u9009\u62E9 1~2 \u4E2A\u4F5C\u54C1\u6807\u7B7E');
+        return prev;
+      }
+      setThemeTagError('');
+      return [...prev, tagId];
+    });
+  };
+
+  const validateThemeTags = (): boolean => {
+    if (selectedThemeTagIds.length < THEME_TAG_MIN || selectedThemeTagIds.length > THEME_TAG_MAX) {
+      setThemeTagError('\u8BF7\u9009\u62E9 1~2 \u4E2A\u4F5C\u54C1\u6807\u7B7E');
+      return false;
+    }
+    setThemeTagError('');
+    return true;
+  };
+
   const saveConfig = async (): Promise<string> => {
     setError('');
     if (!title.trim()) {
       setError('请填写标题');
       throw new Error('请填写标题');
+    }
+
+    if (!validateThemeTags()) {
+      throw new Error('\u8BF7\u9009\u62E9 1~2 \u4E2A\u4F5C\u54C1\u6807\u7B7E');
     }
 
     try {
@@ -168,6 +248,10 @@ const StGameCreate: React.FC = () => {
         body: JSON.stringify(finalCfg),
       });
       if (!r2.ok) throw new Error(await r2.text());
+      await gameTagsApi.setGameTagsForGame({
+        fileId: String(id),
+        tagIds: selectedThemeTagIds,
+      });
       return id;
     } catch (e: any) {
       setError(String(e?.message || e));
@@ -209,6 +293,32 @@ const StGameCreate: React.FC = () => {
             <div className={step === 3 ? styles.stepActive : styles.step}>3. 规则与渲染</div>
           </div>
         </div>
+
+        {step === 1 && (
+          <div className={styles.themeTagsPanel}>
+            <div className={styles.themeTagsHeader}>
+              <span className={styles.themeTagsLabel}>{'\u4F5C\u54C1\u6807\u7B7E *'}</span>
+              <span className={styles.themeTagsHint}>{'\u6700\u5C11 1 \u4E2A\uff0c\u6700\u591A 2 \u4E2A'}</span>
+            </div>
+            <div className={styles.themeTagsWrap}>
+              {availableThemeTags.map((tag) => {
+                const active = selectedThemeTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
+                    onClick={() => handleThemeTagToggle(tag.id)}
+                    title={tag.pathLabel || tag.name}
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+            {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
+          </div>
+        )}
 
         <div className={styles.formRow}>
           <label>标题</label>

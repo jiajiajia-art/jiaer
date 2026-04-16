@@ -15,6 +15,7 @@ import type {
 import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
 import { useMessageStore } from '../store/useMessageStore';
 import { getImageUrl } from '../utils/constants';
+import { toAnnouncementPlainText } from '../utils/announcementLinks';
 import styles from './Messages.module.css';
 
 type MessageFeedItem =
@@ -323,7 +324,7 @@ const Messages: React.FC = () => {
                                         </div>
 
                                         <div className={styles.messageText}>
-                                            {item.sections[0]?.body || '点击查看公告详情'}
+                                            {toAnnouncementPlainText(item.sections[0]?.body || '') || '点击查看公告详情'}
                                         </div>
 
                                         <div className={styles.messageMeta}>

@@ -4,6 +4,11 @@ import ReactCrop, { centerCrop } from 'react-image-crop';
 import type { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { IoClose } from 'react-icons/io5';
+import {
+    buildCropExportAttempts,
+    CROP_EXPORT_ERROR_MESSAGE,
+    MAX_UPLOAD_IMAGE_SIZE,
+} from '../../utils/uploadImageCrop';
 import styles from './ImageCropModal.module.css';
 
 interface ImageCropModalProps {
@@ -15,12 +20,17 @@ interface ImageCropModalProps {
     aspectLabel: string;
     defaultCropScale: number;
     mimeType?: string;
-    quality?: number;
     onClose: () => void;
     onCropComplete: (croppedBlob: Blob) => void | Promise<void>;
 }
 
-const DEFAULT_QUALITY = 0.92;
+type CropMetrics = {
+    image: HTMLImageElement;
+    sx: number;
+    sy: number;
+    sourceWidth: number;
+    sourceHeight: number;
+};
 
 const ImageCropModal: React.FC<ImageCropModalProps> = ({
     isOpen,
@@ -31,13 +41,13 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
     aspectLabel,
     defaultCropScale,
     mimeType = 'image/jpeg',
-    quality = DEFAULT_QUALITY,
     onClose,
     onCropComplete,
 }) => {
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
     const [isExporting, setIsExporting] = useState(false);
+    const [exportError, setExportError] = useState('');
     const imgRef = useRef<HTMLImageElement>(null);
 
     const createDefaultCrop = useCallback((
@@ -77,56 +87,97 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
         const nextCrop = createDefaultCrop(width, height);
         setCrop(nextCrop);
         setCompletedCrop(nextCrop);
+        setExportError('');
     }, [createDefaultCrop]);
 
-    const getCroppedImage = useCallback((): Promise<Blob | null> => {
+    const getCropMetrics = useCallback((): CropMetrics | null => {
+        const image = imgRef.current;
+        if (!image || !completedCrop?.width || !completedCrop?.height) {
+            return null;
+        }
+
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+
+        return {
+            image,
+            sx: Math.round(completedCrop.x * scaleX),
+            sy: Math.round(completedCrop.y * scaleY),
+            sourceWidth: Math.max(Math.round(completedCrop.width * scaleX), 1),
+            sourceHeight: Math.max(Math.round(completedCrop.height * scaleY), 1),
+        };
+    }, [completedCrop]);
+
+    const exportAttempt = useCallback((
+        metrics: CropMetrics,
+        exportMimeType: string,
+        exportScale: number,
+        exportQuality?: number,
+    ): Promise<Blob | null> => {
         return new Promise((resolve) => {
-            const image = imgRef.current;
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
 
-            if (!image || !context || !completedCrop?.width || !completedCrop?.height) {
+            if (!context) {
                 resolve(null);
                 return;
             }
 
-            const scaleX = image.naturalWidth / image.width;
-            const scaleY = image.naturalHeight / image.height;
-            const sourceWidth = Math.max(Math.round(completedCrop.width * scaleX), 1);
-            const sourceHeight = Math.max(Math.round(completedCrop.height * scaleY), 1);
+            const targetWidth = Math.max(Math.round(metrics.sourceWidth * exportScale), 1);
+            const targetHeight = Math.max(Math.round(metrics.sourceHeight * exportScale), 1);
 
-            canvas.width = sourceWidth;
-            canvas.height = sourceHeight;
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
             context.imageSmoothingEnabled = true;
             context.imageSmoothingQuality = 'high';
 
             context.drawImage(
-                image,
-                Math.round(completedCrop.x * scaleX),
-                Math.round(completedCrop.y * scaleY),
-                sourceWidth,
-                sourceHeight,
+                metrics.image,
+                metrics.sx,
+                metrics.sy,
+                metrics.sourceWidth,
+                metrics.sourceHeight,
                 0,
                 0,
-                sourceWidth,
-                sourceHeight,
+                targetWidth,
+                targetHeight,
             );
 
             canvas.toBlob(
                 (blob) => resolve(blob),
-                mimeType,
-                quality,
+                exportMimeType,
+                exportQuality,
             );
         });
-    }, [completedCrop, mimeType, quality]);
+    }, []);
+
+    const getCroppedImage = useCallback(async (): Promise<Blob | null> => {
+        const metrics = getCropMetrics();
+        if (!metrics) {
+            return null;
+        }
+
+        for (const attempt of buildCropExportAttempts(mimeType)) {
+            const blob = await exportAttempt(metrics, attempt.mimeType, attempt.scale, attempt.quality);
+            if (blob && blob.size <= MAX_UPLOAD_IMAGE_SIZE) {
+                return blob;
+            }
+        }
+
+        return null;
+    }, [exportAttempt, getCropMetrics, mimeType]);
 
     const handleConfirm = useCallback(async () => {
         setIsExporting(true);
+        setExportError('');
         try {
             const blob = await getCroppedImage();
             if (blob) {
                 await onCropComplete(blob);
+                return;
             }
+
+            setExportError(CROP_EXPORT_ERROR_MESSAGE);
         } finally {
             setIsExporting(false);
         }
@@ -156,7 +207,10 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                         <ReactCrop
                             key={imageSrc}
                             crop={crop}
-                            onChange={(nextCrop) => setCrop(nextCrop)}
+                            onChange={(nextCrop) => {
+                                setCrop(nextCrop);
+                                setExportError('');
+                            }}
                             onComplete={(nextCrop) => setCompletedCrop(nextCrop)}
                             aspect={aspectRatio}
                             className={styles.reactCrop}
@@ -173,13 +227,14 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
                     <div className={styles.hints}>
                         <p>{description}</p>
-                        <p>宽高比: {aspectLabel}</p>
+                        <p>Aspect ratio: {aspectLabel}</p>
+                        {exportError ? <p className={styles.errorText}>{exportError}</p> : null}
                     </div>
                 </div>
 
                 <div className={styles.footer}>
                     <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isExporting}>
-                        取消
+                        Cancel
                     </button>
                     <button
                         type="button"
@@ -187,14 +242,13 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                         onClick={handleConfirm}
                         disabled={isExporting || !completedCrop?.width || !completedCrop?.height}
                     >
-                        {isExporting ? '裁剪中...' : '确认'}
+                        {isExporting ? 'Processing...' : 'Confirm'}
                     </button>
                 </div>
             </div>
         </div>
     );
 
-    // Render above page shells to avoid clipping and stacking issues in nested layouts.
     return createPortal(modalContent, document.body);
 };
 

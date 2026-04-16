@@ -4,7 +4,6 @@ import bannerApi from '../api/banner/bannerApi';
 import type { BannerGameOption, BannerItem, BannerRecord } from '../api/banner/banner.type';
 import { useImageCropper } from '../hooks/useImageCropper';
 import { getImageUrl } from '../utils/constants';
-import { MAX_UPLOAD_IMAGE_SIZE } from '../utils/uploadImageCrop';
 import ImageCropModal from './CommonModal/ImageCropModal';
 import styles from './AdminBannerManager.module.css';
 
@@ -306,11 +305,6 @@ const AdminBannerManager: React.FC = () => {
 
         if (!file.type.startsWith('image/')) {
             toast.error('Please upload an image file.');
-            return;
-        }
-
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            toast.error('Image size must be under 5MB.');
             return;
         }
 

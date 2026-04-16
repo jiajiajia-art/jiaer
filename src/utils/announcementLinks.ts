@@ -49,3 +49,9 @@ export const parseAnnouncementBody = (body: string): AnnouncementBodyPart[] => {
 
     return parts.length > 0 ? parts : [{ type: 'text', text: body }];
 };
+
+export const toAnnouncementPlainText = (body: string): string => (
+    parseAnnouncementBody(body)
+        .map((part) => part.text)
+        .join('')
+);

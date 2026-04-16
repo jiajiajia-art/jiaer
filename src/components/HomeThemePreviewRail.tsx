@@ -5,6 +5,7 @@ import { IoGameControllerOutline } from 'react-icons/io5';
 import styles from './HomeThemePreviewRail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
+import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
 
 interface HomeThemePreviewRailProps {
     games: UserGameData[];
@@ -117,6 +118,8 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
     };
 
     const getTypeLabel = (game: UserGameData): string => {
+        return getGameTypeLabelFromMeta(game);
+
         const rawType = String(game.game_tags || game.engine || '').trim().toUpperCase();
         switch (rawType) {
             case 'TXT':

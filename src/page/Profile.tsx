@@ -27,7 +27,6 @@ import type { SubscriptionRedeemResult, User } from '../api/account/auth.type';
 import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKeysApi.type';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { useImageCropper } from '../hooks/useImageCropper';
-import { MAX_UPLOAD_IMAGE_SIZE } from '../utils/uploadImageCrop';
 import ImageCropModal from '../components/CommonModal/ImageCropModal';
 
 const isWebViewEnv = (): boolean => {
@@ -407,11 +406,6 @@ const Profile: React.FC = () => {
 
         if (!file.type.startsWith('image/')) {
             toast.error('Please select an image file.');
-            return;
-        }
-
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            toast.error('Image size must be under 5MB.');
             return;
         }
 

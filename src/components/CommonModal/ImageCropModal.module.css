@@ -130,6 +130,11 @@
     color: rgba(0, 0, 0, 0.8);
 }
 
+.errorText {
+    color: #c62828 !important;
+    font-weight: 500;
+}
+
 .footer {
     display: flex;
     justify-content: flex-end;

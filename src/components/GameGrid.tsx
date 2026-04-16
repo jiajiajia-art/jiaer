@@ -6,6 +6,7 @@ import { RiMoneyCnyCircleLine } from 'react-icons/ri';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
+import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
 
 type GameGridLayoutVariant = 'default' | 'homeWide';
 
@@ -48,7 +49,21 @@ const GameGrid: React.FC<GameGridProps> = ({
     ].filter(Boolean).join(' ');
 
     const getTypeLabel = (meta: UserGameData): string => {
-        const raw = String(meta.game_tags || (meta as { engine?: string }).engine || '').toUpperCase();
+        return getGameTypeLabelFromMeta(meta);
+
+        const rawSource = String(meta.game_tags || (meta as { engine?: string }).engine || '').trim();
+        const normalizedRaw = rawSource
+            .replace(/^\[\s*/, '')
+            .replace(/\s*\]$/, '')
+            .replace(/^["']|["']$/g, '')
+            .trim();
+        if (
+            normalizedRaw === '\u6587\u5b57\u4e92\u52a8'
+            || normalizedRaw.toUpperCase() === 'ROLE-PLAYING'
+        ) {
+            return 'Role-Playing';
+        }
+        const raw = normalizedRaw.toUpperCase();
         switch (raw) {
             case 'TXT':
                 return 'Role-Playing';

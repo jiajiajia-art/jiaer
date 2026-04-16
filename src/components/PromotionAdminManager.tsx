@@ -19,7 +19,6 @@ import Pagination from './Pagination';
 import styles from './PromotionAdminManager.module.css';
 import { getImageUrl } from '../utils/constants';
 import { useImageCropper } from '../hooks/useImageCropper';
-import { MAX_UPLOAD_IMAGE_SIZE } from '../utils/uploadImageCrop';
 import ImageCropModal from './CommonModal/ImageCropModal';
 
 type PromotionAdminView = 'create' | 'list' | 'reviews' | 'ticker';
@@ -353,11 +352,6 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
 
     if (!file.type.startsWith('image/')) {
       toast.error('Please upload an image file.');
-      return;
-    }
-
-    if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-      toast.error('Image size must be under 5MB.');
       return;
     }
 
@@ -910,7 +904,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
               <section className={styles.detailSection}>
                 <div className={styles.detailSectionTitle}>投稿图片</div>
                 {submission.submitPayload.images.length === 0 ? <div className={styles.detailTextBlock}>无内容</div> : (
-                  <div className={styles.detailMediaGrid}>
+                  <div className={styles.detailImageGrid}>
                     {submission.submitPayload.images.map((item) => (
                       <img key={item} className={styles.detailImage} src={getImageUrl(item)} alt="投稿图片" />
                     ))}

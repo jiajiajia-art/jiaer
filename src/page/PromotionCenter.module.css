@@ -324,6 +324,13 @@
     gap: 8px;
 }
 
+.payloadImageList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-start;
+}
+
 .payloadItem {
     max-width: 100%;
     padding: 6px 10px;
@@ -346,6 +353,18 @@
     width: 84px;
     height: 84px;
     border-radius: 14px;
+}
+
+.payloadImageWrap {
+    width: clamp(180px, 32vw, 280px);
+}
+
+.payloadImage {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+    background: #eee2d5;
 }
 
 .videoLink {

@@ -9,7 +9,6 @@ import { addImageTimestamp } from '../../../utils/imageCache';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
 import { useImageCropper } from '../../../hooks/useImageCropper';
-import { MAX_UPLOAD_IMAGE_SIZE } from '../../../utils/uploadImageCrop';
 
 interface ObjectDetailProps {
     object: ObjectItem | null;
@@ -495,11 +494,6 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
 
         if (!file.type.startsWith('image/')) {
             toast.error('Please select an image file.');
-            return;
-        }
-
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            toast.error('Image size must be under 5MB.');
             return;
         }
 

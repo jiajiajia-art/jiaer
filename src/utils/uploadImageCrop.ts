@@ -13,6 +13,12 @@ export type UploadCropPreset = {
     defaultCropScale: number;
 };
 
+export type CropExportAttempt = {
+    mimeType: string;
+    quality?: number;
+    scale: number;
+};
+
 export const uploadCropPresets: Record<UploadCropPresetKey, UploadCropPreset> = {
     gameCover: {
         title: '调整游戏封面',
@@ -52,6 +58,9 @@ export const uploadCropPresets: Record<UploadCropPresetKey, UploadCropPreset> = 
 };
 
 export const MAX_UPLOAD_IMAGE_SIZE = 5 * 1024 * 1024;
+export const CROP_EXPORT_SCALES = [1, 0.9, 0.8, 0.7, 0.6];
+export const CROP_EXPORT_QUALITIES = [0.92, 0.85, 0.78, 0.7];
+export const CROP_EXPORT_ERROR_MESSAGE = 'Cropped image is still over 5MB after compression. Please reduce the crop area or choose another image.';
 
 export function getMimeTypeExtension(mimeType: string): string {
     switch (mimeType) {
@@ -79,4 +88,34 @@ export function fileToDataUrl(file: File): Promise<string> {
         reader.onerror = () => reject(new Error('Failed to read image file.'));
         reader.readAsDataURL(file);
     });
+}
+
+function buildExportMimeOrder(sourceMimeType: string): string[] {
+    if (sourceMimeType === 'image/png') {
+        return ['image/png', 'image/webp'];
+    }
+    if (sourceMimeType === 'image/webp') {
+        return ['image/webp'];
+    }
+    return ['image/jpeg', 'image/webp'];
+}
+
+export function buildCropExportAttempts(sourceMimeType: string): CropExportAttempt[] {
+    const mimeOrder = buildExportMimeOrder(sourceMimeType);
+    const attempts: CropExportAttempt[] = [];
+
+    for (const scale of CROP_EXPORT_SCALES) {
+        for (const mimeType of mimeOrder) {
+            if (mimeType === 'image/png') {
+                attempts.push({ mimeType, scale });
+                continue;
+            }
+
+            for (const quality of CROP_EXPORT_QUALITIES) {
+                attempts.push({ mimeType, quality, scale });
+            }
+        }
+    }
+
+    return attempts;
 }

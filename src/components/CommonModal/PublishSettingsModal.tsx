@@ -7,7 +7,7 @@ import getGameDataApi from '../../api/home/getGameData';
 import { useImageCropper } from '../../hooks/useImageCropper';
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../utils/imageCache';
-import { fileToDataUrl, MAX_UPLOAD_IMAGE_SIZE } from '../../utils/uploadImageCrop';
+import { fileToDataUrl } from '../../utils/uploadImageCrop';
 import ImageCropModal from './ImageCropModal';
 
 interface PublishSettingsModalProps {
@@ -154,11 +154,6 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
         if (!file.type.startsWith('image/')) {
             setCoverError('Please upload an image file.');
-            return;
-        }
-
-        if (file.size > MAX_UPLOAD_IMAGE_SIZE) {
-            setCoverError('Image size must be under 5MB.');
             return;
         }
 

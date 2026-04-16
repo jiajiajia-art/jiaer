@@ -619,10 +619,10 @@ const PromotionCenter: React.FC = () => {
                                         {submission.submitPayload.images.length > 0 ? (
                                             <div className={styles.payloadBlock}>
                                                 <div className={styles.payloadLabel}>投稿图片</div>
-                                                <div className={styles.payloadList}>
+                                                <div className={styles.payloadImageList}>
                                                     {submission.submitPayload.images.map((item) => (
-                                                        <div key={item} className={`${styles.imageGuard} ${styles.imageGuardLight} ${styles.mediaPreviewWrap}`}>
-                                                        <img key={item} className={styles.mediaPreview} src={getImageUrl(item)} alt="投稿图片" />
+                                                        <div key={item} className={styles.payloadImageWrap}>
+                                                        <img className={styles.payloadImage} src={getImageUrl(item)} alt="投稿图片" />
                                                         </div>
                                                     ))}
                                                 </div>
