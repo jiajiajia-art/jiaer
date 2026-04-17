@@ -440,6 +440,13 @@
     flex-wrap: nowrap;
 }
 
+.userPointsButton {
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+}
+
 .desktopPayButton {
     display: inline-flex;
 }
@@ -467,6 +474,11 @@
     background: rgba(255, 255, 255, 0.88);
     border: 1px solid rgba(0, 0, 0, 0.06);
     white-space: nowrap;
+}
+
+.userPointsButton:hover .userPoints {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.08);
 }
 
 .userPoints svg {
@@ -665,6 +677,14 @@
     flex-wrap: wrap;
 }
 
+.draftSectionHeader {
+    position: relative;
+}
+
+.draftManageActionsExpanded {
+    width: auto;
+}
+
 .draftManageButton {
     min-height: 38px;
     padding: 0 16px;
@@ -803,6 +823,10 @@
 
     .draftManageActions {
         gap: 8px;
+    }
+
+    .draftManageActionsExpanded {
+        width: auto;
     }
 
     .draftManageButton {
@@ -1009,9 +1033,36 @@
     }
 
     .draftManageActions {
-        width: 100%;
         justify-content: flex-end;
         gap: 6px;
+        min-width: fit-content;
+        max-width: 100%;
+        margin-left: auto;
+    }
+
+    .draftSectionHeader {
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .draftSectionHeader .sectionTitle {
+        order: 1;
+    }
+
+    .draftSectionHeader .sectionDividerDesktop,
+    .draftSectionHeader .sectionDividerMobile {
+        order: 2;
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .draftSectionHeader .draftManageActions {
+        order: 3;
+    }
+
+    .draftSectionHeader .draftManageActionsExpanded {
+        flex-basis: 100%;
+        justify-content: flex-end;
     }
 
     .draftManageButton {

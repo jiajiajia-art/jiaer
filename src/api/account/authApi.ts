@@ -5,8 +5,10 @@ import type {
   AuthResponse,
   BindAccountRequest,
   CheckInResponse,
+  GetPointsActivitiesParams,
   LoginRequest,
   MembershipSignInStatus,
+  PointsActivitiesResponse,
   ResetPasswordRequest,
   SendCodeRequest,
   SettlePointsResponse,
@@ -41,6 +43,9 @@ export const auth = {
 
   getSignInStatus: () =>
     api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),
+
+  getPointsActivities: (params: GetPointsActivitiesParams) =>
+    api.get<ApiResponse<PointsActivitiesResponse>>('/auth/user/points/activities', { params }),
 
   useInviteCode: (data: { inviteCode: string }) =>
     api.post<ApiResponse<null>>('/auth/invite/use-code', data),
