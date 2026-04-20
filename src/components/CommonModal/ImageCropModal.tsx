@@ -227,14 +227,14 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
                     <div className={styles.hints}>
                         <p>{description}</p>
-                        <p>Aspect ratio: {aspectLabel}</p>
+                        <p>宽高比: {aspectLabel}</p>
                         {exportError ? <p className={styles.errorText}>{exportError}</p> : null}
                     </div>
                 </div>
 
                 <div className={styles.footer}>
                     <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isExporting}>
-                        Cancel
+                        取消
                     </button>
                     <button
                         type="button"
@@ -242,7 +242,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                         onClick={handleConfirm}
                         disabled={isExporting || !completedCrop?.width || !completedCrop?.height}
                     >
-                        {isExporting ? 'Processing...' : 'Confirm'}
+                        {isExporting ? '裁剪中...' : '确认'}
                     </button>
                 </div>
             </div>

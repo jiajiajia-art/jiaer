@@ -19,6 +19,7 @@ interface HandlersContext {
     userPoints: number;
     updateUser?: (user: Partial<User>) => void;
     // State setters
+    characterData: Character[];
     setCharacterData: React.Dispatch<React.SetStateAction<Character[]>>;
     setActiveCharacterId: React.Dispatch<React.SetStateAction<string>>;
     setIsAddingNew: React.Dispatch<React.SetStateAction<boolean>>;
@@ -50,12 +51,21 @@ interface HandlersContext {
     onDataChange?: () => void;
 }
 
+interface ConfirmEditResult {
+    success: boolean;
+    characters: Character[];
+    activeCharacterId: string;
+    savedCharacterId: string | null;
+    clearAddState?: boolean;
+}
+
 export const createHandlers = (ctx: HandlersContext) => {
     const {
         fileId,
         mode,
         api,
         updateUser,
+        characterData,
         setCharacterData,
         setActiveCharacterId,
         setIsAddingNew,
@@ -76,6 +86,9 @@ export const createHandlers = (ctx: HandlersContext) => {
         onDataChange,
         pendingImageUrlsRef,
     } = ctx;
+
+    const replaceCharacter = (list: Character[], targetCharacterId: string, nextCharacter: Character): Character[] =>
+        list.map((character) => character.id === targetCharacterId ? nextCharacter : character);
 
     /**
      * 更新角色图片的辅助函数
@@ -308,10 +321,17 @@ export const createHandlers = (ctx: HandlersContext) => {
     // };
 
     // 确认修改/新增角色
-    const confirmEdit = async (characterToSave: Character): Promise<boolean> => {
+    const confirmEdit = async (characterToSave: Character): Promise<ConfirmEditResult> => {
+        const failResult: ConfirmEditResult = {
+            success: false,
+            characters: characterData,
+            activeCharacterId,
+            savedCharacterId: null,
+        };
+
         if (!fileId || !characterToSave) {
             toast.error('缺少必要数据，无法保存修改');
-            return false;
+            return failResult;
         }
 
         // 主角资料保存
@@ -337,19 +357,30 @@ export const createHandlers = (ctx: HandlersContext) => {
                 const response = await api.updatePlayer(fileId, playerData as any);
                 if (!response.data?.success) {
                     toast.error('更新主角信息失败');
-                    return false;
+                    return failResult;
                 }
 
                 toast.success('主角信息更新成功');
                 const p = parseResponse.extractPlayer(response.data, mode);
                 if (p) {
-                    setCharacterData(prev => prev.map(char => char.id === 'player' ? playerToCharacter(p) : char));
+                    const nextPlayer = playerToCharacter(p);
+                    return {
+                        success: true,
+                        characters: replaceCharacter(characterData, 'player', nextPlayer),
+                        activeCharacterId: 'player',
+                        savedCharacterId: 'player',
+                    };
                 }
-                return true;
+                return {
+                    success: true,
+                    characters: replaceCharacter(characterData, 'player', characterToSave),
+                    activeCharacterId: 'player',
+                    savedCharacterId: 'player',
+                };
             } catch (error) {
                 console.error('更新主角信息时出错:', error);
                 toast.error('更新主角信息失败，请重试');
-                return false;
+                return failResult;
             }
         }
 
@@ -384,7 +415,7 @@ export const createHandlers = (ctx: HandlersContext) => {
 
             if (!response.data?.success) {
                 toast.error(isAddingNew ? '创建角色失败' : '更新角色失败');
-                return false;
+                return failResult;
             }
 
             toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
@@ -394,20 +425,50 @@ export const createHandlers = (ctx: HandlersContext) => {
             if (npc) {
                 const newCharacter = npcToCharacter(npc, 0);
                 if (isAddingNew) {
-                    setCharacterData(prev => [newCharacter, ...prev]);
-                    setActiveCharacterId(newCharacter.id);
-                    setIsAddingNew(false);
-                    setNewCharacterData(null);
-                } else {
-                    setCharacterData(prev => prev.map(char => char.id === finalNpcId ? newCharacter : char));
+                    return {
+                        success: true,
+                        characters: [newCharacter, ...characterData],
+                        activeCharacterId: newCharacter.id,
+                        savedCharacterId: newCharacter.id,
+                        clearAddState: true,
+                    };
                 }
-            } else if (!isAddingNew) {
-                updateCharacterFromResponse(response.data, finalNpcId);
+                return {
+                    success: true,
+                    characters: replaceCharacter(characterData, finalNpcId, newCharacter),
+                    activeCharacterId: newCharacter.id,
+                    savedCharacterId: newCharacter.id,
+                };
             }
-            return true;
+
+            if (!isAddingNew) {
+                updateCharacterFromResponse(response.data, finalNpcId);
+                const optimisticCharacter: Character = {
+                    ...characterToSave,
+                    id: finalNpcId,
+                };
+                return {
+                    success: true,
+                    characters: replaceCharacter(characterData, finalNpcId, optimisticCharacter),
+                    activeCharacterId: finalNpcId,
+                    savedCharacterId: finalNpcId,
+                };
+            }
+
+            const createdCharacter: Character = {
+                ...characterToSave,
+                id: finalNpcId,
+            };
+            return {
+                success: true,
+                characters: [createdCharacter, ...characterData],
+                activeCharacterId: finalNpcId,
+                savedCharacterId: finalNpcId,
+                clearAddState: true,
+            };
         } catch (error) {
             toast.error(isAddingNew ? '创建角色失败，请重试' : '更新角色失败，请重试');
-            return false;
+            return failResult;
         }
     };
 
