@@ -268,7 +268,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                         <input
                             className={styles.searchInput}
-                            placeholder="Search games"
+                            placeholder="查询游戏"
                             value={searchKeyword}
                             onChange={(event) => setSearchKeyword(event.target.value)}
                             onFocus={() => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGameCreate.module.css';
@@ -27,6 +27,7 @@ const emptyConfig: StConfig = {
 
 const THEME_TAG_MIN = 1;
 const THEME_TAG_MAX = 2;
+type RequiredFieldKey = 'title' | 'themeTags';
 
 const normalizeThemeTagIds = (value: unknown): number[] => {
   if (!Array.isArray(value)) return [];
@@ -50,6 +51,10 @@ const StGameCreate: React.FC = () => {
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState('');
+  const [highlightField, setHighlightField] = useState<RequiredFieldKey | ''>('');
+  const titleRowRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const themeTagsPanelRef = useRef<HTMLDivElement>(null);
 
   const scripts: STRegexScript[] = ((cfg.extensions?.regex_scripts) || []) as STRegexScript[];
   const entries: STCharBookEntry[] = (((cfg.extensions?.character_book)?.entries) || []) as STCharBookEntry[];
@@ -110,10 +115,10 @@ const StGameCreate: React.FC = () => {
         if (j?.config) {
           setCfg({ ...emptyConfig, ...j.config });
           setAppId(appIdFromQuery);
-          if (typeof j?.config?.persona?.name === 'string') {
-            setTitle(j.config.persona.name as string);
-          } else if (typeof j?.config?.data?.title === 'string') {
+          if (typeof j?.config?.data?.title === 'string') {
             setTitle(j.config.data.title as string);
+          } else if (typeof j?.config?.persona?.name === 'string') {
+            setTitle(j.config.persona.name as string);
           }
         }
       } catch {
@@ -150,8 +155,8 @@ const StGameCreate: React.FC = () => {
         const resp = await getGameDataApi.getGameDetail({ fileId: appIdFromQuery });
         const data: any = resp?.data?.data;
         if (destroyed) return;
-        if (data && typeof data.title === 'string' && !title) {
-          setTitle(data.title);
+        if (data && typeof data.title === 'string') {
+          setTitle((prev) => prev || data.title);
         }
       } catch (_err) {
         // 静默失败，不打断流程
@@ -159,6 +164,27 @@ const StGameCreate: React.FC = () => {
     })();
     return () => { destroyed = true; };
   }, [appIdFromQuery]);
+
+  useEffect(() => {
+    if (!highlightField || step !== 1) return;
+
+    const targetTimer = window.setTimeout(() => {
+      const target = highlightField === 'title' ? titleRowRef.current : themeTagsPanelRef.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (highlightField === 'title') {
+        titleInputRef.current?.focus();
+      }
+    }, 0);
+
+    const clearTimer = window.setTimeout(() => {
+      setHighlightField((current) => current === highlightField ? '' : current);
+    }, 3200);
+
+    return () => {
+      window.clearTimeout(targetTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [highlightField, step]);
 
   useEffect(() => {
     let destroyed = false;
@@ -187,32 +213,59 @@ const StGameCreate: React.FC = () => {
         return next;
       }
       if (prev.length >= THEME_TAG_MAX) {
-        setThemeTagError('\u8BF7\u9009\u62E9 1~2 \u4E2A\u4F5C\u54C1\u6807\u7B7E');
+        setThemeTagError('请选择 1~2 个作品标签');
         return prev;
       }
       setThemeTagError('');
+      setHighlightField((current) => current === 'themeTags' ? '' : current);
       return [...prev, tagId];
     });
   };
 
   const validateThemeTags = (): boolean => {
     if (selectedThemeTagIds.length < THEME_TAG_MIN || selectedThemeTagIds.length > THEME_TAG_MAX) {
-      setThemeTagError('\u8BF7\u9009\u62E9 1~2 \u4E2A\u4F5C\u54C1\u6807\u7B7E');
+      setThemeTagError('请选择 1~2 个作品标签');
       return false;
     }
     setThemeTagError('');
     return true;
   };
 
-  const saveConfig = async (): Promise<string> => {
+  const guideToRequiredField = (field: RequiredFieldKey, message: string) => {
+    window.alert(message);
+    setStep(1);
+    setHighlightField(field);
+  };
+
+  const validateRequiredFields = (): boolean => {
     setError('');
     if (!title.trim()) {
-      setError('请填写标题');
-      throw new Error('请填写标题');
+      const message = '标题未填，请先填写标题。';
+      setError(message);
+      guideToRequiredField('title', message);
+      return false;
     }
 
     if (!validateThemeTags()) {
-      throw new Error('\u8BF7\u9009\u62E9 1~2 \u4E2A\u4F5C\u54C1\u6807\u7B7E');
+      const message = '题材未填，请先选择作品标签。';
+      setError(message);
+      guideToRequiredField('themeTags', message);
+      return false;
+    }
+
+    return true;
+  };
+
+  const saveConfig = async (): Promise<string> => {
+    setError('');
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setError('标题未填，请先填写标题。');
+      throw new Error('标题未填，请先填写标题。');
+    }
+
+    if (!validateThemeTags()) {
+      throw new Error('请选择 1~2 个作品标签');
     }
 
     try {
@@ -233,12 +286,15 @@ const StGameCreate: React.FC = () => {
 
       // 在提交前，按照当前条目顺序写入优先级（1..N）
       const finalCfg = (() => {
-        const current = { ...cfg } as any;
+        const current = {
+          ...cfg,
+          data: { ...((cfg as any).data || {}), title: trimmedTitle },
+          persona: { ...((cfg as any).persona || {}), name: trimmedTitle },
+        } as any;
         const ents = ((current.extensions && current.extensions.character_book && current.extensions.character_book.entries) || []) as any[];
         const withPriority = (Array.isArray(ents) ? ents : []).map((it, i) => ({ ...it, priority: i + 1 }));
-        current.extensions = current.extensions || {};
-        current.extensions.character_book = current.extensions.character_book || {};
-        current.extensions.character_book.entries = withPriority;
+        current.extensions = { ...(current.extensions || {}) };
+        current.extensions.character_book = { ...(current.extensions.character_book || {}), entries: withPriority };
         return current;
       })();
 
@@ -262,6 +318,7 @@ const StGameCreate: React.FC = () => {
   };
 
   const toServer = async () => {
+    if (!validateRequiredFields()) return;
     try {
       const id = await saveConfig();
       nav(`/st/${id}`);
@@ -271,6 +328,7 @@ const StGameCreate: React.FC = () => {
   };
 
   const finishToStats = async () => {
+    if (!validateRequiredFields()) return;
     try {
       const id = await saveConfig();
       nav(`/createGame?mode=stats&gameId=${encodeURIComponent(id)}`);
@@ -294,11 +352,30 @@ const StGameCreate: React.FC = () => {
           </div>
         </div>
 
+        <div
+          ref={titleRowRef}
+          className={`${styles.formRow} ${highlightField === 'title' ? styles.requiredHighlight : ''}`}
+        >
+          <label>标题</label>
+          <input
+            ref={titleInputRef}
+            className={`${styles.text} ${highlightField === 'title' ? styles.inputHighlight : ''}`}
+            value={title}
+            onChange={e => {
+              setTitle(e.target.value);
+              setHighlightField((current) => current === 'title' ? '' : current);
+            }}
+          />
+        </div>
+
         {step === 1 && (
-          <div className={styles.themeTagsPanel}>
+          <div
+            ref={themeTagsPanelRef}
+            className={`${styles.themeTagsPanel} ${highlightField === 'themeTags' ? styles.requiredHighlight : ''}`}
+          >
             <div className={styles.themeTagsHeader}>
-              <span className={styles.themeTagsLabel}>{'\u4F5C\u54C1\u6807\u7B7E *'}</span>
-              <span className={styles.themeTagsHint}>{'\u6700\u5C11 1 \u4E2A\uff0c\u6700\u591A 2 \u4E2A'}</span>
+              <span className={styles.themeTagsLabel}>作品标签<span className={styles.requiredMark}>*</span></span>
+              <span className={styles.themeTagsHint}>最少 1 个，最多 2 个</span>
             </div>
             <div className={styles.themeTagsWrap}>
               {availableThemeTags.map((tag) => {
@@ -319,15 +396,6 @@ const StGameCreate: React.FC = () => {
             {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
           </div>
         )}
-
-        <div className={styles.formRow}>
-          <label>标题</label>
-          <input
-            className={styles.text}
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-          />
-        </div>
 
         {step === 1 && (
           <div className={styles.columns}>

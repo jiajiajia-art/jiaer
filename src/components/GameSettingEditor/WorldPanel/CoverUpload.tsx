@@ -103,7 +103,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
 
     return (
         <div className={styles.uploadCover}>
-            <h2>Game cover</h2>
+            <h2>游戏封面</h2>
             <div className={styles.coverUploadArea} onClick={handleCoverClick}>
                 <input
                     ref={coverInputRef}
@@ -138,8 +138,8 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                 ) : (
                     <div className={styles.coverPlaceholder}>
                         <BsUpload className={styles.coverUploadIcon} size={32} />
-                        <p className={styles.coverUploadText}>Click to upload cover image</p>
-                        <p className={styles.coverUploadHint}>Supports JPG, PNG, WEBP, up to 5MB</p>
+                        <p className={styles.coverUploadText}>点击上传封面图片</p>
+                        <p className={styles.coverUploadHint}>支持 JPG, PNG, WEBP，5MB以内</p>
                     </div>
                 )}
             </div>
