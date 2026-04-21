@@ -4,8 +4,11 @@ import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
 import getGameDataApi from '../../api/home/getGameData';
+import { useImageCropper } from '../../hooks/useImageCropper';
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../utils/imageCache';
+import { fileToDataUrl } from '../../utils/uploadImageCrop';
+import ImageCropModal from './ImageCropModal';
 
 interface PublishSettingsModalProps {
     isOpen: boolean;
@@ -30,6 +33,21 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
     const [coverError, setCoverError] = useState<string | null>(null);
     const [description, setDescription] = useState<string>('');
+
+    const {
+        cropPreset,
+        pendingCropFile,
+        openCropper,
+        closeCropper,
+        handleCropComplete,
+    } = useImageCropper({
+        preset: 'gameCover',
+        onCropped: async (croppedFile) => {
+            const preview = await fileToDataUrl(croppedFile);
+            setCoverPreview(preview);
+            await uploadCover(croppedFile);
+        },
+    });
 
     useEffect(() => {
         if (!isOpen) return;
@@ -129,6 +147,24 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         void uploadCover(file);
     };
 
+    const handleCoverSelectForCrop = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setCoverError('Please upload an image file.');
+            return;
+        }
+
+        setCoverError(null);
+        void openCropper(file).catch((error) => {
+            console.error('open publish cover cropper failed:', error);
+            setCoverError('Failed to load image.');
+        });
+    };
+    void handleCoverSelect;
+
     const handleCoverClick = () => {
         coverInputRef.current?.click();
     };
@@ -158,7 +194,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                 type="file"
                                 accept="image/jpeg,image/png,image/jpg,image/webp"
                                 hidden
-                                onChange={handleCoverSelect}
+                                onChange={handleCoverSelectForCrop}
                                 disabled={coverUploading || !fileId}
                             />
                             {coverPreview ? (
@@ -219,6 +255,20 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     </div>
                 </div>
             </div>
+            {pendingCropFile ? (
+                <ImageCropModal
+                    isOpen
+                    imageSrc={pendingCropFile.imageSrc}
+                    title={cropPreset.title}
+                    description={cropPreset.description}
+                    aspectRatio={cropPreset.aspectRatio}
+                    aspectLabel={cropPreset.aspectLabel}
+                    defaultCropScale={cropPreset.defaultCropScale}
+                    mimeType={pendingCropFile.mimeType}
+                    onClose={closeCropper}
+                    onCropComplete={handleCropComplete}
+                />
+            ) : null}
         </div>
     );
 };

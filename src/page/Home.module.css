@@ -931,8 +931,8 @@
         width: 100vw;
         height: auto;
         aspect-ratio: 16 / 9;
-        min-height: 210px;
-        max-height: 320px;
+        min-height: 0;
+        max-height: none;
         overflow: hidden;
     }
 
@@ -955,7 +955,7 @@
     }
 
     .carouselContent {
-        padding: 0 20px 54px;
+        padding: 0 20px 34px;
     }
 
     .carouselInfo {
@@ -966,13 +966,13 @@
     }
 
     .carouselTitle {
-        font-size: 28px;
+        font-size: 24px;
         margin-bottom: 12px;
     }
 
     .carouselDescription {
-        font-size: 14px;
-        margin-bottom: 20px;
+        font-size: 12px;
+        margin-bottom: 0;
         width: 260px;
     }
 
@@ -1685,11 +1685,12 @@
             0 12px 28px rgba(15, 23, 42, 0.12),
             inset 0 0 0 1px rgba(255, 255, 255, 0.82);
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr) max-content;
         align-items: center;
         gap: 12px;
         cursor: pointer;
         text-align: left;
+        box-sizing: border-box;
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
@@ -1759,22 +1760,57 @@
         line-height: 1;
         text-align: center;
         white-space: nowrap;
+        justify-self: end;
+        box-sizing: border-box;
     }
 
     .carouselContainerPc {
+        height: auto;
         padding: 0;
         background: none;
+    }
+
+    .carouselImage::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--mobile-content-image-guard-height);
+        background: var(--mobile-content-image-guard-dark-gradient);
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    .carouselImage img {
+        transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
+        transform-origin: center center;
     }
 }
 
 @media (max-width: 380px) {
     .mobileJoinGroupCard {
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: auto minmax(0, 1fr) max-content;
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .mobileJoinGroupIcon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .mobileJoinGroupIcon svg {
+        width: 24px;
+        height: 24px;
     }
 
     .mobileJoinGroupAction {
-        grid-column: 1 / -1;
-        width: 100%;
-        margin-top: 2px;
+        grid-column: auto;
+        min-width: 76px;
+        width: auto;
+        margin-top: 0;
+        padding: 9px 12px;
+        font-size: 13px;
     }
 }

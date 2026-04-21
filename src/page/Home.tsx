@@ -66,6 +66,11 @@ type HomeShowcaseTag = {
     autoSort?: SpecialThemeAutoSort | null;
 };
 
+const HOME_PAGE_DEFAULT_FILTERS: HomeListFilters = {
+    ...DEFAULT_HOME_LIST_FILTERS,
+    sort: 'latest',
+};
+
 const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const normalizeShowcaseTagName = (name: string) => String(name || '').trim().toLowerCase();
 const getGameUniqueKey = (game: UserGameData, fallbackIndex?: number): string => {
@@ -108,7 +113,7 @@ const Home: React.FC = () => {
     const [hasMoreAll, setHasMoreAll] = useState(true);
     const [specialPage, setSpecialPage] = useState(0);
     const [allPage, setAllPage] = useState(0);
-    const [allGamesFilters, setAllGamesFilters] = useState<HomeListFilters>(DEFAULT_HOME_LIST_FILTERS);
+    const [allGamesFilters, setAllGamesFilters] = useState<HomeListFilters>(HOME_PAGE_DEFAULT_FILTERS);
     const [currentSlide, setCurrentSlide] = useState(1);
     const [desktopCurrentSlide, setDesktopCurrentSlide] = useState(0);
     const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
@@ -1826,7 +1831,7 @@ const Home: React.FC = () => {
 
         const searchParams = new URLSearchParams({
             mode: 'all',
-            sort: 'hot',
+            sort: 'latest',
             tagId: 'all',
         });
 
@@ -1906,6 +1911,14 @@ const Home: React.FC = () => {
         }
         setShowAnnouncementModal(false);
     };
+
+    const handleAnnouncementLinkNavigate = useCallback((path: string) => {
+        if (latestAnnouncement?.id) {
+            sessionStorage.setItem(`announcementDismissed_${latestAnnouncement.id}`, 'true');
+        }
+        setShowAnnouncementModal(false);
+        navigateToHomeTickerLink(path);
+    }, [latestAnnouncement?.id, navigateToHomeTickerLink]);
 
     const desktopCarouselStyle = isDesktopCarousel
         ? ({
@@ -2314,6 +2327,7 @@ const Home: React.FC = () => {
                 announcement={latestAnnouncement}
                 isOpen={showAnnouncementModal}
                 onClose={handleCloseAnnouncementModal}
+                onNavigateLink={handleAnnouncementLinkNavigate}
             />
             <MobileBottomNav />
         </div>

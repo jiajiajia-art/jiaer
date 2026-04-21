@@ -78,11 +78,16 @@ export interface CreateSaveRequest {
   sessionId: string;
   summaryText: string;
   candidateId?: string;
+  saveAction?: 'create' | 'overwrite';
+  targetSaveId?: string;
 }
 
 export interface CreateSaveResponse {
   saveId: string;
   createdAt: number;
+  updatedAt?: number;
+  mode?: 'create' | 'overwrite';
+  overwritten?: boolean;
 }
 
 export interface SaveSummaryItem {

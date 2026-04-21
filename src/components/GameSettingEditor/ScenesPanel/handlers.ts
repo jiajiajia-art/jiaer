@@ -45,6 +45,7 @@ export interface HandlersContext {
     setSceneData: React.Dispatch<React.SetStateAction<LocalScene[]>>;
     setSubsceneDataBySceneId?: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
     setActiveSceneId: React.Dispatch<React.SetStateAction<string>>;
+    setActiveSceneDraft: React.Dispatch<React.SetStateAction<LocalScene | null>>;
     setActiveSubsceneId: React.Dispatch<React.SetStateAction<string | null>>;
     setActiveSubsceneDraft: React.Dispatch<React.SetStateAction<LocalScene | null>>;
     setIsAddingNew: React.Dispatch<React.SetStateAction<boolean>>;
@@ -83,7 +84,8 @@ export interface HandlersContext {
     onSingleSceneCostModalOpen: () => void;
     onWorldMapCostModalOpen: () => void;
 
-    onDataChange?: () => void;
+    onDataChange?: () => void | Promise<void>;
+    markBatchImageRefreshPending?: () => void;
 }
 
 /**
@@ -94,6 +96,7 @@ export interface PendingImage {
     previewUrl: string;
     sourceType: 'upload' | 'generate' | 'url';
     variant: string;
+    persistedPath?: string;
 }
 
 export const createSceneHandlers = (ctx: HandlersContext) => {
@@ -116,6 +119,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setSceneData,
         setSubsceneDataBySceneId,
         setActiveSceneId,
+        setActiveSceneDraft,
         setActiveSubsceneId,
         setActiveSubsceneDraft,
         setIsAddingNew,
@@ -145,6 +149,8 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         onSceneCostModalOpen,
         onSingleSceneCostModalOpen,
         onWorldMapCostModalOpen,
+        onDataChange,
+        markBatchImageRefreshPending,
     } = ctx;
 
     // 临时状态用闭包变量管理（不需要传给组件）
@@ -207,6 +213,10 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             return;
         }
 
+        const persistedPath = typeof imageData === 'string' && !imageData.startsWith('blob:') && !imageData.startsWith('data:')
+            ? imageData
+            : undefined;
+
         // 更新暂存图片
         setPendingImages(prev => ({
             ...prev,
@@ -217,6 +227,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     file,
                     sourceType: file ? 'upload' : 'url',
                     variant,
+                    persistedPath,
                 }
             }
         }));
@@ -308,7 +319,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 从 API 响应中更新单个场景
-    const updateSceneFromResponse = (responseData: any, sceneId: string) => {
+    const updateSceneFromResponse = (responseData: any, sceneId: string, preferredImage?: string) => {
         if (mode === 'worldInteraction') {
             const scene = responseData?.data;
             if (scene) {
@@ -318,7 +329,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     type: scene.type || '',
                     desc: scene.description || '',
                     // 保持使用后端给的原始 image（不在本地注入时间戳），展示时再通过 getImageUrl 处理
-                    image: scene.image || '',
+                    image: preferredImage || scene.image || '',
                     bgmId: scene.soundtrack || '',
                 };
                 setSceneData(prev => prev.map(s => s.id === sceneId ? updatedScene : s));
@@ -333,13 +344,133 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                         name: scene.name || '',
                         type: 'type' in scene ? (scene.type || '') : '',
                         desc: scene.description || '',
-                        image: (scene as any).image || '',
+                        image: preferredImage || (scene as any).image || '',
                         bgmId: (scene as any).soundtrack || '',
                     };
                     setSceneData(prev => prev.map(s => s.id === sceneId ? updatedScene : s));
                 }
             }
         }
+    };
+
+    const clearPendingImageRecords = (targetIds: string[]) => {
+        if (targetIds.length === 0) return;
+        setPendingImages(prev => {
+            const next = { ...prev };
+            targetIds.forEach((targetId) => {
+                const variants = prev[targetId] || {};
+                Object.keys(variants).forEach((variant) => {
+                    const key = `${targetId}-${variant}`;
+                    const previewUrl = pendingImageUrlsRef.current[key];
+                    if (previewUrl) {
+                        URL.revokeObjectURL(previewUrl);
+                        delete pendingImageUrlsRef.current[key];
+                    }
+                });
+                delete next[targetId];
+            });
+            return next;
+        });
+    };
+
+    const bumpExistingSceneImageCache = () => {
+        sceneData.forEach((scene) => {
+            if (!scene.id.startsWith('temp-') && scene.image) {
+                bumpCacheBust(scene.image);
+            }
+        });
+    };
+
+    const clearVisualBatchPendingImages = () => {
+        const sceneIds = sceneData
+            .filter((scene) => !scene.id.startsWith('temp-'))
+            .map((scene) => scene.id);
+        clearPendingImageRecords(sceneIds);
+    };
+
+    const getGeneratedSceneItemId = (item: any): string | undefined => {
+        const rawId = item?.id ?? item?.sceneId;
+        if (rawId === undefined || rawId === null || rawId === '') return undefined;
+        return String(rawId);
+    };
+
+    const getGeneratedSubsceneItemId = (item: any): string | undefined => {
+        const rawId = item?.id ?? item?.subsceneId;
+        if (rawId === undefined || rawId === null || rawId === '') return undefined;
+        return String(rawId);
+    };
+
+    const applyGeneratedSceneImages = (items: any[]) => {
+        if (!Array.isArray(items) || items.length === 0) return 0;
+
+        const nextImages = new Map<string, string>();
+        items.forEach((item) => {
+            const itemId = getGeneratedSceneItemId(item);
+            if (item?.success && itemId && item?.imagePath) {
+                nextImages.set(itemId, String(item.imagePath));
+                bumpCacheBust(String(item.imagePath));
+            }
+        });
+
+        if (nextImages.size === 0) return 0;
+
+        setSceneData(prev =>
+            prev.map(scene => {
+                const nextImage = nextImages.get(scene.id);
+                return nextImage ? { ...scene, image: nextImage } : scene;
+            })
+        );
+
+        if (activeSceneId) {
+            const activeImage = nextImages.get(activeSceneId);
+            if (activeImage) {
+                setActiveSceneDraft(prev => (
+                    prev && prev.id === activeSceneId ? { ...prev, image: activeImage } : prev
+                ));
+            }
+        }
+
+        clearPendingImageRecords(Array.from(nextImages.keys()));
+        return nextImages.size;
+    };
+
+    const applyGeneratedSubsceneImages = (items: any[]) => {
+        if (mode !== 'worldInteraction' || !setSubsceneDataBySceneId || !Array.isArray(items) || items.length === 0) {
+            return 0;
+        }
+
+        const nextImages = new Map<string, string>();
+        items.forEach((item) => {
+            const itemId = getGeneratedSubsceneItemId(item);
+            if (item?.success && itemId && item?.imagePath) {
+                nextImages.set(itemId, String(item.imagePath));
+                bumpCacheBust(String(item.imagePath));
+            }
+        });
+
+        if (nextImages.size === 0) return 0;
+
+        setSubsceneDataBySceneId(prev => {
+            const next: Record<string, any[]> = { ...(prev || {}) };
+            Object.entries(next).forEach(([sceneId, subscenes]) => {
+                next[sceneId] = (subscenes || []).map((subscene: any) => {
+                    const subsceneId = String(subscene?.id || subscene?.name || '');
+                    const nextImage = nextImages.get(subsceneId);
+                    return nextImage ? { ...subscene, image: nextImage } : subscene;
+                });
+            });
+            return next;
+        });
+
+        if (activeSubsceneDraft) {
+            const activeImage = nextImages.get(activeSubsceneDraft.id);
+            if (activeImage) {
+                setActiveSubsceneDraft({ ...activeSubsceneDraft, image: activeImage });
+            }
+        }
+
+        clearPendingImageRecords(Array.from(nextImages.keys()));
+        return nextImages.size;
     };
 
     // 确认新增场景
@@ -425,9 +556,18 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         let imagePath = sceneToSave.image;
         const pendingImage = pendingImages[sceneToSave.id]?.['base'];
         if (pendingImage) {
-            const serverPath = await uploadImage(sceneToSave.id);
-            if (serverPath) {
-                imagePath = serverPath;
+            if (pendingImage.file) {
+                const serverPath = await uploadImage(sceneToSave.id);
+                if (serverPath) {
+                    imagePath = serverPath;
+                } else {
+                    return;
+                }
+            } else if (pendingImage.persistedPath) {
+                imagePath = pendingImage.persistedPath;
+            }
+            if (imagePath) {
+                bumpCacheBust(imagePath);
             }
             // 清理暂存
             setPendingImages(prev => {
@@ -452,12 +592,15 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             const response = await api.updateScene(fileId, sceneDataForApi);
             if (response.data?.success) {
                 toast.success('场景更新成功');
-                // 先把用户刚确认的数据写回本地（保证不依赖刷新 document 也能持久）
+                const updatedScene = { ...sceneToSave, image: imagePath || sceneToSave.image };
+                // 先把用户刚确认的数据写回本地
                 setSceneData(prev =>
-                    prev.map(s => (s.id === sceneToSave.id ? { ...s, ...sceneToSave, image: imagePath || sceneToSave.image } : s))
+                    prev.map(s => (s.id === sceneToSave.id ? { ...s, ...updatedScene } : s))
                 );
-                // 再用后端回包做一次覆盖（如果后端返回了更完整字段，如 image/soundtrack 等）
-                updateSceneFromResponse(response.data, sceneToSave.id);
+                setActiveSceneDraft(updatedScene);
+                // 再用后端回包做一次覆盖
+                updateSceneFromResponse(response.data, sceneToSave.id, imagePath || sceneToSave.image);
+                onDataChange?.();
             } else {
                 toast.error('更新场景失败');
             }
@@ -511,9 +654,18 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         let imagePath = activeSubsceneDraft.image;
         const pendingImage = pendingImages[activeSubsceneDraft.id]?.['base'];
         if (pendingImage) {
-            const serverPath = await uploadImage(activeSceneId, activeSubsceneDraft.id);
-            if (serverPath) {
-                imagePath = serverPath;
+            if (pendingImage.file) {
+                const serverPath = await uploadImage(activeSceneId, activeSubsceneDraft.id);
+                if (serverPath) {
+                    imagePath = serverPath;
+                } else {
+                    return;
+                }
+            } else if (pendingImage.persistedPath) {
+                imagePath = pendingImage.persistedPath;
+            }
+            if (imagePath) {
+                bumpCacheBust(imagePath);
             }
             // 清理暂存
             setPendingImages(prev => {
@@ -558,7 +710,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     const savedId = subsceneData.id;
                     setSubsceneDataBySceneId(prev => {
                         const current = ((prev || {})[activeSceneId] || []) as any[];
-                        const idx = current.findIndex(s => (s.id || s.name) === savedId);
+                        const idx = current.findIndex(s => (s.id || s.name) === savedId || (s.id || s.name) === activeSubsceneDraft.id);
                         const savedSub = idx >= 0 ? { ...current[idx], ...subsceneData } : { ...subsceneData };
                         const next =
                             idx >= 0
@@ -571,7 +723,13 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                     setIsAddingNewSubscene(false);
                     setActiveSubsceneId(null);
                     setActiveSubsceneDraft(null);
+                } else {
+                    setActiveSubsceneDraft({
+                        ...activeSubsceneDraft,
+                        image: imagePath || activeSubsceneDraft.image,
+                    });
                 }
+                onDataChange?.();
             } else {
                 toast.error(isAddingNewSubscene ? '创建子场景失败' : '更新子场景失败');
             }
@@ -937,22 +1095,69 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 const respAny: any = response.data;
                 const payload = respAny.data || respAny;
+                const details = respAny.details || payload?.details || null;
+                const generatedSceneCount = applyGeneratedSceneImages(details?.scenes || []);
+                const generatedSubsceneCount = applyGeneratedSubsceneImages(details?.subscenes || []);
 
-                // 从 results 中获取新的字段
-                const sceneTotalRaw = Number(payload?.scenes?.total ?? 0);
-                const sceneTotal = Number.isFinite(sceneTotalRaw) ? Math.max(0, sceneTotalRaw) : 0;
-                const sceneEffectiveRaw = Number(
-                    payload?.scenes?.effective ?? 0
+                const rawSceneGenerated = Number(
+                    payload?.scenes?.effective ??
+                    payload?.results?.scenesSuccess ??
+                    payload?.results?.scenesGenerated ??
+                    payload?.results?.scenes ??
+                    payload?.summary?.totalEffective ??
+                    payload?.scenesGenerated ??
+                    generatedSceneCount
                 );
-                const sceneEffective = Number.isFinite(sceneEffectiveRaw) ? Math.max(0, sceneEffectiveRaw) : 0;
-                const generatedCount = sceneTotal > 0 ? Math.min(sceneEffective, sceneTotal) : sceneEffective;
+                const sceneGenerated = Number.isFinite(rawSceneGenerated) ? Math.max(0, rawSceneGenerated) : generatedSceneCount;
+
+                const rawSceneTotal = Number(
+                    payload?.scenes?.total ??
+                    payload?.results?.scenesTotal ??
+                    payload?.results?.scenes ??
+                    payload?.summary?.totalRequested ??
+                    details?.scenes?.length ??
+                    generatedSceneCount
+                );
+                const sceneTotal = Number.isFinite(rawSceneTotal) ? Math.max(0, rawSceneTotal) : generatedSceneCount;
+
+                const rawSubsceneGenerated = Number(
+                    payload?.subscenes?.effective ??
+                    payload?.results?.subscenesSuccess ??
+                    payload?.results?.subscenesGenerated ??
+                    payload?.subscenesGenerated ??
+                    generatedSubsceneCount
+                );
+                const subsceneGenerated = Number.isFinite(rawSubsceneGenerated) ? Math.max(0, rawSubsceneGenerated) : generatedSubsceneCount;
+
+                const rawSubsceneTotal = Number(
+                    payload?.subscenes?.total ??
+                    payload?.results?.subscenes ??
+                    payload?.results?.subscenesTotal ??
+                    payload?.subscenesTotal ??
+                    details?.subscenes?.length ??
+                    generatedSubsceneCount
+                );
+                const subsceneTotal = Number.isFinite(rawSubsceneTotal) ? Math.max(0, rawSubsceneTotal) : generatedSubsceneCount;
+
+                const generatedCount = mode === 'worldInteraction'
+                    ? sceneGenerated + subsceneGenerated
+                    : sceneGenerated;
+                const totalCount = mode === 'worldInteraction'
+                    ? sceneTotal + subsceneTotal
+                    : sceneTotal;
 
                 const pointsDeductedRaw = Number(
-                    payload?.points?.deducted ?? sceneCostPoints ?? 0
+                    payload?.points?.deducted ??
+                    payload?.results?.pointsDeducted ??
+                    sceneCostPoints ??
+                    0
                 );
                 const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
 
-                const remainingPointsRaw = payload?.points?.remaining;
+                const remainingPointsRaw =
+                    payload?.points?.remaining ??
+                    payload?.points?.remainingPoints ??
+                    payload?.results?.remainingPoints;
                 const remainingPointsValue = Number(remainingPointsRaw);
                 const remainingPoints = Number.isFinite(remainingPointsValue)
                     ? Math.max(0, remainingPointsValue)
@@ -961,10 +1166,20 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 // 弹出结果弹窗
                 setSceneGenerationResult({
                     generatedCount,
-                    totalCount: sceneTotal,
+                    totalCount,
                     pointsDeducted,
                     remainingPoints,
                 });
+                if (mode !== 'worldInteraction') {
+                    bumpExistingSceneImageCache();
+                    clearVisualBatchPendingImages();
+                }
+                markBatchImageRefreshPending?.();
+                try {
+                    await onDataChange?.();
+                } catch (refreshError) {
+                    console.error('Failed to refresh scene data after batch generation:', refreshError);
+                }
                 setSceneResultModalOpen(true);
             } else {
                 toast.error('当前使用人数过多，请稍后再试');

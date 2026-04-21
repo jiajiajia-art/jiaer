@@ -44,6 +44,7 @@ export interface User {
   points: number;
   inviteCode: string;
   hasSignedIn: boolean;
+  firstCharge?: boolean;
   isMember?: boolean;
   memberPlan?: MembershipPlanId | null;
   memberEndAt?: string | null;
@@ -92,6 +93,7 @@ export interface ResetPasswordRequest {
   confirmNewPassword: string;
 }
 
+// 结算奖励
 export interface SettlePointsResponse {
   userId: string;
   settlementAmount: number;
@@ -106,4 +108,24 @@ export interface SubscriptionRedeemResult {
   startAt: string;
   endAt: string;
   remainingDays: number;
+}
+
+// 邀请奖励
+export interface InviteRewardItem {
+  threshold: number;
+  points: number;
+  claimed: boolean;
+  claimable: boolean;
+  isDynamic?: boolean;
+}
+
+export interface InviteStats {
+  inviteCount: number;
+  rewards: InviteRewardItem[];
+}
+
+export interface InviteClaimResult {
+  threshold: number;
+  pointsAwarded: number;
+  remainingPoints: number;
 }

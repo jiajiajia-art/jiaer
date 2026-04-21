@@ -9,6 +9,7 @@ import PromotionAdminManager from '../components/PromotionAdminManager';
 import PointsAdminManager from '../components/PointsAdminManager';
 import SpecialThemeTagManager from '../components/SpecialThemeTagManager';
 import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
+import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import promotionApi from '../api/promotion/promotionApi';
@@ -19,10 +20,16 @@ import type {
     AnnouncementSummary,
 } from '../api/announcement/announcement.type';
 import type { AdminGameTagRecord, FeaturedGameTag } from '../api/gameTags/gameTagsApi.type';
+import {
+    ANNOUNCEMENT_QUICK_PAGE_OPTIONS,
+    insertAnnouncementLinkAtSelection,
+    normalizeAnnouncementLinkDraft,
+    type AnnouncementSelectionRange,
+} from '../utils/announcementLinkInsert';
 import styles from './AdminPanel.module.css';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'subscriptions';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -34,6 +41,12 @@ interface SortDraftItem {
     featured_sort_order?: number | null;
 }
 
+interface LinkInsertDraft {
+    text: string;
+    path: string;
+    quickPageKey: string;
+}
+
 const createEmptySection = (): AnnouncementSection => ({ subtitle: '', body: '' });
 const ANNOUNCEMENT_PAGE_SIZE = 3;
 const THEME_PAGE_SIZE = 10;
@@ -41,6 +54,7 @@ const THEME_PAGE_SIZE = 10;
 const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
+    if (pathname.startsWith('/admin/creator-incentives')) return 'creatorIncentives';
     if (pathname.startsWith('/admin/subscriptions')) return 'subscriptions';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes') return tabParam;
@@ -114,6 +128,10 @@ const AdminPanel: React.FC = () => {
     const [previewAnnouncement, setPreviewAnnouncement] = useState<AnnouncementRecord | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [historyPage, setHistoryPage] = useState(1);
+    const [activeLinkSectionIndex, setActiveLinkSectionIndex] = useState<number | null>(null);
+    const [isLinkInsertModalOpen, setIsLinkInsertModalOpen] = useState(false);
+    const [linkInsertDraft, setLinkInsertDraft] = useState<LinkInsertDraft>({ text: '', path: '', quickPageKey: '' });
+    const [linkInsertError, setLinkInsertError] = useState('');
 
     const [themeKeyword, setThemeKeyword] = useState('');
     const [themeTags, setThemeTags] = useState<AdminGameTagRecord[]>([]);
@@ -129,6 +147,8 @@ const AdminPanel: React.FC = () => {
     const [sortDraftItems, setSortDraftItems] = useState<SortDraftItem[]>([]);
     const [draggingSortId, setDraggingSortId] = useState<number | null>(null);
     const createThemeCardRef = useRef<HTMLElement | null>(null);
+    const sectionBodyRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
+    const sectionSelectionRef = useRef<Record<number, AnnouncementSelectionRange>>({});
     const [featuredThemeCardHeight, setFeaturedThemeCardHeight] = useState<number | null>(null);
     const sortListRef = useRef<HTMLDivElement | null>(null);
     const autoScrollFrameRef = useRef<number | null>(null);
@@ -414,6 +434,10 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/points');
             return;
         }
+        if (tab === 'creatorIncentives') {
+            navigate('/admin/creator-incentives');
+            return;
+        }
         if (tab === 'subscriptions') {
             navigate('/admin/subscriptions');
             return;
@@ -461,6 +485,95 @@ const AdminPanel: React.FC = () => {
     const updateSection = (index: number, field: keyof AnnouncementSection, value: string) => {
         setSections((prev) => prev.map((section, currentIndex) => (currentIndex === index ? { ...section, [field]: value } : section)));
     };
+
+    const updateSectionSelection = useCallback((index: number, start: number, end: number) => {
+        sectionSelectionRef.current[index] = { start, end };
+    }, []);
+
+    const closeLinkInsertModal = useCallback(() => {
+        setIsLinkInsertModalOpen(false);
+        setActiveLinkSectionIndex(null);
+        setLinkInsertError('');
+        setLinkInsertDraft({ text: '', path: '', quickPageKey: '' });
+    }, []);
+
+    const handleOpenLinkInsertModal = useCallback((index: number) => {
+        const currentBody = sections[index]?.body || '';
+        const selection = sectionSelectionRef.current[index] || { start: currentBody.length, end: currentBody.length };
+        const selectedText = currentBody.slice(selection.start, selection.end).trim();
+
+        setActiveLinkSectionIndex(index);
+        setLinkInsertError('');
+        setLinkInsertDraft({
+            text: selectedText,
+            path: '',
+            quickPageKey: '',
+        });
+        setIsLinkInsertModalOpen(true);
+    }, [sections]);
+
+    const handleLinkInsertQuickPageChange = useCallback((quickPageKey: string) => {
+        const selectedOption = ANNOUNCEMENT_QUICK_PAGE_OPTIONS.find((option) => option.key === quickPageKey);
+        setLinkInsertDraft((prev) => ({
+            ...prev,
+            quickPageKey,
+            path: selectedOption?.path || prev.path,
+            text: prev.text || selectedOption?.label || '',
+        }));
+        setLinkInsertError('');
+    }, []);
+
+    const handleConfirmInsertLink = useCallback(() => {
+        if (activeLinkSectionIndex === null) {
+            return;
+        }
+
+        const selectedOption = ANNOUNCEMENT_QUICK_PAGE_OPTIONS.find((option) => option.key === linkInsertDraft.quickPageKey);
+        const normalized = normalizeAnnouncementLinkDraft(
+            linkInsertDraft.text,
+            linkInsertDraft.path,
+            selectedOption?.label || '',
+        );
+
+        if (!normalized.valid) {
+            setLinkInsertError(normalized.message);
+            return;
+        }
+
+        const currentBody = sections[activeLinkSectionIndex]?.body || '';
+        const currentSelection = sectionSelectionRef.current[activeLinkSectionIndex] || {
+            start: currentBody.length,
+            end: currentBody.length,
+        };
+        const inserted = insertAnnouncementLinkAtSelection(
+            currentBody,
+            currentSelection,
+            normalized.linkText,
+            normalized.path,
+        );
+
+        setSections((prev) => prev.map((section, currentIndex) => (
+            currentIndex === activeLinkSectionIndex
+                ? { ...section, body: inserted.nextBody }
+                : section
+        )));
+        sectionSelectionRef.current[activeLinkSectionIndex] = inserted.nextSelection;
+
+        const targetIndex = activeLinkSectionIndex;
+        closeLinkInsertModal();
+
+        window.requestAnimationFrame(() => {
+            const textarea = sectionBodyRefs.current[targetIndex];
+            if (!textarea) return;
+            textarea.focus();
+            textarea.setSelectionRange(inserted.nextSelection.start, inserted.nextSelection.end);
+        });
+    }, [activeLinkSectionIndex, closeLinkInsertModal, linkInsertDraft.path, linkInsertDraft.quickPageKey, linkInsertDraft.text, sections]);
+
+    const handlePreviewAnnouncementLinkNavigate = useCallback((path: string) => {
+        setIsPreviewOpen(false);
+        navigate(path);
+    }, [navigate]);
 
     const buildPayload = (status: AnnouncementPayload['status']): AnnouncementPayload => ({ title, sections, status });
 
@@ -793,6 +906,13 @@ const AdminPanel: React.FC = () => {
                         </button>
                         <button
                             type="button"
+                            className={`${styles.navItem} ${activeTab === 'creatorIncentives' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('creatorIncentives')}
+                        >
+                            <span className={styles.navTitle}>创作者激励</span>
+                        </button>
+                        <button
+                            type="button"
                             className={`${styles.navItem} ${activeTab === 'subscriptions' ? styles.navItemActive : ''}`}
                             onClick={() => handleTabChange('subscriptions')}
                         >
@@ -911,10 +1031,34 @@ const AdminPanel: React.FC = () => {
                                                     />
                                                     <textarea
                                                         className={styles.textArea}
+                                                        ref={(node) => {
+                                                            sectionBodyRefs.current[index] = node;
+                                                        }}
                                                         value={section.body}
                                                         onChange={(event) => updateSection(index, 'body', event.target.value)}
+                                                        onSelect={(event) => {
+                                                            updateSectionSelection(index, event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+                                                        }}
+                                                        onClick={(event) => {
+                                                            updateSectionSelection(index, event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+                                                        }}
+                                                        onKeyUp={(event) => {
+                                                            updateSectionSelection(index, event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+                                                        }}
                                                         placeholder="请输入正文内容"
                                                     />
+                                                    <div className={styles.sectionEditorActions}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.secondaryButton}
+                                                            onClick={() => handleOpenLinkInsertModal(index)}
+                                                        >
+                                                            插入链接
+                                                        </button>
+                                                    </div>
+                                                    <div className={styles.fieldHint}>
+                                                        使用插入链接在当前光标处放置内部路由
+                                                    </div>
                                                 </div>
                                             ))}
                                             <div className={styles.actionRow}>
@@ -1132,12 +1276,92 @@ const AdminPanel: React.FC = () => {
                             />
                         )}
 
+                        {activeTab === 'creatorIncentives' && <CreatorIncentiveAdminManager />}
+
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
                     </div>
                 </div>
             </div>
 
-            <AnnouncementModal announcement={previewAnnouncement} isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} badgeText="公告预览" />
+            <AnnouncementModal announcement={previewAnnouncement} isOpen={isPreviewOpen} onClose={() => setIsPreviewOpen(false)} badgeText="公告预览" onNavigateLink={handlePreviewAnnouncementLinkNavigate} />
+
+            {isLinkInsertModalOpen && (
+                <div
+                    className={styles.sortModalOverlay}
+                    onClick={(event) => {
+                        if (event.target === event.currentTarget) {
+                            closeLinkInsertModal();
+                        }
+                    }}
+                >
+                    <div className={`${styles.sortModal} ${styles.linkInsertModal}`} role="dialog" aria-modal="true" aria-label="Insert announcement link">
+                        <div className={styles.sortModalHeader}>
+                            <div>
+                                <div className={styles.sortModalBadge}>公告链接</div>
+                                <h3 className={styles.sortModalTitle}>插入内部链接</h3>
+                            </div>
+                            <button type="button" className={styles.secondaryButton} onClick={closeLinkInsertModal}>
+                                Close
+                            </button>
+                        </div>
+
+                        <div className={styles.linkInsertForm}>
+                            <label className={styles.fieldLabel}>
+                                链接文本
+                                <input
+                                    className={styles.textInput}
+                                    value={linkInsertDraft.text}
+                                    onChange={(event) => {
+                                        setLinkInsertDraft((prev) => ({ ...prev, text: event.target.value }));
+                                        setLinkInsertError('');
+                                    }}
+                                    placeholder="公告内展示的文本"
+                                />
+                            </label>
+
+                            <label className={styles.fieldLabel}>
+                                路径选择
+                                <select
+                                    className={styles.textInput}
+                                    value={linkInsertDraft.quickPageKey}
+                                    onChange={(event) => handleLinkInsertQuickPageChange(event.target.value)}
+                                >
+                                    <option value="">自定义路径</option>
+                                    {ANNOUNCEMENT_QUICK_PAGE_OPTIONS.map((option) => (
+                                        <option key={option.key} value={option.key}>
+                                            {option.label} - {option.path}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label className={styles.fieldLabel}>
+                                路径展示
+                                <input
+                                    className={styles.textInput}
+                                    value={linkInsertDraft.path}
+                                    onChange={(event) => {
+                                        setLinkInsertDraft((prev) => ({ ...prev, path: event.target.value, quickPageKey: '' }));
+                                        setLinkInsertError('');
+                                    }}
+                                    placeholder="例如：/promotions"
+                                />
+                            </label>
+
+                            {linkInsertError ? <div className={styles.formError}>{linkInsertError}</div> : null}
+                        </div>
+
+                        <div className={styles.sortModalFooter}>
+                            <button type="button" className={styles.secondaryButton} onClick={closeLinkInsertModal}>
+                                取消
+                            </button>
+                            <button type="button" className={styles.primaryButton} onClick={handleConfirmInsertLink}>
+                                插入链接
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {isSortModalOpen && (
                 <div

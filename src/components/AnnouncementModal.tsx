@@ -1,12 +1,14 @@
 import React from 'react';
 import styles from './AnnouncementModal.module.css';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
+import { parseAnnouncementBody } from '../utils/announcementLinks';
 
 interface AnnouncementModalProps {
     announcement: AnnouncementRecord | null;
     isOpen: boolean;
     onClose: () => void;
     badgeText?: string;
+    onNavigateLink?: (path: string) => void;
 }
 
 const formatAnnouncementDate = (announcement: AnnouncementRecord): string | null => {
@@ -34,6 +36,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
     isOpen,
     onClose,
     badgeText = '\u9996\u9875\u516c\u544a',
+    onNavigateLink,
 }) => {
     if (!isOpen || !announcement) {
         return null;
@@ -78,7 +81,27 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                             {section.subtitle ? (
                                 <h3 className={styles.subtitle}>{section.subtitle}</h3>
                             ) : null}
-                            <p className={styles.body}>{section.body}</p>
+                            <p className={styles.body}>
+                                {parseAnnouncementBody(section.body).map((part, partIndex) => {
+                                    if (part.type === 'text') {
+                                        return <React.Fragment key={`${index}-text-${partIndex}`}>{part.text}</React.Fragment>;
+                                    }
+
+                                    return (
+                                        <button
+                                            key={`${index}-link-${partIndex}-${part.path}`}
+                                            type="button"
+                                            className={styles.bodyLink}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onNavigateLink?.(part.path);
+                                            }}
+                                        >
+                                            {part.text}
+                                        </button>
+                                    );
+                                })}
+                            </p>
                         </section>
                     ))}
                 </div>

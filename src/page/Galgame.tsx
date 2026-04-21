@@ -1,4 +1,4 @@
-import { CiLocationOn } from "react-icons/ci";
+﻿import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
@@ -21,7 +21,7 @@ import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState, useEffect } from "react";
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import GameImageRenderer from "../components/Galgame/GameImageRenderer";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import GameAction from "../api/rpgGame/gameAction";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
@@ -38,12 +38,17 @@ import { logVisualButtonClick } from "../api/statistics/scriptButtonEvent";
 
 const Galgame = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuthStore();
     const { fileId, sessionId, galgameBetaAttributes, setGalgameBetaAttributes } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isAttributesOpen, setIsAttributesOpen] = useState(false);
     const [isSaveOpen, setIsSaveOpen] = useState(false);
+    const [defaultSaveMode, setDefaultSaveMode] = useState<'create' | 'overwrite' | undefined>(() => {
+        const saveEntry = (location.state as { saveEntry?: string } | null)?.saveEntry;
+        return saveEntry === 'load' ? undefined : 'create';
+    });
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -52,7 +57,7 @@ const Galgame = () => {
 
     // 使用统一的控制器 hook
     const controller = useGalgameController();
-    
+
     // 刷新/直进页面时的兜底：如果未检测过白名单，则尝试拉取一次
     useEffect(() => {
         const run = async () => {
@@ -68,6 +73,13 @@ const Galgame = () => {
         };
         run();
     }, [fileId, galgameBetaAttributes, setGalgameBetaAttributes]);
+
+    // 根据进入来源初始化默认保存模式：
+    // 读取存档进入 -> 让用户选择新建/覆盖；其余入口 -> 直接新建。
+    useEffect(() => {
+        const saveEntry = (location.state as { saveEntry?: string } | null)?.saveEntry;
+        setDefaultSaveMode(saveEntry === 'load' ? undefined : 'create');
+    }, [location.key, location.state]);
 
     // 处理历史按钮点击（切换显示/隐藏）
     const handleHistoryClick = () => {
@@ -313,7 +325,10 @@ const Galgame = () => {
                         {!controller.isReplay && (
                             <div
                                 className={styles.buttonItem}
-                                onClick={() => setIsSaveOpen(true)}
+                                onClick={() => {
+                                    // 保持当前来源对应的保存模式（来源由路由 state 决定）
+                                    setIsSaveOpen(true);
+                                }}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <div className={styles.buttonInner}>
@@ -349,9 +364,9 @@ const Galgame = () => {
                                 controller.isTextMode || controller.showGalgameHistory
                                     ? undefined
                                     : () => {
-                                          logVisualButtonClick("auto");
-                                          controller.handleAutoPlayToggle();
-                                      }
+                                        logVisualButtonClick("auto");
+                                        controller.handleAutoPlayToggle();
+                                    }
                             }
                             style={{ cursor: controller.isTextMode || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
                         >
@@ -390,19 +405,19 @@ const Galgame = () => {
                     />
 
                     {/* 设置弹窗放在 mainContent 内，确保限制在容器内 */}
-                        <SettingsModal
-                            isOpen={isSettingsOpen}
-                            onClose={() => setIsSettingsOpen(false)}
-                            onExitGame={navigateBackSafe}
-                            onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
-                            isMusicPlaying={isMusicPlaying}
-                            onToggleMusic={() => {
-                                logVisualButtonClick("settings_toggle_bgm");
-                                handleMusicToggle();
-                            }}
-                            volume={volume}
-                            onVolumeChange={setVolume}
-                        />
+                    <SettingsModal
+                        isOpen={isSettingsOpen}
+                        onClose={() => setIsSettingsOpen(false)}
+                        onExitGame={navigateBackSafe}
+                        onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
+                        isMusicPlaying={isMusicPlaying}
+                        onToggleMusic={() => {
+                            logVisualButtonClick("settings_toggle_bgm");
+                            handleMusicToggle();
+                        }}
+                        volume={volume}
+                        onVolumeChange={setVolume}
+                    />
 
                     {/* 通用属性面板（服务端KV） */}
                     {galgameBetaAttributes && controller.gameStarted ? (
@@ -418,38 +433,40 @@ const Galgame = () => {
                         onClose={() => setIsSaveOpen(false)}
                         sessionId={sessionId}
                         fileId={fileId}
+                        defaultSaveMode={defaultSaveMode}
                     />
 
                     {/* 读取存档（游戏内也复用同一列表界面，并允许“空位新建”） */}
                     <LoadSaveListModal
-                      isOpen={isLoadSaveOpen}
-                      onClose={() => setIsLoadSaveOpen(false)}
-                      fileId={fileId}
-                      onPreview={async (item) => {
-                        try {
-                          if (!fileId) return setPreviewItem(item);
-                          const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
-                          const detail = resp.data;
-                          setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
-                        } catch (e) {
-                          setPreviewItem(item);
-                        }
-                      }}
-                      allowCreateSlot={true}
-                      onCreateSlotClick={() => {
-                        // 仅游戏内允许新建存档：关闭列表，打开保存弹窗
-                        setIsLoadSaveOpen(false);
-                        setIsSaveOpen(true);
-                      }}
+                        isOpen={isLoadSaveOpen}
+                        onClose={() => setIsLoadSaveOpen(false)}
+                        fileId={fileId}
+                        onPreview={async (item) => {
+                            try {
+                                if (!fileId) return setPreviewItem(item);
+                                const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
+                                const detail = resp.data;
+                                setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
+                            } catch (e) {
+                                setPreviewItem(item);
+                            }
+                        }}
+                        allowCreateSlot={true}
+                        onCreateSlotClick={() => {
+                            // 从“读取存档”入口进入：让用户选择新建或覆盖
+                            setIsLoadSaveOpen(false);
+                            setDefaultSaveMode(undefined);
+                            setIsSaveOpen(true);
+                        }}
                     />
                     <SavePreviewModal
-                      isOpen={!!previewItem}
-                      onClose={() => setPreviewItem(null)}
-                      item={previewItem}
-                      onLoad={() => {
-                        // 游戏内“从存档开始”通常用于从详情页；在游戏内这里仅做预览关闭
-                        setPreviewItem(null);
-                      }}
+                        isOpen={!!previewItem}
+                        onClose={() => setPreviewItem(null)}
+                        item={previewItem}
+                        onLoad={() => {
+                            // 游戏内“从存档开始”通常用于从详情页；在游戏内这里仅做预览关闭
+                            setPreviewItem(null);
+                        }}
                     />
 
                     {/* 请求超时弹窗 */}

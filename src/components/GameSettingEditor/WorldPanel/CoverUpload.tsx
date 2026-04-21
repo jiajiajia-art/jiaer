@@ -1,159 +1,109 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
-import styles from './WorldPanel.module.css';
+import { useImageCropper } from '../../../hooks/useImageCropper';
 import { getImageUrl } from '../../../utils/constants';
 import { addImageTimestamp, bumpCacheBust } from '../../../utils/imageCache';
+import { fileToDataUrl } from '../../../utils/uploadImageCrop';
 import ImageCropModal from '../../CommonModal/ImageCropModal';
+import styles from './WorldPanel.module.css';
 
 interface CoverUploadProps {
     fileId?: string;
     coverUrl?: string;
-    onCoverUploaded?: (coverUrl: string) => void;
+    onCoverUploaded?: () => void;
 }
 
-const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUploaded }) => {
+const CoverUpload: React.FC<CoverUploadProps> = ({
+    fileId,
+    coverUrl,
+    onCoverUploaded,
+}) => {
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
-    const [coverUploading, setCoverUploading] = useState<boolean>(false);
+    const [coverUploading, setCoverUploading] = useState(false);
     const [coverError, setCoverError] = useState<string | null>(null);
-    const isUploadingRef = useRef<boolean>(false);
-    const previousCoverUrlRef = useRef<string | undefined>(coverUrl);
-    const objectPreviewRef = useRef<string | null>(null);
-
-    const [showCropModal, setShowCropModal] = useState<boolean>(false);
-    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
     useEffect(() => {
-        if (coverUrl) {
-            setCoverPreview(coverUrl);
-        }
+        setCoverPreview(coverUrl || null);
     }, [coverUrl]);
-
-    useEffect(() => () => {
-        if (objectPreviewRef.current) {
-            URL.revokeObjectURL(objectPreviewRef.current);
-        }
-    }, []);
-
-    const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (isUploadingRef.current || coverUploading) {
-            return;
-        }
-
-        if (!file.type.startsWith('image/')) {
-            setCoverError('请上传图片文件');
-            return;
-        }
-
-        if (file.size > 5 * 1024 * 1024) {
-            setCoverError('图片大小不能超过 5MB');
-            return;
-        }
-
-        setCoverError(null);
-        previousCoverUrlRef.current = coverPreview && !coverPreview.startsWith('data:image/') && !coverPreview.startsWith('blob:')
-            ? coverPreview
-            : coverUrl;
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const dataUrl = reader.result as string;
-            setImageToCrop(dataUrl);
-            setShowCropModal(true);
-        };
-        reader.readAsDataURL(file);
-        event.target.value = '';
-    };
-
-    const handleCoverClick = () => {
-        coverInputRef.current?.click();
-    };
-
-    const handleRemoveCover = (event: React.MouseEvent) => {
-        event.stopPropagation();
-        setCoverPreview(null);
-        setCoverError(null);
-        if (objectPreviewRef.current) {
-            URL.revokeObjectURL(objectPreviewRef.current);
-            objectPreviewRef.current = null;
-        }
-        if (coverInputRef.current) {
-            coverInputRef.current.value = '';
-        }
-    };
 
     const uploadCover = useCallback(async (file: File) => {
         if (!fileId) {
-            setCoverError('缺少文件ID，无法上传封面');
-            return;
-        }
-
-        if (isUploadingRef.current) {
+            setCoverError('Missing file id.');
             return;
         }
 
         try {
-            isUploadingRef.current = true;
             setCoverUploading(true);
             setCoverError(null);
             const response = await EditorApi.uploadGameCover(fileId, file);
-            if (response.data.success && response.data.data?.coverUrl) {
-                toast.success('封面上传成功');
-                // 同步最新封面地址
-                if (previousCoverUrlRef.current) {
-                    bumpCacheBust(previousCoverUrlRef.current);
-                }
-                if (objectPreviewRef.current) {
-                    URL.revokeObjectURL(objectPreviewRef.current);
-                    objectPreviewRef.current = null;
-                }
-                setCoverPreview(response.data.data.coverUrl);
-                onCoverUploaded?.(response.data.data.coverUrl);
+            if (response.data.success) {
+                const nextCoverUrl = response.data.data.coverUrl;
+                bumpCacheBust(nextCoverUrl);
+                setCoverPreview(nextCoverUrl);
+                toast.success('封面更新');
+                onCoverUploaded?.();
             } else {
-                setCoverError(response.data.message || '封面上传成功，但未获取到最新封面地址');
+                setCoverError(response.data.message || 'Failed to upload cover.');
             }
         } catch (error) {
-            console.error('上传封面失败:', error);
-            setCoverError('封面上传失败，请重试');
+            console.error('upload world cover failed:', error);
+            setCoverError('Failed to upload cover.');
         } finally {
             setCoverUploading(false);
-            isUploadingRef.current = false;
         }
     }, [fileId, onCoverUploaded]);
 
-    const handleCropComplete = useCallback((croppedBlob: Blob) => {
-        if (croppedBlob) {
-            const croppedFile = new File([croppedBlob], 'cover.jpg', {
-                type: 'image/jpeg',
-            });
+    const {
+        cropPreset,
+        pendingCropFile,
+        openCropper,
+        closeCropper,
+        handleCropComplete,
+    } = useImageCropper({
+        preset: 'gameCover',
+        onCropped: async (croppedFile) => {
+            const preview = await fileToDataUrl(croppedFile);
+            setCoverPreview(preview);
+            await uploadCover(croppedFile);
+        },
+    });
 
-            if (objectPreviewRef.current) {
-                URL.revokeObjectURL(objectPreviewRef.current);
-            }
-            const previewUrl = URL.createObjectURL(croppedBlob);
-            objectPreviewRef.current = previewUrl;
-            setCoverPreview(previewUrl);
-            void uploadCover(croppedFile);
+    const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setCoverError('Please upload an image file.');
+            return;
         }
 
-        setShowCropModal(false);
-        setImageToCrop(null);
-    }, [uploadCover]);
+        setCoverError(null);
+        void openCropper(file).catch((error) => {
+            console.error('open world cover cropper failed:', error);
+            setCoverError('Failed to load image.');
+        });
+    };
 
-    const handleCloseCropModal = useCallback(() => {
-        setShowCropModal(false);
-        setImageToCrop(null);
-    }, []);
+    const handleCoverClick = () => {
+        if (!fileId || coverUploading) {
+            return;
+        }
+        coverInputRef.current?.click();
+    };
+
+    const handleReplaceCover = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        handleCoverClick();
+    };
 
     return (
         <div className={styles.uploadCover}>
-            <p className={styles.eyebrow}>Step 2</p>
-            <h2>游戏封面图片上传</h2>
+            <h2>游戏封面</h2>
             <div className={styles.coverUploadArea} onClick={handleCoverClick}>
                 <input
                     ref={coverInputRef}
@@ -167,21 +117,21 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                     <div className={styles.coverPreviewContainer}>
                         <img
                             src={
-                                (coverPreview.startsWith('data:image/') || coverPreview.startsWith('blob:'))
+                                coverPreview.startsWith('data:image/')
                                     ? coverPreview
                                     : addImageTimestamp(getImageUrl(coverPreview))
                             }
-                            alt="封面预览"
+                            alt="Game cover preview"
                             className={styles.coverPreview}
                         />
                         <div className={styles.coverActions}>
                             <button
                                 type="button"
                                 className={styles.removeCoverBtn}
-                                onClick={handleRemoveCover}
+                                onClick={handleReplaceCover}
                                 disabled={coverUploading}
                             >
-                                移除
+                                更换
                             </button>
                         </div>
                     </div>
@@ -189,25 +139,29 @@ const CoverUpload: React.FC<CoverUploadProps> = ({ fileId, coverUrl, onCoverUplo
                     <div className={styles.coverPlaceholder}>
                         <BsUpload className={styles.coverUploadIcon} size={32} />
                         <p className={styles.coverUploadText}>点击上传封面图片</p>
-                        <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
+                        <p className={styles.coverUploadHint}>支持 JPG, PNG, WEBP，5MB以内</p>
                     </div>
                 )}
             </div>
-            {coverError && (
-                <p className={styles.coverErrorText}>{coverError}</p>
-            )}
 
-            {imageToCrop && (
+            {coverError ? (
+                <p className={styles.coverErrorText}>{coverError}</p>
+            ) : null}
+
+            {pendingCropFile ? (
                 <ImageCropModal
-                    isOpen={showCropModal}
-                    imageSrc={imageToCrop}
-                    onClose={handleCloseCropModal}
+                    isOpen
+                    imageSrc={pendingCropFile.imageSrc}
+                    title={cropPreset.title}
+                    description={cropPreset.description}
+                    aspectRatio={cropPreset.aspectRatio}
+                    aspectLabel={cropPreset.aspectLabel}
+                    defaultCropScale={cropPreset.defaultCropScale}
+                    mimeType={pendingCropFile.mimeType}
+                    onClose={closeCropper}
                     onCropComplete={handleCropComplete}
-                    aspectRatio={16 / 9}
-                    outputWidth={800}
-                    outputHeight={450}
                 />
-            )}
+            ) : null}
         </div>
     );
 };

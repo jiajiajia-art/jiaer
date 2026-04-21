@@ -74,6 +74,30 @@
   font-size: 13px;
 }
 
+.promotionHintButton {
+  width: 100%;
+  margin: 4px auto 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.promotionHintButton:hover {
+  color: #1d4ed8;
+  opacity: 0.92;
+}
+
+.promotionHintButton:active {
+  opacity: 1;
+}
+
 .buttons {
   display: flex;
   justify-content: center;
@@ -101,4 +125,5 @@
   /* 依旧保持两列横排，缩放占比自适应 */
   .qrBox { max-width: none; }
   .qrBox img { max-height: 34vh; }
+  .promotionHintButton { margin-bottom: 12px; font-size: 14px; line-height: 1.5; }
 }

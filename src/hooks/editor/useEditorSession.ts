@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import GameAction from '../../api/rpgGame/gameAction';
@@ -80,11 +80,17 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                 console.error('发布游戏失败:', response.data);
                 const errorMessage = response.data.message || '发布游戏失败';
                 alert(errorMessage);
+                if (errorMessage === '游戏已发布') {
+                    navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
+                }
             }
         } catch (error: any) {
             console.error('发布游戏失败:', error);
             const errorMessage = error.response?.data?.message || error.message || '发布游戏失败';
             alert(errorMessage);
+            if (errorMessage === '游戏已发布') {
+                navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
+            }
         }
     }, [fileId, navigate]);
 
@@ -93,4 +99,3 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
         handlePublishGame,
     };
 };
-

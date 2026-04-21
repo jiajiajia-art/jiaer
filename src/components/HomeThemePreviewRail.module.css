@@ -460,6 +460,18 @@
         padding: 68px 14px 14px;
     }
 
+    .coverWrap::after {
+        background:
+            linear-gradient(180deg, rgba(7, 10, 15, 0) 0%, rgba(7, 10, 15, 0.14) 38%, rgba(7, 10, 15, 0.92) 100%),
+            radial-gradient(circle at 18% 18%, rgba(224, 61, 75, 0.16) 0%, transparent 44%);
+        opacity: 1;
+    }
+
+    .coverImage {
+        transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
+        transform-origin: center center;
+    }
+
     .title {
         font-size: 20px;
     }

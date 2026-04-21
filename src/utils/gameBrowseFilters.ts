@@ -1,4 +1,4 @@
-export type HomeListMode = 'all' | 'role-playing' | 'custom';
+export type HomeListMode = 'all' | 'role-playing' | 'world' | 'custom';
 export type HomeListSort = 'hot' | 'recommended' | 'latest';
 
 export type HomeListOption<T extends string | number | null> = {
@@ -22,19 +22,21 @@ export const DEFAULT_HOME_LIST_FILTERS: HomeListFilters = {
 };
 
 export const HOME_LIST_MODE_OPTIONS: HomeListOption<HomeListMode>[] = [
-    { value: 'all', label: '全部' },
-    { value: 'role-playing', label: '角色扮演' },
-    { value: 'custom', label: '自定义' },
+    { value: 'all', label: '\u5168\u90E8' },
+    { value: 'role-playing', label: '\u89D2\u8272\u626E\u6F14' },
+    { value: 'world', label: 'World' },
+    { value: 'custom', label: '\u81EA\u5B9A\u4E49' },
 ];
 
 export const HOME_LIST_SORT_OPTIONS: HomeListOption<HomeListSort>[] = [
-    { value: 'hot', label: '最热' },
-    { value: 'recommended', label: '推荐' },
-    { value: 'latest', label: '最新' },
+    { value: 'hot', label: '\u6700\u70ED' },
+    { value: 'recommended', label: '\u63A8\u8350' },
+    { value: 'latest', label: '\u6700\u65B0' },
 ];
 
 export const normalizeHomeListMode = (value: string | null): HomeListMode => {
     if (value === 'role-playing') return 'role-playing';
+    if (value === 'world' || value === 'avg') return 'world';
     if (value === 'custom') return 'custom';
     return DEFAULT_HOME_LIST_MODE;
 };

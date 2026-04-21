@@ -116,9 +116,21 @@
 
 .amountsLabel {
     font-size: 0.95rem;
-    color: #666;
+    color: #111;
     margin-bottom: 12px;
-    font-weight: 500;
+    font-weight: 600;
+}
+
+.firstChargeHint {
+    margin: 0 0 14px 0;
+    font-size: 0.86rem;
+    color: #FB4655;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.firstChargeHintInactive {
+    color: #ea8e97;
 }
 
 .amountsGrid {
@@ -128,49 +140,119 @@
 }
 
 .amountBtn {
-    background: #f8f9fa;
+    background: #fff;
     border: 2px solid #e9ecef;
     border-radius: 12px;
-    padding: 16px 12px;
+    padding: 14px 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.22s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    justify-content: flex-start;
+    gap: 0;
+    min-height: 132px;
+    overflow: hidden;
+}
+
+.firstChargeTag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #FB4655;
+    color: #fff;
+    font-size: 0.72rem;
+    line-height: 1;
+    padding: 8px 0;
+    border-radius: 10px 10px 0 0;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    width: calc(100% + 24px);
+    margin: -14px -12px 0;
+}
+
+.firstChargeTagInactive {
+    background: #f4a4ad;
+    color: #fff;
+}
+
+.noBonusTag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #999;
+    color: #fff;
+    font-size: 0.72rem;
+    line-height: 1;
+    padding: 8px 0;
+    border-radius: 10px 10px 0 0;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    width: calc(100% + 24px);
+    margin: -14px -12px 0;
 }
 
 .amountBtn:hover {
-    border-color: #FB4655;
-    background: #fff5f6;
+    border-color: #dfe4ea;
+    background: #fff;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.15);
+    box-shadow: 0 4px 12px rgba(17, 17, 17, 0.06);
 }
 
 .amountBtnActive {
     border-color: #FB4655;
-    background: linear-gradient(135deg, #fff5f6 0%, #ffeef0 100%);
-    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.25);
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.16);
 }
 
-.amountValue {
-    font-size: 1.2rem;
+.amountMainPoints {
+    font-size: 1.22rem;
+    line-height: 1.1;
     font-weight: 700;
+    color: #111;
+    letter-spacing: 0.01em;
+}
+
+.amountTopSection {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 12px 0 10px;
+}
+
+.amountPriceMeta {
+    font-size: 0.8rem;
+    color: #8e95a3;
+    line-height: 1.25;
+}
+
+.amountFirstChargePoints {
+    font-size: 0.82rem;
+    color: #111;
+    line-height: 1.25;
+    font-weight: 500;
+    width: 100%;
+    text-align: center;
+    border-top: 1px solid #f0f1f3;
+    padding-top: 9px;
+}
+
+.amountBtnActive .amountMainPoints,
+.amountBtnActive .amountFirstChargePoints {
     color: #111;
 }
 
-.amountBtnActive .amountValue {
-    color: #FB4655;
-}
-
-.amountPoints {
-    font-size: 0.85rem;
-    color: #888;
-}
-
-.amountBtnActive .amountPoints {
-    color: #FB4655;
-    font-weight: 600;
+.amountNoBonus {
+    font-size: 0.82rem;
+    color: #999;
+    line-height: 1.25;
+    font-weight: 500;
+    width: 100%;
+    text-align: center;
+    border-top: 1px solid #f0f1f3;
+    padding-top: 9px;
 }
 
 .customAmount {
@@ -179,9 +261,9 @@
 
 .customLabel {
     font-size: 0.95rem;
-    color: #666;
+    color: #111;
     margin-bottom: 12px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .customInputWrapper {
@@ -433,7 +515,7 @@
     display: flex;
     flex-direction: row;
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: -10px;
 }
 
 .planItem {
@@ -478,7 +560,476 @@
     color: #FB4655;
 }
 
-/* 移动端适配 */
+/* ========== 会员特权页面 ========== */
+.membershipPage {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.membershipHeader {
+    text-align: center;
+    padding: 10px 0 6px;
+}
+
+.membershipTitle {
+    margin: 0 0 8px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    letter-spacing: 0.5px;
+}
+
+.membershipSubtitle {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #999;
+}
+
+.plansCards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.planCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    border-radius: 16px;
+    border: 2px solid #e8e8e8;
+    background: var(--card-bg, #f8f9fa);
+    transition: all 0.3s ease;
+}
+
+.planCard:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.planCardHighlight {
+    border-color: #d4a84b;
+    box-shadow: 0 8px 32px rgba(212, 168, 75, 0.2);
+    transform: scale(1.02);
+}
+
+.planCardHighlight:hover {
+    transform: scale(1.02) translateY(-3px);
+}
+
+.recommendedBadge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #d4a84b 0%, #e8c060 100%);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(212, 168, 75, 0.4);
+}
+
+.planLevel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.planLevelTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 14px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.planLevelName {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.planPrice {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+    margin-bottom: 12px;
+}
+
+.priceFree {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #666;
+}
+
+.priceCurrency {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--card-color);
+}
+
+.priceValue {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--card-color);
+    line-height: 1;
+}
+
+.priceUnit {
+    font-size: 0.8rem;
+    color: #999;
+    margin-left: 2px;
+}
+
+.planDivider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 8px 0 14px;
+}
+
+.perksList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+}
+
+.perksHeader {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.perkItem {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.perkItem:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.perkItemDisabled {
+    opacity: 0.45;
+}
+
+.perkName {
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.4;
+}
+
+.perkValue {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--card-color);
+    white-space: nowrap;
+}
+
+.perkItemDisabled .perkValue {
+    color: #bbb;
+}
+
+.planBtn {
+    width: 100%;
+    padding: 11px 16px;
+    margin-top: 14px;
+    border: 2px solid var(--btn-color, #ccc);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--btn-color, #666);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.planBtn:hover {
+    background: var(--btn-color, #ccc);
+    color: #fff;
+}
+
+.planBtnHighlight {
+    background: var(--btn-color, #d4a84b);
+    color: #fff;
+    border-color: var(--btn-color, #d4a84b);
+}
+
+.planBtnHighlight:hover {
+    background: #c49a3a;
+    border-color: #c49a3a;
+}
+
+/* 季卡特别卡片 */
+.seasonCardWrapper {
+    margin-top: -4px;
+}
+
+.seasonCard {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border-radius: 14px;
+    border: 2px dashed #e8c0c0;
+    background: linear-gradient(180deg, #fff8f8 0%, #fff0f0 100%);
+}
+
+.seasonCardLeft {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 72px;
+}
+
+.seasonTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: #e55b5b;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.seasonName {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 600;
+}
+
+.seasonCardRight {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.seasonPrice {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.seasonPriceValue {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #e55b5b;
+}
+
+.seasonPriceUnit {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.seasonPerks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.seasonPerks span {
+    font-size: 0.8rem;
+    color: #888;
+    line-height: 1.4;
+}
+
+.seasonBtn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 10px;
+    background: #e55b5b;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.seasonBtn:hover {
+    background: #d44a4a;
+    transform: translateY(-1px);
+}
+
+/* 温馨提示 */
+.membershipNotice {
+    display: flex;
+    gap: 10px;
+    padding: 14px 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #eee;
+}
+
+.noticeIcon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ff9800;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.noticeText {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.6;
+}
+
+.noticeText strong {
+    color: #333;
+}
+
+/* ========== 会员权益对比表 ========== */
+.benefitsComparison {
+    margin-top: 8px;
+    border-radius: 14px;
+    border: 1px solid #eee;
+    background: #fafafa;
+    overflow: hidden;
+}
+
+.comparisonTitle {
+    padding: 14px 16px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #333;
+    background: linear-gradient(180deg, #fff 0%, #f8f8f8 100%);
+    border-bottom: 1px solid #eee;
+}
+
+.comparisonTable {
+    padding: 0;
+}
+
+.comparisonHeader {
+    display: grid;
+    grid-template-columns: 1fr repeat(4, 1fr);
+    gap: 0;
+    padding: 10px 12px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #eee;
+}
+
+.comparisonLabel {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.comparisonHeaderCell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.planTag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.planPriceSmall {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.comparisonRow {
+    display: grid;
+    grid-template-columns: 1fr repeat(4, 1fr);
+    gap: 0;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s ease;
+}
+
+.comparisonRow:last-child {
+    border-bottom: none;
+}
+
+.comparisonRow:hover {
+    background: rgba(0, 0, 0, 0.01);
+}
+
+.comparisonValue {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.comparisonValue.highlight {
+    font-weight: 700;
+}
+
+.comparisonValue.disabled {
+    color: #ccc;
+}
+
+.comparisonFooter {
+    padding: 14px 16px;
+    background: #f8f8f8;
+    border-top: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.footerItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #888;
+    line-height: 1.5;
+}
+
+.footerIcon {
+    flex-shrink: 0;
+    color: #d4a84b;
+    font-weight: 700;
+}
+
+/* ========== 移动端适配 ========== */
 @media (max-width: 768px) {
     .modalContent {
         width: 95%;
@@ -498,15 +1049,32 @@
     }
 
     .amountBtn {
-        padding: 14px 8px;
+        padding: 12px 8px;
+        min-height: 124px;
     }
 
-    .amountValue {
-        font-size: 1.1rem;
+    .amountTopSection {
+        gap: 6px;
+        padding: 10px 0 8px;
     }
 
-    .amountPoints {
-        font-size: 0.8rem;
+    .amountMainPoints {
+        font-size: 1.05rem;
+    }
+
+    .amountPriceMeta {
+        font-size: 0.74rem;
+    }
+
+    .amountFirstChargePoints {
+        font-size: 0.76rem;
+    }
+
+    .firstChargeTag {
+        font-size: 0.66rem;
+        padding: 7px 0;
+        width: calc(100% + 16px);
+        margin: -12px -8px 0;
     }
 
     .customInput {
@@ -530,6 +1098,86 @@
 
     .planItemPrice {
         font-size: 1rem;
+    }
+
+    /* 会员页面移动端适配 */
+    .membershipTitle {
+        font-size: 1.25rem;
+    }
+
+    .plansCards {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .planCard {
+        padding: 18px 14px;
+    }
+
+    .planCardHighlight {
+        transform: none;
+    }
+
+    .planCardHighlight:hover {
+        transform: translateY(-3px);
+    }
+
+    .seasonCard {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .seasonCardLeft {
+        flex-direction: row;
+        min-width: auto;
+    }
+
+    .seasonCardRight {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .seasonPerks {
+        gap: 2px;
+    }
+
+    .seasonBtn {
+        width: 100%;
+    }
+
+    /* 对比表移动端适配 */
+    .comparisonHeader,
+    .comparisonRow {
+        padding: 10px 12px;
+    }
+
+    .comparisonLabel {
+        font-size: 0.7rem;
+    }
+
+    .comparisonValue {
+        font-size: 0.75rem;
+    }
+
+    .planTag {
+        padding: 2px 6px;
+        font-size: 0.65rem;
+    }
+
+    .planPriceSmall {
+        font-size: 0.7rem;
+    }
+
+    .comparisonTitle {
+        font-size: 0.9rem;
+        padding: 12px;
+    }
+
+    .footerItem {
+        font-size: 0.75rem;
     }
 }
 

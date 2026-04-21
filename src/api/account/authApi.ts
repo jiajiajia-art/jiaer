@@ -5,13 +5,17 @@ import type {
   AuthResponse,
   BindAccountRequest,
   CheckInResponse,
+  GetPointsActivitiesParams,
   LoginRequest,
   MembershipSignInStatus,
+  PointsActivitiesResponse,
   ResetPasswordRequest,
   SendCodeRequest,
   SettlePointsResponse,
   SignupRequest,
   SubscriptionRedeemResult,
+  InviteStats,
+  InviteClaimResult,
   User,
 } from "./auth.type";
 
@@ -40,8 +44,17 @@ export const auth = {
   getSignInStatus: () =>
     api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),
 
+  getPointsActivities: (params: GetPointsActivitiesParams) =>
+    api.get<ApiResponse<PointsActivitiesResponse>>('/auth/user/points/activities', { params }),
+
   useInviteCode: (data: { inviteCode: string }) =>
     api.post<ApiResponse<null>>('/auth/invite/use-code', data),
+
+  getInviteStats: () =>
+    api.get<ApiResponse<InviteStats>>('/auth/invite/stats'),
+
+  claimInviteReward: (data: { threshold: number }) =>
+    api.post<ApiResponse<InviteClaimResult>>('/auth/invite/claim', data),
 
   updateUserAvatar: (file: File) => {
     const formData = new FormData();

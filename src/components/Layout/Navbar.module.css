@@ -564,16 +564,16 @@
     }
 
     .navbarContainerMobileHomeOverlayActive {
-        --navbar-surface: linear-gradient(180deg, rgba(11, 16, 25, 0.34) 0%, rgba(11, 16, 25, 0.18) 56%, rgba(11, 16, 25, 0.02) 100%);
+        --navbar-surface: transparent;
         --navbar-border: transparent;
         --navbar-shadow: none;
         --navbar-text: rgba(255, 255, 255, 0.88);
         --navbar-text-strong: #ffffff;
-        --navbar-search-bg: rgba(12, 20, 32, 0.22);
-        --navbar-search-border: rgba(255, 255, 255, 0.22);
+        --navbar-search-bg: rgba(12, 20, 32, 0.14);
+        --navbar-search-border: rgba(255, 255, 255, 0.28);
         --navbar-search-input: rgba(255, 255, 255, 0.96);
         --navbar-search-placeholder: rgba(255, 255, 255, 0.56);
-        --navbar-search-icon-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.1) 100%);
+        --navbar-search-icon-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%);
         --navbar-search-icon-color: #ffffff;
         --navbar-search-panel-bg: #ffffff;
         --navbar-search-panel-border: rgba(26, 29, 33, 0.1);
@@ -582,16 +582,16 @@
         --navbar-search-panel-title: #111827;
         --navbar-search-panel-meta: rgba(31, 41, 51, 0.58);
         --navbar-search-panel-empty: rgba(31, 41, 51, 0.62);
-        --navbar-action-bg: rgba(12, 20, 32, 0.24);
-        --navbar-action-bg-hover: rgba(12, 20, 32, 0.34);
-        --navbar-action-border: rgba(255, 255, 255, 0.22);
+        --navbar-action-bg: rgba(12, 20, 32, 0.14);
+        --navbar-action-bg-hover: rgba(12, 20, 32, 0.24);
+        --navbar-action-border: rgba(255, 255, 255, 0.28);
         --navbar-action-text: #ffffff;
-        --navbar-login-bg: rgba(12, 20, 32, 0.24);
-        --navbar-login-bg-hover: rgba(12, 20, 32, 0.34);
-        --navbar-login-border: rgba(255, 255, 255, 0.22);
+        --navbar-login-bg: rgba(12, 20, 32, 0.14);
+        --navbar-login-bg-hover: rgba(12, 20, 32, 0.24);
+        --navbar-login-border: rgba(255, 255, 255, 0.28);
         --navbar-login-text: #ffffff;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
     }
 
     .navbarContainerMobileHomeOverlayActive .logo img {
@@ -601,6 +601,6 @@
     .navbarContainerMobileHomeOverlayActive .searchBox,
     .navbarContainerMobileHomeOverlayActive .messageButton,
     .navbarContainerMobileHomeOverlayActive .loginBtn {
-        box-shadow: none;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
     }
 }

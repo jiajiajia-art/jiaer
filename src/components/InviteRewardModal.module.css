@@ -1,0 +1,201 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.content {
+    width: 90%;
+    max-width: 420px;
+    max-height: 86vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+    border-radius: 20px;
+    padding: 30px 22px 18px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+.closeButton {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    color: #999;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111;
+}
+
+.subtitle {
+    margin: 8px 0 0 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.highlight {
+    color: #FB4655;
+    font-weight: 700;
+}
+
+.rulesList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ruleItem {
+    border-radius: 12px;
+    background: #f4f4f5;
+    border: 1px solid #ececec;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.ruleItemReached {
+    background: #fff1f2;
+    border-color: #ffd4d8;
+}
+
+.ruleMain {
+    font-size: 14px;
+    color: #222;
+    font-weight: 600;
+}
+
+.ruleReward {
+    font-size: 14px;
+    font-weight: 700;
+    color: #FB4655;
+}
+
+.ruleStatus {
+    font-size: 12px;
+    color: #777;
+}
+
+.claimBtn {
+    border: none;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.claimBtnReady {
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+}
+
+.claimBtnDisabled {
+    cursor: not-allowed;
+    color: #888;
+    background: #ececec;
+}
+
+.claimBtnDone {
+    color: #4B5563;
+    background: #e5e7eb;
+}
+
+.claimHint {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 6px 4px;
+    white-space: nowrap;
+}
+
+.loadingText {
+    border-radius: 12px;
+    background: #f4f4f5;
+    border: 1px solid #ececec;
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: #666;
+}
+
+.ruleProgress {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ruleProgressTrack {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: #ececec;
+    overflow: hidden;
+}
+
+.ruleProgressFill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #FB4655 0%, #FF5A6A 100%);
+    transition: width 0.25s ease;
+}
+
+.ruleProgressText {
+    min-width: 44px;
+    text-align: right;
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.tipText {
+    margin: 14px 0 0;
+    text-align: center;
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+@media (max-width: 480px) {
+    .content {
+        width: calc(100vw - 24px);
+        padding: 26px 16px 14px;
+        border-radius: 16px;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .ruleItem {
+        grid-template-columns: 1fr auto;
+        row-gap: 4px;
+    }
+
+    .ruleProgressText {
+        min-width: 40px;
+    }
+}

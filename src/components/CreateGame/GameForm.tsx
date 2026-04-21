@@ -3,6 +3,8 @@ import { FaFileAlt, FaImage } from 'react-icons/fa';
 import styles from './GameForm.module.css';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
+import { useImageCropper } from '../../hooks/useImageCropper';
+import ImageCropModal from '../CommonModal/ImageCropModal';
 
 export interface GameFormData {
     gameName: string;
@@ -52,6 +54,24 @@ const GameForm: React.FC<GameFormProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const coverInputRef = useRef<HTMLInputElement>(null);
 
+    const {
+        cropPreset,
+        pendingCropFile,
+        openCropper,
+        closeCropper,
+        handleCropComplete,
+    } = useImageCropper({
+        preset: 'gameCover',
+        onCropped: async (croppedFile) => {
+            if (coverImage?.startsWith('blob:')) {
+                URL.revokeObjectURL(coverImage);
+            }
+            setCoverFile(croppedFile);
+            setExistingCoverFile(null);
+            setCoverImage(URL.createObjectURL(croppedFile));
+        },
+    });
+
     // 当初始数据变化时更新状态（用于编辑模式）
     useEffect(() => {
         if (initialGameData) {
@@ -65,6 +85,14 @@ const GameForm: React.FC<GameFormProps> = ({
             if (initialFiles.existingCoverFile !== undefined) setExistingCoverFile(initialFiles.existingCoverFile);
         }
     }, [initialGameData, initialFiles]);
+
+    useEffect(() => {
+        return () => {
+            if (coverImage?.startsWith('blob:')) {
+                URL.revokeObjectURL(coverImage);
+            }
+        };
+    }, [coverImage]);
 
     // 当表单数据变化时通知父组件
     useEffect(() => {
@@ -220,6 +248,38 @@ const GameForm: React.FC<GameFormProps> = ({
         }
     };
 
+    const handleCoverSelectForCrop = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Please upload a supported image file.');
+            return;
+        }
+
+        void openCropper(file);
+    };
+    void handleCoverSelect;
+
+    const handleCoverDropForCrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragoverCover(false);
+
+        const file = e.dataTransfer.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Please upload a supported image file.');
+            return;
+        }
+
+        void openCropper(file);
+    };
+    void handleCoverDrop;
+
     const documentDisplayName = uploadedFile?.name ?? existingDocFile?.name ?? '';
     const documentDisplaySize = uploadedFile ? uploadedFile.size : (existingDocFile ? existingDocFile.size : null);
 
@@ -334,7 +394,7 @@ const GameForm: React.FC<GameFormProps> = ({
                     onClick={() => !isCreating && coverInputRef.current?.click()}
                     onDragOver={(e) => !isCreating && handleCoverDragOver(e)}
                     onDragLeave={(e) => !isCreating && handleCoverDragLeave(e)}
-                    onDrop={(e) => !isCreating && handleCoverDrop(e)}
+                        onDrop={(e) => !isCreating && handleCoverDropForCrop(e)}
                 >
                     <input
                         ref={coverInputRef}
@@ -342,7 +402,7 @@ const GameForm: React.FC<GameFormProps> = ({
                         id="coverImage"
                         accept="image/jpeg,image/png,image/jpg"
                         hidden
-                        onChange={handleCoverSelect}
+                        onChange={handleCoverSelectForCrop}
                         autoComplete="off"
                         disabled={isCreating}
                     />
@@ -399,6 +459,20 @@ const GameForm: React.FC<GameFormProps> = ({
                     }
                 </button>
             </div>
+            {pendingCropFile ? (
+                <ImageCropModal
+                    isOpen
+                    imageSrc={pendingCropFile.imageSrc}
+                    title={cropPreset.title}
+                    description={cropPreset.description}
+                    aspectRatio={cropPreset.aspectRatio}
+                    aspectLabel={cropPreset.aspectLabel}
+                    defaultCropScale={cropPreset.defaultCropScale}
+                    mimeType={pendingCropFile.mimeType}
+                    onClose={closeCropper}
+                    onCropComplete={handleCropComplete}
+                />
+            ) : null}
         </div>
     );
 };

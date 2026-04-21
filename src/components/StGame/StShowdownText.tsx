@@ -31,7 +31,6 @@ const StShowdownText: React.FC<Props> = ({ text, rules, assetPrefix, className }
       // 如果是我们包的 iframe，则把 data-st-srcdoc64 / data-st-srcdoc 转为真实内容（用 doc.write 避免属性转义问题）
       const src64 = ifr.getAttribute('data-st-srcdoc64');
       const srcUri = ifr.getAttribute('data-st-srcdoc');
-      let target = ifr;
       if (src64 || srcUri) {
         let html = '';
         try {
@@ -54,7 +53,6 @@ const StShowdownText: React.FC<Props> = ({ text, rules, assetPrefix, className }
         if (idAttr) newIfr.setAttribute('id', idAttr);
         if (dataId) newIfr.setAttribute('data-fl-embed-id', dataId);
         ifr.replaceWith(newIfr);
-        target = newIfr;
         try {
           // Use srcdoc to avoid same-origin dependency (works with sandbox w/o allow-same-origin)
           try { (newIfr as any).srcdoc = html; } catch { newIfr.setAttribute('srcdoc', html); }

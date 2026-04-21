@@ -414,9 +414,9 @@ const GameSettingsEditor = () => {
                         gameData={gameData}
                         fileId={fileId}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { scenesPanelGetDataRef.current = getDataFn; }}
-                        onDataChange={() => {
+                        onDataChange={async () => {
                             if (fileId) {
-                                fetchEditorData(fileId);
+                                await fetchEditorData(fileId);
                             }
                         }}
                         mode={mode || 'visual'}

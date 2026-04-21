@@ -1,10 +1,12 @@
 export type OrderType = 'points' | 'subscription';
 
 export type PlanId = 'month' | 'season' | 'year';
+export type PointsPlanId = 'pr_1' | 'pr_6' | 'pr_24' | 'pr_45' | 'pr_95' | 'pr_198';
 
 export interface PointsOrderRequest {
     orderType: 'points';
     amount: number;
+    planId?: PointsPlanId;
     description?: string;
 }
 

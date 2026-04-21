@@ -188,7 +188,7 @@ const Create: React.FC = () => {
             };
         }
 
-        toast.error('充值失败');
+        toast.error(response.data.message || '充值失败');
         return null;
     };
 
@@ -379,10 +379,16 @@ const Create: React.FC = () => {
                                             )}
                                         </div>
                                         <div className={styles.userCredit}>
-                                            <span className={styles.userPoints}>
+                                            <button
+                                                type="button"
+                                                className={styles.userPointsButton}
+                                                onClick={() => navigate('/points/details')}
+                                            >
+                                                <span className={styles.userPoints}>
                                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
                                                 积分：{user?.user?.points ?? 0}
-                                            </span>
+                                                </span>
+                                            </button>
                                             <button
                                                 className={`${styles.payButton} ${styles.desktopPayButton}`}
                                                 onClick={() => setIsRechargeModalOpen(true)}
@@ -501,7 +507,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>待结算激励收益</span>
+                                            <span>待结算奖励收益</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.pendingIncome}</div>
@@ -556,7 +562,7 @@ const Create: React.FC = () => {
                     </div>
 
                     <div className={styles.shopSection}>
-                        <div className={styles.sectionHeader}>
+                        <div className={`${styles.sectionHeader} ${styles.draftSectionHeader}`}>
                             <div className={styles.sectionTitle}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/create/草稿箱.png`} alt="" />
                             </div>
@@ -571,7 +577,7 @@ const Create: React.FC = () => {
                                 alt=""
                             />
                             {draftGames.length > 0 && (
-                                <div className={styles.draftManageActions}>
+                                <div className={`${styles.draftManageActions} ${isDraftManageMode ? styles.draftManageActionsExpanded : ''}`}>
                                     {isDraftManageMode ? (
                                         <>
                                             <button
@@ -658,6 +664,7 @@ const Create: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
+                isFirstCharge={user?.user?.firstCharge}
             />
 
             <ConfirmModal

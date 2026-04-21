@@ -15,6 +15,7 @@ import type {
 import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
 import { useMessageStore } from '../store/useMessageStore';
 import { getImageUrl } from '../utils/constants';
+import { toAnnouncementPlainText } from '../utils/announcementLinks';
 import styles from './Messages.module.css';
 
 type MessageFeedItem =
@@ -230,11 +231,17 @@ const Messages: React.FC = () => {
         setSelectedAnnouncement({ ...announcement, isRead: true });
     }, [markMessageAsRead]);
 
+    const handleAnnouncementLinkNavigate = useCallback((path: string) => {
+        setSelectedAnnouncement(null);
+        navigate(path);
+    }, [navigate]);
+
     const handleOpenPromotion = useCallback(async (promotion: MessagePromotion) => {
         await markMessageAsRead('promotion', promotion.sourceId, promotion.isRead);
 
         const targetLink = (promotion.detailLinkUrl || '').trim();
         if (!targetLink) {
+            navigate('/promotions');
             return;
         }
 
@@ -317,7 +324,7 @@ const Messages: React.FC = () => {
                                         </div>
 
                                         <div className={styles.messageText}>
-                                            {item.sections[0]?.body || '点击查看公告详情'}
+                                            {toAnnouncementPlainText(item.sections[0]?.body || '') || '点击查看公告详情'}
                                         </div>
 
                                         <div className={styles.messageMeta}>
@@ -335,11 +342,13 @@ const Messages: React.FC = () => {
                                         onClick={() => void handleOpenPromotion(item)}
                                     >
                                         <div className={styles.messageLayout}>
-                                            <img
-                                                className={styles.promotionCover}
-                                                src={getImageUrl(item.coverImageUrl)}
-                                                alt={item.title}
-                                            />
+                                            <div className={styles.promotionCoverWrap}>
+                                                <img
+                                                    className={styles.promotionCover}
+                                                    src={getImageUrl(item.coverImageUrl)}
+                                                    alt={item.title}
+                                                />
+                                            </div>
                                             <div className={styles.messageMain}>
                                                 <div className={styles.messageHeader}>
                                                     <div className={styles.titleBlock}>
@@ -370,11 +379,13 @@ const Messages: React.FC = () => {
                                 >
                                     <div className={styles.messageLayout}>
                                         {coverImageUrl ? (
+                                            <div className={styles.promotionCoverWrap}>
                                             <img
                                                 className={styles.promotionCover}
                                                 src={coverImageUrl}
                                                 alt={item.activityTitle || '投稿状态消息'}
                                             />
+                                            </div>
                                         ) : (
                                             <div className={styles.promotionCoverPlaceholder}>投稿</div>
                                         )}
@@ -409,6 +420,7 @@ const Messages: React.FC = () => {
                 announcement={selectedAnnouncement}
                 isOpen={Boolean(selectedAnnouncement)}
                 onClose={() => setSelectedAnnouncement(null)}
+                onNavigateLink={handleAnnouncementLinkNavigate}
                 badgeText="消息公告"
             />
             <MobileBottomNav />

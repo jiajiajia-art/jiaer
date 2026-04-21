@@ -653,6 +653,13 @@
     gap: 14px;
 }
 
+.detailImageGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+    gap: 14px;
+    align-items: start;
+}
+
 .detailImage,
 .detailVideo {
     width: 100%;
@@ -662,8 +669,7 @@
 
 .detailImage {
     display: block;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
+    height: auto;
 }
 
 .detailVideo {

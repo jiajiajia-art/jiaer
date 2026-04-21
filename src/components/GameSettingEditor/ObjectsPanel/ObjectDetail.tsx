@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect, useImperativeHandle } from 'react';
 import styles from './ObjectDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
+import ImageCropModal from '../../CommonModal/ImageCropModal';
 import { toast } from 'react-hot-toast';
 import { getImageUrl, CHARACTER_GENERATION_COST, normalizeIcon as normalizeIconUtil } from '../../../utils/constants';
 import { addImageTimestamp } from '../../../utils/imageCache';
 import type { ObjectItem } from '../../../api/worldInteraction/objectsData.type';
 import { objectsData } from '../../../api/worldInteraction/objectsData';
+import { useImageCropper } from '../../../hooks/useImageCropper';
 
 interface ObjectDetailProps {
     object: ObjectItem | null;
@@ -53,6 +55,22 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [localFile, setLocalFile] = useState<File | null>(null);
     const [tempImageId, setTempImageId] = useState<string | null>(null);
+
+    const {
+        cropPreset,
+        pendingCropFile,
+        openCropper,
+        closeCropper,
+        handleCropComplete,
+    } = useImageCropper({
+        preset: 'objectIcon',
+        onCropped: async (croppedFile) => {
+            setLocalFile(croppedFile);
+            setTempImageId(null);
+            setFormData(prev => ({ ...prev, icon: URL.createObjectURL(croppedFile) }));
+            toast.success('Image selected.');
+        },
+    });
 
     // 获取当前物品的唯一标识
     const getCurrentItemId = React.useCallback(() => {
@@ -469,6 +487,23 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
         e.target.value = '';
     };
 
+    const handleFileChangeForCrop = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file.');
+            return;
+        }
+
+        void openCropper(file).catch((error) => {
+            console.error('open object cropper failed:', error);
+            toast.error('Failed to load image.');
+        });
+    };
+    void handleFileChange;
+
     const handleGenerateImageClick = () => {
         if (!formData.description?.trim()) {
             toast.error('请先输入物品描述作为图片提示词');
@@ -714,7 +749,7 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                                         ref={fileInputRef}
                                         type="file"
                                         accept="image/*"
-                                        onChange={handleFileChange}
+                                        onChange={handleFileChangeForCrop}
                                         style={{ display: 'none' }}
                                     />
                                 </div>
@@ -892,6 +927,20 @@ const ObjectDetail = React.forwardRef<{ save: () => Promise<void>; checkOnlyImag
                 confirmButtonText="确认生成"
                 cancelButtonText="取消"
             />
+            {pendingCropFile ? (
+                <ImageCropModal
+                    isOpen
+                    imageSrc={pendingCropFile.imageSrc}
+                    title={cropPreset.title}
+                    description={cropPreset.description}
+                    aspectRatio={cropPreset.aspectRatio}
+                    aspectLabel={cropPreset.aspectLabel}
+                    defaultCropScale={cropPreset.defaultCropScale}
+                    mimeType={pendingCropFile.mimeType}
+                    onClose={closeCropper}
+                    onCropComplete={handleCropComplete}
+                />
+            ) : null}
         </div>
     );
 });

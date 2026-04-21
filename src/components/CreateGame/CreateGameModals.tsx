@@ -81,7 +81,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             >
                                 <span>AVG</span>
                                 <span className={styles.createTypeOptionLockedTag}>
-                                    {isMiniProgram ? '需邀请码' : '需邀请码'}
+                                    {isMiniProgram ? '新' : '新'}
                                 </span>
                             </button>
                             <button
@@ -125,72 +125,6 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 bindPhoneActionHint="绑定后可在小程序端和 PC 端使用同一个账号。"
                 onBindPhoneAction={onOpenBindPhoneGuide}
             />
-
-            {isInviteCodeModalOpen && (
-                <div
-                    className={styles.createTypeModalOverlay}
-                    onClick={handleInviteCodeCancel}
-                >
-                    <div
-                        className={styles.createTypeModal}
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <div className={styles.createTypeModalHeader}>
-                            <div className={styles.createTypeModalTitle}>输入邀请码</div>
-                            <button
-                                type="button"
-                                onClick={handleInviteCodeCancel}
-                                className={styles.inviteCodeCloseButton}
-                                aria-label="关闭"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className={styles.createTypeModalDesc}>
-                            该功能需要邀请码才能使用，请输入正确的邀请码。
-                        </div>
-                        <div className={styles.inviteCodeInputContainer}>
-                            <input
-                                type="text"
-                                className={`${styles.inviteCodeInput} ${inviteCodeError ? styles.inviteCodeInputError : ''}`}
-                                value={inviteCodeInput}
-                                onChange={(event) => {
-                                    setInviteCodeInput(event.target.value);
-                                    if (inviteCodeError) {
-                                        setInviteCodeError('');
-                                    }
-                                }}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Enter') {
-                                        handleInviteCodeConfirm();
-                                    }
-                                }}
-                                placeholder="请输入邀请码"
-                                autoFocus
-                            />
-                            {inviteCodeError && (
-                                <div className={styles.inviteCodeErrorText}>{inviteCodeError}</div>
-                            )}
-                        </div>
-                        <div className={styles.createTypeModalFooter}>
-                            <button
-                                type="button"
-                                onClick={handleInviteCodeCancel}
-                                className={styles.createTypeCancelButton}
-                            >
-                                取消
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleInviteCodeConfirm}
-                                className={styles.inviteCodeConfirmButton}
-                            >
-                                确认
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 };

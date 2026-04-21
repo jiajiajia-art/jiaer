@@ -113,6 +113,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const originalCharacterDataRef = useRef<Character[]>([]);
     const [deleteVariationModalOpen, setDeleteVariationModalOpen] = useState(false);
     const [pendingVariationToDelete, setPendingVariationToDelete] = useState<{ variation: Variation; character: Character } | null>(null);
+    const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
     // 未保存修改相关状态
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -204,6 +205,44 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
     const pendingImagesRef = useRef(pendingImages);
+    const cloneCharacters = useCallback((list: Character[]): Character[] => (
+        list.map((character) => ({
+            ...character,
+            personality: [...character.personality],
+            relationships: character.relationships.map((relationship) => ({ ...relationship })),
+            variations: character.variations.map((variation) => ({ ...variation })),
+        }))
+    ), []);
+    const buildCharactersFromGameData = useCallback((sourceGameData: AllGameData | WorldInteractionGameData): Character[] => {
+        const convertedCharacters: Character[] = [];
+
+        if (sourceGameData.worldSetting.player) {
+            convertedCharacters.push(playerToCharacter(sourceGameData.worldSetting.player));
+        }
+
+        const npcs = getNpcs(sourceGameData);
+        if (npcs && npcs.length > 0) {
+            const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
+            convertedCharacters.push(...npcCharacters);
+        }
+
+        return convertedCharacters;
+    }, []);
+    const commitSavedCharacters = useCallback((
+        nextCharacters: Character[],
+        nextActiveCharacterId: string,
+        options?: { clearAddState?: boolean },
+    ) => {
+        setCharacterData(nextCharacters);
+        originalCharacterDataRef.current = cloneCharacters(nextCharacters);
+        setActiveCharacterId(nextActiveCharacterId);
+        setHasUnsavedChanges(false);
+
+        if (options?.clearAddState) {
+            setIsAddingNew(false);
+            setNewCharacterData(null);
+        }
+    }, [cloneCharacters]);
 
     useEffect(() => {
         hasUnsavedChangesRef.current = hasUnsavedChanges;
@@ -250,33 +289,22 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     }, [characterData]);
 
-    // 当 gameData 变化时，填充角色数据
+    // 当 gameData 变化时，回填最新角色数据
     useEffect(() => {
         if (!gameData) return;
 
-        const npcs = getNpcs(gameData);
-        const convertedCharacters: Character[] = [];
-        
-        // 如果有玩家数据，先添加玩家
-        if (gameData.worldSetting.player) {
-            convertedCharacters.push(playerToCharacter(gameData.worldSetting.player));
-        }
-        
-        // 如果有 NPC 数据，添加 NPC
-        if (npcs && npcs.length > 0) {
-            const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
-            convertedCharacters.push(...npcCharacters);
-        }
-
+        const convertedCharacters = buildCharactersFromGameData(gameData);
         setCharacterData(convertedCharacters);
-        // 保存原始数据用于比较
-        originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
+        originalCharacterDataRef.current = cloneCharacters(convertedCharacters);
         setHasUnsavedChanges(false);
-        
-        if (convertedCharacters.length > 0 && !isAddingNew) {
-            setActiveCharacterId(convertedCharacters[0].id);
-        }
-    }, [gameData, isAddingNew]);
+
+        setActiveCharacterId((prev) => {
+            if (prev && convertedCharacters.some((character) => character.id === prev)) {
+                return prev;
+            }
+            return convertedCharacters[0]?.id || '';
+        });
+    }, [buildCharactersFromGameData, cloneCharacters, gameData]);
 
     // 将 characterData 转换为 npcSetting 格式
     const getNpcSettingData = useCallback((): NPCSetting | WorldNPCSetting | null => {
@@ -418,6 +446,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             api,
             userPoints,
             updateUser,
+            characterData,
             setCharacterData,
             setActiveCharacterId,
             setIsAddingNew,
@@ -439,7 +468,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             pendingImageUrlsRef,
             onDataChange,
         });
-    }, [fileId, mode, api, userPoints, activeCharacterId, isAddingNew, newCharacterData, pendingImages, pendingImageUrlsRef, onDataChange]);
+    }, [fileId, mode, api, userPoints, characterData, activeCharacterId, isAddingNew, newCharacterData, pendingImages, pendingImageUrlsRef, onDataChange]);
 
     // 获取当前显示的角色（统一处理新增和编辑模式）
     const currentCharacter = isAddingNew && newCharacterData
@@ -748,13 +777,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             }
 
             // 先保存表单
-            const saveSuccess = await handlers.confirmEdit(characterToSave);
-            if (!saveSuccess) {
+            const saveResult = await handlers.confirmEdit(characterToSave);
+            if (!saveResult.success) {
                 return false;
             }
 
+            commitSavedCharacters(saveResult.characters, saveResult.activeCharacterId, {
+                clearAddState: saveResult.clearAddState,
+            });
+
             // 后上传图片
-            const characterId = isAddingNew && newCharacterData ? null : activeCharacterId;
+            const characterId = saveResult.savedCharacterId;
             if (characterId && pendingImages[characterId]) {
                 const pendingForChar = pendingImages[characterId];
                 for (const [variant, pending] of Object.entries(pendingForChar)) {
@@ -782,21 +815,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 clearPendingImagesForCharacter(characterId);
             }
 
-            if (gameData) {
-                const npcs = getNpcs(gameData);
-                const convertedCharacters: Character[] = [];
-                if (gameData.worldSetting.player) {
-                    convertedCharacters.push(playerToCharacter(gameData.worldSetting.player));
-                }
-                if (npcs && npcs.length > 0) {
-                    const npcCharacters = npcs.map((npc: NPC | WorldNPC, index: number) => npcToCharacter(npc, index));
-                    convertedCharacters.push(...npcCharacters);
-                }
-                originalCharacterDataRef.current = JSON.parse(JSON.stringify(convertedCharacters));
-            }
-
             setHasUnsavedChanges(false);
             setFieldErrors({});
+            onDataChange?.();
             return true;
         } finally {
             setIsSavingCharacter(false);
@@ -960,9 +981,6 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 必填字段列表（除了描述外的所有字段）
     const requiredFields = ['name', 'gender', 'identity', 'appearance', 'speech'];
-    
-    // 字段错误状态
-    const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
     const handleUploadVariationImage = async (variation: Variation, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

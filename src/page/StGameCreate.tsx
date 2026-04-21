@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGameCreate.module.css';
@@ -8,6 +8,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { StConfig, STRegexScript, STCharBookEntry } from '../utils/stRender';
 import AssetsUpload from '../components/StGame/AssetsUpload';
 import getGameDataApi from '../api/home/getGameData';
+import gameTagsApi from '../api/gameTags/gameTagsApi';
+import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -23,6 +25,18 @@ const emptyConfig: StConfig = {
   },
 };
 
+const THEME_TAG_MIN = 1;
+const THEME_TAG_MAX = 2;
+type RequiredFieldKey = 'title' | 'themeTags';
+
+const normalizeThemeTagIds = (value: unknown): number[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => Number(item))
+    .filter((item) => Number.isInteger(item) && item > 0)
+    .slice(0, THEME_TAG_MAX);
+};
+
 const StGameCreate: React.FC = () => {
   const nav = useNavigate();
   const [params] = useSearchParams();
@@ -34,6 +48,13 @@ const StGameCreate: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
+  const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
+  const [themeTagError, setThemeTagError] = useState('');
+  const [highlightField, setHighlightField] = useState<RequiredFieldKey | ''>('');
+  const titleRowRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const themeTagsPanelRef = useRef<HTMLDivElement>(null);
 
   const scripts: STRegexScript[] = ((cfg.extensions?.regex_scripts) || []) as STRegexScript[];
   const entries: STCharBookEntry[] = (((cfg.extensions?.character_book)?.entries) || []) as STCharBookEntry[];
@@ -94,10 +115,10 @@ const StGameCreate: React.FC = () => {
         if (j?.config) {
           setCfg({ ...emptyConfig, ...j.config });
           setAppId(appIdFromQuery);
-          if (typeof j?.config?.persona?.name === 'string') {
-            setTitle(j.config.persona.name as string);
-          } else if (typeof j?.config?.data?.title === 'string') {
+          if (typeof j?.config?.data?.title === 'string') {
             setTitle(j.config.data.title as string);
+          } else if (typeof j?.config?.persona?.name === 'string') {
+            setTitle(j.config.persona.name as string);
           }
         }
       } catch {
@@ -109,6 +130,22 @@ const StGameCreate: React.FC = () => {
     };
   }, [appIdFromQuery]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await gameTagsApi.getGameTagsTree();
+        if (!resp.data?.success || cancelled) return;
+        setAvailableThemeTags(flattenThemeTags(resp.data.data || []));
+      } catch {
+        // ignore theme tag load errors
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // 补充：与自定义模式一致，编辑模式下通过 /auth/games/info 读取游戏信息（用于标题等元数据）
   useEffect(() => {
     let destroyed = false;
@@ -118,8 +155,8 @@ const StGameCreate: React.FC = () => {
         const resp = await getGameDataApi.getGameDetail({ fileId: appIdFromQuery });
         const data: any = resp?.data?.data;
         if (destroyed) return;
-        if (data && typeof data.title === 'string' && !title) {
-          setTitle(data.title);
+        if (data && typeof data.title === 'string') {
+          setTitle((prev) => prev || data.title);
         }
       } catch (_err) {
         // 静默失败，不打断流程
@@ -128,11 +165,107 @@ const StGameCreate: React.FC = () => {
     return () => { destroyed = true; };
   }, [appIdFromQuery]);
 
-  const saveConfig = async (): Promise<string> => {
+  useEffect(() => {
+    if (!highlightField || step !== 1) return;
+
+    const targetTimer = window.setTimeout(() => {
+      const target = highlightField === 'title' ? titleRowRef.current : themeTagsPanelRef.current;
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (highlightField === 'title') {
+        titleInputRef.current?.focus();
+      }
+    }, 0);
+
+    const clearTimer = window.setTimeout(() => {
+      setHighlightField((current) => current === highlightField ? '' : current);
+    }, 3200);
+
+    return () => {
+      window.clearTimeout(targetTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [highlightField, step]);
+
+  useEffect(() => {
+    let destroyed = false;
+    (async () => {
+      if (!appIdFromQuery) return;
+      try {
+        const resp = await getGameDataApi.getGameDetail({ fileId: appIdFromQuery });
+        const data: any = resp?.data?.data;
+        if (!destroyed) {
+          setSelectedThemeTagIds(normalizeThemeTagIds(data?.theme_tag_ids));
+        }
+      } catch {
+        // ignore theme tag hydrate errors
+      }
+    })();
+    return () => { destroyed = true; };
+  }, [appIdFromQuery]);
+
+  const handleThemeTagToggle = (tagId: number) => {
+    setSelectedThemeTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        const next = prev.filter((id) => id !== tagId);
+        if (next.length >= THEME_TAG_MIN) {
+          setThemeTagError('');
+        }
+        return next;
+      }
+      if (prev.length >= THEME_TAG_MAX) {
+        setThemeTagError('请选择 1~2 个作品标签');
+        return prev;
+      }
+      setThemeTagError('');
+      setHighlightField((current) => current === 'themeTags' ? '' : current);
+      return [...prev, tagId];
+    });
+  };
+
+  const validateThemeTags = (): boolean => {
+    if (selectedThemeTagIds.length < THEME_TAG_MIN || selectedThemeTagIds.length > THEME_TAG_MAX) {
+      setThemeTagError('请选择 1~2 个作品标签');
+      return false;
+    }
+    setThemeTagError('');
+    return true;
+  };
+
+  const guideToRequiredField = (field: RequiredFieldKey, message: string) => {
+    window.alert(message);
+    setStep(1);
+    setHighlightField(field);
+  };
+
+  const validateRequiredFields = (): boolean => {
     setError('');
     if (!title.trim()) {
-      setError('请填写标题');
-      throw new Error('请填写标题');
+      const message = '标题未填，请先填写标题。';
+      setError(message);
+      guideToRequiredField('title', message);
+      return false;
+    }
+
+    if (!validateThemeTags()) {
+      const message = '题材未填，请先选择作品标签。';
+      setError(message);
+      guideToRequiredField('themeTags', message);
+      return false;
+    }
+
+    return true;
+  };
+
+  const saveConfig = async (): Promise<string> => {
+    setError('');
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      setError('标题未填，请先填写标题。');
+      throw new Error('标题未填，请先填写标题。');
+    }
+
+    if (!validateThemeTags()) {
+      throw new Error('请选择 1~2 个作品标签');
     }
 
     try {
@@ -161,12 +294,15 @@ const StGameCreate: React.FC = () => {
 
       // 在提交前，按照当前条目顺序写入优先级（1..N）
       const finalCfg = (() => {
-        const current = { ...cfg } as any;
+        const current = {
+          ...cfg,
+          data: { ...((cfg as any).data || {}), title: trimmedTitle },
+          persona: { ...((cfg as any).persona || {}), name: trimmedTitle },
+        } as any;
         const ents = ((current.extensions && current.extensions.character_book && current.extensions.character_book.entries) || []) as any[];
         const withPriority = (Array.isArray(ents) ? ents : []).map((it, i) => ({ ...it, priority: i + 1 }));
-        current.extensions = current.extensions || {};
-        current.extensions.character_book = current.extensions.character_book || {};
-        current.extensions.character_book.entries = withPriority;
+        current.extensions = { ...(current.extensions || {}) };
+        current.extensions.character_book = { ...(current.extensions.character_book || {}), entries: withPriority };
         return current;
       })();
 
@@ -176,6 +312,10 @@ const StGameCreate: React.FC = () => {
         body: JSON.stringify(finalCfg),
       });
       if (!r2.ok) throw new Error(await r2.text());
+      await gameTagsApi.setGameTagsForGame({
+        fileId: String(id),
+        tagIds: selectedThemeTagIds,
+      });
       return id;
     } catch (e: any) {
       setError(String(e?.message || e));
@@ -186,6 +326,7 @@ const StGameCreate: React.FC = () => {
   };
 
   const toServer = async () => {
+    if (!validateRequiredFields()) return;
     try {
       const id = await saveConfig();
       nav(`/st/${id}`);
@@ -195,6 +336,7 @@ const StGameCreate: React.FC = () => {
   };
 
   const finishToStats = async () => {
+    if (!validateRequiredFields()) return;
     try {
       const id = await saveConfig();
       nav(`/createGame?mode=stats&gameId=${encodeURIComponent(id)}`);
@@ -218,14 +360,50 @@ const StGameCreate: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.formRow}>
+        <div
+          ref={titleRowRef}
+          className={`${styles.formRow} ${highlightField === 'title' ? styles.requiredHighlight : ''}`}
+        >
           <label>标题</label>
           <input
-            className={styles.text}
+            ref={titleInputRef}
+            className={`${styles.text} ${highlightField === 'title' ? styles.inputHighlight : ''}`}
             value={title}
-            onChange={e => setTitle(e.target.value)}
+            onChange={e => {
+              setTitle(e.target.value);
+              setHighlightField((current) => current === 'title' ? '' : current);
+            }}
           />
         </div>
+
+        {step === 1 && (
+          <div
+            ref={themeTagsPanelRef}
+            className={`${styles.themeTagsPanel} ${highlightField === 'themeTags' ? styles.requiredHighlight : ''}`}
+          >
+            <div className={styles.themeTagsHeader}>
+              <span className={styles.themeTagsLabel}>作品标签<span className={styles.requiredMark}>*</span></span>
+              <span className={styles.themeTagsHint}>最少 1 个，最多 2 个</span>
+            </div>
+            <div className={styles.themeTagsWrap}>
+              {availableThemeTags.map((tag) => {
+                const active = selectedThemeTagIds.includes(tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className={`${styles.themeTagChip} ${active ? styles.themeTagChipActive : ''}`}
+                    onClick={() => handleThemeTagToggle(tag.id)}
+                    title={tag.pathLabel || tag.name}
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })}
+            </div>
+            {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
+          </div>
+        )}
 
         {step === 1 && (
           <div className={styles.columns}>

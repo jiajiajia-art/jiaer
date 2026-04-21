@@ -1,108 +1,203 @@
-import React, { useState, useRef, useCallback } from 'react';
-import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
+import React, { useCallback, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import ReactCrop, { centerCrop } from 'react-image-crop';
 import type { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { IoClose } from 'react-icons/io5';
+import {
+    buildCropExportAttempts,
+    CROP_EXPORT_ERROR_MESSAGE,
+    MAX_UPLOAD_IMAGE_SIZE,
+} from '../../utils/uploadImageCrop';
 import styles from './ImageCropModal.module.css';
 
 interface ImageCropModalProps {
     isOpen: boolean;
     imageSrc: string;
+    title: string;
+    description: string;
+    aspectRatio: number;
+    aspectLabel: string;
+    defaultCropScale: number;
+    mimeType?: string;
     onClose: () => void;
-    onCropComplete: (croppedBlob: Blob) => void;
-    aspectRatio?: number; // 默认 16/9
-    outputWidth?: number; // 输出宽度，默认 800
-    outputHeight?: number; // 输出高度，默认 450 (16:9)
+    onCropComplete: (croppedBlob: Blob) => void | Promise<void>;
 }
+
+type CropMetrics = {
+    image: HTMLImageElement;
+    sx: number;
+    sy: number;
+    sourceWidth: number;
+    sourceHeight: number;
+};
 
 const ImageCropModal: React.FC<ImageCropModalProps> = ({
     isOpen,
     imageSrc,
+    title,
+    description,
+    aspectRatio,
+    aspectLabel,
+    defaultCropScale,
+    mimeType = 'image/jpeg',
     onClose,
     onCropComplete,
-    aspectRatio = 16 / 9,
-    outputWidth = 800,
-    outputHeight = 450,
 }) => {
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportError, setExportError] = useState('');
     const imgRef = useRef<HTMLImageElement>(null);
 
-    // 居中裁剪框
-    const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
-        const { width, height } = e.currentTarget;
-        const crop = centerCrop(
-            makeAspectCrop(
-                {
-                    unit: '%',
-                    width: 90,
-                },
-                aspectRatio,
-                width,
-                height,
-            ),
-            width,
-            height,
-        );
-        setCrop(crop);
-    }, [aspectRatio]);
+    const createDefaultCrop = useCallback((
+        mediaWidth: number,
+        mediaHeight: number,
+    ): PixelCrop => {
+        const safeScale = Math.min(Math.max(defaultCropScale, 0.01), 1);
+        const mediaAspectRatio = mediaWidth / mediaHeight;
 
-    // 获取裁剪区域的 canvas
-    const getCroppedImage = useCallback((): Promise<Blob | null> => {
+        let maxWidth = mediaWidth;
+        let maxHeight = mediaHeight;
+
+        if (mediaAspectRatio > aspectRatio) {
+            maxWidth = mediaHeight * aspectRatio;
+        } else {
+            maxHeight = mediaWidth / aspectRatio;
+        }
+
+        const cropWidth = Math.max(Math.round(maxWidth * safeScale), 1);
+        const cropHeight = Math.max(Math.round(maxHeight * safeScale), 1);
+
+        return centerCrop(
+            {
+                unit: 'px',
+                width: cropWidth,
+                height: cropHeight,
+                x: 0,
+                y: 0,
+            },
+            mediaWidth,
+            mediaHeight,
+        ) as PixelCrop;
+    }, [aspectRatio, defaultCropScale]);
+
+    const onImageLoad = useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
+        const { width, height } = event.currentTarget;
+        const nextCrop = createDefaultCrop(width, height);
+        setCrop(nextCrop);
+        setCompletedCrop(nextCrop);
+        setExportError('');
+    }, [createDefaultCrop]);
+
+    const getCropMetrics = useCallback((): CropMetrics | null => {
+        const image = imgRef.current;
+        if (!image || !completedCrop?.width || !completedCrop?.height) {
+            return null;
+        }
+
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+
+        return {
+            image,
+            sx: Math.round(completedCrop.x * scaleX),
+            sy: Math.round(completedCrop.y * scaleY),
+            sourceWidth: Math.max(Math.round(completedCrop.width * scaleX), 1),
+            sourceHeight: Math.max(Math.round(completedCrop.height * scaleY), 1),
+        };
+    }, [completedCrop]);
+
+    const exportAttempt = useCallback((
+        metrics: CropMetrics,
+        exportMimeType: string,
+        exportScale: number,
+        exportQuality?: number,
+    ): Promise<Blob | null> => {
         return new Promise((resolve) => {
-            const image = imgRef.current;
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const context = canvas.getContext('2d');
 
-            if (!image || !ctx || !completedCrop) {
+            if (!context) {
                 resolve(null);
                 return;
             }
 
-            const scaleX = image.naturalWidth / image.width;
-            const scaleY = image.naturalHeight / image.height;
+            const targetWidth = Math.max(Math.round(metrics.sourceWidth * exportScale), 1);
+            const targetHeight = Math.max(Math.round(metrics.sourceHeight * exportScale), 1);
 
-            canvas.width = outputWidth;
-            canvas.height = outputHeight;
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
 
-            ctx.drawImage(
-                image,
-                completedCrop.x * scaleX,
-                completedCrop.y * scaleY,
-                completedCrop.width * scaleX,
-                completedCrop.height * scaleY,
+            context.drawImage(
+                metrics.image,
+                metrics.sx,
+                metrics.sy,
+                metrics.sourceWidth,
+                metrics.sourceHeight,
                 0,
                 0,
-                outputWidth,
-                outputHeight,
+                targetWidth,
+                targetHeight,
             );
 
             canvas.toBlob(
-                (blob) => {
-                    resolve(blob);
-                },
-                'image/jpeg',
-                0.9,
+                (blob) => resolve(blob),
+                exportMimeType,
+                exportQuality,
             );
         });
-    }, [completedCrop, outputWidth, outputHeight]);
+    }, []);
 
-    const handleConfirm = async () => {
-        const blob = await getCroppedImage();
-        if (blob) {
-            onCropComplete(blob);
+    const getCroppedImage = useCallback(async (): Promise<Blob | null> => {
+        const metrics = getCropMetrics();
+        if (!metrics) {
+            return null;
         }
-        onClose();
-    };
 
-    if (!isOpen) return null;
+        for (const attempt of buildCropExportAttempts(mimeType)) {
+            const blob = await exportAttempt(metrics, attempt.mimeType, attempt.scale, attempt.quality);
+            if (blob && blob.size <= MAX_UPLOAD_IMAGE_SIZE) {
+                return blob;
+            }
+        }
 
-    return (
-        <div className={styles.overlay} onClick={onClose}>
-            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        return null;
+    }, [exportAttempt, getCropMetrics, mimeType]);
+
+    const handleConfirm = useCallback(async () => {
+        setIsExporting(true);
+        setExportError('');
+        try {
+            const blob = await getCroppedImage();
+            if (blob) {
+                await onCropComplete(blob);
+                return;
+            }
+
+            setExportError(CROP_EXPORT_ERROR_MESSAGE);
+        } finally {
+            setIsExporting(false);
+        }
+    }, [getCroppedImage, onCropComplete]);
+
+    if (!isOpen || typeof document === 'undefined') return null;
+
+    const modalContent = (
+        <div
+            className={styles.overlay}
+            onClick={() => {
+                if (!isExporting) {
+                    onClose();
+                }
+            }}
+        >
+            <div className={styles.modal} onClick={(event) => event.stopPropagation()}>
                 <div className={styles.header}>
-                    <h3>调整封面</h3>
-                    <button className={styles.closeBtn} onClick={onClose}>
+                    <h3>{title}</h3>
+                    <button type="button" className={styles.closeBtn} onClick={onClose} disabled={isExporting}>
                         <IoClose size={20} />
                     </button>
                 </div>
@@ -110,16 +205,20 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 <div className={styles.body}>
                     <div className={styles.cropContainer}>
                         <ReactCrop
+                            key={imageSrc}
                             crop={crop}
-                            onChange={(_, percentCrop) => setCrop(percentCrop)}
-                            onComplete={(c) => setCompletedCrop(c)}
+                            onChange={(nextCrop) => {
+                                setCrop(nextCrop);
+                                setExportError('');
+                            }}
+                            onComplete={(nextCrop) => setCompletedCrop(nextCrop)}
                             aspect={aspectRatio}
                             className={styles.reactCrop}
                         >
                             <img
                                 ref={imgRef}
                                 src={imageSrc}
-                                alt="待裁剪封面"
+                                alt={title}
                                 onLoad={onImageLoad}
                                 className={styles.cropImage}
                             />
@@ -127,26 +226,30 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                     </div>
 
                     <div className={styles.hints}>
-                        <p>拖动裁剪框调整封面展示区域</p>
-                        <p>输出尺寸: 16:9</p>
+                        <p>{description}</p>
+                        <p>宽高比: {aspectLabel}</p>
+                        {exportError ? <p className={styles.errorText}>{exportError}</p> : null}
                     </div>
                 </div>
 
                 <div className={styles.footer}>
-                    <button className={styles.cancelBtn} onClick={onClose}>
+                    <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isExporting}>
                         取消
                     </button>
                     <button
+                        type="button"
                         className={styles.confirmBtn}
                         onClick={handleConfirm}
-                        disabled={!completedCrop?.width || !completedCrop?.height}
+                        disabled={isExporting || !completedCrop?.width || !completedCrop?.height}
                     >
-                        确认裁剪
+                        {isExporting ? '裁剪中...' : '确认'}
                     </button>
                 </div>
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default ImageCropModal;
