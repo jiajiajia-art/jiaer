@@ -54,7 +54,7 @@ interface ScenesPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
     fileId?: string | null;
     onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
-    onDataChange?: () => void;
+    onDataChange?: () => void | Promise<void>;
     mode?: string;
 }
 
@@ -124,6 +124,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     // 暂存图片相关状态
     const [pendingImages, setPendingImages] = useState<{ [sceneId: string]: { [variant: string]: PendingImage } }>({});
     const pendingImageUrlsRef = useRef<{ [key: string]: string }>({});
+    const isBatchImageRefreshPendingRef = useRef(false);
 
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
@@ -285,6 +286,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setSceneData,
                 setSubsceneDataBySceneId,
                 setActiveSceneId,
+                setActiveSceneDraft,
                 setActiveSubsceneId,
                 setActiveSubsceneDraft,
                 setIsAddingNew,
@@ -313,6 +315,9 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onSingleSceneCostModalOpen: handleSingleSceneCostModalOpen,
                 onWorldMapCostModalOpen: handleWorldMapCostModalOpen,
                 onDataChange,
+                markBatchImageRefreshPending: () => {
+                    isBatchImageRefreshPendingRef.current = true;
+                },
             }),
         [
             fileId,
@@ -359,8 +364,72 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         handlersRef.current.openAddNewSubscene();
     }, []);
 
+    const mergeImageFieldsFromGameData = useCallback((nextGameData: AllGameData | WorldInteractionGameData) => {
+        const scenes = getScenes(nextGameData);
+        if (!scenes || scenes.length === 0) return;
+
+        const nextSceneImages = new Map<string, string>();
+        scenes.forEach((scene) => {
+            if (scene.id) {
+                nextSceneImages.set(String(scene.id), scene.image || '');
+            }
+        });
+
+        setSceneData((prev) =>
+            prev.map((scene) => {
+                if (!nextSceneImages.has(scene.id)) return scene;
+                return { ...scene, image: nextSceneImages.get(scene.id) || '' };
+            })
+        );
+
+        setActiveSceneDraft((prev) => {
+            if (!prev) return prev;
+            if (!nextSceneImages.has(prev.id)) return prev;
+            return { ...prev, image: nextSceneImages.get(prev.id) || '' };
+        });
+
+        if (mode === 'worldInteraction') {
+            const nextSubsceneImages = new Map<string, string>();
+            scenes.forEach((scene: any) => {
+                if (!isWorldScene(scene)) return;
+                (scene.subscenes || []).forEach((subscene: any) => {
+                    const subsceneId = String(subscene?.id || subscene?.name || '');
+                    if (subsceneId) {
+                        nextSubsceneImages.set(subsceneId, subscene?.image || '');
+                    }
+                });
+            });
+
+            setSubsceneDataBySceneId((prev) => {
+                const next: Record<string, WorldSubScene[]> = { ...(prev || {}) };
+                Object.entries(next).forEach(([sceneId, subscenes]) => {
+                    next[sceneId] = (subscenes || []).map((subscene: any) => {
+                        const subsceneId = String(subscene?.id || subscene?.name || '');
+                        if (!nextSubsceneImages.has(subsceneId)) return subscene;
+                        return { ...subscene, image: nextSubsceneImages.get(subsceneId) || '' };
+                    });
+                });
+                return next;
+            });
+
+            setActiveSubsceneDraft((prev) => {
+                if (!prev) return prev;
+                const nextImage = nextSubsceneImages.get(prev.id);
+                if (nextImage === undefined) return prev;
+                return { ...prev, image: nextImage };
+            });
+        }
+    }, [mode]);
+
     useEffect(() => {
         if (!gameData) return;
+        if (hasUnsavedChangesRef.current) {
+            if (isBatchImageRefreshPendingRef.current) {
+                mergeImageFieldsFromGameData(gameData);
+                isBatchImageRefreshPendingRef.current = false;
+            }
+            return;
+        }
         const scenes = getScenes(gameData);
         if (scenes && scenes.length > 0) {
             const convertedScenes: LocalScene[] = scenes.map((scene) => {
@@ -395,7 +464,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setActiveSceneId(prev => prev || convertedScenes[0].id);
             }
         }
-    }, [gameData]);
+        isBatchImageRefreshPendingRef.current = false;
+    }, [gameData, mergeImageFieldsFromGameData]);
 
     useEffect(() => {
         const loadMusicList = async () => {
@@ -556,8 +626,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const handleConfirmGenerateAllSceneImages = useCallback(async () => {
         setSceneCostModalOpen(false);
         await handlers.confirmGenerateAllSceneImages(sceneCostPoints);
-        onDataChange?.();
-    }, [handlers, sceneCostPoints, onDataChange, userPoints]);
+    }, [handlers, sceneCostPoints]);
 
     const handleCancelGenerateAllSceneImages = useCallback(() => {
         setSceneCostModalOpen(false);
