@@ -151,6 +151,14 @@ const StGameCreate: React.FC = () => {
         setAppId(id);
       }
 
+      // 同步游戏标题到 Custom App 元数据（用于卡片标题/列表展示）
+      const titleResp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${id}/meta/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim() }),
+      });
+      if (!titleResp.ok) throw new Error(await titleResp.text());
+
       // 在提交前，按照当前条目顺序写入优先级（1..N）
       const finalCfg = (() => {
         const current = { ...cfg } as any;
