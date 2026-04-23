@@ -9,16 +9,21 @@
 .title { font-size: 20px; font-weight: 700; color: #fff; margin: 0; }
 .closeBtn { background: transparent; border: none; cursor: pointer; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .closeImg { width: 40px; height: 40px; filter: brightness(0) invert(1); }
-.body { padding: 16px 24px 6px; }
-.field { margin-bottom: 14px; }
-.label { font-size: 13px; color: #666; margin-bottom: 6px; display: block; font-weight: 600; }
-.input { width: 100%; box-sizing: border-box; border: 1px solid #e6e6e6; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; background: #fafafa; }
-.textarea { width: 100%; box-sizing: border-box; min-height: 96px; border: 1px solid #e6e6e6; border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; resize: vertical; background: #fafafa; }
-.radio { display: flex; gap: 14px; font-size: 14px; color: #444; }
+.body { padding: 18px 24px 8px; }
+.field { margin-bottom: 16px; }
+.visibilityField { margin-top: 4px; margin-bottom: 10px; }
+.label { font-size: 13px; color: #666; margin-bottom: 8px; display: block; font-weight: 600; }
+.input { width: 100%; box-sizing: border-box; border: 1px solid rgba(251, 70, 85, 0.22); border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; background: #fff9fa; }
+.textarea { width: 100%; box-sizing: border-box; min-height: 96px; border: 1px solid rgba(251, 70, 85, 0.22); border-radius: 10px; padding: 10px 12px; font-size: 14px; outline: none; resize: vertical; background: #fff9fa; }
+.helperText { margin-top: 6px; color: #999; font-size: 12px; text-align: right; }
+.radioGroup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 18px; padding: 12px 14px; border: 1px solid rgba(251, 70, 85, 0.22); border-radius: 12px; background: #fff9fa; }
+.radioOption { display: flex; align-items: flex-start; gap: 8px; min-width: 0; color: #444; font-size: 14px; line-height: 1.45; cursor: pointer; }
+.radioOption input { margin: 2px 0 0; flex-shrink: 0; }
+.radioText { display: block; word-break: break-word; }
 .footer { display: flex; justify-content: center; gap: 18px; padding: 16px 24px 22px; background: #fff; }
 .btn { width: 220px; height: 56px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; }
-.btnSecondary { color: #fff; background-image: url('/data/assets/create/我再想想框.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
-.btnPrimary { color: #FB4655; background-image: url('/data/assets/create/确认删除框.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
+.btnSecondary { color: #FB4655; background-image: url('/data/assets/create/确认删除框.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
+.btnPrimary { color: #fff; background-image: url('/data/assets/create/我再想想框.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .endMask { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); z-index: 1500; }
 .endCard { width: 520px; max-width: 90vw; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
@@ -26,3 +31,11 @@
 .endTitle { font-size: 18px; font-weight: 700; color: #fff; }
 .endBody { padding: 20px; text-align: center; color: #666; }
 .endFooter { display: flex; justify-content: center; padding: 14px 20px 22px; background: #fff; }
+
+@media (max-width: 768px) {
+  .body { padding: 16px 18px 8px; }
+  .field { margin-bottom: 18px; }
+  .radioGroup { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+  .footer { gap: 14px; padding: 14px 18px 20px; }
+  .btn { width: min(10rem, 42vw); height: 52px; }
+}

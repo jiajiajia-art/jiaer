@@ -10,11 +10,23 @@ interface GalgameHistoryModalProps {
     isOpen: boolean;
     history: HistoryWithId[];
     backgroundImage: string;
+    hasMoreBefore?: boolean;
+    loadingMoreBefore?: boolean;
+    onLoadMoreBefore?: () => Promise<void> | void;
     onRegenerate?: (messageIndex: number) => void;
     onEditSave?: (historyIndex: number, content: string) => Promise<boolean>;
 }
 
-const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgroundImage }: GalgameHistoryModalProps) => {
+const GalgameHistoryModal = ({
+    isOpen,
+    history,
+    onRegenerate,
+    onEditSave,
+    backgroundImage,
+    hasMoreBefore = false,
+    loadingMoreBefore = false,
+    onLoadMoreBefore,
+}: GalgameHistoryModalProps) => {
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editContent, setEditContent] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
@@ -38,8 +50,16 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
     }, [editContent, editingIndex, adjustTextareaHeight]);
 
     // 当历史记录变化或模态框打开时，滚动到底部
+    const previousFirstIndexRef = useRef<number | null>(null);
+
     useEffect(() => {
-        if (isOpen && modalBodyRef.current) {
+        const firstIndex = history[0]?.absoluteIndex ?? null;
+        const prependedEarlierHistory = previousFirstIndexRef.current !== null
+            && firstIndex !== null
+            && firstIndex < previousFirstIndexRef.current;
+        previousFirstIndexRef.current = firstIndex;
+
+        if (isOpen && modalBodyRef.current && !prependedEarlierHistory) {
             // 使用 requestAnimationFrame 和 setTimeout 确保 DOM 已完全渲染
             const scrollToBottom = () => {
                 if (modalBodyRef.current) {
@@ -55,6 +75,24 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
             });
         }
     }, [isOpen, history]);
+
+    const handleBodyScroll = useCallback(() => {
+        const container = modalBodyRef.current;
+        if (!container || !hasMoreBefore || loadingMoreBefore || !onLoadMoreBefore) {
+            return;
+        }
+        if (container.scrollTop > 80) {
+            return;
+        }
+        const previousHeight = container.scrollHeight;
+        Promise.resolve(onLoadMoreBefore()).then(() => {
+            requestAnimationFrame(() => {
+                const next = modalBodyRef.current;
+                if (!next) return;
+                next.scrollTop = next.scrollHeight - previousHeight + next.scrollTop;
+            });
+        });
+    }, [hasMoreBefore, loadingMoreBefore, onLoadMoreBefore]);
 
     const processedAssistantContent = useMemo(() => {
         if (!isOpen) return [];
@@ -82,12 +120,12 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
 
     // 计算每条消息在原始历史中的索引
     const getMessageIndex = (itemIndex: number): number => {
-        return itemIndex;
+        return history[itemIndex]?.absoluteIndex ?? itemIndex;
     };
 
     const handleRegenerate = (itemIndex: number) => {
         if (onRegenerate) {
-            const messageIndex = getMessageIndex(itemIndex + 1);
+            const messageIndex = getMessageIndex(itemIndex) + 1;
             logVisualButtonClick("history_regenerate");
             onRegenerate(messageIndex);
         }
@@ -133,14 +171,26 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
                 <div className={styles.modalHeader}>
                     <h2 className={styles.modalTitle}>历史记录</h2>
                 </div>
-                <div className={styles.modalBody} ref={modalBodyRef}>
+                <div className={styles.modalBody} ref={modalBodyRef} onScroll={handleBodyScroll}>
                     {history.length === 0 ? (
                         <div className={styles.emptyState}>暂无历史记录</div>
                     ) : (
                         <div className={styles.chatMessages}>
+                            {(hasMoreBefore || loadingMoreBefore) && (
+                                <button
+                                    type="button"
+                                    className={styles.loadMoreButton}
+                                    onClick={() => {
+                                        void onLoadMoreBefore?.();
+                                    }}
+                                    disabled={loadingMoreBefore}
+                                >
+                                    {loadingMoreBefore ? 'Loading...' : 'Load earlier'}
+                                </button>
+                            )}
                             {history.map((item, index) => {
                                 const isUser = item.role === 'user';
-                                const isEditing = editingIndex === index;
+                                const isEditing = editingIndex === item.absoluteIndex;
 
                                 // 用户消息 - 右侧气泡
                                 if (isUser) {
@@ -172,7 +222,7 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
                                                     <div className={styles.editActions}>
                                                         <button
                                                             className={styles.saveButton}
-                                                            onClick={() => handleSaveEdit(index)}
+                                                            onClick={() => handleSaveEdit(item.absoluteIndex)}
                                                             disabled={isSaving}
                                                         >
                                                             <MdCheck />
@@ -198,7 +248,7 @@ const GalgameHistoryModal = ({ isOpen, history, onRegenerate, onEditSave, backgr
                                                         {onEditSave && (
                                                             <button 
                                                                 className={styles.editButton}
-                                                                onClick={() => handleStartEdit(index, item.content || '')}
+                                                                onClick={() => handleStartEdit(item.absoluteIndex, item.content || '')}
                                                                 title="编辑消息"
                                                             >
                                                                 <MdEdit />

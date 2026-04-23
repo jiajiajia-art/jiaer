@@ -79,7 +79,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 className={styles.createTypeOption}
                                 onClick={handleAvgClick}
                             >
-                                <span>AVG</span>
+                                <span>AVG（内测中）</span>
                                 <span className={styles.createTypeOptionLockedTag}>
                                     {isMiniProgram ? '新' : '新'}
                                 </span>

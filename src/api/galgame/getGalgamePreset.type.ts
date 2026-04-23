@@ -119,6 +119,11 @@ export interface SceneWithFullNPCs extends Omit<Scene, "npcs"> {
 export interface GetGalgameHistoryResponse {
   success: boolean;
   history: History[];
+  total?: number;
+  offset?: number;
+  limit?: number;
+  hasMoreBefore?: boolean;
+  hasMoreAfter?: boolean;
   // 后端返回的已访问场景 ID 列表，最后一个元素为当前所在场景
   visitedScenes?: string[];
   [key: string]: unknown;

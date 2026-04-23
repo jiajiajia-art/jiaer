@@ -12,8 +12,11 @@ const getGalgamePresetApi = {
             responseType: 'blob'
         });
     },
-    getGalgameHistory: (sessionId: string) =>
-        api.get<GetGalgameHistoryResponse>(`/visual/session/${sessionId}/history`),
+    getGalgameHistory: (
+        sessionId: string,
+        params?: { offset?: number; limit?: number; direction?: 'before' | 'after' }
+    ) =>
+        api.get<GetGalgameHistoryResponse>(`/visual/session/${sessionId}/history`, { params }),
 };
 
 export default getGalgamePresetApi;

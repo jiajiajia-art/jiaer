@@ -8,17 +8,35 @@ import { authFetch } from "../../api/base";
 
 export interface HistoryWithId extends History {
     id: string;
+    absoluteIndex: number;
 }
 
-const useGalgameHistory = () => {
+const HISTORY_PAGE_SIZE = 80;
+
+const useGalgameHistory = (options?: { disabled?: boolean }) => {
     const [history, setHistory] = useState<History[]>([]);
+    const [historyOffset, setHistoryOffset] = useState<number>(0);
+    const [historyTotal, setHistoryTotal] = useState<number>(0);
+    const [hasMoreBefore, setHasMoreBefore] = useState<boolean>(false);
+    const [loadingMoreBefore, setLoadingMoreBefore] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [lastVisitedSceneId, setLastVisitedSceneId] = useState<string | null>(null);
     const initializedRef = useRef<boolean>(false);
     const { sessionId } = useGameStore();
+    const disabled = options?.disabled === true;
 
     const fetchHistory = useCallback(async () => {
+        if (disabled) {
+            setHistory([]);
+            setHistoryOffset(0);
+            setHistoryTotal(0);
+            setHasMoreBefore(false);
+            setLastVisitedSceneId(null);
+            setLoading(false);
+            return;
+        }
+
         if (!sessionId) {
             setLoading(false);
             return;
@@ -27,9 +45,15 @@ const useGalgameHistory = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await getGalgamePresetApi.getGalgameHistory(sessionId);
+            const response = await getGalgamePresetApi.getGalgameHistory(sessionId, {
+                limit: HISTORY_PAGE_SIZE,
+                direction: 'before'
+            });
             if (response.data?.success && response.data.history) {
                 setHistory(response.data.history);
+                setHistoryOffset(Number(response.data.offset || 0));
+                setHistoryTotal(Number(response.data.total || response.data.history.length));
+                setHasMoreBefore(response.data.hasMoreBefore === true);
 
                 // 从返回的 visitedScenes 中解析当前所在场景 ID（最后一个）
                 const visitedScenes = (response.data as any).visitedScenes;
@@ -45,7 +69,32 @@ const useGalgameHistory = () => {
         } finally {
             setLoading(false);
         }
-    }, [sessionId]);
+    }, [disabled, sessionId]);
+
+    const loadMoreBefore = useCallback(async () => {
+        if (disabled || !sessionId || loadingMoreBefore || !hasMoreBefore) {
+            return;
+        }
+
+        try {
+            setLoadingMoreBefore(true);
+            const response = await getGalgamePresetApi.getGalgameHistory(sessionId, {
+                offset: historyOffset,
+                limit: HISTORY_PAGE_SIZE,
+                direction: 'before'
+            });
+            if (response.data?.success && Array.isArray(response.data.history)) {
+                setHistory((prev) => [...response.data.history, ...prev]);
+                setHistoryOffset(Number(response.data.offset || 0));
+                setHistoryTotal(Number(response.data.total || historyTotal));
+                setHasMoreBefore(response.data.hasMoreBefore === true);
+            }
+        } catch (error) {
+            setError(error instanceof Error ? error.message : 'Failed to load earlier history');
+        } finally {
+            setLoadingMoreBefore(false);
+        }
+    }, [disabled, hasMoreBefore, historyOffset, historyTotal, loadingMoreBefore, sessionId]);
 
     const editHistory = useCallback(async (historyIndex: number, content: string): Promise<boolean> => {
         if (!sessionId) {
@@ -89,6 +138,9 @@ const useGalgameHistory = () => {
         } else {
             initializedRef.current = false;
             setHistory([]);
+            setHistoryOffset(0);
+            setHistoryTotal(0);
+            setHasMoreBefore(false);
             setLoading(false);
         }
     }, [sessionId]);
@@ -97,15 +149,21 @@ const useGalgameHistory = () => {
         const sessionPrefix = sessionId || 'session';
         return history.map((item, index) => ({
             ...item,
-            id: `${sessionPrefix}-${index}-${item.role}`,
+            absoluteIndex: historyOffset + index,
+            id: `${sessionPrefix}-${historyOffset + index}-${item.role}`,
         }));
-    }, [history, sessionId]);
+    }, [history, historyOffset, sessionId]);
 
     return { 
         history: historyWithId, 
         loading, 
         error, 
         refreshHistory: fetchHistory,
+        loadMoreBefore,
+        hasMoreBefore,
+        loadingMoreBefore,
+        historyTotal,
+        historyOffset,
         editHistory,
         lastVisitedSceneId,
     };

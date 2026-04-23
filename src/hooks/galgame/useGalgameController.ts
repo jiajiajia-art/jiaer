@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
 import { useGalgameStep } from "./useGalgameStep";
@@ -16,21 +16,41 @@ import replayApi from "../../api/galgame/replay";
 
 export type { Message } from "./useGalgameMessage";
 
+export type ReplaySpeed = 0.5 | 1 | 1.5 | 2;
+
+type ReplayStep = {
+    id?: string | number;
+    type?: string;
+    content?: string;
+    sceneId?: string | null;
+    sceneImage?: string;
+    isPlayer?: boolean;
+    is_player?: boolean;
+    [key: string]: unknown;
+};
+
+const REPLAY_SPEED_OPTIONS: ReplaySpeed[] = [0.5, 1, 1.5, 2];
+const REPLAY_PAGE_SIZE = 200;
+const REPLAY_PREFETCH_REMAINING = 40;
+
 export const useGalgameController = () => {
     const { user } = useAuthStore();
     const { fileId, sessionId } = useGameStore();
     const navigate = useNavigate();
+    const { replayId: replayIdParam } = useParams<{ replayId?: string }>();
     const [searchParams] = useSearchParams();
 
     // 回放模式检测
-    const replayId = searchParams.get('replayId');
+    const replayId = replayIdParam || searchParams.get('replayId');
     const mode = searchParams.get('mode');
-    const isReplay = useMemo(() => mode === 'replay' && !!replayId, [mode, replayId]);
+    const isReplay = useMemo(() => (mode === 'replay' && !!replayId) || !!replayIdParam, [mode, replayId, replayIdParam]);
+    const isPublicReplayRoute = useMemo(() => !!replayIdParam, [replayIdParam]);
+    const playableSessionId = isReplay ? null : sessionId;
 
     // 存储完整 allSteps 的 key（按 sessionId 隔离）
     const allStepsStorageKey = useMemo(() => {
-        return sessionId ? `galgame-allsteps-${sessionId}` : 'galgame-allsteps';
-    }, [sessionId]);
+        return playableSessionId ? `galgame-allsteps-${playableSessionId}` : 'galgame-allsteps';
+    }, [playableSessionId]);
 
     const [backgroundImage, setBackgroundImage] = useState<string>('');
     const [currentScene, setCurrentScene] = useState<GetGalgamePresetResponse['scenes']['scenes'][0] | null>(null);
@@ -49,6 +69,13 @@ export const useGalgameController = () => {
     const [requestTimeoutVisible, setRequestTimeoutVisible] = useState<boolean>(false);
     const [errorModalVisible, setErrorModalVisible] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [replayMeta, setReplayMeta] = useState<any>(null);
+    const [replaySteps, setReplaySteps] = useState<ReplayStep[]>([]);
+    const [replayIndex, setReplayIndex] = useState<number>(0);
+    const [replayTotalSteps, setReplayTotalSteps] = useState<number>(0);
+    const [replayLoadedOffset, setReplayLoadedOffset] = useState<number>(0);
+    const [replayHasMore, setReplayHasMore] = useState<boolean>(false);
+    const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(1);
 
     const currentRequestIdRef = useRef<number>(0);
     const historyProcessedRef = useRef<boolean>(false);
@@ -60,8 +87,20 @@ export const useGalgameController = () => {
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
     const lastAutoResendRef = useRef<{ content: string; ts: number } | null>(null);
+    const replayStepsRef = useRef<ReplayStep[]>([]);
+    const replayLoadingPageRef = useRef<boolean>(false);
+    const replayLoadedOffsetRef = useRef<number>(0);
+    const replayHasMoreRef = useRef<boolean>(false);
 
-    const { history, refreshHistory, loading: historyLoading, editHistory } = useGalgameHistory();
+    const {
+        history,
+        refreshHistory,
+        loadMoreBefore,
+        hasMoreBefore,
+        loadingMoreBefore,
+        loading: historyLoading,
+        editHistory
+    } = useGalgameHistory({ disabled: isReplay });
 
     // 根据 assistant 消息数量计算当前是第几回合（用于前几回合免费 / UI 提示）
     const assistantRoundCount = useMemo(() => {
@@ -125,6 +164,10 @@ export const useGalgameController = () => {
         previousIsTypingRef.current = false;
     }, []);
 
+    useEffect(() => {
+        replayStepsRef.current = replaySteps;
+    }, [replaySteps]);
+
     // 资源切换时重置状态
     useEffect(() => {
         historyProcessedRef.current = false;
@@ -132,12 +175,53 @@ export const useGalgameController = () => {
         setInitialMessages([]);
         setGameStarted(false);
         setShowStoryIntro(false);
+        setReplaySteps([]);
+        setReplayIndex(0);
+        setReplayTotalSteps(0);
+        setReplayLoadedOffset(0);
+        setReplayHasMore(false);
+        replayLoadedOffsetRef.current = 0;
+        replayHasMoreRef.current = false;
+        replayLoadingPageRef.current = false;
+        setReplaySpeed(1);
+        setIsAutoPlay(false);
         // 强制重置加载标记，确保数据重新加载
         presetDataLoadedRef.current = false;
-    }, [fileId]);
+    }, [fileId, isReplay, replayId]);
+
+    useEffect(() => {
+        if (!isReplay || !replayId) {
+            setReplayMeta(null);
+            return;
+        }
+
+        let cancelled = false;
+
+        const run = async () => {
+            try {
+                const response = await replayApi.getReplayMeta(replayId);
+                if (!cancelled) {
+                    setReplayMeta(response.data?.replay || null);
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setReplayMeta(null);
+                    console.error('[Replay] Failed to load replay meta:', error);
+                    toast.error('Failed to load replay.');
+                }
+            }
+        };
+
+        void run();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isReplay, replayId]);
 
     const loadPresetData = useCallback(async () => {
-        if (!fileId) {
+        const targetFileId = isReplay ? String(replayMeta?.fileId || '') : String(fileId || '');
+        if (!targetFileId) {
             return;
         }
 
@@ -148,7 +232,7 @@ export const useGalgameController = () => {
         try {
             setIsLoading(true);
             presetDataLoadedRef.current = true;
-            const response = await getGalgamePresetApi.getGalgameFileId(fileId);
+            const response = await getGalgamePresetApi.getGalgameFileId(targetFileId);
 
             if (response.data.data) {
                 setPresetData(response.data.data);
@@ -158,9 +242,9 @@ export const useGalgameController = () => {
                 if (scenes && scenes.length > 0) {
                     let initialScene = scenes[0];
                     // 直接从历史数据获取 visitedScenes 的最后一个值，而不是使用 hook
-                    if (!isReplay && sessionId) {
+                    if (!isReplay && playableSessionId) {
                         try {
-                            const historyResponse = await getGalgamePresetApi.getGalgameHistory(sessionId);
+                            const historyResponse = await getGalgamePresetApi.getGalgameHistory(playableSessionId);
                             if (historyResponse.data?.success && historyResponse.data.visitedScenes) {
                                 const visitedScenes = historyResponse.data.visitedScenes;
                                 
@@ -218,12 +302,12 @@ export const useGalgameController = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, sessionId, isReplay]);
+    }, [fileId, isReplay, playableSessionId, replayMeta?.fileId]);
 
     useEffect(() => {
         presetDataLoadedRef.current = false;
         loadPresetData();
-    }, [fileId, isReplay]);
+    }, [loadPresetData]);
 
     // 根据场景 ID 更新场景和背景图
     const updateSceneFromId = useCallback((sceneId: string | null) => {
@@ -260,6 +344,27 @@ export const useGalgameController = () => {
         }
     }, [presetData, currentScene?.id]);
 
+    const syncReplaySceneForIndex = useCallback((steps: ReplayStep[], index: number) => {
+        for (let i = Math.min(index, steps.length - 1); i >= 0; i--) {
+            const step = steps[i];
+            if (!step || step.type !== 'scene_change') {
+                continue;
+            }
+
+            if (step.sceneId) {
+                updateSceneFromId(step.sceneId);
+            }
+
+            if (step.sceneImage) {
+                const sceneImageUrl = getImageUrl(step.sceneImage);
+                if (sceneImageUrl) {
+                    setBackgroundImage(sceneImageUrl);
+                }
+            }
+            return;
+        }
+    }, [updateSceneFromId]);
+
     const stepHandlers = useGalgameStep({
         sessionId,
         historyLength: assistantRoundCount,
@@ -291,6 +396,10 @@ export const useGalgameController = () => {
         isReplay,
         onExhausted: () => {
             if (isReplay) {
+                if (replayTotalSteps > 0) {
+                    setReplayIndex(replayTotalSteps - 1);
+                }
+                setIsAutoPlay(false);
                 setReplayFinished(true);
             }
         }
@@ -366,13 +475,27 @@ export const useGalgameController = () => {
     useEffect(() => {
         const run = async () => {
             if (!isReplay || !replayId) return;
+            if (isPublicReplayRoute && !replayMeta?.fileId) return;
             try {
                 setIsLoading(true);
-                const resp = await replayApi.getReplayAllSteps(replayId);
-                const steps = Array.isArray(resp.data?.allSteps) ? resp.data.allSteps : [];
+                const resp = await replayApi.getReplaySteps(replayId, {
+                    offset: 0,
+                    limit: REPLAY_PAGE_SIZE
+                });
+                const steps: ReplayStep[] = Array.isArray(resp.data?.steps)
+                    ? resp.data.steps
+                    : [];
                 // 回放模式：始终隐藏玩家台词（用户侧输入）
-                const filteredSteps = steps.filter((s: any) => !(s && s.type === 'dialogue' && (s.isPlayer === true || s.is_player === true)));
+                const filteredSteps = steps;
                 if (filteredSteps.length === 0) {
+                    setReplaySteps([]);
+                    setReplayIndex(0);
+                    setReplayTotalSteps(0);
+                    setReplayLoadedOffset(0);
+                    setReplayHasMore(false);
+                    replayLoadedOffsetRef.current = 0;
+                    replayHasMoreRef.current = false;
+                    setIsAutoPlay(false);
                     toast.error('回放内容为空');
                     return;
                 }
@@ -380,18 +503,26 @@ export const useGalgameController = () => {
                 setShowStoryIntro(false);
                 setGameStarted(true);
                 setReplayFinished(false);
+                setIsAutoPlay(false);
+                setReplaySpeed(1);
+                setReplaySteps(filteredSteps);
+                setReplayIndex(0);
+                setReplayTotalSteps(Number(resp.data?.total || filteredSteps.length));
+                setReplayLoadedOffset(Number(resp.data?.offset || 0) + filteredSteps.length);
+                setReplayHasMore(resp.data?.hasMore === true);
+                replayLoadedOffsetRef.current = Number(resp.data?.offset || 0) + filteredSteps.length;
+                replayHasMoreRef.current = resp.data?.hasMore === true;
                 setInitialMessages([]);
+                setCompletedSteps([]);
 
                 const [first, ...rest] = filteredSteps;
+                previousStepRef.current = first || null;
+                previousIsTypingRef.current = false;
                 stepHandlers.setCurrentStep(first || null);
                 stepHandlers.setStepQueue(rest || []);
                 stepHandlers.setShowNextButton(first?.type !== 'choice');
 
-                const firstScene = filteredSteps.find((s: any) => s && s.type === 'scene_change' && (s.sceneId || s.sceneImage));
-                if (firstScene && firstScene.sceneImage) {
-                    const sceneImageUrl = getImageUrl(firstScene.sceneImage);
-                    if (sceneImageUrl) setBackgroundImage(sceneImageUrl);
-                }
+                syncReplaySceneForIndex(filteredSteps, 0);
             } catch (e) {
                 console.error('[Replay] 获取回放步骤失败:', e);
                 toast.error('加载回放失败');
@@ -401,7 +532,71 @@ export const useGalgameController = () => {
         };
         void run();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isReplay, replayId]);
+    }, [isPublicReplayRoute, isReplay, replayId, replayMeta?.fileId]);
+
+    useEffect(() => {
+        if (!isReplay || replaySteps.length === 0 || !stepHandlers.currentStep) {
+            return;
+        }
+
+        const index = replaySteps.findIndex(step => step === stepHandlers.currentStep);
+        if (index < 0) {
+            return;
+        }
+
+        setReplayIndex(index);
+        if (index < replayTotalSteps - 1) {
+            setReplayFinished(false);
+        } else {
+            setIsAutoPlay(false);
+        }
+    }, [isReplay, replaySteps, replayTotalSteps, stepHandlers.currentStep]);
+
+    const loadNextReplayPage = useCallback(async () => {
+        if (!isReplay || !replayId || !replayHasMore || replayLoadingPageRef.current) {
+            return;
+        }
+
+        replayLoadingPageRef.current = true;
+        try {
+            const resp = await replayApi.getReplaySteps(replayId, {
+                offset: replayLoadedOffsetRef.current,
+                limit: REPLAY_PAGE_SIZE
+            });
+            const nextSteps: ReplayStep[] = Array.isArray(resp.data?.steps)
+                ? resp.data.steps
+                : [];
+            const filteredSteps = nextSteps;
+            setReplaySteps((prev) => {
+                if (filteredSteps.length === 0) return prev;
+                const existingIds = new Set(prev.map((step) => String(step?.id ?? '')));
+                const merged = [...prev];
+                for (const step of filteredSteps) {
+                    const id = String(step?.id ?? '');
+                    if (id && existingIds.has(id)) continue;
+                    merged.push(step);
+                }
+                return merged;
+            });
+            setReplayLoadedOffset(Number(resp.data?.offset || replayLoadedOffset) + nextSteps.length);
+            setReplayTotalSteps(Number(resp.data?.total || replayTotalSteps));
+            setReplayHasMore(resp.data?.hasMore === true);
+            replayLoadedOffsetRef.current = Number(resp.data?.offset || replayLoadedOffset) + nextSteps.length;
+            replayHasMoreRef.current = resp.data?.hasMore === true;
+        } catch (error) {
+            console.error('[Replay] Failed to load next replay page:', error);
+        } finally {
+            replayLoadingPageRef.current = false;
+        }
+    }, [isReplay, replayHasMore, replayId, replayLoadedOffset, replayTotalSteps]);
+
+    useEffect(() => {
+        if (!isReplay || !replayHasMore) return;
+        const remainingLoadedSteps = replaySteps.length - replayIndex - 1;
+        if (remainingLoadedSteps <= REPLAY_PREFETCH_REMAINING) {
+            void loadNextReplayPage();
+        }
+    }, [isReplay, loadNextReplayPage, replayHasMore, replayIndex, replaySteps.length]);
 
     useEffect(() => {
         previousIsTypingRef.current = isTyping;
@@ -699,7 +894,7 @@ export const useGalgameController = () => {
     }, [allStepsForTextModal, stepHandlers.currentStep, initialMessages]);
 
     const addConversion = useCallback(async () => {
-        if (!fileId || !user?.user.id) {
+        if (!fileId || isReplay || !user?.user.id) {
             return;
         }
         try {
@@ -710,10 +905,10 @@ export const useGalgameController = () => {
         } catch (error) {
             console.error('记录游戏统计失败:', error);
         }
-    }, [fileId, user?.user.id]);
+    }, [fileId, isReplay, user?.user.id]);
 
     const handleStartGame = useCallback(async () => {
-        if (!sessionId) {
+        if (!playableSessionId) {
             toast.error('没有 sessionId，无法开始游戏');
             return;
         }
@@ -739,7 +934,7 @@ export const useGalgameController = () => {
                 setShowStoryIntro(true);
             }
         });
-    }, [sessionId, stepHandlers, resetDisplayedSteps, addConversion]);
+    }, [playableSessionId, stepHandlers, resetDisplayedSteps, addConversion]);
 
     const handleNextMessage = useCallback(() => {
         if (gameStarted && stepHandlers.showNextButton) {
@@ -748,14 +943,66 @@ export const useGalgameController = () => {
     }, [gameStarted, stepHandlers]);
 
     const handleAutoPlayToggle = useCallback(() => {
-        setIsAutoPlay(prev => !prev);
+        setIsAutoPlay(prev => {
+            if (isReplay && (replayTotalSteps <= 1 || replayIndex >= replayTotalSteps - 1)) {
+                return false;
+            }
+            return !prev;
+        });
+    }, [isReplay, replayIndex, replayTotalSteps]);
+
+    const handleReplaySeek = useCallback(async (targetIndex: number) => {
+        if (!isReplay) {
+            return;
+        }
+
+        const target = Math.min(Math.max(Math.round(targetIndex), 0), Math.max(replayTotalSteps - 1, 0));
+        while (target >= replayStepsRef.current.length && replayHasMoreRef.current && !replayLoadingPageRef.current) {
+            await loadNextReplayPage();
+        }
+
+        const steps = replayStepsRef.current;
+        if (steps.length === 0) {
+            return;
+        }
+
+        const clampedIndex = Math.min(target, steps.length - 1);
+        const targetStep = steps[clampedIndex] || null;
+
+        setReplayIndex(clampedIndex);
+        setReplayFinished(false);
+        if (clampedIndex >= Math.max(replayTotalSteps - 1, 0)) {
+            setIsAutoPlay(false);
+        }
+
+        setShowStoryIntro(false);
+        setGameStarted(true);
+        setInitialMessages([]);
+        setCompletedSteps(steps.slice(0, clampedIndex));
+        previousStepRef.current = targetStep;
+        previousIsTypingRef.current = false;
+
+        stepHandlers.setCurrentStep(targetStep);
+        stepHandlers.setStepQueue(steps.slice(clampedIndex + 1));
+        stepHandlers.setShowNextButton(targetStep?.type !== 'choice');
+        syncReplaySceneForIndex(steps, clampedIndex);
+    }, [isReplay, loadNextReplayPage, replayHasMore, replayTotalSteps, stepHandlers, syncReplaySceneForIndex]);
+
+    const handleReplaySpeedChange = useCallback((speed: ReplaySpeed) => {
+        if (!REPLAY_SPEED_OPTIONS.includes(speed)) {
+            return;
+        }
+        setReplaySpeed(speed);
     }, []);
 
     useEffect(() => {
-        // 文本模式下始终自动播放，不受按钮控制
-        const shouldAutoPlay = isTextMode ? true : isAutoPlay;
+        const shouldAutoPlay = isReplay ? isAutoPlay : (isTextMode ? true : isAutoPlay);
         
         if (!shouldAutoPlay || !gameStarted) return;
+        if (isReplay && replayTotalSteps > 0 && replayIndex >= replayTotalSteps - 1) {
+            setIsAutoPlay(false);
+            return;
+        }
         if (stepHandlers.isWaitingForData) return;
         if (messageUtilsWithTyping.finalIsTyping) return;
         if (!stepHandlers.showNextButton) return;
@@ -770,12 +1017,12 @@ export const useGalgameController = () => {
             if (shouldAutoPlay && !messageUtilsWithTyping.finalIsTyping && stepHandlers.showNextButton && messageUtilsWithTyping.currentMessage?.type !== 'choice' && !stepHandlers.isWaitingForData) {
                 handleNextMessage();
             }
-        }, 1000);
+        }, isReplay ? 2000 / replaySpeed : 1000);
 
         return () => {
             clearTimeout(autoPlayTimer);
         };
-    }, [isAutoPlay, isTextMode, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
+    }, [isAutoPlay, isTextMode, isReplay, replayIndex, replaySpeed, replaySteps.length, replayTotalSteps, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
         if (!messageUtilsWithTyping.currentMessage || messageUtilsWithTyping.currentMessage.type !== 'choice' || !messageUtilsWithTyping.currentMessage.options) {
@@ -842,12 +1089,24 @@ export const useGalgameController = () => {
         } catch (e) {
             console.warn('[Galgame] 清理临时状态失败:', e);
         }
+        if (isPublicReplayRoute) {
+            if (typeof window !== 'undefined' && window.history.length > 1) {
+                navigate(-1);
+                return;
+            }
+            navigate('/home');
+            return;
+        }
         navigate('/');
-    }, [allStepsStorageKey, navigate]);
+    }, [allStepsStorageKey, isPublicReplayRoute, navigate]);
 
     return {
         isReplay,
         replayFinished,
+        replayIndex,
+        replayStepsCount: replayTotalSteps,
+        replaySpeed,
+        replaySpeedOptions: REPLAY_SPEED_OPTIONS,
         isLoading,
         backgroundImage,
         currentScene,
@@ -875,11 +1134,16 @@ export const useGalgameController = () => {
         convertStepsToTextModalFormat: messageUtilsWithTyping.convertStepsToTextModalFormat,
         history,
         refreshHistory,
+        loadMoreHistoryBefore: loadMoreBefore,
+        hasMoreHistoryBefore: hasMoreBefore,
+        loadingMoreHistoryBefore: loadingMoreBefore,
         editHistory,
         stepHandlers,
         handleStartGame,
         handleNextMessage,
         handleAutoPlayToggle,
+        handleReplaySeek,
+        handleReplaySpeedChange,
         handleChoiceClick,
         handleCustomInputSubmit,
         handleRetryLastRequest,

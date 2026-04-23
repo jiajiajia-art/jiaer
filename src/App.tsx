@@ -60,6 +60,7 @@ function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />
+        <Route path="/replay/:replayId" element={<Galgame />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />

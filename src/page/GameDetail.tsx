@@ -19,6 +19,8 @@ import { IoChevronBack } from 'react-icons/io5';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
+import ReplayList from '../components/Galgame/ReplayList';
+import type { ReplayVisibility } from '../api/galgame/replay';
 import type { SaveSummaryItem } from '../api/galgame/saves';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
@@ -37,6 +39,12 @@ const DEFAULT_PLAY_STATUS = {
     hasContinueState: true,
     hasSave: true,
 };
+
+const REPLAY_VISIBILITY_TABS: Array<{ value: ReplayVisibility; label: string }> = [
+    { value: 'public', label: '公开' },
+    { value: 'unlisted', label: '仅链接可见' },
+    { value: 'private', label: '私密' },
+];
 
 // 判断是否点赞的辅助函数
 const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
@@ -71,6 +79,8 @@ const GameDetail: React.FC = () => {
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
+    const [isReplayDrawerOpen, setIsReplayDrawerOpen] = useState(false);
+    const [activeReplayVisibility, setActiveReplayVisibility] = useState<ReplayVisibility>('public');
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
 
@@ -82,8 +92,14 @@ const GameDetail: React.FC = () => {
 
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
+    const creatorUserId = useMemo(() => user?.user?.userId, [user?.user?.userId]);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
     const isStartButtonLoading = isLoading || isPlayStatusLoading;
+    const replayManagerUserId = useMemo(() => {
+        if (!creatorUserId) return '';
+        return String(creatorUserId);
+    }, [creatorUserId]);
+    const canManageReplayTabs = Boolean(replayManagerUserId);
     const isGalgame = useMemo(() => {
         const mapServerEngine = (engine?: string) => {
             switch ((engine || '').toUpperCase()) {
@@ -537,6 +553,38 @@ const GameDetail: React.FC = () => {
         setIsLoadSaveOpen(true);
     };
 
+    const closeStartOptions = () => {
+        setIsStartOptionsOpen(false);
+    };
+
+    const openReplayDrawer = useCallback(() => {
+        setIsStartOptionsOpen(false);
+        setIsReplayDrawerOpen(true);
+    }, []);
+
+    const closeReplayDrawer = useCallback(() => {
+        setIsReplayDrawerOpen(false);
+    }, []);
+
+    useEffect(() => {
+        if (!isReplayDrawerOpen) return;
+
+        const previousOverflow = document.body.style.overflow;
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                closeReplayDrawer();
+            }
+        };
+
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleEscape);
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener('keydown', handleEscape);
+        };
+    }, [closeReplayDrawer, isReplayDrawerOpen]);
+
     const handlePreviewSave = async (item: SaveSummaryItem) => {
         // 加载详情并展示在 TEXT 区域
         try {
@@ -628,23 +676,35 @@ const GameDetail: React.FC = () => {
                     {/* 标题和类型 */}
                     <div className={styles.headerSection}>
                         <div className={styles.titleRow}>
-                            <div className={styles.titleLeft}>
+                            <div className={`${styles.titleLeft} ${isGalgame ? styles.titleLeftWithReplay : ''}`}>
                                 <div className={styles.titleWithButton}>
                                     <h1 className={styles.gameTitle}>
                                         {game.title || '未命名游戏'}
                                     </h1>
-                                    <button
-                                        className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline}`}
-                                        onClick={handleLike}
-                                        disabled={isLikeLoading}
-                                        aria-label="点赞"
-                                    >
-                                        <img
-                                            src={`${import.meta.env.BASE_URL}data/assets/gameDetail/${isLiked ? '点赞' : '未点赞'}.png`}
-                                            alt="点赞"
-                                        />
-                                        <span>{likeCount || 0}</span>
-                                    </button>
+                                    <div className={`${styles.headerActions} ${isGalgame ? styles.headerActionsWithReplay : ''}`}>
+                                        <button
+                                            className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline} ${isGalgame ? styles.headerLikeButton : ''}`}
+                                            onClick={handleLike}
+                                            disabled={isLikeLoading}
+                                            aria-label="点赞"
+                                        >
+                                            <img
+                                                src={`${import.meta.env.BASE_URL}data/assets/gameDetail/${isLiked ? '点赞' : '未点赞'}.png`}
+                                                alt="点赞"
+                                            />
+                                            <span>{likeCount || 0}</span>
+                                        </button>
+                                        {isGalgame && (
+                                            <button
+                                                type="button"
+                                                className={`${styles.replayEntryButton} ${styles.headerReplayButton} ${styles.desktopReplayButton}`}
+                                                onClick={openReplayDrawer}
+                                            >
+                                                <span className={styles.replayEntryLabel}>回放集锦</span>
+                                                <span className={styles.replayEntryArrow} aria-hidden="true">&gt;</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className={styles.gameMeta}>
                                     <span className={styles.gameType}>{game.game_tags}</span>
@@ -657,6 +717,16 @@ const GameDetail: React.FC = () => {
                                             {likeCount}人评价
                                         </span> */}
                                     </div>
+                                    {isGalgame && (
+                                        <button
+                                            type="button"
+                                            className={`${styles.replayEntryButton} ${styles.mobileReplayButton}`}
+                                            onClick={openReplayDrawer}
+                                        >
+                                            <span className={styles.replayEntryLabel}>回放集锦</span>
+                                            <span className={styles.replayEntryArrow} aria-hidden="true">&gt;</span>
+                                        </button>
+                                    )}
                                 </div>
                                 {/* 作者信息放在标题下面 */}
                                 <div className={styles.authorSection}>
@@ -677,7 +747,6 @@ const GameDetail: React.FC = () => {
                     <div className={styles.descriptionSection}>
                         <p>{normalizeNewlines(game.description || '暂无描述')}</p>
                     </div>
-
                 </div>
             </div>
 
@@ -740,51 +809,119 @@ const GameDetail: React.FC = () => {
                 onLoad={handleLoadSave}
                 loadButtonText={'开始体验'}
             />
-            {isStartOptionsOpen && (
-                <div className={styles.startOptionsOverlay} onClick={() => setIsStartOptionsOpen(false)}>
-                    <div className={styles.startOptionsModal} onClick={(e) => e.stopPropagation()}>
+            {isReplayDrawerOpen && (
+                <div className={`${styles.startOptionsOverlay} ${styles.replayDrawerOverlay}`} onClick={closeReplayDrawer}>
+                    <aside
+                        className={styles.replayDrawer}
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="回放集锦"
+                    >
                         <div className={styles.startOptionsHeader}>
-                            <h2 className={styles.startOptionsTitle}>请选择开始方式</h2>
+                            <div className={styles.startOptionsHeaderMain}>
+                                <h2 className={styles.startOptionsTitle}>回放集锦</h2>
+                            </div>
+                            <button
+                                className={`${styles.startOptionsClose} ${styles.replayDrawerClose}`}
+                                onClick={closeReplayDrawer}
+                                aria-label="关闭回放集锦"
+                            >
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        {canManageReplayTabs && (
+                            <div className={styles.replayDrawerTabs} role="tablist" aria-label="回放可见范围筛选">
+                                {REPLAY_VISIBILITY_TABS.map((tab) => {
+                                    const isActive = activeReplayVisibility === tab.value;
+                                    return (
+                                        <button
+                                            key={tab.value}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={isActive}
+                                            tabIndex={isActive ? 0 : -1}
+                                            className={`${styles.replayDrawerTab} ${isActive ? styles.replayDrawerTabActive : ''}`}
+                                            onClick={() => setActiveReplayVisibility(tab.value)}
+                                        >
+                                            {tab.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <div className={styles.replayDrawerBody}>
+                            {fileId ? (
+                                <ReplayList
+                                    fileId={fileId}
+                                    includeUnlisted={canManageReplayTabs && activeReplayVisibility === 'unlisted'}
+                                    showVisibility={canManageReplayTabs}
+                                    visibility={canManageReplayTabs ? activeReplayVisibility : 'public'}
+                                    currentUserId={replayManagerUserId || undefined}
+                                />
+                            ) : null}
+                        </div>
+                    </aside>
+                </div>
+            )}
+            {isStartOptionsOpen && (
+                <div className={styles.startOptionsOverlay} onClick={closeStartOptions}>
+                    <div
+                        className={styles.startOptionsModal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className={styles.startOptionsHeader}>
+                            <div className={styles.startOptionsHeaderMain}>
+                                <h2 className={styles.startOptionsTitle}>请选择开始方式</h2>
+                            </div>
                             <button
                                 className={styles.startOptionsClose}
-                                onClick={() => setIsStartOptionsOpen(false)}
+                                onClick={closeStartOptions}
                                 aria-label="关闭"
                             >
                                 <img src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} alt="关闭" />
                             </button>
                         </div>
                         <div className={styles.startOptionsButtons}>
-                            <button
-                                className={styles.startOptionsPrimary}
-                                onClick={async () => {
-                                    setIsStartOptionsOpen(false);
-                                    await handleStartNewGame();
-                                }}
-                            >
-                                新的开始
-                            </button>
-                            <button
-                                className={styles.startOptionsSecondary}
-                                disabled={!playStatus.hasContinueState}
-                                onClick={async () => {
-                                    setIsStartOptionsOpen(false);
-                                    await handleStartGame();
-                                }}
-                            >
-                                继续体验
-                            </button>
-                            {isGalgame && (
                                 <button
-                                    className={styles.startOptionsGhost}
-                                    disabled={!playStatus.hasSave}
-                                    onClick={() => {
-                                        setIsStartOptionsOpen(false);
-                                        handleOpenLoadSave();
+                                    className={styles.startOptionsPrimary}
+                                    onClick={async () => {
+                                        closeStartOptions();
+                                        await handleStartNewGame();
                                     }}
                                 >
-                                    读取存档
+                                    新的开始
                                 </button>
-                            )}
+                                <button
+                                    className={styles.startOptionsSecondary}
+                                    disabled={!playStatus.hasContinueState}
+                                    onClick={async () => {
+                                        closeStartOptions();
+                                        await handleStartGame();
+                                    }}
+                                >
+                                    继续体验
+                                </button>
+                                {isGalgame && (
+                                    <button
+                                        className={styles.startOptionsGhost}
+                                        disabled={!playStatus.hasSave}
+                                        onClick={() => {
+                                            closeStartOptions();
+                                            handleOpenLoadSave();
+                                        }}
+                                    >
+                                        读取存档
+                                    </button>
+                                )}
+                                {isGalgame && (
+                                    <button
+                                        className={styles.startOptionsGhost}
+                                        onClick={openReplayDrawer}
+                                    >
+                                        回放
+                                    </button>
+                                )}
                         </div>
                     </div>
                 </div>

@@ -6,6 +6,7 @@ interface SettingsModalProps {
   onClose: () => void;
   onExitGame: () => void;
   onDeleteSession?: () => void;
+  hideExitButton?: boolean;
   isMusicPlaying: boolean;
   onToggleMusic: () => void;
   volume: number;
@@ -17,6 +18,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onExitGame,
   onDeleteSession,
+  hideExitButton = false,
   isMusicPlaying,
   onToggleMusic,
   volume,
@@ -62,7 +64,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 value={Number.isFinite(volumePercent) ? volumePercent : 50}
                 style={
                   {
-                    ['--percent' as any]: `${Number.isFinite(volumePercent) ? volumePercent : 50}%`,
+                    ['--percent' as const]: `${Number.isFinite(volumePercent) ? volumePercent : 50}%`,
                   } as React.CSSProperties
                 }
                 onChange={(e) => onVolumeChange(Number(e.target.value) / 100)}
@@ -80,9 +82,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>重新开始</span>
               </button>
             )}
-            <button className={styles.dangerButton} onClick={onExitGame}>
-              <span>保存并退出</span>
-            </button>
+            {!hideExitButton && (
+              <button className={styles.dangerButton} onClick={onExitGame}>
+                <span>保存并退出</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

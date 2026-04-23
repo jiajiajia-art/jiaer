@@ -4,8 +4,9 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
+import { RiLogoutCircleRLine } from "react-icons/ri";
 import { MdOutlineAutoStories } from "react-icons/md";
-import { MdSettings, MdOutlineAssessment } from "react-icons/md";
+import { MdSettings, MdOutlineAssessment, MdReplay, MdTimeline } from "react-icons/md";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -18,14 +19,14 @@ import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import GameImageRenderer from "../components/Galgame/GameImageRenderer";
 import { useLocation, useNavigate } from "react-router-dom";
 import GameAction from "../api/rpgGame/gameAction";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
 import replayModalStyles from "../components/Galgame/ShareReplayModal.module.css";
-import replayApi from "../api/galgame/replay";
+import replayApi, { buildReplayShareUrl } from "../api/galgame/replay";
 import ServerAttributesPanel from "../components/Galgame/ServerAttributesPanel";
 import SaveModal from "../components/Galgame/SaveModal";
 import LoadSaveListModal from "../components/CreateGame/LoadSaveListModal";
@@ -35,6 +36,16 @@ import betaWhitelistApi from "../api/galgame/betaWhitelist";
 import GameConfirmModal from "../components/Galgame/GameConfirmModal";
 import { useGameDurationTracking } from "../hooks/useGameDurationTracking";
 import { logVisualButtonClick } from "../api/statistics/scriptButtonEvent";
+import type { AxiosError } from "axios";
+import {
+    beginHorizontalDrag,
+    createInitialHorizontalDragState,
+    DESKTOP_MEDIA_QUERY,
+    getNextHorizontalScrollLeft,
+    getNextHorizontalWheelScrollLeft,
+    hasExceededHorizontalDragThreshold,
+    type HorizontalDragState,
+} from "./galgameControlBarDrag";
 
 const Galgame = () => {
     const navigate = useNavigate();
@@ -43,6 +54,7 @@ const Galgame = () => {
     const { fileId, sessionId, galgameBetaAttributes, setGalgameBetaAttributes } = useGameStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
+    const [isReplayControlsOpen, setIsReplayControlsOpen] = useState(false);
     const [isAttributesOpen, setIsAttributesOpen] = useState(false);
     const [isSaveOpen, setIsSaveOpen] = useState(false);
     const [defaultSaveMode, setDefaultSaveMode] = useState<'create' | 'overwrite' | undefined>(() => {
@@ -52,16 +64,30 @@ const Galgame = () => {
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
-    useGameDurationTracking(fileId || undefined);
+    const [createdReplayShare, setCreatedReplayShare] = useState<{
+        visibility: 'public' | 'unlisted';
+        shareUrl: string;
+    } | null>(null);
+    const buttonContainerRef = useRef<HTMLDivElement | null>(null);
+    const buttonBarDragStateRef = useRef<HorizontalDragState>(createInitialHorizontalDragState());
+    const [isDesktopButtonBarInteraction, setIsDesktopButtonBarInteraction] = useState(false);
+    const [isButtonBarDragging, setIsButtonBarDragging] = useState(false);
 
     // 使用统一的控制器 hook
     const controller = useGalgameController();
+
+    // 自动追踪游戏时长（监听页面可见性变化和页面卸载）
+    useGameDurationTracking(!controller.isReplay ? (fileId || undefined) : undefined);
+
+    useEffect(() => {
+        setIsReplayControlsOpen(false);
+    }, [controller.isReplay, location.key]);
 
     // 刷新/直进页面时的兜底：如果未检测过白名单，则尝试拉取一次
     useEffect(() => {
         const run = async () => {
             try {
+                if (controller.isReplay) return;
                 if (!fileId) return;
                 if (galgameBetaAttributes !== null) return;
                 const resp = await betaWhitelistApi.get(fileId);
@@ -72,7 +98,7 @@ const Galgame = () => {
             }
         };
         run();
-    }, [fileId, galgameBetaAttributes, setGalgameBetaAttributes]);
+    }, [controller.isReplay, fileId, galgameBetaAttributes, setGalgameBetaAttributes]);
 
     // 根据进入来源初始化默认保存模式：
     // 读取存档进入 -> 让用户选择新建/覆盖；其余入口 -> 直接新建。
@@ -80,6 +106,31 @@ const Galgame = () => {
         const saveEntry = (location.state as { saveEntry?: string } | null)?.saveEntry;
         setDefaultSaveMode(saveEntry === 'load' ? undefined : 'create');
     }, [location.key, location.state]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return undefined;
+        }
+
+        const mediaQuery = window.matchMedia(DESKTOP_MEDIA_QUERY);
+        const syncDesktopInteraction = () => {
+            setIsDesktopButtonBarInteraction(mediaQuery.matches);
+        };
+
+        syncDesktopInteraction();
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', syncDesktopInteraction);
+            return () => {
+                mediaQuery.removeEventListener('change', syncDesktopInteraction);
+            };
+        }
+
+        mediaQuery.addListener(syncDesktopInteraction);
+        return () => {
+            mediaQuery.removeListener(syncDesktopInteraction);
+        };
+    }, []);
 
     // 处理历史按钮点击（切换显示/隐藏）
     const handleHistoryClick = () => {
@@ -146,6 +197,140 @@ const Galgame = () => {
         setIsDeleteConfirmOpen(true);
     };
 
+    const finishButtonBarDragging = (currentTarget?: HTMLDivElement, pointerId?: number) => {
+        const activePointerId = pointerId ?? buttonBarDragStateRef.current.pointerId;
+        const hadCaptured = buttonBarDragStateRef.current.hasCaptured;
+
+        if (!buttonBarDragStateRef.current.isDragging && buttonBarDragStateRef.current.pointerId === null) {
+            return;
+        }
+
+        buttonBarDragStateRef.current.isDragging = false;
+        buttonBarDragStateRef.current.pointerId = null;
+        buttonBarDragStateRef.current.hasCaptured = false;
+        window.setTimeout(() => {
+            buttonBarDragStateRef.current.moved = false;
+        }, 0);
+        setIsButtonBarDragging(false);
+
+        if (hadCaptured && activePointerId !== null && currentTarget?.hasPointerCapture(activePointerId)) {
+            currentTarget.releasePointerCapture(activePointerId);
+        }
+    };
+
+    const handleButtonBarPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDesktopButtonBarInteraction || event.pointerType !== 'mouse' || event.button !== 0 || !buttonContainerRef.current) {
+            return;
+        }
+
+        buttonBarDragStateRef.current = beginHorizontalDrag(
+            event.pointerId,
+            event.clientX,
+            buttonContainerRef.current.scrollLeft,
+        );
+    };
+
+    const handleButtonBarPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (
+            !isDesktopButtonBarInteraction ||
+            buttonBarDragStateRef.current.pointerId !== event.pointerId ||
+            !buttonBarDragStateRef.current.isDragging ||
+            !buttonContainerRef.current
+        ) {
+            return;
+        }
+
+        if (hasExceededHorizontalDragThreshold(buttonBarDragStateRef.current, event.clientX)) {
+            buttonBarDragStateRef.current.moved = true;
+            setIsButtonBarDragging(true);
+
+            if (!buttonBarDragStateRef.current.hasCaptured) {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                buttonBarDragStateRef.current.hasCaptured = true;
+            }
+        }
+
+        if (!buttonBarDragStateRef.current.moved) {
+            return;
+        }
+
+        buttonContainerRef.current.scrollLeft = getNextHorizontalScrollLeft(
+            buttonBarDragStateRef.current,
+            event.clientX,
+        );
+        event.preventDefault();
+    };
+
+    const handleButtonBarPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDesktopButtonBarInteraction || buttonBarDragStateRef.current.pointerId !== event.pointerId) {
+            return;
+        }
+
+        finishButtonBarDragging(event.currentTarget, event.pointerId);
+    };
+
+    const handleButtonBarPointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDesktopButtonBarInteraction || buttonBarDragStateRef.current.pointerId !== event.pointerId) {
+            return;
+        }
+
+        finishButtonBarDragging(event.currentTarget, event.pointerId);
+    };
+
+    const handleButtonBarLostPointerCapture = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDesktopButtonBarInteraction || buttonBarDragStateRef.current.pointerId !== event.pointerId) {
+            return;
+        }
+
+        finishButtonBarDragging();
+    };
+
+    const handleButtonBarClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (!buttonBarDragStateRef.current.moved) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const handleButtonBarWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+        const buttonContainer = buttonContainerRef.current;
+        if (!buttonContainer) {
+            return;
+        }
+
+        if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+            return;
+        }
+
+        const maxScrollLeft = buttonContainer.scrollWidth - buttonContainer.clientWidth;
+        if (maxScrollLeft <= 0) {
+            return;
+        }
+
+        const nextScrollLeft = getNextHorizontalWheelScrollLeft(
+            buttonContainer.scrollLeft,
+            event.deltaY,
+            maxScrollLeft,
+        );
+
+        if (nextScrollLeft === buttonContainer.scrollLeft) {
+            return;
+        }
+
+        buttonContainer.scrollLeft = nextScrollLeft;
+        event.preventDefault();
+    };
+
+    const handleButtonBarDragStartCapture = (event: React.DragEvent<HTMLDivElement>) => {
+        if (!isDesktopButtonBarInteraction) {
+            return;
+        }
+
+        event.preventDefault();
+    };
+
     const handleConfirmDeleteSession = async () => {
         logVisualButtonClick("settings_restart");
         const userId = user?.user?.id;
@@ -169,6 +354,59 @@ const Galgame = () => {
             setIsDeleteConfirmOpen(false);
         }
     };
+
+    const copyReplayLink = async (shareUrl: string) => {
+        if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                return true;
+            } catch (error) {
+                console.warn('[Replay] Failed to copy replay link with clipboard API:', error);
+            }
+        }
+
+        if (typeof document === 'undefined') {
+            return false;
+        }
+
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.setAttribute('readonly', 'true');
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        textArea.style.pointerEvents = 'none';
+        document.body.appendChild(textArea);
+        textArea.select();
+
+        try {
+            return document.execCommand('copy');
+        } catch (error) {
+            console.warn('[Replay] Failed to copy replay link with fallback:', error);
+            return false;
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    };
+
+    const handleCopyCreatedReplayLink = async () => {
+        if (!createdReplayShare) {
+            return;
+        }
+
+        const copied = await copyReplayLink(createdReplayShare.shareUrl);
+        if (!copied) {
+            toast.error('复制回放链接失败');
+            return;
+        }
+
+        if (createdReplayShare.visibility === 'unlisted') {
+            toast.success('回放链接已复制，仅持链接者可查看');
+            return;
+        }
+
+        toast.success('公开回放链接已复制');
+    };
+
     const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
         logVisualButtonClick('share_replay_create');
         if (!sessionId || !fileId) {
@@ -177,12 +415,35 @@ const Galgame = () => {
         }
         try {
             const resp = await replayApi.createFromSession({ sessionId, fileId, title, description, visibility });
-            if (resp.data?.success) {
-                toast.success('回放已创建，可在“回放列表”查看');
+            const replayId = resp.data?.replayId;
+            if (resp.data?.success && replayId) {
+                const shareUrl = buildReplayShareUrl(replayId);
+                setIsShareOpen(false);
+
+                if (visibility === 'private') {
+                    setCreatedReplayShare(null);
+                    toast.success('回放已创建，仅自己可见');
+                    return;
+                }
+
+                setCreatedReplayShare({ visibility, shareUrl });
             } else {
                 toast.error('创建回放失败');
             }
-        } catch (e) {
+        } catch (error) {
+            const axiosError = error as AxiosError<{ code?: string; message?: string }>;
+            const errorCode = axiosError.response?.data?.code;
+
+            if (errorCode === 'REPLAY_TITLE_CONFLICT') {
+                toast.error('当前游戏内已存在同名回放');
+                return;
+            }
+
+            if (errorCode === 'GENERATION_IN_PROGRESS') {
+                toast.error('剧情生成仍在进行中，请稍后再试');
+                return;
+            }
+
             toast.error('创建回放失败');
         }
     };
@@ -297,7 +558,7 @@ const Galgame = () => {
                         )}
                     </div>
                     {/* 顶部右侧：属性按钮（内测白名单） */}
-                    {galgameBetaAttributes && controller.gameStarted ? (
+                    {!controller.isReplay && galgameBetaAttributes && controller.gameStarted ? (
                         <div className={styles.topButtonsContainer}>
                             <div
                                 className={`${styles.buttonItem} ${isAttributesOpen ? styles.buttonItemActive : ''}`}
@@ -313,14 +574,69 @@ const Galgame = () => {
                     ) : null}
 
 
-                    {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
-                    <div className={styles.buttonContainer}>
-                        <div className={styles.buttonItem}>
-                            <div className={styles.buttonInner}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
-                                <span>{user?.user?.points}</span>
+                    {controller.isReplay && isReplayControlsOpen && (
+                        <div className={styles.replayControlBar}>
+                            <div className={styles.replayProgressHeader}>
+                                <span>进度</span>
+                                <span>
+                                    {controller.replayStepsCount > 0
+                                        ? `${controller.replayIndex + 1}/${controller.replayStepsCount}`
+                                        : '0/0'}
+                                </span>
+                            </div>
+                            <input
+                                className={styles.replayProgressRange}
+                                type="range"
+                                min={0}
+                                max={Math.max(controller.replayStepsCount - 1, 0)}
+                                step={1}
+                                value={Math.min(controller.replayIndex, Math.max(controller.replayStepsCount - 1, 0))}
+                                disabled={controller.replayStepsCount <= 1}
+                                onChange={(event) => {
+                                    controller.handleReplaySeek(Number(event.currentTarget.value));
+                                }}
+                                aria-label="Replay progress"
+                            />
+                            <div className={styles.replaySpeedRow}>
+                                <span className={styles.replaySpeedLabel}>自动播放速度</span>
+                                <div className={styles.replaySpeedOptions}>
+                                    {controller.replaySpeedOptions.map((speed) => (
+                                        <button
+                                            key={speed}
+                                            type="button"
+                                            className={`${styles.replaySpeedButton} ${controller.replaySpeed === speed ? styles.replaySpeedButtonActive : ''}`}
+                                            onClick={() => controller.handleReplaySpeedChange(speed)}
+                                        >
+                                            {speed}x
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
+                    )}
+
+                    {/* 按钮栏移到 mainContent 内，与历史弹窗同级，确保显示在弹窗之上 */}
+                    <div
+                        ref={buttonContainerRef}
+                        className={`${styles.buttonContainer} ${isButtonBarDragging ? styles.buttonContainerDragging : ''}`}
+                        onPointerDown={handleButtonBarPointerDown}
+                        onPointerMove={handleButtonBarPointerMove}
+                        onPointerUp={handleButtonBarPointerUp}
+                        onPointerCancel={handleButtonBarPointerCancel}
+                        onLostPointerCapture={handleButtonBarLostPointerCapture}
+                        onClickCapture={handleButtonBarClickCapture}
+                        onDoubleClickCapture={handleButtonBarClickCapture}
+                        onWheel={handleButtonBarWheel}
+                        onDragStartCapture={handleButtonBarDragStartCapture}
+                    >
+                        {!controller.isReplay && (
+                            <div className={styles.buttonItem}>
+                                <div className={styles.buttonInner}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="积分" />
+                                    <span>{user?.user?.points}</span>
+                                </div>
+                            </div>
+                        )}
                         {/* 存档按钮（仅非回放模式显示） */}
                         {!controller.isReplay && (
                             <div
@@ -345,6 +661,35 @@ const Galgame = () => {
                                 <div className={styles.buttonInner}>
                                     <BiHistory />
                                     <span>历史</span>
+                                </div>
+                            </div>
+                        )}
+                        {!controller.isReplay && controller.gameStarted && (
+                            <div
+                                className={`${styles.buttonItem} ${isShareOpen ? styles.buttonItemActive : ''}`}
+                                onClick={() => {
+                                    logVisualButtonClick('share_replay');
+                                    setIsShareOpen(true);
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className={styles.buttonInner}>
+                                    <MdReplay />
+                                    <span>回放</span>
+                                </div>
+                            </div>
+                        )}
+                        {controller.isReplay && (
+                            <div
+                                className={`${styles.buttonItem} ${isReplayControlsOpen ? styles.buttonItemActive : ''}`}
+                                onClick={() => {
+                                    setIsReplayControlsOpen((prev) => !prev);
+                                }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className={styles.buttonInner}>
+                                    <MdTimeline />
+                                    <span>进度</span>
                                 </div>
                             </div>
                         )}
@@ -387,6 +732,18 @@ const Galgame = () => {
                                 <span>设置</span>
                             </div>
                         </div>
+                        {controller.isReplay && (
+                            <div
+                                className={styles.buttonItem}
+                                onClick={controller.handleExitGame}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                <div className={styles.buttonInner}>
+                                    <RiLogoutCircleRLine />
+                                    <span>退出</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <StoryIntroModal
@@ -400,6 +757,9 @@ const Galgame = () => {
                         isOpen={controller.showGalgameHistory}
                         history={controller.history}
                         backgroundImage={controller.backgroundImage}
+                        hasMoreBefore={controller.hasMoreHistoryBefore}
+                        loadingMoreBefore={controller.loadingMoreHistoryBefore}
+                        onLoadMoreBefore={controller.loadMoreHistoryBefore}
                         onRegenerate={controller.isReplay ? undefined : handleRegenerate}
                         onEditSave={controller.isReplay ? undefined : controller.editHistory}
                     />
@@ -408,8 +768,9 @@ const Galgame = () => {
                     <SettingsModal
                         isOpen={isSettingsOpen}
                         onClose={() => setIsSettingsOpen(false)}
-                        onExitGame={navigateBackSafe}
+                        onExitGame={controller.isReplay ? controller.handleExitGame : navigateBackSafe}
                         onDeleteSession={controller.isReplay ? undefined : handleDeleteSessionInGame}
+                        hideExitButton={controller.isReplay}
                         isMusicPlaying={isMusicPlaying}
                         onToggleMusic={() => {
                             logVisualButtonClick("settings_toggle_bgm");
@@ -420,7 +781,7 @@ const Galgame = () => {
                     />
 
                     {/* 通用属性面板（服务端KV） */}
-                    {galgameBetaAttributes && controller.gameStarted ? (
+                    {!controller.isReplay && galgameBetaAttributes && controller.gameStarted ? (
                         <ServerAttributesPanel
                             isOpen={isAttributesOpen}
                             onClose={() => setIsAttributesOpen(false)}
@@ -447,7 +808,7 @@ const Galgame = () => {
                                 const resp = await (await import('../api/galgame/saves')).savesApi.getDetail(item.saveId, fileId);
                                 const detail = resp.data;
                                 setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
-                            } catch (e) {
+                            } catch {
                                 setPreviewItem(item);
                             }
                         }}
@@ -520,6 +881,91 @@ const Galgame = () => {
                         onSubmit={handleShareReplay}
                         defaultTitle={controller.presetData?.world?.title ? `${controller.presetData.world.title} · 回放` : '我的回放'}
                     />
+
+                    {createdReplayShare && (
+                        <div
+                            className={replayModalStyles.overlay}
+                            style={{ zIndex: 3400 }}
+                            onClick={() => setCreatedReplayShare(null)}
+                        >
+                            <div
+                                className={replayModalStyles.modal}
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="replay-share-result-title"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <div className={replayModalStyles.header}>
+                                    <div className={replayModalStyles.headerContent}>
+                                        <div className={replayModalStyles.titleWrap}>
+                                            <div
+                                                id="replay-share-result-title"
+                                                className={replayModalStyles.title}
+                                            >
+                                                回放已创建
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={replayModalStyles.body}>
+                                    <div
+                                        style={{
+                                            color: '#4b5563',
+                                            fontSize: '14px',
+                                            lineHeight: 1.6,
+                                            marginBottom: '12px',
+                                        }}
+                                    >
+                                        将此链接分享给其他玩家，对方即可在平台查看该回放。
+                                    </div>
+                                    {createdReplayShare.visibility === 'unlisted' && (
+                                        <div
+                                            style={{
+                                                color: '#a56200',
+                                                fontSize: '13px',
+                                                lineHeight: 1.5,
+                                                marginBottom: '12px',
+                                            }}
+                                        >
+                                            仅持有链接的用户可以查看该回放。
+                                        </div>
+                                    )}
+                                    <input
+                                        className={replayModalStyles.input}
+                                        value={createdReplayShare.shareUrl}
+                                        readOnly
+                                        onFocus={(event) => event.currentTarget.select()}
+                                    />
+                                </div>
+                                <div className={replayModalStyles.footer}>
+                                    <button
+                                        type="button"
+                                        className={replayModalStyles.btn}
+                                        style={{
+                                            width: 'min(13rem, calc(50% - 0.5625rem))',
+                                            background: '#E03D4B',
+                                            color: '#fff',
+                                        }}
+                                        onClick={handleCopyCreatedReplayLink}
+                                    >
+                                        复制链接
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={replayModalStyles.btn}
+                                        style={{
+                                            width: 'min(13rem, calc(50% - 0.5625rem))',
+                                            background: '#f3f4f6',
+                                            color: '#111827',
+                                        }}
+                                        onClick={() => setCreatedReplayShare(null)}
+                                    >
+                                        关闭
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 回放结束提示（退出按钮） */}
                     {controller.isReplay && controller.replayFinished && (

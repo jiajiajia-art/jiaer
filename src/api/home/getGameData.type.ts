@@ -1,7 +1,7 @@
 export interface UserGameData {
     id: string;
     file_id: string;
-    creator_user_id: number;
+    creator_user_id: string | number;
     title: string;
     subtitle: string;
     description: string;
