@@ -6,6 +6,7 @@ import { stApi, type StRenderRule } from '../api/stGame';
 import StShowdownText from '../components/StGame/StShowdownText';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
+import { buildStSceneSrcDoc } from '../utils/stSceneHtml';
 
 type CreateResp = {
   success: boolean;
@@ -29,6 +30,7 @@ type SceneMsg =
   | { type: 'st:assistant'; payload: { requestId: string; text: string } }
   | { type: 'st:assistant_delta'; payload: { requestId: string; text: string } }
   | { type: 'st:assistant_done'; payload: { requestId: string } }
+  | { type: 'st:kv:result'; payload: { requestId: string; success: boolean; op: 'get' | 'set' | 'delete'; code?: string; message?: string; kv?: { scope: 'user' | 'session'; namespace?: string; values: Record<string, unknown> } } }
   | { type: 'st:error'; payload: { requestId: string; message: string } }
   | { type: 'st:debug'; payload: { phase: string; message: string; ts: number } };
 
@@ -47,6 +49,10 @@ const StGame: React.FC = () => {
 
   const assetPrefix = useMemo(() => `${HOST_ADDRESS}/public/custom/apps/${appId || ''}/assets`, [appId]);
   const isSceneMode = !!openingHtml.trim();
+  const openingSrcDoc = useMemo(
+    () => buildStSceneSrcDoc(openingHtml, assetPrefix),
+    [openingHtml, assetPrefix],
+  );
 
   const postSceneMessage = (msg: SceneMsg) => {
     const target = sceneIframeRef.current?.contentWindow;
@@ -266,6 +272,79 @@ const StGame: React.FC = () => {
   useEffect(() => {
     if (!isSceneMode || !sessionId || !appId) return;
 
+    const handleSceneKV = async (type: string, payload: Record<string, unknown>) => {
+      const requestId = String(payload.requestId || crypto.randomUUID());
+      const op = type === 'st:kv:set' ? 'set' : type === 'st:kv:delete' ? 'delete' : 'get';
+      const scope = payload.scope === 'user' ? 'user' : 'session';
+      const namespace = typeof payload.namespace === 'string' ? payload.namespace : undefined;
+
+      try {
+        const body: Record<string, unknown> = {
+          scope,
+          namespace,
+          sessionId,
+        };
+        if (op === 'get') {
+          body.keys = Array.isArray(payload.keys) ? payload.keys : undefined;
+          body.prefix = typeof payload.prefix === 'string' ? payload.prefix : undefined;
+          body.limit = typeof payload.limit === 'number' ? payload.limit : undefined;
+        } else if (op === 'set') {
+          body.items = Array.isArray(payload.items) ? payload.items : [];
+        } else {
+          body.keys = Array.isArray(payload.keys) ? payload.keys : [];
+        }
+
+        const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${appId}/kv/${op}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const json = await resp.json().catch(() => ({} as Record<string, unknown>));
+        if (!resp.ok || json?.success === false) {
+          postSceneDebug('kv', `${op} 失败 requestId=${requestId}`);
+          postSceneMessage({
+            type: 'st:kv:result',
+            payload: {
+              requestId,
+              success: false,
+              op,
+              code: String((json as Record<string, unknown>)?.code || 'HTTP_ERROR'),
+              message: String((json as Record<string, unknown>)?.message || resp.statusText || 'KV request failed'),
+            },
+          });
+          return;
+        }
+
+        const data = ((json as Record<string, unknown>)?.data || {}) as Record<string, unknown>;
+        const values = (data.values && typeof data.values === 'object' ? data.values : {}) as Record<string, unknown>;
+        postSceneMessage({
+          type: 'st:kv:result',
+          payload: {
+            requestId,
+            success: true,
+            op,
+            kv: {
+              scope: (data.scope === 'user' ? 'user' : scope),
+              namespace: typeof data.namespace === 'string' ? data.namespace : namespace,
+              values,
+            },
+          },
+        });
+      } catch (err) {
+        postSceneDebug('kv', `${op} 异常 requestId=${requestId}`);
+        postSceneMessage({
+          type: 'st:kv:result',
+          payload: {
+            requestId,
+            success: false,
+            op,
+            code: 'NETWORK_ERROR',
+            message: String((err as Error)?.message || err),
+          },
+        });
+      }
+    };
+
     const handler = (event: MessageEvent) => {
       if (event.source !== sceneIframeRef.current?.contentWindow) return;
       const data = event.data as Record<string, unknown>;
@@ -286,6 +365,11 @@ const StGame: React.FC = () => {
         const text = String(payload.text || '').trim();
         postSceneDebug('bridge', `收到 st:return，text="${text || '继续(兜底)'}"`);
         void send(text || '继续');
+        return;
+      }
+
+      if (type === 'st:kv:get' || type === 'st:kv:set' || type === 'st:kv:delete') {
+        void handleSceneKV(type, payload);
       }
     };
 
@@ -301,7 +385,7 @@ const StGame: React.FC = () => {
         <iframe
           ref={sceneIframeRef}
           title="STScene"
-          srcDoc={openingHtml}
+          srcDoc={openingSrcDoc}
           style={{ display: 'block', width: '100%', height: '100%', border: 'none', background: '#000' }}
           sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
         />
