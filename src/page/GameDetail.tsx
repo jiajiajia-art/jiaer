@@ -50,6 +50,31 @@ const checkIsLiked = (reaction: string | number | null | undefined): boolean => 
     return false;
 };
 
+const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => {
+    const normalizeRaw = (value?: string | null) => {
+        if (!value) return '';
+        return String(value)
+            .trim()
+            .replace(/^\[\s*/, '')
+            .replace(/\s*\]$/, '')
+            .split(',')[0]
+            .replace(/^["']|["']$/g, '')
+            .trim()
+            .toUpperCase();
+    };
+
+    const normalizedEngine = normalizeRaw(engine);
+    if (normalizedEngine === 'CUSTOM') return 'customif' as const;
+    if (normalizedEngine === 'ST') return 'st' as const;
+    if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
+
+    const normalizedTags = normalizeRaw(gameTags);
+    if (normalizedTags === 'CUSTOM') return 'customif' as const;
+    if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
+
+    return '';
+};
+
 const GameDetail: React.FC = () => {
     const { fileId: fileIdParam } = useParams<{ fileId: string }>();
     const navigate = useNavigate();
@@ -84,16 +109,11 @@ const GameDetail: React.FC = () => {
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
     const isStartButtonLoading = isLoading || isPlayStatusLoading;
-    const isGalgame = useMemo(() => {
-        const mapServerEngine = (engine?: string) => {
-            switch ((engine || '').toUpperCase()) {
-                case 'CUSTOM': return 'customif' as const;
-                default: return undefined;
-            }
-        };
-        const normalized = mapServerEngine(game?.engine) || game?.game_tags;
-        return normalized === 'TXT';
-    }, [game?.engine, game?.game_tags]);
+    const normalizedGameMode = useMemo(
+        () => normalizeGameMode(game?.engine, game?.game_tags),
+        [game?.engine, game?.game_tags],
+    );
+    const isGalgame = normalizedGameMode === 'TXT';
 
     // 解析进入详情页的来源
     const enterSource = useMemo(() => {
@@ -277,14 +297,7 @@ const GameDetail: React.FC = () => {
         }
 
         // engine 映射：RPG→story，TXT→galgame，AVG→world，CUSTOM→customif
-        const mapServerEngine = (engine?: string) => {
-            switch ((engine || '').toUpperCase()) {
-                case 'CUSTOM': return 'customif' as const;
-                default: return undefined;
-            }
-        };
-
-        const normalized = mapServerEngine(game.engine) || game.game_tags;
+        const normalized = normalizedGameMode;
         if (!normalized) {
             toast.error('未知的游戏类型，无法创建会话');
             return;
@@ -299,6 +312,12 @@ const GameDetail: React.FC = () => {
                 return;
             }
             navigate(`/customif/${appId}`);
+            return;
+        }
+
+        if (normalized === 'st') {
+            useGameStore.getState().clearAll();
+            navigate(`/st/${fileId}`);
             return;
         }
 
@@ -383,8 +402,8 @@ const GameDetail: React.FC = () => {
             return;
         }
 
-        // CUSTOM 模式：直接开始，不需要弹窗
-        if (game?.engine === 'CUSTOM') {
+        // CUSTOM/ST 模式：直接开始，不需要弹窗
+        if (normalizedGameMode === 'customif' || normalizedGameMode === 'st') {
             await startGameInternal();
             return;
         }
@@ -400,20 +419,42 @@ const GameDetail: React.FC = () => {
     };
 
     const handleStartNewGame = async () => {
-        if (!fileId) {
+        if (!fileId || !normalizedGameMode) {
             toast.error('游戏ID无效');
             return;
         }
         
         // 进入游戏前清理旧状态
         useGameStore.getState().clearAll();
-        
-        const sessionId = await createGalgameSession(fileId, true);
-        
-        if (sessionId) {
-            useGameStore.getState().setFileId(fileId);
-            useGameStore.getState().setSessionId(sessionId);
-            navigate('/galgame');
+
+        if (normalizedGameMode === 'TXT') {
+            const sessionId = await createGalgameSession(fileId, true);
+            if (sessionId) {
+                useGameStore.getState().setFileId(fileId);
+                useGameStore.getState().setSessionId(sessionId);
+                navigate('/galgame');
+            }
+            return;
+        }
+
+        if (normalizedGameMode === 'st') {
+            navigate(`/st/${fileId}`);
+            return;
+        }
+
+        if (normalizedGameMode === 'AVG') {
+            try {
+                await GameAction.deletGameSession({ fileId });
+            } catch (error) {
+                console.error('Delete AVG session before restart failed:', error);
+            }
+
+            const sessionId = await createMapWorldSession(fileId);
+            if (sessionId) {
+                useGameStore.getState().setFileId(fileId);
+                useGameStore.getState().setSessionId(sessionId);
+                navigate('/galgameMap');
+            }
         }
     };
 

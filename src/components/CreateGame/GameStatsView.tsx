@@ -17,6 +17,31 @@ import SavePreviewModal from './SavePreviewModal';
 import type { SaveSummaryItem } from '../../api/galgame/saves';
 import { isMiniProgramEnv } from '../../utils/miniProgram';
 
+const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => {
+    const normalizeRaw = (value?: string | null) => {
+        if (!value) return '';
+        return String(value)
+            .trim()
+            .replace(/^\[\s*/, '')
+            .replace(/\s*\]$/, '')
+            .split(',')[0]
+            .replace(/^["']|["']$/g, '')
+            .trim()
+            .toUpperCase();
+    };
+
+    const normalizedEngine = normalizeRaw(engine);
+    if (normalizedEngine === 'CUSTOM') return 'customif' as const;
+    if (normalizedEngine === 'ST') return 'st' as const;
+    if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
+
+    const normalizedTags = normalizeRaw(gameTags);
+    if (normalizedTags === 'CUSTOM') return 'customif' as const;
+    if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
+
+    return '';
+};
+
 interface GameStatsViewProps {
     gameDetail: UserGameData;
     heroBackground: string;
@@ -59,18 +84,9 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             return { sessionId: null, redirectUrl: '' };
         }
 
-        // 服务端 engine 优先：RPG/TXT/AVG/CUSTOM → 统一为内部 key
-        const mapServerEngine = (engine?: string) => {
-            switch ((engine || '').toUpperCase()) {
-                case 'CUSTOM': return 'customif' as const;
-                default: return undefined;
-            }
-        };
-
-
         setIsLoading(true);
         try {
-            const normalized = mapServerEngine(gameDetail?.engine) || gameDetail?.game_tags;
+            const normalized = normalizeGameMode(gameDetail?.engine, gameDetail?.game_tags);
             if (!normalized) {
                 alert('未知的游戏类型，无法创建会话');
                 return { sessionId: null, redirectUrl: '' };
@@ -84,6 +100,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 }
                 // 不创建 session，直接跳转宿主页
                 return { sessionId: null, redirectUrl: `/customif/${appId}` };
+            }
+
+            if (normalized === 'st') {
+                return { sessionId: null, redirectUrl: `/st/${fileId}` };
             }
 
             if (normalized === 'TXT') {
