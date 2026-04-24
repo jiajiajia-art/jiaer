@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from '../../page/CustomIFCreate.module.css';
 import { HOST_ADDRESS } from '../../config';
 import { authFetch } from '../../api/base';
@@ -6,12 +6,28 @@ import UploadProgress from '../CreateGame/UploadProgress';
 import toast from 'react-hot-toast';
 
 type MultiItem = { path: string; file: File; selected: boolean };
+type CloudAsset = { path: string; url: string; size: number; uploadedAt: string | null };
+type CloudSummary = { count: number; bytes: number; latestUploadedAt: string | null };
+type CloudAssetsResponse = {
+  success: boolean;
+  appId: string;
+  assetPrefix: string;
+  summary?: Partial<CloudSummary> | null;
+  assets?: CloudAsset[];
+  message?: string;
+};
 
 type Props = {
   title: string;
   appId?: string;
   onAppReady?: (appId: string) => void;
   onUploaded?: (assetPrefix: string) => void;
+};
+
+const EMPTY_CLOUD_SUMMARY: CloudSummary = {
+  count: 0,
+  bytes: 0,
+  latestUploadedAt: null,
 };
 
 const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded }) => {
@@ -31,6 +47,12 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
   // 新增：点击唤起选择器（与自定义模式一致）
   const fileRef = useRef<HTMLInputElement>(null);
   const dirRef = useRef<HTMLInputElement>(null);
+  const [cloudAssets, setCloudAssets] = useState<CloudAsset[]>([]);
+  const [cloudSummary, setCloudSummary] = useState<CloudSummary>(EMPTY_CLOUD_SUMMARY);
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudReady, setCloudReady] = useState(false);
+  const [cloudError, setCloudError] = useState('');
+  const [downloadingCloudZip, setDownloadingCloudZip] = useState(false);
 
   function startFakeProgress(max=90){
     if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
@@ -51,6 +73,33 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
   }
   function formatBytes(n:number){ if(n<1024) return `${n} B`; if(n<1024*1024) return `${(n/1024).toFixed(1)} KB`; return `${(n/1024/1024).toFixed(1)} MB`; }
   function normalizePath(p:string){ let s=p.replace(/\\+/g,'/'); s=s.replace(/^\/+/,''); const parts:string[]=[]; for(const seg of s.split('/')){ if(seg===''||seg==='.') continue; if(seg==='..'){ parts.pop(); } else { parts.push(seg); } } return parts.join('/'); }
+  function toAbsoluteUrl(path: string){ try { return new URL(path, HOST_ADDRESS).toString(); } catch { return path; } }
+  function formatDateTime(value: string | null | undefined){
+    if (!value) return 'Unknown time';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString();
+  }
+  function makeZipFileName(rawTitle: string, currentAppId?: string){
+    const fallback = currentAppId ? `${currentAppId}-assets` : 'st-assets';
+    const base = (rawTitle || '').trim() || fallback;
+    const safe = base
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+    return `${safe || fallback}.zip`;
+  }
+  async function readErrorMessage(response: Response){
+    const text = await response.text();
+    if (!text) return `Request failed (${response.status})`;
+    try {
+      const parsed = JSON.parse(text);
+      return parsed?.message || parsed?.error || text;
+    } catch {
+      return text;
+    }
+  }
 
   function updateMultiStats(list: MultiItem[]){
     const bytes = list.reduce((a,b)=> a + (b.file.size||0), 0);
@@ -58,6 +107,49 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
     const selBytes = sel.reduce((a,b)=> a + (b.file.size||0), 0);
     setMultiStats({ count: list.length, bytes, selCount: sel.length, selBytes });
   }
+
+  async function loadCloudAssets(targetAppId?: string){
+    const resolvedAppId = String(targetAppId || appId || '').trim();
+    if (!resolvedAppId) {
+      setCloudAssets([]);
+      setCloudSummary(EMPTY_CLOUD_SUMMARY);
+      setCloudError('');
+      setCloudLoading(false);
+      setCloudReady(false);
+      return;
+    }
+
+    setCloudLoading(true);
+    setCloudReady(false);
+    setCloudError('');
+
+    try {
+      const response = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${resolvedAppId}/assets`, { method: 'GET' });
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response));
+      }
+
+      const json = await response.json() as CloudAssetsResponse;
+      const nextAssets = Array.isArray(json.assets) ? json.assets : [];
+      const nextSummary = {
+        count: Number(json.summary?.count || 0),
+        bytes: Number(json.summary?.bytes || 0),
+        latestUploadedAt: json.summary?.latestUploadedAt || null,
+      };
+
+      setCloudAssets(nextAssets);
+      setCloudSummary(nextSummary);
+    } catch (err:any) {
+      setCloudError(String(err?.message || err || 'Failed to load cloud assets.'));
+    } finally {
+      setCloudLoading(false);
+      setCloudReady(true);
+    }
+  }
+
+  useEffect(() => {
+    void loadCloudAssets();
+  }, [appId]);
 
   async function ensureZipLib(){
     if ((window as any).fflate) return;
@@ -149,6 +241,45 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
     });
   };
 
+  const downloadCloudAssetsZip = async () => {
+    if (!appId || cloudAssets.length === 0 || downloadingCloudZip) return;
+
+    setCloudError('');
+    setDownloadingCloudZip(true);
+
+    try {
+      await ensureZipLib();
+      const zipEntries: Record<string, Uint8Array> = {};
+
+      for (const asset of cloudAssets) {
+        const response = await fetch(toAbsoluteUrl(asset.url), { credentials: 'include' });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ${asset.path}`);
+        }
+        zipEntries[asset.path] = new Uint8Array(await response.arrayBuffer());
+      }
+
+      // @ts-ignore
+      const zipped = (window as any).fflate.zipSync(zipEntries);
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const link = document.createElement('a');
+      const downloadUrl = URL.createObjectURL(blob);
+      link.href = downloadUrl;
+      link.download = makeZipFileName(title, appId);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+      toast.success('Cloud assets downloaded.');
+    } catch (err:any) {
+      const message = String(err?.message || err || 'Failed to download cloud assets.');
+      setCloudError(message);
+      toast.error(message, { duration: 8000 });
+    } finally {
+      setDownloadingCloudZip(false);
+    }
+  };
+
   const doUpload = async () => {
     setError('');
     if (creating) return;
@@ -188,6 +319,7 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
       stopFakeProgress();
       setIsUploading(true);
       toast.success('素材包上传成功');
+      await loadCloudAssets(id);
       onUploaded && onUploaded(prefix);
     } catch (e:any) {
       let msg = String(e?.message || e);
@@ -297,6 +429,61 @@ const AssetsUpload: React.FC<Props> = ({ title, appId, onAppReady, onUploaded })
             </div>
           </div>
         )}
+
+        <div className={styles.cloudAssetsCard}>
+          <div className={styles.cloudAssetsHeader}>
+            <div className={styles.cloudAssetsHeading}>
+              <div className={styles.cloudAssetsTitle}>Cloud Assets</div>
+              <div className={styles.cloudAssetsMeta}>
+                {!appId
+                  ? 'Cloud assets appear after the first upload.'
+                  : `${cloudSummary.count} files • ${formatBytes(cloudSummary.bytes)}${cloudSummary.latestUploadedAt ? ` • Updated ${formatDateTime(cloudSummary.latestUploadedAt)}` : ''}`}
+              </div>
+            </div>
+            <div className={styles.cloudAssetsActions}>
+              <button
+                type="button"
+                className={styles.smallBtn}
+                onClick={() => void loadCloudAssets()}
+                disabled={!appId || cloudLoading || downloadingCloudZip}
+              >
+                {cloudLoading ? 'Refreshing...' : 'Refresh'}
+              </button>
+              <button
+                type="button"
+                className={styles.smallBtn}
+                onClick={() => void downloadCloudAssetsZip()}
+                disabled={!appId || cloudAssets.length === 0 || cloudLoading || downloadingCloudZip}
+              >
+                {downloadingCloudZip ? 'Preparing ZIP...' : 'Download ZIP'}
+              </button>
+            </div>
+          </div>
+
+          {!appId ? (
+            <div className={styles.cloudAssetsEmpty}>Upload once to create the cloud asset folder for this project.</div>
+          ) : cloudLoading && !cloudReady ? (
+            <div className={styles.cloudAssetsEmpty}>Loading cloud assets...</div>
+          ) : cloudAssets.length > 0 ? (
+            <div className={styles.fileList}>
+              {cloudAssets.map((asset) => (
+                <div className={styles.cloudAssetRow} key={asset.path}>
+                  <span className={styles.filePath}>{asset.path}</span>
+                  <span className={styles.cloudAssetMetaLine}>
+                    {formatBytes(asset.size)}
+                    {asset.uploadedAt ? ` • ${formatDateTime(asset.uploadedAt)}` : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.cloudAssetsEmpty}>No cloud assets found for this project yet.</div>
+          )}
+
+          {cloudError && (
+            <div className={styles.error}>{cloudError}</div>
+          )}
+        </div>
 
         {error && (
           <div className={styles.error}>{error}</div>
