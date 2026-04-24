@@ -1,5 +1,12 @@
 import { api } from './base';
 
+export type StChatRole = 'system' | 'user' | 'assistant';
+
+export type StChatMessage = {
+  role: StChatRole;
+  content: string;
+};
+
 export type StRenderRule = {
   id?: string;
   order: number;
@@ -26,4 +33,9 @@ export const stApi = {
   getSession: (appId: string, sessionId: string) => api.get(`/st/apps/${appId}/session/${sessionId}`),
   act: (appId: string, sessionId: string, body: { input: string; globals?: any }) =>
     api.post(`/st/apps/${appId}/session/${sessionId}/action`, body, { timeout: 45000 }),
+  actByMessages: (
+    appId: string,
+    sessionId: string,
+    body: { messages: StChatMessage[]; globals?: any; model?: string; stream?: boolean },
+  ) => api.post(`/st/apps/${appId}/session/${sessionId}/action-by-messages`, body, { timeout: 45000 }),
 };

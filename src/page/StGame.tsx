@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGame.module.css';
-import { stApi, type StRenderRule } from '../api/stGame';
+import { stApi, type StChatMessage, type StRenderRule } from '../api/stGame';
 import StShowdownText from '../components/StGame/StShowdownText';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
@@ -26,13 +26,21 @@ type ActResp = {
 
 type Msg = { role: 'user'|'assistant'; text: string; streaming?: boolean };
 type SceneMsg =
-  | { type: 'st:ready'; payload: { appId: string; sessionId: string; assetBase?: string } }
+  | { type: 'st:ready'; payload: { appId: string; sessionId: string; assetBase?: string; protocols?: { actionByMessages: boolean } } }
   | { type: 'st:assistant'; payload: { requestId: string; text: string } }
   | { type: 'st:assistant_delta'; payload: { requestId: string; text: string } }
   | { type: 'st:assistant_done'; payload: { requestId: string } }
   | { type: 'st:kv:result'; payload: { requestId: string; success: boolean; op: 'get' | 'set' | 'delete'; code?: string; message?: string; kv?: { scope: 'user' | 'session'; namespace?: string; values: Record<string, unknown> } } }
   | { type: 'st:error'; payload: { requestId: string; message: string } }
   | { type: 'st:debug'; payload: { phase: string; message: string; ts: number } };
+
+type SceneActionByMessagesPayload = {
+  requestId?: string;
+  messages?: unknown;
+  globals?: unknown;
+  model?: unknown;
+  stream?: unknown;
+};
 
 const StGame: React.FC = () => {
   const { appId } = useParams();
@@ -102,6 +110,172 @@ const StGame: React.FC = () => {
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages.length]);
 
+  const readSSE = async (
+    resp: Response,
+    handlers: {
+      onDelta: (text: string) => void;
+      onDone?: () => void;
+    },
+  ) => {
+    if (!resp.ok || !resp.body) {
+      throw new Error(`stream request failed: ${resp.status}`);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buf = '';
+    let doneAll = false;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0) {
+        const frame = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        const lines = frame.split('\n').map(s => s.trim()).filter(Boolean);
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const dataStr = line.slice(5).trim();
+          if (dataStr === '[DONE]') {
+            doneAll = true;
+            handlers.onDone?.();
+            break;
+          }
+          try {
+            const json = JSON.parse(dataStr);
+            const choice = json?.choices?.[0];
+            const piece: string = choice?.delta?.content || '';
+            if (piece) {
+              handlers.onDelta(piece);
+            }
+          } catch (err) {
+            console.warn('SSE parse error:', err);
+          }
+        }
+        if (doneAll) break;
+      }
+      if (doneAll) break;
+    }
+  };
+
+  const normalizeManagedMessages = (raw: unknown): StChatMessage[] => {
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((item) => {
+      if (!item || typeof item !== 'object') return [];
+      const role = String((item as Record<string, unknown>).role || '');
+      if (role !== 'system' && role !== 'user' && role !== 'assistant') return [];
+      const content = (item as Record<string, unknown>).content;
+      if (content == null) return [];
+      return [{ role, content: String(content) }];
+    });
+  };
+
+  const validateManagedMessages = (managedMessages: StChatMessage[]) => {
+    if (!managedMessages.length) {
+      return 'messages 缺失';
+    }
+    const lastNonSystem = [...managedMessages].reverse().find((msg) => msg.role !== 'system');
+    if (!lastNonSystem || lastNonSystem.role !== 'user') {
+      return '最后一条非 system 消息必须是 user';
+    }
+    return '';
+  };
+
+  const sendByMessages = async (payload: SceneActionByMessagesPayload) => {
+    if (!appId || !sessionId || sendingRef.current) return;
+
+    const requestId = typeof payload.requestId === 'string' && payload.requestId.trim()
+      ? payload.requestId.trim()
+      : crypto.randomUUID();
+    const managedMessages = normalizeManagedMessages(payload.messages);
+    const validationError = validateManagedMessages(managedMessages);
+    if (validationError) {
+      postSceneMessage({
+        type: 'st:error',
+        payload: { requestId, message: validationError },
+      });
+      return;
+    }
+
+    const stream = payload.stream !== false;
+    const body: {
+      messages: StChatMessage[];
+      globals?: unknown;
+      model?: string;
+      stream?: boolean;
+    } = {
+      messages: managedMessages,
+      stream,
+    };
+    if (payload.globals !== undefined) {
+      body.globals = payload.globals;
+    }
+    if (typeof payload.model === 'string' && payload.model.trim()) {
+      body.model = payload.model.trim();
+    }
+
+    sendingRef.current = true;
+    setSending(true);
+
+    try {
+      if (stream) {
+        let acc = '';
+        const resp = await authFetch(`${HOST_ADDRESS}/api/st/apps/${appId}/session/${sessionId}/action-by-messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+          body: JSON.stringify(body),
+        });
+        await readSSE(resp, {
+          onDelta: (piece) => {
+            acc += piece;
+            postSceneMessage({
+              type: 'st:assistant_delta',
+              payload: { requestId, text: piece },
+            });
+          },
+          onDone: () => {
+            if (!acc) {
+              postSceneMessage({
+                type: 'st:assistant',
+                payload: { requestId, text: '' },
+              });
+            }
+            postSceneMessage({
+              type: 'st:assistant_done',
+              payload: { requestId },
+            });
+          },
+        });
+        return;
+      }
+
+      const resp = await stApi.actByMessages(appId, sessionId, body);
+      const data = resp.data as ActResp;
+      if (!data?.success) {
+        throw new Error('action-by-messages 请求失败');
+      }
+      setRules(data.renderRegex || []);
+      postSceneMessage({
+        type: 'st:assistant',
+        payload: { requestId, text: String(data.reply?.text || '') },
+      });
+    } catch (err) {
+      postSceneMessage({
+        type: 'st:error',
+        payload: {
+          requestId,
+          message: String((err as Error)?.message || err || '请求失败'),
+        },
+      });
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
+  };
+
   const send = async (rawText?: string) => {
     if (!appId || !sessionId || sendingRef.current) return;
     const text = String(rawText ?? input).trim();
@@ -126,15 +300,6 @@ const StGame: React.FC = () => {
         body: JSON.stringify({ input: text, stream: true }),
         signal: controller.signal,
       });
-
-      if (!resp.ok || !resp.body) {
-        throw new Error(`stream request failed: ${resp.status}`);
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buf = '';
-      let doneAll = false;
       let acc = '';
 
       const appendDelta = (deltaText: string) => {
@@ -154,47 +319,17 @@ const StGame: React.FC = () => {
           });
         }
       };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-
-        // 解析 SSE 帧（以\n\n作为分隔）
-        let idx;
-        while ((idx = buf.indexOf('\n\n')) >= 0) {
-          const frame = buf.slice(0, idx);
-          buf = buf.slice(idx + 2);
-          // 只处理以 data: 开头的行
-          const lines = frame.split('\n').map(s => s.trim()).filter(Boolean);
-          for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-            const dataStr = line.slice(5).trim();
-            if (dataStr === '[DONE]') {
-              doneAll = true;
-              break;
-            }
-            try {
-              const json = JSON.parse(dataStr);
-              const choice = json?.choices?.[0];
-              const piece: string = choice?.delta?.content || '';
-              if (piece) {
-                appendDelta(piece);
-                if (isSceneMode) {
-                  postSceneMessage({
-                    type: 'st:assistant_delta',
-                    payload: { requestId, text: piece },
-                  });
-                }
-              }
-            } catch (err) {
-              console.warn('SSE parse error:', err);
-            }
+      await readSSE(resp, {
+        onDelta: (piece) => {
+          appendDelta(piece);
+          if (isSceneMode) {
+            postSceneMessage({
+              type: 'st:assistant_delta',
+              payload: { requestId, text: piece },
+            });
           }
-          if (doneAll) break;
-        }
-        if (doneAll) break;
-      }
+        },
+      });
 
       // 流式结束：把最后一条助手消息从 streaming 切换为最终（用正则+showdown 渲染）
       if (isSceneMode) {
@@ -356,7 +491,7 @@ const StGame: React.FC = () => {
         postSceneDebug('bridge', '收到 st:init，回传 st:ready');
         postSceneMessage({
           type: 'st:ready',
-          payload: { appId, sessionId, assetBase: assetPrefix },
+          payload: { appId, sessionId, assetBase: assetPrefix, protocols: { actionByMessages: true } },
         });
         return;
       }
@@ -365,6 +500,12 @@ const StGame: React.FC = () => {
         const text = String(payload.text || '').trim();
         postSceneDebug('bridge', `收到 st:return，text="${text || '继续(兜底)'}"`);
         void send(text || '继续');
+        return;
+      }
+
+      if (type === 'st:action-by-messages') {
+        postSceneDebug('bridge', '收到 st:action-by-messages，转发 action-by-messages');
+        void sendByMessages(payload as SceneActionByMessagesPayload);
         return;
       }
 
