@@ -1,9 +1,15 @@
-import type { ApiResponse } from "../api.types";
-import { api } from "../base";
+﻿import type { ApiResponse } from '../api.types';
+import { api } from '../base';
+import type { DailyTaskPayload } from './dailyTask.type';
 
 export interface AnalyticsEndRequest {
     durationSeconds: number;
     gameFileId?: string;
+}
+
+export interface GameEntryRequest {
+    gameFileId: string;
+    source: 'game_detail';
 }
 
 export interface EnterGameDetailRequest {
@@ -12,14 +18,11 @@ export interface EnterGameDetailRequest {
 }
 
 export const trackingApi = {
-    // 时长统计接口（游戏时长和平台停留时长共用）
-    // - 游戏时长：传递 durationSeconds 和 gameFileId
-    // - 平台停留时长：只传递 durationSeconds（不传 gameFileId）
-    analyticsEnd: (data: AnalyticsEndRequest) => {
-        return api.post<ApiResponse<null>>(`/analytics/session/duration`, data);
-    },
-    // 进入游戏详情页
-    enterGameDetail: (data: EnterGameDetailRequest) => {
-        return api.post<ApiResponse<null>>(`/analytics/game-detail-view`, data);
-    },
-}
+    analyticsEnd: (data: AnalyticsEndRequest) =>
+        api.post<ApiResponse<DailyTaskPayload>>('/analytics/session/duration', data),
+    reportGameEntry: (data: GameEntryRequest) =>
+        api.post<ApiResponse<DailyTaskPayload>>('/analytics/game-entry', data),
+    enterGameDetail: (data: EnterGameDetailRequest) =>
+        api.post<ApiResponse<null>>('/analytics/game-detail-view', data),
+};
+

@@ -581,9 +581,9 @@
     }
 
     .startGameBtn {
-        grid-column: 1 / -1;
-        height: 54px;
-        border-radius: 18px;
+        grid-column: auto;
+        height: 48px;
+        border-radius: 16px;
         background-image: linear-gradient(135deg, #fb4655 0%, #ff6a78 100%);
         box-shadow: 0 16px 32px rgba(251, 70, 85, 0.28);
     }

@@ -1,0 +1,485 @@
+/* ========================================
+   CreatorProfile - 创作者资料组件样式
+   设计风格：与 Profile 一致的红色主题
+   ======================================== */
+
+.creatorProfile {
+    width: 100%;
+    padding: 0 0 40px 0;
+}
+
+/* ========================================
+   视图模式 - View Container
+   ======================================== */
+
+.viewContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   信息卡片 - Section Card
+   ======================================== */
+
+.sectionCard {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f0f0f0;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.sectionCard:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.sectionCardEmpty {
+    border-style: dashed;
+    background: #fafafa;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.sectionIcon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.sectionContent {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ========================================
+    信息行 - Info Row
+   ======================================== */
+
+.infoRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 36px;
+}
+
+.infoLabel {
+    font-size: 14px;
+    color: #666;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.infoValueWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.infoValue {
+    font-size: 14px;
+    color: #1a1a1a;
+    font-weight: 500;
+    text-align: right;
+}
+
+.infoValueMasked {
+    font-size: 14px;
+    color: #999;
+    font-weight: 500;
+    text-align: right;
+    letter-spacing: 0.05em;
+}
+
+.infoActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.infoActionBtn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.infoActionBtn:hover {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.infoActionBtn svg {
+    font-size: 16px;
+}
+
+/* ========================================
+   空状态 - Empty State
+   ======================================== */
+
+.emptyState {
+    padding: 16px 0;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+/* ========================================
+   编辑按钮 - Edit Button
+   ======================================== */
+
+.editButtonWrapper {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.editButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 28px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    border: none;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.25);
+}
+
+.editButton:hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.35);
+}
+
+.editButton:active {
+    transform: translateY(0);
+}
+
+.editButton svg {
+    font-size: 16px;
+}
+
+/* ========================================
+   安全提示 - Security Notice
+   ======================================== */
+
+.securityNotice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fef8f8;
+    border-radius: 10px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #888;
+}
+
+.securityIcon {
+    font-size: 14px;
+}
+
+/* ========================================
+   表单模式 - Form Styles
+   ======================================== */
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.formSection {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid #f0f0f0;
+}
+
+.formSectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.formSectionTitle svg {
+    font-size: 18px;
+    color: #FB4655;
+}
+
+.formField {
+    margin-bottom: 16px;
+}
+
+.formField:last-child {
+    margin-bottom: 0;
+}
+
+.formLabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.required {
+    color: #FB4655;
+    margin-left: 2px;
+}
+
+.formInput {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #1a1a1a;
+    background: #fafafa;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.formInput:focus {
+    border-color: #FB4655;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(251, 70, 85, 0.1);
+}
+
+.formInput::placeholder {
+    color: #bbb;
+}
+
+.formInputError {
+    border-color: #ff4d4f;
+}
+
+.formInputError:focus {
+    border-color: #ff4d4f;
+    box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.1);
+}
+
+.formError {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #ff4d4f;
+}
+
+/* ========================================
+   表单操作按钮 - Form Actions
+   ======================================== */
+
+.formActions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 8px;
+}
+
+.cancelBtn {
+    padding: 10px 24px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 999px;
+    background: #fff;
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cancelBtn:hover:not(:disabled) {
+    border-color: #ccc;
+    color: #333;
+    background: #fafafa;
+}
+
+.cancelBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.saveBtn {
+    padding: 10px 32px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.25);
+}
+
+.saveBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(251, 70, 85, 0.35);
+}
+
+.saveBtn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.saveBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   响应式设计 - Responsive
+   ======================================== */
+
+@media (max-width: 768px) {
+    .creatorProfile {
+        padding: 0 0 30px 0;
+    }
+
+    .sectionCard,
+    .formSection {
+        padding: 16px 18px;
+        border-radius: 12px;
+    }
+
+    .sectionHeader {
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+    }
+
+    .sectionIcon {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+
+    .sectionTitle {
+        font-size: 15px;
+    }
+
+    .infoRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .infoValueWrapper {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .infoValue,
+    .infoValueMasked {
+        text-align: left;
+    }
+
+    .editButton {
+        padding: 9px 24px;
+        font-size: 13px;
+    }
+
+    .formActions {
+        flex-direction: column-reverse;
+    }
+
+    .cancelBtn,
+    .saveBtn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .securityNotice {
+        font-size: 11px;
+        padding: 10px 14px;
+    }
+}
+
+/* ========================================
+   深色模式支持（可选）
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+    /* 如需支持深色模式，可在此添加 */
+}
+
+/* ========================================
+   打印样式
+   ======================================== */
+
+@media print {
+    .editButton,
+    .infoActionBtn,
+    .formActions {
+        display: none !important;
+    }
+
+    .sectionCard,
+    .formSection {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}

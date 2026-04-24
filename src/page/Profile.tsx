@@ -1,5 +1,6 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
@@ -10,6 +11,7 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import CheckInModal from '../components/CheckInModal';
 import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
 import InviteRewardModal from '../components/InviteRewardModal';
+import CreatorProfile, { type CreatorProfileFormData } from '../components/CreatorProfile.tsx';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import {
     MdCampaign,
@@ -19,6 +21,7 @@ import {
     MdGroup,
     MdPersonAddAlt1,
     MdPlayCircleOutline,
+    MdAccountBalanceWallet,
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import JoinGroupModal from '../components/JoinGroupModal';
@@ -28,7 +31,26 @@ import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKey
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { useImageCropper } from '../hooks/useImageCropper';
 import ImageCropModal from '../components/CommonModal/ImageCropModal';
+import { useDailyTaskStore } from '../store/dailyTaskStore';
+import {
+    isDurationTaskCode,
+    type DailyTaskClaimType,
+} from '../api/statistics/dailyTask.type';
+import { getCreatorProfile, saveCreatorProfile } from '../api/incentive/creatorProfileApi';
+import type { CreatorProfileData } from '../components/CreatorProfile.tsx';
 
+const formatDuration = (totalSeconds: number): string => {
+    const safe = Math.max(0, Math.floor(totalSeconds));
+    const minutes = Math.floor(safe / 60);
+    const seconds = safe % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
+
+const getTaskActionText = (code: string): string => {
+    if (code === 'like_once') return '去点赞';
+    if (code === 'play_3_unique' || code === 'play_three_games') return '去游玩';
+    return '进行中';
+};
 const isWebViewEnv = (): boolean => {
     const win = window as any;
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
@@ -65,9 +87,23 @@ const Profile: React.FC = () => {
     const [isRedeemingMembership, setIsRedeemingMembership] = useState(false);
     const [redeemSuccessPlanId, setRedeemSuccessPlanId] = useState<SubscriptionRedeemResult['planId'] | null>(null);
 
+    // 创作者资料 Tab 状态
+    const [profileTab, setProfileTab] = useState<'function' | 'creator'>('function');
+    const [creatorProfileData, setCreatorProfileData] = useState<CreatorProfileData>({
+        groupNo: '',
+        realName: '',
+        idCard: '',
+        bankCard: '',
+        bankBranch: '',
+    });
+
+    // 判断是否为创作者（基于 userSegment 是否为 incentive）
+    const isCreator = user?.user?.userSegment !== 'normal';
+
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isMembershipRechargeModalOpen, setIsMembershipRechargeModalOpen] = useState(false);
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+    const [isDailyTaskModalOpen, setIsDailyTaskModalOpen] = useState(false);
     const [isInviteRewardModalOpen, setIsInviteRewardModalOpen] = useState(false);
     const [inviteStats, setInviteStats] = useState<{ inviteCount: number; claimedPoints: number }>({
         inviteCount: 0,
@@ -117,10 +153,30 @@ const Profile: React.FC = () => {
     const [bindConfirmPassword, setBindConfirmPassword] = useState('');
     const [isBindingAccount, setIsBindingAccount] = useState(false);
     const [isBindAccountStatusModalOpen, setIsBindAccountStatusModalOpen] = useState(false);
+    const [, setTaskNowTick] = useState<number>(Date.now());
 
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+    const [, setIsMobile] = useState(window.innerWidth <= 768);
     const [searchParams, setSearchParams] = useSearchParams();
 
+    const {
+        tasks: dailyTasks,
+        isLoadedOnce: isTaskLoadedOnce,
+        isLoading: isTaskLoading,
+        errorMessage: taskErrorMessage,
+        claimingTaskMap,
+        refreshDailyTasks,
+        claimDailyTask,
+        getDisplayTotalSeconds,
+    } = useDailyTaskStore(useShallow((state) => ({
+        tasks: state.tasks,
+        isLoadedOnce: state.isLoadedOnce,
+        isLoading: state.isLoading,
+        errorMessage: state.errorMessage,
+        claimingTaskMap: state.claimingTaskMap,
+        refreshDailyTasks: state.refreshDailyTasks,
+        claimDailyTask: state.claimDailyTask,
+        getDisplayTotalSeconds: state.getDisplayTotalSeconds,
+    })));
     useEffect(() => {
         const handleResize = () => {
             setIsMobile(window.innerWidth <= 768);
@@ -171,7 +227,41 @@ const Profile: React.FC = () => {
     useEffect(() => {
         getUserInfo();
         void getInviteStats();
+        void refreshDailyTasks();
+        if (isCreator) {
+            void fetchCreatorProfile();
+        }
+    }, [refreshDailyTasks, isCreator]);
+
+    const fetchCreatorProfile = async () => {
+        try {
+            const data = await getCreatorProfile();
+            setCreatorProfileData(data);
+        } catch (error) {
+            console.error('获取创作者资料失败:', error);
+        }
+    };
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            setTaskNowTick(Date.now());
+        }, 1000);
+        return () => {
+            window.clearInterval(intervalId);
+        };
     }, []);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                void refreshDailyTasks({ silent: true });
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [refreshDailyTasks]);
 
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || '未设置';
@@ -343,6 +433,19 @@ const Profile: React.FC = () => {
         setSearchParams(nextParams, { replace: true });
     }, [searchParams, setSearchParams, user?.user?.phoneNumber]);
 
+    useEffect(() => {
+        if (searchParams.get('openDailyTasks') !== '1') {
+            return;
+        }
+
+        setIsDailyTaskModalOpen(true);
+        void refreshDailyTasks({ silent: true });
+
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('openDailyTasks');
+        setSearchParams(nextParams, { replace: true });
+    }, [refreshDailyTasks, searchParams, setSearchParams]);
+
     const handleCheckInSuccess = () => {
         updateUser({ hasSignedIn: true });
         getUserInfo();
@@ -457,6 +560,22 @@ const Profile: React.FC = () => {
         return null;
     };
 
+    const handleClaimTask = async (taskType: DailyTaskClaimType) => {
+        const result = await claimDailyTask(taskType);
+        if (!result.success) {
+            toast.error(result.message || '奖励领取失败');
+            return;
+        }
+        toast.success(result.message || '奖励领取成功');
+        await getUserInfo();
+    };
+
+    const displayTotalSeconds = getDisplayTotalSeconds();
+    const durationTaskMap = new Map(dailyTasks.filter((task) => isDurationTaskCode(task.code)).map((task) => [task.code, task]));
+    const tenMinuteTask = durationTaskMap.get('online_10m');
+    const thirtyMinuteTask = durationTaskMap.get('online_30m');
+    const hasDurationTaskFallback = !tenMinuteTask || !thirtyMinuteTask;
+
     return (
         <div className={styles.pageRoot}>
             <Navbar />
@@ -518,6 +637,36 @@ const Profile: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Tab 切换 - 功能列表 / 创作者资料 */}
+                    {isCreator && (
+                        <div className={styles.profileTabContainer}>
+                            <button
+                                type="button"
+                                className={`${styles.profileTab} ${profileTab === 'function' ? styles.profileTabActive : ''}`}
+                                onClick={() => setProfileTab('function')}
+                            >
+                                功能列表
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.profileTab} ${profileTab === 'creator' ? styles.profileTabActive : ''}`}
+                                onClick={() => setProfileTab('creator')}
+                            >
+                                <MdAccountBalanceWallet />
+                                创作者资料
+                            </button>
+                        </div>
+                    )}
+
+                    {profileTab === 'creator' ? (
+                        <CreatorProfile
+                            data={creatorProfileData}
+                            onSave={async (data: CreatorProfileFormData) => {
+                                await saveCreatorProfile(data);
+                                setCreatorProfileData(data);
+                            }}
+                        />
+                    ) : (
                     <div className={styles.functionList}>
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -537,6 +686,27 @@ const Profile: React.FC = () => {
                                     {'签到'}
                                 </button>
                             </div>
+                        </div>
+
+                        <div className={styles.functionItem}>
+                            <div className={styles.functionIcon}>
+                                <RiCopperCoinLine />
+                            </div>
+                            <div className={styles.functionText}>
+                                <div className={styles.functionTitle}>每日任务</div>
+                                <div className={styles.functionDesc}>
+                                    点赞、游玩和在线时长任务，完成后可领取积分
+                                </div>
+                            </div>
+                            <button
+                                className={styles.functionButton}
+                                onClick={() => {
+                                    setIsDailyTaskModalOpen(true);
+                                    void refreshDailyTasks({ silent: true });
+                                }}
+                            >
+                                领积分
+                            </button>
                         </div>
 
                         <div className={styles.inviteCampaignSection}>
@@ -761,6 +931,7 @@ const Profile: React.FC = () => {
                             </div>
                         )}
                     </div>
+                    )}
                 </div>
             </div>
             <MobileBottomNav />
@@ -924,6 +1095,106 @@ const Profile: React.FC = () => {
                 onClose={() => setRedeemSuccessPlanId(null)}
                 planId={redeemSuccessPlanId ?? 'month'}
             />
+
+            {isDailyTaskModalOpen && (
+                <div
+                    className={styles.dailyTaskModalOverlay}
+                    onClick={() => setIsDailyTaskModalOpen(false)}
+                >
+                    <div className={styles.dailyTaskModal} onClick={(e) => e.stopPropagation()}>
+                        <div className={styles.dailyTaskModalHeader}>
+                            <div className={styles.dailyTaskModalTitle}>每日任务</div>
+                            <button
+                                type="button"
+                                className={styles.dailyTaskCloseBtn}
+                                aria-label="关闭每日任务弹窗"
+                                onClick={() => setIsDailyTaskModalOpen(false)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                        {/* <div className={styles.dailyTaskSummary}>
+                            今日在线：{formatDuration(displayTotalSeconds)}
+                            <span className={styles.dailyTaskSummaryMeta}>
+                                已同步 {formatDuration(dailyTaskSummary.totalSeconds)} / 待同步 +{pendingPlatformSeconds + pendingGameSeconds}s
+                            </span>
+                        </div> */}
+                        {!isTaskLoadedOnce && isTaskLoading && (
+                            <div className={styles.dailyTaskLoading}>任务加载中...</div>
+                        )}
+                        {taskErrorMessage && (
+                            <div className={styles.dailyTaskError}>{taskErrorMessage}</div>
+                        )}
+                        <div className={styles.dailyTaskList}>
+                            {dailyTasks.map((task) => {
+                                const isDurationTask = isDurationTaskCode(task.code);
+                                const claimTaskType = task.taskType;
+                                const isClaimingTask = claimTaskType ? claimingTaskMap[claimTaskType] : false;
+                                const canClaimNow = Boolean(claimTaskType) && task.claimable && !task.claimed;
+                                const effectiveProgress = isDurationTask
+                                    ? Math.max(task.progress, displayTotalSeconds)
+                                    : task.progress;
+                                const progressDenominator = Math.max(task.target, 1);
+                                const progressRatio = Math.min(1, Math.max(0, effectiveProgress / progressDenominator));
+                                const progressPercent = Math.round(progressRatio * 100);
+                                const progressText = isDurationTask
+                                    ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
+                                    : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
+
+                                let statusText = task.statusText || '进行中';
+                                if (task.claimed) {
+                                    statusText = '奖励已领取';
+                                } else if (canClaimNow) {
+                                    statusText = '已达成，待领取';
+                                } else if (task.completed) {
+                                    statusText = '已完成';
+                                }
+
+                                return (
+                                    <div key={task.code} className={styles.dailyTaskItem}>
+                                        <div className={styles.dailyTaskItemHeader}>
+                                            <div className={styles.dailyTaskItemTitle}>{task.title}</div>
+                                            <div className={styles.dailyTaskReward}>+{task.rewardPoints}积分</div>
+                                        </div>
+                                        <div className={styles.dailyTaskProgressRow}>
+                                            <div className={styles.dailyTaskProgressBar}>
+                                                <div
+                                                    className={`${styles.dailyTaskProgressFill} ${task.completed ? styles.dailyTaskProgressFillDone : ''}`}
+                                                    style={{ width: `${progressPercent}%` }}
+                                                />
+                                            </div>
+                                            <div className={styles.dailyTaskProgressText}>{progressText}</div>
+                                        </div>
+                                        <div className={styles.dailyTaskStatusRow}>
+                                            <span className={`${styles.dailyTaskStatus} ${task.completed ? styles.dailyTaskStatusDone : ''}`}>
+                                                {statusText}
+                                            </span>
+                                            {canClaimNow && claimTaskType && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.dailyTaskClaimBtn}
+                                                    disabled={isClaimingTask}
+                                                    onClick={() => {
+                                                        void handleClaimTask(claimTaskType);
+                                                    }}
+                                                >
+                                                    {isClaimingTask ? '领取中...' : '领取'}
+                                                </button>
+                                            )}
+                                            {!canClaimNow && claimTaskType && !task.claimed && (
+                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task.code)}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {hasDurationTaskFallback && (
+                            <div className={styles.dailyTaskHint}>在线任务以系统统计为准，若进度异常请点击刷新。</div>
+                        )}
+                    </div>
+                </div>
+            )}
             {pendingCropFile ? (
                 <ImageCropModal
                     isOpen
@@ -943,3 +1214,6 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
+
+
+

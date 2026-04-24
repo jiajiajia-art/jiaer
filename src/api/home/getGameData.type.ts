@@ -51,6 +51,8 @@ export interface UserGameData {
     incentive_amount?: number;
     incentive_pending_amount?: number;
     incentive_settled_amount?: number;
+    /** QQ群号，有值则渲染 */
+    groupNo?: string;
 }
 
 export interface UserGameResponse {

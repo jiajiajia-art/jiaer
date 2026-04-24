@@ -36,6 +36,7 @@ export interface User {
   userCode: string;
   phoneNumber: string;
   role: string;
+  userSegment?: 'normal' | 'incentive' | string;
   createTime: string;
   lastLoginTime: string | null;
   email: string;
@@ -128,4 +129,39 @@ export interface InviteClaimResult {
   threshold: number;
   pointsAwarded: number;
   remainingPoints: number;
+}
+
+// 积分活动查询
+export type PointsActivityDirection = 'all' | 'income' | 'expense';
+
+export interface GetPointsActivitiesParams {
+  direction?: PointsActivityDirection;
+  month?: number;
+  year?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PointsActivityItem {
+  id: number;
+  activityType: string;
+  direction: 'income' | 'expense';
+  title: string;
+  subtitle?: string;
+  type: string;
+  points: number;
+  description: string;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface PointsActivitiesResponse {
+  currentPoints: number;
+  items: PointsActivityItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }

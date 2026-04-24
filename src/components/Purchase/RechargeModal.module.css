@@ -12,9 +12,12 @@
     z-index: 2000;
     animation: fadeIn 0.3s ease-out;
     margin: 0;
-    padding: 0;
+    padding: 16px;
+    box-sizing: border-box;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
 }
 
 @keyframes fadeIn {
@@ -39,6 +42,8 @@
     display: flex;
     flex-direction: column;
     padding: 36px 32px;
+    max-height: calc(100dvh - 32px - env(safe-area-inset-bottom));
+    overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -108,6 +113,10 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 
 .fixedAmounts {
@@ -463,6 +472,10 @@
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 12px rgba(251, 70, 85, 0.3);
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 4px;
 }
 
 .submitBtn:hover:not(:disabled) {
@@ -1031,11 +1044,18 @@
 
 /* ========== 移动端适配 ========== */
 @media (max-width: 768px) {
+    .modalOverlay {
+        align-items: flex-start;
+        justify-content: center;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    }
+
     .modalContent {
-        width: 95%;
+        width: 100%;
         max-width: none;
         padding: 28px 20px;
         min-height: auto;
+        max-height: calc(100dvh - 20px - env(safe-area-inset-bottom));
     }
 
     .title {
@@ -1085,6 +1105,7 @@
     .submitBtn {
         padding: 14px;
         font-size: 1rem;
+        margin-top: 2px;
     }
 
     .planItem {

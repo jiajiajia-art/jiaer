@@ -1,12 +1,14 @@
 export type AdminIncentiveLookupMode = 'userCode' | 'phoneNumber';
 
+export type UserSegment = 'normal' | 'game_incentive' | 'incentive' | 'code_incentive';
+
 export interface AdminIncentiveAuthorInfo {
     userId: string;
     nickname: string;
     userCode: string;
     phoneNumber: string;
     role: string;
-    userSegment: 'normal' | 'incentive' | string;
+    userSegment: UserSegment;
     incentiveEnabled: boolean;
 }
 
@@ -15,7 +17,10 @@ export interface AdminIncentiveAuthorListParams {
     pageSize?: number;
     keyword?: string;
     enabled?: boolean;
+    userSegment?: UserSegment;
 }
+
+export type IncentiveStatus = 'none' | 'code_incentive' | 'game_incentive' | 'incentive' | 'finished';
 
 export interface AdminIncentiveGameRecord {
     fileId: string;
@@ -26,7 +31,10 @@ export interface AdminIncentiveGameRecord {
     incentiveStartTime: string | null;
     incentiveEndTime: string | null;
     incentiveSettledAmount: number;
-    incentiveStatus: 'none' | 'incentive' | 'finished' | string;
+    inviteSettledAmount: number | null;
+    incentivePendingAmount: number;
+    invitePendingIncome: number | null;
+    incentiveStatus: IncentiveStatus;
     updatedAt: string | null;
     createdAt: string | null;
 }
@@ -43,8 +51,17 @@ export interface AdminIncentiveAuthorListResult {
     pagination: AdminIncentivePagination;
 }
 
+export interface IncentiveSummary {
+    inviteCount: number;
+    invitePendingIncome: number;
+    inviteSettledAmount: number;
+    incentiveStartTime: string;
+    incentiveEndTime: string;
+}
+
 export interface AdminIncentiveAuthorGamesResult {
     author: AdminIncentiveAuthorInfo;
+    incentiveSummary: IncentiveSummary | null;
     list: AdminIncentiveGameRecord[];
     pagination: AdminIncentivePagination;
 }
@@ -56,7 +73,7 @@ export interface AdminIncentiveAuthorGamesParams {
 }
 
 export interface AdminUpdateIncentiveAuthorPayload {
-    enabled: boolean;
+    userSegment: UserSegment;
 }
 
 export interface AdminUpdateIncentiveGamePayload {
@@ -64,4 +81,5 @@ export interface AdminUpdateIncentiveGamePayload {
     incentiveStartTime?: string;
     incentiveEndTime?: string | null;
     incentiveSettledAmount?: number;
+    inviteSettledAmount?: number;
 }
