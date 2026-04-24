@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
@@ -50,7 +50,9 @@ const Create: React.FC = () => {
         totalAmount: 0,
         totalIncentiveAmount: 0,
         pendingIncome: 0,
-        isIncentive: false,
+        inviteTotalAmount: 0,
+        invitePendingIncome: 0,
+        incentiveType: 'none' as 'none' | 'incentive' | 'game_incentive' | 'code_incentive',
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
@@ -67,6 +69,8 @@ const Create: React.FC = () => {
     const userName = user?.user?.nickname || user?.user?.name || '未设置昵称';
     const userCode = user?.user?.userCode;
     const isMiniProgram = isMiniProgramEnv();
+    const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive';
+    const isCodeIncentive = stats.incentiveType === 'code_incentive';
 
     const { publishedGames, draftGames } = useMemo(() => {
         const published: UserGameData[] = [];
@@ -126,7 +130,9 @@ const Create: React.FC = () => {
                     totalAmount: response.data.data.totalAmount ?? 0,
                     totalIncentiveAmount: response.data.data.totalIncentiveAmount ?? 0,
                     pendingIncome: response.data.data.pendingIncome ?? 0,
-                    isIncentive: response.data.data.isIncentive ?? false,
+                    inviteTotalAmount: response.data.data.inviteTotalAmount ?? 0,
+                    invitePendingIncome: response.data.data.invitePendingIncome ?? 0,
+                    incentiveType: response.data.data.incentiveType ?? 'none',
                 });
             }
         } catch (error) {
@@ -491,7 +497,7 @@ const Create: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            {stats.isIncentive && (
+                            {isWorkIncentive && (
                                 <div className={styles.statBox}>
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -502,7 +508,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statValue}>{stats.totalIncentiveAmount}</div>
                                 </div>
                             )}
-                            {stats.isIncentive && (
+                            {isWorkIncentive && (
                                 <div className={styles.statBox}>
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -511,6 +517,28 @@ const Create: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.pendingIncome}</div>
+                                </div>
+                            )}
+                            {isCodeIncentive && (
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                            <span>邀请码激励总收益</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.statValue}>{stats.inviteTotalAmount}</div>
+                                </div>
+                            )}
+                            {isCodeIncentive && (
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                            <span>邀请码待结算收益</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.statValue}>{stats.invitePendingIncome}</div>
                                 </div>
                             )}
                         </div>
@@ -550,8 +578,7 @@ const Create: React.FC = () => {
                             <GameGrid
                                 games={publishedGames}
                                 primaryStat="pv"
-                                isIncentive={stats.isIncentive}
-                                showIncentiveUI={true}
+                                showIncentiveUI={isWorkIncentive}
                                 onGameClick={(game) => {
                                     const gameId = game.file_id || game.id;
                                     if (!gameId) return;

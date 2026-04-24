@@ -568,7 +568,7 @@ const Home: React.FC = () => {
         return preloadCarouselImage(item);
     }, [getCarouselImageStateKey, isDesktopCarousel, preloadCarouselImage]);
 
-    // 鐩戝惉鐢ㄦ埛鐧诲嚭锛岄噸缃鏌ョ姸鎬?
+    // 监听用户登出，重置检查状态
     useEffect(() => {
         if (!user?.user?.id) {
             hasCheckedInSessionRef.current = false;
@@ -604,7 +604,7 @@ const Home: React.FC = () => {
         const alreadyPlanned = sessionStorage.getItem(sessionKey) === 'true';
 
         if (!hasShown && !alreadyPlanned) {
-            sessionStorage.setItem(sessionKey, 'true'); // 鍛婄煡鍏朵粬 effect锛氭湰娆″厛鏄剧ず鍏ョ兢寮圭獥
+            sessionStorage.setItem(sessionKey, 'true'); // 通知其他 effect：本次先显示加群弹窗
             setShowJoinGroupModal(true);
         }
     }, [user?.user?.id]);
@@ -636,7 +636,7 @@ const Home: React.FC = () => {
     }, [checkShouldShowCheckInModal, user?.user?.id]);
 
 
-    // 鍔犺浇闄愭椂浼樻儬鏁版嵁
+    // 加载限时优惠数据
     const loadSpecialGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {
         const MAX_RETRIES = 1;
         const RETRY_DELAY = 1000;
@@ -672,10 +672,10 @@ const Home: React.FC = () => {
                     setSpecialPage(page + 1); // 椤电爜閫掑
                 }
             } else {
-                throw new Error('鑾峰彇闄愭椂浼樻儬娓告垙鍒楄〃澶辫触');
+                throw new Error('获取限时优惠游戏列表失败');
             }
         } catch (error) {
-            console.error('鑾峰彇闄愭椂浼樻儬娓告垙鍒楄〃澶辫触:', error);
+            console.error('获取限时优惠游戏列表失败:', error);
             if (retryCount < MAX_RETRIES) {
                 setTimeout(() => {
                     loadSpecialGames(page, isInitial, retryCount + 1);
@@ -692,7 +692,7 @@ const Home: React.FC = () => {
         return [];
     }, []);
 
-    // 鍔犺浇鍏ㄩ儴娓告垙鏁版嵁
+    // 加载全部游戏数据
     const loadAllGames = useCallback(async (
         page: number,
         filters: HomeListFilters,
@@ -744,7 +744,7 @@ const Home: React.FC = () => {
                 setAllPage(nextGames.length > 0 ? page + 1 : page);
                 return nextGames;
             } else {
-                throw new Error('鑾峰彇鍏ㄩ儴娓告垙鍒楄〃澶辫触');
+                throw new Error('获取全部游戏列表失败');
             }
         } catch (error) {
             if (requestId !== latestAllGamesRequestIdRef.current) {

@@ -1,148 +1,144 @@
 import { useEffect, useRef } from 'react';
-import { useTrackingStore } from '../store/trackingStore';
-import { useGameStore } from '../store/gameStore';
-import { trackingApi } from '../api/statistics/trackingApi';
 import { HOST_ADDRESS } from '../config';
 import { useAuthStore } from '../store/useAuthStore';
+import { useGameStore } from '../store/gameStore';
+import { useDailyTaskStore } from '../store/dailyTaskStore';
+import { trackingApi } from '../api/statistics/trackingApi';
 
-/**
- * 自动追踪游戏时长并上报
- * 监听页面可见性变化和页面卸载事件，自动计算并上报游戏时长
- * 
- * @param gameFileId 当前游戏的 fileId（可选，如果不传则从 gameStore 读取）
- */
+const REPORT_INTERVAL_SECONDS = 25;
+const MAX_TASK_SECONDS = 1800; // 30分钟
+
+const postGameDurationWithKeepalive = async (
+    durationSeconds: number,
+    gameFileId: string,
+    token?: string,
+): Promise<void> => {
+    const response = await fetch(`${HOST_ADDRESS}/api/analytics/session/duration`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+            durationSeconds,
+            gameFileId,
+        }),
+        keepalive: true,
+    });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+};
+
 export const useGameDurationTracking = (gameFileId?: string) => {
     const { user } = useAuthStore();
-    const isReportingRef = useRef(false); // 防止并发上报
-    const gameFileIdRef = useRef(gameFileId); // 使用 ref 存储最新的 gameFileId
-    const lastReportAtRef = useRef<number>(0); // 防止同一次离开触发多次上报（pagehide + unmount 等）
+    const pendingSecondsRef = useRef(0);
+    const isVisibleRef = useRef(!document.hidden);
+    const isReportingRef = useRef(false);
+    const tickTimerRef = useRef<number | null>(null);
+    const gameFileIdRef = useRef(gameFileId);
 
-    // 更新 gameFileId ref
     useEffect(() => {
         gameFileIdRef.current = gameFileId;
     }, [gameFileId]);
 
-    // 计算并上报时长（分段模型：离开就提交；回来重新开始计时）
-    // 使用 getState 获取最新状态，避免闭包问题
-    const reportDuration = async (isPageUnload = false) => {
-        const trackingState = useTrackingStore.getState();
-        const { started_at, setStartedAt } = trackingState;
+    const resolveGameFileId = (): string | null => {
+        const explicit = String(gameFileIdRef.current || '').trim();
+        if (explicit) return explicit;
+        const fromStore = String(useGameStore.getState().fileId || '').trim();
+        return fromStore || null;
+    };
 
-        if (isReportingRef.current || !started_at) {
-            return;
-        }
+    const syncPending = (nextValue: number) => {
+        pendingSecondsRef.current = Math.max(0, Math.floor(nextValue));
+        useDailyTaskStore.getState().setPendingSeconds('game', pendingSecondsRef.current);
+    };
 
-        const effectiveGameFileId = gameFileIdRef.current || useGameStore.getState().fileId;
-        if (!effectiveGameFileId) {
-            return;
-        }
+    const addPending = (deltaSeconds: number) => {
+        const safeDelta = Math.max(0, Math.floor(deltaSeconds));
+        if (!safeDelta) return;
+        syncPending(pendingSecondsRef.current + safeDelta);
+    };
 
-        // 防抖：避免短时间内重复上报（常见于 pagehide + unmount 双触发）
-        const now = Date.now();
-        if (now - lastReportAtRef.current < 800) {
-            return;
-        }
-
-        const startTime = new Date(started_at).getTime();
-        const durationSeconds = Math.floor((now - startTime) / 1000);
-
-        // 如果时长小于 1 秒，可能是误触发，不上报
-        if (durationSeconds < 1) {
-            return;
-        }
+    const flush = async (isPageUnload = false) => {
+        if (isReportingRef.current) return;
+        const gameId = resolveGameFileId();
+        const secondsToReport = pendingSecondsRef.current;
+        if (!gameId || secondsToReport < 1) return;
+        if (secondsToReport > MAX_TASK_SECONDS) return;
 
         isReportingRef.current = true;
-        lastReportAtRef.current = now;
-
-        const payload = {
-            durationSeconds,
-            gameFileId: effectiveGameFileId,
-        };
+        useDailyTaskStore.getState().markFlushStarted();
+        syncPending(0);
 
         try {
-            // 如果是页面卸载，使用 fetch with keepalive（支持自定义 headers，浏览器保证发送）
             if (isPageUnload) {
-                const url = `${HOST_ADDRESS}/api/analytics/session/duration`;
-                const token = user?.token;
-                
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                    },
-                    body: JSON.stringify(payload),
-                    keepalive: true, // 关键：确保在页面卸载时也能发送，浏览器会保证请求完成
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                await postGameDurationWithKeepalive(secondsToReport, gameId, user?.token);
             } else {
-                // 正常情况使用 trackingApi
-                await trackingApi.analyticsEnd(payload);
+                const response = await trackingApi.analyticsEnd({
+                    durationSeconds: secondsToReport,
+                    gameFileId: gameId,
+                });
+                useDailyTaskStore.getState().syncFromPayload(response.data.data);
             }
-
-            // 成功上报后：清掉 started_at，防止同一次离开重复上报同一段
-            setStartedAt(null);
-        } catch (error) {
-            // 失败时不清 started_at，允许后续再次尝试上报
+        } catch {
+            addPending(secondsToReport);
         } finally {
+            useDailyTaskStore.getState().markFlushSettled();
             isReportingRef.current = false;
         }
     };
 
-    // 监听页面可见性变化
     useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                // 离开：立即提交本段时长
-                reportDuration(false);
-            } else {
-                // 回来：如果当前还没开始计时，则开始新一段
-                const trackingState = useTrackingStore.getState();
-                if (!trackingState.started_at) {
-                    trackingState.setStartedAt(new Date().toISOString());
-                }
+        const tick = () => {
+            if (!isVisibleRef.current) return;
+            if (!resolveGameFileId()) return;
+
+            addPending(1);
+            if (pendingSecondsRef.current >= REPORT_INTERVAL_SECONDS) {
+                void flush(false);
             }
         };
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+        tickTimerRef.current = window.setInterval(tick, 1000);
 
+        return () => {
+            if (tickTimerRef.current) {
+                window.clearInterval(tickTimerRef.current);
+            }
+            void flush(false);
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                isVisibleRef.current = false;
+                void flush(false);
+                return;
+            }
+            isVisibleRef.current = true;
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, []); 
-    
-    // 监听页面卸载事件（关闭标签页、关闭浏览器、刷新页面等）
+    }, []);
+
     useEffect(() => {
         const handleBeforeUnload = () => {
-            // 在页面卸载前上报（使用 fetch keepalive 确保发送）
-            reportDuration(true);
+            void flush(true);
         };
-
         const handlePageHide = () => {
-            reportDuration(true);
+            void flush(true);
         };
 
-        // 使用 beforeunload 和 pagehide 两个事件，确保覆盖所有场景
         window.addEventListener('beforeunload', handleBeforeUnload);
         window.addEventListener('pagehide', handlePageHide);
-
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
             window.removeEventListener('pagehide', handlePageHide);
         };
-    }, []); // 空依赖数组，因为 reportDuration 内部使用 getState 获取最新状态
-
-    useEffect(() => {
-        return () => {
-            // 组件卸载时，如果还没上报，尝试上报
-            const trackingState = useTrackingStore.getState();
-            if (trackingState.started_at) {
-                reportDuration(false);
-            }
-        };
-    }, []); 
+    }, [user?.token]);
 };
-

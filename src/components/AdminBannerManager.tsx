@@ -7,7 +7,7 @@ import { getImageUrl } from '../utils/constants';
 import ImageCropModal from './CommonModal/ImageCropModal';
 import styles from './AdminBannerManager.module.css';
 
-const BANNER_LIMIT = 3;
+const BANNER_LIMIT = 5;
 const SEARCH_DEBOUNCE_MS = 250;
 
 const createBannerItemId = (): string => {

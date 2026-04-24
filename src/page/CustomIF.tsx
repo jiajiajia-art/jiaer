@@ -5,6 +5,8 @@ import { authFetch } from '../api/base';
 import { CustomIFHostBridge } from '../custom/hostBridge';
 import { useTrackingStore } from '../store/trackingStore';
 import { useGameDurationTracking } from '../hooks/useGameDurationTracking';
+import { trackingApi } from '../api/statistics/trackingApi';
+import { useDailyTaskStore } from '../store/dailyTaskStore';
 
 type CreateSessionResp = {
   sessionId: string;
@@ -24,6 +26,7 @@ const CustomIF: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const bridgeRef = useRef<CustomIFHostBridge | null>(null);
   const { setStartedAt } = useTrackingStore();
+  const syncDailyTaskPayload = useDailyTaskStore((state) => state.syncFromPayload);
   useGameDurationTracking(appId || undefined);
 
   const toAbsoluteUrl = (raw?: string) => {
@@ -56,6 +59,14 @@ const CustomIF: React.FC = () => {
         setSession(data);
         const startTime = new Date().toISOString();
         setStartedAt(startTime);
+        trackingApi.reportGameEntry({
+          gameFileId: appId,
+          source: 'game_detail',
+        })
+          .then((entryResponse) => {
+            syncDailyTaskPayload(entryResponse.data.data);
+          })
+          .catch(() => {});
 
         // 2) load manifest if provided
         if (data.manifestUrl) {
@@ -72,7 +83,7 @@ const CustomIF: React.FC = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [appId]);
+  }, [appId, setStartedAt, syncDailyTaskPayload]);
 
   useEffect(() => {
     // attach host bridge when iframe is ready and session exists

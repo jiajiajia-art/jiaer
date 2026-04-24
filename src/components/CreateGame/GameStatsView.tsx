@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoEye } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
@@ -169,11 +169,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         }
     };
 
-    // 读取存档：打开列表
-    const handleOpenLoadSave = () => {
-        setIsLoadSaveOpen(true);
-    };
-
     // 读取存档：选择一项后预览
     const handlePreview = (item: SaveSummaryItem) => {
         setPreviewItem(item);
@@ -239,15 +234,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 onClick={handleStartGame}
                                 disabled={isLoading}
                             >
-                                {isLoading ? '加载中...' : '开始游戏'}
-                            </button>
-
-                            <button
-                                className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
-                                onClick={handleOpenLoadSave}
-                                disabled={isLoading}
-                            >
-                                读取存档
+                                {isLoading ? '加载中...' : '开始测试'}
                             </button>
 
                             {

@@ -15,6 +15,7 @@ import betaWhitelistApi from '../api/galgame/betaWhitelist';
 import createWorldSessionApi from '../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../utils/constants';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
+import { MdContentCopy } from 'react-icons/md';
 import { IoChevronBack } from 'react-icons/io5';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
@@ -24,6 +25,7 @@ import type { ReplayVisibility } from '../api/galgame/replay';
 import type { SaveSummaryItem } from '../api/galgame/saves';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
+import { useDailyTaskStore } from '../store/dailyTaskStore';
 
 // 检测是否在微信小程序环境
 const isWebViewEnv = (): boolean => {
@@ -93,6 +95,7 @@ const GameDetail: React.FC = () => {
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { setFileId, setIsPreset, setGameDetail: setGameDetailToStore } = useGameStore();
     const { setStartedAt } = useTrackingStore();
+    const syncDailyTaskPayload = useDailyTaskStore((state) => state.syncFromPayload);
 
     // 状态
     const [isLoading, setIsLoading] = useState(true);
@@ -262,6 +265,14 @@ const GameDetail: React.FC = () => {
                 const startTime = new Date().toISOString();
                 setStartedAt(startTime);
                 const sessionId = sessionResponse.data.data.session.session_id;
+                trackingApi.reportGameEntry({
+                    gameFileId: presetId,
+                    source: 'game_detail',
+                })
+                    .then((resp) => {
+                        syncDailyTaskPayload(resp.data.data);
+                    })
+                    .catch(() => {});
                 return sessionId;
             } else {
                 toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
@@ -293,6 +304,14 @@ const GameDetail: React.FC = () => {
             if (response.data.success) {
                 const startTime = new Date().toISOString();
                 setStartedAt(startTime);
+                trackingApi.reportGameEntry({
+                    gameFileId: presetId,
+                    source: 'game_detail',
+                })
+                    .then((resp) => {
+                        syncDailyTaskPayload(resp.data.data);
+                    })
+                    .catch(() => {});
                 return response.data.data.session.session_id;
             } else {
                 toast.error(response.data.message || '创建游戏失败，请重试');
@@ -717,14 +736,14 @@ const GameDetail: React.FC = () => {
                     {/* 标题和类型 */}
                     <div className={styles.headerSection}>
                         <div className={styles.titleRow}>
-                            <div className={`${styles.titleLeft} ${isGalgame ? styles.titleLeftWithReplay : ''}`}>
+                            <div className={styles.titleLeft}>
                                 <div className={styles.titleWithButton}>
                                     <h1 className={styles.gameTitle}>
                                         {game.title || '未命名游戏'}
                                     </h1>
-                                    <div className={`${styles.headerActions} ${isGalgame ? styles.headerActionsWithReplay : ''}`}>
+                                    <div className={styles.headerActions}>
                                         <button
-                                            className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline} ${isGalgame ? styles.headerLikeButton : ''}`}
+                                            className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline}`}
                                             onClick={handleLike}
                                             disabled={isLikeLoading}
                                             aria-label="点赞"
@@ -735,33 +754,22 @@ const GameDetail: React.FC = () => {
                                             />
                                             <span>{likeCount || 0}</span>
                                         </button>
-                                        {isGalgame && (
-                                            <button
-                                                type="button"
-                                                className={`${styles.replayEntryButton} ${styles.headerReplayButton} ${styles.desktopReplayButton}`}
-                                                onClick={openReplayDrawer}
-                                            >
-                                                <span className={styles.replayEntryLabel}>回放集锦</span>
-                                                <span className={styles.replayEntryArrow} aria-hidden="true">&gt;</span>
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                                 <div className={styles.gameMeta}>
-                                    <span className={styles.gameType}>{game.game_tags}</span>
-                                    <div className={styles.ratingSection}>
-                                        <span className={styles.rating}>
-                                            {game.rating_avg ?? DEFAULT_RATING}
-                                            <span className={styles.ratingUnit}>分</span>
-                                        </span>
-                                        {/* <span className={styles.ratingCount}>
-                                            {likeCount}人评价
-                                        </span> */}
+                                    <div className={styles.metaLeft}>
+                                        <span className={styles.gameType}>{game.game_tags}</span>
+                                        <div className={styles.ratingSection}>
+                                            <span className={styles.rating}>
+                                                {game.rating_avg ?? DEFAULT_RATING}
+                                                <span className={styles.ratingUnit}>分</span>
+                                            </span>
+                                        </div>
                                     </div>
                                     {isGalgame && (
                                         <button
                                             type="button"
-                                            className={`${styles.replayEntryButton} ${styles.mobileReplayButton}`}
+                                            className={styles.replayMetaButton}
                                             onClick={openReplayDrawer}
                                         >
                                             <span className={styles.replayEntryLabel}>回放集锦</span>
@@ -771,14 +779,31 @@ const GameDetail: React.FC = () => {
                                 </div>
                                 {/* 作者信息放在标题下面 */}
                                 <div className={styles.authorSection}>
-                                    <img
-                                        className={styles.authorAvatar}
-                                        src={getImageUrl(game.avatarUrl) || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
-                                        alt="作者头像"
-                                    />
-                                    <span className={styles.authorName}>
-                                        {game.author_name || '未知作者'}
-                                    </span>
+                                    <div className={styles.authorLeft}>
+                                        <img
+                                            className={styles.authorAvatar}
+                                            src={getImageUrl(game.avatarUrl) || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
+                                            alt="作者头像"
+                                        />
+                                        <span className={styles.authorName}>
+                                            {game.author_name || '未知作者'}
+                                        </span>
+                                    </div>
+                                    {game.groupNo && (
+                                        <span className={styles.groupNoTag}>
+                                            QQ群：{game.groupNo}
+                                            <button
+                                                className={styles.groupNoCopyBtn}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(game.groupNo!).catch(() => {});
+                                                    toast.success('QQ群号已复制');
+                                                }}
+                                                title="复制群号"
+                                            >
+                                                <MdContentCopy />
+                                            </button>
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
