@@ -4,7 +4,7 @@ import styles from './DocumentsPanel.module.css';
 import { BsUpload, BsCheckCircle } from 'react-icons/bs';
 import { HiOutlineGlobeAlt, HiOutlineUserGroup, HiOutlineMap, HiOutlineCheckCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { useUploadStore } from '../../../store/uploadStore';
+import { useUploadStore, type UploadJob } from '../../../store/uploadStore';
 import CreateEmptyGameModal from './CreateEmptyGameModal';
 import GenerateFromIdeaModal from './GenerateFromIdeaModal';
 import type { UploadResult } from '../../../hooks/editor/useFileUpload';
@@ -53,6 +53,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const handledJobStateRef = useRef<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [activeParseStartedAt, setActiveParseStartedAt] = useState<number | null>(null);
     const [failedJobSnapshot, setFailedJobSnapshot] = useState<FailedJobSnapshot | null>(null);
     const [parseErrorModal, setParseErrorModal] = useState<ParseErrorModalState>({
         visible: false,
@@ -86,6 +87,17 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             ...prev,
             visible: false,
         }));
+    }, []);
+
+    const resetParseFeedback = useCallback(() => {
+        // 清理上一次 Step 1 的临时状态，避免复用旧任务结果。
+        setFailedJobSnapshot(null);
+        setParseErrorModal({
+            visible: false,
+            message: '',
+            errorDetail: '',
+        });
+        handledJobStateRef.current = null;
     }, []);
 
     const handleUploadFailure = useCallback((errorDetail: string, snapshot?: Partial<FailedJobSnapshot>) => {
@@ -135,9 +147,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             return;
         }
 
+        resetParseFeedback();
+        setActiveParseStartedAt(Date.now());
         setUploadedFile(file);
-        setFailedJobSnapshot(null);
-        handledJobStateRef.current = null;
         onParsingStart();
 
         const result = await onFileUpload(file);
@@ -150,7 +162,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
             setFailedJobSnapshot(null);
             onParsingSuccess();
         }
-    }, [handleUploadFailure, onFileUpload, onParsingStart, onParsingSuccess, validateFileType]);
+    }, [handleUploadFailure, onFileUpload, onParsingStart, onParsingSuccess, resetParseFeedback, validateFileType]);
 
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -206,14 +218,46 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         await startUpload(file);
     };
 
-    useEffect(() => {
-        const jobList = Object.values(jobs);
-        if (jobList.length === 0 || !uploadedFile) {
-            return;
+    const getLatestJob = useCallback((jobList: UploadJob[]) => {
+        if (jobList.length === 0) {
+            return null;
         }
 
-        const currentJob = jobList.find((job) => job.fileName === uploadedFile.name) || jobList[jobList.length - 1];
-        if (!currentJob) {
+        return jobList.reduce((latestJob, job) => (
+            job.startTime >= latestJob.startTime ? job : latestJob
+        ));
+    }, []);
+
+    const jobList = useMemo(() => Object.values(jobs), [jobs]);
+
+    const currentJob = useMemo(() => {
+        if (activeParseStartedAt === null) {
+            return null;
+        }
+
+        const scopedJobs = jobList.filter((job) => job.startTime >= activeParseStartedAt);
+
+        if (scopedJobs.length === 0) {
+            return null;
+        }
+
+        const activeJobs = scopedJobs.filter(
+            (job) => job.status === 'uploading' || job.status === 'processing',
+        );
+        const candidateJobs = activeJobs.length > 0 ? activeJobs : scopedJobs;
+
+        if (uploadedFile?.name) {
+            const matchedJobs = candidateJobs.filter((job) => job.fileName === uploadedFile.name);
+            if (matchedJobs.length > 0) {
+                return getLatestJob(matchedJobs);
+            }
+        }
+
+        return getLatestJob(candidateJobs);
+    }, [activeParseStartedAt, getLatestJob, jobList, uploadedFile?.name]);
+
+    useEffect(() => {
+        if (!isParsing || !currentJob) {
             return;
         }
 
@@ -240,19 +284,15 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 },
             );
         }
-    }, [jobs, uploadedFile, onParsingSuccess, handleUploadFailure]);
+    }, [currentJob, handleUploadFailure, isParsing, onParsingSuccess]);
 
     const handleRetry = () => {
-        setFailedJobSnapshot(null);
+        resetParseFeedback();
+        setActiveParseStartedAt(null);
         setUploadedFile(null);
-        setParseErrorModal((prev) => ({
-            ...prev,
-            visible: false,
-        }));
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        handledJobStateRef.current = null;
     };
 
     const formatFileSize = (bytes: number) => {
@@ -261,13 +301,6 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
-    const getCurrentJob = () => {
-        const jobList = Object.values(jobs);
-        if (jobList.length === 0 || !uploadedFile) return null;
-        return jobList.find((job) => job.fileName === uploadedFile.name) || jobList[jobList.length - 1];
-    };
-
-    const currentJob = getCurrentJob();
     const isUploading = isParsing && !currentJob && uploadedFile;
     const progress = (currentJob?.progress ?? failedJobSnapshot?.progress) ?? 0;
     const stage = currentJob?.stage || failedJobSnapshot?.stage || (isUploading ? '正在上传文件...' : '');
@@ -323,6 +356,17 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
     const currentStepIndex = getCurrentStepIndex();
     const isCompleted = currentJob?.status === 'completed';
+
+    const handleGenerateFromIdeaSubmit = useCallback(async (idea: string) => {
+        if (!onGenerateFromIdea) {
+            return false;
+        }
+
+        resetParseFeedback();
+        setActiveParseStartedAt(Date.now());
+        setUploadedFile(null);
+        return onGenerateFromIdea(idea);
+    }, [onGenerateFromIdea, resetParseFeedback]);
 
     return (
         <div className={styles.panelContent}>
@@ -496,7 +540,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                 <GenerateFromIdeaModal
                     isOpen={showGenerateFromIdeaModal}
                     onClose={() => setShowGenerateFromIdeaModal(false)}
-                    onSubmit={onGenerateFromIdea}
+                    onSubmit={handleGenerateFromIdeaSubmit}
                 />
             )}
 

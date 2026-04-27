@@ -53,8 +53,16 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
                 {/* 操作区域 */}
                 {completed ? (
                     <div className={styles.actionRow}>
-                        <button type="button" className={styles.secondaryBtn} onClick={onPrimary}>{primaryText}</button>
-                        <button type="button" className={styles.primaryBtn} onClick={onSecondary}>{secondaryText}</button>
+                        <button
+                            type="button"
+                            className={onSecondary ? styles.secondaryBtn : styles.primaryBtn}
+                            onClick={onPrimary}
+                        >
+                            {primaryText}
+                        </button>
+                        {onSecondary ? (
+                            <button type="button" className={styles.primaryBtn} onClick={onSecondary}>{secondaryText}</button>
+                        ) : null}
                     </div>
                 ) : (
                     <button

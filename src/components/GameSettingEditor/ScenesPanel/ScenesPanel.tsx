@@ -59,7 +59,7 @@ interface ScenesPanelProps {
 }
 
 export interface ScenesPanelRef {
-    checkBeforeLeave: () => boolean;
+    checkBeforeLeave: (action?: () => void) => boolean;
 }
 
 const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({ 
@@ -120,6 +120,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         targetSubsceneId?: string | null;
     } | null>(null);
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
+    const pendingPanelActionRef = useRef<(() => void) | null>(null);
 
     // 暂存图片相关状态
     const [pendingImages, setPendingImages] = useState<{ [sceneId: string]: { [variant: string]: PendingImage } }>({});
@@ -537,41 +538,58 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     }, [onGetData, getSceneSettingData]);
 
     const executePendingAction = useCallback(() => {
-        if (!pendingAction) return;
+        const action = pendingAction;
+        const pendingPanelAction = pendingPanelActionRef.current;
 
-        if (pendingAction.type === 'switchScene') {
+        setPendingAction(null);
+        pendingPanelActionRef.current = null;
+
+        if (!action) {
+            if (pendingPanelAction) {
+                pendingPanelAction();
+            }
+            return;
+        }
+
+        if (action.type === 'switchScene') {
             setIsAddingNew(false);
             setNewSceneData(null);
             if (isAddingNewSubscene) {
                 setIsAddingNewSubscene(false);
             }
             setActiveSubsceneDraft(null);
-            setActiveSceneId(pendingAction.targetSceneId || '');
+            setActiveSceneId(action.targetSceneId || '');
             setActiveSubsceneId(null);
+        } else if (action.type === 'switchPanel') {
+            if (pendingPanelAction) {
+                pendingPanelAction();
+            }
         }
-
-        setPendingAction(null);
     }, [pendingAction, isAddingNewSubscene]);
 
     const checkBeforeSwitch = useCallback((action: { type: 'switchScene' | 'switchSubscene' | 'switchPanel' | 'createScene'; targetSceneId?: string | null; targetSubsceneId?: string | null }) => {
         if (hasUnsavedChanges) {
+            pendingPanelActionRef.current = null;
             setPendingAction(action);
             setSaveConfirmModalOpen(true);
             setIsBlockingSwitch(true);
+            isBlockingSwitchRef.current = true;
             return false;
         }
         return true;
     }, [hasUnsavedChanges]);
 
     useImperativeHandle(ref, () => ({
-        checkBeforeLeave: () => {
+        checkBeforeLeave: (action?: () => void) => {
             const hasChanges = hasUnsavedChangesRef.current;
             const isBlocking = isBlockingSwitchRef.current;
             
             if (hasChanges && !isBlocking) {
+                pendingPanelActionRef.current = action || null;
                 setPendingAction({ type: 'switchPanel' });
                 setSaveConfirmModalOpen(true);
                 setIsBlockingSwitch(true);
+                isBlockingSwitchRef.current = true;
                 return false;
             }
             
@@ -1075,6 +1093,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         } else {
                             setHasUnsavedChanges(false);
                         }
+                        hasUnsavedChangesRef.current = false;
+                        isBlockingSwitchRef.current = false;
                         setSaveConfirmModalOpen(false);
                         setIsBlockingSwitch(false);
                         executePendingAction();
@@ -1084,6 +1104,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 }}
                 onDiscard={() => {
                     discardCurrentScenePendingChanges();
+                    hasUnsavedChangesRef.current = false;
+                    isBlockingSwitchRef.current = false;
                     setSaveConfirmModalOpen(false);
                     setHasUnsavedChanges(false);
                     setIsBlockingSwitch(false);
@@ -1093,6 +1115,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     setSaveConfirmModalOpen(false);
                     setPendingAction(null);
                     setIsBlockingSwitch(false);
+                    isBlockingSwitchRef.current = false;
+                    pendingPanelActionRef.current = null;
                 }}
                 title="未保存的修改"
                 message="您有未保存的修改，是否要保存？"

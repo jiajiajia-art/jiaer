@@ -29,11 +29,13 @@ type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | '';
 type NavbarProps = {
     mobileVariant?: 'default' | 'home-overlay';
     mobileOverlayScrolled?: boolean;
+    beforeLeaveAction?: (action: () => void) => void;
 };
 
 const Navbar: React.FC<NavbarProps> = ({
     mobileVariant = 'default',
     mobileOverlayScrolled = false,
+    beforeLeaveAction,
 }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -181,6 +183,14 @@ const Navbar: React.FC<NavbarProps> = ({
         return false;
     };
 
+    const runLeaveAction = (action: () => void) => {
+        if (beforeLeaveAction) {
+            beforeLeaveAction(action);
+            return;
+        }
+        action();
+    };
+
     const resetSearchState = () => {
         // Reset transient search state after navigation or manual close.
         searchRequestIdRef.current += 1;
@@ -196,8 +206,10 @@ const Navbar: React.FC<NavbarProps> = ({
         const gameId = getSearchResultId(game);
         if (!gameId) return;
 
-        resetSearchState();
-        navigate(`/game/${gameId}`, { state: { source: 'search' } });
+        runLeaveAction(() => {
+            resetSearchState();
+            navigate(`/game/${gameId}`, { state: { source: 'search' } });
+        });
     };
 
     const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -229,13 +241,13 @@ const Navbar: React.FC<NavbarProps> = ({
                 <div className={styles.navLinks}>
                     <div
                         className={`${styles.navLink} ${activeNav === 'home' ? styles.navLinkActive : ''}`}
-                        onClick={() => navigate('/home')}
+                        onClick={() => runLeaveAction(() => navigate('/home'))}
                     >
                         首页
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === 'categories' ? styles.navLinkActive : ''}`}
-                        onClick={() => navigate('/categories')}
+                        onClick={() => runLeaveAction(() => navigate('/categories'))}
                     >
                         分类
                     </div>
@@ -243,7 +255,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''}`}
                         onClick={() => {
                             if (!requireAuth()) return;
-                            navigate('/create');
+                            runLeaveAction(() => navigate('/create'));
                         }}
                     >
                         创作
@@ -252,7 +264,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         className={`${styles.navLink} ${activeNav === 'warehouse' ? styles.navLinkActive : ''}`}
                         onClick={() => {
                             if (!requireAuth()) return;
-                            navigate('/warehouse');
+                            runLeaveAction(() => navigate('/warehouse'));
                         }}
                     >
                         仓库
@@ -320,7 +332,7 @@ const Navbar: React.FC<NavbarProps> = ({
                             <button
                                 type="button"
                                 className={styles.messageButton}
-                                onClick={() => navigate('/messages')}
+                                onClick={() => runLeaveAction(() => navigate('/messages'))}
                                 aria-label="消息中心"
                             >
                                 <IoMailOutline />
@@ -346,8 +358,10 @@ const Navbar: React.FC<NavbarProps> = ({
                                         <button
                                             className={styles.menuBtn}
                                             onClick={() => {
-                                                navigate('/profile');
-                                                setShowUserMenu(false);
+                                                runLeaveAction(() => {
+                                                    navigate('/profile');
+                                                    setShowUserMenu(false);
+                                                });
                                             }}
                                         >
                                             个人中心
@@ -356,8 +370,10 @@ const Navbar: React.FC<NavbarProps> = ({
                                             <button
                                                 className={styles.menuBtn}
                                                 onClick={() => {
-                                                    navigate('/admin');
-                                                    setShowUserMenu(false);
+                                                    runLeaveAction(() => {
+                                                        navigate('/admin');
+                                                        setShowUserMenu(false);
+                                                    });
                                                 }}
                                             >
                                                 管理面板
@@ -366,8 +382,10 @@ const Navbar: React.FC<NavbarProps> = ({
                                         <button
                                             className={`${styles.menuBtn} ${styles.logoutBtn}`}
                                             onClick={() => {
-                                                logout();
-                                                setShowUserMenu(false);
+                                                runLeaveAction(() => {
+                                                    logout();
+                                                    setShowUserMenu(false);
+                                                });
                                             }}
                                         >
                                             退出登录

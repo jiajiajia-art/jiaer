@@ -16,6 +16,8 @@ import getGameDataApi from '../../../api/home/getGameData';
 import gameTagsApi from '../../../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../../../utils/themeTags';
 
+const WORLD_PANEL_TOAST_DURATION = 2200;
+
 export interface WorldPanelRef {
     checkBeforeLeave: (action?: () => void) => boolean;
 }
@@ -114,6 +116,9 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const originalThemeTagIdsRef = useRef<number[]>([]);
     const hasTouchedThemeTagsRef = useRef(false);
     const saveWorldSettingChangesRef = useRef<(() => Promise<boolean>) | null>(null);
+    const hasUnsavedChangesRef = useRef(false);
+    const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+    const isLeaveActionPendingRef = useRef(false);
 
     const currentFileId = gameData?.fileId || fileId;
     const isWorldInteractionMode = mode === 'worldInteraction';
@@ -124,6 +129,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     );
 
     const {
+        hasUnsavedChanges,
         setHasUnsavedChanges,
         SaveConfirmModalComponent,
         getCheckBeforeLeave,
@@ -136,9 +142,29 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         },
     });
 
-    useImperativeHandle(ref, () => ({
-        checkBeforeLeave: getCheckBeforeLeave(),
-    }), [getCheckBeforeLeave]);
+    useEffect(() => {
+        hasUnsavedChangesRef.current = hasUnsavedChanges;
+    }, [hasUnsavedChanges]);
+
+    const defaultCheckBeforeLeave = React.useMemo(() => getCheckBeforeLeave(), [getCheckBeforeLeave]);
+
+    const executePendingLeaveAction = useCallback(() => {
+        const action = pendingLeaveActionRef.current;
+        pendingLeaveActionRef.current = null;
+        action?.();
+    }, []);
+
+    const showWorldPanelErrorToast = useCallback((message: string) => {
+        toast.error(message, { duration: WORLD_PANEL_TOAST_DURATION });
+    }, []);
+
+    const clearLeaveActionState = useCallback((clearUnsavedChanges: boolean) => {
+        isLeaveActionPendingRef.current = false;
+        if (clearUnsavedChanges) {
+            hasUnsavedChangesRef.current = false;
+            setHasUnsavedChanges(false);
+        }
+    }, [setHasUnsavedChanges]);
 
     useEffect(() => {
         let cancelled = false;
@@ -277,7 +303,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setToneValue(value);
     };
 
-    const handleThemeTagToggle = (tagId: number) => {
+    const handleThemeTagToggle = useCallback((tagId: number) => {
         hasTouchedThemeTagsRef.current = true;
         setSelectedThemeTagIds((prev) => {
             if (prev.includes(tagId)) {
@@ -288,13 +314,13 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 return next;
             }
             if (prev.length >= 2) {
-                toast.error('作品标签最多选择 2 个');
+                showWorldPanelErrorToast('作品标签最多选择 2 个');
                 return prev;
             }
             setThemeTagError('');
             return [...prev, tagId];
         });
-    };
+    }, [showWorldPanelErrorToast]);
 
     const reorderStorylines = (items: StoryLine[]): StoryLine[] => {
         const sorted = [...items].sort((a, b) => a.index - b.index);
@@ -550,6 +576,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         lastWorldSettingSnapshotRef.current = JSON.stringify(savedWorldSetting);
         originalThemeTagIdsRef.current = [...savedThemeTagIds];
         hasTouchedThemeTagsRef.current = false;
+        hasUnsavedChangesRef.current = false;
         setPersistedThemeTagIds([...savedThemeTagIds]);
         setHasUnsavedChanges(false);
     }, [setHasUnsavedChanges]);
@@ -558,7 +585,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const openingTrimmed = opening.trim();
         if (!openingTrimmed) {
             setOpeningError('开场白为必填字段，请填写后再提交');
-            toast.error('开场白为必填字段，请填写后再提交');
+            showWorldPanelErrorToast('开场白为必填字段，请填写后再提交');
             return false;
         }
         setOpeningError('');
@@ -566,7 +593,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         const openingPlotTrimmed = openingPlot.trim();
         if (!openingPlotTrimmed) {
             setOpeningPlotError('开场剧情为必填字段，请填写后再提交');
-            toast.error('开场剧情为必填字段，请填写后再提交');
+            showWorldPanelErrorToast('开场剧情为必填字段，请填写后再提交');
             return false;
         }
         setOpeningPlotError('');
@@ -574,7 +601,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         // 实现题材标签保存校验
         if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
             setThemeTagError('请选择 1~2 个作品标签');
-            toast.error('作品标签为必填，且最多选择 2 个');
+            showWorldPanelErrorToast('作品标签为必填，且最多选择 2 个');
             return false;
         }
         setThemeTagError('');
@@ -582,12 +609,12 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (isWorldInteractionMode && storylines.length === 0) {
             setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
             setIsStorylineExpanded(true);
-            toast.error('请至少添加一条故事线（世界交互模式下为必填）');
+            showWorldPanelErrorToast('请至少添加一条故事线（世界交互模式下为必填）');
             return false;
         }
         setStorylineError('');
         return true;
-    }, [isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, storylines.length]);
+    }, [isWorldInteractionMode, opening, openingPlot, selectedThemeTagIds.length, showWorldPanelErrorToast, storylines.length]);
 
     const saveWorldSettingChanges = useCallback(async () => {
         if (!handleSubmit) {
@@ -600,7 +627,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         const fullWorldSetting = getFullWorldSettingData();
         if (!fullWorldSetting) {
-            toast.error('没有需要保存的世界观数据');
+            showWorldPanelErrorToast('没有需要保存的世界观数据');
             return false;
         }
 
@@ -610,9 +637,55 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 syncSavedBaseline(fullWorldSetting, nextThemeTagIds);
             },
         });
-    }, [getFullWorldSettingData, handleSubmit, selectedThemeTagIds, syncSavedBaseline, validateWorldSettingBeforeSave]);
+    }, [getFullWorldSettingData, handleSubmit, selectedThemeTagIds, showWorldPanelErrorToast, syncSavedBaseline, validateWorldSettingBeforeSave]);
 
     saveWorldSettingChangesRef.current = saveWorldSettingChanges;
+
+    const checkBeforeLeave = useCallback((action?: () => void) => {
+        if (isWorldInteractionMode) {
+            return defaultCheckBeforeLeave(action);
+        }
+
+        if (!hasUnsavedChangesRef.current) {
+            return true;
+        }
+
+        if (isLeaveActionPendingRef.current) {
+            return false;
+        }
+
+        if (!validateWorldSettingBeforeSave()) {
+            pendingLeaveActionRef.current = null;
+            return false;
+        }
+
+        pendingLeaveActionRef.current = action || null;
+        isLeaveActionPendingRef.current = true;
+
+        void (async () => {
+            try {
+                const saveResult = await saveWorldSettingChangesRef.current?.();
+                if (saveResult !== true) {
+                    pendingLeaveActionRef.current = null;
+                    clearLeaveActionState(false);
+                    return;
+                }
+
+                clearLeaveActionState(true);
+                executePendingLeaveAction();
+            } catch (error) {
+                pendingLeaveActionRef.current = null;
+                clearLeaveActionState(false);
+                showWorldPanelErrorToast('保存失败，请重试');
+            }
+        })();
+
+        return false;
+    }, [clearLeaveActionState, defaultCheckBeforeLeave, executePendingLeaveAction, isWorldInteractionMode, showWorldPanelErrorToast, validateWorldSettingBeforeSave]);
+
+    useImperativeHandle(ref, () => ({
+        checkBeforeLeave,
+    }), [checkBeforeLeave]);
 
     useEffect(() => {
         if (!originalDataRef.current) {
@@ -662,7 +735,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 </div>
             </div>
 
-            {SaveConfirmModalComponent}
+            {isWorldInteractionMode ? SaveConfirmModalComponent : null}
 
             <div className={styles.formContainer}>
                 {/* 实现世界观设定标题与右上角确认按钮 */}

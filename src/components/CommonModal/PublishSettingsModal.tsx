@@ -13,10 +13,11 @@ import ImageCropModal from './ImageCropModal';
 interface PublishSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onPublish: (description: string) => void;
+    onPublish: (description: string) => Promise<void> | void;
     fileId?: string;
     coverUrl?: string;
     onCoverUploaded?: () => void;
+    publishing?: boolean;
 }
 
 const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
@@ -26,6 +27,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     fileId,
     coverUrl,
     onCoverUploaded,
+    publishing = false,
 }) => {
     const DESCRIPTION_MAX_LENGTH = 300;
     const coverInputRef = useRef<HTMLInputElement>(null);
@@ -105,6 +107,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     if (!isOpen) return null;
 
     const handleSubmit = () => {
+        if (publishing) {
+            return;
+        }
         // 实现封面必填校验
         if (!coverPreview) {
             toast.error('请上传封面图片');
@@ -249,7 +254,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     </div>
 
                     <div className={styles.buttonGroup}>
-                        <button className={styles.publishBtn} onClick={handleSubmit}>
+                        <button className={styles.publishBtn} onClick={handleSubmit} disabled={publishing}>
                             发布
                         </button>
                     </div>

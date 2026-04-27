@@ -50,7 +50,7 @@ interface CharactersPanelProps {
 }
 
 export interface CharactersPanelRef {
-    checkBeforeLeave: () => boolean;
+    checkBeforeLeave: (action?: () => void) => boolean;
 }
 
 const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProps>(({
@@ -124,6 +124,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     } | null>(null);
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
     const [personalityInputValue, setPersonalityInputValue] = useState('');
+    const pendingPanelActionRef = useRef<(() => void) | null>(null);
 
     // 暂存图片状态 - 用于图片上传/生成后、确认前的预览
     const [pendingImages, setPendingImages] = useState<{ [characterId: string]: { [variant: string]: PendingImage } }>({});
@@ -366,15 +367,34 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 执行待处理的操作
     const executePendingAction = useCallback(() => {
-        if (!pendingAction) return;
-
-        if (pendingAction.type === 'switchCharacter') {
-            setActiveCharacterId(pendingAction.targetCharacterId || '');
-        } else if (pendingAction.type === 'createCharacter') {
-            // 这个操作会在 openAddNewPanel 中执行，这里不需要重复
-        }
+        const action = pendingAction;
+        const pendingPanelAction = pendingPanelActionRef.current;
 
         setPendingAction(null);
+        pendingPanelActionRef.current = null;
+
+        if (!action) {
+            if (pendingPanelAction) {
+                pendingPanelAction();
+            }
+            return;
+        }
+
+        if (action.type === 'switchCharacter') {
+            setActiveCharacterId(action.targetCharacterId || '');
+            return;
+        }
+
+        if (action.type === 'switchPanel') {
+            if (pendingPanelAction) {
+                pendingPanelAction();
+            }
+            return;
+        }
+
+        if (action.type === 'createCharacter') {
+            return;
+        }
     }, [pendingAction]);
 
     // 丢弃当前角色的暂存立绘并恢复到原始数据
@@ -395,9 +415,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         // 检查是否有暂存图片
         const hasPendingImages = activeCharacterId && pendingImages[activeCharacterId] && Object.keys(pendingImages[activeCharacterId]).length > 0;
         if (hasPendingImages || hasUnsavedChanges) {
+            pendingPanelActionRef.current = null;
             setPendingAction(action);
             setSaveConfirmModalOpen(true);
             setIsBlockingSwitch(true);
+            isBlockingSwitchRef.current = true;
             return false;
         }
         return true;
@@ -405,16 +427,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 暴露给父组件的方法，用于在切换面板前检查
     useImperativeHandle(ref, () => ({
-        checkBeforeLeave: () => {
+        checkBeforeLeave: (action?: () => void) => {
             const hasChanges = hasUnsavedChangesRef.current;
             const isBlocking = isBlockingSwitchRef.current;
             const hasPendingImages = activeCharacterId && pendingImagesRef.current[activeCharacterId] &&
                 Object.keys(pendingImagesRef.current[activeCharacterId]).length > 0;
 
             if ((hasChanges || hasPendingImages) && !isBlocking) {
+                pendingPanelActionRef.current = action || null;
                 setPendingAction({ type: 'switchPanel' });
                 setSaveConfirmModalOpen(true);
                 setIsBlockingSwitch(true);
+                isBlockingSwitchRef.current = true;
                 return false;
             }
 
@@ -1811,6 +1835,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         if (!saved) {
                             return;
                         }
+                        hasUnsavedChangesRef.current = false;
+                        isBlockingSwitchRef.current = false;
                         setSaveConfirmModalOpen(false);
                         setIsBlockingSwitch(false);
                         setHasUnsavedChanges(false);
@@ -1821,6 +1847,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 }}
                 onDiscard={() => {
                     discardCurrentCharacterPendingImages();
+                    hasUnsavedChangesRef.current = false;
+                    isBlockingSwitchRef.current = false;
                     setSaveConfirmModalOpen(false);
                     setHasUnsavedChanges(false);
                     setIsBlockingSwitch(false);
@@ -1830,6 +1858,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     setSaveConfirmModalOpen(false);
                     setPendingAction(null);
                     setIsBlockingSwitch(false);
+                    isBlockingSwitchRef.current = false;
+                    pendingPanelActionRef.current = null;
                 }}
                 title="未保存的修改"
                 message="您有未保存的修改，是否要保存？"

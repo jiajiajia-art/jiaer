@@ -117,7 +117,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             <span className={styles.fieldLabel}>作品标签<span className={styles.required}>*</span></span>
                             <span className={styles.fieldHint}>最少 1 个，最多 2 个</span>
                         </div>
-                        <div className={styles.themeTagsWrap}>
+                        <div className={`${styles.themeTagsWrap} ${themeTagError ? styles.themeTagsWrapError : ''}`}>
                             {themeTags.map((tag) => {
                                 const selected = selectedThemeTagIds.includes(tag.id);
                                 return (

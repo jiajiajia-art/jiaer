@@ -319,6 +319,27 @@
 .pickedText{ color:#4b5563; font-size:12px; }
 
 /* 纵向排列：文件类型选择器 + 上传区域 */
+.assetsUploadLayout {
+  width: min(100%, 1120px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.assetsUploadLayoutWide {
+  width: 100%;
+  max-width: none;
+}
+
+.assetsUploadMain,
+.assetsUploadAside {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .uploaderColumn{ display:flex; flex-direction:column; gap:12px; width: min(100%, 1120px); }
 
 .themeTagsPanel {
@@ -378,7 +399,7 @@
 .smallBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .cloudAssetsCard {
-  width: min(100%, 1120px);
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -386,6 +407,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   background: #fff;
+  overflow: hidden;
 }
 
 .cloudAssetsHeader {
@@ -396,6 +418,7 @@
 }
 
 .cloudAssetsHeading {
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -421,10 +444,66 @@
   justify-content: flex-end;
 }
 
+.assetsPanelTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.assetsPanelTab {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.assetsPanelTab:hover:not(:disabled) {
+  color: #fb5b67;
+}
+
+.assetsPanelTab:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.assetsPanelTabActive {
+  color: #111827;
+}
+
+.assetsPanelTabDivider {
+  color: #cbd5e1;
+  font-size: 12px;
+  line-height: 1;
+}
+
 .cloudAssetsEmpty {
+  min-height: 460px;
+  display: flex;
+  align-items: center;
   font-size: 13px;
   color: #6b7280;
   line-height: 1.6;
+}
+
+.cloudAssetsBody {
+  min-height: 460px;
+}
+
+.localAssetsBody {
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.localAssetsBody .dropZoneLarge {
+  flex: 1;
 }
 
 .cloudAssetRow {
@@ -441,6 +520,310 @@
   font-size: 12px;
   text-align: right;
   line-height: 1.5;
+}
+
+.assetTreePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: #fcfdff;
+  padding: 10px 12px;
+}
+
+.assetTreeHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assetTreeTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.assetTreeSubTitle {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.assetTreeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cloudAssetTreePanel {
+  height: 460px;
+  min-height: 460px;
+}
+
+.cloudAssetTreeList {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.localAssetsTreeArea {
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
+.localAssetTreePanel {
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+}
+
+.localAssetTreeList {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.assetTreeNode {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.assetTreeChildrenWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transition: grid-template-rows 0.24s ease, opacity 0.18s ease;
+}
+
+.assetTreeChildrenWrapExpanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.assetTreeChildrenInner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.assetTreeChildren {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-top: 2px;
+}
+
+.assetTreeRow {
+  --asset-depth-space: calc(var(--asset-depth, 0) * 18px);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto auto auto minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 6px 4px calc(8px + var(--asset-depth-space));
+  border-radius: 8px;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.assetTreeRow::before {
+  content: '';
+  position: absolute;
+  left: calc(17px + var(--asset-depth-space));
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.assetTreeRow::after {
+  content: '';
+  position: absolute;
+  left: calc(17px + var(--asset-depth-space));
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.38);
+  transform: translateY(-50%);
+}
+
+.assetTreeRow:hover {
+  background: rgba(37, 99, 235, 0.045);
+}
+
+.assetTreeDirectoryRow {
+  background: transparent;
+}
+
+.assetTreeFileRow {
+  background: transparent;
+}
+
+.assetTreeRowExpandable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.assetTreeRowExpandable:focus-visible {
+  outline: none;
+  background: rgba(37, 99, 235, 0.055);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.22), 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.assetTreeBranch {
+  display: none;
+}
+
+.assetTreeBranchLine {
+  display: none;
+}
+
+.assetTreeToggle,
+.assetTreeTogglePlaceholder {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.assetTreeToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.assetTreeToggle:hover {
+  background: rgba(148, 163, 184, 0.14);
+  color: #334155;
+}
+
+.assetTreeTogglePlaceholder,
+.assetTreeCheckboxPlaceholder,
+.assetTreeActionPlaceholder {
+  display: inline-flex;
+}
+
+.assetTreeCheckboxPlaceholder {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.assetTreeActionPlaceholder {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.assetTreeIcon {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-radius: 999px;
+  font-size: 0;
+  flex-shrink: 0;
+}
+
+.assetTreeDirectoryIcon {
+  background: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+
+.assetTreeFileIcon {
+  background: #cbd5e1;
+}
+
+.assetTreeContent {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.assetTreeNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.assetTreeName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.assetTreeBadge {
+  display: none;
+}
+
+.assetTreeMeta {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.assetDangerBtn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 8px;
+  padding: 0;
+  font-size: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  justify-self: end;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.assetDangerBtn::before {
+  content: '×';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.assetDangerBtn:hover:not(:disabled) {
+  background: rgba(254, 242, 242, 0.95);
+  border-color: rgba(248, 113, 113, 0.26);
+  color: #dc2626;
+}
+
+.assetDangerBtn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 /* 确认弹窗 */
@@ -469,10 +852,167 @@
   .textarea { width: 100%; height: 100px; font-size: 14px; }
   .fileRow { width: 100%; }
   .primaryBtn { width: 100%; height: 44px; font-size: 14px; }
+  .assetsUploadLayout { width: 100%; }
   .uploaderColumn { width: 100%; }
   .themeTagsPanel { width: 100%; }
-  .cloudAssetsHeader { flex-direction: column; }
-  .cloudAssetsActions { justify-content: flex-start; }
+  .cloudAssetsHeader {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+  .cloudAssetsActions {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .assetsPanelTabs {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+  .assetsPanelTab,
+  .smallBtn {
+    white-space: nowrap;
+  }
+  .assetsPanelTabDivider {
+    flex: 0 0 auto;
+  }
   .cloudAssetRow { flex-direction: column; gap: 4px; }
   .cloudAssetMetaLine { text-align: left; }
+  .assetTreeRow {
+    grid-template-columns: auto auto auto auto minmax(0, 1fr) 28px;
+    align-items: center;
+    padding-right: 4px;
+  }
+  .assetDangerBtn,
+  .assetTreeActionPlaceholder {
+    grid-column: auto;
+    margin-left: 0;
+    width: 28px;
+  }
+  .assetTreeNameRow {
+    flex-wrap: nowrap;
+  }
+  .assetTreeName {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+@media (max-width: 980px) {
+  .assetsUploadLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.assetTreeToggle {
+  font-size: 0;
+}
+
+.assetTreeToggle::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transition: transform 0.22s ease;
+}
+
+.assetTreeToggle[data-expanded='false']::before {
+  transform: rotate(-45deg) translate(-1px, 1px);
+}
+
+.assetTreeToggle[data-expanded='true']::before {
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.assetTreeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  background-color: #94a3b8;
+  border-radius: 0;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+.assetTreeDirectoryIcon {
+  background-color: #2563eb;
+  box-shadow: none;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='black'%3E%3Cpath d='M2 5.5A1.5 1.5 0 0 1 3.5 4H8l1.4 1.8H16.5A1.5 1.5 0 0 1 18 7.3v7.2A1.5 1.5 0 0 1 16.5 16h-13A1.5 1.5 0 0 1 2 14.5v-9Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='black'%3E%3Cpath d='M2 5.5A1.5 1.5 0 0 1 3.5 4H8l1.4 1.8H16.5A1.5 1.5 0 0 1 18 7.3v7.2A1.5 1.5 0 0 1 16.5 16h-13A1.5 1.5 0 0 1 2 14.5v-9Z'/%3E%3C/svg%3E");
+}
+
+.assetTreeFileIcon {
+  background-color: #94a3b8;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='black'%3E%3Cpath d='M5 2.5A1.5 1.5 0 0 1 6.5 1h6L17 5.5v12A1.5 1.5 0 0 1 15.5 19h-9A1.5 1.5 0 0 1 5 17.5v-15Z'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='black'%3E%3Cpath d='M5 2.5A1.5 1.5 0 0 1 6.5 1h6L17 5.5v12A1.5 1.5 0 0 1 15.5 19h-9A1.5 1.5 0 0 1 5 17.5v-15Z'/%3E%3C/svg%3E");
+}
+
+.assetDangerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+}
+
+.assetDangerBtn::before {
+  content: '';
+  display: block;
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M9 3h6l1 2h5v2H3V5h5l1-2Zm-3 6h12l-1 11H7L6 9Zm3 2v7h2v-7H9Zm4 0v7h2v-7h-2Z'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M9 3h6l1 2h5v2H3V5h5l1-2Zm-3 6h12l-1 11H7L6 9Zm3 2v7h2v-7H9Zm4 0v7h2v-7h-2Z'/%3E%3C/svg%3E");
+}
+
+.assetDangerBtn:focus-visible {
+  outline: none;
+  border-color: rgba(248, 113, 113, 0.32);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+}
+
+.fileStats[data-label],
+.cloudAssetsMeta[data-label] {
+  position: relative;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+.fileStats[data-label]::before,
+.cloudAssetsMeta[data-label]::before {
+  content: attr(data-label);
+  display: block;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.fileStats[data-label]::before {
+  font-size: 12px;
+}
+
+.cloudAssetsMeta[data-label]::before {
+  font-size: 13px;
 }

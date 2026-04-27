@@ -280,9 +280,28 @@
 }
 
 .themeTagsWrap {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    isolation: isolate;
+}
+
+.themeTagsWrap > * {
+    position: relative;
+    z-index: 1;
+}
+
+.themeTagsWrapError::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border: 1px solid #e03d4b;
+    border-radius: 16px;
+    background: #fff5f5;
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.12);
+    z-index: 0;
+    pointer-events: none;
 }
 
 .themeTagChip {
@@ -295,11 +314,14 @@
     line-height: 1;
     cursor: pointer;
     transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.themeTagChip:hover {
-    border-color: rgba(224, 61, 75, 0.5);
-    color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+    .themeTagChip:hover {
+        border-color: rgba(224, 61, 75, 0.5);
+        color: var(--primary);
+    }
 }
 
 .themeTagChipActive {

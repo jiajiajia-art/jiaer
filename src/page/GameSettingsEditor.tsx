@@ -145,10 +145,11 @@ const GameSettingsEditor = () => {
     useEffect(() => {
         if (fileId && fileId !== hasInitializedRef.current && gameData && !isLoadingData) {
             hasInitializedRef.current = fileId;
+            setIsParsing(false);
             setIsParsed(true);
             setActivePanel('world');
         }
-    }, [fileId, gameData, isLoadingData, setIsParsed, setActivePanel]);
+    }, [fileId, gameData, isLoadingData, setActivePanel, setIsParsed, setIsParsing]);
 
     const functionalNPCsPanelRef = useRef<FunctionalNPCsPanelRef | null>(null);
     const objectsPanelRef = useRef<ObjectsPanelRef | null>(null);
@@ -214,7 +215,9 @@ const GameSettingsEditor = () => {
 
         // 从角色面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'characters' && panelId !== 'characters' && charactersPanelRef.current) {
-            const canLeave = charactersPanelRef.current.checkBeforeLeave();
+            const canLeave = charactersPanelRef.current.checkBeforeLeave(() => {
+                void handlePanelChange(panelId);
+            });
             if (!canLeave) {
                 return;
             }
@@ -222,7 +225,9 @@ const GameSettingsEditor = () => {
 
         // 从场景面板切换出去时，检查是否有未保存的修改
         if (activePanel === 'scenes' && panelId !== 'scenes' && scenesPanelRef.current) {
-            const canLeave = scenesPanelRef.current.checkBeforeLeave();
+            const canLeave = scenesPanelRef.current.checkBeforeLeave(() => {
+                void handlePanelChange(panelId);
+            });
             if (!canLeave) {
                 return;
             }
@@ -274,7 +279,7 @@ const GameSettingsEditor = () => {
         setShowPublishModal(false);
     }, [handlePublishGame]);
 
-    const checkActivePanelBeforeAction = useCallback(async (): Promise<boolean> => {
+    const checkActivePanelBeforeAction = useCallback(async (action?: () => void): Promise<boolean> => {
         // 实现操作前统一复用当前面板未保存检查
         if (activePanel === 'functionalNPCs' && functionalNPCsPanelRef.current) {
             return await Promise.resolve(functionalNPCsPanelRef.current.checkBeforeLeave());
@@ -283,16 +288,16 @@ const GameSettingsEditor = () => {
             return await Promise.resolve(objectsPanelRef.current.checkBeforeLeave());
         }
         if (activePanel === 'characters' && charactersPanelRef.current) {
-            return await Promise.resolve(charactersPanelRef.current.checkBeforeLeave());
+            return await Promise.resolve(charactersPanelRef.current.checkBeforeLeave(action));
         }
         if (activePanel === 'scenes' && scenesPanelRef.current) {
-            return await Promise.resolve(scenesPanelRef.current.checkBeforeLeave());
+            return await Promise.resolve(scenesPanelRef.current.checkBeforeLeave(action));
         }
         if (activePanel === 'attributeGrowth' && attributeGrowthPanelRef.current) {
             return await Promise.resolve(attributeGrowthPanelRef.current.checkBeforeLeave());
         }
         if (activePanel === 'world' && worldPanelRef.current) {
-            return await Promise.resolve(worldPanelRef.current.checkBeforeLeave());
+            return await Promise.resolve(worldPanelRef.current.checkBeforeLeave(action));
         }
         if (activePanel === 'mapEdit' && mapPanelRef.current) {
             return await Promise.resolve(mapPanelRef.current.checkBeforeLeave());
@@ -333,7 +338,9 @@ const GameSettingsEditor = () => {
                             onClick={async (e) => {
                                 console.log('点击测试体验');
                                 e.preventDefault();
-                                const canStartTest = await checkActivePanelBeforeAction();
+                                const canStartTest = await checkActivePanelBeforeAction(() => {
+                                    void createGalgameSession();
+                                });
                                 if (!canStartTest) {
                                     return;
                                 }
@@ -348,7 +355,9 @@ const GameSettingsEditor = () => {
                             onClick={async (e) => {
                                 e.preventDefault();
                                 // 实现直接发布前未保存校验
-                                const canOpenPublishModal = await checkActivePanelBeforeAction();
+                                const canOpenPublishModal = await checkActivePanelBeforeAction(() => {
+                                    setShowPublishModal(true);
+                                });
                                 // 阻止未保存状态直接进入发布弹窗
                                 if (!canOpenPublishModal) {
                                     return;

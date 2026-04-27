@@ -4,12 +4,16 @@ import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGameCreate.module.css';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import type { StConfig, STRegexScript, STCharBookEntry } from '../utils/stRender';
-import AssetsUpload from '../components/StGame/AssetsUpload';
+import AssetsUpload, { type AssetsUploadHandle } from '../components/StGame/AssetsUpload';
 import getGameDataApi from '../api/home/getGameData';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
+import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
+import GameAction from '../api/rpgGame/gameAction';
+import toast from 'react-hot-toast';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -27,7 +31,25 @@ const emptyConfig: StConfig = {
 
 const THEME_TAG_MIN = 1;
 const THEME_TAG_MAX = 2;
+const THEME_TAG_REQUIRED_TOAST_ID = 'st-theme-tags-required';
+const THEME_TAG_REQUIRED_TOAST_DURATION = 4500;
 type RequiredFieldKey = 'title' | 'themeTags';
+type ClearFieldKey = 'description' | 'firstMes';
+type StCreateStepKey = 'info' | 'assets' | 'rules';
+type StCreateStepIndex = 1 | 2 | 3;
+type LeaveConfirmSource = 'navigate' | 'history-back';
+
+const DEFAULT_STEP_KEY: StCreateStepKey = 'info';
+const STEP_INDEX_MAP: Record<StCreateStepKey, StCreateStepIndex> = {
+  info: 1,
+  assets: 2,
+  rules: 3,
+};
+const STEP_ITEMS: Array<{ key: StCreateStepKey; index: StCreateStepIndex; label: string }> = [
+  { key: 'info', index: 1, label: '剧本信息' },
+  { key: 'assets', index: 2, label: '素材包' },
+  { key: 'rules', index: 3, label: '规则与渲染' },
+];
 
 const normalizeThemeTagIds = (value: unknown): number[] => {
   if (!Array.isArray(value)) return [];
@@ -37,27 +59,76 @@ const normalizeThemeTagIds = (value: unknown): number[] => {
     .slice(0, THEME_TAG_MAX);
 };
 
+const isStCreateStepKey = (value: string | null): value is StCreateStepKey => (
+  value === 'info' || value === 'assets' || value === 'rules'
+);
+
 const StGameCreate: React.FC = () => {
   const nav = useNavigate();
   const [params] = useSearchParams();
   const appIdFromQuery = params.get('appId') || '';
+  const stepParam = params.get('step');
+  const stepKey: StCreateStepKey = isStCreateStepKey(stepParam) ? stepParam : DEFAULT_STEP_KEY;
 
   const [title, setTitle] = useState('');
   const [appId, setAppId] = useState('');
   const [cfg, setCfg] = useState<StConfig>({ ...emptyConfig });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [availableThemeTags, setAvailableThemeTags] = useState<FlatThemeTag[]>([]);
   const [selectedThemeTagIds, setSelectedThemeTagIds] = useState<number[]>([]);
   const [themeTagError, setThemeTagError] = useState('');
   const [highlightField, setHighlightField] = useState<RequiredFieldKey | ''>('');
+  const [showPendingAssetsConfirm, setShowPendingAssetsConfirm] = useState(false);
+  const [uploadingFromStepConfirm, setUploadingFromStepConfirm] = useState(false);
+  const [hasPendingLocalAssets, setHasPendingLocalAssets] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leaveConfirmSource, setLeaveConfirmSource] = useState<LeaveConfirmSource | null>(null);
+  const [clearFieldTarget, setClearFieldTarget] = useState<ClearFieldKey | null>(null);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishTargetGameId, setPublishTargetGameId] = useState('');
+  const [publishing, setPublishing] = useState(false);
   const titleRowRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const themeTagsPanelRef = useRef<HTMLDivElement>(null);
+  const assetsUploadRef = useRef<AssetsUploadHandle | null>(null);
+  const pendingLeaveActionRef = useRef<(() => void) | null>(null);
+  const pendingGuardCleanupActionRef = useRef<(() => void) | null>(null);
+  const shouldWarnBeforeLeaveRef = useRef(false);
+  const hasHistoryGuardRef = useRef(false);
+  const skipNextPopstateRef = useRef(false);
+  const step = STEP_INDEX_MAP[stepKey];
+  const resolvedAppId = String(appIdFromQuery || appId || '').trim();
 
   const scripts: STRegexScript[] = ((cfg.extensions?.regex_scripts) || []) as STRegexScript[];
   const entries: STCharBookEntry[] = (((cfg.extensions?.character_book)?.entries) || []) as STCharBookEntry[];
+  const descriptionValue = String((cfg.data?.description) || '');
+  const firstMessageValue = String(cfg.persona?.first_mes || '');
+
+  const readHasPendingLocalAssets = () => (
+    assetsUploadRef.current?.hasPendingLocalAssets() ?? hasPendingLocalAssets
+  );
+
+  const shouldWarnBeforeLeave = () => stepKey === 'assets' && readHasPendingLocalAssets();
+
+  const buildStepHref = (targetStep: StCreateStepKey, nextAppId?: string) => {
+    const nextParams = new URLSearchParams(params);
+    const targetAppId = String(nextAppId ?? resolvedAppId).trim();
+    nextParams.set('step', targetStep);
+    if (targetAppId) {
+      nextParams.set('appId', targetAppId);
+    } else {
+      nextParams.delete('appId');
+    }
+    return `/st/create?${nextParams.toString()}`;
+  };
+
+  const navigateToStep = (
+    targetStep: StCreateStepKey,
+    options?: { replace?: boolean; nextAppId?: string },
+  ) => {
+    nav(buildStepHref(targetStep, options?.nextAppId), { replace: options?.replace });
+  };
 
   const updateScripts = (next: STRegexScript[]) => {
     setCfg(s => ({
@@ -78,6 +149,166 @@ const StGameCreate: React.FC = () => {
         character_book: { entries: withPriority },
       },
     }));
+  };
+
+  const openClearFieldConfirm = (field: ClearFieldKey) => {
+    setClearFieldTarget(field);
+  };
+
+  const clearField = () => {
+    if (clearFieldTarget === 'description') {
+      setCfg(s => ({
+        ...s,
+        data: { ...(s.data || {}), description: '' },
+      }));
+    } else if (clearFieldTarget === 'firstMes') {
+      setCfg(s => ({
+        ...s,
+        persona: { ...(s.persona || {}), first_mes: '' },
+      }));
+    }
+    setClearFieldTarget(null);
+  };
+
+  const closeClearFieldConfirm = () => {
+    setClearFieldTarget(null);
+  };
+
+  const cleanupHistoryGuard = (action?: () => void) => {
+    if (typeof window === 'undefined' || !hasHistoryGuardRef.current) {
+      action?.();
+      return;
+    }
+
+    pendingGuardCleanupActionRef.current = action ?? null;
+    skipNextPopstateRef.current = true;
+    hasHistoryGuardRef.current = false;
+    window.history.back();
+  };
+
+  const openLeaveConfirm = (
+    source: LeaveConfirmSource,
+    action?: () => void,
+  ) => {
+    pendingLeaveActionRef.current = action ?? null;
+    setLeaveConfirmSource(source);
+    setShowLeaveConfirm(true);
+  };
+
+  const runBeforeLeaveAction = (action: () => void) => {
+    if (!shouldWarnBeforeLeave()) {
+      if (hasHistoryGuardRef.current) {
+        cleanupHistoryGuard(action);
+        return;
+      }
+      action();
+      return;
+    }
+    openLeaveConfirm('navigate', action);
+  };
+
+  useEffect(() => {
+    if (isStCreateStepKey(stepParam)) return;
+    navigateToStep(DEFAULT_STEP_KEY, { replace: true });
+  }, [nav, params, resolvedAppId, stepParam]);
+
+  useEffect(() => {
+    if (!appId || appId === appIdFromQuery) return;
+    navigateToStep(stepKey, { replace: true, nextAppId: appId });
+  }, [appId, appIdFromQuery, nav, params, stepKey]);
+
+  useEffect(() => {
+    shouldWarnBeforeLeaveRef.current = shouldWarnBeforeLeave();
+
+    if (typeof window === 'undefined') return;
+    if (shouldWarnBeforeLeaveRef.current) {
+      if (!hasHistoryGuardRef.current && window.history.length > 1) {
+        // 插入同地址哨兵记录，用于拦截浏览器后退。
+        window.history.pushState(window.history.state, '', window.location.href);
+        hasHistoryGuardRef.current = true;
+      }
+      return;
+    }
+
+    if (hasHistoryGuardRef.current) {
+      cleanupHistoryGuard();
+    }
+  }, [stepKey, hasPendingLocalAssets]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!shouldWarnBeforeLeaveRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    const handlePopState = () => {
+      if (skipNextPopstateRef.current) {
+        skipNextPopstateRef.current = false;
+        const nextAction = pendingGuardCleanupActionRef.current;
+        pendingGuardCleanupActionRef.current = null;
+        nextAction?.();
+        return;
+      }
+
+      if (!shouldWarnBeforeLeaveRef.current) {
+        hasHistoryGuardRef.current = false;
+        return;
+      }
+
+      window.history.pushState(window.history.state, '', window.location.href);
+      hasHistoryGuardRef.current = true;
+      openLeaveConfirm('history-back');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  const canProceedToAssetsStep = () => {
+    setError('');
+    if (!validateThemeTags()) {
+      const message = '题材未填，请先选择作品标签。';
+      setError(message);
+      guideToRequiredField('themeTags', message);
+      return false;
+    }
+    return true;
+  };
+
+  const goToRulesStep = () => {
+    if (!canProceedToAssetsStep()) return;
+    if (assetsUploadRef.current?.hasPendingUpload()) {
+      setShowPendingAssetsConfirm(true);
+      return;
+    }
+    runBeforeLeaveAction(() => navigateToStep('rules'));
+  };
+
+  const uploadAssetsAndContinue = async () => {
+    if (uploadingFromStepConfirm) return;
+    if (!assetsUploadRef.current) {
+      setShowPendingAssetsConfirm(false);
+      navigateToStep('rules');
+      return;
+    }
+
+    setUploadingFromStepConfirm(true);
+    try {
+      const ok = await assetsUploadRef.current.uploadPendingAssetsAndContinue();
+      if (!ok) return;
+      setShowPendingAssetsConfirm(false);
+      navigateToStep('rules');
+    } finally {
+      setUploadingFromStepConfirm(false);
+    }
   };
 
   // DnD: 拖动调整世界书条目顺序
@@ -231,10 +462,90 @@ const StGameCreate: React.FC = () => {
     return true;
   };
 
+  const showThemeTagRequiredToast = (message: string) => {
+    toast.error(message, {
+      id: THEME_TAG_REQUIRED_TOAST_ID,
+      duration: THEME_TAG_REQUIRED_TOAST_DURATION,
+    });
+  };
+
   const guideToRequiredField = (field: RequiredFieldKey, message: string) => {
-    window.alert(message);
-    setStep(1);
+    if (field === 'themeTags') {
+      showThemeTagRequiredToast(message);
+    } else {
+      window.alert(message);
+    }
+    navigateToStep(DEFAULT_STEP_KEY, { replace: true });
     setHighlightField(field);
+  };
+
+  const goToAssetsStep = () => {
+    if (!canProceedToAssetsStep()) return;
+    navigateToStep('assets');
+  };
+
+  const handleStepNavigation = (targetStep: StCreateStepKey) => {
+    if (targetStep === stepKey) return;
+    if (STEP_INDEX_MAP[targetStep] <= step) {
+      if (targetStep !== 'assets') {
+        runBeforeLeaveAction(() => navigateToStep(targetStep));
+        return;
+      }
+      navigateToStep(targetStep);
+      return;
+    }
+    if (targetStep === 'assets') {
+      goToAssetsStep();
+      return;
+    }
+    if (targetStep === 'rules') {
+      goToRulesStep();
+      return;
+    }
+    navigateToStep(targetStep);
+  };
+
+  const handleStepLinkClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    targetStep: StCreateStepKey,
+  ) => {
+    if (
+      event.button !== 0
+      || event.metaKey
+      || event.altKey
+      || event.ctrlKey
+      || event.shiftKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    handleStepNavigation(targetStep);
+  };
+
+  const closeLeaveConfirm = () => {
+    pendingLeaveActionRef.current = null;
+    setLeaveConfirmSource(null);
+    setShowLeaveConfirm(false);
+  };
+
+  const confirmLeaveCurrentPage = () => {
+    const source = leaveConfirmSource;
+    const action = pendingLeaveActionRef.current;
+
+    pendingLeaveActionRef.current = null;
+    setLeaveConfirmSource(null);
+    setShowLeaveConfirm(false);
+
+    if (typeof window !== 'undefined' && source === 'history-back') {
+      skipNextPopstateRef.current = true;
+      hasHistoryGuardRef.current = false;
+      window.history.go(-2);
+      return;
+    }
+
+    if (action) {
+      cleanupHistoryGuard(action);
+    }
   };
 
   const validateRequiredFields = (): boolean => {
@@ -325,17 +636,8 @@ const StGameCreate: React.FC = () => {
     }
   };
 
-  const toServer = async () => {
-    if (!validateRequiredFields()) return;
-    try {
-      const id = await saveConfig();
-      nav(`/st/${id}`);
-    } catch {
-      // handled in saveConfig
-    }
-  };
-
-  const finishToStats = async () => {
+  const saveToStats = async () => {
+    if (saving || publishing) return;
     if (!validateRequiredFields()) return;
     try {
       const id = await saveConfig();
@@ -345,19 +647,101 @@ const StGameCreate: React.FC = () => {
     }
   };
 
+  const saveAndTest = async () => {
+    if (saving || publishing) return;
+    if (!validateRequiredFields()) return;
+    try {
+      const id = await saveConfig();
+      nav(`/st/${id}`);
+    } catch {
+      // handled in saveConfig
+    }
+  };
+
+  const saveAndOpenPublish = async () => {
+    if (saving || publishing) return;
+    if (!validateRequiredFields()) return;
+    try {
+      const id = await saveConfig();
+      setPublishTargetGameId(id);
+      setShowPublishModal(true);
+    } catch {
+      // handled in saveConfig
+    }
+  };
+
+  const closePublishModal = () => {
+    if (publishing) return;
+    setShowPublishModal(false);
+  };
+
+  const handlePublishGame = async (description: string) => {
+    if (publishing) return;
+
+    const fileId = String(publishTargetGameId || appIdFromQuery || appId || '').trim();
+    if (!fileId) {
+      toast.error('缺少作品 ID，无法发布');
+      return;
+    }
+
+    try {
+      setPublishing(true);
+      const response = await GameAction.publishGame({
+        fileId,
+        priceAmount: 0,
+        description,
+      });
+
+      if (!response.data.success) {
+        const errorMessage = response.data.message || '发布游戏失败';
+        toast.error(errorMessage);
+        if (errorMessage === '游戏已发布') {
+          setShowPublishModal(false);
+          nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
+        }
+        return;
+      }
+
+      setShowPublishModal(false);
+      nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || '发布游戏失败';
+      toast.error(errorMessage);
+      if (errorMessage === '游戏已发布') {
+        setShowPublishModal(false);
+        nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
+      }
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className={styles.pageRoot}>
-      <Navbar />
+      <Navbar beforeLeaveAction={runBeforeLeaveAction} />
       <div className={styles.main}>
         <div className={styles.headerRow}>
           <h2>创建AVG模式</h2>
-          <div className={styles.stepper}>
-            <div className={step === 1 ? styles.stepActive : styles.step}>1. 剧本信息</div>
-            <div className={styles.stepDivider}></div>
-            <div className={step === 2 ? styles.stepActive : styles.step}>2. 素材包</div>
-            <div className={styles.stepDivider}></div>
-            <div className={step === 3 ? styles.stepActive : styles.step}>3. 规则与渲染</div>
-          </div>
+          <nav className={styles.stepper} aria-label="AVG create steps">
+            {STEP_ITEMS.map((item, index) => {
+              const active = item.key === stepKey;
+              return (
+                <React.Fragment key={item.key}>
+                  <Link
+                    to={buildStepHref(item.key)}
+                    aria-current={active ? 'step' : undefined}
+                    className={`${styles.stepLink} ${active ? styles.stepActive : styles.step}`}
+                    onClick={(event) => handleStepLinkClick(event, item.key)}
+                  >
+                    {item.index}. {item.label}
+                  </Link>
+                  {index < STEP_ITEMS.length - 1 ? (
+                    <div className={styles.stepDivider} aria-hidden="true"></div>
+                  ) : null}
+                </React.Fragment>
+              );
+            })}
+          </nav>
         </div>
 
         <div
@@ -406,15 +790,25 @@ const StGameCreate: React.FC = () => {
         )}
 
         {step === 1 && (
-          <div className={styles.columns}>
-            <div className={styles.col}>
-              <div className={styles.group}>
-                <div className={styles.groupTitle}>故事书 / 角色卡</div>
+          <div className={`${styles.columns} ${styles.stepOneColumns}`}>
+            <div className={`${styles.col} ${styles.stepOneCol}`}>
+              <div className={`${styles.group} ${styles.stepOneGroup}`}>
+                <div className={styles.stepOneGroupHeader}>
+                  <div className={`${styles.groupTitle} ${styles.stepOneGroupTitle}`}>提示词 / 角色卡</div>
+                  <button
+                    type="button"
+                    className={styles.clearFieldButton}
+                    onClick={() => openClearFieldConfirm('description')}
+                    disabled={!descriptionValue}
+                  >
+                    一键清空
+                  </button>
+                </div>
                 <textarea
-                  className={styles.area}
+                  className={`${styles.area} ${styles.stepOneArea}`}
                   rows={18}
                   placeholder={'例：近未来的上海，玩家扮演新入职的「记忆修复师」，需要在一周内修复三名委托人的记忆。'}
-                  value={String((cfg.data?.description) || '')}
+                  value={descriptionValue}
                   onChange={e => setCfg(s => ({
                     ...s,
                     data: { ...(s.data || {}), description: e.target.value },
@@ -422,15 +816,24 @@ const StGameCreate: React.FC = () => {
                 />
               </div>
             </div>
-            <div className={styles.col}>
-              <div className={styles.group}>
-                <div className={styles.groupTitle}>开场白</div>
-                <div className={styles.hint}>玩家进入游戏时看到的第一句旁白或对话。</div>
+            <div className={`${styles.col} ${styles.stepOneCol}`}>
+              <div className={`${styles.group} ${styles.stepOneGroup}`}>
+                <div className={styles.stepOneGroupHeader}>
+                  <div className={`${styles.groupTitle} ${styles.stepOneGroupTitle}`}>开场白 / 首页</div>
+                  <button
+                    type="button"
+                    className={styles.clearFieldButton}
+                    onClick={() => openClearFieldConfirm('firstMes')}
+                    disabled={!firstMessageValue}
+                  >
+                    一键清空
+                  </button>
+                </div>
                 <textarea
-                  className={styles.area}
-                  rows={10}
+                  className={`${styles.area} ${styles.stepOneArea}`}
+                  rows={18}
                   placeholder={'例：你推开那家小店的门，风铃叮当作响，一股混合着咖啡与雨味的气息扑面而来。'}
-                  value={String(cfg.persona?.first_mes || '')}
+                  value={firstMessageValue}
                   onChange={e => setCfg(s => ({
                     ...s,
                     persona: { ...(s.persona || {}), first_mes: e.target.value },
@@ -448,9 +851,12 @@ const StGameCreate: React.FC = () => {
                 <div className={styles.groupTitle}>素材包</div>
                 <div className={styles.hint}>上传图片/音频等静态资源，稍后在正则替换模板里用 {'{{ASSET_PREFIX}}'} 引用。</div>
                 <AssetsUpload
+                  ref={assetsUploadRef}
                   title={title}
                   appId={appId}
+                  layoutVariant="shell"
                   onAppReady={(id)=> setAppId(id)}
+                  onPendingLocalAssetsChange={setHasPendingLocalAssets}
                   onUploaded={() => {}}
                 />
               </div>
@@ -592,39 +998,152 @@ const StGameCreate: React.FC = () => {
         )}
 
         {error && <div className={styles.error}>{error}</div>}
-        <div className={styles.actions}>
+        <div className={styles.actionsLegacy}>
           {step === 1 ? (
             <button
               type="button"
               className={styles.primary}
-              onClick={() => setStep(2)}
+              onClick={() => handleStepNavigation('assets')}
             >下一步：上传素材包</button>
           ) : step === 2 ? (
             <>
-              <button type="button" className={styles.secondary} onClick={() => setStep(1)}>上一步</button>
-              <button type="button" className={styles.primary} onClick={() => setStep(3)}>下一步：配置规则</button>
+              <button type="button" className={styles.secondary} onClick={() => handleStepNavigation('info')}>上一步</button>
+              <button type="button" className={styles.primary} onClick={() => handleStepNavigation('rules')}>下一步：配置规则</button>
             </>
           ) : (
             <>
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => setStep(2)}
+                onClick={() => handleStepNavigation('assets')}
+                disabled={saving || publishing}
               >上一步</button>
               <button
                 type="button"
+                className={styles.secondary}
+                disabled={saving || publishing}
+                onClick={saveToStats}
+              >{saving ? '保存中...' : '保存'}</button>
+              <button
+                type="button"
                 className={styles.primary}
-                disabled={saving}
-                onClick={finishToStats}
+                disabled={saving || publishing}
+                onClick={saveAndTest}
+              >{saving ? '保存中...' : '测试'}</button>
+              <button
+                type="button"
+                className={styles.primary}
+                disabled={saving || publishing}
+                onClick={saveAndOpenPublish}
+              >{saving ? '保存中...' : publishing ? '发布中...' : '发布'}</button>
+              <div style={{ display: 'none' }}>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => handleStepNavigation('assets')}
+              >上一步</button>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={saving || publishing}
+                onClick={saveToStats}
               >完成</button>
               <button
                 className={styles.primary}
-                disabled={saving}
-                onClick={toServer}
+                disabled={saving || publishing}
+                onClick={saveAndTest}
               >{saving ? '创建中…' : '创建并测试'}</button>
+              </div>
             </>
           )}
         </div>
+        <div className={styles.actions}>
+          <div className={styles.actionsLeft}>
+            {step !== 1 ? (
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => handleStepNavigation(step === 2 ? 'info' : 'assets')}
+                disabled={saving || publishing}
+              >上一步</button>
+            ) : null}
+          </div>
+          <div className={styles.actionsRight}>
+            {step === 1 ? (
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => handleStepNavigation('assets')}
+              >下一步：上传素材包</button>
+            ) : step === 2 ? (
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => handleStepNavigation('rules')}
+              >下一步：配置规则</button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  disabled={saving || publishing}
+                  onClick={saveToStats}
+                >{saving ? '保存中...' : '保存'}</button>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  disabled={saving || publishing}
+                  onClick={saveAndTest}
+                >{saving ? '保存中...' : '测试'}</button>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  disabled={saving || publishing}
+                  onClick={saveAndOpenPublish}
+                >{saving ? '保存中...' : publishing ? '发布中...' : '发布'}</button>
+              </>
+            )}
+          </div>
+        </div>
+        <ConfirmModal
+          isOpen={showPendingAssetsConfirm}
+          onConfirm={() => { void uploadAssetsAndContinue(); }}
+          onCancel={() => {
+            if (uploadingFromStepConfirm) return;
+            setShowPendingAssetsConfirm(false);
+          }}
+          title="素材还没有上传"
+          message="你当前只是把素材选进了列表，还没有真正上传到云端。现在上传后再继续下一步。"
+          confirmButtonText={uploadingFromStepConfirm ? "上传中..." : "上传并继续"}
+          cancelButtonText="留在当前页"
+        />
+        <ConfirmModal
+          isOpen={showLeaveConfirm}
+          onConfirm={confirmLeaveCurrentPage}
+          onCancel={closeLeaveConfirm}
+          title="素材未上传"
+          message="当前素材只保存在本地，尚未上传素材包。确认离开当前页面吗？"
+          confirmButtonText="确认离开"
+          cancelButtonText="取消"
+        />
+        <ConfirmModal
+          isOpen={clearFieldTarget !== null}
+          onConfirm={clearField}
+          onCancel={closeClearFieldConfirm}
+          title={clearFieldTarget === 'description' ? '清除当前的文本?' : '清除当前的文本?'}
+          message={clearFieldTarget === 'description'
+            ? '此操作将清空“提示词 / 角色卡”的当前所有文本'
+            : '此操作将清空“开场白 / 首页”中的当前所有文本'}
+          confirmButtonText="清除"
+          cancelButtonText="取消"
+        />
+        <PublishSettingsModal
+          isOpen={showPublishModal}
+          onClose={closePublishModal}
+          onPublish={handlePublishGame}
+          fileId={publishTargetGameId || undefined}
+          publishing={publishing}
+        />
       </div>
       <FooterArea />
     </div>

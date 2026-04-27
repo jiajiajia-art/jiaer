@@ -690,7 +690,6 @@ const handleCreate = () => {
         primaryText="确定"
         secondaryText="开始测试"
         onPrimary={() => { setIsUploading(false); }}
-        onSecondary={() => { const id = appId || appIdFromQuery; if (id) navigate(`/customif/${id}`); }}
       />
       {confirmOpen && (
         <div className={styles.confirmOverlay}>
