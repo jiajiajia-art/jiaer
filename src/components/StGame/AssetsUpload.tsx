@@ -101,6 +101,36 @@ const GBK_DECODER = createDecoder('gbk');
 const CJK_CHAR_RE = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/;
 const SUSPICIOUS_MOJIBAKE_RE = /[\u00C0-\u017F\u2500-\u257F\u2580-\u259F]/g;
 const CONTROL_CHAR_RE = /[\u0000-\u001F\u007F]/g;
+const ZIP_FILE_MIME_TYPES: Record<string, string> = {
+  js: 'text/javascript; charset=utf-8',
+  mjs: 'text/javascript; charset=utf-8',
+  cjs: 'text/javascript; charset=utf-8',
+  css: 'text/css; charset=utf-8',
+  html: 'text/html; charset=utf-8',
+  htm: 'text/html; charset=utf-8',
+  json: 'application/json; charset=utf-8',
+  svg: 'image/svg+xml',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  avif: 'image/avif',
+  ico: 'image/x-icon',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  ogg: 'audio/ogg',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  flac: 'audio/flac',
+  webm: 'video/webm',
+  mp4: 'video/mp4',
+  woff: 'font/woff',
+  woff2: 'font/woff2',
+  ttf: 'font/ttf',
+  otf: 'font/otf',
+  eot: 'application/vnd.ms-fontobject',
+};
 
 function createDecoder(label: string, options?: TextDecoderOptions) {
   try {
@@ -193,6 +223,12 @@ function splitFileExtension(path: string) {
     stem: path.slice(0, dotIndex),
     ext: path.slice(dotIndex),
   };
+}
+
+function getMimeTypeFromPath(path: string) {
+  const match = /\.([^.\\/]+)$/.exec(String(path || ''));
+  if (!match) return '';
+  return ZIP_FILE_MIME_TYPES[match[1].toLowerCase()] || '';
 }
 
 function dedupeLocalCloudPaths<T extends { displayPath: string }>(assets: T[]) {
@@ -640,7 +676,12 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         if (!path) continue;
         const bytes = await entry.async('uint8array');
         const fileBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-        const restoredFile = new File([fileBuffer], path.split('/').pop() || 'file');
+        const mimeType = getMimeTypeFromPath(path);
+        const restoredFile = new File(
+          [fileBuffer],
+          path.split('/').pop() || 'file',
+          mimeType ? { type: mimeType } : undefined,
+        );
         list.push({ path, file: restoredFile, selected: true });
       }
       applyLocalSelection(list, 'zip', true);
