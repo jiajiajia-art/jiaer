@@ -408,9 +408,9 @@ const GameSettingsEditor = () => {
                         gameData={gameData}
                         isLoading={isLoadingData}
                         onGetData={(getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => { charactersPanelGetDataRef.current = getDataFn; }}
-                        onDataChange={() => {
+                        onDataChange={async () => {
                             if (fileId) {
-                                fetchEditorData(fileId);
+                                await fetchEditorData(fileId);
                             }
                         }}
                         mode={mode || 'visual'}

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo, useImperative
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
 import { getImageUrl, getMusicUrlWithHost, SCENE_GENERATION_COST } from '../../../utils/constants';
-import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { SceneSetting as VisualSceneSetting } from '../../../api/galgame/EditorData.type';
 import type { SceneSetting as WorldSceneSetting } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -13,7 +13,7 @@ import {
     type WorldSubScene
 } from '../editorCompat';
 import { createSceneApiHelpers } from './apiHelpers';
-import { createSceneHandlers, type LocalScene as HandlerLocalScene } from './handlers';
+import { createSceneHandlers, type LocalScene as HandlerLocalScene, type SceneSaveResult } from './handlers';
 import SceneDetailForm from './SceneDetailForm';
 import SceneList from './SceneList';
 import WorldMapCard from './WorldMapCard';
@@ -49,6 +49,7 @@ interface PendingImage {
 }
 
 type LocalScene = HandlerLocalScene;
+const cloneValue = <T,>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 interface ScenesPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
@@ -96,6 +97,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
 
     const [isGeneratingAllSceneImages, setIsGeneratingAllSceneImages] = useState<boolean>(false);
+    const [sceneBatchJobStatus, setSceneBatchJobStatus] = useState<BatchImageJobStatus | null>(null);
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
     const [generatingSceneId, setGeneratingSceneId] = useState<string | null>(null);
     const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
@@ -111,6 +113,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const newSceneFileInputRef = useRef<HTMLInputElement>(null);
     const worldMapFileInputRef = useRef<HTMLInputElement>(null);
     const originalSceneDataRef = useRef<LocalScene[]>([]);
+    const originalSubsceneDataBySceneIdRef = useRef<Record<string, WorldSubScene[]>>({});
 
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
@@ -162,19 +165,71 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         });
     }, [pendingImages]);
 
-    // 丢弃当前场景的暂存数据并恢复到原始数据
-    const discardCurrentScenePendingChanges = useCallback(() => {
-        if (!activeSceneId) return;
-        
-        const originalScene = originalSceneDataRef.current.find(s => s.id === activeSceneId);
-        if (originalScene) {
-            setSceneData(prev => prev.map(scene => (
-                scene.id === activeSceneId ? originalScene : scene
-            )));
-            setActiveSceneDraft(originalScene);
+    const buildLocalSubsceneDraft = useCallback((sceneId: string, subscene?: WorldSubScene | null): LocalScene | null => {
+        if (!subscene) {
+            return null;
         }
+
+        return {
+            id: String(subscene.id || subscene.name || ''),
+            name: subscene.name || '',
+            type: '',
+            desc: (subscene as any)?.description || '',
+            image: subscene.image ? getImageUrl(subscene.image as any) : '',
+            bgmId: sceneData.find((scene) => scene.id === sceneId)?.bgmId || '',
+        };
+    }, [sceneData]);
+
+    const discardCurrentPendingChanges = useCallback(() => {
+        if (isAddingNew && newSceneData) {
+            clearPendingImagesForScene(newSceneData.id);
+            setIsAddingNew(false);
+            setNewSceneData(null);
+            setActiveSubsceneId(null);
+            setActiveSubsceneDraft(null);
+            setActiveSceneId(sceneData[0]?.id || originalSceneDataRef.current[0]?.id || '');
+            return;
+        }
+
+        if (activeSubsceneId && activeSceneId) {
+            clearPendingImagesForScene(activeSubsceneId);
+
+            if (isAddingNewSubscene) {
+                setIsAddingNewSubscene(false);
+                setActiveSubsceneId(null);
+                setActiveSubsceneDraft(null);
+                return;
+            }
+
+            const originalSubsceneMap = cloneValue(originalSubsceneDataBySceneIdRef.current);
+            const originalSubscenes = originalSubsceneMap[activeSceneId] || [];
+            const originalSubscene = originalSubscenes.find((subscene) => String(subscene.id || subscene.name || '') === activeSubsceneId);
+
+            setSubsceneDataBySceneId(originalSubsceneMap);
+            setActiveSubsceneDraft(buildLocalSubsceneDraft(activeSceneId, originalSubscene || null));
+            return;
+        }
+
+        if (!activeSceneId) {
+            return;
+        }
+
         clearPendingImagesForScene(activeSceneId);
-    }, [activeSceneId, clearPendingImagesForScene]);
+        const originalScenes = cloneValue(originalSceneDataRef.current);
+        const originalScene = originalScenes.find((scene) => scene.id === activeSceneId) || null;
+
+        setSceneData(originalScenes);
+        setActiveSceneDraft(originalScene);
+    }, [
+        activeSceneId,
+        activeSubsceneId,
+        buildLocalSubsceneDraft,
+        clearPendingImagesForScene,
+        isAddingNew,
+        isAddingNewSubscene,
+        newSceneData,
+        sceneData,
+    ]);
 
     const bgmLibrary = useMemo<BgmItem[]>(() => {
         return musicList.map(music => ({
@@ -217,20 +272,47 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         }, 0);
         return sceneCount + subsceneCount;
     }, [mode, sceneData, subsceneDataBySceneId]);
+    const isBatchSceneJobActive = isGeneratingAllSceneImages || (
+        sceneBatchJobStatus != null
+        && ['queued', 'running', 'pending'].includes(String(sceneBatchJobStatus.status || ''))
+    );
     const singleSceneEtaText = useGenerationEta({
         active: isGeneratingSingleSceneImage,
         totalSeconds: SINGLE_SCENE_ETA_SECONDS,
     });
     const batchSceneEtaText = useGenerationEta({
-        active: isGeneratingAllSceneImages,
+        active: isBatchSceneJobActive,
         totalSeconds: Math.max(
             SINGLE_SCENE_ETA_SECONDS,
             batchSceneGenerationCount * SINGLE_SCENE_ETA_SECONDS + BATCH_SCENE_BUFFER_SECONDS,
         ),
-        totalCount: batchSceneGenerationCount,
+        totalCount: sceneBatchJobStatus?.totalCount ?? batchSceneGenerationCount,
+        completedCount: sceneBatchJobStatus?.completedCount,
+        status: sceneBatchJobStatus?.status,
+        estimatedRemainingSeconds: sceneBatchJobStatus?.estimatedRemainingSeconds ?? null,
         // 实现批量场景生图的数量提示
         batchLabel: batchSceneGenerationCount > 0 ? `本次共生成 ${batchSceneGenerationCount} 项` : undefined,
     });
+
+    const batchSceneProgressText = useMemo(() => {
+        if (!sceneBatchJobStatus || !isBatchSceneJobActive) {
+            return '';
+        }
+
+        const totalCount = Math.max(0, Number(sceneBatchJobStatus.totalCount ?? 0));
+        const completedCount = Math.max(0, Number(sceneBatchJobStatus.completedCount ?? 0));
+        const failedCount = Math.max(0, Number(sceneBatchJobStatus.failedCount ?? 0));
+
+        if (totalCount <= 0) {
+            return '';
+        }
+
+        const settledCount = Math.min(totalCount, completedCount);
+        const successCount = Math.max(0, settledCount - failedCount);
+        const remainingCount = Math.max(0, totalCount - settledCount);
+
+        return `已完成 ${settledCount}/${totalCount}，成功 ${successCount}，失败 ${failedCount}，剩余 ${remainingCount}`;
+    }, [isBatchSceneJobActive, sceneBatchJobStatus]);
 
     const getEffectiveImage = (sceneId: string, subsceneId?: string): string | undefined => {
         const targetId = subsceneId || sceneId;
@@ -298,6 +380,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setIsGeneratingWorldMap,
                 setWorldMapImageOverride,
                 setIsGeneratingAllSceneImages,
+                setSceneBatchJobStatus,
                 setSceneCostPoints,
                 setIsLoadingSceneCost,
                 setSceneResultModalOpen,
@@ -364,6 +447,105 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const onListAddNewSubscene = useCallback(() => {
         handlersRef.current.openAddNewSubscene();
     }, []);
+
+    const applySuccessfulSaveResult = useCallback((result: SceneSaveResult): boolean => {
+        if (!result.success) {
+            return false;
+        }
+
+        if (result.kind === 'sceneAdd' || result.kind === 'sceneEdit') {
+            const nextScenes = cloneValue(originalSceneDataRef.current);
+            const existingIndex = nextScenes.findIndex((scene) => scene.id === result.savedScene.id);
+
+            if (existingIndex >= 0) {
+                nextScenes[existingIndex] = result.savedScene;
+            } else {
+                nextScenes.unshift(result.savedScene);
+            }
+
+            originalSceneDataRef.current = nextScenes;
+            if (mode === 'worldInteraction' && result.kind === 'sceneAdd') {
+                originalSubsceneDataBySceneIdRef.current = {
+                    ...originalSubsceneDataBySceneIdRef.current,
+                    [result.savedScene.id]: originalSubsceneDataBySceneIdRef.current[result.savedScene.id] || [],
+                };
+            }
+            setActiveSceneDraft(result.savedScene);
+            return true;
+        }
+
+        if (result.kind !== 'subsceneAdd' && result.kind !== 'subsceneEdit') {
+            return false;
+        }
+
+        const nextSubsceneMap = cloneValue(originalSubsceneDataBySceneIdRef.current);
+        const currentSubscenes = nextSubsceneMap[result.sceneId] || [];
+        const savedSubscene = cloneValue(result.savedSubscene);
+        const savedSubsceneId = String(savedSubscene.id || savedSubscene.name || '');
+        const existingIndex = currentSubscenes.findIndex((subscene) => {
+            const subsceneId = String(subscene.id || subscene.name || '');
+            return subsceneId === result.previousSubsceneId || subsceneId === savedSubsceneId;
+        });
+
+        nextSubsceneMap[result.sceneId] =
+            existingIndex >= 0
+                ? currentSubscenes.map((subscene, index) => (index === existingIndex ? savedSubscene : subscene))
+                : [savedSubscene, ...currentSubscenes];
+
+        originalSubsceneDataBySceneIdRef.current = nextSubsceneMap;
+        return true;
+    }, [mode]);
+
+    const saveCurrentChanges = useCallback(async (
+        options?: { suppressSuccessToast?: boolean },
+    ): Promise<boolean> => {
+        let result: SceneSaveResult;
+
+        if (isAddingNew && newSceneData) {
+            result = await handlersRef.current.confirmAddNew(options);
+        } else if (activeSubsceneId && activeSubsceneDraft) {
+            result = await handlersRef.current.confirmSubsceneEdit(options);
+        } else if (activeSceneDraft || activeScene) {
+            result = await handlersRef.current.confirmEdit((activeSceneDraft || activeScene)!, options);
+        } else {
+            setHasUnsavedChanges(false);
+            hasUnsavedChangesRef.current = false;
+            return true;
+        }
+
+        if (!result.success) {
+            return false;
+        }
+
+        applySuccessfulSaveResult(result);
+        setHasUnsavedChanges(false);
+        hasUnsavedChangesRef.current = false;
+        return true;
+    }, [
+        activeScene,
+        activeSceneDraft,
+        activeSubsceneDraft,
+        activeSubsceneId,
+        applySuccessfulSaveResult,
+        isAddingNew,
+        newSceneData,
+    ]);
+
+    const handleManualSave = useCallback(async () => {
+        await saveCurrentChanges();
+    }, [saveCurrentChanges]);
+
+    const closePendingSaveModal = useCallback(() => {
+        setSaveConfirmModalOpen(false);
+        setIsBlockingSwitch(false);
+        isBlockingSwitchRef.current = false;
+    }, []);
+
+    const clearPendingActionState = useCallback(() => {
+        closePendingSaveModal();
+        setPendingAction(null);
+        pendingPanelActionRef.current = null;
+    }, [closePendingSaveModal]);
 
     const mergeImageFieldsFromGameData = useCallback((nextGameData: AllGameData | WorldInteractionGameData) => {
         const scenes = getScenes(nextGameData);
@@ -454,12 +636,15 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 const nextMap: Record<string, WorldSubScene[]> = {};
                 scenes.forEach((s: any) => {
                     if (isWorldScene(s)) {
-                        nextMap[s.id] = (s.subscenes || []) as WorldSubScene[];
+                        nextMap[s.id] = cloneValue((s.subscenes || []) as WorldSubScene[]);
                     }
                 });
                 setSubsceneDataBySceneId(nextMap);
+                originalSubsceneDataBySceneIdRef.current = cloneValue(nextMap);
+            } else {
+                originalSubsceneDataBySceneIdRef.current = {};
             }
-            originalSceneDataRef.current = JSON.parse(JSON.stringify(convertedScenes));
+            originalSceneDataRef.current = cloneValue(convertedScenes);
             setHasUnsavedChanges(false);
             if (convertedScenes.length > 0) {
                 setActiveSceneId(prev => prev || convertedScenes[0].id);
@@ -560,12 +745,40 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             setActiveSubsceneDraft(null);
             setActiveSceneId(action.targetSceneId || '');
             setActiveSubsceneId(null);
+        } else if (action.type === 'switchSubscene') {
+            const targetSceneId = action.targetSceneId || '';
+            const targetSubsceneId = action.targetSubsceneId || null;
+            const targetSubscene = subsceneDataBySceneId[targetSceneId]?.find(
+                (subscene) => (subscene.id || subscene.name) === targetSubsceneId,
+            );
+
+            setIsAddingNew(false);
+            setNewSceneData(null);
+            if (isAddingNewSubscene) {
+                setIsAddingNewSubscene(false);
+            }
+            setActiveSceneId(targetSceneId);
+            setActiveSubsceneId(targetSubsceneId);
+            setActiveSubsceneDraft(buildLocalSubsceneDraft(targetSceneId, targetSubscene || null));
         } else if (action.type === 'switchPanel') {
             if (pendingPanelAction) {
                 pendingPanelAction();
             }
         }
-    }, [pendingAction, isAddingNewSubscene]);
+    }, [buildLocalSubsceneDraft, pendingAction, isAddingNewSubscene, subsceneDataBySceneId]);
+
+    const handlePendingSave = useCallback(async () => {
+        closePendingSaveModal();
+
+        const saved = await saveCurrentChanges({ suppressSuccessToast: true });
+        if (saved) {
+            executePendingAction();
+            return;
+        }
+
+        setPendingAction(null);
+        pendingPanelActionRef.current = null;
+    }, [closePendingSaveModal, executePendingAction, saveCurrentChanges]);
 
     const checkBeforeSwitch = useCallback((action: { type: 'switchScene' | 'switchSubscene' | 'switchPanel' | 'createScene'; targetSceneId?: string | null; targetSubsceneId?: string | null }) => {
         if (hasUnsavedChanges) {
@@ -627,19 +840,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         }
         setActiveSceneId(sceneId);
         setActiveSubsceneId(subsceneId);
-        
+
         const subscene = subsceneDataBySceneId[sceneId]?.find(s => (s.id || s.name) === subsceneId);
-        const processedSubsceneImage = subscene?.image ? getImageUrl(subscene.image as any) : '';
-        
-        setActiveSubsceneDraft({
-            id: subsceneId,
-            name: subscene?.name || '未命名子场景',
-            type: '',
-            desc: (subscene as any)?.description || '',
-            image: processedSubsceneImage || '',
-            bgmId: sceneData.find(s => s.id === sceneId)?.bgmId || '',
-        });
-    }, [isAddingNewSubscene, sceneData, checkBeforeSwitch, subsceneDataBySceneId]);
+        setActiveSubsceneDraft(buildLocalSubsceneDraft(sceneId, subscene || null));
+    }, [buildLocalSubsceneDraft, isAddingNewSubscene, checkBeforeSwitch, subsceneDataBySceneId]);
 
     const handleConfirmGenerateAllSceneImages = useCallback(async () => {
         setSceneCostModalOpen(false);
@@ -801,7 +1005,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 <button
                     className={`${styles.ghost} ${styles.generateButton}`}
                     onClick={() => handlers.openSceneCostModal()}
-                    disabled={isGeneratingAllSceneImages || isLoadingSceneCost || isBlockingSwitch}
+                    disabled={isBatchSceneJobActive || isLoadingSceneCost || isBlockingSwitch}
                 >
                     <img
                         src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -871,26 +1075,11 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         isAddingNew={isAddingNew}
                         activeSubsceneId={activeSubsceneId}
                         isAddingNewSubscene={isAddingNewSubscene}
-                        onConfirmAddNew={async () => {
-                            await handlers.confirmAddNew();
-                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
-                            setHasUnsavedChanges(false);
-                        }}
+                        onConfirmAddNew={handleManualSave}
                         onCancelAddNew={handlers.cancelAddNew}
-                        onConfirmSubsceneEdit={async () => {
-                            await handlers.confirmSubsceneEdit();
-                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
-                            setHasUnsavedChanges(false);
-                        }}
+                        onConfirmSubsceneEdit={handleManualSave}
                         onCancelAddNewSubscene={handlers.cancelAddNewSubscene}
-                        onConfirmEdit={async () => {
-                            if (activeSceneDraft || activeScene) {
-                                await handlers.confirmEdit((activeSceneDraft || activeScene)!);
-                                setActiveSceneDraft((prev) => prev || (activeSceneDraft || activeScene));
-                                originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
-                                setHasUnsavedChanges(false);
-                            }
-                        }}
+                        onConfirmEdit={handleManualSave}
                     />
 
                     {isAddingNew && newSceneData ? (
@@ -1060,13 +1249,16 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handleUploadMusic}
             />
 
-            {isGeneratingAllSceneImages && (
+            {isBatchSceneJobActive && (
                 <div className={styles.plusLoadingOverlay}>
                     <div className={styles.plusLoadingDialog}>
                         <div className={styles.plusLoadingSpinner}></div>
                         <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
-                        {batchSceneEtaText && (
+{batchSceneEtaText && (
                             <div className={styles.plusLoadingHint}>{batchSceneEtaText}</div>
+                        )}
+                        {batchSceneProgressText && (
+                            <div className={styles.plusLoadingHint}>{batchSceneProgressText}</div>
                         )}
                         <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作</div>
                     </div>
@@ -1075,49 +1267,15 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
             <SaveConfirmModal
                 isOpen={saveConfirmModalOpen}
-                onSave={async () => {
-                    try {
-                        if (isAddingNew && newSceneData) {
-                            await handlers.confirmAddNew();
-                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
-                            setHasUnsavedChanges(false);
-                        } else if (isAddingNewSubscene && activeSubsceneDraft) {
-                            await handlers.confirmSubsceneEdit();
-                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
-                            setHasUnsavedChanges(false);
-                        } else if (activeSceneDraft || activeScene) {
-                            await handlers.confirmEdit((activeSceneDraft || activeScene)!);
-                            setActiveSceneDraft((prev) => prev || (activeSceneDraft || activeScene));
-                            originalSceneDataRef.current = JSON.parse(JSON.stringify(sceneData));
-                            setHasUnsavedChanges(false);
-                        } else {
-                            setHasUnsavedChanges(false);
-                        }
-                        hasUnsavedChangesRef.current = false;
-                        isBlockingSwitchRef.current = false;
-                        setSaveConfirmModalOpen(false);
-                        setIsBlockingSwitch(false);
-                        executePendingAction();
-                    } catch (error) {
-                        toast.error('保存失败，请重试');
-                    }
-                }}
+                onSave={handlePendingSave}
                 onDiscard={() => {
-                    discardCurrentScenePendingChanges();
+                    closePendingSaveModal();
+                    discardCurrentPendingChanges();
                     hasUnsavedChangesRef.current = false;
-                    isBlockingSwitchRef.current = false;
-                    setSaveConfirmModalOpen(false);
                     setHasUnsavedChanges(false);
-                    setIsBlockingSwitch(false);
                     executePendingAction();
                 }}
-                onCancel={() => {
-                    setSaveConfirmModalOpen(false);
-                    setPendingAction(null);
-                    setIsBlockingSwitch(false);
-                    isBlockingSwitchRef.current = false;
-                    pendingPanelActionRef.current = null;
-                }}
+                onCancel={clearPendingActionState}
                 title="未保存的修改"
                 message="您有未保存的修改，是否要保存？"
                 saveButtonText="保存"

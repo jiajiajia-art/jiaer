@@ -10,6 +10,25 @@ import type { UploadSceneImageResponse, UploadSubSceneImageResponse } from '../.
 
 export type SceneApiHelpers = ReturnType<typeof createSceneApiHelpers>;
 
+const extractBlobErrorMessage = async (blob: Blob | undefined): Promise<string | null> => {
+    if (!(blob instanceof Blob) || blob.size === 0) {
+        return null;
+    }
+
+    const contentType = blob.type || '';
+    if (!contentType.includes('application/json') && !contentType.includes('text/json')) {
+        return null;
+    }
+
+    try {
+        const text = await blob.text();
+        const parsed = JSON.parse(text) as { message?: string; error?: string };
+        return parsed?.message || parsed?.error || null;
+    } catch {
+        return null;
+    }
+};
+
 export const createSceneApiHelpers = (mode: string) => {
     const isWorldInteraction = mode === 'worldInteraction';
 
@@ -46,16 +65,35 @@ export const createSceneApiHelpers = (mode: string) => {
         }) => {
             const { fileId, scene } = params;
             try {
+                if (isWorldInteraction) {
+                    const response = await worldEditor.generateSceneImage(fileId, scene.id);
+                    return {
+                        data: {
+                            success: response.data.success,
+                            message: response.data.message,
+                            imagePath: response.data.result?.imagePath,
+                            sceneId: response.data.result?.sceneId || scene.id,
+                        },
+                    };
+                }
+
                 const response = await EditorApi.generateSceneImage(scene.id, fileId, {
                     removeBg: true,
-                    pluginType: isWorldInteraction ? 'world-interaction' : 'visual',
+                    pluginType: 'visual',
                 });
 
                 const sceneId = (response.headers['x-scene-id'] as string) || scene.id;
                 return { data: { success: true, blob: response.data, sceneId } };
             } catch (error) {
-                const err = error as { response?: { data?: { message?: string } }; message?: string };
-                const message = err?.response?.data?.message || err?.message || '生成失败';
+                const err = error as { response?: { data?: Blob | { message?: string; error?: string } }; message?: string };
+                const responseData = err?.response?.data;
+                const blobMessage = responseData instanceof Blob
+                    ? await extractBlobErrorMessage(responseData)
+                    : null;
+                const jsonMessage = responseData && !(responseData instanceof Blob)
+                    ? responseData.message || responseData.error
+                    : null;
+                const message = blobMessage || jsonMessage || err?.message || '生成失败';
                 return { data: { success: false, message } };
             }
         },

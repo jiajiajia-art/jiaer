@@ -5,9 +5,9 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Scene as ApiScene } from '../../../api/galgame/getGalgamePreset.type';
-import { getSceneById, getSubSceneById, isWorldSubScene, type SceneLike } from '../editorCompat';
+import { getSceneById, getSubSceneById, isWorldSubScene, type SceneLike, type WorldSubScene } from '../editorCompat';
 import type { SceneApiHelpers } from './apiHelpers';
-import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { User } from '../../../api/account/auth.type';
 import { auth } from '../../../api/account/authApi';
@@ -56,6 +56,7 @@ export interface HandlersContext {
     setIsGeneratingWorldMap: React.Dispatch<React.SetStateAction<boolean>>;
     setWorldMapImageOverride: React.Dispatch<React.SetStateAction<string | null>>;
     setIsGeneratingAllSceneImages: React.Dispatch<React.SetStateAction<boolean>>;
+    setSceneBatchJobStatus: React.Dispatch<React.SetStateAction<BatchImageJobStatus | null>>;
     setSceneCostPoints: React.Dispatch<React.SetStateAction<number | null>>;
     setIsLoadingSceneCost: React.Dispatch<React.SetStateAction<boolean>>;
     // 一键生成结果弹窗
@@ -99,6 +100,21 @@ export interface PendingImage {
     persistedPath?: string;
 }
 
+interface SaveOptions {
+    suppressSuccessToast?: boolean;
+}
+
+export type SceneSaveResult =
+    | { success: false }
+    | { success: true; kind: 'sceneAdd' | 'sceneEdit'; savedScene: LocalScene }
+    | {
+        success: true;
+        kind: 'subsceneAdd' | 'subsceneEdit';
+        sceneId: string;
+        previousSubsceneId: string;
+        savedSubscene: WorldSubScene;
+    };
+
 export const createSceneHandlers = (ctx: HandlersContext) => {
     const {
         fileId,
@@ -130,6 +146,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         setIsGeneratingWorldMap,
         setWorldMapImageOverride,
         setIsGeneratingAllSceneImages,
+        setSceneBatchJobStatus,
         setSceneCostPoints,
         setIsLoadingSceneCost,
         setSceneResultModalOpen,
@@ -474,13 +491,14 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 确认新增场景
-    const confirmAddNew = async () => {
+    const confirmAddNew = async (options: SaveOptions = {}): Promise<SceneSaveResult> => {
         if (!fileId || !newSceneData) {
             toast.error('缺少必要数据，无法新增场景');
-            return;
+            return { success: false };
         }
 
         const newSceneId = `scene_${Date.now()}`;
+        const shouldShowSuccessToast = !options.suppressSuccessToast;
 
         const sceneDataForApi: ApiScene = {
             id: newSceneId,
@@ -495,64 +513,78 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
         try {
             const response = await api.addScene(fileId, sceneDataForApi);
-            if (response.data?.success) {
-                let createdScene: LocalScene;
-                if (mode === 'worldInteraction') {
-                    const scene = (response.data as any)?.data;
-                    if (scene && scene.id) {
-                        createdScene = {
-                            id: scene.id,
-                            name: scene.name || '',
-                            type: scene.type || '',
-                            desc: scene.description || '',
-                            image: scene.image || '',
-                            bgmId: scene.soundtrack || '',
-                        };
-                    } else {
-                        createdScene = {
-                            ...newSceneData,
-                            id: newSceneId,
-                        };
-                    }
-                } else {
-                    const sceneSetting = (response.data as any)?.sceneSetting;
-                    const scene = sceneSetting?.scenes?.find((s: any) => s.id === newSceneId);
-                    createdScene = scene ? {
+            if (!response.data?.success) {
+                toast.error('创建场景失败');
+                return { success: false };
+            }
+
+            let createdScene: LocalScene;
+            if (mode === 'worldInteraction') {
+                const scene = (response.data as any)?.data;
+                if (scene && scene.id) {
+                    createdScene = {
                         id: scene.id,
                         name: scene.name || '',
                         type: scene.type || '',
                         desc: scene.description || '',
                         image: scene.image || '',
                         bgmId: scene.soundtrack || '',
-                    } : {
+                    };
+                } else {
+                    createdScene = {
                         ...newSceneData,
                         id: newSceneId,
                     };
                 }
-                setSceneData(prev => [createdScene, ...prev]);
-                setActiveSceneId(createdScene.id);
-                setIsAddingNew(false);
-                setNewSceneData(null);
-                toast.success('场景创建成功');
             } else {
-                toast.error('创建场景失败');
+                const sceneSetting = (response.data as any)?.sceneSetting;
+                const scene = sceneSetting?.scenes?.find((s: any) => s.id === newSceneId);
+                createdScene = scene ? {
+                    id: scene.id,
+                    name: scene.name || '',
+                    type: scene.type || '',
+                    desc: scene.description || '',
+                    image: scene.image || '',
+                    bgmId: scene.soundtrack || '',
+                } : {
+                    ...newSceneData,
+                    id: newSceneId,
+                };
             }
+
+            setSceneData(prev => [createdScene, ...prev]);
+            setActiveSceneId(createdScene.id);
+            setIsAddingNew(false);
+            setNewSceneData(null);
+
+            if (shouldShowSuccessToast) {
+                toast.success('场景创建成功');
+            }
+
+            return {
+                success: true,
+                kind: 'sceneAdd',
+                savedScene: createdScene,
+            };
         } catch (error) {
             console.error('创建场景时出错:', error);
             toast.error('创建场景失败，请重试');
+            return { success: false };
         }
     };
 
-    // 确认修改场景
-    const confirmEdit = async (activeScene: LocalScene | undefined) => {
+    const confirmEdit = async (
+        activeScene: LocalScene | undefined,
+        options: SaveOptions = {},
+    ): Promise<SceneSaveResult> => {
         if (!fileId || !activeScene) {
             toast.error('缺少必要数据，无法保存修改');
-            return;
+            return { success: false };
         }
 
         const sceneToSave = activeScene;
+        const shouldShowSuccessToast = !options.suppressSuccessToast;
 
-        // 处理暂存图片
         let imagePath = sceneToSave.image;
         const pendingImage = pendingImages[sceneToSave.id]?.['base'];
         if (pendingImage) {
@@ -561,7 +593,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 if (serverPath) {
                     imagePath = serverPath;
                 } else {
-                    return;
+                    return { success: false };
                 }
             } else if (pendingImage.persistedPath) {
                 imagePath = pendingImage.persistedPath;
@@ -569,7 +601,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (imagePath) {
                 bumpCacheBust(imagePath);
             }
-            // 清理暂存
             setPendingImages(prev => {
                 const next = { ...prev };
                 delete next[sceneToSave.id];
@@ -590,27 +621,34 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
         try {
             const response = await api.updateScene(fileId, sceneDataForApi);
-            if (response.data?.success) {
-                toast.success('场景更新成功');
-                const updatedScene = { ...sceneToSave, image: imagePath || sceneToSave.image };
-                // 先把用户刚确认的数据写回本地
-                setSceneData(prev =>
-                    prev.map(s => (s.id === sceneToSave.id ? { ...s, ...updatedScene } : s))
-                );
-                setActiveSceneDraft(updatedScene);
-                // 再用后端回包做一次覆盖
-                updateSceneFromResponse(response.data, sceneToSave.id, imagePath || sceneToSave.image);
-                onDataChange?.();
-            } else {
+            if (!response.data?.success) {
                 toast.error('更新场景失败');
+                return { success: false };
             }
+
+            const updatedScene = { ...sceneToSave, image: imagePath || sceneToSave.image };
+            if (shouldShowSuccessToast) {
+                toast.success('场景更新成功');
+            }
+            setSceneData(prev =>
+                prev.map(s => (s.id === sceneToSave.id ? { ...s, ...updatedScene } : s))
+            );
+            setActiveSceneDraft(updatedScene);
+            updateSceneFromResponse(response.data, sceneToSave.id, imagePath || sceneToSave.image);
+            onDataChange?.();
+
+            return {
+                success: true,
+                kind: 'sceneEdit',
+                savedScene: updatedScene,
+            };
         } catch (error) {
             console.error('更新场景时出错:', error);
             toast.error('更新场景失败，请重试');
+            return { success: false };
         }
     };
 
-    // 打开新增子场景
     const openAddNewSubscene = () => {
         if (!activeSceneId) {
             toast.error('请先选择一个父场景');
@@ -640,26 +678,29 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 确认修改/新增子场景
-    const confirmSubsceneEdit = async () => {
+    const confirmSubsceneEdit = async (options: SaveOptions = {}): Promise<SceneSaveResult> => {
         if (!fileId || !activeSubsceneDraft || !activeSceneId) {
             toast.error('缺少必要数据，无法保存修改');
-            return;
+            return { success: false };
         }
         if (mode !== 'worldInteraction') {
             toast.error('子场景功能仅在世界交互模式下可用');
-            return;
+            return { success: false };
         }
 
-        // 处理暂存图片
-        let imagePath = activeSubsceneDraft.image;
-        const pendingImage = pendingImages[activeSubsceneDraft.id]?.['base'];
+        const draftToSave = activeSubsceneDraft;
+        const previousSubsceneId = draftToSave.id;
+        const shouldShowSuccessToast = !options.suppressSuccessToast;
+
+        let imagePath = draftToSave.image;
+        const pendingImage = pendingImages[draftToSave.id]?.['base'];
         if (pendingImage) {
             if (pendingImage.file) {
-                const serverPath = await uploadImage(activeSceneId, activeSubsceneDraft.id);
+                const serverPath = await uploadImage(activeSceneId, draftToSave.id);
                 if (serverPath) {
                     imagePath = serverPath;
                 } else {
-                    return;
+                    return { success: false };
                 }
             } else if (pendingImage.persistedPath) {
                 imagePath = pendingImage.persistedPath;
@@ -667,18 +708,17 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (imagePath) {
                 bumpCacheBust(imagePath);
             }
-            // 清理暂存
             setPendingImages(prev => {
                 const next = { ...prev };
-                delete next[activeSubsceneDraft.id];
+                delete next[draftToSave.id];
                 return next;
             });
         }
 
         const subsceneData: any = {
-            id: isAddingNewSubscene ? `subscene_${Date.now()}` : activeSubsceneDraft.id,
-            name: activeSubsceneDraft.name || '未命名子场景',
-            description: activeSubsceneDraft.desc || '',
+            id: isAddingNewSubscene ? `subscene_${Date.now()}` : draftToSave.id,
+            name: draftToSave.name || '未命名子场景',
+            description: draftToSave.desc || '',
             image: imagePath || '',
             npcs: [],
             position: [0, 0],
@@ -687,7 +727,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
 
         if (!isAddingNewSubscene) {
             const originalScene = getSceneById(gameData as any, activeSceneId);
-            const originalSubscene = getSubSceneById(originalScene, activeSubsceneDraft.id);
+            const originalSubscene = getSubSceneById(originalScene, draftToSave.id);
             if (originalSubscene && isWorldSubScene(originalSubscene)) {
                 subsceneData.npcs = originalSubscene.npcs || [];
                 subsceneData.position = originalSubscene.position || [0, 0];
@@ -696,51 +736,57 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
 
         try {
-            let response;
-            if (isAddingNewSubscene) {
-                response = await api.addSubScene(fileId, activeSceneId, subsceneData);
-            } else {
-                response = await api.updateSubScene(fileId, activeSceneId, subsceneData);
+            const response = isAddingNewSubscene
+                ? await api.addSubScene(fileId, activeSceneId, subsceneData)
+                : await api.updateSubScene(fileId, activeSceneId, subsceneData);
+
+            if (!response.data?.success) {
+                toast.error(isAddingNewSubscene ? '创建子场景失败' : '更新子场景失败');
+                return { success: false };
             }
 
-            if (response.data?.success) {
+            if (shouldShowSuccessToast) {
                 toast.success(isAddingNewSubscene ? '子场景创建成功' : '子场景更新成功');
-                // 把当前确认的数据写回本地子场景数据源（保证不依赖刷新 document 也能持久）
-                if (setSubsceneDataBySceneId) {
-                    const savedId = subsceneData.id;
-                    setSubsceneDataBySceneId(prev => {
-                        const current = ((prev || {})[activeSceneId] || []) as any[];
-                        const idx = current.findIndex(s => (s.id || s.name) === savedId || (s.id || s.name) === activeSubsceneDraft.id);
-                        const savedSub = idx >= 0 ? { ...current[idx], ...subsceneData } : { ...subsceneData };
-                        const next =
-                            idx >= 0
-                                ? current.map((s, i) => (i === idx ? savedSub : s))
-                                : [savedSub, ...current];
-                        return { ...(prev || {}), [activeSceneId]: next };
-                    });
-                }
-                if (isAddingNewSubscene) {
-                    setIsAddingNewSubscene(false);
-                    setActiveSubsceneId(null);
-                    setActiveSubsceneDraft(null);
-                } else {
-                    setActiveSubsceneDraft({
-                        ...activeSubsceneDraft,
-                        image: imagePath || activeSubsceneDraft.image,
-                    });
-                }
-                onDataChange?.();
-            } else {
-                toast.error(isAddingNewSubscene ? '创建子场景失败' : '更新子场景失败');
             }
+            if (setSubsceneDataBySceneId) {
+                const savedId = subsceneData.id;
+                setSubsceneDataBySceneId(prev => {
+                    const current = ((prev || {})[activeSceneId] || []) as any[];
+                    const idx = current.findIndex(s => (s.id || s.name) === savedId || (s.id || s.name) === draftToSave.id);
+                    const savedSub = idx >= 0 ? { ...current[idx], ...subsceneData } : { ...subsceneData };
+                    const next =
+                        idx >= 0
+                            ? current.map((s, i) => (i === idx ? savedSub : s))
+                            : [savedSub, ...current];
+                    return { ...(prev || {}), [activeSceneId]: next };
+                });
+            }
+            if (isAddingNewSubscene) {
+                setIsAddingNewSubscene(false);
+                setActiveSubsceneId(null);
+                setActiveSubsceneDraft(null);
+            } else {
+                setActiveSubsceneDraft({
+                    ...draftToSave,
+                    image: imagePath || draftToSave.image,
+                });
+            }
+            onDataChange?.();
+
+            return {
+                success: true,
+                kind: isAddingNewSubscene ? 'subsceneAdd' : 'subsceneEdit',
+                sceneId: activeSceneId,
+                previousSubsceneId,
+                savedSubscene: { ...subsceneData } as WorldSubScene,
+            };
         } catch (error) {
             console.error(isAddingNewSubscene ? '创建子场景时出错:' : '更新子场景时出错:', error);
             toast.error(isAddingNewSubscene ? '创建子场景失败，请重试' : '更新子场景失败，请重试');
+            return { success: false };
         }
     };
 
-
-    // 统一退出新增模式
     const exitCreateModes = () => {
         if (isAddingNew) {
             setIsAddingNew(false);
@@ -1084,13 +1130,140 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 批量生成场景立绘 + 积分试算
+    const applySceneBatchResult = async (payload: any, sceneCostPointsValue: number | null) => {
+        const details = payload?.details || null;
+        const generatedSceneCount = applyGeneratedSceneImages(details?.scenes || []);
+        const generatedSubsceneCount = applyGeneratedSubsceneImages(details?.subscenes || []);
+
+        const rawSceneGenerated = Number(
+            payload?.scenes?.effective ??
+            payload?.results?.scenesSuccess ??
+            payload?.results?.scenesGenerated ??
+            payload?.results?.scenes ??
+            payload?.summary?.totalEffective ??
+            payload?.scenesGenerated ??
+            generatedSceneCount
+        );
+        const sceneGenerated = Number.isFinite(rawSceneGenerated) ? Math.max(0, rawSceneGenerated) : generatedSceneCount;
+
+        const rawSceneTotal = Number(
+            payload?.scenes?.total ??
+            payload?.results?.scenesTotal ??
+            payload?.results?.scenes ??
+            payload?.summary?.totalRequested ??
+            details?.scenes?.length ??
+            generatedSceneCount
+        );
+        const sceneTotal = Number.isFinite(rawSceneTotal) ? Math.max(0, rawSceneTotal) : generatedSceneCount;
+
+        const rawSubsceneGenerated = Number(
+            payload?.subscenes?.effective ??
+            payload?.results?.subscenesSuccess ??
+            payload?.results?.subscenesGenerated ??
+            payload?.subscenesGenerated ??
+            generatedSubsceneCount
+        );
+        const subsceneGenerated = Number.isFinite(rawSubsceneGenerated) ? Math.max(0, rawSubsceneGenerated) : generatedSubsceneCount;
+
+        const rawSubsceneTotal = Number(
+            payload?.subscenes?.total ??
+            payload?.results?.subscenes ??
+            details?.subscenes?.length ??
+            generatedSubsceneCount
+        );
+        const subsceneTotal = Number.isFinite(rawSubsceneTotal) ? Math.max(0, rawSubsceneTotal) : generatedSubsceneCount;
+
+        const generatedCount = sceneGenerated + subsceneGenerated;
+        const totalCount = sceneTotal + subsceneTotal;
+
+        const pointsDeductedRaw = Number(
+            payload?.points?.deducted ??
+            payload?.points?.pointsDeducted ??
+            payload?.results?.pointsDeducted ??
+            sceneCostPointsValue ??
+            0
+        );
+        const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
+
+        const remainingPointsRaw =
+            payload?.points?.remaining ??
+            payload?.points?.remainingPoints ??
+            payload?.results?.remainingPoints;
+        const remainingPointsValue = Number(remainingPointsRaw);
+        const remainingPoints = Number.isFinite(remainingPointsValue)
+            ? Math.max(0, remainingPointsValue)
+            : undefined;
+
+        setSceneGenerationResult({
+            generatedCount,
+            totalCount,
+            pointsDeducted,
+            remainingPoints,
+        });
+        if (mode !== 'worldInteraction') {
+            bumpExistingSceneImageCache();
+            clearVisualBatchPendingImages();
+        }
+        markBatchImageRefreshPending?.();
+        try {
+            await onDataChange?.();
+        } catch (refreshError) {
+            console.error('Failed to refresh scene data after batch generation:', refreshError);
+        }
+        setSceneResultModalOpen(true);
+    };
+
     const generateAllSceneImages = async (sceneCostPoints: number | null) => {
+        let lastJobStatus: BatchImageJobStatus | null = null;
         if (!fileId) {
             toast.error('缺少必要数据，无法生成');
             return;
         }
         try {
             setIsGeneratingAllSceneImages(true);
+            setSceneBatchJobStatus(null);
+            const startResponse: any = await api.startGenerateAllSceneImages(fileId);
+            const startPayload: any = startResponse?.data || startResponse;
+            const jobId = startPayload?.jobId;
+            if (!startPayload?.success || !jobId) {
+                toast.error(startPayload?.error || startPayload?.message || 'å½“å‰ä½¿ç”¨äººæ•°è¿‡å¤šï¼Œè¯·ç¨åŽå†è¯•');
+                return;
+            }
+            setSceneBatchJobStatus({
+                success: true,
+                jobId,
+                fileId: startPayload?.fileId ?? fileId,
+                status: startPayload?.status ?? 'queued',
+                totalCount: Number(startPayload?.totalCount ?? 0),
+                completedCount: 0,
+                failedCount: 0,
+                estimatedRemainingSeconds: null,
+            });
+            for (let attempt = 0; attempt < 600; attempt += 1) {
+                const statusResponse: any = await api.getSceneBatchJobStatus(jobId);
+                const statusPayload = statusResponse?.data || statusResponse;
+                lastJobStatus = statusPayload as BatchImageJobStatus;
+                setSceneBatchJobStatus(lastJobStatus);
+                if (!statusPayload?.success) {
+                    throw new Error(statusPayload?.error || statusPayload?.message || 'Failed to fetch scene batch job status');
+                }
+                if (statusPayload.status === 'completed') {
+                    const resultResponse: any = await api.getSceneBatchJobResult(jobId);
+                    const resultPayload = resultResponse?.data || resultResponse;
+                    if (!resultPayload?.success || !resultPayload?.result) {
+                        throw new Error(resultPayload?.error || resultPayload?.message || 'Failed to fetch scene batch job result');
+                    }
+                    await applySceneBatchResult(resultPayload.result, sceneCostPoints);
+                    setSceneBatchJobStatus(null);
+                    return;
+                }
+                if (statusPayload.status === 'failed' || statusPayload.status === 'unknown') {
+                    throw new Error(statusPayload?.error || statusPayload?.message || 'Scene batch job failed');
+                }
+                await new Promise((resolve) => window.setTimeout(resolve, 1500));
+            }
+            /* legacy synchronous fallback removed in favor of batch job polling
+            if (Date.now() < 0) {
             const response = await api.generateAllSceneImages(fileId);
             if (response.data?.success) {
                 const respAny: any = response.data;
@@ -1187,8 +1360,16 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         } catch (error) {
             console.error('生成所有场景立绘时出错:', error);
             toast.error('生成所有场景立绘失败，请检查网络连接');
+            }
+            }
+            throw new Error('Scene batch job polling timed out');
+            */
+            throw new Error('Scene batch job polling timed out');
         } finally {
             setIsGeneratingAllSceneImages(false);
+            if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
+                setSceneBatchJobStatus(null);
+            }
         }
     };
 

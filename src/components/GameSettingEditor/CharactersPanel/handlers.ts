@@ -5,12 +5,13 @@
 import React from 'react';
 import { toast } from 'react-hot-toast';
 import type { Character, Variation, PendingImage } from './types';
-import type { NPC, GenerateImgeResponse } from '../../../api/galgame/EditorData.type';
+import type { NPC, GenerateImgeResponse, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import { npcToCharacter, playerToCharacter, bumpCacheBust, stringifyPersonalityTags } from './utils';
 import type { ApiHelpers } from './apiHelpers';
 import { parseResponse } from './apiHelpers';
 import type { User } from '../../../api/account/auth.type';
 import { auth } from '../../../api/account/authApi';
+import { isMiniProgramEnv } from '../../../utils/miniProgram';
 
 interface HandlersContext {
     fileId: string;
@@ -38,6 +39,7 @@ interface HandlersContext {
         pointsDeducted: number;
         remainingPoints?: number;
     } | null>>;
+    setNpcBatchJobStatus: React.Dispatch<React.SetStateAction<BatchImageJobStatus | null>>;
     // 暂存图片 setters
     setPendingImages: React.Dispatch<React.SetStateAction<{ [characterId: string]: { [variant: string]: PendingImage } }>>;
     setHasUnsavedChanges: (value: boolean) => void;
@@ -48,7 +50,7 @@ interface HandlersContext {
     pendingImages: { [characterId: string]: { [variant: string]: PendingImage } };
     // 暂存图片 blob URL refs
     pendingImageUrlsRef: React.MutableRefObject<{ [key: string]: string }>;
-    onDataChange?: () => void;
+    onDataChange?: () => void | Promise<void>;
 }
 
 interface ConfirmEditResult {
@@ -78,6 +80,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         setIsLoadingNpcCost,
         setNpcResultModalOpen,
         setNpcGenerationResult,
+        setNpcBatchJobStatus,
         setPendingImages,
         setHasUnsavedChanges,
         activeCharacterId,
@@ -89,6 +92,45 @@ export const createHandlers = (ctx: HandlersContext) => {
 
     const replaceCharacter = (list: Character[], targetCharacterId: string, nextCharacter: Character): Character[] =>
         list.map((character) => character.id === targetCharacterId ? nextCharacter : character);
+
+    const bumpExistingCharacterImageCache = () => {
+        characterData.forEach((character) => {
+            if (character.id.startsWith('temp-')) return;
+            if (
+                character.portrait &&
+                !character.portrait.startsWith('blob:') &&
+                !character.portrait.startsWith('data:')
+            ) {
+                bumpCacheBust(character.portrait);
+            }
+        });
+    };
+
+    const createPreviewUrl = async (
+        imageFile: File,
+        previousUrl?: string
+    ): Promise<string> => {
+        if (previousUrl?.startsWith('blob:')) {
+            URL.revokeObjectURL(previousUrl);
+        }
+
+        if (!isMiniProgramEnv()) {
+            return URL.createObjectURL(imageFile);
+        }
+
+        return await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (typeof reader.result === 'string') {
+                    resolve(reader.result);
+                    return;
+                }
+                reject(new Error('Failed to build image preview'));
+            };
+            reader.onerror = () => reject(reader.error || new Error('Failed to read image preview'));
+            reader.readAsDataURL(imageFile);
+        });
+    };
 
     /**
      * 更新角色图片的辅助函数
@@ -133,37 +175,34 @@ export const createHandlers = (ctx: HandlersContext) => {
      * @param imageData 可以是 URL 字符串、File 对象、Blob、ArrayBuffer（二进制数据）
      * @param variant 变体名称
      */
-    const setPendingImage = (
+    const setPendingImage = async (
         characterId: string,
         imageData: string | File | Blob | ArrayBuffer,
         variant: string
-    ) => {
+    ): Promise<void> => {
         let previewUrl: string;
         let file: File | undefined;
         const pendingImageKey = `${characterId}-${variant}`;
 
-        const createOrReplacePendingUrl = (imageFile: File): string => {
+        const createOrReplacePendingUrl = async (imageFile: File): Promise<string> => {
             const previousUrl = pendingImageUrlsRef.current[pendingImageKey];
-            if (previousUrl) {
-                URL.revokeObjectURL(previousUrl);
-            }
-            const objectUrl = URL.createObjectURL(imageFile);
-            pendingImageUrlsRef.current[pendingImageKey] = objectUrl;
-            return objectUrl;
+            const nextUrl = await createPreviewUrl(imageFile, previousUrl);
+            pendingImageUrlsRef.current[pendingImageKey] = nextUrl;
+            return nextUrl;
         };
 
         if (typeof imageData === 'string') {
             previewUrl = imageData;
         } else if (imageData instanceof File) {
             file = imageData;
-            previewUrl = createOrReplacePendingUrl(file);
-        } else if (imageData instanceof Blob) {//
+            previewUrl = await createOrReplacePendingUrl(file);
+        } else if (imageData instanceof Blob) {
             file = new File([imageData], `generated_${variant}.webp`, { type: imageData.type || 'image/webp' });
-            previewUrl = createOrReplacePendingUrl(file);
+            previewUrl = await createOrReplacePendingUrl(file);
         } else if (imageData instanceof ArrayBuffer) {
             const blob = new Blob([imageData], { type: 'image/webp' });
             file = new File([blob], `generated_${variant}.webp`, { type: 'image/webp' });
-            previewUrl = createOrReplacePendingUrl(file);
+            previewUrl = await createOrReplacePendingUrl(file);
         } else {
             console.error('无效的图片数据类型');
             return;
@@ -200,6 +239,59 @@ export const createHandlers = (ctx: HandlersContext) => {
     };
 
     // 从 API 响应中更新角色数据
+    const applyNpcBatchResult = async (payload: any, npcCostPointsValue: number | null) => {
+        const npcsTotalRaw = Number(
+            payload?.npcs?.total
+            ?? payload?.results?.npcsTotal
+            ?? 0
+        );
+        const npcsTotal = Number.isFinite(npcsTotalRaw) ? Math.max(0, npcsTotalRaw) : 0;
+        const playerTotalRaw = Number(payload?.player?.total ?? 0);
+        const playerTotal = Number.isFinite(playerTotalRaw) ? Math.max(0, playerTotalRaw) : 0;
+        const totalCount = npcsTotal + playerTotal;
+
+        const npcsEffectiveRaw = Number(
+            payload?.npcs?.effective
+            ?? payload?.results?.npcsGenerated
+            ?? payload?.results?.effectiveSuccessful
+            ?? 0
+        );
+        const npcsEffective = Number.isFinite(npcsEffectiveRaw) ? Math.max(0, npcsEffectiveRaw) : 0;
+        const playerEffectiveRaw = Number(payload?.player?.effective ?? 0);
+        const playerEffective = Number.isFinite(playerEffectiveRaw) ? Math.max(0, playerEffectiveRaw) : 0;
+        const generatedRaw = payload?.npcs || payload?.player ? npcsEffective + playerEffective : npcsEffective;
+        const generatedCount = totalCount > 0 ? Math.min(generatedRaw, totalCount) : generatedRaw;
+
+        const pointsDeductedRaw = Number(
+            payload?.points?.deducted
+            ?? payload?.results?.pointsDeducted
+            ?? npcCostPointsValue
+            ?? 0
+        );
+        const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
+
+        const remainingPointsRaw = payload?.points?.remaining ?? payload?.results?.remainingPoints;
+        const remainingPointsValue = Number(remainingPointsRaw);
+        const remainingPoints = Number.isFinite(remainingPointsValue)
+            ? Math.max(0, remainingPointsValue)
+            : undefined;
+
+        setNpcGenerationResult({
+            generatedCount,
+            totalCount,
+            pointsDeducted,
+            remainingPoints,
+        });
+        bumpExistingCharacterImageCache();
+        try {
+            await onDataChange?.();
+        } catch (refreshError) {
+            console.error('Failed to refresh character data after batch generation:', refreshError);
+        }
+        setNpcResultModalOpen(true);
+        await refreshUserPoints();
+    };
+
     const updateCharacterFromResponse = (responseData: any, characterId: string) => {
         const npc = parseResponse.extractNpc(responseData, mode, characterId);
         if (npc) {
@@ -744,7 +836,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 toast.success('NPC图片生成成功，请在确认修改后保存');
 
                 // 直接使用返回的 blob 数据
-                setPendingImage(npc.id, response.data.blob, 'base');
+                await setPendingImage(npc.id, response.data.blob, 'base');
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }
@@ -767,7 +859,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 toast.success('主角图片生成成功，请在确认修改后保存');
 
                 // 直接使用返回的 blob 数据
-                setPendingImage('player', response.data.blob, 'base');
+                await setPendingImage('player', response.data.blob, 'base');
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }
@@ -868,12 +960,56 @@ export const createHandlers = (ctx: HandlersContext) => {
 
     // 批量生成所有NPC图片
     const generateAllNpcImages = async (npcCostPoints: number | null) => {
+        let lastJobStatus: BatchImageJobStatus | null = null;
         if (!fileId) {
             toast.error('缺少必要数据，无法生成');
             return;
         }
         try {
             setIsGeneratingNpcImages(true);
+            setNpcBatchJobStatus(null);
+            const startResponse: any = await api.startGenerateAllNpcImages(fileId);
+            const startPayload: any = startResponse?.data || startResponse;
+            const jobId = startPayload?.jobId;
+            if (!startPayload?.success || !jobId) {
+                toast.error(startPayload?.error || startPayload?.message || 'å½“å‰ä½¿ç”¨äººæ•°è¿‡å¤šï¼Œè¯·ç¨åŽå†è¯•');
+                return;
+            }
+            setNpcBatchJobStatus({
+                success: true,
+                jobId,
+                fileId: startPayload?.fileId ?? fileId,
+                status: startPayload?.status ?? 'queued',
+                totalCount: Number(startPayload?.totalCount ?? 0),
+                completedCount: 0,
+                failedCount: 0,
+                estimatedRemainingSeconds: null,
+            });
+            for (let attempt = 0; attempt < 600; attempt += 1) {
+                const statusResponse: any = await api.getNpcBatchJobStatus(jobId);
+                const statusPayload = statusResponse?.data || statusResponse;
+                lastJobStatus = statusPayload as BatchImageJobStatus;
+                setNpcBatchJobStatus(lastJobStatus);
+                if (!statusPayload?.success) {
+                    throw new Error(statusPayload?.error || statusPayload?.message || 'Failed to fetch NPC batch job status');
+                }
+                if (statusPayload.status === 'completed') {
+                    const resultResponse: any = await api.getNpcBatchJobResult(jobId);
+                    const resultPayload = resultResponse?.data || resultResponse;
+                    if (!resultPayload?.success || !resultPayload?.result) {
+                        throw new Error(resultPayload?.error || resultPayload?.message || 'Failed to fetch NPC batch job result');
+                    }
+                    await applyNpcBatchResult(resultPayload.result, npcCostPoints);
+                    setNpcBatchJobStatus(null);
+                    return;
+                }
+                if (statusPayload.status === 'failed' || statusPayload.status === 'unknown') {
+                    throw new Error(statusPayload?.error || statusPayload?.message || 'NPC batch job failed');
+                }
+                await new Promise((resolve) => window.setTimeout(resolve, 1500));
+            }
+            /* legacy synchronous fallback removed in favor of batch job polling
+            if (Date.now() < 0) {
             const response = await api.generateAllNpcImages(fileId);
             if (response.data?.success) {
                 const respAny: any = response.data;
@@ -913,18 +1049,29 @@ export const createHandlers = (ctx: HandlersContext) => {
                     pointsDeducted,
                     remainingPoints,
                 });
-                setNpcResultModalOpen(true);
-                if (onDataChange) {
-                    onDataChange();
+                bumpExistingCharacterImageCache();
+                try {
+                    await onDataChange?.();
+                } catch (refreshError) {
+                    console.error('Failed to refresh character data after batch generation:', refreshError);
                 }
+                setNpcResultModalOpen(true);
                 await refreshUserPoints();
             } else {
                 toast.error('当前使用人数过多，请稍后再试');
             }
         } catch (error) {
             toast.error('生成所有角色立绘失败，请检查网络连接');
+            }
+            }
+            throw new Error('NPC batch job polling timed out');
+            */
+            throw new Error('NPC batch job polling timed out');
         } finally {
             setIsGeneratingNpcImages(false);
+            if (!lastJobStatus || ['queued', 'running', 'pending'].includes(String(lastJobStatus.status || ''))) {
+                setNpcBatchJobStatus(null);
+            }
         }
     };
 

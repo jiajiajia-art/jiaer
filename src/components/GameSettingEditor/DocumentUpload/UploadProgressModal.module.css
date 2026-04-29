@@ -94,6 +94,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
@@ -102,6 +103,7 @@
     flex-direction: column;
     gap: 4px;
     flex: 1;
+    min-width: 0;
 }
 
 .fileName {
@@ -138,10 +140,12 @@
     align-items: center;
     gap: 12px;
     margin-bottom: 8px;
+    min-width: 0;
 }
 
 .progressBar {
     flex: 1;
+    min-width: 0;
     height: 8px;
     background: #e8e8e8;
     border-radius: 4px;
@@ -166,6 +170,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     font-size: 12px;
     color: #999;
     margin-top: 8px;
@@ -173,10 +178,15 @@
 
 .stage {
     color: #666;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .time {
     color: #999;
+    flex-shrink: 0;
 }
 
 .etaText {
@@ -184,6 +194,8 @@
     font-size: 12px;
     color: #666;
     line-height: 1.45;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .errorMessage {
@@ -194,6 +206,8 @@
     border-radius: 4px;
     color: #ff4d4f;
     font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .successMessage {
@@ -204,6 +218,8 @@
     border-radius: 4px;
     color: #22C55E;
     font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 @media (max-width: 768px) {
@@ -278,6 +294,7 @@
     .progressContainer {
         align-items: flex-start;
         gap: 10px;
+        min-width: 0;
     }
 
     .progressText {
@@ -295,6 +312,17 @@
     .time,
     .errorMessage,
     .successMessage {
+        overflow-wrap: anywhere;
         word-break: break-word;
+    }
+}
+
+@media (max-width: 480px) {
+    .modalContent {
+        width: 100%;
+    }
+
+    .progressText {
+        min-width: 34px;
     }
 }

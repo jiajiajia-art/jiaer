@@ -263,9 +263,7 @@ const ReplayList: React.FC<Props> = ({
             }`}
           >
             <div
-              className={`${styles.replayCardMain} ${
-                item.coverImageUrl ? '' : styles.replayCardMainNoCover
-              }`}
+              className={styles.replayCardMain}
               role="button"
               tabIndex={0}
               aria-expanded={isExpanded}
@@ -273,9 +271,6 @@ const ReplayList: React.FC<Props> = ({
               onClick={() => handleToggleReplay(item.replayId)}
               onKeyDown={(event) => handleReplayKeyDown(event, item.replayId)}
             >
-              {item.coverImageUrl && (
-                <img src={item.coverImageUrl} alt={item.title} className={styles.replayCover} />
-              )}
               <div className={styles.replayContent}>
                 <div className={styles.replayTitleRow}>
                   <div className={styles.replayTitle}>{item.title}</div>

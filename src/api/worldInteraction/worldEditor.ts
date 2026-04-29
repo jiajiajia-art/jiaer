@@ -298,6 +298,25 @@ const worldEditor = {
       }
     );
   },
+  generateSceneImage: (fileId: string, sceneId: string) => {
+    return api.post<{
+      success: boolean;
+      message: string;
+      result?: {
+        sceneId: string;
+        imagePath: string;
+      };
+    }>(
+      `/world-interaction/images/generate-scene`,
+      {
+        fileId: fileId,
+        sceneId: sceneId,
+      },
+      {
+        timeout: 0,
+      }
+    );
+  },
   generateSubSceneImage: (
     fileId: string,
     sceneId: string,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import styles from './CharactersPanel.module.css';
 import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
-import type { AllGameData } from '../../../api/galgame/EditorData.type';
+import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
 import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -45,7 +45,7 @@ interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
     isLoading?: boolean;
     onGetData?: (getDataFn: () => Partial<AllGameData | WorldInteractionGameData> | null) => void;
-    onDataChange?: () => void; // 数据变化回调，用于刷新数据
+    onDataChange?: () => void | Promise<void>; // 数据变化回调，用于刷新数据
     mode: string;
 }
 
@@ -81,6 +81,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
     const [isGeneratingNpcImages, setIsGeneratingNpcImages] = useState<boolean>(false);
+    const [npcBatchJobStatus, setNpcBatchJobStatus] = useState<BatchImageJobStatus | null>(null);
     const [isGeneratingSingleNpcImage, setIsGeneratingSingleNpcImage] = useState<boolean>(false);
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
     const [isUploadingPortrait, setIsUploadingPortrait] = useState<boolean>(false);
@@ -134,7 +135,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 清理暂存图片 Object URL
     const clearPendingImageUrl = (key: string) => {
         if (pendingImageUrlsRef.current[key]) {
-            URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            if (pendingImageUrlsRef.current[key].startsWith('blob:')) {
+                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            }
             delete pendingImageUrlsRef.current[key];
         }
     };
@@ -142,7 +145,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 清理所有暂存图片
     const clearAllPendingImages = () => {
         Object.keys(pendingImageUrlsRef.current).forEach(key => {
-            URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            if (pendingImageUrlsRef.current[key].startsWith('blob:')) {
+                URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
+            }
         });
         pendingImageUrlsRef.current = {};
         setPendingImages({});
@@ -483,6 +488,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             setIsLoadingNpcCost,
             setNpcResultModalOpen,
             setNpcGenerationResult,
+            setNpcBatchJobStatus,
             setPendingImages,
             setHasUnsavedChanges,
             activeCharacterId,
@@ -535,7 +541,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         ? getEffectiveImage(currentCharacter, 'base')
         : undefined;
     const displayPortraitImage = currentPortraitImage
-        ? (currentPortraitImage.startsWith('blob:') ? currentPortraitImage : withCacheBust(currentPortraitImage))
+        ? ((currentPortraitImage.startsWith('blob:') || currentPortraitImage.startsWith('data:'))
+            ? currentPortraitImage
+            : withCacheBust(currentPortraitImage))
         : DEFAULT_NPC_PORTRAIT;
     const isCurrentPortraitGenerating = Boolean(
         currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
@@ -544,24 +552,31 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         () => characterData.filter((character) => !character.id.startsWith('temp-')).length,
         [characterData],
     );
+    const isBatchNpcJobActive = isGeneratingNpcImages || (
+        npcBatchJobStatus != null
+        && ['queued', 'running', 'pending'].includes(String(npcBatchJobStatus.status || ''))
+    );
     const singleCharacterEtaText = useGenerationEta({
         active: isCurrentPortraitGenerating,
         totalSeconds: currentCharacter?.id === 'player' ? SINGLE_PLAYER_ETA_SECONDS : SINGLE_CHARACTER_ETA_SECONDS,
     });
     const batchCharacterEtaText = useGenerationEta({
-        active: isGeneratingNpcImages,
+        active: isBatchNpcJobActive,
         totalSeconds: Math.max(
             SINGLE_CHARACTER_ETA_SECONDS,
             batchCharacterCount * SINGLE_CHARACTER_ETA_SECONDS + BATCH_CHARACTER_BUFFER_SECONDS,
         ),
-        totalCount: batchCharacterCount,
+        totalCount: npcBatchJobStatus?.totalCount ?? batchCharacterCount,
+        completedCount: npcBatchJobStatus?.completedCount,
+        status: npcBatchJobStatus?.status,
+        estimatedRemainingSeconds: npcBatchJobStatus?.estimatedRemainingSeconds ?? null,
         // 实现批量角色生图的数量提示
         batchLabel: batchCharacterCount > 0 ? `本次共生成 ${batchCharacterCount} 项` : undefined,
     });
     const isPortraitActionBusy = isUploadingPortrait
         || isSavingCharacter
         || isCurrentPortraitGenerating
-        || isGeneratingNpcImages
+        || isBatchNpcJobActive
         || isGeneratingVariation;
 
     // 更新角色字段（统一处理新增和编辑模式）
@@ -1813,7 +1828,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 cancelButtonText="我再想想"
             />
 
-            {isGeneratingNpcImages && (
+            {isBatchNpcJobActive && (
                 <div className={styles.plusLoadingOverlay}>
                     <div className={styles.plusLoadingDialog}>
                         <div className={styles.plusLoadingSpinner}></div>
