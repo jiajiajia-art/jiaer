@@ -27,6 +27,7 @@ import Categories from './page/Categories';
 import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
 import PointsDetails from './page/PointsDetails';
+import Document from './page/Document';
 
 function App() {
   usePlatformDurationTracking();
@@ -61,6 +62,7 @@ function App() {
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />
         <Route path="/replay/:replayId" element={<Galgame />} />
+        <Route path="/document" element={<Document />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
@@ -77,6 +79,7 @@ function App() {
           <Route path="/admin/points" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/creator-incentives" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/documents" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

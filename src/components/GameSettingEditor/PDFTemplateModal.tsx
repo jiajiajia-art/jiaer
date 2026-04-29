@@ -27,23 +27,26 @@ const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) 
             name: '都市类模板-杭城网红模拟器',
             path: '/pdf/都市类模板-杭城网红模拟器.pdf',
         },
+        {
+            name: 'AVG教程-崇祯模拟器',
+            path: '/pdf/AVG教程-崇祯模拟器.zip',
+        },
     ];
 
-    const handleDownload = (pdfPath: string, pdfName: string) => {
+    const handleDownload = (filePath: string) => {
         try {
-            // 使用完整的 URL，确保能正确访问 public 文件夹下的资源
-            const fullPath = `${import.meta.env.BASE_URL}${pdfPath.startsWith('/') ? pdfPath.slice(1) : pdfPath}`;
+            const fullPath = `${import.meta.env.BASE_URL}${filePath.startsWith('/') ? filePath.slice(1) : filePath}`;
+            const fileName = filePath.split('/').pop() || filePath;
             const link = document.createElement('a');
             link.href = fullPath;
-            link.download = pdfName.endsWith('.pdf') ? pdfName : `${pdfName}.pdf`;
-            link.target = '_blank'; // 在新标签页打开，作为备用方案
+            link.download = fileName;
+            link.target = '_blank';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         } catch (error) {
-            console.error('下载 PDF 失败:', error);
-            // 如果下载失败，尝试在新窗口打开
-            window.open(`${import.meta.env.BASE_URL}${pdfPath.startsWith('/') ? pdfPath.slice(1) : pdfPath}`, '_blank');
+            console.error('下载失败:', error);
+            window.open(`${import.meta.env.BASE_URL}${filePath.startsWith('/') ? filePath.slice(1) : filePath}`, '_blank');
         }
     };
 
@@ -70,7 +73,7 @@ const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) 
                                     </div>
                                     <button
                                         className={styles.downloadButton}
-                                        onClick={() => handleDownload(pdf.path, pdf.name)}
+                                        onClick={() => handleDownload(pdf.path)}
                                     >
                                         下载
                                     </button>

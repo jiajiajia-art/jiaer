@@ -11,6 +11,7 @@ import SpecialThemeTagManager from '../components/SpecialThemeTagManager';
 import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
 import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
+import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import promotionApi from '../api/promotion/promotionApi';
 import type {
@@ -29,7 +30,7 @@ import {
 import styles from './AdminPanel.module.css';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -52,6 +53,7 @@ const ANNOUNCEMENT_PAGE_SIZE = 3;
 const THEME_PAGE_SIZE = 10;
 
 const resolveAdminTab = (pathname: string, search: string): AdminTab => {
+    if (pathname.startsWith('/admin/documents')) return 'documents';
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
     if (pathname.startsWith('/admin/creator-incentives')) return 'creatorIncentives';
@@ -158,6 +160,34 @@ const AdminPanel: React.FC = () => {
     const [pendingPromotionReviewCount, setPendingPromotionReviewCount] = useState(0);
     const [pendingPromotionRewardCount, setPendingPromotionRewardCount] = useState(0);
 
+    // 文档管理相关状态
+    const [documentList, setDocumentList] = useState<Array<{ slug: string; title: string; guide: string; category: string; order: number; updatedAt?: string }>>([]);
+    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+    const [showDocumentModal, setShowDocumentModal] = useState(false);
+    // 正在编辑的文档 slug，null 表示新增模式
+    const [documentEditingSlug, setDocumentEditingSlug] = useState<string | null>(null);
+    // 上传表单状态（文件上传方式）
+    const [uploadFile, setUploadFile] = useState<File | null>(null);
+    const [documentForm, setDocumentForm] = useState({ title: '', guide: '', category: '', slug: '', order: 0 });
+    // 编辑模式下的 Markdown 内容
+    const [documentMarkdown, setDocumentMarkdown] = useState('');
+    const [isSavingDocument, setIsSavingDocument] = useState(false);
+    const [documentFormError, setDocumentFormError] = useState('');
+    // 文档树形结构展开状态
+    const [expandedGuides, setExpandedGuides] = useState<Set<string>>(new Set());
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+    // 选中的文档
+    const [selectedDocumentSlug, setSelectedDocumentSlug] = useState<string | null>(null);
+    const [selectedDocumentDetail, setSelectedDocumentDetail] = useState<{
+        slug: string;
+        title: string;
+        guide: string;
+        category: string;
+        order: number;
+        updatedAt?: string;
+        markdown: string;
+    } | null>(null);
+
     const previewDraftRecord = useMemo<AnnouncementRecord>(() => {
         const safeSections = sections.filter((section) => section.subtitle.trim() || section.body.trim());
         return {
@@ -260,6 +290,235 @@ const AdminPanel: React.FC = () => {
         setSections([createEmptySection()]);
     };
 
+    // 展开/收起指南
+    const toggleGuide = (guide: string) => {
+        setExpandedGuides((prev) => {
+            const next = new Set(prev);
+            if (next.has(guide)) {
+                next.delete(guide);
+            } else {
+                next.add(guide);
+            }
+            return next;
+        });
+    };
+
+    // 展开/收起分类
+    const toggleCategory = (category: string) => {
+        setExpandedCategories((prev) => {
+            const next = new Set(prev);
+            if (next.has(category)) {
+                next.delete(category);
+            } else {
+                next.add(category);
+            }
+            return next;
+        });
+    };
+
+    // 选择文档
+    const handleSelectDocument = useCallback(async (slug: string) => {
+        setSelectedDocumentSlug(slug);
+        try {
+            const response = await documentApi.getDocument(slug);
+            const data = response.data?.data;
+            if (data) {
+                setSelectedDocumentDetail({
+                    slug: data.slug,
+                    title: data.title,
+                    guide: data.guide,
+                    category: data.category,
+                    order: data.order,
+                    updatedAt: data.updatedAt,
+                    markdown: data.markdown || '',
+                });
+            }
+        } catch {
+            toast.error('加载文档详情失败');
+        }
+    }, []);
+
+    // 加载文档列表
+    const loadDocumentList = useCallback(async () => {
+        try {
+            setIsLoadingDocuments(true);
+            const response = await documentApi.getDocumentList();
+            setDocumentList(response.data?.data?.documents || []);
+
+            // 初始展开第一个指南和第一个分类，并选中第一个文档
+            const guides = response.data?.data?.guides || [];
+            if (guides.length > 0) {
+                const firstGuide = guides[0];
+                setExpandedGuides(new Set([firstGuide.guide]));
+                if (firstGuide.categories.length > 0) {
+                    const firstCategory = firstGuide.categories[0];
+                    setExpandedCategories(new Set([firstCategory.category]));
+                    if (firstCategory.documents.length > 0) {
+                        const firstDoc = firstCategory.documents[0];
+                        void handleSelectDocument(firstDoc.slug);
+                    }
+                }
+            }
+        } catch (error) {
+            toast.error('文档列表加载失败');
+        } finally {
+            setIsLoadingDocuments(false);
+        }
+    }, [handleSelectDocument]);
+
+    // 关闭文档弹窗
+    const closeDocumentModal = () => {
+        setShowDocumentModal(false);
+        setDocumentEditingSlug(null);
+        setUploadFile(null);
+        setDocumentForm({ title: '', guide: '', category: '', slug: '', order: 0 });
+        setDocumentMarkdown('');
+        setDocumentFormError('');
+    };
+
+    // 打开编辑文档弹窗
+    const handleEditDocument = useCallback(async (slug: string) => {
+        setShowDocumentModal(true);
+        setDocumentEditingSlug(slug);
+        setUploadFile(null);
+        setDocumentFormError('');
+
+        try {
+            const response = await documentApi.getDocument(slug);
+            const data = response.data?.data;
+            if (data) {
+                setDocumentForm({
+                    title: data.title || '',
+                    guide: data.guide || '',
+                    category: data.category || '',
+                    slug: data.slug || '',
+                    order: data.order || 0,
+                });
+                setDocumentMarkdown(data.markdown || '');
+            }
+        } catch {
+            toast.error('加载文档详情失败');
+            closeDocumentModal();
+        }
+    }, []);
+
+    // 保存文档（新增/编辑）
+    const handleSaveDocument = useCallback(async () => {
+        // 编辑模式：直接提交 Markdown 和表单
+        if (documentEditingSlug) {
+            if (!documentMarkdown.trim()) {
+                setDocumentFormError('Markdown 内容不能为空');
+                return;
+            }
+            try {
+                setIsSavingDocument(true);
+                setDocumentFormError('');
+                await documentApi.updateDocument(documentEditingSlug, {
+                    title: documentForm.title.trim(),
+                    markdown: documentMarkdown,
+                    guide: documentForm.guide.trim() || undefined,
+                    category: documentForm.category.trim() || undefined,
+                    order: documentForm.order,
+                });
+                toast.success('文档保存成功');
+                closeDocumentModal();
+                await loadDocumentList();
+            } catch (error) {
+                const errorMsg = extractErrorMessage(error, '文档保存失败');
+                setDocumentFormError(errorMsg);
+            } finally {
+                setIsSavingDocument(false);
+            }
+            return;
+        }
+
+        // 新增模式：文件上传方式
+        // 验证文件
+        if (!uploadFile) {
+            setDocumentFormError('请先选择文件再上传');
+            return;
+        }
+
+        // 验证文件类型
+        const validExtensions = ['.md', '.zip'];
+        const fileName = uploadFile.name.toLowerCase();
+        const isValidType = validExtensions.some((ext) => fileName.endsWith(ext));
+        if (!isValidType) {
+            setDocumentFormError('仅支持 .md 或 .zip 文件');
+            return;
+        }
+
+        // 验证文件大小 (20MB)
+        const maxSize = 20 * 1024 * 1024;
+        if (uploadFile.size > maxSize) {
+            setDocumentFormError('文件超过 20MB，请压缩后重试');
+            return;
+        }
+
+        try {
+            setIsSavingDocument(true);
+            setDocumentFormError('');
+
+            // 构建 FormData
+            const formData = new FormData();
+            formData.append('file', uploadFile);
+            if (documentForm.title.trim()) {
+                formData.append('title', documentForm.title.trim());
+            }
+            if (documentForm.guide.trim()) {
+                formData.append('guide', documentForm.guide.trim());
+            }
+            if (documentForm.category.trim()) {
+                formData.append('category', documentForm.category.trim());
+            }
+            if (documentForm.slug.trim()) {
+                formData.append('slug', documentForm.slug.trim());
+            }
+            if (documentForm.order) {
+                formData.append('order', String(documentForm.order));
+            }
+
+            await documentApi.uploadDocument(formData);
+
+            toast.success('文档上传成功');
+            closeDocumentModal();
+            await loadDocumentList();
+        } catch (error) {
+            // 根据错误信息匹配对应提示
+            const errorMsg = extractErrorMessage(error, '文档上传失败');
+            if (errorMsg.includes('file is required')) {
+                setDocumentFormError('请先选择文件再上传');
+            } else if (errorMsg.includes('Only .md or .zip')) {
+                setDocumentFormError('仅支持 .md 或 .zip 文件');
+            } else if (errorMsg.includes('file too large') || errorMsg.includes('20MB')) {
+                setDocumentFormError('文件超过 20MB，请压缩后重试');
+            } else if (errorMsg.includes('zip must contain')) {
+                setDocumentFormError('压缩包里未找到 Markdown 主文档');
+            } else if (errorMsg.includes('markdown is empty')) {
+                setDocumentFormError('主 Markdown 文件内容为空');
+            } else if (errorMsg.includes('slug already exists')) {
+                setDocumentFormError('slug 已存在，请修改标题或填写新的 slug 后重试');
+            } else {
+                setDocumentFormError(errorMsg);
+            }
+        } finally {
+            setIsSavingDocument(false);
+        }
+    }, [uploadFile, documentForm, documentEditingSlug, documentMarkdown, loadDocumentList, closeDocumentModal]);
+
+    // 删除文档
+    const handleDeleteDocument = useCallback(async (slug: string) => {
+        if (!window.confirm(`确认删除文档「${slug}」吗？此操作不可恢复。`)) return;
+
+        try {
+            await documentApi.deleteDocument(slug);
+            toast.success('文档删除成功');
+            await loadDocumentList();
+        } catch (error) {
+            toast.error(extractErrorMessage(error, '文档删除失败'));
+        }
+    }, [loadDocumentList]);
+
     const loadHistory = useCallback(async (focusId?: number | null) => {
         try {
             setIsLoadingHistory(true);
@@ -334,7 +593,10 @@ const AdminPanel: React.FC = () => {
         if (activeTab === 'promotions' || activeTab === 'points') {
             void refreshAdminBadgeCounts();
         }
-    }, [activeTab, refreshAdminBadgeCounts]);
+        if (activeTab === 'documents') {
+            void loadDocumentList();
+        }
+    }, [activeTab, refreshAdminBadgeCounts, loadDocumentList]);
 
     useEffect(() => {
         const handleWindowFocus = () => {
@@ -440,6 +702,10 @@ const AdminPanel: React.FC = () => {
         }
         if (tab === 'subscriptions') {
             navigate('/admin/subscriptions');
+            return;
+        }
+        if (tab === 'documents') {
+            navigate('/admin/documents');
             return;
         }
 
@@ -918,6 +1184,13 @@ const AdminPanel: React.FC = () => {
                         >
                             <span className={styles.navTitle}>会员管理</span>
                         </button>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'documents' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('documents')}
+                        >
+                            <span className={styles.navTitle}>文档管理</span>
+                        </button>
                     </aside>
 
                     <div className={styles.contentArea}>
@@ -1279,6 +1552,349 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'creatorIncentives' && <CreatorIncentiveAdminManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
+
+                        {activeTab === 'documents' && (
+                            <div className={styles.panelStack}>
+                                <section className={styles.heroCard}>
+                                    <div>
+                                        <div className={styles.sectionBadge}>文档管理</div>
+                                        <h2 className={styles.heroTitle}>管理帮助文档与使用指南</h2>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={styles.primaryGhostButton}
+                                        onClick={() => {
+                                            setShowDocumentModal(true);
+                                            setUploadFile(null);
+                                            setDocumentForm({ title: '', guide: '', category: '', slug: '', order: 0 });
+                                        }}
+                                    >
+                                        新增文档
+                                    </button>
+                                </section>
+
+                                <section className={styles.documentManager}>
+                                    {/* 左侧：树形结构 */}
+                                    <aside className={styles.documentTreePanel}>
+                                        <div className={styles.documentTreeHeader}>
+                                            <span className={styles.documentTreeTitle}>文档导航</span>
+                                        </div>
+                                        {isLoadingDocuments ? (
+                                            <div className={styles.emptyState}>文档列表加载中...</div>
+                                        ) : documentList.length === 0 ? (
+                                            <div className={styles.emptyState}>暂无文档</div>
+                                        ) : (
+                                            <div className={styles.documentTreeContent}>
+                                                {/* 从 API 获取 guides 数据 */}
+                                                {(() => {
+                                                    const guides = documentList.reduce<Record<string, Record<string, typeof documentList>>>((acc, doc) => {
+                                                        const guide = doc.guide || 'default';
+                                                        const category = doc.category || 'uncategorized';
+                                                        if (!acc[guide]) acc[guide] = {};
+                                                        if (!acc[guide][category]) acc[guide][category] = [];
+                                                        acc[guide][category].push(doc);
+                                                        return acc;
+                                                    }, {});
+
+                                                    return Object.entries(guides).map(([guideName, categories]) => (
+                                                        <div key={guideName} className={styles.guideGroup}>
+                                                            <div
+                                                                className={styles.guideGroupHeader}
+                                                                onClick={() => toggleGuide(guideName)}
+                                                            >
+                                                                <span className={`${styles.guideGroupIcon} ${expandedGuides.has(guideName) ? styles.guideGroupIconExpanded : ''}`}>
+                                                                    ▶
+                                                                </span>
+                                                                <span className={styles.guideGroupName}>{guideName}</span>
+                                                                <span className={styles.guideGroupCount}>
+                                                                    {Object.values(categories).reduce((sum, docs) => sum + docs.length, 0)}
+                                                                </span>
+                                                            </div>
+                                                            {expandedGuides.has(guideName) && (
+                                                                <div className={styles.categoryList}>
+                                                                    {Object.entries(categories).map(([categoryName, docs]) => (
+                                                                        <div key={categoryName} className={styles.categoryItem}>
+                                                                            <div
+                                                                                className={styles.categoryHeader}
+                                                                                onClick={() => toggleCategory(`${guideName}:${categoryName}`)}
+                                                                            >
+                                                                                <span className={`${styles.categoryIcon} ${expandedCategories.has(`${guideName}:${categoryName}`) ? styles.categoryIconExpanded : ''}`}>
+                                                                                    ▶
+                                                                                </span>
+                                                                                <span className={styles.categoryName}>{categoryName}</span>
+                                                                                <span className={styles.categoryCount}>{docs.length}</span>
+                                                                            </div>
+                                                                            {expandedCategories.has(`${guideName}:${categoryName}`) && (
+                                                                                <div className={styles.documentList}>
+                                                                                    {docs.sort((a, b) => a.order - b.order).map((doc) => (
+                                                                                        <div
+                                                                                            key={doc.slug}
+                                                                                            className={`${styles.documentItem} ${selectedDocumentSlug === doc.slug ? styles.documentItemActive : ''}`}
+                                                                                            onClick={() => void handleSelectDocument(doc.slug)}
+                                                                                        >
+                                                                                            <span className={styles.documentItemIcon}>📄</span>
+                                                                                            <span className={styles.documentItemTitle}>{doc.title}</span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        )}
+                                    </aside>
+
+                                    {/* 右侧：文档预览 */}
+                                    <div className={styles.documentPreviewPanel}>
+                                        {selectedDocumentDetail ? (
+                                            <article className={styles.documentPreviewCard}>
+                                                <header className={styles.documentPreviewHeader}>
+                                                    <div className={styles.documentPreviewInfo}>
+                                                        <div className={styles.documentPreviewMeta}>
+                                                            <span className={styles.documentPreviewMetaItem}>
+                                                                <span className={styles.documentMetaLabel}>指南</span>
+                                                                <span className={styles.documentMetaValue}>{selectedDocumentDetail.guide || 'default'}</span>
+                                                            </span>
+                                                            <span className={styles.documentPreviewMetaItem}>
+                                                                <span className={styles.documentMetaLabel}>分类</span>
+                                                                <span className={styles.documentMetaValue}>{selectedDocumentDetail.category || 'uncategorized'}</span>
+                                                            </span>
+                                                            <span className={styles.documentPreviewMetaItem}>
+                                                                <span className={styles.documentMetaLabel}>排序</span>
+                                                                <span className={styles.documentMetaValue}>{selectedDocumentDetail.order}</span>
+                                                            </span>
+                                                        </div>
+                                                        <h2 className={styles.documentPreviewTitle}>{selectedDocumentDetail.title}</h2>
+                                                        {selectedDocumentDetail.updatedAt && (
+                                                            <div className={styles.documentPreviewTime}>
+                                                                更新于 {new Date(selectedDocumentDetail.updatedAt).toLocaleDateString('zh-CN')}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className={styles.documentPreviewActions}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.actionButton}
+                                                            onClick={() => void handleEditDocument(selectedDocumentDetail.slug)}
+                                                        >
+                                                            编辑
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.dangerButton}
+                                                            onClick={() => handleDeleteDocument(selectedDocumentDetail.slug)}
+                                                        >
+                                                            删除
+                                                        </button>
+                                                    </div>
+                                                </header>
+                                            </article>
+                                        ) : (
+                                            <div className={styles.documentEmptyState}>
+                                                <div className={styles.documentEmptyIcon}>📚</div>
+                                                <div className={styles.documentEmptyTitle}>选择文档查看详情</div>
+                                                <div className={styles.documentEmptyDesc}>
+                                                    点击左侧列表中的文档，然后点击编辑按钮进行编辑
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </section>
+                            </div>
+                        )}
+
+                        {/* 文档上传弹窗 */}
+                        {showDocumentModal && (
+                            <div className={styles.sortModalOverlay} onClick={closeDocumentModal}>
+                                <div className={`${styles.sortModal} ${styles.linkInsertModal} ${styles.documentModal}`} onClick={(e) => e.stopPropagation()}>
+                                    <div className={styles.sortModalHeader}>
+                                        <div>
+                                            <div className={styles.sortModalBadge}>文档管理</div>
+                                            <h3 className={styles.sortModalTitle}>{documentEditingSlug ? '编辑文档' : '上传文档'}</h3>
+                                        </div>
+                                        <button type="button" className={styles.secondaryButton} onClick={closeDocumentModal}>
+                                            关闭
+                                        </button>
+                                    </div>
+                                    <div className={`${styles.linkInsertForm} ${styles.documentModalBody}`}>
+                                        {documentEditingSlug ? (
+                                            // 编辑模式：直接编辑 Markdown
+                                            <>
+                                                <label className={styles.fieldLabel}>
+                                                    标题
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.title}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, title: e.target.value }))}
+                                                        placeholder="文档标题"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    指南
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.guide}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, guide: e.target.value }))}
+                                                        placeholder="例如：创作者教程（默认 default）"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    分类
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.category}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, category: e.target.value }))}
+                                                        placeholder="例如：入门指南（默认 uncategorized）"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    排序
+                                                    <input
+                                                        type="number"
+                                                        className={styles.textInput}
+                                                        value={documentForm.order}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, order: Number(e.target.value) || 0 }))}
+                                                        placeholder="数字越小排序越靠前"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    Markdown 内容
+                                                    <textarea
+                                                        className={styles.textInput}
+                                                        style={{ minHeight: '300px', fontFamily: 'monospace', resize: 'vertical' }}
+                                                        value={documentMarkdown}
+                                                        onChange={(e) => setDocumentMarkdown(e.target.value)}
+                                                        placeholder="在此编辑 Markdown 内容..."
+                                                    />
+                                                </label>
+                                            </>
+                                        ) : (
+                                            // 新增模式：文件上传
+                                            <>
+                                                <label className={styles.fieldLabel}>
+                                                    选择文件
+                                                    <div
+                                                        className={styles.fileUploadArea}
+                                                        onDragOver={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                        }}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            const file = e.dataTransfer.files?.[0];
+                                                            if (file) setUploadFile(file);
+                                                        }}
+                                                    >
+                                                        <input
+                                                            type="file"
+                                                            accept=".md,.zip"
+                                                            className={styles.fileInput}
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) setUploadFile(file);
+                                                            }}
+                                                        />
+                                                        {uploadFile ? (
+                                                            <div className={styles.selectedFile}>
+                                                                <span className={styles.fileName}>{uploadFile.name}</span>
+                                                                <span className={styles.fileSize}>
+                                                                    ({(uploadFile.size / 1024 / 1024).toFixed(2)} MB)
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div className={styles.uploadIcon}>📄</div>
+                                                                <div className={styles.uploadText}>
+                                                                    点击选择文件或将文件拖拽到此处
+                                                                </div>
+                                                                <div className={styles.uploadHint}>支持 .md 或 .zip 文件，最大 20MB</div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    标题
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.title}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, title: e.target.value }))}
+                                                        placeholder="不填则自动从文件提取"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    指南
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.guide}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, guide: e.target.value }))}
+                                                        placeholder="例如：创作者教程（默认 default）"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    分类
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.category}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, category: e.target.value }))}
+                                                        placeholder="例如：入门指南（默认 uncategorized）"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    Slug
+                                                    <input
+                                                        className={styles.textInput}
+                                                        value={documentForm.slug}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, slug: e.target.value }))}
+                                                        placeholder="不填则自动生成拼音 slug"
+                                                    />
+                                                </label>
+                                                <label className={styles.fieldLabel}>
+                                                    排序
+                                                    <input
+                                                        type="number"
+                                                        className={styles.textInput}
+                                                        value={documentForm.order}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, order: Number(e.target.value) || 0 }))}
+                                                        placeholder="数字越小排序越靠前"
+                                                    />
+                                                </label>
+                                                <div className={styles.uploadInstructions}>
+                                                    <div className={styles.uploadInstructionsTitle}>上传说明：</div>
+                                                    <ul className={styles.uploadInstructionsList}>
+                                                        <li>支持上传 <code>.md</code> 或 <code>.zip</code> 文件</li>
+                                                        <li>文件大小上限 <strong>20MB</strong></li>
+                                                        <li><code>.zip</code> 内必须包含至少 1 个 Markdown 文件（优先识别 <code>index.md</code>，其次 <code>readme.md</code>，否则取第一个 <code>.md</code> 作为主文档）</li>
+                                                        <li><code>.zip</code> 内图片仅支持：<code>png / jpg / jpeg / webp / gif / svg</code></li>
+                                                        <li>Markdown 中使用相对路径引用的图片会自动上传并替换为可访问地址</li>
+                                                    </ul>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {documentFormError && <div className={styles.formError}>{documentFormError}</div>}
+                                    </div>
+                                    <div className={styles.sortModalFooter}>
+                                        <button type="button" className={styles.secondaryButton} onClick={closeDocumentModal}>
+                                            取消
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={styles.primaryButton}
+                                            onClick={() => void handleSaveDocument()}
+                                            disabled={isSavingDocument}
+                                        >
+                                            {isSavingDocument ? (documentEditingSlug ? '保存中...' : '上传中...') : (documentEditingSlug ? '保存' : '上传')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
