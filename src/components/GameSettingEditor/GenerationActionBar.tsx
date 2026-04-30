@@ -9,13 +9,14 @@ interface GenerationActionBarProps {
 }
 
 const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children }) => {
-    const { user, isAuthenticated, updateUser } = useAuthStore();
+    const { user, updateUser } = useAuthStore();
     const userId = user?.user?.userId;
     const token = user?.token;
-    const userPoints = isAuthenticated ? user?.user?.points ?? 0 : 0;
+    const pointsValue = Number(user?.user?.points);
+    const userPoints = Number.isFinite(pointsValue) ? pointsValue : 0;
 
     useEffect(() => {
-        if (!isAuthenticated || !token) return;
+        if (!token) return;
 
         let isCancelled = false;
 
@@ -36,7 +37,7 @@ const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children }) =
         return () => {
             isCancelled = true;
         };
-    }, [isAuthenticated, token, userId, updateUser]);
+    }, [token, userId, updateUser]);
 
     return (
         <div className={styles.actionBar}>

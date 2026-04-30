@@ -837,6 +837,7 @@ export const createHandlers = (ctx: HandlersContext) => {
 
                 // 直接使用返回的 blob 数据
                 await setPendingImage(npc.id, response.data.blob, 'base');
+                await refreshUserPoints();
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }
@@ -860,6 +861,7 @@ export const createHandlers = (ctx: HandlersContext) => {
 
                 // 直接使用返回的 blob 数据
                 await setPendingImage('player', response.data.blob, 'base');
+                await refreshUserPoints();
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }
@@ -917,6 +919,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                     }
                     return { ...char, variations: [...char.variations, newVariation] };
                 }));
+                await refreshUserPoints();
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }

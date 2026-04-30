@@ -1048,10 +1048,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 if (response.data.blob) {
                     toast.success('场景图片生成成功，请在确认修改后保存');
                     await setPendingImage(targetId, response.data.blob);
+                    await refreshUserPoints();
                 } else if (response.data.imagePath) {
                     // 兼容：直接返回路径的情况
                     toast.success('场景图片生成成功，请在确认修改后保存');
                     await setPendingImage(targetId, response.data.imagePath);
+                    await refreshUserPoints();
                 }
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
@@ -1258,6 +1260,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         } catch (refreshError) {
             console.error('Failed to refresh scene data after batch generation:', refreshError);
         }
+        await refreshUserPoints();
         setSceneResultModalOpen(true);
     };
 
@@ -1400,6 +1403,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 } catch (refreshError) {
                     console.error('Failed to refresh scene data after batch generation:', refreshError);
                 }
+                await refreshUserPoints();
                 setSceneResultModalOpen(true);
             } else {
                 toast.error('当前使用人数过多，请稍后再试');

@@ -214,6 +214,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
     const pendingImagesRef = useRef(pendingImages);
+    const activeCharacterIdRef = useRef(activeCharacterId);
     const cloneCharacters = useCallback((list: Character[]): Character[] => (
         list.map((character) => ({
             ...character,
@@ -285,6 +286,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     useEffect(() => {
         isBlockingSwitchRef.current = isBlockingSwitch;
     }, [isBlockingSwitch]);
+
+    useEffect(() => {
+        activeCharacterIdRef.current = activeCharacterId;
+    }, [activeCharacterId]);
 
     useEffect(() => {
         pendingImagesRef.current = pendingImages;
@@ -472,8 +477,12 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         checkBeforeLeave: (action?: () => void) => {
             const hasChanges = hasUnsavedChangesRef.current;
             const isBlocking = isBlockingSwitchRef.current;
-            const hasPendingImages = activeCharacterId && pendingImagesRef.current[activeCharacterId] &&
-                Object.keys(pendingImagesRef.current[activeCharacterId]).length > 0;
+            const currentActiveCharacterId = activeCharacterIdRef.current;
+            const pendingForActiveCharacter = currentActiveCharacterId
+                ? pendingImagesRef.current[currentActiveCharacterId]
+                : undefined;
+            const hasPendingImages = !!pendingForActiveCharacter &&
+                Object.keys(pendingForActiveCharacter).length > 0;
 
             if ((hasChanges || hasPendingImages) && !isBlocking) {
                 pendingPanelActionRef.current = action || null;

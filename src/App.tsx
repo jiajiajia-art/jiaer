@@ -28,9 +28,16 @@ import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
 import PointsDetails from './page/PointsDetails';
 import Document from './page/Document';
+import { useEffect } from 'react';
+import { useAuthStore } from './store/useAuthStore';
 
 function App() {
   usePlatformDurationTracking();
+  const initializeAuth = useAuthStore((state) => state.initialize);
+
+  useEffect(() => {
+    void initializeAuth();
+  }, [initializeAuth]);
 
   return (
     <BrowserRouter basename='/funloom'>
