@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
-import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
+import { extractPlainText, sanitizeVisualStepText, truncateTextWithTags } from "../../utils/textUtils";
 import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
 import { withCacheBust } from "../../utils/imageCache";
 
@@ -81,18 +81,22 @@ export const useGalgameMessage = (
     // 转换步骤为消息
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
+        const stepText = sanitizeVisualStepText(step.content || step.text || step.message || '');
+        if (typeof step.description === 'string') {
+            step = { ...step, description: sanitizeVisualStepText(step.description) };
+        }
 
         if (step.type === 'narration') {
             return {
                 id: Date.now(),
                 type: 'narration',
-                message: step.content || '',
+                message: stepText,
             };
         } else if (step.type === 'transition') {
             return {
                 id: Date.now(),
                 type: 'transition',
-                message: step.content || '',
+                message: stepText,
             };
         } else if (step.type === 'dialogue') {
             const characterName = step.isPlayer ? worldSetting?.player?.name : step.speakerName || step.npcId || '未知角色';
@@ -118,7 +122,7 @@ export const useGalgameMessage = (
             return {
                 id: Date.now(),
                 type: 'dialogue',
-                message: step.content || '',
+                message: stepText,
                 characterName,
                 characterImage,
                 characterPosition: step.isPlayer ? 'right' : 'left',
@@ -230,11 +234,12 @@ export const useGalgameMessage = (
         return steps
             .filter(step => step != null && step.type)
             .map((step, index) => {
+                const stepContent = sanitizeVisualStepText(step.content || step.text || step.message || '');
                 const stableId = step.id || `step-${step.type}-${index}-${(step.content || '').substring(0, 20)}`;
                 const baseStep = {
                     id: stableId,
                     type: step.type,
-                    content: step.content || '',
+                    content: stepContent,
                 };
 
                 if (step.type === 'dialogue') {
@@ -273,7 +278,7 @@ export const useGalgameMessage = (
             return {
                 ...baseStep,
                 title: step.title,
-                description: step.description,
+                description: sanitizeVisualStepText(step.description || ''),
                 options,
             };
         }

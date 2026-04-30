@@ -25,6 +25,7 @@ import CharactersSidebar from './CharactersSidebar';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { HOST_ADDRESS } from '../../../config';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
+import GenerationActionBar from '../GenerationActionBar';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -1302,23 +1303,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     <h2>角色档案 & 立绘差分</h2>
                     <p className={styles.subtitle}>解析出的角色自动列出，可逐项确认姓名、称呼、口癖与立绘</p>
                 </div>
-                <button
-                    className={`${styles.ghost} ${styles.generateButton}`}
-                    onClick={openNpcCostModal}
-                    disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
-                >
-                    <img
-                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                        alt=""
-                        className={styles.priceIcon}
-                    />
-                    <div className={styles.buttonTextContainer}>
-                        <span className={styles.buttonMainText}>
-                            {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
-                        </span>
-                        <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}积分/张</span>
-                    </div>
-                </button>
+                <GenerationActionBar>
+                    <button
+                        className={`${styles.ghost} ${styles.generateButton}`}
+                        onClick={openNpcCostModal}
+                        disabled={isLoading || isGeneratingNpcImages || isLoadingNpcCost || isBlockingSwitch}
+                    >
+                        <img
+                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                            alt=""
+                            className={styles.priceIcon}
+                        />
+                        <div className={styles.buttonTextContainer}>
+                            <span className={styles.buttonMainText}>
+                                {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
+                            </span>
+                            <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}积分/张</span>
+                        </div>
+                    </button>
+                </GenerationActionBar>
             </div>
 
             <div className={styles.characterLayout}>

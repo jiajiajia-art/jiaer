@@ -33,6 +33,7 @@ import UploadMusicModal from '../UploadMusic/UploadMusicModal';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
 import GenerateResultModal from '../../CommonModal/GenerateResultModal';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
+import GenerationActionBar from '../GenerationActionBar';
 
 interface BgmItem {
     id: string;
@@ -1193,23 +1194,25 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     <h2>场景背景 & BGM 绑定</h2>
                     <p className={styles.subtitle}>AI 生成场景描述，可直接选择上一步上传的 BGM</p>
                 </div>
-                <button
-                    className={`${styles.ghost} ${styles.generateButton}`}
-                    onClick={() => handlers.openSceneCostModal()}
-                    disabled={isBatchSceneJobActive || isLoadingSceneCost || isBlockingSwitch}
-                >
-                    <img
-                        src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
-                        alt=""
-                        className={styles.priceIcon}
-                    />
-                    <div className={styles.buttonTextContainer}>
-                        <span className={styles.buttonMainText}>
-                            {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
-                        </span>
-                        <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}积分/张</span>
-                    </div>
-                </button>
+                <GenerationActionBar>
+                    <button
+                        className={`${styles.ghost} ${styles.generateButton}`}
+                        onClick={() => handlers.openSceneCostModal()}
+                        disabled={isBatchSceneJobActive || isLoadingSceneCost || isBlockingSwitch}
+                    >
+                        <img
+                            src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
+                            alt=""
+                            className={styles.priceIcon}
+                        />
+                        <div className={styles.buttonTextContainer}>
+                            <span className={styles.buttonMainText}>
+                                {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
+                            </span>
+                            <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}积分/张</span>
+                        </div>
+                    </button>
+                </GenerationActionBar>
             </div>
 
             {false && ((mode === 'worldInteraction' || mode === 'visual') && (

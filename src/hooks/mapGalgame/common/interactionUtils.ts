@@ -1,4 +1,5 @@
 import { getImageUrl } from "../../../utils/constants";
+import { sanitizeVisualStepText } from "../../../utils/textUtils";
 
 
 export type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -53,7 +54,10 @@ export const convertStepToMessage = (
     if (!step) return null;
 
     // 统一取文案的兜底字段，避免后端有时用 text/message
-    const stepText = step.content || step.text || step.message || '';
+    const stepText = sanitizeVisualStepText(step.content || step.text || step.message || '');
+    if (typeof step.description === 'string') {
+        step = { ...step, description: sanitizeVisualStepText(step.description) };
+    }
 
     if (step.type === 'narration') {
         return {
@@ -131,7 +135,7 @@ export const convertStepsToTextModalFormat = (
             const baseStep = {
                 id: stableId,
                 type: step.type,
-                content: step.content || '',
+                content: sanitizeVisualStepText(step.content || step.text || step.message || ''),
             };
 
             if (step.type === 'dialogue') {
@@ -159,7 +163,7 @@ export const convertStepsToTextModalFormat = (
                 return {
                     ...baseStep,
                     title: step.title,
-                    description: step.description,
+                    description: sanitizeVisualStepText(step.description || ''),
                     options,
                 };
             }

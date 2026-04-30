@@ -1,0 +1,61 @@
+.actionBar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pointsPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(251, 70, 85, 0.18);
+    background: rgba(255, 255, 255, 0.92);
+    color: #111827;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+}
+
+.pointsIcon {
+    width: 16px;
+    height: 16px;
+    color: #fb4655;
+    flex: 0 0 auto;
+}
+
+.pointsLabel {
+    color: rgba(17, 24, 39, 0.68);
+}
+
+.pointsValue {
+    color: #111827;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+    .actionBar {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 420px) {
+    .actionBar,
+    .actionBar > * {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .pointsPill {
+        min-height: 40px;
+    }
+}

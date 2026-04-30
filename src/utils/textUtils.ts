@@ -135,6 +135,8 @@ interface ParsedGameTag {
 }
 
 const GAME_TAG_NAME_REGEX = /^[A-Z_]+$/;
+const VISUAL_STEP_MARKER_REGEX = /\[(?:NARRATION|DIALOGUE|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION|END_CHOICE)(?::|\])/i;
+const VISUAL_STEP_MARKER_PREFIX_REGEX = /\[\s*(?:NARRATION|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION|END_CHOICE)\s*:?\s*/gi;
 
 const findGameTagCloseIndex = (text: string, payloadStart: number): number => {
     let nestedDepth = 0;
@@ -314,6 +316,10 @@ const processGameTagText = (content: string, context: ProcessTagContext, optionS
                 cursor = tag.end + 1;
                 break;
 
+            case 'CHARACTER_IMAGE':
+                cursor = tag.end + 1;
+                break;
+
             case 'SCENE_CHANGE':
                 result += tag.payload.trim() ? `场景切换：${tag.payload.trim()}` : '';
                 cursor = tag.end + 1;
@@ -411,6 +417,33 @@ export const processGameTags = (content: string): string => {
 // 【核心函数4】提取纯文本（去掉所有颜色标签和动画标签）
 // 用于：计算打字机进度、选项文本显示等
 // ============================================================
+export const sanitizeVisualStepText = (text: string): string => {
+    if (!text) return '';
+    if (!VISUAL_STEP_MARKER_REGEX.test(text)) return text;
+
+    let cleaned = processGameTags(text);
+    if (VISUAL_STEP_MARKER_REGEX.test(cleaned) || cleaned.includes(']')) {
+        cleaned = cleaned
+            .replace(/\[DIALOGUE:\s*([^,\]]+),\s*([^,\]]+),\s*["']([^"'\]]*)["']?/gi, (_match, _speaker, speakerName, content) => {
+                const name = speakerName ? String(speakerName).trim() : '';
+                const value = content ? String(content).trim() : '';
+                return name && value ? `${name}: "${value}"` : value || name;
+            })
+            .replace(/\[DIALOGUE:\s*([^,\]]+),\s*["']([^"'\]]*)["']?/gi, (_match, speaker, content) => {
+                const name = speaker ? String(speaker).trim() : '';
+                const value = content ? String(content).trim() : '';
+                return name && value ? `${name}: "${value}"` : value || name;
+            })
+            .replace(VISUAL_STEP_MARKER_PREFIX_REGEX, '')
+            .replace(/\]/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .replace(/[ \t]+/g, ' ')
+            .trim();
+    }
+
+    return cleaned;
+};
+
 export const extractPlainText = (text: string): string => {
     if (!text) return '';
     
