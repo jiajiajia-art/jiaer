@@ -13,7 +13,12 @@ import {
     type WorldSubScene
 } from '../editorCompat';
 import { createSceneApiHelpers } from './apiHelpers';
-import { createSceneHandlers, type LocalScene as HandlerLocalScene, type SceneSaveResult } from './handlers';
+import {
+    createSceneHandlers,
+    type BatchImageReconciliationPayload,
+    type LocalScene as HandlerLocalScene,
+    type SceneSaveResult,
+} from './handlers';
 import SceneDetailForm from './SceneDetailForm';
 import SceneList from './SceneList';
 import WorldMapCard from './WorldMapCard';
@@ -46,6 +51,7 @@ interface PendingImage {
     previewUrl: string;            // 本地预览 URL
     sourceType: 'upload' | 'generate' | 'url'; // 来源类型
     variant: string;                // 图片类型：'base'
+    persistedPath?: string;
 }
 
 type LocalScene = HandlerLocalScene;
@@ -128,7 +134,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     // 暂存图片相关状态
     const [pendingImages, setPendingImages] = useState<{ [sceneId: string]: { [variant: string]: PendingImage } }>({});
     const pendingImageUrlsRef = useRef<{ [key: string]: string }>({});
-    const isBatchImageRefreshPendingRef = useRef(false);
+    const batchImageRefreshPendingRef = useRef<BatchImageReconciliationPayload>({
+        scenes: {},
+        subscenes: {},
+    });
 
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
@@ -140,6 +149,98 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     useEffect(() => {
         isBlockingSwitchRef.current = isBlockingSwitch;
     }, [isBlockingSwitch]);
+
+    const hasPendingBatchImageRefresh = useCallback(() => {
+        const pending = batchImageRefreshPendingRef.current;
+        return Object.keys(pending.scenes).length > 0 || Object.keys(pending.subscenes).length > 0;
+    }, []);
+
+    const hasPendingBatchImageRefreshRef = useRef(hasPendingBatchImageRefresh);
+    useEffect(() => {
+        hasPendingBatchImageRefreshRef.current = hasPendingBatchImageRefresh;
+    }, [hasPendingBatchImageRefresh]);
+
+    const markBatchImageRefreshPending = useCallback((payload: BatchImageReconciliationPayload) => {
+        batchImageRefreshPendingRef.current = {
+            scenes: { ...payload.scenes },
+            subscenes: { ...payload.subscenes },
+        };
+
+        if (Object.keys(payload.scenes).length > 0) {
+            setSceneData((prev) =>
+                prev.map((scene) => {
+                    const nextImage = payload.scenes[scene.id];
+                    return nextImage ? { ...scene, image: nextImage } : scene;
+                })
+            );
+            setActiveSceneDraft((prev) => {
+                if (!prev) return prev;
+                const nextImage = payload.scenes[prev.id];
+                return nextImage ? { ...prev, image: nextImage } : prev;
+            });
+            originalSceneDataRef.current = originalSceneDataRef.current.map((scene) => {
+                const nextImage = payload.scenes[scene.id];
+                return nextImage ? { ...scene, image: nextImage } : scene;
+            });
+        }
+
+        if (Object.keys(payload.subscenes).length > 0) {
+            setSubsceneDataBySceneId((prev) => {
+                const nextMap = cloneValue(prev);
+                Object.entries(nextMap).forEach(([sceneId, subscenes]) => {
+                    nextMap[sceneId] = (subscenes || []).map((subscene) => {
+                        const subsceneId = String(subscene.id || subscene.name || '');
+                        const nextImage = payload.subscenes[subsceneId];
+                        return nextImage ? { ...subscene, image: nextImage } : subscene;
+                    });
+                });
+                return nextMap;
+            });
+            setActiveSubsceneDraft((prev) => {
+                if (!prev) return prev;
+                const nextImage = payload.subscenes[prev.id];
+                return nextImage ? { ...prev, image: nextImage } : prev;
+            });
+            const nextMap = cloneValue(originalSubsceneDataBySceneIdRef.current);
+            Object.entries(nextMap).forEach(([sceneId, subscenes]) => {
+                nextMap[sceneId] = (subscenes || []).map((subscene) => {
+                    const subsceneId = String(subscene.id || subscene.name || '');
+                    const nextImage = payload.subscenes[subsceneId];
+                    return nextImage ? { ...subscene, image: nextImage } : subscene;
+                });
+            });
+            originalSubsceneDataBySceneIdRef.current = nextMap;
+        }
+
+        const nextGeneratedImages = {
+            ...payload.scenes,
+            ...payload.subscenes,
+        };
+        if (Object.keys(nextGeneratedImages).length > 0) {
+            setPendingImages((prev) => {
+                const next = { ...prev };
+                Object.entries(nextGeneratedImages).forEach(([targetId, imagePath]) => {
+                    if (!imagePath) return;
+                    const pendingKey = `${targetId}-base`;
+                    const existingPreviewUrl = pendingImageUrlsRef.current[pendingKey];
+                    if (existingPreviewUrl?.startsWith('blob:')) {
+                        URL.revokeObjectURL(existingPreviewUrl);
+                        delete pendingImageUrlsRef.current[pendingKey];
+                    }
+                    next[targetId] = {
+                        ...(next[targetId] || {}),
+                        base: {
+                            previewUrl: imagePath,
+                            sourceType: 'url',
+                            variant: 'base',
+                            persistedPath: imagePath,
+                        },
+                    };
+                });
+                return next;
+            });
+        }
+    }, []);
 
     // 清理暂存图片 Object URL
     const clearPendingImageUrl = (key: string) => {
@@ -329,11 +430,23 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     useEffect(() => {
         if (isAddingNew) return;
         if (activeSubsceneId) return;
-        if (activeScene) {
-            setActiveSceneDraft(activeScene);
-        } else {
-            setActiveSceneDraft(null);
-        }
+        setActiveSceneDraft((prev) => {
+            if (!activeScene) {
+                return prev === null ? prev : null;
+            }
+            if (
+                prev &&
+                prev.id === activeScene.id &&
+                prev.name === activeScene.name &&
+                prev.type === activeScene.type &&
+                prev.desc === activeScene.desc &&
+                prev.image === activeScene.image &&
+                prev.bgmId === activeScene.bgmId
+            ) {
+                return prev;
+            }
+            return activeScene;
+        });
     }, [activeSceneId, activeSubsceneId, isAddingNew, activeScene]);
 
     const sceneApi = useMemo(() => createSceneApiHelpers(mode), [mode]);
@@ -399,9 +512,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onSingleSceneCostModalOpen: handleSingleSceneCostModalOpen,
                 onWorldMapCostModalOpen: handleWorldMapCostModalOpen,
                 onDataChange,
-                markBatchImageRefreshPending: () => {
-                    isBatchImageRefreshPendingRef.current = true;
-                },
+                markBatchImageRefreshPending,
+                hasPendingBatchImageRefresh,
             }),
         [
             fileId,
@@ -426,6 +538,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             handleSceneCostModalOpen,
             handleSingleSceneCostModalOpen,
             handleWorldMapCostModalOpen,
+            markBatchImageRefreshPending,
+            hasPendingBatchImageRefresh,
             onDataChange,
         ]
     );
@@ -558,17 +672,36 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             }
         });
 
-        setSceneData((prev) =>
-            prev.map((scene) => {
-                if (!nextSceneImages.has(scene.id)) return scene;
-                return { ...scene, image: nextSceneImages.get(scene.id) || '' };
-            })
-        );
+        const pending = batchImageRefreshPendingRef.current;
+        const nextPendingScenes = { ...pending.scenes };
+        const nextPendingSubscenes = { ...pending.subscenes };
+        const clearedPendingImages: Record<string, string> = {};
+
+        Object.entries(pending.scenes).forEach(([sceneId, pendingImage]) => {
+            if (nextSceneImages.get(sceneId) === pendingImage) {
+                delete nextPendingScenes[sceneId];
+                clearedPendingImages[sceneId] = pendingImage;
+            }
+        });
+
+        setSceneData((prevScenes) => prevScenes.map((scene) => {
+            if (!nextSceneImages.has(scene.id)) return scene;
+            const nextImage = nextSceneImages.get(scene.id) || '';
+            const pendingImage = pending.scenes[scene.id];
+            if (pendingImage && nextImage !== pendingImage) {
+                return scene;
+            }
+            return { ...scene, image: nextImage };
+        }));
 
         setActiveSceneDraft((prev) => {
-            if (!prev) return prev;
-            if (!nextSceneImages.has(prev.id)) return prev;
-            return { ...prev, image: nextSceneImages.get(prev.id) || '' };
+            if (!prev || !nextSceneImages.has(prev.id)) return prev;
+            const nextImage = nextSceneImages.get(prev.id) || '';
+            const pendingImage = pending.scenes[prev.id];
+            if (pendingImage && nextImage !== pendingImage) {
+                return prev;
+            }
+            return { ...prev, image: nextImage };
         });
 
         if (mode === 'worldInteraction') {
@@ -583,35 +716,93 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 });
             });
 
+            Object.entries(pending.subscenes).forEach(([subsceneId, pendingImage]) => {
+                if (nextSubsceneImages.get(subsceneId) === pendingImage) {
+                    delete nextPendingSubscenes[subsceneId];
+                    clearedPendingImages[subsceneId] = pendingImage;
+                }
+            });
+
             setSubsceneDataBySceneId((prev) => {
-                const next: Record<string, WorldSubScene[]> = { ...(prev || {}) };
-                Object.entries(next).forEach(([sceneId, subscenes]) => {
-                    next[sceneId] = (subscenes || []).map((subscene: any) => {
+                const nextSubsceneState: Record<string, WorldSubScene[]> = cloneValue(prev);
+                Object.entries(nextSubsceneState).forEach(([sceneId, subscenes]) => {
+                    nextSubsceneState[sceneId] = (subscenes || []).map((subscene: any) => {
                         const subsceneId = String(subscene?.id || subscene?.name || '');
                         if (!nextSubsceneImages.has(subsceneId)) return subscene;
-                        return { ...subscene, image: nextSubsceneImages.get(subsceneId) || '' };
+                        const nextImage = nextSubsceneImages.get(subsceneId) || '';
+                        const pendingImage = pending.subscenes[subsceneId];
+                        if (pendingImage && nextImage !== pendingImage) {
+                            return subscene;
+                        }
+                        return { ...subscene, image: nextImage };
                     });
                 });
-                return next;
+                return nextSubsceneState;
             });
 
             setActiveSubsceneDraft((prev) => {
                 if (!prev) return prev;
                 const nextImage = nextSubsceneImages.get(prev.id);
                 if (nextImage === undefined) return prev;
+                const pendingImage = pending.subscenes[prev.id];
+                if (pendingImage && nextImage !== pendingImage) {
+                    return prev;
+                }
                 return { ...prev, image: nextImage };
             });
         }
+
+        if (Object.keys(clearedPendingImages).length > 0) {
+            setPendingImages((prev) => {
+                let changed = false;
+                const next = { ...prev };
+                Object.entries(clearedPendingImages).forEach(([targetId, imagePath]) => {
+                    const basePending = next[targetId]?.base;
+                    if (!basePending) return;
+                    if (basePending.previewUrl !== imagePath && basePending.persistedPath !== imagePath) return;
+                    const pendingKey = `${targetId}-base`;
+                    const existingPreviewUrl = pendingImageUrlsRef.current[pendingKey];
+                    if (existingPreviewUrl?.startsWith('blob:')) {
+                        URL.revokeObjectURL(existingPreviewUrl);
+                        delete pendingImageUrlsRef.current[pendingKey];
+                    }
+                    const nextTarget = { ...next[targetId] };
+                    delete nextTarget.base;
+                    if (Object.keys(nextTarget).length > 0) {
+                        next[targetId] = nextTarget;
+                    } else {
+                        delete next[targetId];
+                    }
+                    changed = true;
+                });
+                return changed ? next : prev;
+            });
+        }
+
+        batchImageRefreshPendingRef.current = {
+            scenes: nextPendingScenes,
+            subscenes: nextPendingSubscenes,
+        };
     }, [mode]);
+
+    const mergeImageFieldsFromGameDataRef = useRef(mergeImageFieldsFromGameData);
+    useEffect(() => {
+        mergeImageFieldsFromGameDataRef.current = mergeImageFieldsFromGameData;
+    }, [mergeImageFieldsFromGameData]);
 
     useEffect(() => {
         if (!gameData) return;
         if (hasUnsavedChangesRef.current) {
-            if (isBatchImageRefreshPendingRef.current) {
-                mergeImageFieldsFromGameData(gameData);
-                isBatchImageRefreshPendingRef.current = false;
+            if (hasPendingBatchImageRefreshRef.current()) {
+                mergeImageFieldsFromGameDataRef.current(gameData);
             }
             return;
+        }
+        if (hasPendingBatchImageRefreshRef.current()) {
+            mergeImageFieldsFromGameDataRef.current(gameData);
+            if (hasPendingBatchImageRefreshRef.current()) {
+                return;
+            }
         }
         const scenes = getScenes(gameData);
         if (scenes && scenes.length > 0) {
@@ -650,8 +841,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 setActiveSceneId(prev => prev || convertedScenes[0].id);
             }
         }
-        isBatchImageRefreshPendingRef.current = false;
-    }, [gameData, mergeImageFieldsFromGameData]);
+        batchImageRefreshPendingRef.current = { scenes: {}, subscenes: {} };
+    }, [gameData, mode]);
 
     useEffect(() => {
         const loadMusicList = async () => {

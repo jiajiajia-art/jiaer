@@ -3,6 +3,7 @@ import styles from './NormalModeDisplay.module.css';
 import { extractPlainText, truncateTextWithTags } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
+import { MdAutorenew } from 'react-icons/md';
 import { OPTION_COST, INPUT_COST } from '../../utils/constants';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
@@ -28,10 +29,12 @@ interface NormalModeDisplayProps {
     currentMessage: Message | null;
     finalDisplayText: string;
     finalIsTyping: boolean;
+    canRegenerateCurrentMessage?: boolean;
     stepHandlers: StepHandlers;
     isAutoPlay: boolean;
     historyLength: number;
     onNextMessage: () => void;
+    onRegenerateCurrentMessage?: () => void;
     onChoiceClick: (option: { id: number; text: string }) => void;
     onCustomInputSubmit: (value: string) => void;
     isFreeRound?: boolean;
@@ -48,9 +51,11 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     currentMessage,
     finalDisplayText,
     finalIsTyping,
+    canRegenerateCurrentMessage = false,
     stepHandlers,
     isAutoPlay,
     onNextMessage,
+    onRegenerateCurrentMessage,
     onChoiceClick,
     onCustomInputSubmit,
     isFreeRound = false,
@@ -177,8 +182,22 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         </div>
                     )}
 
-                    {showNextButton && (!finalIsTyping || forceShowFullText) && !isAutoPlay && (
+                    {(showNextButton || canRegenerateCurrentMessage) && (!finalIsTyping || forceShowFullText) && !isAutoPlay && (
                         <div className={styles.nextButtonContainer}>
+                            {canRegenerateCurrentMessage && onRegenerateCurrentMessage && (
+                                <button
+                                    className={styles.regenerateButton}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onRegenerateCurrentMessage();
+                                    }}
+                                    disabled={isWaitingForData}
+                                    title="重新生成"
+                                    aria-label="重新生成"
+                                >
+                                    <MdAutorenew />
+                                </button>
+                            )}
                             <button
                                 className={styles.nextButton}
                                 onClick={(e) => {

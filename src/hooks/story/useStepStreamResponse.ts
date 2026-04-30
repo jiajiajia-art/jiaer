@@ -36,6 +36,42 @@ export const useStepStreamResponse = ({
     enableFallbackEmptyChoice = false,
 }: UseStepStreamResponseOptions) => {
 
+    const normalizeUserFacingStreamError = useCallback((error: unknown): string => {
+        let message = typeof error === 'string'
+            ? error
+            : error instanceof Error
+                ? error.message
+                : '发生错误';
+
+        if (typeof message === 'string' && message.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(message);
+                if (parsed.error?.message) {
+                    message = parsed.error.message;
+                } else if (parsed.message) {
+                    message = parsed.message;
+                } else if (parsed.error) {
+                    message = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
+                }
+            } catch {
+                // JSON 解析失败时保持原始信息
+            }
+        }
+
+        if (
+            typeof message === 'string' &&
+            (
+                message.includes('Failed to acquire lock') ||
+                message.includes('Lock acquisition timeout') ||
+                message.includes('visual:locks:')
+            )
+        ) {
+            return '当前内容正在生成中，请稍后再试';
+        }
+
+        return message;
+    }, []);
+
     // 从文本中提取 MAIN_OPTION / OPTION 列表
     const extractOptionsFromText = useCallback((text: string): { mainOptions: string[]; options: string[] } => {
         const mainOptions: string[] = [];
@@ -283,21 +319,7 @@ export const useStepStreamResponse = ({
                             if (typeof errorMessage === 'object' && errorMessage !== null) {
                                 errorMessage = errorMessage.message || errorMessage.error || JSON.stringify(errorMessage);
                             }
-                            
-                            if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
-                                try {
-                                    const parsed = JSON.parse(errorMessage);
-                                    if (parsed.error?.message) {
-                                        errorMessage = parsed.error.message;
-                                    } else if (parsed.message) {
-                                        errorMessage = parsed.message;
-                                    } else if (parsed.error) {
-                                        errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
-                                    }
-                                } catch (e) {
-                                    // 解析失败，使用原始 message
-                                }
-                            }
+                            errorMessage = normalizeUserFacingStreamError(errorMessage);
                             
                             // 显示错误弹窗给用户
                             console.error('❌ 流式响应错误:', errorMessage);
@@ -508,22 +530,7 @@ export const useStepStreamResponse = ({
                         if (typeof errorMessage === 'object' && errorMessage !== null) {
                             errorMessage = errorMessage.message || errorMessage.error || JSON.stringify(errorMessage);
                         }
-                        
-                        // 尝试解析 message 中可能包含的嵌套 JSON
-                        if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
-                            try {
-                                const parsed = JSON.parse(errorMessage);
-                                if (parsed.error?.message) {
-                                    errorMessage = parsed.error.message;
-                                } else if (parsed.message) {
-                                    errorMessage = parsed.message;
-                                } else if (parsed.error) {
-                                    errorMessage = typeof parsed.error === 'string' ? parsed.error : JSON.stringify(parsed.error);
-                                }
-                            } catch (e) {
-                                // 解析失败，使用原始 message
-                            }
-                        }
+                        errorMessage = normalizeUserFacingStreamError(errorMessage);
                         
                         // 显示错误弹窗给用户
                         console.error('❌ 流式响应错误（缓冲区）:', errorMessage);
@@ -596,9 +603,9 @@ export const useStepStreamResponse = ({
             console.error('❌ 流式数据接收错误:', error);
             setSelectedOptionIndex(null);
             setIsWaitingForData(false);
-            options?.onError?.(error instanceof Error ? error.message : '流式数据接收错误');
+            options?.onError?.(normalizeUserFacingStreamError(error));
         }
-    }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId]);
+    }, [setStepQueue, setSelectedOptionIndex, setIsWaitingForData, currentRequestId, normalizeUserFacingStreamError]);
 
     return {
         processStreamResponse,

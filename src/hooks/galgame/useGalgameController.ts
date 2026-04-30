@@ -13,6 +13,7 @@ import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from 
 import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
 import replayApi from "../../api/galgame/replay";
+import { withCacheBust } from "../../utils/imageCache";
 
 export type { Message } from "./useGalgameMessage";
 
@@ -112,8 +113,19 @@ export const useGalgameController = () => {
 
     const getPlayerImageUrlCallback = useCallback((): string | undefined => {
         const imageUrl = getPlayerImageUrl(worldSetting?.player);
-        return imageUrl ? getImageUrl(imageUrl) : undefined;
+        return imageUrl ? withCacheBust(getImageUrl(imageUrl)) : undefined;
     }, [worldSetting]);
+
+    const getSceneImagePath = useCallback((scene?: GetGalgamePresetResponse['scenes']['scenes'][0] | null): string | undefined => {
+        const imagePath = (scene as any)?.image || (scene as any)?.images;
+        return typeof imagePath === 'string' && imagePath ? imagePath : undefined;
+    }, []);
+
+    const toSceneBackgroundUrl = useCallback((imagePath?: string | null): string => {
+        if (!imagePath) return '';
+        const imageUrl = getImageUrl(imagePath);
+        return imageUrl ? withCacheBust(imageUrl) : '';
+    }, []);
 
     const createChoiceMessage = useCallback((choiceData: ReturnType<typeof extractChoiceFromHistory>) => {
         if (!choiceData) return null;
@@ -269,22 +281,19 @@ export const useGalgameController = () => {
                     setCurrentScene(initialScene);
 
                     // 优先使用当前场景自己的图片
-                    let sceneImagePath: string | undefined =
-                        (initialScene as any).image || (initialScene as any).images;
+                    let sceneImagePath = getSceneImagePath(initialScene);
 
                     // 如果当前场景没有配置图片，则回退到第一个有图片的场景
                     if (!sceneImagePath) {
                         const sceneWithImage = scenes.find(
-                            (s: any) => typeof s.image === 'string' && s.image
+                            (s: any) => !!getSceneImagePath(s)
                         );
                         if (sceneWithImage) {
-                            sceneImagePath = (sceneWithImage as any).image as string;
+                            sceneImagePath = getSceneImagePath(sceneWithImage);
                         }
                     }
 
-                    let sceneImageUrl = sceneImagePath
-                        ? getImageUrl(sceneImagePath)
-                        : '';
+                    let sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
 
                     // 最后兜底：如果还是拿不到有效图片，用内置默认场景图
                     if (!sceneImageUrl) {
@@ -302,7 +311,7 @@ export const useGalgameController = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [fileId, isReplay, playableSessionId, replayMeta?.fileId]);
+    }, [fileId, isReplay, playableSessionId, replayMeta?.fileId, getSceneImagePath, toSceneBackgroundUrl]);
 
     useEffect(() => {
         presetDataLoadedRef.current = false;
@@ -310,31 +319,31 @@ export const useGalgameController = () => {
     }, [loadPresetData]);
 
     // 根据场景 ID 更新场景和背景图
-    const updateSceneFromId = useCallback((sceneId: string | null) => {
+    const getLatestSceneById = useCallback((sceneId?: string | null) => {
         if (!sceneId || !presetData) {
-            return;
-        }
-
-        if (currentScene?.id === sceneId) {
-            return;
+            return null;
         }
 
         const scenes = presetData.scenes?.scenes;
         if (!scenes || scenes.length === 0) {
-            return;
+            return null;
         }
 
-        const matchedScene = scenes.find(
+        return scenes.find(
             (scene: GetGalgamePresetResponse['scenes']['scenes'][0]) => 
                 scene.id === sceneId
-        );
+        ) || null;
+    }, [presetData]);
+
+    const updateSceneFromId = useCallback((sceneId: string | null) => {
+        const matchedScene = getLatestSceneById(sceneId);
 
         if (matchedScene) {
             setCurrentScene(matchedScene);
 
-            const sceneImagePath = matchedScene.image || matchedScene.images;
+            const sceneImagePath = getSceneImagePath(matchedScene);
             if (sceneImagePath) {
-                const sceneImageUrl = getImageUrl(sceneImagePath as string);
+                const sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
                 if (sceneImageUrl) {
                     setBackgroundImage(sceneImageUrl);
                 }
@@ -342,7 +351,7 @@ export const useGalgameController = () => {
         } else {
             console.warn('[Galgame] 未找到匹配的场景 ID:', sceneId);
         }
-    }, [presetData, currentScene?.id]);
+    }, [getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
 
     const syncReplaySceneForIndex = useCallback((steps: ReplayStep[], index: number) => {
         for (let i = Math.min(index, steps.length - 1); i >= 0; i--) {
@@ -355,15 +364,17 @@ export const useGalgameController = () => {
                 updateSceneFromId(step.sceneId);
             }
 
-            if (step.sceneImage) {
-                const sceneImageUrl = getImageUrl(step.sceneImage);
+            const latestSceneImagePath = getSceneImagePath(getLatestSceneById(step.sceneId));
+            const sceneImagePath = latestSceneImagePath || step.sceneImage;
+            if (sceneImagePath) {
+                const sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
                 if (sceneImageUrl) {
                     setBackgroundImage(sceneImageUrl);
                 }
             }
             return;
         }
-    }, [updateSceneFromId]);
+    }, [updateSceneFromId, getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
 
     const stepHandlers = useGalgameStep({
         sessionId,
@@ -443,6 +454,7 @@ export const useGalgameController = () => {
 
     const messageUtils = useGalgameMessage(
         worldSetting,
+        presetData?.npcs || null,
         gameStarted,
         stepHandlers.currentStep,
         initialMessages,
@@ -462,6 +474,7 @@ export const useGalgameController = () => {
 
     const messageUtilsWithTyping = useGalgameMessage(
         worldSetting,
+        presetData?.npcs || null,
         gameStarted,
         stepHandlers.currentStep,
         initialMessages,
@@ -651,8 +664,10 @@ export const useGalgameController = () => {
                 updateSceneFromId(currentStep.sceneId);
             }
             
-            if (currentStep.sceneImage) {
-                const sceneImageUrl = getImageUrl(currentStep.sceneImage);
+            const latestSceneImagePath = getSceneImagePath(getLatestSceneById(currentStep.sceneId));
+            const sceneImagePath = latestSceneImagePath || currentStep.sceneImage;
+            if (sceneImagePath) {
+                const sceneImageUrl = toSceneBackgroundUrl(sceneImagePath);
                 if (sceneImageUrl) {
                     setBackgroundImage(prev => {
                         if (prev !== sceneImageUrl) {
@@ -669,7 +684,7 @@ export const useGalgameController = () => {
                 stepHandlers.handleNextStep();
             }
         }
-    }, [stepHandlers.currentStep, stepHandlers.handleNextStep, updateSceneFromId]);
+    }, [stepHandlers.currentStep, stepHandlers.handleNextStep, updateSceneFromId, getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
 
     useEffect(() => {
         if (isReplay) {

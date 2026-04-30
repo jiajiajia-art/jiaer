@@ -19,7 +19,7 @@ import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import GameImageRenderer from "../components/Galgame/GameImageRenderer";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -164,6 +164,37 @@ const Galgame = () => {
                 toast.error(error || '重新生成失败，请检查网络连接');
             }
         });
+    };
+
+    const currentAssistantHistoryIndex = useMemo(() => {
+        if (controller.isReplay || controller.isTextMode || controller.stepHandlers.isWaitingForData) {
+            return null;
+        }
+        if (!controller.currentMessage || controller.currentMessage.type === 'choice') {
+            return null;
+        }
+
+        for (let i = controller.history.length - 1; i >= 0; i -= 1) {
+            const item = controller.history[i];
+            if (item?.role === 'assistant' && Number.isFinite(item.absoluteIndex)) {
+                return item.absoluteIndex + 1;
+            }
+        }
+
+        return null;
+    }, [
+        controller.currentMessage,
+        controller.history,
+        controller.isReplay,
+        controller.isTextMode,
+        controller.stepHandlers.isWaitingForData,
+    ]);
+
+    const handleCurrentMessageRegenerate = () => {
+        if (!currentAssistantHistoryIndex) {
+            return;
+        }
+        handleRegenerate(currentAssistantHistoryIndex);
     };
 
     const characterAnimation = useCharacterAnimation({
@@ -524,6 +555,7 @@ const Galgame = () => {
                                     currentMessage={controller.currentMessage}
                                     finalDisplayText={controller.finalDisplayText}
                                     finalIsTyping={controller.finalIsTyping}
+                                    canRegenerateCurrentMessage={currentAssistantHistoryIndex !== null}
                                     stepHandlers={{
                                         isWaitingForData: controller.stepHandlers.isWaitingForData,
                                         currentStep: controller.stepHandlers.currentStep,
@@ -533,6 +565,7 @@ const Galgame = () => {
                                     isAutoPlay={controller.isAutoPlay}
                                     historyLength={controller.history.length}
                                     onNextMessage={controller.handleNextMessage}
+                                    onRegenerateCurrentMessage={handleCurrentMessageRegenerate}
                                     onChoiceClick={controller.handleChoiceClick}
                                     onCustomInputSubmit={(value) => controller.handleCustomInputSubmit(value)}
                                     isFreeRound={controller.isFreeRound}

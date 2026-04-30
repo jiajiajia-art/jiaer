@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
 import { extractPlainText, truncateTextWithTags } from "../../utils/textUtils";
 import { getPlayerImageUrl, getImageUrl } from "../../utils/constants";
+import { withCacheBust } from "../../utils/imageCache";
 
 export interface Message {
     id: number;
@@ -18,6 +19,7 @@ export interface Message {
  */
 export const useGalgameMessage = (
     worldSetting: GetGalgamePresetResponse['world'] | null,
+    npcSetting: GetGalgamePresetResponse['npcs'] | null,
     gameStarted: boolean,
     currentStep: any,
     initialMessages: Message[],
@@ -26,6 +28,56 @@ export const useGalgameMessage = (
     isWaitingForData: boolean,
     currentStepForTextModal: any
 ) => {
+    const latestNpcById = useMemo(() => {
+        const map = new Map<string, GetGalgamePresetResponse['npcs']['npcs'][0]>();
+        (npcSetting?.npcs || []).forEach((npc) => {
+            if (npc?.id) {
+                map.set(String(npc.id), npc);
+            }
+        });
+        return map;
+    }, [npcSetting]);
+
+    const toDisplayImageUrl = useCallback((imagePath?: string | null): string | undefined => {
+        if (!imagePath) return undefined;
+        if (imagePath.startsWith('blob:') || imagePath.startsWith('data:')) return imagePath;
+        const imageUrl = getImageUrl(imagePath);
+        return imageUrl ? withCacheBust(getImageUrl(imagePath)) : undefined;
+    }, []);
+
+    const normalizeImageKey = useCallback((imagePath?: string | null): string | null => {
+        if (!imagePath) return null;
+        const cleanPath = imagePath.split('?')[0].split('#')[0];
+        const fileName = cleanPath.split('/').pop() || '';
+        const withoutExt = fileName.replace(/\.(png|jpg|jpeg|webp|gif)$/i, '');
+        return withoutExt.replace(/_\d{10,}_[A-Za-z0-9]{6}$/, '') || null;
+    }, []);
+
+    const resolveNpcImagePath = useCallback((step: any): string | undefined => {
+        const npcId = step?.speakerId || step?.npcId;
+        const latestNpc = npcId ? latestNpcById.get(String(npcId)) : null;
+        const latestImages = latestNpc?.images;
+
+        if (latestImages && typeof latestImages === 'object') {
+            if (step?.activeImage && step?.npcImages && typeof step.npcImages === 'object') {
+                const matchedEntry = Object.entries(step.npcImages).find(([, value]) => value === step.activeImage);
+                const matchedKey = matchedEntry?.[0];
+                if (matchedKey && latestImages[matchedKey]) {
+                    return latestImages[matchedKey];
+                }
+            }
+
+            const normalizedKey = normalizeImageKey(step?.activeImage);
+            if (normalizedKey && latestImages[normalizedKey]) {
+                return latestImages[normalizedKey];
+            }
+
+            return latestImages.base || Object.values(latestImages).find((value): value is string => typeof value === 'string' && value.trim() !== '');
+        }
+
+        return step?.activeImage;
+    }, [latestNpcById, normalizeImageKey]);
+
     // 转换步骤为消息
     const convertStepToMessage = useCallback((step: any): Message | null => {
         if (!step) return null;
@@ -46,16 +98,21 @@ export const useGalgameMessage = (
             const characterName = step.isPlayer ? worldSetting?.player?.name : step.speakerName || step.npcId || '未知角色';
             let characterImage: string | undefined;
 
-            if (step.activeImage) {
-                // 使用统一的 getImageUrl 处理 URL
-                characterImage = getImageUrl(step.activeImage);
-            }
-
             if (step.isPlayer) {
                 const playerImagePath = getPlayerImageUrl(worldSetting?.player);
                 if (playerImagePath) {
-                    characterImage = getImageUrl(playerImagePath);
+                    characterImage = toDisplayImageUrl(playerImagePath);
                 }
+            } else {
+                const npcImagePath = resolveNpcImagePath(step);
+                if (npcImagePath) {
+                    characterImage = toDisplayImageUrl(npcImagePath);
+                }
+            }
+
+            if (!characterImage && step.activeImage) {
+                // 使用统一的 getImageUrl 处理 URL
+                characterImage = toDisplayImageUrl(step.activeImage);
             }
 
             return {
@@ -99,7 +156,7 @@ export const useGalgameMessage = (
             const playerImagePath = getPlayerImageUrl(worldSetting?.player);
             if (playerImagePath) {
                 // 使用统一的 getImageUrl 处理 URL
-                characterImage = getImageUrl(playerImagePath);
+                characterImage = toDisplayImageUrl(playerImagePath);
             }
 
             return {
@@ -134,7 +191,7 @@ export const useGalgameMessage = (
         }
 
         return null;
-    }, [worldSetting]);
+    }, [worldSetting, resolveNpcImagePath, toDisplayImageUrl]);
 
     const currentMessage = useMemo(() => {
         if (gameStarted && currentStep && currentStep.type) {

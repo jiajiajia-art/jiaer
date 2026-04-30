@@ -103,10 +103,11 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                         // 侧栏角色前缀统一
                         const sidebarRole = character.id === 'player' ? (character.role || '主角') : 'NPC';
                         const personalityTags = normalizePersonalityTags(character.personality);
+                        const isActiveCharacter = !isAddingNew && character.id === activeCharacterId;
                         return (
                             <article
                                 key={character.id}
-                                className={`${sidebarStyles.characterRow} ${character.id === activeCharacterId ? sidebarStyles.active : ''}`}
+                                className={`${sidebarStyles.characterRow} ${isActiveCharacter ? sidebarStyles.active : ''}`}
                                 onClick={() => handleCharacterClick(character.id)}
                             >
                                 <div

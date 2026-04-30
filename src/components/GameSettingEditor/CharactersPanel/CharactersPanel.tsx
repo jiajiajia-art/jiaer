@@ -126,6 +126,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [isBlockingSwitch, setIsBlockingSwitch] = useState(false);
     const [personalityInputValue, setPersonalityInputValue] = useState('');
     const pendingPanelActionRef = useRef<(() => void) | null>(null);
+    const addDraftReturnCharacterIdRef = useRef<string | null>(null);
 
     // 暂存图片状态 - 用于图片上传/生成后、确认前的预览
     const [pendingImages, setPendingImages] = useState<{ [characterId: string]: { [variant: string]: PendingImage } }>({});
@@ -197,6 +198,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 clearPendingImageUrl(`${activeCharacterId}-${variant}`);
             });
         }
+        setFieldErrors({});
         setActiveCharacterId(newCharacterId);
     }, [activeCharacterId, pendingImages]);
 
@@ -247,8 +249,33 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         if (options?.clearAddState) {
             setIsAddingNew(false);
             setNewCharacterData(null);
+            addDraftReturnCharacterIdRef.current = null;
         }
     }, [cloneCharacters]);
+
+    const resolveExistingCharacterId = useCallback((preferredCharacterId?: string | null) => {
+        if (preferredCharacterId && characterData.some((character) => character.id === preferredCharacterId)) {
+            return preferredCharacterId;
+        }
+
+        const returnCharacterId = addDraftReturnCharacterIdRef.current;
+        if (returnCharacterId && characterData.some((character) => character.id === returnCharacterId)) {
+            return returnCharacterId;
+        }
+
+        return characterData[0]?.id || '';
+    }, [characterData]);
+
+    const discardNewCharacterDraft = useCallback((options?: { nextCharacterId?: string | null }) => {
+        const nextCharacterId = resolveExistingCharacterId(options?.nextCharacterId);
+
+        setFieldErrors({});
+        setHasUnsavedChanges(false);
+        setIsAddingNew(false);
+        setNewCharacterData(null);
+        setActiveCharacterId(nextCharacterId);
+        addDraftReturnCharacterIdRef.current = null;
+    }, [resolveExistingCharacterId]);
 
     useEffect(() => {
         hasUnsavedChangesRef.current = hasUnsavedChanges;
@@ -386,11 +413,20 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
 
         if (action.type === 'switchCharacter') {
+            if (isAddingNew) {
+                discardNewCharacterDraft({ nextCharacterId: action.targetCharacterId || null });
+                return;
+            }
+
+            setFieldErrors({});
             setActiveCharacterId(action.targetCharacterId || '');
             return;
         }
 
         if (action.type === 'switchPanel') {
+            if (isAddingNew) {
+                discardNewCharacterDraft();
+            }
             if (pendingPanelAction) {
                 pendingPanelAction();
             }
@@ -400,7 +436,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         if (action.type === 'createCharacter') {
             return;
         }
-    }, [pendingAction]);
+    }, [discardNewCharacterDraft, isAddingNew, pendingAction]);
 
     // 丢弃当前角色的暂存立绘并恢复到原始数据
     const discardCurrentCharacterPendingImages = useCallback(() => {
@@ -725,6 +761,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         if (!checkBeforeSwitch({ type: 'createCharacter' })) {
             return;
         }
+        addDraftReturnCharacterIdRef.current = activeCharacterId || characterData[0]?.id || null;
+        setFieldErrors({});
         const emptyCharacter: Character = {
             id: `temp-${Date.now()}`,
             name: '',
@@ -751,11 +789,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 取消新增
     const cancelAddNew = () => {
-        setIsAddingNew(false);
-        setNewCharacterData(null);
-        if (characterData.length > 0) {
-            setActiveCharacterId(characterData[0].id);
-        }
+        discardNewCharacterDraft();
     };
 
     // 验证必填字段
@@ -1862,6 +1896,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 }}
                 onDiscard={() => {
                     discardCurrentCharacterPendingImages();
+                    if (isAddingNew) {
+                        discardNewCharacterDraft({
+                            nextCharacterId: pendingAction?.type === 'switchCharacter' ? pendingAction.targetCharacterId || null : null,
+                        });
+                    } else if (pendingAction?.type === 'switchCharacter') {
+                        setFieldErrors({});
+                    }
                     hasUnsavedChangesRef.current = false;
                     isBlockingSwitchRef.current = false;
                     setSaveConfirmModalOpen(false);

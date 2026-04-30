@@ -86,7 +86,8 @@ export interface HandlersContext {
     onWorldMapCostModalOpen: () => void;
 
     onDataChange?: () => void | Promise<void>;
-    markBatchImageRefreshPending?: () => void;
+    markBatchImageRefreshPending?: (payload: BatchImageReconciliationPayload) => void;
+    hasPendingBatchImageRefresh?: () => boolean;
 }
 
 /**
@@ -98,6 +99,11 @@ export interface PendingImage {
     sourceType: 'upload' | 'generate' | 'url';
     variant: string;
     persistedPath?: string;
+}
+
+export interface BatchImageReconciliationPayload {
+    scenes: Record<string, string>;
+    subscenes: Record<string, string>;
 }
 
 interface SaveOptions {
@@ -168,7 +174,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         onWorldMapCostModalOpen,
         onDataChange,
         markBatchImageRefreshPending,
+        hasPendingBatchImageRefresh,
     } = ctx;
+
+    const BATCH_IMAGE_REFRESH_RETRY_COUNT = 3;
+    const BATCH_IMAGE_REFRESH_RETRY_DELAY_MS = 1200;
 
     // 临时状态用闭包变量管理（不需要传给组件）
     let sceneToDelete: string | null = null;
@@ -370,26 +380,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
     };
 
-    const clearPendingImageRecords = (targetIds: string[]) => {
-        if (targetIds.length === 0) return;
-        setPendingImages(prev => {
-            const next = { ...prev };
-            targetIds.forEach((targetId) => {
-                const variants = prev[targetId] || {};
-                Object.keys(variants).forEach((variant) => {
-                    const key = `${targetId}-${variant}`;
-                    const previewUrl = pendingImageUrlsRef.current[key];
-                    if (previewUrl) {
-                        URL.revokeObjectURL(previewUrl);
-                        delete pendingImageUrlsRef.current[key];
-                    }
-                });
-                delete next[targetId];
-            });
-            return next;
-        });
-    };
-
     const bumpExistingSceneImageCache = () => {
         sceneData.forEach((scene) => {
             if (!scene.id.startsWith('temp-') && scene.image) {
@@ -398,11 +388,29 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         });
     };
 
-    const clearVisualBatchPendingImages = () => {
-        const sceneIds = sceneData
-            .filter((scene) => !scene.id.startsWith('temp-'))
-            .map((scene) => scene.id);
-        clearPendingImageRecords(sceneIds);
+    const setBatchGeneratedPendingImages = (items: Map<string, string>) => {
+        if (items.size === 0) return;
+        setPendingImages((prev) => {
+            const next = { ...prev };
+            items.forEach((imagePath, targetId) => {
+                const pendingKey = `${targetId}-base`;
+                const existingPreviewUrl = pendingImageUrlsRef.current[pendingKey];
+                if (existingPreviewUrl?.startsWith('blob:')) {
+                    URL.revokeObjectURL(existingPreviewUrl);
+                    delete pendingImageUrlsRef.current[pendingKey];
+                }
+                next[targetId] = {
+                    ...(next[targetId] || {}),
+                    base: {
+                        previewUrl: imagePath,
+                        sourceType: 'url',
+                        variant: 'base',
+                        persistedPath: imagePath,
+                    },
+                };
+            });
+            return next;
+        });
     };
 
     const getGeneratedSceneItemId = (item: any): string | undefined => {
@@ -418,7 +426,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     const applyGeneratedSceneImages = (items: any[]) => {
-        if (!Array.isArray(items) || items.length === 0) return 0;
+        if (!Array.isArray(items) || items.length === 0) {
+            return {
+                count: 0,
+                images: {} as Record<string, string>,
+            };
+        }
 
         const nextImages = new Map<string, string>();
         items.forEach((item) => {
@@ -429,7 +442,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             }
         });
 
-        if (nextImages.size === 0) return 0;
+        if (nextImages.size === 0) {
+            return {
+                count: 0,
+                images: {} as Record<string, string>,
+            };
+        }
 
         setSceneData(prev =>
             prev.map(scene => {
@@ -447,13 +465,19 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             }
         }
 
-        clearPendingImageRecords(Array.from(nextImages.keys()));
-        return nextImages.size;
+        setBatchGeneratedPendingImages(nextImages);
+        return {
+            count: nextImages.size,
+            images: Object.fromEntries(nextImages),
+        };
     };
 
     const applyGeneratedSubsceneImages = (items: any[]) => {
         if (mode !== 'worldInteraction' || !setSubsceneDataBySceneId || !Array.isArray(items) || items.length === 0) {
-            return 0;
+            return {
+                count: 0,
+                images: {} as Record<string, string>,
+            };
         }
 
         const nextImages = new Map<string, string>();
@@ -465,7 +489,12 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             }
         });
 
-        if (nextImages.size === 0) return 0;
+        if (nextImages.size === 0) {
+            return {
+                count: 0,
+                images: {} as Record<string, string>,
+            };
+        }
 
         setSubsceneDataBySceneId(prev => {
             const next: Record<string, any[]> = { ...(prev || {}) };
@@ -486,8 +515,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             }
         }
 
-        clearPendingImageRecords(Array.from(nextImages.keys()));
-        return nextImages.size;
+        setBatchGeneratedPendingImages(nextImages);
+        return {
+            count: nextImages.size,
+            images: Object.fromEntries(nextImages),
+        };
     };
 
     // 确认新增场景
@@ -1132,8 +1164,10 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     // 批量生成场景立绘 + 积分试算
     const applySceneBatchResult = async (payload: any, sceneCostPointsValue: number | null) => {
         const details = payload?.details || null;
-        const generatedSceneCount = applyGeneratedSceneImages(details?.scenes || []);
-        const generatedSubsceneCount = applyGeneratedSubsceneImages(details?.subscenes || []);
+        const generatedSceneResult = applyGeneratedSceneImages(details?.scenes || []);
+        const generatedSubsceneResult = applyGeneratedSubsceneImages(details?.subscenes || []);
+        const generatedSceneCount = generatedSceneResult.count;
+        const generatedSubsceneCount = generatedSubsceneResult.count;
 
         const rawSceneGenerated = Number(
             payload?.scenes?.effective ??
@@ -1202,11 +1236,25 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         });
         if (mode !== 'worldInteraction') {
             bumpExistingSceneImageCache();
-            clearVisualBatchPendingImages();
         }
-        markBatchImageRefreshPending?.();
+        markBatchImageRefreshPending?.({
+            scenes: generatedSceneResult.images,
+            subscenes: generatedSubsceneResult.images,
+        });
         try {
             await onDataChange?.();
+            if (onDataChange && hasPendingBatchImageRefresh?.()) {
+                for (let attempt = 0; attempt < BATCH_IMAGE_REFRESH_RETRY_COUNT; attempt += 1) {
+                    await new Promise((resolve) => window.setTimeout(resolve, BATCH_IMAGE_REFRESH_RETRY_DELAY_MS));
+                    if (!hasPendingBatchImageRefresh()) {
+                        break;
+                    }
+                    await onDataChange();
+                    if (!hasPendingBatchImageRefresh()) {
+                        break;
+                    }
+                }
+            }
         } catch (refreshError) {
             console.error('Failed to refresh scene data after batch generation:', refreshError);
         }
@@ -1345,7 +1393,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
                 });
                 if (mode !== 'worldInteraction') {
                     bumpExistingSceneImageCache();
-                    clearVisualBatchPendingImages();
                 }
                 markBatchImageRefreshPending?.();
                 try {
