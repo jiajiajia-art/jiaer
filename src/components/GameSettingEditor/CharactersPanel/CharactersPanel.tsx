@@ -825,7 +825,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     // 确认修改/新增角色（统一处理）
-    const confirmEdit = async (): Promise<boolean> => {
+    const confirmEdit = async (options?: { onPrimarySaved?: () => void }): Promise<boolean> => {
         if (!handlers) return false;
 
         setIsSavingCharacter(true);
@@ -851,20 +851,23 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             }
 
             // 先保存表单
+            const pendingImagesSnapshot = { ...pendingImages };
             const saveResult = await handlers.confirmEdit(characterToSave);
             if (!saveResult.success) {
                 return false;
             }
 
+            const characterId = saveResult.savedCharacterId;
+            const pendingForSavedCharacter = characterId ? pendingImagesSnapshot[characterId] : undefined;
+
             commitSavedCharacters(saveResult.characters, saveResult.activeCharacterId, {
                 clearAddState: saveResult.clearAddState,
             });
+            options?.onPrimarySaved?.();
 
             // 后上传图片
-            const characterId = saveResult.savedCharacterId;
-            if (characterId && pendingImages[characterId]) {
-                const pendingForChar = pendingImages[characterId];
-                for (const [variant, pending] of Object.entries(pendingForChar)) {
+            if (characterId && pendingForSavedCharacter) {
+                for (const [variant, pending] of Object.entries(pendingForSavedCharacter)) {
                     if (!pending.file) continue;
 
                     const uploadSuccess = characterId === 'player'
@@ -1362,7 +1365,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div className={styles.detailActionRow}>
                                 <button
                                     className={styles.ghostSmall}
-                                    onClick={confirmEdit}
+                                    onClick={() => { void confirmEdit(); }}
                                     disabled={isPortraitActionBusy}
                                 >
                                     确认增加
@@ -1375,7 +1378,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div className={styles.detailActionRow}>
                                 <button
                                     className={styles.ghostSmall}
-                                    onClick={confirmEdit}
+                                    onClick={() => { void confirmEdit(); }}
                                     disabled={isPortraitActionBusy}
                                 >
                                     确认修改
@@ -1883,16 +1886,30 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 isOpen={saveConfirmModalOpen}
                 onSave={async () => {
                     try {
-                        const saved = await confirmEdit();
+                        let primarySaveHandled = false;
+                        const closeOnPrimarySave = pendingAction?.type === 'switchCharacter';
+                        const saved = await confirmEdit(closeOnPrimarySave ? {
+                            onPrimarySaved: () => {
+                                primarySaveHandled = true;
+                                hasUnsavedChangesRef.current = false;
+                                isBlockingSwitchRef.current = false;
+                                setSaveConfirmModalOpen(false);
+                                setIsBlockingSwitch(false);
+                                setHasUnsavedChanges(false);
+                                executePendingAction();
+                            },
+                        } : undefined);
                         if (!saved) {
                             return;
                         }
-                        hasUnsavedChangesRef.current = false;
-                        isBlockingSwitchRef.current = false;
-                        setSaveConfirmModalOpen(false);
-                        setIsBlockingSwitch(false);
-                        setHasUnsavedChanges(false);
-                        executePendingAction();
+                        if (!primarySaveHandled) {
+                            hasUnsavedChangesRef.current = false;
+                            isBlockingSwitchRef.current = false;
+                            setSaveConfirmModalOpen(false);
+                            setIsBlockingSwitch(false);
+                            setHasUnsavedChanges(false);
+                            executePendingAction();
+                        }
                     } catch (error) {
                         toast.error('保存失败，请重试');
                     }
