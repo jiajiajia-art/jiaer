@@ -12,6 +12,7 @@ export interface GameImageRendererProps {
   className?: string;
   style?: React.CSSProperties;
   useCanvas?: boolean;
+  disableMobileGuard?: boolean;
   placeholder?: React.ReactNode;
   errorPlaceholder?: React.ReactNode;
   onLoad?: () => void;
@@ -22,6 +23,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
   className = '',
   style,
   useCanvas = true,
+  disableMobileGuard = false,
   placeholder,
   errorPlaceholder,
   onLoad,
@@ -192,7 +194,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
 
   if (useCanvas) {
     return (
-      <div className={`${styles.container} ${className}`} style={style}>
+      <div className={`${styles.container} ${disableMobileGuard ? styles.disableMobileGuard : ''} ${className}`} style={style}>
         {isLoading && placeholder && (
           <div className={styles.placeholder}>{placeholder}</div>
         )}

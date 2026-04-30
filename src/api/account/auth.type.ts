@@ -36,7 +36,7 @@ export interface User {
   userCode: string;
   phoneNumber: string;
   role: string;
-  userSegment?: 'normal' | 'incentive' | string;
+  userSegment?: 'normal' | 'incentive' | 'all_incentive' | string;
   createTime: string;
   lastLoginTime: string | null;
   email: string;

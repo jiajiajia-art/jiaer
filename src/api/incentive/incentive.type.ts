@@ -1,6 +1,6 @@
 export type AdminIncentiveLookupMode = 'userCode' | 'phoneNumber';
 
-export type UserSegment = 'normal' | 'game_incentive' | 'incentive' | 'code_incentive';
+export type UserSegment = 'normal' | 'game_incentive' | 'incentive' | 'code_incentive' | 'all_incentive';
 
 export interface AdminIncentiveAuthorInfo {
     userId: string;
@@ -20,7 +20,7 @@ export interface AdminIncentiveAuthorListParams {
     userSegment?: UserSegment;
 }
 
-export type IncentiveStatus = 'none' | 'code_incentive' | 'game_incentive' | 'incentive' | 'finished';
+export type IncentiveStatus = 'none' | 'code_incentive' | 'game_incentive' | 'incentive' | 'all_incentive' | 'finished';
 
 export interface AdminIncentiveGameRecord {
     fileId: string;

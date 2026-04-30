@@ -1120,17 +1120,15 @@
     }
 
     .characterContainer {
-        width: 100%; /* 移动端也使用 100% 宽度，确保适配 */
+        width: 100%;
         max-width: 100%;
         bottom: 0;
+        height: 95dvh;
+        max-height: 95dvh;
     }
 
     .messageContainer {
-        bottom: 5rem; /* 80px */
-    }
-
-    .messageContainer {
-        bottom: 5rem; /* 80px */
+        bottom: 5rem;
     }
 
     .buttonContainer {

@@ -293,6 +293,11 @@
     color: #e65100;
 }
 
+.statusAllIncentive {
+    background: rgba(38, 166, 154, 0.16);
+    color: #0f766e;
+}
+
 .statusNone {
     background: rgba(146, 125, 107, 0.14);
     color: #7b6552;
@@ -311,6 +316,12 @@
 
 .paginationBar {
     margin-top: 14px;
+}
+
+.detailSectionStack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 /* CODE_INCENTIVE 汇总卡片样式 */

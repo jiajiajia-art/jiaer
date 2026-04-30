@@ -335,6 +335,7 @@ const InteractWithNpcModal: React.FC<InteractWithNpcModalProps> = ({
                 src={currentMessage.characterImage}
                 className={styles.characterImage}
                 useCanvas={true}
+                disableMobileGuard={true}
               />
             </div>
           )}

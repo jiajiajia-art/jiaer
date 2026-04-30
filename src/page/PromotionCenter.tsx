@@ -484,31 +484,30 @@ const PromotionCenter: React.FC = () => {
         <div className={styles.pageRoot}>
             <Navbar />
             <div className={styles.pageBody}>
-                <section className={styles.hero}>
-                    <div>
-                        <div className={styles.badge}>推广分享</div>
-                        <h1 className={styles.title}>完成投稿后获取积分奖励</h1>
+                <div className={styles.headerRow}>
+                    <button type="button" className={styles.backButton} onClick={() => window.history.back()}>
+                        <span>←</span>
+                        <span>返回</span>
+                    </button>
+                    <div className={styles.heroCard}>
+                        <h2 className={styles.heroText}>完成投稿后获取积分奖励</h2>
                     </div>
-                    <div className={styles.metaRow}>
-                        <span className={styles.chip}>已发布活动 {activities.length}</span>
-                        <span className={styles.chip}>我的投稿 {submissionCount}</span>
-                    </div>
-                </section>
+                </div>
 
                 <div className={styles.tabRow}>
-                    <button
-                        type="button"
-                        className={`${styles.tabButton} ${activeTab === 'activities' ? styles.tabButtonActive : ''}`}
-                        onClick={() => setActiveTab('activities')}
-                    >
-                        推广活动
-                    </button>
                     <button
                         type="button"
                         className={`${styles.tabButton} ${activeTab === 'submissions' ? styles.tabButtonActive : ''}`}
                         onClick={() => setActiveTab('submissions')}
                     >
-                        我的投稿
+                        我的投稿({submissionCount})
+                    </button>
+                    <button
+                        type="button"
+                        className={`${styles.tabButton} ${activeTab === 'activities' ? styles.tabButtonActive : ''}`}
+                        onClick={() => setActiveTab('activities')}
+                    >
+                        已发布活动({activities.length})
                     </button>
                 </div>
 

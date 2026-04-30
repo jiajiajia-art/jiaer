@@ -668,7 +668,7 @@ const Profile: React.FC = () => {
                         />
                     ) : (
                     <div className={styles.functionList}>
-                        <div className={styles.functionItem}>
+                        <div className={styles.functionItem} onClick={() => navigate('/points/details')}>
                             <div className={styles.functionIcon}>
                                 <RiCopperCoinLine />
                             </div>
@@ -677,12 +677,10 @@ const Profile: React.FC = () => {
                                 <div className={styles.functionDesc}>{`当前积分：${user?.user?.points ?? 0}`}</div>
                             </div>
                             <div className={styles.pointsActions}>
-                                {/* {isMobile && (
-                                    <button className={styles.payButton} onClick={() => setIsRechargeModalOpen(true)}>
-                                        <span>{'充值'}</span>
-                                    </button>
-                                )} */}
-                                <button className={styles.functionButton} onClick={() => setIsCheckInModalOpen(true)}>
+                                <button className={styles.payButton} onClick={(e) => { e.stopPropagation(); setIsRechargeModalOpen(true); }}>
+                                    <span>{'充值'}</span>
+                                </button>
+                                <button className={styles.functionButton} onClick={(e) => { e.stopPropagation(); setIsCheckInModalOpen(true); }}>
                                     {'签到'}
                                 </button>
                             </div>

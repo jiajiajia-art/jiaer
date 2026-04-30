@@ -997,10 +997,8 @@
         width: 100%;
         max-width: 100%;
         bottom: 0;
-    }
-
-    .messageContainer {
-        bottom: 5rem;
+        height: 100%;
+        max-height: none;
     }
 
     .messageContainer {

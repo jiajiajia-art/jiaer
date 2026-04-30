@@ -177,20 +177,18 @@ const EditorApi = {
     deletePlayerImageVariant: (fileId:string, variant:string) =>
         api.delete<ApiResponse<null>>(`/visual/edit/${fileId}/player/image/${variant}`),
     calculateScenePoints: (fileId: string) =>
-        api.post<CalculatePointsResponse>(`/visual/images/generate-scenes/calculate-points`, {
+        api.post<CalculatePointsResponse>(`/visual/scenes/calculate-points`, {
             fileId: fileId,
         }),
     calculateNpcPoints: (fileId: string) =>
-        api.post<CalculatePointsResponse>(`/visual/images/generate-npcs/calculate-points`, {
+        api.post<CalculatePointsResponse>(`/visual/npcs/calculate-points`, {
             fileId: fileId,
         }),
     downloadImage: (pluginType:string, fileId:string, type:string, name: string, variant?: string, imagePath?: string) =>{
         // Player 类型：/players/base.png（不需要 name）
         // NPC 类型：/npcs/{name}/base.png（需要 name）
         // 场景类型：/scenes/{name}.png（不需要 variant）
-        
         const extension = extractImageExtension(imagePath);
-        
         let url: string;
         if (type === 'players' && variant) {
             url = `/${pluginType}/images/${fileId}/${type}/${variant}${extension}`;

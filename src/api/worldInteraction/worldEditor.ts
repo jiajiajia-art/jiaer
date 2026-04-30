@@ -341,7 +341,7 @@ const worldEditor = {
   },
   calculateScenePoints: (fileId: string) => {
     return api.post<CalculatePointsResponse>(
-      `/world-interaction/images/generate-scenes/calculate-points`,
+      `/world-interaction/scenes/calculate-points`,
       {
         fileId: fileId,
       }
@@ -349,7 +349,7 @@ const worldEditor = {
   },
   calculateNpcPoints: (fileId: string) => {
     return api.post<CalculatePointsResponse>(
-      `/world-interaction/images/generate-npcs/calculate-points`,
+      `/world-interaction/npcs/calculate-points`,
       {
         fileId: fileId,
       }

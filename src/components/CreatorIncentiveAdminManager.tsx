@@ -74,12 +74,13 @@ const normalizeIncentiveStatus = (status: string | undefined | null): IncentiveS
     if (lower === 'code_incentive') return 'code_incentive';
     if (lower === 'game_incentive') return 'game_incentive';
     if (lower === 'incentive') return 'incentive';
+    if (lower === 'all_incentive') return 'all_incentive';
     if (lower === 'finished') return 'finished';
     return 'none';
 };
 
 const isIncentiveActive = (status: IncentiveStatus): boolean => {
-    return status === 'code_incentive' || status === 'game_incentive' || status === 'incentive';
+    return status === 'code_incentive' || status === 'game_incentive' || status === 'incentive' || status === 'all_incentive';
 };
 
 const getGameStatusLabel = (status: IncentiveStatus): string => {
@@ -89,6 +90,7 @@ const getGameStatusLabel = (status: IncentiveStatus): string => {
 };
 
 const getIncentiveOptionLabel = (segment: UserSegment): string => {
+    if (segment === 'all_incentive') return '作品激励';
     switch (segment) {
         case 'code_incentive':
             return '邀请激励';
@@ -115,12 +117,22 @@ const getSettledAmount = (game: AdminIncentiveGameRecord, authorSegment: string)
     return game.incentiveSettledAmount;
 };
 
-const isAuthorCodeIncentive = (author: AdminIncentiveAuthorInfo | null): boolean => {
-    return author?.userSegment === 'code_incentive';
+const hasInviteIncentive = (segment?: string | null): boolean => {
+    return segment === 'code_incentive' || segment === 'all_incentive';
+};
+
+const shouldShowGameIncentiveModule = (segment?: UserSegment | null): boolean => {
+    return segment !== 'code_incentive';
+};
+
+const isAuthorInviteIncentive = (author: AdminIncentiveAuthorInfo | null): boolean => {
+    return hasInviteIncentive(author?.userSegment);
 };
 
 const getSegmentTagClass = (segment: UserSegment): string => {
     switch (segment) {
+        case 'all_incentive':
+            return styles.statusAllIncentive;
         case 'game_incentive':
             return styles.statusGameIncentive;
         case 'incentive':
@@ -138,6 +150,7 @@ const getSegmentLabel = (segment: UserSegment): string => {
         game_incentive: '游戏激励',
         incentive: '旧版激励',
         code_incentive: '邀请激励',
+        all_incentive: '双激励',
     };
     return labels[segment];
 };
@@ -230,6 +243,15 @@ const CreatorIncentiveAdminManager: React.FC = () => {
         if (isSearchView && searchedAuthor) return [searchedAuthor];
         return authors;
     }, [authors, isSearchView, searchedAuthor]);
+    const showInviteIncentiveModule = hasInviteIncentive(selectedAuthor?.userSegment);
+    const showGameModule = Boolean(selectedAuthor) && shouldShowGameIncentiveModule(selectedAuthor?.userSegment ?? null);
+    const inviteSummaryData: IncentiveSummary = incentiveSummary ?? {
+        inviteCount: 0,
+        invitePendingIncome: 0,
+        inviteSettledAmount: 0,
+        incentiveStartTime: '',
+        incentiveEndTime: '',
+    };
 
     const loadAuthors = useCallback(async () => {
         try {
@@ -292,15 +314,20 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                 ...game,
                 incentiveStatus: normalizeIncentiveStatus(game.incentiveStatus),
             }));
+            const summary = payload?.incentiveSummary || null;
             setGames(normalizedGames);
             setGamePagination(payload?.pagination || emptyPagination);
-            setIncentiveSummary(payload?.incentiveSummary || null);
+            setIncentiveSummary(summary);
 
             // CODE_INCENTIVE 作者：保存编辑状态
-            if (payload?.incentiveSummary) {
-                setCodeStartTime(normalizeDateOnlyValue(payload.incentiveSummary.incentiveStartTime));
-                setCodeEndTime(normalizeDateOnlyValue(payload.incentiveSummary.incentiveEndTime));
-                setCodeSettledAmount(String(payload.incentiveSummary.inviteSettledAmount || 0));
+            if (summary) {
+                setCodeStartTime(normalizeDateOnlyValue(summary.incentiveStartTime));
+                setCodeEndTime(normalizeDateOnlyValue(summary.incentiveEndTime));
+                setCodeSettledAmount(String(summary.inviteSettledAmount || 0));
+            } else {
+                setCodeStartTime('');
+                setCodeEndTime('');
+                setCodeSettledAmount('');
             }
 
             if (payload?.author) {
@@ -419,9 +446,9 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                 game_incentive: '游戏激励',
                 incentive: '旧版激励',
                 code_incentive: '邀请激励',
+                all_incentive: '双激励',
             };
             toast.success(`作者已切换为${segmentLabels[newSegment]}`);
-            await loadAuthors();
         } catch (error) {
             toast.error(getErrorMessage(error, '作者分段更新失败'));
         } finally {
@@ -441,7 +468,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
     };
 
     const handleSaveCodeIncentive = async () => {
-        if (!selectedAuthor || !isAuthorCodeIncentive(selectedAuthor)) {
+        if (!selectedAuthor || !isAuthorInviteIncentive(selectedAuthor)) {
             toast.error('请先选择一个邀请激励作者');
             return;
         }
@@ -610,6 +637,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                                 <option value="incentive">旧版激励</option>
                                 <option value="code_incentive">邀请激励</option>
                                 <option value="normal">普通用户</option>
+                                <option value="all_incentive">双激励</option>
                             </select>
                         </div>
 
@@ -693,165 +721,165 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                                             <option value="game_incentive">切换为游戏激励（1分/UV）</option>
                                             <option value="incentive">切换为旧版激励（5分/UV）</option>
                                             <option value="code_incentive">切换为邀请激励（5分/人）</option>
+                                            <option value="all_incentive">切换为双激励（作品+邀请）</option>
                                         </select>
                                         {isUpdatingAuthor && <span className={styles.loadingText}>提交中...</span>}
                                     </div>
                                 </div>
 
-                                {/* CODE_INCENTIVE 作者显示可编辑表单 */}
-                                        {selectedAuthor && isAuthorCodeIncentive(selectedAuthor) ? (
-                                            <div className={styles.summaryCard}>
-                                                <div className={styles.summaryTitle}>
-                                                    <MdTrendingUp />
-                                                    邀请激励配置
-                                                </div>
-                                                {isLoadingGames ? (
-                                                    <div className={styles.emptyState}>数据加载中...</div>
-                                                ) : incentiveSummary ? (
-                                                    <div className={styles.codeIncentiveForm}>
-                                                        <div className={styles.summaryGrid}>
-                                                            <div className={styles.summaryItem}>
-                                                                <span className={styles.summaryLabel}>邀请人数</span>
-                                                                <span className={styles.summaryValue}>{incentiveSummary.inviteCount}</span>
-                                                            </div>
-                                                            <div className={styles.summaryItem}>
-                                                                <span className={styles.summaryLabel}>待结算收入</span>
-                                                                <span className={styles.summaryValue}>{incentiveSummary.invitePendingIncome}</span>
-                                                            </div>
-                                                        </div>
 
-                                                        <div className={styles.formGrid}>
-                                                            <label className={styles.fieldLabel}>
-                                                                激励起始时间
-                                                                <input
-                                                                    className={styles.textInput}
-                                                                    type="date"
-                                                                    value={codeStartTime}
-                                                                    onChange={(e) => setCodeStartTime(e.target.value)}
-                                                                    disabled={isUpdatingGame}
-                                                                />
-                                                            </label>
-                                                            <label className={styles.fieldLabel}>
-                                                                激励结束时间
-                                                                <input
-                                                                    className={styles.textInput}
-                                                                    type="date"
-                                                                    value={codeEndTime}
-                                                                    onChange={(e) => setCodeEndTime(e.target.value)}
-                                                                    disabled={isUpdatingGame}
-                                                                />
-                                                            </label>
+                                <div className={styles.detailSectionStack}>
+                                    {showInviteIncentiveModule ? (
+                                        <div className={styles.summaryCard}>
+                                            <div className={styles.summaryTitle}>
+                                                <MdTrendingUp />
+                                                邀请激励配置
+                                            </div>
+                                            {isLoadingGames ? (
+                                                <div className={styles.emptyState}>数据加载中...</div>
+                                            ) : (
+                                                <div className={styles.codeIncentiveForm}>
+                                                    <div className={styles.summaryGrid}>
+                                                        <div className={styles.summaryItem}>
+                                                            <span className={styles.summaryLabel}>邀请人数</span>
+                                                            <span className={styles.summaryValue}>{inviteSummaryData.inviteCount}</span>
                                                         </div>
-
-                                                        <div className={styles.formField}>
-                                                            <label className={styles.fieldLabel}>
-                                                                已结算收入（整数）
-                                                                <input
-                                                                    className={styles.textInput}
-                                                                    type="number"
-                                                                    min={0}
-                                                                    step={1}
-                                                                    value={codeSettledAmount}
-                                                                    onChange={(e) => setCodeSettledAmount(e.target.value)}
-                                                                    placeholder="请输入已结算金额"
-                                                                    disabled={isUpdatingGame}
-                                                                />
-                                                            </label>
-                                                        </div>
-
-                                                        <div className={styles.actionRow}>
-                                                            <button
-                                                                type="button"
-                                                                className={styles.primaryButton}
-                                                                onClick={() => void handleSaveCodeIncentive()}
-                                                                disabled={isUpdatingGame}
-                                                            >
-                                                                {isUpdatingGame ? '保存中...' : '保存配置'}
-                                                            </button>
+                                                        <div className={styles.summaryItem}>
+                                                            <span className={styles.summaryLabel}>待结算收益</span>
+                                                            <span className={styles.summaryValue}>{inviteSummaryData.invitePendingIncome}</span>
                                                         </div>
                                                     </div>
-                                                ) : (
-                                                    <div className={styles.emptyState}>暂无数据</div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            /* GAME_INCENTIVE / INCENTIVE 作者显示游戏列表 */
-                                            <>
-                                                <div className={styles.filterBar}>
-                                                    <input
-                                                        className={styles.textInput}
-                                                        value={gameKeywordInput}
-                                                        onChange={(event) => setGameKeywordInput(event.target.value)}
-                                                        placeholder="按作品标题搜索"
-                                                    />
-                                                    <button type="button" className={styles.secondaryButton} onClick={handleSearchGames}>搜索作品</button>
-                                                </div>
-                                                <div className={styles.actionRow}>
-                                                    <button type="button" className={styles.secondaryButton} onClick={handleClearGameSearch} disabled={!gameKeywordInput && !gameKeyword}>
-                                                        清除作品搜索
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className={styles.secondaryButton}
-                                                        onClick={() => {
-                                                            if (selectedAuthor.userId) {
-                                                                void loadGames(selectedAuthor.userId, gamePage, gameKeyword);
-                                                            }
-                                                        }}
-                                                        disabled={isLoadingGames}
-                                                    >
-                                                        刷新作品
-                                                    </button>
-                                                </div>
 
-                                                <div className={styles.list}>
-                                                    {isLoadingGames ? <div className={styles.emptyState}>作品列表加载中...</div> : null}
-                                                    {!isLoadingGames && games.length === 0 ? <div className={styles.emptyState}>该作者暂无作品或无匹配结果。</div> : null}
-                                                    {!isLoadingGames && games.map((game) => (
-                                                        <article key={game.fileId} className={styles.itemCard}>
-                                                            <div className={styles.itemHeader}>
-                                                                <div className={styles.itemTitle}>{game.title}</div>
-                                                                <span
-                                                                    className={`${styles.statusTag} ${
-                                                                        game.incentiveStatus === 'finished'
-                                                                            ? styles.statusFinished
-                                                                            : isIncentiveActive(game.incentiveStatus)
-                                                                                ? styles.statusJoined
-                                                                                : styles.statusNone}`}
-                                                                >
-                                                                    {getGameStatusLabel(game.incentiveStatus)}
-                                                                </span>
-                                                            </div>
-                                                            <div className={styles.metaGrid}>
-                                                                <span className={styles.itemMeta}>激励开始：{formatDateOnly(game.incentiveStartTime)}</span>
-                                                                <span className={styles.itemMeta}>激励结束：{formatDateOnly(game.incentiveEndTime)}</span>
-                                                                <span className={styles.itemMeta}>已结算金额：{getSettledAmount(game, selectedAuthor?.userSegment ?? 'normal')}</span>
-                                                                <span className={styles.itemMeta}>
-                                                                    待结算金额：{getPendingIncome(game, selectedAuthor?.userSegment ?? 'normal')}
-                                                                </span>
-                                                                <span className={styles.itemMeta}>更新时间：{formatTime(game.updatedAt)}</span>
-                                                            </div>
-                                                            <div className={styles.actionRow}>
-                                                                <button type="button" className={styles.primaryButton} onClick={() => handleOpenGameModal(game)}>
-                                                                    {isIncentiveActive(game.incentiveStatus) || game.incentiveStatus === 'finished'
-                                                                        ? '编辑激励配置'
-                                                                        : `加入${getIncentiveOptionLabel(selectedAuthor?.userSegment ?? 'normal')}并配置`}
-                                                                </button>
-                                                            </div>
-                                                        </article>
-                                                    ))}
-                                                </div>
+                                                    <div className={styles.formGrid}>
+                                                        <label className={styles.fieldLabel}>
+                                                            开始日期
+                                                            <input
+                                                                className={styles.textInput}
+                                                                type="date"
+                                                                value={codeStartTime}
+                                                                onChange={(e) => setCodeStartTime(e.target.value)}
+                                                                disabled={isUpdatingGame}
+                                                            />
+                                                        </label>
+                                                        <label className={styles.fieldLabel}>
+                                                            结束日期
+                                                            <input
+                                                                className={styles.textInput}
+                                                                type="date"
+                                                                value={codeEndTime}
+                                                                onChange={(e) => setCodeEndTime(e.target.value)}
+                                                                disabled={isUpdatingGame}
+                                                            />
+                                                        </label>
+                                                    </div>
 
-                                                <Pagination
-                                                    className={styles.paginationBar}
-                                                    currentPage={gamePagination.page}
-                                                    totalPages={gamePagination.totalPages}
-                                                    onPageChange={setGamePage}
-                                                    disabled={isLoadingGames || isUpdatingGame}
-                                                    summary={`第${gamePagination.page}页，共${gamePagination.totalPages}页，共${gamePagination.total}条记录`}
+                                                    <div className={styles.formField}>
+                                                        <label className={styles.fieldLabel}>
+                                                            已结算收益
+                                                            <input
+                                                                className={styles.textInput}
+                                                                type="number"
+                                                                min={0}
+                                                                step={1}
+                                                                value={codeSettledAmount}
+                                                                onChange={(e) => setCodeSettledAmount(e.target.value)}
+                                                                placeholder="请输入已结算金额"
+                                                                disabled={isUpdatingGame}
+                                                            />
+                                                        </label>
+                                                    </div>
+
+                                                    <div className={styles.actionRow}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.primaryButton}
+                                                            onClick={() => void handleSaveCodeIncentive()}
+                                                            disabled={isUpdatingGame}
+                                                        >
+                                                            {isUpdatingGame ? '保存中...' : '保存配置'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
+
+                                    {showGameModule ? (
+                                        <>
+                                            <div className={styles.filterBar}>
+                                                <input
+                                                    className={styles.textInput}
+                                                    value={gameKeywordInput}
+                                                    onChange={(event) => setGameKeywordInput(event.target.value)}
+                                                    placeholder="按作品标题搜索"
                                                 />
-                                            </>
-                                        )}
+                                                <button type="button" className={styles.secondaryButton} onClick={handleSearchGames}>搜索作品</button>
+                                            </div>
+                                            <div className={styles.actionRow}>
+                                                <button type="button" className={styles.secondaryButton} onClick={handleClearGameSearch} disabled={!gameKeywordInput && !gameKeyword}>
+                                                    清除搜索
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.secondaryButton}
+                                                    onClick={() => {
+                                                        if (selectedAuthor.userId) {
+                                                            void loadGames(selectedAuthor.userId, gamePage, gameKeyword);
+                                                        }
+                                                    }}
+                                                    disabled={isLoadingGames}
+                                                >
+                                                    刷新作品
+                                                </button>
+                                            </div>
+
+                                            <div className={styles.list}>
+                                                {isLoadingGames ? <div className={styles.emptyState}>作品列表加载中...</div> : null}
+                                                {!isLoadingGames && games.length === 0 ? <div className={styles.emptyState}>该作者暂无作品或没有匹配结果。</div> : null}
+                                                {!isLoadingGames && games.map((game) => (
+                                                    <article key={game.fileId} className={styles.itemCard}>
+                                                        <div className={styles.itemHeader}>
+                                                            <div className={styles.itemTitle}>{game.title}</div>
+                                                            <span
+                                                                className={`${styles.statusTag} ${
+                                                                    game.incentiveStatus === 'finished'
+                                                                        ? styles.statusFinished
+                                                                        : isIncentiveActive(game.incentiveStatus)
+                                                                            ? styles.statusJoined
+                                                                            : styles.statusNone}`}
+                                                            >
+                                                                {getGameStatusLabel(game.incentiveStatus)}
+                                                            </span>
+                                                        </div>
+                                                        <div className={styles.metaGrid}>
+                                                            <span className={styles.itemMeta}>激励开始：{formatDateOnly(game.incentiveStartTime)}</span>
+                                                            <span className={styles.itemMeta}>激励结束：{formatDateOnly(game.incentiveEndTime)}</span>
+                                                            <span className={styles.itemMeta}>已结算金额：{getSettledAmount(game, selectedAuthor?.userSegment ?? 'normal')}</span>
+                                                            <span className={styles.itemMeta}>待结算金额：{getPendingIncome(game, selectedAuthor?.userSegment ?? 'normal')}</span>
+                                                            <span className={styles.itemMeta}>更新时间：{formatTime(game.updatedAt)}</span>
+                                                        </div>
+                                                        <div className={styles.actionRow}>
+                                                            <button type="button" className={styles.primaryButton} onClick={() => handleOpenGameModal(game)}>
+                                                                {isIncentiveActive(game.incentiveStatus) || game.incentiveStatus === 'finished'
+                                                                    ? '编辑激励配置'
+                                                                    : `加入${getIncentiveOptionLabel(selectedAuthor?.userSegment ?? 'normal')}并配置`}
+                                                            </button>
+                                                        </div>
+                                                    </article>
+                                                ))}
+                                            </div>
+
+                                            <Pagination
+                                                className={styles.paginationBar}
+                                                currentPage={gamePagination.page}
+                                                totalPages={gamePagination.totalPages}
+                                                onPageChange={setGamePage}
+                                                disabled={isLoadingGames || isUpdatingGame}
+                                                summary={`第${gamePagination.page}页，共${gamePagination.totalPages}页，共${gamePagination.total}条记录`}
+                                            />
+                                        </>
+                                    ) : null}
+                                </div>
                             </>
                         )}
                     </section>

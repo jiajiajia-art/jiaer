@@ -53,16 +53,27 @@
   object-fit: contain;
 }
 
+.disableMobileGuard::after {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .container::after {
-    height: var(--mobile-content-image-guard-height);
-    background: var(--mobile-content-image-guard-dark-gradient);
+    display: none;
+  }
+
+  .container {
+    overflow: visible;
   }
 
   .canvas,
   .fallbackImage {
-    transform: translateY(var(--mobile-content-image-guard-shift-y)) scale(var(--mobile-content-image-guard-scale));
-    transform-origin: center center;
+    transform: none;
+  }
+
+  .disableMobileGuard .canvas,
+  .disableMobileGuard .fallbackImage {
+    transform: none;
   }
 }
 

@@ -35,6 +35,8 @@ import {
     type CreatorGameType,
 } from '../utils/miniProgram';
 
+type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
+
 const Create: React.FC = () => {
     const { user, updateUser } = useAuthStore();
     const { clearState } = useEditorStore();
@@ -52,7 +54,7 @@ const Create: React.FC = () => {
         pendingIncome: 0,
         inviteTotalAmount: 0,
         invitePendingIncome: 0,
-        incentiveType: 'none' as 'none' | 'incentive' | 'game_incentive' | 'code_incentive',
+        incentiveType: 'none' as CreatorStatsIncentiveType,
     });
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
@@ -69,8 +71,8 @@ const Create: React.FC = () => {
     const userName = user?.user?.nickname || user?.user?.name || '未设置昵称';
     const userCode = user?.user?.userCode;
     const isMiniProgram = isMiniProgramEnv();
-    const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive';
-    const isCodeIncentive = stats.incentiveType === 'code_incentive';
+    const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
+    const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
     const { publishedGames, draftGames } = useMemo(() => {
         const published: UserGameData[] = [];

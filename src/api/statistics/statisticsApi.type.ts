@@ -32,5 +32,5 @@ export interface GameTotalStatsResponse {
     inviteCount?: number;
     inviteTotalAmount?: number;
     invitePendingIncome?: number;
-    incentiveType?: 'none' | 'incentive' | 'game_incentive' | 'code_incentive';
+    incentiveType?: 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 }

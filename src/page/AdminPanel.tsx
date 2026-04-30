@@ -1756,9 +1756,10 @@ const AdminPanel: React.FC = () => {
                                                     排序
                                                     <input
                                                         type="number"
+                                                        min="0"
                                                         className={styles.textInput}
                                                         value={documentForm.order}
-                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, order: Number(e.target.value) || 0 }))}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, order: Math.max(0, Number(e.target.value) || 0) }))}
                                                         placeholder="数字越小排序越靠前"
                                                     />
                                                 </label>
@@ -1858,9 +1859,10 @@ const AdminPanel: React.FC = () => {
                                                     排序
                                                     <input
                                                         type="number"
+                                                        min="0"
                                                         className={styles.textInput}
                                                         value={documentForm.order}
-                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, order: Number(e.target.value) || 0 }))}
+                                                        onChange={(e) => setDocumentForm((prev) => ({ ...prev, order: Math.max(0, Number(e.target.value) || 0) }))}
                                                         placeholder="数字越小排序越靠前"
                                                     />
                                                 </label>
