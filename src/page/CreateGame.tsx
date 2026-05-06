@@ -44,6 +44,7 @@ const CreateGame: React.FC = () => {
 
     const defaultHeroCover = `${import.meta.env.BASE_URL}data/events/welcome.png`;
     const heroBackground = gameDetail?.cover_url ? getImageUrl(gameDetail.cover_url) : defaultHeroCover;
+    const isPublished = Number(gameDetail?.is_public) === 1;
 
     const { setFileId, setIsPreset } = useGameStore();
     const { user } = useAuthStore();
@@ -117,10 +118,6 @@ const CreateGame: React.FC = () => {
         };
     }, [isStatsMode, gameId, user?.user?.id]);
 
-
-
-
-
     // 显示删除弹窗
     const handleDeleteGame = () => {
         if (!isStatsMode || !gameId || isDeleting) {
@@ -151,7 +148,6 @@ const CreateGame: React.FC = () => {
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
     const handlePublishGame = async (description?: string) => {
         if (!gameId) return;
-
         try {
             const response = await GameAction.publishGame({
                 fileId: gameId,
@@ -169,7 +165,7 @@ const CreateGame: React.FC = () => {
             }
         } catch (error: any) {
             console.error('发布游戏失败:', error);
-            const errorMessage = error.response.data.message || error.message || '发布游戏失败';
+            const errorMessage = error.response?.data?.message || error.message || '发布游戏失败';
             alert(errorMessage);
         }
     };
@@ -278,7 +274,11 @@ const CreateGame: React.FC = () => {
                                 onEdit={handleEditGame}
                                 onDelete={handleDeleteGame}
                                 isDeleting={isDeleting}
-                                onPublish={() => setShowPublishModal(true)}
+                                onPublish={() => {
+                                    if (!isPublished) {
+                                        setShowPublishModal(true);
+                                    }
+                                }}
                                 onUnpublish={handleUnpublishGame}
                             />
                         ) : (

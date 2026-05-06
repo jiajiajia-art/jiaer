@@ -80,17 +80,11 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                 console.error('发布游戏失败:', response.data);
                 const errorMessage = response.data.message || '发布游戏失败';
                 alert(errorMessage);
-                if (errorMessage === '游戏已发布') {
-                    navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
-                }
             }
         } catch (error: any) {
             console.error('发布游戏失败:', error);
             const errorMessage = error.response?.data?.message || error.message || '发布游戏失败';
             alert(errorMessage);
-            if (errorMessage === '游戏已发布') {
-                navigate(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
-            }
         }
     }, [fileId, navigate]);
 

@@ -695,10 +695,6 @@ const StGameCreate: React.FC = () => {
       if (!response.data.success) {
         const errorMessage = response.data.message || '发布游戏失败';
         toast.error(errorMessage);
-        if (errorMessage === '游戏已发布') {
-          setShowPublishModal(false);
-          nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
-        }
         return;
       }
 
@@ -707,10 +703,6 @@ const StGameCreate: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message || error?.message || '发布游戏失败';
       toast.error(errorMessage);
-      if (errorMessage === '游戏已发布') {
-        setShowPublishModal(false);
-        nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
-      }
     } finally {
       setPublishing(false);
     }
