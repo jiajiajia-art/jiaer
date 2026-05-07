@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './WorldPanel.module.css';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
+import InlineFieldSave from '../InlineFieldSave';
 
 interface WorldSettingFormProps {
     mode: 'visual' | 'worldInteraction';
@@ -24,6 +25,19 @@ interface WorldSettingFormProps {
     onTargetOutputLengthChange: (value: number | undefined) => void;
     onMinOutputLengthChange: (value: number | undefined) => void;
     onMaxOutputLengthChange: (value: number | undefined) => void;
+    titleDirty?: boolean;
+    taglineDirty?: boolean;
+    eraDirty?: boolean;
+    openingDirty?: boolean;
+    openingPlotDirty?: boolean;
+    outputLengthDirty?: boolean;
+    inlineSaveDisabled?: boolean;
+    onTitleSave?: () => void | Promise<void> | Promise<boolean>;
+    onTaglineSave?: () => void | Promise<void> | Promise<boolean>;
+    onEraSave?: () => void | Promise<void> | Promise<boolean>;
+    onOpeningSave?: () => void | Promise<void> | Promise<boolean>;
+    onOpeningPlotSave?: () => void | Promise<void> | Promise<boolean>;
+    onOutputLengthSave?: () => void | Promise<void> | Promise<boolean>;
     openingError?: string;
     openingPlotError?: string;
     themeTagError?: string;
@@ -59,6 +73,19 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
     onTargetOutputLengthChange,
     onMinOutputLengthChange,
     onMaxOutputLengthChange,
+    titleDirty = false,
+    taglineDirty = false,
+    eraDirty = false,
+    openingDirty = false,
+    openingPlotDirty = false,
+    outputLengthDirty = false,
+    inlineSaveDisabled = false,
+    onTitleSave,
+    onTaglineSave,
+    onEraSave,
+    onOpeningSave,
+    onOpeningPlotSave,
+    onOutputLengthSave,
     openingError,
     openingPlotError,
     themeTagError,
@@ -92,11 +119,17 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             <span className={styles.fieldLabel}>作品标题</span>
                             <span className={styles.wordCounter}>{titleWords}/{WORD_LIMITS.title}</span>
                         </div>
-                        <input
-                            type="text"
-                            value={title}
-                            {...titleLimit}
-                        />
+                        <InlineFieldSave
+                            showSave={titleDirty}
+                            onSave={() => onTitleSave?.()}
+                            disabled={inlineSaveDisabled}
+                        >
+                            <input
+                                type="text"
+                                value={title}
+                                {...titleLimit}
+                            />
+                        </InlineFieldSave>
                     </label>
 
                     <label>
@@ -104,11 +137,17 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             <span className={styles.fieldLabel}>一句话概述</span>
                             <span className={styles.wordCounter}>{taglineWords}/{WORD_LIMITS.tagline}</span>
                         </div>
-                        <input
-                            type="text"
-                            value={tagline}
-                            {...taglineLimit}
-                        />
+                        <InlineFieldSave
+                            showSave={taglineDirty}
+                            onSave={() => onTaglineSave?.()}
+                            disabled={inlineSaveDisabled}
+                        >
+                            <input
+                                type="text"
+                                value={tagline}
+                                {...taglineLimit}
+                            />
+                        </InlineFieldSave>
                     </label>
 
                     {/* 修复题材按钮误命中首个标签 */}
@@ -166,11 +205,18 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                         <span className={styles.fieldLabel}>时代背景 / 前情提要</span>
                         <span className={styles.wordCounter}>{eraWords}/{WORD_LIMITS.era}</span>
                     </div>
-                    <textarea
-                        rows={6}
-                        value={era}
-                        {...eraLimit}
-                    />
+                    <InlineFieldSave
+                        showSave={eraDirty}
+                        onSave={() => onEraSave?.()}
+                        disabled={inlineSaveDisabled}
+                        buttonPlacement="external"
+                    >
+                        <textarea
+                            rows={6}
+                            value={era}
+                            {...eraLimit}
+                        />
+                    </InlineFieldSave>
                 </label>
             </section>
 
@@ -191,12 +237,19 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             </div>
                             <span className={styles.wordCounter}>{openingWords}/{WORD_LIMITS.opening}</span>
                         </div>
-                        <textarea
-                            rows={5}
-                            value={opening}
-                            {...openingLimit}
-                            className={openingError ? styles.errorInput : ''}
-                        />
+                        <InlineFieldSave
+                            showSave={openingDirty}
+                            onSave={() => onOpeningSave?.()}
+                            disabled={inlineSaveDisabled}
+                            buttonPlacement="external"
+                        >
+                            <textarea
+                                rows={5}
+                                value={opening}
+                                {...openingLimit}
+                                className={openingError ? styles.errorInput : ''}
+                            />
+                        </InlineFieldSave>
                         {openingError && (
                             <div className={styles.errorMessage}>{openingError}</div>
                         )}
@@ -210,12 +263,19 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             </div>
                             <span className={styles.wordCounter}>{openingPlotWords}/{WORD_LIMITS.openingPlot}</span>
                         </div>
-                        <textarea
-                            rows={5}
-                            value={openingPlot}
-                            {...openingPlotLimit}
-                            className={openingPlotError ? styles.errorInput : ''}
-                        />
+                        <InlineFieldSave
+                            showSave={openingPlotDirty}
+                            onSave={() => onOpeningPlotSave?.()}
+                            disabled={inlineSaveDisabled}
+                            buttonPlacement="external"
+                        >
+                            <textarea
+                                rows={5}
+                                value={openingPlot}
+                                {...openingPlotLimit}
+                                className={openingPlotError ? styles.errorInput : ''}
+                            />
+                        </InlineFieldSave>
                         {openingPlotError && (
                             <div className={styles.errorMessage}>{openingPlotError}</div>
                         )}
@@ -232,6 +292,12 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                         </div>
                     </div>
 
+                    <InlineFieldSave
+                        variant="group"
+                        showSave={outputLengthDirty}
+                        onSave={() => onOutputLengthSave?.()}
+                        disabled={inlineSaveDisabled}
+                    >
                     <div className={styles.outputLengthGrid}>
                         <label>
                             <span className={styles.fieldLabel}>最短</span>
@@ -275,6 +341,7 @@ const WorldSettingForm: React.FC<WorldSettingFormProps> = ({
                             />
                         </label>
                     </div>
+                    </InlineFieldSave>
                 </section>
             )}
         </>

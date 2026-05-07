@@ -1,0 +1,107 @@
+.wrapper {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+.fieldWrapper {
+    display: block;
+}
+
+.externalWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.groupWrapper {
+    display: block;
+}
+
+.groupWrapperDirty {
+    padding-bottom: 44px;
+}
+
+.fieldControl {
+    padding-right: 44px !important;
+}
+
+textarea.fieldControl {
+    padding-bottom: 40px !important;
+}
+
+.saveButton {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(224, 61, 75, 0.24);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--primary);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    z-index: 1;
+}
+
+.saveButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: rgba(224, 61, 75, 0.44);
+    background: rgba(224, 61, 75, 0.06);
+    box-shadow: 0 6px 16px rgba(224, 61, 75, 0.18);
+}
+
+.saveButton:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.saveButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+}
+
+.externalSaveRow {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.externalSaveButton {
+    position: static;
+    flex: 0 0 auto;
+}
+
+.groupSaveButton {
+    right: 12px;
+    bottom: 12px;
+}
+
+@media (max-width: 720px) {
+    .groupWrapperDirty {
+        padding-bottom: 48px;
+    }
+
+    .fieldControl {
+        padding-right: 48px !important;
+    }
+
+    textarea.fieldControl {
+        padding-bottom: 44px !important;
+    }
+
+    .saveButton {
+        right: 12px;
+        bottom: 12px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .externalWrapper {
+        gap: 8px;
+    }
+}

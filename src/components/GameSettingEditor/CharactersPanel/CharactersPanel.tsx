@@ -26,6 +26,7 @@ import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { HOST_ADDRESS } from '../../../config';
 import { useGenerationEta } from '../../../hooks/editor/useGenerationEta';
 import GenerationActionBar from '../GenerationActionBar';
+import InlineFieldSave from '../InlineFieldSave';
 
 // 字数限制配置
 const CHARACTER_WORD_LIMITS = {
@@ -53,6 +54,28 @@ interface CharactersPanelProps {
 export interface CharactersPanelRef {
     checkBeforeLeave: (action?: () => void) => boolean;
 }
+
+interface CharacterFieldDirtyState {
+    name: boolean;
+    callName: boolean;
+    gender: boolean;
+    identity: boolean;
+    personality: boolean;
+    speech: boolean;
+    appearance: boolean;
+    background: boolean;
+}
+
+const EMPTY_CHARACTER_FIELD_DIRTY_STATE: CharacterFieldDirtyState = {
+    name: false,
+    callName: false,
+    gender: false,
+    identity: false,
+    personality: false,
+    speech: false,
+    appearance: false,
+    background: false,
+};
 
 const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProps>(({
     gameData,
@@ -624,6 +647,51 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         || isCurrentPortraitGenerating
         || isBatchNpcJobActive
         || isGeneratingVariation;
+
+    const currentCharacterBaseline = useMemo(() => {
+        if (!currentCharacter) {
+            return null;
+        }
+
+        if (isAddingNew) {
+            return {
+                ...currentCharacter,
+                name: '',
+                callName: '',
+                gender: '',
+                identity: '',
+                personality: [],
+                speech: '',
+                appearance: '',
+                background: '',
+            };
+        }
+
+        const savedCharacter = originalCharacterDataRef.current.find((character) => character.id === currentCharacter.id);
+        return savedCharacter || null;
+    }, [currentCharacter, isAddingNew]);
+
+    const characterFieldDirtyState = useMemo<CharacterFieldDirtyState>(() => {
+        if (!currentCharacter || !currentCharacterBaseline) {
+            return EMPTY_CHARACTER_FIELD_DIRTY_STATE;
+        }
+
+        const normalizedCurrentPersonality = normalizePersonalityTags(personalityInputValue);
+        const normalizedSavedPersonality = normalizePersonalityTags(
+            stringifyPersonalityTags(currentCharacterBaseline.personality)
+        );
+
+        return {
+            name: (currentCharacter.name || '') !== (currentCharacterBaseline.name || ''),
+            callName: (currentCharacter.callName || '') !== (currentCharacterBaseline.callName || ''),
+            gender: (currentCharacter.gender || '') !== (currentCharacterBaseline.gender || ''),
+            identity: (currentCharacter.identity || '') !== (currentCharacterBaseline.identity || ''),
+            personality: JSON.stringify(normalizedCurrentPersonality) !== JSON.stringify(normalizedSavedPersonality),
+            speech: (currentCharacter.speech || '') !== (currentCharacterBaseline.speech || ''),
+            appearance: (currentCharacter.appearance || '') !== (currentCharacterBaseline.appearance || ''),
+            background: (currentCharacter.background || '') !== (currentCharacterBaseline.background || ''),
+        };
+    }, [currentCharacter, currentCharacterBaseline, personalityInputValue]);
 
     // 更新角色字段（统一处理新增和编辑模式）
     const updateField = (field: keyof Character, value: string | string[]) => {
@@ -1472,23 +1540,35 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             {nameWords}/{CHARACTER_WORD_LIMITS.name}
                                         </span>
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={currentCharacter.name}
-                                        {...nameLimit}
-                                        className={fieldErrors.name ? styles.errorInput : ''}
-                                    />
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.name}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
+                                        <input
+                                            type="text"
+                                            value={currentCharacter.name}
+                                            {...nameLimit}
+                                            className={fieldErrors.name ? styles.errorInput : ''}
+                                        />
+                                    </InlineFieldSave>
                                     {fieldErrors.name && (
                                         <div className={styles.errorMessage}>{fieldErrors.name}</div>
                                     )}
                                 </label>
                                 <label>
                                     <span>称呼 / 昵称</span>
-                                    <input
-                                        type="text"
-                                        value={currentCharacter.callName}
-                                        onChange={(e) => handleFieldChange('callName', e.target.value)}
-                                    />
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.callName}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
+                                        <input
+                                            type="text"
+                                            value={currentCharacter.callName}
+                                            onChange={(e) => handleFieldChange('callName', e.target.value)}
+                                        />
+                                    </InlineFieldSave>
                                 </label>
                                 <label>
                                     <div className={styles.labelRowWithCounter}>
@@ -1497,12 +1577,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             {genderWords}/{CHARACTER_WORD_LIMITS.gender}
                                         </span>
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={currentCharacter.gender}
-                                        {...genderLimit}
-                                        className={fieldErrors.gender ? styles.errorInput : ''}
-                                    />
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.gender}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
+                                        <input
+                                            type="text"
+                                            value={currentCharacter.gender}
+                                            {...genderLimit}
+                                            className={fieldErrors.gender ? styles.errorInput : ''}
+                                        />
+                                    </InlineFieldSave>
                                     {fieldErrors.gender && (
                                         <div className={styles.errorMessage}>{fieldErrors.gender}</div>
                                     )}
@@ -1514,12 +1600,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             {identityWords}/{CHARACTER_WORD_LIMITS.identity}
                                         </span>
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={currentCharacter.identity}
-                                        {...identityLimit}
-                                        className={fieldErrors.identity ? styles.errorInput : ''}
-                                    />
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.identity}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
+                                        <input
+                                            type="text"
+                                            value={currentCharacter.identity}
+                                            {...identityLimit}
+                                            className={fieldErrors.identity ? styles.errorInput : ''}
+                                        />
+                                    </InlineFieldSave>
                                     {fieldErrors.identity && (
                                         <div className={styles.errorMessage}>{fieldErrors.identity}</div>
                                     )}
@@ -1531,6 +1623,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             {personalityWords}/{CHARACTER_WORD_LIMITS.personality}
                                         </span>
                                     </div>
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.personality}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
                                     <textarea
                                         rows={2}
                                         value={personalityInputValue}
@@ -1540,6 +1637,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         }}
                                         placeholder="输入性格标签，用 / 或 ，分隔"
                                     />
+                                    </InlineFieldSave>
                                 </label>
                                 <label className={styles.wide}>
                                     <div className={styles.labelRowWithCounter}>
@@ -1548,12 +1646,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             {speechWords}/{CHARACTER_WORD_LIMITS.speech}
                                         </span>
                                     </div>
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.speech}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
                                     <textarea
                                         rows={3}
                                         value={currentCharacter.speech}
                                         {...speechLimit}
                                         className={fieldErrors.speech ? styles.errorInput : ''}
                                     />
+                                    </InlineFieldSave>
                                     {fieldErrors.speech && (
                                         <div className={styles.errorMessage}>{fieldErrors.speech}</div>
                                     )}
@@ -1565,12 +1669,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             {appearanceWords}/{CHARACTER_WORD_LIMITS.appearance}
                                         </span>
                                     </div>
+                                    <InlineFieldSave
+                                        showSave={characterFieldDirtyState.appearance}
+                                        onSave={() => { void confirmEdit(); }}
+                                        disabled={isPortraitActionBusy}
+                                    >
                                     <textarea
                                         rows={3}
                                         value={currentCharacter.appearance}
                                         {...appearanceLimit}
                                         className={fieldErrors.appearance ? styles.errorInput : ''}
                                     />
+                                    </InlineFieldSave>
                                     {fieldErrors.appearance && (
                                         <div className={styles.errorMessage}>{fieldErrors.appearance}</div>
                                     )}
@@ -1725,12 +1835,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     {backgroundWords}/{CHARACTER_WORD_LIMITS.background}
                                                 </span>
                                             </div>
+                                            <InlineFieldSave
+                                                showSave={characterFieldDirtyState.background}
+                                                onSave={() => { void confirmEdit(); }}
+                                                disabled={isPortraitActionBusy}
+                                            >
                                             <textarea
                                                 rows={4}
                                                 value={currentCharacter.background}
                                                 placeholder="可填写：成长经历/目标/秘密/人物关系等，会统一作为背景在剧情中生效"
                                                 {...backgroundLimit}
                                             />
+                                            </InlineFieldSave>
                                         </label>
                                     </div>
                                 )}

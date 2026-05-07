@@ -18,7 +18,7 @@ interface UseEditorSubmitOptions {
 
 interface UseEditorSubmitReturn {
     isSubmitting: boolean;
-    handleSubmit: (options?: { onSuccess?: () => void }) => Promise<boolean>;
+    handleSubmit: (options?: { onSuccess?: () => void; silentSuccess?: boolean }) => Promise<boolean>;
     worldPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
     charactersPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
     scenesPanelGetDataRef: RefObject<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>;
@@ -50,7 +50,7 @@ export const useEditorSubmit = ({
     const charactersPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
     const scenesPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
 
-    const handleSubmit = useCallback(async (options?: { onSuccess?: () => void }) => {
+    const handleSubmit = useCallback(async (options?: { onSuccess?: () => void; silentSuccess?: boolean }) => {
         if (!fileId || !gameData) {
             toast.error('缺少必要数据，无法提交');
             return false;

@@ -70,6 +70,16 @@ export interface ScenesPanelRef {
     checkBeforeLeave: (action?: () => void) => boolean;
 }
 
+interface SceneFieldDirtyState {
+    name: boolean;
+    desc: boolean;
+}
+
+const EMPTY_SCENE_FIELD_DIRTY_STATE: SceneFieldDirtyState = {
+    name: false,
+    desc: false,
+};
+
 const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({ 
     gameData, 
     fileId, 
@@ -93,6 +103,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const [sceneCostModalOpen, setSceneCostModalOpen] = useState<boolean>(false);
     const [singleSceneCostModalOpen, setSingleSceneCostModalOpen] = useState<boolean>(false);
     const [worldMapCostModalOpen, setWorldMapCostModalOpen] = useState<boolean>(false);
+    const [clearSceneImageModalOpen, setClearSceneImageModalOpen] = useState<boolean>(false);
     // 一键生成结果弹窗
     const [sceneResultModalOpen, setSceneResultModalOpen] = useState<boolean>(false);
     const [sceneGenerationResult, setSceneGenerationResult] = useState<{
@@ -108,6 +119,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const [isGeneratingSingleSceneImage, setIsGeneratingSingleSceneImage] = useState<boolean>(false);
     const [generatingSceneId, setGeneratingSceneId] = useState<string | null>(null);
     const [isGeneratingWorldMap, setIsGeneratingWorldMap] = useState<boolean>(false);
+    const [isClearingSceneImage, setIsClearingSceneImage] = useState<boolean>(false);
     const [isLoadingSceneCost, setIsLoadingSceneCost] = useState<boolean>(false);
 
     const [worldMapImageOverride, setWorldMapImageOverride] = useState<string | null>(null);
@@ -428,12 +440,24 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         return sceneData.find(s => s.id === sceneId)?.image;
     };
 
+    const currentSceneForDetail = activeSceneDraft || activeScene;
+    const canClearActiveSceneImage = Boolean(
+        mode === 'visual'
+        && !isAddingNew
+        && !activeSubsceneId
+        && currentSceneForDetail
+        && getEffectiveImage(currentSceneForDetail.id)
+    );
+
     useEffect(() => {
         if (isAddingNew) return;
         if (activeSubsceneId) return;
         setActiveSceneDraft((prev) => {
             if (!activeScene) {
                 return prev === null ? prev : null;
+            }
+            if (prev && prev.id === activeScene.id && hasUnsavedChangesRef.current) {
+                return prev;
             }
             if (
                 prev &&
@@ -472,6 +496,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 api: sceneApi,
                 updateUser,
                 activeSceneId,
+                activeSceneDraft,
                 activeSubsceneId,
                 activeSubsceneDraft,
                 sceneData,
@@ -549,6 +574,23 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     useEffect(() => {
         handlersRef.current = handlers;
     }, [handlers]);
+
+    const hasSceneDraftChanges = useCallback((
+        draft: LocalScene | null | undefined,
+        persisted: LocalScene | null | undefined,
+    ) => {
+        if (!draft || !persisted) {
+            return false;
+        }
+
+        return (
+            draft.name !== persisted.name
+            || draft.type !== persisted.type
+            || draft.desc !== persisted.desc
+            || draft.image !== persisted.image
+            || draft.bgmId !== persisted.bgmId
+        );
+    }, []);
 
     const onListDeleteClick = useCallback((sceneId: string, e: React.MouseEvent) => {
         handlersRef.current.handleDeleteClick(sceneId, e);
@@ -649,6 +691,82 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     const handleManualSave = useCallback(async () => {
         await saveCurrentChanges();
     }, [saveCurrentChanges]);
+
+    const currentSceneFieldDirtyState = useMemo<SceneFieldDirtyState>(() => {
+        if (isAddingNew && newSceneData) {
+            return {
+                name: Boolean(newSceneData.name),
+                desc: Boolean(newSceneData.desc),
+            };
+        }
+
+        if (activeSubsceneId && activeSubsceneDraft) {
+            const originalSubscene = originalSubsceneDataBySceneIdRef.current[activeSceneId || '']?.find(
+                (subscene) => String(subscene.id || subscene.name || '') === activeSubsceneId,
+            );
+
+            return {
+                name: (activeSubsceneDraft.name || '') !== (originalSubscene?.name || ''),
+                desc: (activeSubsceneDraft.desc || '') !== ((originalSubscene as { description?: string } | undefined)?.description || ''),
+            };
+        }
+
+        const currentDraft = activeSceneDraft || activeScene;
+        if (!currentDraft) {
+            return EMPTY_SCENE_FIELD_DIRTY_STATE;
+        }
+
+        const originalScene = originalSceneDataRef.current.find((scene) => scene.id === currentDraft.id);
+        if (!originalScene) {
+            return EMPTY_SCENE_FIELD_DIRTY_STATE;
+        }
+
+        return {
+            name: (currentDraft.name || '') !== (originalScene.name || ''),
+            desc: (currentDraft.desc || '') !== (originalScene.desc || ''),
+        };
+    }, [activeScene, activeSceneDraft, activeSceneId, activeSubsceneDraft, activeSubsceneId, isAddingNew, newSceneData]);
+
+    const handleRequestClearSceneImage = useCallback(() => {
+        if (mode !== 'visual' || !activeSceneId) {
+            return;
+        }
+        setClearSceneImageModalOpen(true);
+    }, [activeSceneId, mode]);
+
+    const handleCancelClearSceneImage = useCallback(() => {
+        if (isClearingSceneImage) {
+            return;
+        }
+        setClearSceneImageModalOpen(false);
+    }, [isClearingSceneImage]);
+
+    const handleConfirmClearSceneImage = useCallback(async () => {
+        if (!activeSceneId) {
+            setClearSceneImageModalOpen(false);
+            return;
+        }
+
+        setIsClearingSceneImage(true);
+        const clearedScene = await handlersRef.current.clearSceneImageImmediately(activeSceneId);
+
+        if (clearedScene) {
+            originalSceneDataRef.current = originalSceneDataRef.current.map((scene) => (
+                scene.id === clearedScene.id ? clearedScene : scene
+            ));
+
+            const nextDraft = activeSceneDraft && activeSceneDraft.id === activeSceneId
+                ? { ...activeSceneDraft, image: '' }
+                : clearedScene;
+            const nextHasUnsavedChanges = hasSceneDraftChanges(nextDraft, clearedScene);
+
+            hasUnsavedChangesRef.current = nextHasUnsavedChanges;
+            setHasUnsavedChanges(nextHasUnsavedChanges);
+        }
+
+        setIsClearingSceneImage(false);
+        setClearSceneImageModalOpen(false);
+    }, [activeSceneDraft, activeSceneId, hasSceneDraftChanges]);
 
     const closePendingSaveModal = useCallback(() => {
         setSaveConfirmModalOpen(false);
@@ -1048,8 +1166,13 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
     const handleConfirmSingleSceneGenerate = useCallback(async () => {
         setSingleSceneCostModalOpen(false);
-        await handlers.confirmSingleSceneGenerate();
-    }, [handlers]);
+        const result = await handlers.confirmSingleSceneGenerate();
+        if (result?.success && result.kind === 'sceneEdit') {
+            applySuccessfulSaveResult(result);
+            hasUnsavedChangesRef.current = false;
+            setHasUnsavedChanges(false);
+        }
+    }, [applySuccessfulSaveResult, handlers]);
 
     const handleCancelSingleSceneGenerate = useCallback(() => {
         setSingleSceneCostModalOpen(false);
@@ -1290,6 +1413,11 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             onImageClick={() => toast.error('请先确认新增场景，然后再上传图片')}
                             onUploadChange={handlers.handleUploadSceneImage}
                             onRequestRegenerate={() => toast.error('请先确认新增场景，然后再生成图片')}
+                            nameDirty={currentSceneFieldDirtyState.name}
+                            descDirty={currentSceneFieldDirtyState.desc}
+                            inlineSaveDisabled={isGeneratingSingleSceneImage || isClearingSceneImage}
+                            onNameSave={handleManualSave}
+                            onDescSave={handleManualSave}
                             sceneType="scenes"
                         />
                     ) : (
@@ -1311,6 +1439,11 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                         setHasUnsavedChanges(true);
                                     }}
                                     onDownloadImage={handleDownloadImage}
+                                    nameDirty={currentSceneFieldDirtyState.name}
+                                    descDirty={currentSceneFieldDirtyState.desc}
+                                    inlineSaveDisabled={isGeneratingSingleSceneImage || isClearingSceneImage}
+                                    onNameSave={handleManualSave}
+                                    onDescSave={handleManualSave}
                                     sceneType="subscenes"
                                 />
                             ) : (activeSceneDraft || activeScene) ? (
@@ -1319,16 +1452,24 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                     bgmLibrary={bgmLibrary}
                                     fileInputRef={sceneFileInputRef}
                                     isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === (activeSceneDraft || activeScene)!.id}
+                                    isClearingImage={isClearingSceneImage}
                                     generationEtaText={singleSceneEtaText}
                                     getEffectiveImage={getEffectiveImage}
                                     onImageClick={handlers.handleSceneImageClick}
                                     onUploadChange={handlers.handleUploadSceneImage}
                                     onRequestRegenerate={handlers.handleRequestRegenerateSceneImage}
+                                    onRequestClearImage={handleRequestClearSceneImage}
+                                    canClearImage={canClearActiveSceneImage}
                                     onFieldChange={(field, value) => {
                                         setActiveSceneDraft(prev => (prev ? { ...prev, [field]: value } : prev));
                                         setHasUnsavedChanges(true);
                                     }}
                                     onDownloadImage={handleDownloadImage}
+                                    nameDirty={currentSceneFieldDirtyState.name}
+                                    descDirty={currentSceneFieldDirtyState.desc}
+                                    inlineSaveDisabled={isGeneratingSingleSceneImage || isClearingSceneImage}
+                                    onNameSave={handleManualSave}
+                                    onDescSave={handleManualSave}
                                     sceneType="scenes"
                                 />
                             ) : (
@@ -1417,6 +1558,15 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             />
 
             {/* 一键生成场景立绘结果弹窗 */}
+            <ConfirmModal
+                isOpen={clearSceneImageModalOpen}
+                onConfirm={handleConfirmClearSceneImage}
+                onCancel={handleCancelClearSceneImage}
+                title="清空当前场景图"
+                message="确认是否清空当前场景图并恢复默认无图？"
+                confirmButtonText="确认清空"
+                cancelButtonText="取消"
+            />
             <GenerateResultModal
                 isOpen={sceneResultModalOpen}
                 onClose={() => setSceneResultModalOpen(false)}

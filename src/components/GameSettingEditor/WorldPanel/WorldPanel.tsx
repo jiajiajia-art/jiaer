@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback, useRef, useImperativeHandle } from 'react';
+import { useLayoutEffect } from 'react';
 import styles from './WorldPanel.module.css';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -77,6 +78,24 @@ const resolveInitialThemeTagIds = (
         .map((tag) => tag.id);
 };
 
+interface WorldFieldDirtyState {
+    title: boolean;
+    tagline: boolean;
+    era: boolean;
+    opening: boolean;
+    openingPlot: boolean;
+    outputLength: boolean;
+}
+
+const EMPTY_WORLD_FIELD_DIRTY_STATE: WorldFieldDirtyState = {
+    title: false,
+    tagline: false,
+    era: false,
+    opening: false,
+    openingPlot: false,
+    outputLength: false,
+};
+
 const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     gameData,
     onGetData,
@@ -113,6 +132,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const lastFileIdRef = useRef<string | null>(null);
     const originalDataRef = useRef<VisualWorldSetting | WorldWorldSetting | null>(null);
     const lastWorldSettingSnapshotRef = useRef<string | null>(null);
+    const lastAppliedGameDataSnapshotRef = useRef<string | null>(null);
     const originalThemeTagIdsRef = useRef<number[]>([]);
     const hasTouchedThemeTagsRef = useRef(false);
     const saveWorldSettingChangesRef = useRef<(() => Promise<boolean>) | null>(null);
@@ -228,10 +248,11 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         if (isFileIdChanged) {
             lastFileIdRef.current = nextFileId;
             lastWorldSettingSnapshotRef.current = currentWorldSettingSnapshot;
+            lastAppliedGameDataSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
             hasTouchedThemeTagsRef.current = false;
-        } else if (lastWorldSettingSnapshotRef.current !== currentWorldSettingSnapshot) {
-            lastWorldSettingSnapshotRef.current = currentWorldSettingSnapshot;
+        } else if (lastAppliedGameDataSnapshotRef.current !== currentWorldSettingSnapshot) {
+            lastAppliedGameDataSnapshotRef.current = currentWorldSettingSnapshot;
             originalDataRef.current = JSON.parse(JSON.stringify(ws));
             return;
         } else {
@@ -567,6 +588,38 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         return Object.keys(diff).length > 0 ? diff : null;
     }, [gameData, getFullWorldSettingData, mode]);
 
+    const getWorldFieldDirtyState = useCallback((): WorldFieldDirtyState => {
+        if (!originalDataRef.current) {
+            return EMPTY_WORLD_FIELD_DIRTY_STATE;
+        }
+
+        const original = originalDataRef.current as VisualWorldSetting & WorldWorldSetting;
+        const originalLlmConfig = (original as { llmConfig?: VisualWorldSetting['llmConfig'] }).llmConfig;
+
+        return {
+            title: title !== (original.title || ''),
+            tagline: tagline !== (original.summary || ''),
+            era: era !== (original.background || ''),
+            opening: opening !== (original.preamble || ''),
+            openingPlot: openingPlot !== (original.initialPlot || ''),
+            outputLength:
+                (targetOutputLength ?? undefined) !== (originalLlmConfig?.targetOutputLength ?? undefined)
+                || (minOutputLength ?? undefined) !== (originalLlmConfig?.minOutputLength ?? undefined)
+                || (maxOutputLength ?? undefined) !== (originalLlmConfig?.maxOutputLength ?? undefined),
+        };
+    }, [
+        era,
+        maxOutputLength,
+        minOutputLength,
+        opening,
+        openingPlot,
+        tagline,
+        targetOutputLength,
+        title,
+    ]);
+
+    const worldFieldDirtyState = getWorldFieldDirtyState();
+
     const syncSavedBaseline = useCallback((
         savedWorldSetting: VisualWorldSetting | WorldWorldSetting,
         savedThemeTagIds: number[],
@@ -574,6 +627,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         // 实现世界观保存后同步基线
         originalDataRef.current = JSON.parse(JSON.stringify(savedWorldSetting));
         lastWorldSettingSnapshotRef.current = JSON.stringify(savedWorldSetting);
+        lastAppliedGameDataSnapshotRef.current = lastAppliedGameDataSnapshotRef.current;
         originalThemeTagIdsRef.current = [...savedThemeTagIds];
         hasTouchedThemeTagsRef.current = false;
         hasUnsavedChangesRef.current = false;
@@ -696,7 +750,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setHasUnsavedChanges(getWorldSettingData() !== null || hasThemeTagChanges);
     }, [getWorldSettingData, selectedThemeTagIds, setHasUnsavedChanges]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (!onGetData) {
             return;
         }
@@ -785,6 +839,19 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                         onTargetOutputLengthChange={setTargetOutputLength}
                         onMinOutputLengthChange={setMinOutputLength}
                         onMaxOutputLengthChange={setMaxOutputLength}
+                        titleDirty={worldFieldDirtyState.title}
+                        taglineDirty={worldFieldDirtyState.tagline}
+                        eraDirty={worldFieldDirtyState.era}
+                        openingDirty={worldFieldDirtyState.opening}
+                        openingPlotDirty={worldFieldDirtyState.openingPlot}
+                        outputLengthDirty={worldFieldDirtyState.outputLength}
+                        inlineSaveDisabled={!gameData || isSubmitting}
+                        onTitleSave={saveWorldSettingChanges}
+                        onTaglineSave={saveWorldSettingChanges}
+                        onEraSave={saveWorldSettingChanges}
+                        onOpeningSave={saveWorldSettingChanges}
+                        onOpeningPlotSave={saveWorldSettingChanges}
+                        onOutputLengthSave={saveWorldSettingChanges}
                         openingError={openingError}
                         openingPlotError={openingPlotError}
                         themeTagError={themeTagError}

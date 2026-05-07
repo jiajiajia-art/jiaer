@@ -32,6 +32,7 @@ export interface HandlersContext {
 
     // 必要的 state getters
     activeSceneId: string;
+    activeSceneDraft: LocalScene | null;
     activeSubsceneId: string | null;
     activeSubsceneDraft: LocalScene | null;
     sceneData: LocalScene[];
@@ -130,6 +131,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         updateUser,
         // state getters
         activeSceneId,
+        activeSceneDraft,
         activeSubsceneId,
         activeSubsceneDraft,
         sceneData,
@@ -265,16 +267,17 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     const uploadImage = async (
         sceneId: string,
         subsceneId?: string,
-        variant: string = 'base'
+        variant: string = 'base',
+        overrideFile?: File
     ): Promise<string | undefined> => {
         const targetId = subsceneId || sceneId;
         const pendingImage = pendingImages[targetId]?.[variant];
-        if (!pendingImage?.file) {
+        const file = overrideFile || pendingImage?.file;
+        if (!file) {
             console.warn(`未找到 ${targetId}-${variant} 的暂存图片文件`);
             return undefined;
         }
 
-        const file = pendingImage.file;
         toast.loading('正在存储图片...', { id: 'uploading-image' });
 
         try {
@@ -304,6 +307,58 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 更新场景字段（本地）
+    const persistSceneEdit = async (
+        sceneToSave: LocalScene,
+        imagePath: string | undefined,
+        options: SaveOptions = {},
+    ): Promise<SceneSaveResult> => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法保存修改');
+            return { success: false };
+        }
+
+        const shouldShowSuccessToast = !options.suppressSuccessToast;
+        const sceneDataForApi: ApiScene = {
+            id: sceneToSave.id,
+            name: sceneToSave.name || '未命名场景',
+            type: sceneToSave.type || '',
+            description: sceneToSave.desc || '暂无描述',
+            image: imagePath || undefined,
+            soundtrack: sceneToSave.bgmId || undefined,
+            npcs: [],
+            events: [],
+        };
+
+        try {
+            const response = await api.updateScene(fileId, sceneDataForApi);
+            if (!response.data?.success) {
+                toast.error('更新场景失败');
+                return { success: false };
+            }
+
+            const updatedScene = { ...sceneToSave, image: imagePath || sceneToSave.image };
+            if (shouldShowSuccessToast) {
+                toast.success('场景更新成功');
+            }
+            setSceneData(prev =>
+                prev.map(s => (s.id === sceneToSave.id ? { ...s, ...updatedScene } : s))
+            );
+            setActiveSceneDraft(updatedScene);
+            updateSceneFromResponse(response.data, sceneToSave.id, imagePath || sceneToSave.image);
+            onDataChange?.();
+
+            return {
+                success: true,
+                kind: 'sceneEdit',
+                savedScene: updatedScene,
+            };
+        } catch (error) {
+            console.error('更新场景时出错:', error);
+            toast.error('更新场景失败，请重试');
+            return { success: false };
+        }
+    };
+
     const updateSceneField = (field: keyof LocalScene, value: string) => {
         setSceneData(prev =>
             prev.map(scene =>
@@ -615,7 +670,6 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         }
 
         const sceneToSave = activeScene;
-        const shouldShowSuccessToast = !options.suppressSuccessToast;
 
         let imagePath = sceneToSave.image;
         const pendingImage = pendingImages[sceneToSave.id]?.['base'];
@@ -640,13 +694,63 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             });
         }
 
+        return persistSceneEdit(sceneToSave, imagePath, options);
+    };
+
+    const clearPendingSceneImageState = (sceneId: string) => {
+        const pendingKey = `${sceneId}-base`;
+        const pendingUrl = pendingImageUrlsRef.current[pendingKey];
+        if (pendingUrl?.startsWith('blob:')) {
+            URL.revokeObjectURL(pendingUrl);
+        }
+        delete pendingImageUrlsRef.current[pendingKey];
+
+        setPendingImages((prev) => {
+            if (!prev[sceneId]) {
+                return prev;
+            }
+            const next = { ...prev };
+            delete next[sceneId];
+            return next;
+        });
+    };
+
+    const clearSceneImageImmediately = async (sceneId: string): Promise<LocalScene | null> => {
+        if (!fileId) {
+            toast.error('缺少必要数据，无法清空场景图');
+            return null;
+        }
+        if (mode !== 'visual') {
+            toast.error('当前模式不支持清空场景图');
+            return null;
+        }
+
+        const persistedScene = sceneData.find((scene) => scene.id === sceneId);
+        if (!persistedScene) {
+            toast.error('未找到当前场景');
+            return null;
+        }
+
+        if (!persistedScene.image) {
+            clearPendingSceneImageState(sceneId);
+            const clearedScene = { ...persistedScene, image: '' };
+            setSceneData((prev) => prev.map((scene) => (
+                scene.id === sceneId ? clearedScene : scene
+            )));
+            setActiveSceneDraft((prev) => (
+                prev && prev.id === sceneId ? { ...prev, image: '' } : prev
+            ));
+            toast.success('场景图已清空');
+            return clearedScene;
+        }
+
         const sceneDataForApi: ApiScene = {
-            id: sceneToSave.id,
-            name: sceneToSave.name || '未命名场景',
-            type: sceneToSave.type || '',
-            description: sceneToSave.desc || '暂无描述',
-            image: imagePath || undefined,
-            soundtrack: sceneToSave.bgmId || undefined,
+            id: persistedScene.id,
+            name: persistedScene.name || '未命名场景',
+            type: persistedScene.type || '',
+            description: persistedScene.desc || '暂无描述',
+            image: '',
+            soundtrack: persistedScene.bgmId || undefined,
             npcs: [],
             events: [],
         };
@@ -654,30 +758,26 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         try {
             const response = await api.updateScene(fileId, sceneDataForApi);
             if (!response.data?.success) {
-                toast.error('更新场景失败');
-                return { success: false };
+                toast.error('清空场景图失败');
+                return null;
             }
 
-            const updatedScene = { ...sceneToSave, image: imagePath || sceneToSave.image };
-            if (shouldShowSuccessToast) {
-                toast.success('场景更新成功');
-            }
-            setSceneData(prev =>
-                prev.map(s => (s.id === sceneToSave.id ? { ...s, ...updatedScene } : s))
-            );
-            setActiveSceneDraft(updatedScene);
-            updateSceneFromResponse(response.data, sceneToSave.id, imagePath || sceneToSave.image);
+            clearPendingSceneImageState(sceneId);
+
+            const clearedScene = { ...persistedScene, image: '' };
+            setSceneData((prev) => prev.map((scene) => (
+                scene.id === sceneId ? clearedScene : scene
+            )));
+            setActiveSceneDraft((prev) => (
+                prev && prev.id === sceneId ? { ...prev, image: '' } : prev
+            ));
             onDataChange?.();
-
-            return {
-                success: true,
-                kind: 'sceneEdit',
-                savedScene: updatedScene,
-            };
+            toast.success('场景图已清空');
+            return clearedScene;
         } catch (error) {
-            console.error('更新场景时出错:', error);
-            toast.error('更新场景失败，请重试');
-            return { success: false };
+            console.error('清空场景图时出错:', error);
+            toast.error('清空场景图失败，请稍后重试');
+            return null;
         }
     };
 
@@ -1009,18 +1109,19 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
     };
 
     // 重新生成单个场景/子场景图片（暂存模式）
-    const doRegenerateSceneImage = async (scene: LocalScene) => {
-        if (!fileId || !scene) return;
+    const doRegenerateSceneImage = async (scene: LocalScene): Promise<SceneSaveResult | null> => {
+        if (!fileId || !scene) return null;
 
         const isSubscene = !!(activeSubsceneId && activeSubsceneDraft && scene.id === activeSubsceneDraft.id);
+        const shouldAutoSaveVisualScene = mode === 'visual' && !isSubscene;
 
         if (isAddingNew && newSceneData && scene.id === newSceneData.id) {
             toast.error('请先确认新增场景，然后再生成图片');
-            return;
+            return null;
         }
         if (isAddingNewSubscene && scene.id.startsWith('temp-')) {
             toast.error('请先确认新增子场景，然后再生成图片');
-            return;
+            return null;
         }
 
         try {
@@ -1046,10 +1147,58 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             if (response.data?.success) {
                 // 优先尝试获取 blob 数据（AI 生成）
                 if (response.data.blob) {
+                    if (shouldAutoSaveVisualScene) {
+                        const generatedBlob = response.data.blob as Blob;
+                        const generatedFile = new File([generatedBlob], `generated_${targetId}.webp`, {
+                            type: generatedBlob.type || 'image/webp',
+                        });
+                        const sceneDraftToSave = activeSceneDraft && activeSceneDraft.id === scene.id
+                            ? activeSceneDraft
+                            : scene;
+
+                        await setPendingImage(targetId, generatedBlob);
+                        const serverPath = await uploadImage(scene.id, undefined, 'base', generatedFile);
+                        if (!serverPath) {
+                            await refreshUserPoints();
+                            return { success: false };
+                        }
+
+                        bumpCacheBust(serverPath);
+                        await setPendingImage(targetId, serverPath);
+
+                        const saveResult = await persistSceneEdit(sceneDraftToSave, serverPath);
+                        await refreshUserPoints();
+
+                        if (saveResult.success) {
+                            clearPendingSceneImageState(targetId);
+                            return saveResult;
+                        }
+
+                        return { success: false };
+                    }
                     toast.success('场景图片生成成功，请在确认修改后保存');
                     await setPendingImage(targetId, response.data.blob);
                     await refreshUserPoints();
                 } else if (response.data.imagePath) {
+                    if (shouldAutoSaveVisualScene) {
+                        const imagePath = response.data.imagePath as string;
+                        const sceneDraftToSave = activeSceneDraft && activeSceneDraft.id === scene.id
+                            ? activeSceneDraft
+                            : scene;
+
+                        bumpCacheBust(imagePath);
+                        await setPendingImage(targetId, imagePath);
+
+                        const saveResult = await persistSceneEdit(sceneDraftToSave, imagePath);
+                        await refreshUserPoints();
+
+                        if (saveResult.success) {
+                            clearPendingSceneImageState(targetId);
+                            return saveResult;
+                        }
+
+                        return { success: false };
+                    }
                     // 兼容：直接返回路径的情况
                     toast.success('场景图片生成成功，请在确认修改后保存');
                     await setPendingImage(targetId, response.data.imagePath);
@@ -1058,9 +1207,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
             } else {
                 toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
             }
+            return null;
         } catch (error) {
             console.error('重新生成场景图片时出错:', error);
             toast.error('重新生成场景图片失败，请重试');
+            return { success: false };
         } finally {
             setIsGeneratingSingleSceneImage(false);
             setGeneratingSceneId(null);
@@ -1076,12 +1227,11 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         onSingleSceneCostModalOpen();
     };
 
-    const confirmSingleSceneGenerate = async () => {
-        if (!pendingSceneForGenerate) return;
+    const confirmSingleSceneGenerate = async (): Promise<SceneSaveResult | null> => {
+        if (!pendingSceneForGenerate) return null;
         const target = pendingSceneForGenerate;
         pendingSceneForGenerate = null;
-        await doRegenerateSceneImage(target);
-        await refreshUserPoints();
+        return doRegenerateSceneImage(target);
     };
 
     const cancelSingleSceneGenerate = () => {
@@ -1479,6 +1629,7 @@ export const createSceneHandlers = (ctx: HandlersContext) => {
         handleSceneImageClick,
         handleUploadSceneImage,
         handleRequestRegenerateSceneImage,
+        clearSceneImageImmediately,
         confirmSingleSceneGenerate,
         cancelSingleSceneGenerate,
 

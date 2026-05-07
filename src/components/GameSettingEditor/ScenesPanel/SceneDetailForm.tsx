@@ -6,6 +6,7 @@ import { SCENE_GENERATION_COST, getImageUrl, DEFAULT_SCENE_IMAGE, DEFAULT_WORLD_
 import { withCacheBust } from '../../../utils/imageCache';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 import { isMiniProgramEnv } from '../../../utils/miniProgram';
+import InlineFieldSave from '../InlineFieldSave';
 
 // 字数限制配置
 const SCENE_WORD_LIMITS = {
@@ -24,15 +25,23 @@ interface SceneDetailFormProps {
     bgmLibrary: BgmItem[];
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     isGeneratingForThisScene: boolean;
+    isClearingImage?: boolean;
     generationEtaText?: string;
     isAddingNewSubscene?: boolean;
     getEffectiveImage?: (sceneId: string, subsceneId?: string) => string | undefined;
     onImageClick: () => void;
     onUploadChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onRequestRegenerate: (scene: LocalScene) => void;
+    onRequestClearImage?: () => void;
+    canClearImage?: boolean;
     onFieldChange: (field: keyof LocalScene, value: string) => void;
     onDownloadImage?: (type: 'scenes' | 'subscenes', id: string, imagePath?: string) => void;
     sceneType?: 'scenes' | 'subscenes';
+    nameDirty?: boolean;
+    descDirty?: boolean;
+    inlineSaveDisabled?: boolean;
+    onNameSave?: () => void | Promise<void> | Promise<boolean>;
+    onDescSave?: () => void | Promise<void> | Promise<boolean>;
 }
 
 const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
@@ -40,15 +49,23 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     bgmLibrary,
     fileInputRef,
     isGeneratingForThisScene,
+    isClearingImage = false,
     generationEtaText = '',
     isAddingNewSubscene = false,
     getEffectiveImage,
     onImageClick,
     onUploadChange,
     onRequestRegenerate,
+    onRequestClearImage,
+    canClearImage = false,
     onFieldChange,
     onDownloadImage,
     sceneType = 'scenes',
+    nameDirty = false,
+    descDirty = false,
+    inlineSaveDisabled = false,
+    onNameSave,
+    onDescSave,
 }) => {
     const [isMobilePicker, setIsMobilePicker] = useState(false);
     const [isBgmPickerOpen, setIsBgmPickerOpen] = useState(false);
@@ -95,6 +112,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
 
     const showDisabledMessage = disabled && disabledMessage;
     const isDisabled = disabled || isGeneratingForThisScene;
+    const isImageActionDisabled = isDisabled || isClearingImage;
 
     // 字数统计
     const nameWords = useWordCount(scene.name ?? '');
@@ -165,17 +183,27 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 <button
                     className={styles.ghostSmall}
                     onClick={onImageClick}
-                    disabled={isDisabled}
-                    style={{ opacity: isDisabled ? 0.5 : 1 }}
+                    disabled={isImageActionDisabled}
+                    style={{ opacity: isImageActionDisabled ? 0.5 : 1 }}
                 >
                     {uploadButtonText}
                 </button>
+                {onRequestClearImage && (
+                    <button
+                        className={`${styles.ghostSmall} ${styles.dangerButton}`}
+                        onClick={onRequestClearImage}
+                        disabled={!canClearImage || isImageActionDisabled}
+                        style={{ opacity: !canClearImage || isImageActionDisabled ? 0.5 : 1 }}
+                    >
+                        清空当前图片
+                    </button>
+                )}
                 {scene && (
                     <button
                         className={`${styles.ghostSmall} ${styles.generateButton}`}
                         onClick={() => onRequestRegenerate(scene)}
-                        disabled={isDisabled}
-                        style={{ opacity: isDisabled ? 0.5 : 1 }}
+                        disabled={isImageActionDisabled}
+                        style={{ opacity: isImageActionDisabled ? 0.5 : 1 }}
                     >
                         <img
                             src={`${import.meta.env.BASE_URL}data/assets/金币1.png`}
@@ -204,11 +232,17 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             {nameWords}/{SCENE_WORD_LIMITS.name}
                         </span>
                     </div>
-                    <input
-                        type="text"
-                        value={scene.name}
-                        {...nameLimit}
-                    />
+                    <InlineFieldSave
+                        showSave={nameDirty}
+                        onSave={() => onNameSave?.()}
+                        disabled={inlineSaveDisabled}
+                    >
+                        <input
+                            type="text"
+                            value={scene.name}
+                            {...nameLimit}
+                        />
+                    </InlineFieldSave>
                 </label>
                 <label className={styles.wide}>
                     <div className={styles.labelRowWithCounter}>
@@ -217,11 +251,17 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             {descWords}/{SCENE_WORD_LIMITS.desc}
                         </span>
                     </div>
-                    <textarea
-                        rows={3}
-                        value={scene.desc}
-                        {...descLimit}
-                    />
+                    <InlineFieldSave
+                        showSave={descDirty}
+                        onSave={() => onDescSave?.()}
+                        disabled={inlineSaveDisabled}
+                    >
+                        <textarea
+                            rows={3}
+                            value={scene.desc}
+                            {...descLimit}
+                        />
+                    </InlineFieldSave>
                 </label>
                 <label>
                     <span>特殊 BGM</span>

@@ -103,6 +103,21 @@
 }
 
 /* AI生成按钮样式优化 */
+.dangerButton {
+    border-color: rgba(204, 60, 60, 0.22);
+    color: #c43c3c;
+}
+
+.dangerButton:hover {
+    border-color: rgba(204, 60, 60, 0.42);
+    color: #b23131;
+}
+
+.dangerButton:disabled:hover {
+    border-color: rgba(204, 60, 60, 0.22);
+    color: #c43c3c;
+}
+
 .generateButton {
     display: flex;
     align-items: center;
