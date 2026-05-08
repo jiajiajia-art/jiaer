@@ -34,6 +34,7 @@ export interface User {
   id: number;
   userId: string;
   userCode: string;
+  debugToken?: string;
   phoneNumber: string;
   role: string;
   userSegment?: 'normal' | 'incentive' | 'all_incentive' | string;

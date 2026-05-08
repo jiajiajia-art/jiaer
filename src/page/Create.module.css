@@ -114,6 +114,26 @@
     white-space: nowrap;
 }
 
+.debugToken {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4b5563;
+    padding: 10px 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    max-width: min(560px, 72vw);
+}
+
+.debugTokenText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .userCodeCopyButton {
     background: transparent;
     border-radius: 4px;
@@ -349,6 +369,13 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 14px 18px;
+}
+
+.creatorIdentityStack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
 }
 
 .creatorHeroActions {
@@ -873,6 +900,12 @@
         gap: 10px;
     }
 
+    .creatorIdentityStack {
+        min-width: 0;
+        gap: 6px;
+        flex-shrink: 1;
+    }
+
     .createGameButtonRow {
         width: 100%;
         justify-content: flex-start;
@@ -908,6 +941,20 @@
         font-size: 14px;
         padding: 8px 12px;
         flex-shrink: 0;
+    }
+
+    .debugToken {
+        width: min(100%, 320px);
+        box-sizing: border-box;
+        justify-content: flex-start;
+        gap: 6px;
+        font-size: 13px;
+        padding: 8px 12px;
+        flex-shrink: 1;
+    }
+
+    .debugTokenText {
+        max-width: 240px;
     }
 
     .userPoints {
@@ -1081,4 +1128,3 @@
         border-radius: 12px;
     }
 }
-

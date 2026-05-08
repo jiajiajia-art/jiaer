@@ -70,6 +70,7 @@ const Create: React.FC = () => {
 
     const userName = user?.user?.nickname || user?.user?.name || '未设置昵称';
     const userCode = user?.user?.userCode;
+    const debugToken = user?.user?.debugToken;
     const isMiniProgram = isMiniProgramEnv();
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
@@ -182,6 +183,18 @@ const Create: React.FC = () => {
             toast.success('Kuran号已复制');
         } catch (error) {
             console.error('复制 Kuran 号失败:', error);
+            toast.error('复制失败，请稍后重试');
+        }
+    };
+
+    const handleCopyDebugToken = async () => {
+        if (!debugToken) return;
+
+        try {
+            await navigator.clipboard.writeText(debugToken);
+            toast.success('Token 已复制');
+        } catch (error) {
+            console.error('复制 Token 失败:', error);
             toast.error('复制失败，请稍后重试');
         }
     };
@@ -373,18 +386,33 @@ const Create: React.FC = () => {
                                     <div className={styles.creatorHeroEyebrow}>Creator Studio</div>
                                     <div className={styles.creatorHeroName}>{userName}</div>
                                     <div className={styles.creatorHeroInfoRow}>
-                                        <div className={styles.userCode}>
-                                            <span className={styles.userCodeText}>Kuran号：{userCode || '--'}</span>
-                                            {userCode && (
-                                                <button
-                                                    type="button"
-                                                    className={styles.userCodeCopyButton}
-                                                    onClick={handleCopyUserCode}
-                                                    title="复制 Kuran 号"
-                                                >
-                                                    <MdContentCopy />
-                                                </button>
-                                            )}
+                                        <div className={styles.creatorIdentityStack}>
+                                            <div className={styles.userCode}>
+                                                <span className={styles.userCodeText}>Kuran号：{userCode || '--'}</span>
+                                                {userCode && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.userCodeCopyButton}
+                                                        onClick={handleCopyUserCode}
+                                                        title="复制 Kuran 号"
+                                                    >
+                                                        <MdContentCopy />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className={styles.debugToken}>
+                                                <span className={styles.debugTokenText}>Token：{debugToken || '--'}</span>
+                                                {debugToken && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.userCodeCopyButton}
+                                                        onClick={handleCopyDebugToken}
+                                                        title="复制 Token"
+                                                    >
+                                                        <MdContentCopy />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className={styles.userCredit}>
                                             <button
