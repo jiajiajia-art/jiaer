@@ -26,6 +26,9 @@ export interface Character {
     speech: string;
     appearance: string;
     portrait: string;
+    portraitScale?: number;  // 立绘缩放比例（默认 1，可设为 0.5 表示缩小到 50%）
+    portraitOffsetX?: number;  // 立绘水平偏移（像素）
+    portraitOffsetY?: number;  // 立绘垂直偏移（像素）
     background: string;
     growth: string;
     goalShort: string;
@@ -43,6 +46,7 @@ export interface PendingImage {
     previewUrl: string;            // 本地预览 URL（生成时为服务器返回的URL，上传时为本地Object URL）
     sourceType: 'upload' | 'generate' | 'url'; // 来源类型：上传、AI生成、或已有URL
     variant: string;                // 图片类型：'base' 或差分label
+    scale?: number;                // 立绘缩放比例（1 = 原尺寸）
 }
 
 export const VARIATION_TYPES = [

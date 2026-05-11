@@ -23,6 +23,9 @@ export interface Player {
   images?: {
     [variant: string]: string;
   };
+  portraitScale?: number;
+  portraitOffsetX?: number;
+  portraitOffsetY?: number;
 }
 
 // NPC 类型（visual 模式）
@@ -43,6 +46,9 @@ export interface NPC {
   };
   abilities?: string[];
   dialogue?: string[];
+  portraitScale?: number;
+  portraitOffsetX?: number;
+  portraitOffsetY?: number;
 }
 
 // 子场景类型（visual 模式）

@@ -15,6 +15,9 @@ interface Message {
     characterName?: string;
     characterImage?: string;
     characterPosition?: 'left' | 'right';
+    portraitScale?: number;
+    portraitOffsetX?: number;
+    portraitOffsetY?: number;
     options?: Array<{ id: number; text: string; isMain?: boolean }>;
 }
 

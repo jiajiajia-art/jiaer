@@ -14,6 +14,7 @@ import statisticsApi from "../../api/statistics/statisticsApi";
 import toast from "react-hot-toast";
 import replayApi from "../../api/galgame/replay";
 import { withCacheBust } from "../../utils/imageCache";
+import { gameResourceManager } from "../../utils/gameResourceManager";
 
 export type { Message } from "./useGalgameMessage";
 
@@ -483,6 +484,65 @@ export const useGalgameController = () => {
         stepHandlers.isWaitingForData,
         stepHandlers.currentStep
     );
+
+    // 提取步骤中的角色图片 URL（用于预加载）
+    const extractCharacterImageUrl = useCallback((step: any): string | null => {
+        if (!step) return null;
+
+        if (step.type === 'dialogue') {
+            if (step.isPlayer) {
+                const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+                if (playerImagePath) {
+                    const imageUrl = getImageUrl(playerImagePath);
+                    return imageUrl ? withCacheBust(imageUrl) : null;
+                }
+            } else {
+                // NPC 图片逻辑（与 useGalgameMessage 中的逻辑一致）
+                const npcId = step.speakerId || step.npcId;
+                if (npcId && presetData?.npcs?.npcs) {
+                    const npc = presetData.npcs.npcs.find((n: any) => String(n.id) === String(npcId));
+                    if (npc?.images && typeof npc.images === 'object') {
+                        if (step.activeImage && npc.images[step.activeImage]) {
+                            const imageUrl = getImageUrl(npc.images[step.activeImage]);
+                            return imageUrl ? withCacheBust(imageUrl) : null;
+                        }
+                        const baseImage = npc.images.base || Object.values(npc.images).find((v: any) => typeof v === 'string');
+                        if (baseImage) {
+                            const imageUrl = getImageUrl(baseImage as string);
+                            return imageUrl ? withCacheBust(imageUrl) : null;
+                        }
+                    }
+                }
+                if (step.activeImage) {
+                    const imageUrl = getImageUrl(step.activeImage);
+                    return imageUrl ? withCacheBust(imageUrl) : null;
+                }
+            }
+        } else if (step.type === 'choice') {
+            const playerImagePath = getPlayerImageUrl(worldSetting?.player);
+            if (playerImagePath) {
+                const imageUrl = getImageUrl(playerImagePath);
+                return imageUrl ? withCacheBust(imageUrl) : null;
+            }
+        }
+        return null;
+    }, [worldSetting, presetData]);
+
+    // 预加载下一个步骤的角色图片
+    useEffect(() => {
+        const queue = stepHandlers.stepQueue;
+        if (!queue || queue.length === 0 || !gameStarted) return;
+
+        const nextStep = queue[0];
+        const imageUrl = extractCharacterImageUrl(nextStep);
+
+        if (imageUrl && !gameResourceManager.isLoaded(imageUrl)) {
+            console.debug('[GalgameController] Prefetching character image:', imageUrl);
+            gameResourceManager.loadImage(imageUrl).catch((err) => {
+                console.warn('[GalgameController] Prefetch failed:', err);
+            });
+        }
+    }, [stepHandlers.stepQueue, gameStarted, extractCharacterImageUrl]);
 
     // 回放模式：拉取回放 steps 并注入到队列
     useEffect(() => {

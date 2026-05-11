@@ -225,6 +225,204 @@
     opacity: 1;
 }
 
+/* 立绘大小预览模式 - 左大右小布局 */
+.portraitPreviewMode {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+/* 预览区域 - 占主导地位 */
+.portraitPreviewArea {
+    flex: 0 0 58%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.portraitPreviewCanvas {
+    /* 与游戏 mainContent 完全一致的约束条件 */
+    /* 游戏 mainContent: width: 25.875rem (414px), height: 56rem (896px), max-height: 100vh */
+    width: 414px;
+    height: 896px;
+    max-height: 100vh;
+    flex-shrink: 0;
+    margin: 0 auto; /* PC端居中 */
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f0f0f0 0%, #e0e0e0 100%);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+    position: relative; /* 与游戏 mainContent 保持一致 */
+}
+
+.portraitPreviewImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: bottom center;
+}
+
+/* 预览模式下 CharacterLayer 的容器样式 - 与游戏保持一致 */
+/* 注意：不能强制 position，否则会覆盖 CharacterLayer 内部的 absolute 定位 */
+.portraitPreviewCharacterContainer {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+}
+
+.portraitPreviewHint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    backdrop-filter: blur(4px);
+}
+
+/* 控制区域 - 右侧简洁面板 */
+.portraitPreviewControls {
+    flex: 0 0 38%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.portraitPreviewSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.portraitPreviewSectionTitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.portraitPreviewSlider {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.portraitPreviewSliderRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.portraitPreviewLabel {
+    font-size: 13px;
+    color: #666;
+    width: 30px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.portraitPreviewRange {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.portraitPreviewRange::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
+.portraitPreviewRange::-moz-range-track {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
+.portraitPreviewRange::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
+    will-change: transform;
+    margin-top: -7px;
+}
+
+.portraitPreviewRange::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(224, 61, 75, 0.4);
+}
+
+.portraitPreviewRange::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary);
+    cursor: pointer;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(224, 61, 75, 0.3);
+}
+
+.portraitPreviewValue {
+    min-width: 52px;
+    padding: 6px 10px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #111827;
+}
+
+.portraitPreviewActions {
+    display: flex;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* 激活状态的按钮样式 */
+.ghostSmallActive {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(224, 61, 75, 0.08);
+}
+
 /* 下载按钮 */
 .downloadButton {
     position: absolute;
@@ -962,7 +1160,33 @@
 }
 
 /* 响应式布局 */
-@media (max-width: 1080px) {
+/* PC 端（>1080px）预览区域样式 */
+@media (min-width: 1081px) {
+    .portraitPreviewMode {
+        flex-direction: column;
+    }
+
+    .portraitPreviewArea {
+        flex: none;
+        width: 100%;
+    }
+
+    .portraitPreviewCanvas {
+        width: 414px;
+        height: 896px;
+        max-height: 100vh;
+        flex-shrink: 0;
+        margin: 0 auto;
+    }
+
+    .portraitPreviewControls {
+        flex: none;
+        width: 100%;
+    }
+}
+
+/* 769px - 1080px 中等屏幕：保持固定 9:16 比例，与游戏一致 */
+@media (min-width: 769px) and (max-width: 1080px) {
     .characterLayout {
         grid-template-columns: 1fr;
         height: auto;
@@ -986,6 +1210,129 @@
     .portraitLarge {
         height: clamp(220px, 42vh, 320px);
         min-height: 220px;
+    }
+
+    .portraitPreviewMode {
+        flex-direction: column;
+    }
+
+    .portraitPreviewArea {
+        flex: none;
+        width: 100%;
+    }
+
+    .portraitPreviewCanvas {
+        width: 414px;
+        height: 896px;
+        max-height: 100vh;
+        flex-shrink: 0;
+        margin: 0 auto;
+    }
+
+    .portraitPreviewControls {
+        flex: none;
+        width: 100%;
+    }
+}
+
+/* 768px 及以下：全屏布局 */
+@media (max-width: 768px) {
+    .characterLayout {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: 0;
+    }
+
+    .card {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .detailCard {
+        overflow: visible;
+    }
+
+    .detailCard > * {
+        flex-shrink: initial;
+    }
+
+    .portraitLarge {
+        height: clamp(220px, 42vh, 320px);
+        min-height: 220px;
+    }
+
+    .portraitPreviewMode {
+        flex-direction: column;
+    }
+
+    .portraitPreviewArea {
+        flex: 0 0 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        touch-action: none;
+        overflow: hidden;
+    }
+
+    .portraitPreviewCanvas {
+        width: 100%;
+        aspect-ratio: 414 / 880;
+        max-width: 280px;
+        height: auto;
+        flex-shrink: 0;
+        margin: 0 auto;
+        touch-action: none;
+        overflow: hidden;
+    }
+
+    .portraitPreviewControls {
+        flex: none;
+        width: 100%;
+        margin-top: -12px;
+    }
+
+    .portraitPreviewSection {
+        gap: 8px;
+    }
+
+    .portraitPreviewSection:last-of-type {
+        gap: 0;
+    }
+
+    .portraitPreviewSliderRow {
+        gap: 10px;
+        align-items: center;
+    }
+
+    .portraitPreviewRange {
+        touch-action: none;
+        height: 4px;
+    }
+
+    .portraitPreviewRange::-webkit-slider-runnable-track,
+    .portraitPreviewRange::-moz-range-track {
+        height: 4px;
+    }
+
+    .portraitPreviewRange::-webkit-slider-thumb,
+    .portraitPreviewRange::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        margin-top: -6px;
+    }
+
+    .portraitPreviewValue {
+        min-width: 44px;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    .portraitPreviewActions {
+        gap: 8px;
+        padding-top: 12px;
+        margin-top: 8px;
     }
 }
 

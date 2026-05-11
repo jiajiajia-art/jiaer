@@ -115,12 +115,12 @@ const hasAnyAcceptedSubmissionContent = (activity: PromotionActivity, payload: S
 
 const getSubmissionLimitSummary = (activity: PromotionActivity) => {
     if (activity.submissionLimitType === 'once_per_activity') {
-        return '\u6d3b\u52a8\u671f\u5185\u9650\u5236\u4e00\u6b21';
+        return '活动期内限制一次';
     }
     if (activity.submissionLimitType === 'rolling_window') {
-        return `\u6bcf ${activity.submissionLimitDays} \u5929\u9650 ${activity.submissionLimitCount} \u6b21`;
+        return `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次`;
     }
-    return '\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21';
+    return '活动期内无限次';
 };
 void buildLimitSummary;
 
@@ -133,7 +133,7 @@ const getActivitySubmissionAvailability = (
     if (activity.canSubmit === false) {
         return {
             canSubmit: false,
-            availabilityText: activity.availabilityText || '\u5f53\u524d\u6d3b\u52a8\u6682\u4e0d\u53ef\u6295\u7a3f',
+            availabilityText: activity.availabilityText || '当前活动暂不可投稿',
         };
     }
 
@@ -142,7 +142,7 @@ const getActivitySubmissionAvailability = (
     if (activity.submissionLimitType === 'once_per_activity' && activitySubmissions.length > 0) {
         return {
             canSubmit: false,
-            availabilityText: '\u5f53\u524d\u6d3b\u52a8\u6bcf\u4e2a\u8d26\u53f7\u4ec5\u53ef\u6295\u7a3f\u4e00\u6b21',
+            availabilityText: '当前活动每个账号仅可投稿一次',
         };
     }
 
@@ -164,7 +164,7 @@ const getActivitySubmissionAvailability = (
             if (submissionCountInWindow >= limitCount) {
                 return {
                     canSubmit: false,
-                    availabilityText: `\u5f53\u524d\u6d3b\u52a8\u6bcf ${activity.submissionLimitDays} \u5929\u4ec5\u53ef\u6295\u7a3f ${activity.submissionLimitCount} \u6b21`,
+                    availabilityText: `当前活动每 ${activity.submissionLimitDays} 天仅可投稿 ${activity.submissionLimitCount} 次`,
                 };
             }
         }
@@ -337,7 +337,7 @@ const PromotionCenter: React.FC = () => {
     const handleStartSubmission = useCallback((activity: PromotionActivity) => {
         const nextActivity = resolveActivitySubmissionState(activity);
         if (nextActivity.canSubmit === false) {
-            toast.error(nextActivity.availabilityText || '\u5f53\u524d\u6d3b\u52a8\u6682\u4e0d\u53ef\u6295\u7a3f');
+            toast.error(nextActivity.availabilityText || '当前活动暂不可投稿');
             return;
         }
 
@@ -435,7 +435,7 @@ const PromotionCenter: React.FC = () => {
 
         if (currentActivity.canSubmit === false) {
             setSelectedActivity(currentActivity);
-            toast.error(currentActivity.availabilityText || '\u5f53\u524d\u6d3b\u52a8\u6682\u4e0d\u53ef\u6295\u7a3f');
+            toast.error(currentActivity.availabilityText || '当前活动暂不可投稿');
             return;
         }
 

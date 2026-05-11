@@ -3,7 +3,7 @@
  * 使用 Canvas 渲染已解码的 ImageBitmap，实现零延迟切换
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameResourceManager } from '../../utils/gameResourceManager';
 import styles from './GameImageRenderer.module.css';
 
@@ -33,8 +33,115 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
   const imgRef = useRef<HTMLImageElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [useFallback, setUseFallback] = useState(false); // 标记是否使用 <img> 标签兜底
+  const [useFallback, setUseFallback] = useState(false);
   const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+
+  // 根据屏幕宽度决定是否使用 Canvas 渲染
+  // 在中等尺寸屏幕上（768px - 1080px），禁用 Canvas 改用 img fallback
+  const isMediumScreen = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth <= 1080;
+
+  const renderBitmap = useCallback((bitmap: ImageBitmap, targetSrc?: string): boolean => {
+    // 中等屏幕上使用 img fallback
+    if (!useCanvas || isMediumScreen) {
+      if (imgRef.current) {
+        imgRef.current.src = targetSrc || src || '';
+        return true;
+      }
+      return false;
+    }
+
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d', {
+        alpha: true,
+        desynchronized: true,
+      });
+
+      if (ctx) {
+        try {
+          const imgWidth = bitmap.width;
+          const imgHeight = bitmap.height;
+          if (imgWidth === 0 || imgHeight === 0) {
+            return false;
+          }
+
+          // 获取容器尺寸，如果为 0 则使用图片原始尺寸
+          const container = canvas.parentElement;
+          const rawContainerWidth = container?.clientWidth || canvas.clientWidth;
+          const rawContainerHeight = container?.clientHeight || canvas.clientHeight;
+
+          // 最小尺寸保护，防止 Canvas 变成 0x0 的黑色元素
+          const MIN_SIZE = 100;
+          const containerWidth = Math.max(rawContainerWidth || imgWidth, MIN_SIZE);
+          const containerHeight = Math.max(rawContainerHeight || imgHeight, MIN_SIZE);
+
+          // 设置 Canvas 分辨率为容器尺寸（与 CSS display 尺寸一致）
+          canvas.width = containerWidth;
+          canvas.height = containerHeight;
+
+          // 实现 object-fit: contain + object-position: bottom 逻辑
+          // 图片底部对齐，同时保持比例
+          const imgAspect = imgWidth / imgHeight;
+          const containerAspect = containerWidth / containerHeight;
+
+          let drawWidth: number;
+          let drawHeight: number;
+
+          if (imgAspect > containerAspect) {
+            // 图片更宽，以宽度为准
+            drawWidth = containerWidth;
+            drawHeight = containerWidth / imgAspect;
+          } else {
+            // 图片更高，以高度为准
+            drawHeight = containerHeight;
+            drawWidth = containerHeight * imgAspect;
+          }
+
+          // 底部对齐：dy 为容器高度减去图片高度
+          const dx = (containerWidth - drawWidth) / 2;
+          const dy = containerHeight - drawHeight;
+
+          // 填充透明背景（防止 Canvas 默认黑色背景）
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          // 绘制缩放后的图片
+          ctx.drawImage(bitmap, dx, dy, drawWidth, drawHeight);
+
+          return true;
+        } catch (error) {
+          console.error('[GameImageRenderer] Failed to render bitmap:', error);
+          return false;
+        }
+      }
+      return false;
+    }
+    return false;
+  }, [useCanvas, src, isMediumScreen]);
+
+  useEffect(() => {
+    const container = canvasRef.current?.parentElement;
+    if (!container || !currentSrc) return;
+
+    const bitmap = gameResourceManager.getBitmap(currentSrc);
+    if (bitmap) {
+      renderBitmap(bitmap, currentSrc);
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      const currentBitmap = gameResourceManager.getBitmap(currentSrc);
+      if (currentBitmap) {
+        renderBitmap(currentBitmap, currentSrc);
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [currentSrc, renderBitmap]);
 
   useEffect(() => {
     if (!src || src === 'null' || src === 'undefined' || src.trim() === '') {
@@ -45,141 +152,81 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
       return;
     }
 
-    let cancelled = false;
+        let cancelled = false;
+
+    const loadAndRenderImage = async () => {
+      let bitmap: ImageBitmap | null = null;
+      try {
+        bitmap = await gameResourceManager.loadImage(src, { decode: true });
+      } catch {
+        bitmap = await gameResourceManager.loadImage(src, { decode: true });
+      }
+
+      if (cancelled || !bitmap) return;
+
+      const isValid = bitmap.width > 0 && bitmap.height > 0;
+      if (!isValid) {
+        setHasError(true);
+        setIsLoading(false);
+        onError?.(new Error('Invalid bitmap dimensions'));
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        if (cancelled || !canvasRef.current) return;
+        const renderSuccess = renderBitmap(bitmap!);
+        if (renderSuccess) {
+          setIsLoading(false);
+          setHasError(false);
+          onLoad?.();
+        } else {
+          setHasError(true);
+          setIsLoading(false);
+          if (imgRef.current && src) {
+            imgRef.current.src = src;
+          }
+        }
+      });
+    };
 
     const loadImage = async () => {
+      // 先检查缓存，如果命中则不需要显示加载状态
+      const cachedBitmap = gameResourceManager.getBitmap(src);
+      if (cachedBitmap) {
+        setCurrentSrc(src);
+
+        if (cancelled) return;
+
+        requestAnimationFrame(() => {
+          if (!cancelled && canvasRef.current) {
+            const renderSuccess = renderBitmap(cachedBitmap);
+            if (renderSuccess) {
+              setIsLoading(false);
+              setHasError(false);
+              onLoad?.();
+            }
+          }
+        });
+        return;
+      }
+
+      // 缓存未命中，需要加载
       setIsLoading(true);
       setHasError(false);
-      setUseFallback(false); // 重置兜底标记
+      setUseFallback(false);
       setCurrentSrc(src);
 
       try {
-        let bitmap: ImageBitmap | null = null;
-        
-        const cachedBitmap = gameResourceManager.getBitmap(src);
-        if (cachedBitmap) {
-          bitmap = gameResourceManager.useBitmap(src);
-        } else {
-          bitmap = await gameResourceManager.loadImage(src, { decode: true });
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        if (bitmap) {
-          try {
-            const testWidth = bitmap.width;
-            const testHeight = bitmap.height;
-            if (testWidth > 0 && testHeight > 0) {
-              requestAnimationFrame(() => {
-                if (!cancelled && canvasRef.current) {
-                  const renderSuccess = renderBitmap(bitmap);
-                  if (renderSuccess) {
-                    setIsLoading(false);
-                    setHasError(false);
-                    onLoad?.();
-                  } else {
-                    setHasError(true);
-                    setIsLoading(false);
-                    if (imgRef.current && src) {
-                      imgRef.current.src = src;
-                    }
-                  }
-                } else if (!cancelled) {
-                  setHasError(true);
-                  setIsLoading(false);
-                  if (imgRef.current && src) {
-                    imgRef.current.src = src;
-                  }
-                }
-              });
-            } else {
-              setHasError(true);
-              setIsLoading(false);
-              onError?.(new Error('Invalid bitmap dimensions'));
-            }
-          } catch (error) {
-            const newBitmap = await gameResourceManager.loadImage(src, { decode: true });
-            if (newBitmap && !cancelled) {
-              requestAnimationFrame(() => {
-                if (!cancelled && canvasRef.current) {
-                  const renderSuccess = renderBitmap(newBitmap);
-                  if (renderSuccess) {
-                    setIsLoading(false);
-                    setHasError(false);
-                    onLoad?.();
-                  } else {
-                    setHasError(true);
-                    setIsLoading(false);
-                  }
-                }
-              });
-            } else {
-              setHasError(true);
-              setIsLoading(false);
-              onError?.(new Error('Failed to reload image'));
-            }
-          }
-        } else {
-          // bitmap 为 null，说明图片加载失败或 CORS 不允许 Canvas 渲染
-          // 回退到 <img> 标签显示（至少能显示图片，虽然不能用于 Canvas）
-          // 注意：currentSrc 在开始时就已经设置了，这里只需要设置错误状态和兜底标记
-          setUseFallback(true); // 标记使用 <img> 标签兜底
-          setHasError(true);
-          setIsLoading(false);
-          // 不调用 onError，因为图片实际上可能已经加载成功了（只是不能用于 Canvas）
-          // onError?.(new Error('Failed to load image'));
-        }
+        await loadAndRenderImage();
       } catch (error) {
         if (!cancelled) {
-          // 出错时设置错误状态，让 <img> 标签能显示
-          // 注意：currentSrc 在开始时就已经设置了
-          setUseFallback(true); // 标记使用 <img> 标签兜底
+          setUseFallback(true);
           setHasError(true);
           setIsLoading(false);
           const err = error instanceof Error ? error : new Error('Unknown error');
           onError?.(err);
         }
       }
-    };
-
-    const renderBitmap = (bitmap: ImageBitmap): boolean => {
-      if (useCanvas && canvasRef.current) {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d', {
-          alpha: true,
-          desynchronized: true,
-        });
-
-        if (ctx) {
-          try {
-            const width = bitmap.width;
-            const height = bitmap.height;
-            if (width === 0 || height === 0) {
-              return false;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(bitmap, 0, 0);
-            canvas.style.display = 'block';
-            canvas.style.visibility = 'visible';
-            
-            return true;
-          } catch (error) {
-            console.error('[GameImageRenderer] Failed to render bitmap:', error);
-            return false;
-          }
-        }
-        return false;
-      } else if (imgRef.current) {
-        const img = imgRef.current;
-        img.src = src || '';
-        return true;
-      }
-      return false;
     };
 
     loadImage();
@@ -190,7 +237,7 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
         gameResourceManager.releaseBitmap(src);
       }
     };
-  }, [src, useCanvas, onLoad, onError, style]);
+  }, [src, useCanvas, onLoad, onError, style, renderBitmap, isMediumScreen]);
 
   if (useCanvas) {
     return (
@@ -205,11 +252,12 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
           ref={canvasRef}
           className={styles.canvas}
           style={{
-            display: (!isLoading && !hasError && !useFallback) ? 'block' : 'none',
-            visibility: (!isLoading && !hasError && !useFallback) ? 'visible' : 'hidden',
+            opacity: (isLoading && placeholder) || hasError || useFallback ? 0 : 1,
+            transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             width: '100%',
             height: '100%',
             objectFit: 'contain',
+            backgroundColor: 'transparent',
             ...style,
           }}
         />
@@ -220,11 +268,8 @@ export const GameImageRenderer: React.FC<GameImageRendererProps> = ({
             alt=""
             className={`${styles.fallbackImage} ${className}`}
             style={{
-              display: 'block',
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
               ...style,
+              objectPosition: style?.objectPosition,
             }}
             onLoad={() => {
               setIsLoading(false);

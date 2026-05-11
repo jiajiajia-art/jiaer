@@ -18,6 +18,11 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
 // 重新导出图片缓存管理函数
 export { withCacheBust, bumpCacheBust, extractImageExtension } from '../../../utils/imageCache';
 
+// 通用 URL 有效性检查
+const isValidUrl = (url?: string | null): url is string => {
+    return !!url && url !== 'null' && url !== 'undefined' && typeof url === 'string' && url.trim() !== '';
+};
+
 // 拆分 variant 键名（格式：type_value）为 type 和 value
 export const parseVariantKey = (key: string): { type: string; value: string } | null => {
     if (!key || typeof key !== 'string') return null;
@@ -103,43 +108,32 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
 };
 
 // 从images对象中选取base图片
-export const pickBaseImage = (images?: Record<string, string>, fallback?: string) => {
-    const isValidUrl = (url?: string | null): url is string => {
-        return !!url && url !== 'null' && url !== 'undefined' && url.trim() !== '';
-    };
-
+export const pickBaseImage = (images?: Record<string, string>, fallback?: string): string | undefined => {
     if (isValidUrl(images?.base)) return images!.base;
     const first = images ? Object.values(images).find(v => isValidUrl(v)) : undefined;
     return first || (isValidUrl(fallback) ? fallback : undefined);
 };
 
 // 统一处理 player 的图片字段（支持多种格式）
-const extractPlayerImages = (player: any): {
+const extractPlayerImages = (player: unknown): {
     imagesObject?: Record<string, string>;
     baseImage?: string;
 } => {
-    const isValidUrl = (url?: string | null): url is string => {
-        return !!url && 
-               url !== 'null' && 
-               url !== 'undefined' && 
-               typeof url === 'string' && 
-               url.trim() !== '';
-    };
-
     // 情况1: images 是对象格式 { base: string, ... }
-    if (player?.images && typeof player.images === 'object' && !Array.isArray(player.images)) {
-        const imagesObj = player.images as Record<string, any>;
-        // 检查是否是有效的对象（不是 null）
-        if (imagesObj !== null) {
-            // 转换为 Record<string, string>，过滤无效值
-            const validImages: Record<string, string> = {};
-            for (const [key, value] of Object.entries(imagesObj)) {
-                if (isValidUrl(value)) {
-                    validImages[key] = value as string;
+    if (player && typeof player === 'object' && 'images' in player) {
+        const playerObj = player as Record<string, unknown>;
+        if (playerObj.images && typeof playerObj.images === 'object' && !Array.isArray(playerObj.images)) {
+            const imagesObj = playerObj.images as Record<string, unknown>;
+            if (imagesObj !== null) {
+                const validImages: Record<string, string> = {};
+                for (const [key, value] of Object.entries(imagesObj)) {
+                    if (isValidUrl(value as string | null)) {
+                        validImages[key] = value as string;
+                    }
                 }
-            }
-            if (Object.keys(validImages).length > 0) {
-                return { imagesObject: validImages };
+                if (Object.keys(validImages).length > 0) {
+                    return { imagesObject: validImages };
+                }
             }
         }
     }
@@ -177,6 +171,9 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
         speech: npc.tone || '',
         appearance: npc.appearance || '',
         portrait: portrait || '',
+        portraitScale: (npc as any).portraitScale,
+        portraitOffsetX: (npc as any).portraitOffsetX,
+        portraitOffsetY: (npc as any).portraitOffsetY,
         background: mergedNpcBackground,
         relationships: npcRelationship ? [{
             id: 'r1',
@@ -334,6 +331,9 @@ export const playerToCharacter = (player: any): Character => {
         speech: player?.tone || '',
         appearance: player?.appearance || '',
         portrait: portrait || '',
+        portraitScale: player?.portraitScale,
+        portraitOffsetX: player?.portraitOffsetX,
+        portraitOffsetY: player?.portraitOffsetY,
         background: playerBackground,
         relationships: [],
         variations: imagesToVariations(imagesObject),

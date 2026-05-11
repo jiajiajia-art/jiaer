@@ -1,24 +1,6 @@
-import { getImageUrl } from "../../../utils/constants";
-import { sanitizeVisualStepText } from "../../../utils/textUtils";
+import { getImageUrl, getPlayerImageUrl } from '../../../utils/constants';
+import { sanitizeVisualStepText } from '../../../utils/textUtils';
 
-
-export type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
-
-export interface Message {
-    id: number;
-    type: MessageType;
-    message: string;
-    characterName?: string;
-    characterImage?: string;
-    characterPosition?: 'left' | 'right';
-    options?: Array<{ id: number; text: string; optionId?: string }>;
-    npcId?: string;
-}
-
-export interface ModalState {
-    visible: boolean;
-    message: string;
-}
 
 // ==================== 图片处理 ====================
 
@@ -29,7 +11,7 @@ export const getImageUrls = (image: string | undefined): string | undefined => {
     return getImageUrl(image) || undefined;
 };
 
-import { getPlayerImageUrl } from '../../../utils/constants';
+export { getImageUrl, getPlayerImageUrl };
 
 /** 获取玩家图片（支持字符串或对象格式） */
 export const getPlayerImage = (playerImages: string | { [variant: string]: string } | undefined): string | undefined => {
@@ -44,7 +26,27 @@ export const getPlayerImageWithFallback = (player: any, defaultImage?: string): 
     return imageUrl ? getImageUrls(imageUrl) : undefined;
 };
 
+export interface ModalState {
+    visible: boolean;
+    message: string;
+}
+
 // ==================== 步骤转换 ====================
+
+// Message type for mapGalgame context — kept in sync with useGalgameMessage's Message
+export interface Message {
+    id: number;
+    type: 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
+    message: string;
+    characterName?: string;
+    characterImage?: string;
+    characterPosition?: 'left' | 'right';
+    portraitScale?: number;
+    portraitOffsetX?: number;
+    portraitOffsetY?: number;
+    options?: Array<{ id: number; text: string; optionId?: string }>;
+    npcId?: string;
+}
 
 /** 将原始步骤转换为 Message 格式 */
 export const convertStepToMessage = (
@@ -77,6 +79,15 @@ export const convertStepToMessage = (
         const characterImage = isPlayer 
             ? getPlayerImage(worldSetting?.player?.images)
             : getImageUrls(step.activeImage || step.npcImages?.base);
+        const portraitScale = isPlayer 
+            ? worldSetting?.player?.portraitScale 
+            : undefined;
+        const portraitOffsetX = isPlayer 
+            ? worldSetting?.player?.portraitOffsetX 
+            : undefined;
+        const portraitOffsetY = isPlayer 
+            ? worldSetting?.player?.portraitOffsetY 
+            : undefined;
         
         return {
             id: Date.now(),
@@ -85,6 +96,9 @@ export const convertStepToMessage = (
             characterName,
             characterImage,
             characterPosition: isPlayer ? 'right' : 'left',
+            portraitScale,
+            portraitOffsetX,
+            portraitOffsetY,
             npcId: isPlayer ? undefined : (step.npcId || step.speakerId),
         };
     } else if (step.type === 'choice') {
@@ -110,6 +124,9 @@ export const convertStepToMessage = (
             options,
             characterImage: getPlayerImage(worldSetting?.player?.images),
             characterPosition: 'right',
+            portraitScale: worldSetting?.player?.portraitScale,
+            portraitOffsetX: worldSetting?.player?.portraitOffsetX,
+            portraitOffsetY: worldSetting?.player?.portraitOffsetY,
         };
     } else if (step.type === 'scene_change') {
         return {
