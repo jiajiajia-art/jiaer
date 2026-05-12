@@ -111,6 +111,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
     const [isUploadingPortrait, setIsUploadingPortrait] = useState<boolean>(false);
     const [isSavingCharacter, setIsSavingCharacter] = useState<boolean>(false);
+    // 保存遮罩层状态
+    const [isSaveOverlayVisible, setIsSaveOverlayVisible] = useState<boolean>(false);
     // 差分生成加载状态
     const [isGeneratingVariation, setIsGeneratingVariation] = useState<boolean>(false);
     const [generatingVariationId, setGeneratingVariationId] = useState<string | null>(null);
@@ -974,6 +976,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         if (!handlers) return false;
 
         setIsSavingCharacter(true);
+        setIsSaveOverlayVisible(true);
 
         // 用于存储缩放处理后的数据（避免依赖异步的 setState）
         let processedPendingImages: typeof pendingImages = {};
@@ -1118,6 +1121,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             setHasUnsavedChanges(false);
             setFieldErrors({});
             onDataChange?.();
+
+            // 所有操作完成后显示成功提示
+            toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
             return true;
         } catch (error) {
             console.error('保存时发生错误:', error);
@@ -1125,6 +1131,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return false;
         } finally {
             setIsSavingCharacter(false);
+            setIsSaveOverlayVisible(false);
         }
     };
 
@@ -1526,7 +1533,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     return (
-        <div className={styles.panelContent}>
+        <div className={`${styles.panelContent} ${isSaveOverlayVisible ? styles.panelContentSaving : ''}`}>
             <div className={styles.panelHeader}>
                 <div>
                     <p className={styles.eyebrow}>Step 3</p>
@@ -2350,6 +2357,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 saveButtonText="保存"
                 discardButtonText="不保存"
             />
+
+            {/* 保存遮罩层 */}
+            {isSaveOverlayVisible && (
+                <div className={styles.saveOverlay}>
+                    <div className={styles.saveOverlayContent}>
+                        <div className={styles.saveOverlaySpinner}></div>
+                        <div className={styles.saveOverlayText}>保存中，请不要切换页面</div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 });

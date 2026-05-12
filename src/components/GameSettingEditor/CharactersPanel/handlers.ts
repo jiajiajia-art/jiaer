@@ -406,7 +406,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                     return failResult;
                 }
 
-                toast.success('主角信息更新成功');
                 const p = parseResponse.extractPlayer(response.data, mode);
                 if (p) {
                     const nextPlayer = playerToCharacter(p);
@@ -467,7 +466,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                 return failResult;
             }
 
-            toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
             const finalNpcId = npcData.id;
             const npc = parseResponse.extractNpc(response.data, mode, finalNpcId);
 

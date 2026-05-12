@@ -95,14 +95,27 @@ const CreateGame: React.FC = () => {
 
                 if (response.data && response.data.data) {
                     const data = response.data.data;
+                    const currentUserId = user?.user?.userId;
+                    if (
+                        currentUserId != null &&
+                        String(data.creator_user_id) !== String(currentUserId)
+                    ) {
+                        navigate(`/game/${encodeURIComponent(gameId)}`);
+                        return;
+                    }
                     setGameDetail(data);
                 } else {
                     setDetailError('未找到游戏详情');
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('加载游戏详情失败:', error);
                 if (isMounted) {
-                    setDetailError('加载游戏详情失败');
+                    const status = error?.response?.status;
+                    if (status === 403 || status === 401) {
+                        toast.error('游戏尚未公开');
+                    } else {
+                        setDetailError('加载游戏详情失败');
+                    }
                 }
             } finally {
                 if (isMounted) {

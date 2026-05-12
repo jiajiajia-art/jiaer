@@ -4,6 +4,16 @@
     gap: 24px;
 }
 
+/* 保存中禁用状态 - 禁止输入但允许滚动查看 */
+.panelContentSaving button,
+.panelContentSaving input,
+.panelContentSaving textarea,
+.panelContentSaving select {
+    pointer-events: none;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .panelHeader {
     display: flex;
     justify-content: space-between;
@@ -1480,4 +1490,43 @@
     .variationTypeGroup {
         grid-template-columns: 1fr;
     }
+}
+
+/* 保存中提示条（非阻塞） */
+.saveOverlay {
+    position: fixed;
+    top: 250px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: white;
+    color: #333;
+    border-radius: 8px;
+    z-index: 10001;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.saveOverlayContent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.saveOverlaySpinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #e0e0e0;
+    border-top: 2px solid #FB4655;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.saveOverlayText {
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
 }
