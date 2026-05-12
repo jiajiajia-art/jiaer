@@ -53,7 +53,7 @@ const COLOR_TAGS = ['red', 'yellow', 'green', 'blue', 'purple'];
 export const removeAnimationTags = (text: string): string => {
     if (!text) return '';
     
-    let result = text;
+    let result = stripNonStoryControlMarkup(text);
     let previousResult = '';
     
     // 循环处理嵌套的动画标签
@@ -137,6 +137,106 @@ interface ParsedGameTag {
 const GAME_TAG_NAME_REGEX = /^[A-Z_]+$/;
 const VISUAL_STEP_MARKER_REGEX = /\[(?:NARRATION|DIALOGUE|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION|END_CHOICE)(?::|\])/i;
 const VISUAL_STEP_MARKER_PREFIX_REGEX = /\[\s*(?:NARRATION|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION|END_CHOICE)\s*:?\s*/gi;
+const ALLOWED_INLINE_TAG_REGEX = /<\/?(?:red|yellow|green|blue|purple|jump|vibration|injury)\b[^>]*>/gi;
+const CHINESE_DISPLAY_TEXT_REGEX = /[\u3400-\u9fff]/;
+const ORPHAN_LOWERCASE_ENGLISH_TOKEN_REGEX = /(^|[^A-Za-z0-9_])([a-z]{3,})(?=$|[^A-Za-z0-9_])/g;
+const FRONTEND_ALLOWED_LOWERCASE_ENGLISH_TOKENS = new Set(['http', 'https', 'www']);
+
+const protectAllowedInlineTags = (text: string, transform: (value: string) => string): string => {
+    const placeholders: string[] = [];
+    const protectedText = String(text || '').replace(ALLOWED_INLINE_TAG_REGEX, (match) => {
+        const token = `\u0000${placeholders.length}\u0000`;
+        placeholders.push(match);
+        return token;
+    });
+    return transform(protectedText).replace(/\u0000(\d+)\u0000/g, (_match, index) => placeholders[Number(index)] || '');
+};
+
+const stripOrphanLowercaseEnglishNoise = (text: string): string => {
+    if (!CHINESE_DISPLAY_TEXT_REGEX.test(text)) return text;
+    let changed = false;
+    const cleaned = protectAllowedInlineTags(text, (protectedText) => protectedText.replace(ORPHAN_LOWERCASE_ENGLISH_TOKEN_REGEX, (match, prefix, token) => {
+        if (FRONTEND_ALLOWED_LOWERCASE_ENGLISH_TOKENS.has(String(token).toLowerCase())) return match;
+        changed = true;
+        return prefix;
+    }));
+    return changed
+        ? cleaned.replace(/([\u3400-\u9fff])\s+([\u3400-\u9fff])/g, '$1$2')
+        : text;
+};
+
+export const stripNonStoryControlMarkup = (text: string): string => {
+    let result = String(text || '');
+    let previous = '';
+
+    while (result !== previous) {
+        previous = result;
+        result = result.replace(/<(think(?:[_-][a-z0-9]+)*|thinking(?:[_-][a-z0-9]+)*)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
+    }
+
+    return result
+        .replace(/<\/?(?:think|thinking)(?:[_-][a-z0-9]+)*\b[^>]*>/gi, '')
+        .replace(/<point\b[^>]*>[\s\S]*?<\/point>/gi, '')
+        .replace(/<\/?point\b[^>]*>/gi, '')
+        .replace(/<\s*\/?\s*>/g, '')
+        .replace(/\[METRICS_JSON:\s*\{[^\]]*\}\s*\]/gi, '')
+        .replace(/\[(?:SILENT|HIDDEN|DEBUG|ANALYSIS|INTERNAL)[^\]\n>]*(?:\]|\>)/gi, '');
+};
+
+const stripInvalidAngleBrackets = (text: string): string => {
+    const placeholders: string[] = [];
+    const protectedText = String(text || '').replace(ALLOWED_INLINE_TAG_REGEX, (match) => {
+        const token = `\u0000${placeholders.length}\u0000`;
+        placeholders.push(match);
+        return token;
+    });
+    return protectedText
+        .replace(/[<>]/g, '')
+        .replace(/\u0000(\d+)\u0000/g, (_match, index) => placeholders[Number(index)] || '');
+};
+
+const removeUnbalancedQuoteResidue = (text: string): string => {
+    let value = String(text || '');
+    if ((value.match(/"/g) || []).length % 2 === 1) {
+        value = value.replace(/"/g, '');
+    }
+    const pairs: Array<[string, string]> = [['\u201c', '\u201d'], ['\u300c', '\u300d'], ['\u300e', '\u300f']];
+    pairs.forEach(([open, close]) => {
+        const openCount = (value.match(new RegExp(open, 'g')) || []).length;
+        const closeCount = (value.match(new RegExp(close, 'g')) || []).length;
+        if (openCount !== closeCount) {
+            value = value.split(open).join('').split(close).join('');
+        }
+    });
+    return value;
+};
+
+export const sanitizeVisualDisplayText = (text: string): string => {
+    let value = stripNonStoryControlMarkup(text).trim();
+    if (!value) return '';
+    value = stripInvalidAngleBrackets(value);
+    value = removeUnbalancedQuoteResidue(value);
+    value = stripOrphanLowercaseEnglishNoise(value);
+    return value
+        .replace(/^[\]\u3011]+/g, '')
+        .replace(/[\]\u3011]+$/g, '')
+        .replace(/\s+([,，。！？!?;；:：])/g, '$1')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+};
+
+export const sanitizeVisualOptionText = (text: string): string => {
+    let value = sanitizeVisualDisplayText(text);
+    if (!value) return '';
+    value = value
+        .replace(/^["']+|["']+$/g, '')
+        .replace(/[\]\u3011\u300d\u300f]+$/g, '')
+        .trim();
+    if (/[\u3400-\u9fff]/.test(value)) {
+        value = value.replace(/\s+(?:revive|undefined|null|none)$/i, '').trim();
+    }
+    return value;
+};
 
 const findGameTagCloseIndex = (text: string, payloadStart: number): number => {
     let nestedDepth = 0;
@@ -210,6 +310,7 @@ const parseGameTagAt = (text: string, start: number): ParsedGameTag | null => {
 };
 
 const formatDialoguePayload = (payload: string): string => {
+    payload = stripNonStoryControlMarkup(payload);
     const firstComma = payload.indexOf(',');
     if (firstComma < 0) {
         return payload.trim();
@@ -241,7 +342,7 @@ const formatDialoguePayload = (payload: string): string => {
 };
 
 const normalizeOptionPayload = (payload: string): string => {
-    let value = payload.trim();
+    let value = sanitizeVisualOptionText(payload);
     if (!value) return '';
 
     const quoted = value.match(/"([\s\S]*?)"/);
@@ -249,8 +350,7 @@ const normalizeOptionPayload = (payload: string): string => {
         return quoted[1].trim();
     }
 
-    value = value.replace(/^["']|["']$/g, '').trim();
-    return value;
+    return sanitizeVisualOptionText(value.replace(/^["']|["']$/g, '').trim());
 };
 
 const findEndChoiceStartIndex = (text: string, from: number): number => {
@@ -287,6 +387,7 @@ interface OptionStore {
 const processGameTagText = (content: string, context: ProcessTagContext, optionStore: OptionStore): string => {
     let result = '';
     let cursor = 0;
+    content = stripNonStoryControlMarkup(content);
 
     while (cursor < content.length) {
         const openIndex = content.indexOf('[', cursor);
@@ -386,6 +487,7 @@ const processGameTagText = (content: string, context: ProcessTagContext, optionS
 
 export const processGameTags = (content: string): string => {
     if (!content) return '';
+    content = stripNonStoryControlMarkup(content);
 
     const optionStore: OptionStore = {
         mainOptions: [],
@@ -419,6 +521,7 @@ export const processGameTags = (content: string): string => {
 // ============================================================
 export const sanitizeVisualStepText = (text: string): string => {
     if (!text) return '';
+    text = sanitizeVisualDisplayText(text);
     if (!VISUAL_STEP_MARKER_REGEX.test(text)) return text;
 
     let cleaned = processGameTags(text);
@@ -446,6 +549,7 @@ export const sanitizeVisualStepText = (text: string): string => {
 
 export const extractPlainText = (text: string): string => {
     if (!text) return '';
+    text = stripNonStoryControlMarkup(text);
     
     // 先移除动画标签
     let result = removeAnimationTags(text);
@@ -546,6 +650,7 @@ export const hasinjuryTag = (text: string): boolean => {
 export const cleanHistoryMessage = (text: string): { cleanedText: string; options: string[] } => {
     if (!text) return { cleanedText: '', options: [] };
     
+    text = stripNonStoryControlMarkup(text);
     let cleaned = text;
     const options: string[] = [];
     
@@ -553,7 +658,7 @@ export const cleanHistoryMessage = (text: string): { cleanedText: string; option
     const optionRegex = /\[OPTION:\s*([^\]]*(?:\[[^\]]*\][^\]]*)*)\]/gi;
     let optionMatch;
     while ((optionMatch = optionRegex.exec(text)) !== null) {
-        const optionText = optionMatch[1]?.trim();
+        const optionText = sanitizeVisualOptionText(optionMatch[1] || '');
         if (optionText && !options.includes(optionText)) {
             options.push(optionText);
         }
@@ -591,6 +696,7 @@ export const cleanHistoryMessage = (text: string): { cleanedText: string; option
     // 清理多余的符号和空格
     cleaned = cleaned.replace(/\]/g, '\n');
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
+    cleaned = sanitizeVisualDisplayText(cleaned);
     
     return { cleanedText: cleaned, options };
 };
@@ -608,6 +714,7 @@ export const extractChoiceFromHistory = (text: string): {
     options: string[];
 } | null => {
     if (!text) return null;
+    text = stripNonStoryControlMarkup(text);
     
     // 匹配完整的 CHOICE 块（从 [CHOICE: 到 [END_CHOICE]）
     const choiceBlockRegex = /\[CHOICE:([^\]]*)\]([\s\S]*?)\[END_CHOICE\]/i;
@@ -640,7 +747,7 @@ export const extractChoiceFromHistory = (text: string): {
     const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
 
     const collectOption = (raw: string | undefined | null, target: string[]) => {
-        let optionText = raw?.trim() || '';
+        let optionText = sanitizeVisualOptionText(raw || '');
         if (!optionText) return;
 
         // 如果包含引号，提取引号内的内容
@@ -649,7 +756,7 @@ export const extractChoiceFromHistory = (text: string): {
             optionText = quotedMatch[1];
         } else {
             // 如果没有引号格式，移除可能的引号
-            optionText = optionText.replace(/^["']|["']$/g, '');
+            optionText = sanitizeVisualOptionText(optionText.replace(/^["']|["']$/g, ''));
         }
 
         if (optionText && !target.includes(optionText)) {
@@ -760,6 +867,7 @@ export interface HistoryStep {
 
 export const parseHistoryToSteps = (content: string): HistoryStep[] => {
     if (!content) return [];
+    content = stripNonStoryControlMarkup(content);
     
     const steps: HistoryStep[] = [];
     let stepIndex = 0;
@@ -796,14 +904,14 @@ export const parseHistoryToSteps = (content: string): HistoryStep[] => {
     const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
 
     const collectOption = (raw: string | undefined | null, target: string[]) => {
-        let optionText = raw?.trim() || '';
+        let optionText = sanitizeVisualOptionText(raw || '');
         if (!optionText) return;
 
         const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
         if (quotedMatch && quotedMatch[1]) {
             optionText = quotedMatch[1];
         } else {
-            optionText = optionText.replace(/^["']|["']$/g, '');
+            optionText = sanitizeVisualOptionText(optionText.replace(/^["']|["']$/g, ''));
         }
 
         if (optionText && !target.includes(optionText)) {

@@ -126,7 +126,32 @@ export interface GetGalgameHistoryResponse {
   hasMoreAfter?: boolean;
   // 后端返回的已访问场景 ID 列表，最后一个元素为当前所在场景
   visitedScenes?: string[];
+  contextMemory?: ContextMemoryStatus;
   [key: string]: unknown;
+}
+
+export interface ContextMemoryStatus {
+  enabled: boolean;
+  estimatedTokens: number;
+  thresholdTokens: number;
+  modelContextWindow: number;
+  modelContextWindowConfigured?: boolean;
+  safePromptBudgetTokens?: number;
+  maxOutputTokens?: number;
+  safetyMarginTokens?: number;
+  systemTokens?: number;
+  messageTokens?: number;
+  usageRatio: number;
+  compressedThroughMessageCount: number;
+  recentRounds: number;
+  turnsSinceCompression?: number;
+  safeRoundLimit?: number;
+  provider?: string | null;
+  model?: string | null;
+  triggerReason?: string;
+  compressionCount: number;
+  lastCompressionEstimatedTokens: number;
+  updatedAt: string | null;
 }
 
 export interface History {

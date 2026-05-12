@@ -190,6 +190,32 @@ const Galgame = () => {
         controller.stepHandlers.isWaitingForData,
     ]);
 
+    const contextMemoryPercent = useMemo(() => {
+        const status = controller.contextMemory;
+        const totalTokens = status?.safePromptBudgetTokens ?? status?.modelContextWindow;
+        if (!status?.modelContextWindowConfigured || !totalTokens) {
+            return 0;
+        }
+        return Math.min(999, Math.max(0, Math.round((status.estimatedTokens / totalTokens) * 100)));
+    }, [controller.contextMemory]);
+    const formatContextTokenCount = (value?: number | null) => {
+        const n = Number(value || 0);
+        if (!Number.isFinite(n) || n <= 0) {
+            return '0';
+        }
+        if (n < 1000) {
+            return String(Math.ceil(n));
+        }
+        if (n < 10000) {
+            return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+        }
+        return `${Math.round(n / 1000)}k`;
+    };
+    const contextMemoryUsedLabel = formatContextTokenCount(controller.contextMemory?.estimatedTokens);
+    const contextMemoryTotalLabel = controller.contextMemory?.modelContextWindowConfigured
+        ? formatContextTokenCount(controller.contextMemory?.safePromptBudgetTokens ?? controller.contextMemory?.modelContextWindow)
+        : '未配置';
+
     const handleCurrentMessageRegenerate = () => {
         if (!currentAssistantHistoryIndex) {
             return;
@@ -538,6 +564,22 @@ const Galgame = () => {
                         <CiLocationOn />
                         <span>{controller.currentScene?.name}</span>
                     </div>
+                    {!controller.isReplay && controller.gameStarted && (
+                        <div className={styles.contextMemoryMeter}>
+                            <span className={styles.contextMemoryText}>
+                                已用 {contextMemoryUsedLabel} 标记，共 {contextMemoryTotalLabel}
+                            </span>
+                            <span
+                                className={`${styles.contextMemoryProgress} ${controller.stepHandlers.isCompressingContext ? styles.contextMemoryProgressActive : ''}`}
+                                style={{
+                                    background: `conic-gradient(rgba(255, 255, 255, 0.92) ${Math.min(contextMemoryPercent, 100) * 3.6}deg, rgba(255, 255, 255, 0.24) 0deg)`
+                                }}
+                            />
+                            {controller.stepHandlers.isCompressingContext && (
+                                <span className={styles.contextMemoryBusy}>整理中</span>
+                            )}
+                        </div>
+                    )}
                     {controller.currentMessage.characterImage && !controller.isTextMode && (
                         <div className={getCharacterContainerClassName()}>
                             <GameImageRenderer
@@ -558,6 +600,7 @@ const Galgame = () => {
                                     canRegenerateCurrentMessage={currentAssistantHistoryIndex !== null}
                                     stepHandlers={{
                                         isWaitingForData: controller.stepHandlers.isWaitingForData,
+                                        isCompressingContext: controller.stepHandlers.isCompressingContext,
                                         currentStep: controller.stepHandlers.currentStep,
                                         showNextButton: controller.stepHandlers.showNextButton,
                                         selectedOptionIndex: controller.stepHandlers.selectedOptionIndex,
@@ -579,6 +622,7 @@ const Galgame = () => {
                                 currentDisplayText={controller.textModalDisplayText}
                                 isTyping={controller.finalIsTyping}
                                 isWaitingForData={controller.stepHandlers.isWaitingForData}
+                                isCompressingContext={controller.stepHandlers.isCompressingContext}
                                 historyLength={controller.history.length}
                                 onChoiceClick={(option) => {
                                     controller.handleChoiceClick(option);

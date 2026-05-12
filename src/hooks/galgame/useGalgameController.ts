@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
-import { useGalgameStep } from "./useGalgameStep";
+import { createGalgameActionId, useGalgameStep } from "./useGalgameStep";
 import useGalgameHistory from "./useGalgameHistory";
 import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
-import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
+import type { ContextMemoryStatus, GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
 import { getImageUrl, getPlayerImageUrl, DEFAULT_SCENE_IMAGE } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
@@ -77,6 +77,7 @@ export const useGalgameController = () => {
     const [replayLoadedOffset, setReplayLoadedOffset] = useState<number>(0);
     const [replayHasMore, setReplayHasMore] = useState<boolean>(false);
     const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(1);
+    const [liveContextMemory, setLiveContextMemory] = useState<ContextMemoryStatus | null>(null);
 
     const currentRequestIdRef = useRef<number>(0);
     const historyProcessedRef = useRef<boolean>(false);
@@ -87,6 +88,7 @@ export const useGalgameController = () => {
     const lastRefreshRequestIdRef = useRef<number>(0);
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
+    const lastRequestActionIdRef = useRef<string | null>(null);
     const lastAutoResendRef = useRef<{ content: string; ts: number } | null>(null);
     const replayStepsRef = useRef<ReplayStep[]>([]);
     const replayLoadingPageRef = useRef<boolean>(false);
@@ -100,7 +102,8 @@ export const useGalgameController = () => {
         hasMoreBefore,
         loadingMoreBefore,
         loading: historyLoading,
-        editHistory
+        editHistory,
+        contextMemory: historyContextMemory
     } = useGalgameHistory({ disabled: isReplay });
 
     // 根据 assistant 消息数量计算当前是第几回合（用于前几回合免费 / UI 提示）
@@ -197,6 +200,7 @@ export const useGalgameController = () => {
         replayLoadingPageRef.current = false;
         setReplaySpeed(1);
         setIsAutoPlay(false);
+        setLiveContextMemory(null);
         // 强制重置加载标记，确保数据重新加载
         presetDataLoadedRef.current = false;
     }, [fileId, isReplay, replayId]);
@@ -405,6 +409,8 @@ export const useGalgameController = () => {
             setErrorModalVisible(true);
         },
         isReplay,
+        isTextMode,
+        onContextMemoryUpdate: setLiveContextMemory,
         onExhausted: () => {
             if (isReplay) {
                 if (replayTotalSteps > 0) {
@@ -415,6 +421,8 @@ export const useGalgameController = () => {
             }
         }
     });
+
+    const textModeContextMemory = liveContextMemory || stepHandlers.contextMemory || historyContextMemory;
 
     // 请求超时检测（60秒）
     useEffect(() => {
@@ -1040,6 +1048,7 @@ export const useGalgameController = () => {
     }, [isAutoPlay, isTextMode, isReplay, replayIndex, replaySpeed, replaySteps.length, replayTotalSteps, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
+        if (stepHandlers.isWaitingForData || stepHandlers.loading) return;
         if (!messageUtilsWithTyping.currentMessage || messageUtilsWithTyping.currentMessage.type !== 'choice' || !messageUtilsWithTyping.currentMessage.options) {
             return;
         }
@@ -1050,9 +1059,11 @@ export const useGalgameController = () => {
         if (optionIndex < 0) return;
 
         const optionText = messageUtilsWithTyping.currentMessage.options[optionIndex].text;
+        const actionId = createGalgameActionId(playableSessionId, optionText);
 
         // 保存最后一次请求的 action
         lastRequestActionRef.current = optionText;
+        lastRequestActionIdRef.current = actionId;
 
         if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
             const stepOptionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
@@ -1066,37 +1077,43 @@ export const useGalgameController = () => {
                     ? { text: stepOptionObj, nextId: '' }
                     : stepOptionObj;
 
-                stepHandlers.handleChoiceOption(optionData, stepOptionIndex);
+                stepHandlers.handleChoiceOption(optionData, stepOptionIndex, actionId);
                 return;
             }
         }
 
-        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex);
-    }, [stepHandlers, messageUtilsWithTyping.currentMessage, resetDisplayedSteps]);
+        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex, actionId);
+    }, [playableSessionId, stepHandlers, messageUtilsWithTyping.currentMessage, resetDisplayedSteps]);
 
     const handleCustomInputSubmit = useCallback((value: string) => {
+        if (stepHandlers.isWaitingForData || stepHandlers.loading) return;
         if (!value.trim()) return;
+        const actionText = value.trim();
+        const actionId = createGalgameActionId(playableSessionId, actionText);
         // 保存最后一次请求的 action
-        lastRequestActionRef.current = value.trim();
-        stepHandlers.handleChoiceSend(value);
-    }, [stepHandlers]);
+        lastRequestActionRef.current = actionText;
+        lastRequestActionIdRef.current = actionId;
+        stepHandlers.handleChoiceSend(value, actionId);
+    }, [playableSessionId, stepHandlers]);
 
     const handleRetryLastRequest = useCallback(async () => {
         setRequestTimeoutVisible(false);
         setErrorModalVisible(false);
 
         const lastAction = lastRequestActionRef.current;
+        const lastActionId = lastRequestActionIdRef.current || createGalgameActionId(playableSessionId, lastAction || '');
         if (!lastAction) {
             toast.error('没有可重试的上次操作');
             return;
         }
 
         await stepHandlers.handleStreamAction(lastAction, {
+            actionId: lastActionId,
             onError: () => {
                 toast.error('重试失败，请稍后再试');
             }
         });
-    }, [stepHandlers]);
+    }, [playableSessionId, stepHandlers]);
 
     const handleExitGame = useCallback(() => {
         try {
@@ -1146,6 +1163,7 @@ export const useGalgameController = () => {
         allStepsForTextModal,
         currentStepIndex,
         textModalDisplayText: messageUtilsWithTyping.textModalDisplayText,
+        contextMemory: textModeContextMemory,
         convertStepsToTextModalFormat: messageUtilsWithTyping.convertStepsToTextModalFormat,
         history,
         refreshHistory,

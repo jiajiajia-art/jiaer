@@ -21,6 +21,7 @@ interface TextModeDisplayProps {
     currentDisplayText: string;
     isTyping: boolean;
     isWaitingForData: boolean;
+    isCompressingContext?: boolean;
     historyLength: number;
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
@@ -45,6 +46,7 @@ interface MessageItemProps {
     isTyping: boolean;
     historyLength: number;
     isWaitingForData: boolean;
+    isCompressingContext?: boolean;
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
     isFreeRound?: boolean;
@@ -56,6 +58,7 @@ const MessageItem = memo<MessageItemProps>(({
     currentDisplayText, 
     isTyping,
     isWaitingForData,
+    isCompressingContext = false,
     onChoiceClick, 
     onCustomInputSubmit,
     isFreeRound = false,
@@ -65,7 +68,7 @@ const MessageItem = memo<MessageItemProps>(({
     if (!step) return null;
 
     const handleCustomSubmit = () => {
-        if (customInput.trim() && onCustomInputSubmit && !isTyping) {
+        if (customInput.trim() && onCustomInputSubmit && !isTyping && !isCompressingContext) {
             onCustomInputSubmit(customInput.trim());
             setCustomInput('');
         }
@@ -149,12 +152,12 @@ const MessageItem = memo<MessageItemProps>(({
                                     key={opt.id} 
                                     className={`${styles.optionItem} ${opt.isMain ? styles.optionItemMain : ''}`}
                                     onClick={() => {
-                                        if (onChoiceClick && !isTyping) {
+                                        if (onChoiceClick && !isTyping && !isCompressingContext) {
                                             onChoiceClick(opt);
                                         }
                                     }}
                                     style={{ 
-                                        cursor: onChoiceClick && !isTyping ? 'pointer' : 'default' 
+                                        cursor: onChoiceClick && !isTyping && !isCompressingContext ? 'pointer' : 'default' 
                                     }}
                                 >
                                     <span className={`${styles.optionText} ${opt.isMain ? styles.optionTextMain : ''}`}>
@@ -184,12 +187,12 @@ const MessageItem = memo<MessageItemProps>(({
                                 value={customInput}
                                 onChange={(e) => setCustomInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                disabled={isTyping}
+                                disabled={isTyping || isCompressingContext}
                             />
                             <button 
                                 className={styles.customInputButton}
                                 onClick={handleCustomSubmit}
-                                disabled={!customInput.trim() || isTyping}
+                                disabled={!customInput.trim() || isTyping || isCompressingContext}
                             >
                                 发送
                             </button>
@@ -214,6 +217,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     currentDisplayText,
     isTyping,
     isWaitingForData,
+    isCompressingContext = false,
     historyLength,
     onChoiceClick,
     onCustomInputSubmit,
@@ -268,7 +272,6 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     const showMainLoader = isWaitingForData && (steps.length === 0 || lastStepIsChoice);
     
     const showDotLoader = isWaitingForData && steps.length > 0 && !isTyping && !lastStepIsChoice;
-
     return (
         <div className={styles.textModeContainer}>
             {steps.length === 0 && !isWaitingForData ? (
@@ -294,6 +297,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 isTyping={isCurrent ? isTyping : false}
                                 historyLength={historyLength}
                                 isWaitingForData={isWaitingForData}
+                                isCompressingContext={isCompressingContext}
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
                                 isFreeRound={isFreeRound}
@@ -309,7 +313,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 <div className={styles.core}></div>
                             </div>
                             <div className={styles.statusText}>
-                                AI 推演中<span className={styles.dots}></span>
+                                {isCompressingContext ? '正在整理故事记忆' : 'AI 推演中'}<span className={styles.dots}></span>
                             </div>
                         </div>
                     )}

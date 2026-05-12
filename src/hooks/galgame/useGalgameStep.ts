@@ -4,6 +4,14 @@ import { authFetch } from '../../api/base';
 import { HOST_ADDRESS } from '../../config';
 import { useAuthStore } from '../../store/useAuthStore';
 import { auth } from '../../api/account/authApi';
+import type { ContextMemoryStatus } from '../../api/galgame/getGalgamePreset.type';
+
+export function createGalgameActionId(sessionId: string | null, _action: string): string {
+    const randomPart = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return `visual-${sessionId || 'session'}-${Date.now()}-${randomPart}`;
+}
 
 interface UseGalgameStepOptions {
     sessionId: string | null;
@@ -16,7 +24,9 @@ interface UseGalgameStepOptions {
     onErrorAfterAlert?: (error: string) => void;
     // Replay mode: avoid showing "AI generating" on queue exhausted
     isReplay?: boolean;
+    isTextMode?: boolean;
     onExhausted?: () => void;
+    onContextMemoryUpdate?: (status: ContextMemoryStatus) => void;
 }
 
 export const useGalgameStep = ({
@@ -27,13 +37,17 @@ export const useGalgameStep = ({
     onStreamComplete,
     onErrorAfterAlert,
     isReplay = false,
+    isTextMode = false,
     onExhausted,
+    onContextMemoryUpdate,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
     const [showNextButton, setShowNextButton] = useState(false);
     const [selectedOptionIndex, setSelectedOptionIndex] = useState<number | null>(null);
     const [isWaitingForData, setIsWaitingForData] = useState(false);
+    const [isCompressingContext, setIsCompressingContext] = useState(false);
+    const [contextMemory, setContextMemory] = useState<ContextMemoryStatus | null>(null);
     const [loading, setLoading] = useState(false);
 
     const currentRequestId = useRef(0);
@@ -60,6 +74,8 @@ export const useGalgameStep = ({
         setShowNextButton(false);
         setSelectedOptionIndex(null);
         setIsWaitingForData(false);
+        setIsCompressingContext(false);
+        setContextMemory(null);
         setLoading(false);
         isProcessingStepRef.current = false;
     }, [sessionId]);
@@ -75,6 +91,16 @@ export const useGalgameStep = ({
             console.error('[Galgame] Failed to fetch user info:', error);
         }
     }, [updateUser]);
+
+    const resetStreamRetryDisplay = useCallback(() => {
+        setCurrentStep(null);
+        setStepQueue([]);
+        setShowNextButton(false);
+        setSelectedOptionIndex(null);
+        setIsWaitingForData(true);
+        setLoading(true);
+        isProcessingStepRef.current = false;
+    }, []);
 
     const { processStreamResponse } = useStepStreamResponse({
         setStepQueue,
@@ -122,6 +148,7 @@ export const useGalgameStep = ({
                 onFirstStep?: () => void;
                 onError?: (error: string) => void;
                 deduct?: boolean;
+                actionId?: string;
             }
         ) => {
             if (!sessionId) {
@@ -142,9 +169,15 @@ export const useGalgameStep = ({
                 onMessagesClear?.();
                 options?.onBeforeRequest?.();
 
-                const requestBody: any = { action };
+                const requestBody: any = {
+                    action,
+                    actionId: options?.actionId || createGalgameActionId(sessionId, action),
+                };
                 if (options?.deduct) {
                     requestBody.deduct = true;
+                }
+                if (isTextMode && !isReplay) {
+                    requestBody.textModeMemoryEnabled = true;
                 }
 
                 const response = await authFetch(
@@ -159,6 +192,7 @@ export const useGalgameStep = ({
                 if (response.ok) {
                     await processStreamResponse(response, requestId, {
                         onSuccess: async () => {
+                            setIsCompressingContext(false);
                             if (options?.onSuccess) {
                                 await options.onSuccess();
                             }
@@ -173,14 +207,37 @@ export const useGalgameStep = ({
                             setLoading(false);
                         },
                         onError: (error) => {
+                            setIsCompressingContext(false);
                             setLoading(false);
+                            setCurrentStep(null);
+                            setStepQueue([]);
+                            setShowNextButton(false);
                             options?.onError?.(error);
                         },
                         onFirstStep: options?.onFirstStep,
+                        onData: (data) => {
+                            if (data?.contextMemory) {
+                                setContextMemory(data.contextMemory);
+                                onContextMemoryUpdate?.(data.contextMemory);
+                            }
+                            if (data?.type === 'context_compression_start') {
+                                setIsCompressingContext(true);
+                                return;
+                            }
+                            if (data?.type === 'context_compression_done') {
+                                setIsCompressingContext(false);
+                                return;
+                            }
+                            if (data?.type === 'error' && data?.code === 'CONTEXT_COMPRESSION_FAILED') {
+                                setIsCompressingContext(false);
+                            }
+                        },
+                        onGenerationRetry: resetStreamRetryDisplay,
                         onErrorAfterAlert,
                     });
                 } else {
                     const errorMsg = `Request failed: ${response.statusText}`;
+                    setIsCompressingContext(false);
                     setLoading(false);
                     setSelectedOptionIndex(null);
                     setIsWaitingForData(false);
@@ -189,13 +246,14 @@ export const useGalgameStep = ({
             } catch (error) {
                 const errorMsg = `Request error: ${error instanceof Error ? error.message : 'Unknown error'}`;
                 console.error('[Galgame] handleStreamAction error:', errorMsg);
+                setIsCompressingContext(false);
                 setLoading(false);
                 setSelectedOptionIndex(null);
                 setIsWaitingForData(false);
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, resetStreamRetryDisplay]
     );
 
     // Handle next step in queue
@@ -230,7 +288,7 @@ export const useGalgameStep = ({
 
     // Handle selecting a choice option
     const handleChoiceOption = useCallback(
-        async (option: { text: string; nextId: string }, optionIndex: number) => {
+        async (option: { text: string; nextId: string }, optionIndex: number, actionId?: string) => {
             setSelectedOptionIndex(optionIndex);
             setIsWaitingForData(true);
             setShowNextButton(false);
@@ -243,6 +301,7 @@ export const useGalgameStep = ({
                     setIsWaitingForData(false);
                     setSelectedOptionIndex(null);
                 },
+                actionId,
             });
         },
         [handleStreamAction]
@@ -250,7 +309,7 @@ export const useGalgameStep = ({
 
     // Handle custom input send
     const handleChoiceSend = useCallback(
-        async (inputText: string) => {
+        async (inputText: string, actionId?: string) => {
             if (!inputText.trim()) {
                 return;
             }
@@ -266,6 +325,7 @@ export const useGalgameStep = ({
                     setIsWaitingForData(false);
                 },
                 deduct: true,
+                actionId,
             });
         },
         [handleStreamAction]
@@ -325,8 +385,12 @@ export const useGalgameStep = ({
                         },
                         onError: (error) => {
                             setLoading(false);
+                            setCurrentStep(null);
+                            setStepQueue([]);
+                            setShowNextButton(false);
                             options?.onError?.(error);
                         },
+                        onGenerationRetry: resetStreamRetryDisplay,
                         onErrorAfterAlert,
                     });
                 } else {
@@ -345,7 +409,7 @@ export const useGalgameStep = ({
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo, resetStreamRetryDisplay]
     );
 
     return {
@@ -354,6 +418,8 @@ export const useGalgameStep = ({
         showNextButton,
         selectedOptionIndex,
         isWaitingForData,
+        isCompressingContext,
+        contextMemory,
         loading,
         handleStreamAction,
         handleNextStep,

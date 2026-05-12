@@ -20,6 +20,7 @@ interface Message {
 
 interface StepHandlers {
     isWaitingForData: boolean;
+    isCompressingContext?: boolean;
     currentStep: any;
     showNextButton: boolean;
     selectedOptionIndex: number | null;
@@ -65,7 +66,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     // 是否强制展示当前 step 的完整文本（用于点击跳过打字机效果）
     const [forceShowFullText, setForceShowFullText] = useState(false);
 
-    const { isWaitingForData, currentStep, showNextButton } = stepHandlers;
+    const { isWaitingForData, isCompressingContext = false, currentStep, showNextButton } = stepHandlers;
 
     const handleCustomInputClick = useCallback(() => {
         setShowCustomInput(true);
@@ -76,12 +77,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     }, []);
 
     const handleCustomInputSubmit = useCallback(() => {
-        if (customInputValue.trim()) {
+        if (customInputValue.trim() && !isCompressingContext) {
             onCustomInputSubmit(customInputValue.trim());
             setCustomInputValue('');
             setShowCustomInput(false);
         }
-    }, [customInputValue, onCustomInputSubmit]);
+    }, [customInputValue, isCompressingContext, onCustomInputSubmit]);
 
     const handleCustomInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -126,12 +127,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             setForceShowFullText(true);
                             return;
                         }
-                        if (showNextButton && !isAutoPlay) {
+                        if (showNextButton && !isAutoPlay && !isCompressingContext) {
                             onNextMessage();
                         }
                     }}
                 >
-                    {isWaitingForData && !currentStep && currentMessage && (
+                    {(isWaitingForData || isCompressingContext) && !currentStep && currentMessage && (
                         <div className={styles.loadingContainer}>
                             <div className={styles.aiLoader}>
                                 <div className={styles.orbit}></div>
@@ -139,7 +140,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 <div className={styles.core}></div>
                             </div>
                             <div className={styles.statusText}>
-                                AI 推演中<span className={styles.dots}></span>
+                                {isCompressingContext ? '正在整理故事记忆' : 'AI 推演中'}<span className={styles.dots}></span>
                             </div>
                         </div>
                     )}
@@ -191,7 +192,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                         e.stopPropagation();
                                         onRegenerateCurrentMessage();
                                     }}
-                                    disabled={isWaitingForData}
+                                    disabled={isWaitingForData || isCompressingContext}
                                     title="重新生成"
                                     aria-label="重新生成"
                                 >
@@ -204,7 +205,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                     e.stopPropagation();
                                     onNextMessage();
                                 }}
-                                disabled={isWaitingForData}
+                                disabled={isWaitingForData || isCompressingContext}
                             >
                                 <IoArrowDownCircleOutline />
                             </button>
@@ -213,7 +214,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 </div>
             )}
 
-            {currentMessage && currentMessage.type === 'choice' && !isWaitingForData && (
+            {currentMessage && currentMessage.type === 'choice' && !isWaitingForData && !isCompressingContext && (
                 <div className={styles.choiceContainer}>
                     {currentMessage.options && currentMessage.options.length > 0 && (
                         <>
@@ -251,11 +252,12 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 value={customInputValue}
                                 onChange={(e) => handleCustomInputChange(e.target.value)}
                                 onKeyDown={handleCustomInputKeyDown}
+                                disabled={isCompressingContext}
                                 autoFocus
                             />
                             <button
                                 onClick={handleCustomInputSubmit}
-                                disabled={!customInputValue.trim()}
+                                disabled={!customInputValue.trim() || isCompressingContext}
                                 className={styles.customInputButton}
                             >
                                 <span>发送</span>
@@ -271,7 +273,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                 </div>
             )}
 
-            {currentMessage && currentMessage.type === 'choice' && isWaitingForData && (
+            {currentMessage && currentMessage.type === 'choice' && (isWaitingForData || isCompressingContext) && (
                 <div className={styles.loadingContainer}>
                     <div className={styles.aiLoader}>
                         <div className={styles.orbit}></div>
@@ -279,7 +281,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         <div className={styles.core}></div>
                     </div>
                     <div className={styles.statusText}>
-                        AI 推演中<span className={styles.dots}></span>
+                        {isCompressingContext ? '正在整理故事记忆' : 'AI 推演中'}<span className={styles.dots}></span>
                     </div>
                 </div>
             )}
