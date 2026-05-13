@@ -165,6 +165,16 @@ const stripOrphanLowercaseEnglishNoise = (text: string): string => {
         : text;
 };
 
+const stripVisualProtocolFragmentResidue = (text: string, stripCompleteEndChoice = false): string => {
+    let value = String(text || '')
+        .replace(/(^|\n)[ \t]*(?:\[\s*END_CHOICE(?!\s*\])|END_CHOICE\s*\])[ \t]*(?=\n|$)/gi, '$1')
+        .replace(/(^|\n)[ \t]*\[\s*(?:NARRATION|DIALOGUE|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION)\s*:[^\]\n]*(?=\n|$)/gi, '$1');
+    if (stripCompleteEndChoice) {
+        value = value.replace(/(^|\n)[ \t]*\[\s*END_CHOICE\s*\][ \t]*(?=\n|$)/gi, '$1');
+    }
+    return value;
+};
+
 export const stripNonStoryControlMarkup = (text: string): string => {
     let result = String(text || '');
     let previous = '';
@@ -180,7 +190,8 @@ export const stripNonStoryControlMarkup = (text: string): string => {
         .replace(/<\/?point\b[^>]*>/gi, '')
         .replace(/<\s*\/?\s*>/g, '')
         .replace(/\[METRICS_JSON:\s*\{[^\]]*\}\s*\]/gi, '')
-        .replace(/\[(?:SILENT|HIDDEN|DEBUG|ANALYSIS|INTERNAL)[^\]\n>]*(?:\]|\>)/gi, '');
+        .replace(/\[(?:SILENT|HIDDEN|DEBUG|ANALYSIS|INTERNAL)[^\]\n>]*(?:\]|\>)/gi, '')
+        .replace(/[\s\S]*/, (value) => stripVisualProtocolFragmentResidue(value));
 };
 
 const stripInvalidAngleBrackets = (text: string): string => {
@@ -213,6 +224,8 @@ const removeUnbalancedQuoteResidue = (text: string): string => {
 
 export const sanitizeVisualDisplayText = (text: string): string => {
     let value = stripNonStoryControlMarkup(text).trim();
+    if (!value) return '';
+    value = stripVisualProtocolFragmentResidue(value, true).trim();
     if (!value) return '';
     value = stripInvalidAngleBrackets(value);
     value = removeUnbalancedQuoteResidue(value);
