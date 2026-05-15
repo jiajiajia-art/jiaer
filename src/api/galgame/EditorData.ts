@@ -103,10 +103,13 @@ const EditorApi = {
             timeout: UPLOAD_TIMEOUT_MS,
         });
     },
-    uploadPlayerImage: (fileId:string, data:{file:File, variant:string}) => {
+    uploadPlayerImage: (fileId:string, data:{file:File, variant:string, variationDescription?: string}) => {
         const formData = new FormData();
         formData.append('image', data.file);
         formData.append('variant', data.variant);
+        if (data.variationDescription !== undefined) {
+            formData.append('variationDescription', data.variationDescription);
+        }
         return api.post<UploadPlayerImageResponse>(`/visual/edit/${fileId}/player/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -124,10 +127,13 @@ const EditorApi = {
             timeout: UPLOAD_TIMEOUT_MS,
         });
     },
-    uploadNpcImage: (fileId:string, npcId:string, data:{file:File, variat:string}) => {
+    uploadNpcImage: (fileId:string, npcId:string, data:{file:File, variat:string, variationDescription?: string}) => {
         const formData = new FormData();
         formData.append('image', data.file);
         formData.append('variant', data.variat);
+        if (data.variationDescription !== undefined) {
+            formData.append('variationDescription', data.variationDescription);
+        }
         return api.post<UploadNpcImageResponse>(`/visual/edit/${fileId}/npcs/${npcId}/image`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',

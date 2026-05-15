@@ -1383,6 +1383,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             type: 'variation',
             characterId: currentCharacter.id,
             variant: variantKey,
+            variationDescription: variation.description || '',
             inputRef,
         });
 
