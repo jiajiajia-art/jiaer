@@ -21,6 +21,15 @@ class GameResourceManager {
   private loadingPromises = new Map<string, Promise<ImageBitmap | null>>();
   private maxCacheSize = 500;
 
+  /**
+   * 获取缓存键：移除查询参数中的时间戳/缓存破坏参数
+   * 这样带不同时间戳的同一资源 URL 可以命中同一缓存
+   */
+  private getCacheKey(url: string): string {
+    // 移除常见的时间戳/缓存破坏参数
+    return url.replace(/[?&](t|cb)=[\d]+/g, '').split('?')[0];
+  }
+
   async loadImage(
     url: string,
     options: ResourceLoadOptions = {}
@@ -29,40 +38,42 @@ class GameResourceManager {
       return null;
     }
 
-    const cached = this.textureCache.get(url);
+    const cacheKey = this.getCacheKey(url);
+    const cached = this.textureCache.get(cacheKey);
     if (cached?.bitmap && cached.status === 'loaded') {
       return cached.bitmap;
     }
 
-    const existingPromise = this.loadingPromises.get(url);
+    const existingPromise = this.loadingPromises.get(cacheKey);
     if (existingPromise) {
       return existingPromise;
     }
 
-    const loadPromise = this._loadImageInternal(url, options.decode !== false);
-    this.loadingPromises.set(url, loadPromise);
+    const loadPromise = this._loadImageInternal(url, options.decode !== false, cacheKey);
+    this.loadingPromises.set(cacheKey, loadPromise);
 
     try {
       const bitmap = await loadPromise;
       return bitmap;
     } finally {
-      this.loadingPromises.delete(url);
+      this.loadingPromises.delete(cacheKey);
     }
   }
 
   private async _loadImageInternal(
     url: string,
-    shouldDecode: boolean
+    shouldDecode: boolean,
+    cacheKey: string
   ): Promise<ImageBitmap | null> {
-    if (!this.textureCache.has(url)) {
-      this.textureCache.set(url, {
+    if (!this.textureCache.has(cacheKey)) {
+      this.textureCache.set(cacheKey, {
         url,
         bitmap: null,
         status: 'loading',
       });
     }
 
-    const resourceInfo = this.textureCache.get(url)!;
+    const resourceInfo = this.textureCache.get(cacheKey)!;
     resourceInfo.status = 'loading';
 
     try {
@@ -141,21 +152,25 @@ class GameResourceManager {
   }
 
   getResourceInfo(url: string): ResourceInfo | undefined {
-    return this.textureCache.get(url);
+    const cacheKey = this.getCacheKey(url);
+    return this.textureCache.get(cacheKey);
   }
 
   isLoaded(url: string): boolean {
-    const info = this.textureCache.get(url);
+    const cacheKey = this.getCacheKey(url);
+    const info = this.textureCache.get(cacheKey);
     return info?.status === 'loaded' && info.bitmap !== null;
   }
 
   getBitmap(url: string): ImageBitmap | null {
-    const info = this.textureCache.get(url);
+    const cacheKey = this.getCacheKey(url);
+    const info = this.textureCache.get(cacheKey);
     return info?.bitmap || null;
   }
 
   useBitmap(url: string): ImageBitmap | null {
-    const info = this.textureCache.get(url);
+    const cacheKey = this.getCacheKey(url);
+    const info = this.textureCache.get(cacheKey);
     if (info?.bitmap) {
       info.refCount = (info.refCount || 0) + 1;
     }
@@ -163,7 +178,8 @@ class GameResourceManager {
   }
 
   releaseBitmap(url: string): void {
-    const info = this.textureCache.get(url);
+    const cacheKey = this.getCacheKey(url);
+    const info = this.textureCache.get(cacheKey);
     if (info && info.refCount !== undefined && info.refCount > 0) {
       info.refCount--;
     }
@@ -181,12 +197,12 @@ class GameResourceManager {
       .sort((a, b) => (a[1].loadedAt || 0) - (b[1].loadedAt || 0));
 
     const toRemove = entries.slice(0, entries.length - this.maxCacheSize);
-    toRemove.forEach(([url]) => {
-      const info = this.textureCache.get(url);
+    toRemove.forEach(([cacheKey]) => {
+      const info = this.textureCache.get(cacheKey);
       if (info?.bitmap && (info.refCount === undefined || info.refCount === 0)) {
         info.bitmap.close();
       }
-      this.textureCache.delete(url);
+      this.textureCache.delete(cacheKey);
     });
   }
 

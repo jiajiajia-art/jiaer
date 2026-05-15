@@ -18,6 +18,11 @@ export function getNpcs(data: AllGameData | WorldInteractionGameData) {
 // 重新导出图片缓存管理函数
 export { withCacheBust, bumpCacheBust, extractImageExtension } from '../../../utils/imageCache';
 
+// 通用 URL 有效性检查
+const isValidUrl = (url?: string | null): url is string => {
+    return !!url && url !== 'null' && url !== 'undefined' && typeof url === 'string' && url.trim() !== '';
+};
+
 // 拆分 variant 键名（格式：type_value）为 type 和 value
 export const parseVariantKey = (key: string): { type: string; value: string } | null => {
     if (!key || typeof key !== 'string') return null;
@@ -77,11 +82,15 @@ export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'g
 };
 
 // 将images对象转换为variations数组（过滤掉base，因为base已经存储在portrait中）
-export const imagesToVariations = (images?: Record<string, string>): Variation[] => {
+export const imagesToVariations = (
+    images?: Record<string, string>,
+    variationDescriptions?: Record<string, string>
+): Variation[] => {
     if (!images) return [];
     return Object.entries(images)
         .filter(([key]) => key !== 'base') // 过滤掉 base，base 图片已存储在 portrait 中
         .map(([key, img], idx) => {
+            const description = variationDescriptions?.[key] || undefined;
             // 尝试解析 type_value 格式
             const parsed = parseVariantKey(key);
             if (parsed) {
@@ -90,6 +99,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
                     label: parsed.value, // value 作为 label
                     img,                 // 保持原始路径，展示时再处理
                     type: parsed.type,   // type 作为 type
+                    description,
                 };
             }
             // 如果不是 type_value 格式，使用 key 作为 label 和 type
@@ -98,48 +108,38 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
                 label: key,
                 img, // 保持原始路径，展示时再处理
                 type: key,
+                description,
             };
         });
 };
 
 // 从images对象中选取base图片
-export const pickBaseImage = (images?: Record<string, string>, fallback?: string) => {
-    const isValidUrl = (url?: string | null): url is string => {
-        return !!url && url !== 'null' && url !== 'undefined' && url.trim() !== '';
-    };
-
+export const pickBaseImage = (images?: Record<string, string>, fallback?: string): string | undefined => {
     if (isValidUrl(images?.base)) return images!.base;
     const first = images ? Object.values(images).find(v => isValidUrl(v)) : undefined;
     return first || (isValidUrl(fallback) ? fallback : undefined);
 };
 
 // 统一处理 player 的图片字段（支持多种格式）
-const extractPlayerImages = (player: any): {
+const extractPlayerImages = (player: unknown): {
     imagesObject?: Record<string, string>;
     baseImage?: string;
 } => {
-    const isValidUrl = (url?: string | null): url is string => {
-        return !!url && 
-               url !== 'null' && 
-               url !== 'undefined' && 
-               typeof url === 'string' && 
-               url.trim() !== '';
-    };
-
     // 情况1: images 是对象格式 { base: string, ... }
-    if (player?.images && typeof player.images === 'object' && !Array.isArray(player.images)) {
-        const imagesObj = player.images as Record<string, any>;
-        // 检查是否是有效的对象（不是 null）
-        if (imagesObj !== null) {
-            // 转换为 Record<string, string>，过滤无效值
-            const validImages: Record<string, string> = {};
-            for (const [key, value] of Object.entries(imagesObj)) {
-                if (isValidUrl(value)) {
-                    validImages[key] = value as string;
+    if (player && typeof player === 'object' && 'images' in player) {
+        const playerObj = player as Record<string, unknown>;
+        if (playerObj.images && typeof playerObj.images === 'object' && !Array.isArray(playerObj.images)) {
+            const imagesObj = playerObj.images as Record<string, unknown>;
+            if (imagesObj !== null) {
+                const validImages: Record<string, string> = {};
+                for (const [key, value] of Object.entries(imagesObj)) {
+                    if (isValidUrl(value as string | null)) {
+                        validImages[key] = value as string;
+                    }
                 }
-            }
-            if (Object.keys(validImages).length > 0) {
-                return { imagesObject: validImages };
+                if (Object.keys(validImages).length > 0) {
+                    return { imagesObject: validImages };
+                }
             }
         }
     }
@@ -161,6 +161,7 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
     const npcRelationship = 'relationship' in npc ? npc.relationship : undefined;
 
     const images = (npc.images || undefined) as Record<string, string> | undefined;
+    const variationDescriptions = (npc as any).variationDescriptions as Record<string, string> | undefined;
     const portrait = pickBaseImage(images, DEFAULT_NPC_PORTRAIT);
 
     const mergedNpcBackground = mergeLegacyFieldsIntoBackground(npc, npc.description || '');
@@ -177,13 +178,16 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
         speech: npc.tone || '',
         appearance: npc.appearance || '',
         portrait: portrait || '',
+        portraitScale: (npc as any).portraitScale,
+        portraitOffsetX: (npc as any).portraitOffsetX,
+        portraitOffsetY: (npc as any).portraitOffsetY,
         background: mergedNpcBackground,
         relationships: npcRelationship ? [{
             id: 'r1',
             name: '玩家',
             description: npcRelationship,
         }] : [],
-        variations: imagesToVariations(images),
+        variations: imagesToVariations(images, variationDescriptions),
     };
 };
 
@@ -318,6 +322,7 @@ const mergeLegacyFieldsIntoBackground = (source: any, rawBackground: string): st
 
 export const playerToCharacter = (player: any): Character => {
     const { imagesObject, baseImage } = extractPlayerImages(player);
+    const variationDescriptions = player?.variationDescriptions as Record<string, string> | undefined;
     const portrait = pickBaseImage(imagesObject, baseImage) || DEFAULT_NPC_PORTRAIT;
     const playerIdentity = extractPlayerIdentity(player);
     const playerBackground = mergeLegacyFieldsIntoBackground(player, extractPlayerBackground(player));
@@ -334,9 +339,12 @@ export const playerToCharacter = (player: any): Character => {
         speech: player?.tone || '',
         appearance: player?.appearance || '',
         portrait: portrait || '',
+        portraitScale: player?.portraitScale,
+        portraitOffsetX: player?.portraitOffsetX,
+        portraitOffsetY: player?.portraitOffsetY,
         background: playerBackground,
         relationships: [],
-        variations: imagesToVariations(imagesObject),
+        variations: imagesToVariations(imagesObject, variationDescriptions),
     };
 };
 

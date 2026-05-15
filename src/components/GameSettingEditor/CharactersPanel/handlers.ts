@@ -363,54 +363,19 @@ export const createHandlers = (ctx: HandlersContext) => {
         return images;
     };
 
-    // 确认修改/新增角色 - 不管是用户上传还是 AI 生成，都统一调用存储接口
-    // const uploadImage = async (
-    //     imageUrl: string | undefined,
-    //     characterId: string,
-    //     variant: string
-    // ): Promise<string | undefined> => {
-    //     if (!imageUrl) {
-    //         return undefined;
-    //     }
-
-    //     try {
-    //         // 从 pendingImages 中获取文件
-    //         const pendingImage = pendingImages[characterId]?.[variant];
-    //         if (!pendingImage?.file) {
-    //             console.warn(`未找到 ${characterId}-${variant} 的暂存图片文件`);
-    //             return imageUrl;
-    //         }
-
-    //         const file = pendingImage.file;
-    //         toast.loading('正在存储图片...', { id: 'uploading-image' });
-
-    //         // 调用对应的上传 API
-    //         let response;
-    //         if (characterId === 'player') {
-    //             response = await api.uploadPlayerImage(fileId, file, variant);
-    //         } else {
-    //             const npcId = characterId.startsWith('temp-') ? `npc_${Date.now()}` : characterId;
-    //             response = await api.uploadNpcImage(fileId, npcId, file, variant);
-    //         }
-
-    //         toast.dismiss('uploading-image');
-
-    //         if (response.data?.success) {
-    //             // 从响应中提取服务器返回的图片路径
-    //             const serverPath = response.data.imagePath;
-    //             if (serverPath) {
-    //                 return serverPath;
-    //             }
-    //         }
-    //         toast.error('图片存储失败');
-    //         return imageUrl;
-    //     } catch (error) {
-    //         console.error('存储图片失败:', error);
-    //         toast.dismiss('uploading-image');
-    //         toast.error('图片存储失败，请重试');
-    //         return imageUrl;
-    //     }
-    // };
+    const buildVariationDescriptions = (character: Character): { [key: string]: string } => {
+        const descriptions: { [key: string]: string } = {};
+        character.variations
+            .filter(v => v.label !== 'base')
+            .forEach(variation => {
+                const key = getVariationImageKey(variation);
+                const description = variation.description?.trim();
+                if (key && description) {
+                    descriptions[key] = description;
+                }
+            });
+        return descriptions;
+    };
 
     // 确认修改/新增角色
     const confirmEdit = async (characterToSave: Character): Promise<ConfirmEditResult> => {
@@ -430,6 +395,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         if (characterToSave.id === 'player') {
             const persistedBaseImage = normalizePersistedImagePath(characterToSave.portrait);
             const images = buildCharacterImages(characterToSave, { normalize: true });
+            const variationDescriptions = buildVariationDescriptions(characterToSave);
 
             const playerData = {
                 name: characterToSave.name || '',
@@ -443,6 +409,10 @@ export const createHandlers = (ctx: HandlersContext) => {
                 background: characterToSave.background || undefined,
                 image: persistedBaseImage,
                 images: Object.keys(images).length > 0 ? images : undefined,
+                portraitScale: characterToSave.portraitScale,
+                portraitOffsetX: characterToSave.portraitOffsetX,
+                portraitOffsetY: characterToSave.portraitOffsetY,
+                variationDescriptions: Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined,
             };
 
             try {
@@ -452,7 +422,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                     return failResult;
                 }
 
-                toast.success('主角信息更新成功');
                 const p = parseResponse.extractPlayer(response.data, mode);
                 if (p) {
                     const nextPlayer = playerToCharacter(p);
@@ -479,13 +448,14 @@ export const createHandlers = (ctx: HandlersContext) => {
         // NPC 资料保存
         const { race, job } = splitIdentity(characterToSave.identity, characterToSave.role);
         const images = buildCharacterImages(characterToSave, { normalize: true });
+        const variationDescriptions = buildVariationDescriptions(characterToSave);
 
         const finalImages: { [key: string]: string } | undefined = Object.keys(images).length > 0 ? images : undefined;
         const playerRelationship = characterToSave.relationships.find(
             r => r.name === '玩家' || r.name.toLowerCase().includes('player'),
         );
 
-        const npcData: NPC & { callName?: string } = {
+        const npcData: NPC & { callName?: string; variationDescriptions?: Record<string, string> } = {
             id: characterToSave.id.startsWith('temp-') ? `npc_${Date.now()}` : characterToSave.id,
             name: characterToSave.name || '',
             callName: characterToSave.callName || '',
@@ -498,6 +468,10 @@ export const createHandlers = (ctx: HandlersContext) => {
             tone: characterToSave.speech || '',
             relationship: playerRelationship?.description || undefined,
             images: finalImages,
+            portraitScale: characterToSave.portraitScale,
+            portraitOffsetX: characterToSave.portraitOffsetX,
+            portraitOffsetY: characterToSave.portraitOffsetY,
+            variationDescriptions: Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined,
         };
 
         try {
@@ -510,7 +484,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                 return failResult;
             }
 
-            toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
             const finalNpcId = npcData.id;
             const npc = parseResponse.extractNpc(response.data, mode, finalNpcId);
 
@@ -610,13 +583,14 @@ export const createHandlers = (ctx: HandlersContext) => {
         const targetCharacterId = `npc_${Date.now()}`;
         const { race, job } = splitIdentity(newCharacterData.identity, newCharacterData.role);
         const images = buildCharacterImages(newCharacterData, { includeEmptyBase: true });
+        const variationDescriptions = buildVariationDescriptions(newCharacterData);
 
         const finalImages: { [key: string]: string } | undefined =
             newCharacterData.portrait || Object.keys(images).length > 1 ? images : undefined;
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
-        const newNpc: NPC & { callName?: string } = {
+        const newNpc: NPC & { callName?: string; variationDescriptions?: Record<string, string> } = {
             id: targetCharacterId,
             name: newCharacterData.name || '未命名角色',
             callName: newCharacterData.callName || '',
@@ -629,6 +603,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             tone: newCharacterData.speech || '',
             relationship: playerRelationship?.description || undefined,
             images: finalImages,
+            variationDescriptions: Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined,
         };
 
         try {
@@ -718,99 +693,90 @@ export const createHandlers = (ctx: HandlersContext) => {
                 return false;
             }
 
-                // 如果是玩家图片，更新 portrait 或 variations
+            // 如果是玩家图片，更新 portrait 或 variations
             if ((type === 'player' || (type === 'variation' && targetCharacterId === 'player')) && !isAddingNew) {
                 const { image: playerImage, images: playerImages } = parseResponse.extractPlayerImage(response.data, mode);
 
                 if (variant === 'base') {
-                        const newPortrait = (playerImages && playerImages.base) || playerImage;
-                        if (newPortrait) {
-                            setCharacterData(prev =>
-                                prev.map(char =>
-                                    char.id === 'player'
-                                        ? { ...char, portrait: newPortrait }
-                                        : char
-                                )
-                            );
-                            // 手动刷新缓存，强制浏览器重新加载图片
-                            bumpCacheBust(newPortrait);
-                        } else {
-                            // 如果无法提取图片数据，触发数据刷新以获取最新数据
-                            if (onDataChange) {
-                                onDataChange();
-                            }
-                        }
+                    const newPortrait = (playerImages && playerImages.base) || playerImage;
+                    if (newPortrait) {
+                        setCharacterData(prev =>
+                            prev.map(char =>
+                                char.id === 'player'
+                                    ? { ...char, portrait: newPortrait }
+                                    : char
+                            )
+                        );
+                        bumpCacheBust(newPortrait);
                     } else {
-                        // 差分图片：解析 type_label 格式的 variant（如 expression_伤心）
-                        const { type: finalType, label: finalLabel } = parseVariantKey(variant);
-                        const variantImg = (playerImages && playerImages[variant]) || playerImage;
-                        if (variantImg) {
-                            setCharacterData(prev =>
-                                prev.map(char => {
-                                    if (char.id !== 'player') return char;
-                                    const existingVarIndex = char.variations.findIndex(v => v.label === finalLabel);
-                                    if (existingVarIndex >= 0) {
-                                        const newVariations = [...char.variations];
-                                        newVariations[existingVarIndex] = {
-                                            ...newVariations[existingVarIndex],
-                                            img: variantImg,
-                                        };
-                                        bumpCacheBust(variantImg);
-                                        return { ...char, variations: newVariations };
-                                    } else {
-                                        const newVar: Variation = {
-                                            id: `v-${Date.now()}`,
-                                            label: finalLabel,
-                                            img: variantImg,
-                                            type: finalType,
-                                        };
-                                        return { ...char, variations: [...char.variations, newVar] };
-                                    }
-                                })
-                            );
-                        } else {
-                            // 如果无法提取图片数据，触发数据刷新以获取最新数据
-                            if (onDataChange) {
-                                onDataChange();
-                            }
+                        if (onDataChange) {
+                            onDataChange();
+                        }
+                    }
+                } else {
+                    // 差分图片
+                    const { type: finalType, label: finalLabel } = parseVariantKey(variant);
+                    const variantImg = (playerImages && playerImages[variant]) || playerImage;
+                    if (variantImg) {
+                        setCharacterData(prev =>
+                            prev.map(char => {
+                                if (char.id !== 'player') return char;
+                                const existingVarIndex = char.variations.findIndex(v => v.label === finalLabel);
+                                if (existingVarIndex >= 0) {
+                                    const newVariations = [...char.variations];
+                                    newVariations[existingVarIndex] = {
+                                        ...newVariations[existingVarIndex],
+                                        img: variantImg,
+                                    };
+                                    bumpCacheBust(variantImg);
+                                    return { ...char, variations: newVariations };
+                                } else {
+                                    const newVar: Variation = {
+                                        id: `v-${Date.now()}`,
+                                        label: finalLabel,
+                                        img: variantImg,
+                                        type: finalType,
+                                    };
+                                    return { ...char, variations: [...char.variations, newVar] };
+                                }
+                            })
+                        );
+                    } else {
+                        if (onDataChange) {
+                            onDataChange();
                         }
                     }
                 }
+            }
 
-                // 如果是NPC图片（基础立绘或差分），使用返回的数据更新本地状态
-                if ((type === 'npc' || (type === 'variation' && targetCharacterId !== 'player')) && targetCharacterId && !isAddingNew) {
-                    const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
-                    if (imageData?.imagePath) {
-                        const imageUrl = imageData.imagePath;
-                        if (variant === 'base') {
-                            updateCharacterImage(targetCharacterId, imageUrl, 'base');
-                            // 同步其他差分图片
-                            if (imageData.allVariants) {
-                                for (const [variantKey, variantUrl] of Object.entries(imageData.allVariants)) {
-                                    if (variantKey !== 'base') {
-                                        // 解析 variantKey 获取 type 和 label
-                                        const { type: finalType, label: finalLabel } = parseVariantKey(variantKey);
-                                        updateCharacterImage(targetCharacterId, variantUrl, finalLabel, finalType);
-                                    }
+            // 如果是 NPC 图片
+            if ((type === 'npc' || (type === 'variation' && targetCharacterId !== 'player')) && targetCharacterId && !isAddingNew) {
+                const imageData = parseResponse.extractNpcImage(response.data, mode, variant);
+                if (imageData?.imagePath) {
+                    const imageUrl = imageData.imagePath;
+                    if (variant === 'base') {
+                        updateCharacterImage(targetCharacterId, imageUrl, 'base');
+                        if (imageData.allVariants) {
+                            for (const [variantKey, variantUrl] of Object.entries(imageData.allVariants)) {
+                                if (variantKey !== 'base') {
+                                    const { type: finalType, label: finalLabel } = parseVariantKey(variantKey);
+                                    updateCharacterImage(targetCharacterId, variantUrl, finalLabel, finalType);
                                 }
                             }
-                            bumpCacheBust(imageUrl);
-                        } else {
-                            // 上传图片时，处理 type_label 格式的 variant（如 expression_伤心）
-                            // 解析 variant 获取 type 和 label
-                            const { type: finalType, label: finalValue } = parseVariantKey(variant);
-                            updateCharacterImage(targetCharacterId, imageUrl, finalValue, finalType);
-                            // 同步 base 图片（如果有）
-                            if (imageData.allVariants?.base) {
-                                updateCharacterImage(targetCharacterId, imageData.allVariants.base, 'base');
-                            }
-                            bumpCacheBust(imageUrl);
                         }
+                        bumpCacheBust(imageUrl);
                     } else {
-                        // 如果无法提取图片数据，使用后端返回的完整数据进行更新
-                        updateCharacterFromResponse(response.data, targetCharacterId);
+                        const { type: finalType, label: finalValue } = parseVariantKey(variant);
+                        updateCharacterImage(targetCharacterId, imageUrl, finalValue, finalType);
+                        if (imageData.allVariants?.base) {
+                            updateCharacterImage(targetCharacterId, imageData.allVariants.base, 'base');
+                        }
+                        bumpCacheBust(imageUrl);
                     }
+                } else {
+                    updateCharacterFromResponse(response.data, targetCharacterId);
                 }
+            }
 
             return true;
         } catch (error) {
@@ -975,7 +941,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             const startPayload: any = startResponse?.data || startResponse;
             const jobId = startPayload?.jobId;
             if (!startPayload?.success || !jobId) {
-                toast.error(startPayload?.error || startPayload?.message || 'å½“å‰ä½¿ç”¨äººæ•°è¿‡å¤šï¼Œè¯·ç¨åŽå†è¯•');
+                toast.error(startPayload?.error || startPayload?.message || '当前使用人数过多，请稍后再试');
                 return;
             }
             setNpcBatchJobStatus({
@@ -1011,64 +977,6 @@ export const createHandlers = (ctx: HandlersContext) => {
                 }
                 await new Promise((resolve) => window.setTimeout(resolve, 1500));
             }
-            /* legacy synchronous fallback removed in favor of batch job polling
-            if (Date.now() < 0) {
-            const response = await api.generateAllNpcImages(fileId);
-            if (response.data?.success) {
-                const respAny: any = response.data;
-                const payload = respAny.data || respAny;
-
-                // 从 results 中获取新的字段
-                const npcsTotalRaw = Number(payload?.npcs?.total ?? 0);
-                const npcsTotal = Number.isFinite(npcsTotalRaw) ? Math.max(0, npcsTotalRaw) : 0;
-                const playerTotalRaw = Number(payload?.player?.total ?? 0);
-                const playerTotal = Number.isFinite(playerTotalRaw) ? Math.max(0, playerTotalRaw) : 0;
-                const totalCount = npcsTotal + playerTotal;
-
-                const npcsEffectiveRaw = Number(
-                    payload?.npcs?.effective ?? 0
-                );
-                const npcsEffective = Number.isFinite(npcsEffectiveRaw) ? Math.max(0, npcsEffectiveRaw) : 0;
-                const playerEffectiveRaw = Number(payload?.player?.effective ?? 0);
-                const playerEffective = Number.isFinite(playerEffectiveRaw) ? Math.max(0, playerEffectiveRaw) : 0;
-                const generatedRaw = payload?.npcs || payload?.player ? npcsEffective + playerEffective : npcsEffective;
-                const generatedCount = totalCount > 0 ? Math.min(generatedRaw, totalCount) : generatedRaw;
-
-                const pointsDeductedRaw = Number(
-                    payload?.points?.deducted ?? npcCostPoints ?? 0
-                );
-                const pointsDeducted = Number.isFinite(pointsDeductedRaw) ? Math.max(0, pointsDeductedRaw) : 0;
-
-                const remainingPointsRaw = payload?.points?.remaining;
-                const remainingPointsValue = Number(remainingPointsRaw);
-                const remainingPoints = Number.isFinite(remainingPointsValue)
-                    ? Math.max(0, remainingPointsValue)
-                    : undefined;
-
-                // 弹出结果弹窗
-                setNpcGenerationResult({
-                    generatedCount,
-                    totalCount,
-                    pointsDeducted,
-                    remainingPoints,
-                });
-                bumpExistingCharacterImageCache();
-                try {
-                    await onDataChange?.();
-                } catch (refreshError) {
-                    console.error('Failed to refresh character data after batch generation:', refreshError);
-                }
-                setNpcResultModalOpen(true);
-                await refreshUserPoints();
-            } else {
-                toast.error('当前使用人数过多，请稍后再试');
-            }
-        } catch (error) {
-            toast.error('生成所有角色立绘失败，请检查网络连接');
-            }
-            }
-            throw new Error('NPC batch job polling timed out');
-            */
             throw new Error('NPC batch job polling timed out');
         } finally {
             setIsGeneratingNpcImages(false);

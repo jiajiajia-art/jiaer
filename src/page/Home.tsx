@@ -608,13 +608,13 @@ const Home: React.FC = () => {
             setShowJoinGroupModal(true);
         }
     }, [user?.user?.id]);
-    // 鍙湪鐧诲綍鍚庢鏌ヤ竴娆＄鍒板脊绐楋紙浣跨敤 sessionStorage 璁板綍鏈浼氳瘽锛?
+    // 用户登录时，检查是否显示签到弹窗
     useEffect(() => {
         if (!user?.user?.id || hasCheckedInSessionRef.current || user?.user?.hasSignedIn) {
             return;
         }
 
-        // 濡傛灉鏈浼氳瘽璁″垝鍏堝睍绀哄叆缇ゅ脊绐楋紝鍒欐湰娆′笉寮圭鍒?
+        // 如果用户已经显示过签到弹窗，则不显示
         const joinSessionKey = 'joinGroupModalWillShow_' + (user?.user?.id || '');
         if (sessionStorage.getItem(joinSessionKey) === 'true') {
             return;
@@ -640,7 +640,7 @@ const Home: React.FC = () => {
     const loadSpecialGames = useCallback(async (page: number, isInitial = false, retryCount = 0) => {
         const MAX_RETRIES = 1;
         const RETRY_DELAY = 1000;
-        const PAGE_SIZE = 8;
+        const PAGE_SIZE = 10;
         const offset = page * PAGE_SIZE;
 
         if (isInitial) {
@@ -669,7 +669,7 @@ const Home: React.FC = () => {
                 
                 setHasMoreSpecial(newGames.length === PAGE_SIZE);
                 if (newGames.length > 0) {
-                    setSpecialPage(page + 1); // 椤电爜閫掑
+                    setSpecialPage(page + 1); // 设置限时优惠分页
                 }
             } else {
                 throw new Error('获取限时优惠游戏列表失败');
@@ -698,7 +698,7 @@ const Home: React.FC = () => {
         filters: HomeListFilters,
         isInitial = false,
     ) => {
-        const pageSize = 12;
+        const pageSize = 10;
         const offset = page * pageSize;
         const requestId = ++latestAllGamesRequestIdRef.current;
 
@@ -739,7 +739,7 @@ const Home: React.FC = () => {
                     });
                 }
                 
-                // 濡傛灉杩斿洖鐨勬暟鎹皯浜?PAGE_SIZE锛岃鏄庢病鏈夋洿澶氫簡
+                // 如果返回的游戏数量等于PAGE_SIZE，则设置为有更多
                 setHasMoreAll(nextGames.length === pageSize);
                 setAllPage(nextGames.length > 0 ? page + 1 : page);
                 return nextGames;
@@ -772,23 +772,23 @@ const Home: React.FC = () => {
             const bannerResponse = await bannerApi.getLatest();
             const bannerItems = bannerResponse.data.data?.banners || [];
             if (bannerResponse.data.success && bannerItems.length > 0) {
-                // 瀹炵幇鍙岀缁熶竴璇诲彇杞挱鍥?
+                // 实现加载首页轮播图
                 setCarouselItems(bannerItems);
                 return;
             }
         } catch (error) {
-            console.error('鍔犺浇棣栭〉杞挱鍥惧け璐ワ紝鍑嗗鍥為€€鏃ц疆鎾?', error);
+            console.error('加载首页轮播图失败:', error);
         }
 
         try {
             const response = await libraryDataApi.getCarouselData();
             if (response.data.success && response.data.data) {
-                // 瀹炵幇杞挱鍥惧厹搴曞洖閫€
+                // 实现加载首页轮播图
                 setCarouselItems(response.data.data);
                 return;
             }
         } catch (error) {
-            console.error('鍔犺浇棣栭〉鏃ц疆鎾浘澶辫触:', error);
+            console.error('加载首页轮播图失败:', error);
         }
 
         setCarouselItems([]);
@@ -801,7 +801,7 @@ const Home: React.FC = () => {
                 setLatestAnnouncement(response.data.data);
             }
         } catch (error) {
-            console.error('鑾峰彇棣栭〉鍏憡澶辫触:', error);
+            console.error('加载最新公告失败:', error);
         }
     }, []);
 
@@ -829,12 +829,12 @@ const Home: React.FC = () => {
                 })).filter((tag) => Number.isFinite(tag.id) && tag.id > 0 && tag.name);
             }
         } catch (error) {
-            console.error('鍔犺浇棣栭〉棰樻潗鏍囩澶辫触:', error);
+            console.error('加载首页热门题材失败:', error);
         }
         return [];
     }, []);
 
-    // 鍒濆鍔犺浇
+    // 加载全部题材标签
     const loadAllThemeTags = useCallback(async (): Promise<FlatThemeTag[]> => {
         try {
             const response = await gameTagsApi.getGameTagsTree();
@@ -851,7 +851,7 @@ const Home: React.FC = () => {
         try {
             const response = await specialThemeTagsApi.getPublicTags();
             if (response.data.success) {
-                // 实现首页特殊标签读取
+                // 实现加载首页特殊标签
                 return (response.data.data || []).filter((tag) => Number(tag.id) > 0 && String(tag.name || '').trim());
             }
         } catch (error) {
@@ -911,7 +911,7 @@ const Home: React.FC = () => {
             if (showcaseTag.kind === 'special') {
                 const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12);
                 if (response.data.success) {
-                    // 实现普通热门题材剧本预览读取
+                    // 实现加载普通热门题材剧本预览
                     games = response.data.data || [];
                     // 实现特殊标签剧本预览读取
                     games = response.data.data || [];
@@ -1383,7 +1383,7 @@ const Home: React.FC = () => {
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                // 瀹炵幇 椤甸潰闅愯棌鏃舵殏鍋滆嚜鍔ㄨ疆鎾?
+                // 实现 页面隐藏时暂停自动播放
                 clearCarouselInterval();
                 return;
             }
@@ -1876,7 +1876,7 @@ const Home: React.FC = () => {
         };
     }, []);
 
-    // 鍏抽棴鍔犲叆缇ゅ脊绐楋紱璁板綍宸插睍绀猴紱蹇呰鏃惰窡杩涘脊绛惧埌
+    // 实现关闭加入群组弹窗
     const handleCloseJoinGroupModal = () => {
         setShowJoinGroupModal(false);
         const uid = user?.user?.id;
@@ -1884,7 +1884,7 @@ const Home: React.FC = () => {
         const localKey = 'joinGroupModalShown_' + uid;
         localStorage.setItem(localKey, 'true');
 
-        // 濡傛灉浠婂ぉ杩樻病绛惧埌锛屼笖鏈細璇濆皻鏈脊杩囩鍒帮紝鍒欒ˉ寮圭鍒?
+        // 如果用户今天已经签到过，则不显示签到弹窗
         const today = new Date().toDateString();
         const checkInKey = 'checkIn_' + uid + '_' + today;
         const isCheckedIn = localStorage.getItem(checkInKey) === today;
@@ -2246,8 +2246,8 @@ const Home: React.FC = () => {
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/绠ご.png`} alt="" />
                             </button>
                         </div>
-                        {isLoadingSpecial ? (
-                            <GameGridSkeleton count={8} layoutVariant="homeWide" />
+                            {isLoadingSpecial ? (
+                                <GameGridSkeleton count={10} layoutVariant="homeWide" />
                         ) : (
                             <>
                                 <GameGrid
@@ -2282,7 +2282,7 @@ const Home: React.FC = () => {
                             </button>
                         </div> */}
                             {isLoadingAll ? (
-                                <GameGridSkeleton count={8} layoutVariant="homeWide" />
+                                <GameGridSkeleton count={10} layoutVariant="homeWide" />
                             ) : (
                                 <>
                                     <GameGrid
@@ -2292,7 +2292,7 @@ const Home: React.FC = () => {
                                     />
                                     {isLoadingMoreAll && (
                                         <div style={{ padding: '20px', textAlign: 'center' }}>
-                                            <GameGridSkeleton count={8} layoutVariant="homeWide" />
+                                            <GameGridSkeleton count={10} layoutVariant="homeWide" />
                                         </div>
                                     )}
                                 </>

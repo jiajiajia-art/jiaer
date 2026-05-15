@@ -38,10 +38,14 @@ export interface PlayerCharacter {
   age: number;
   gender: string;
   race?: string;
+  background?: string;
   personality?: string;
   appearance?: string;
   tone?: string;
   images: string;
+  portraitScale?: number;
+  portraitOffsetX?: number;
+  portraitOffsetY?: number;
   [key: string]: string | number | undefined;
 }
 
@@ -65,6 +69,7 @@ export interface NPC {
   abilities?: string[];
   dialogue?: string[];
   images?: NPCImages;
+  portraitScale?: number;
   [key: string]: unknown;
 }
 

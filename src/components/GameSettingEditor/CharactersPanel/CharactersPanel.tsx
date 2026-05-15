@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
 import styles from './CharactersPanel.module.css';
+import CharacterLayer from '../../Galgame/CharacterLayer';
 import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
 import type { AllGameData, BatchImageJobStatus } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -7,6 +8,7 @@ import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
+import { MdEdit } from 'react-icons/md';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { withCacheBust, extractImageExtension } from './utils';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
@@ -101,6 +103,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [newVariationType, setNewVariationType] = useState<string>('');
     const [newVariationLabel, setNewVariationLabel] = useState<string>('');
     const [newVariationDescription, setNewVariationDescription] = useState<string>('');
+    const [editingVariationId, setEditingVariationId] = useState<string | null>(null);
     const playerFileInputRef = useRef<HTMLInputElement>(null);
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
@@ -110,6 +113,8 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null);
     const [isUploadingPortrait, setIsUploadingPortrait] = useState<boolean>(false);
     const [isSavingCharacter, setIsSavingCharacter] = useState<boolean>(false);
+    // 保存遮罩层状态
+    const [isSaveOverlayVisible, setIsSaveOverlayVisible] = useState<boolean>(false);
     // 差分生成加载状态
     const [isGeneratingVariation, setIsGeneratingVariation] = useState<boolean>(false);
     const [generatingVariationId, setGeneratingVariationId] = useState<string | null>(null);
@@ -142,6 +147,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 未保存修改相关状态
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    // 立绘预览模式状态
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
+    const [previewScale, setPreviewScale] = useState(1);
     const [saveConfirmModalOpen, setSaveConfirmModalOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{
         type: 'switchCharacter' | 'switchPanel' | 'createCharacter';
@@ -164,6 +172,54 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 URL.revokeObjectURL(pendingImageUrlsRef.current[key]);
             }
             delete pendingImageUrlsRef.current[key];
+        }
+    };
+
+    // Canvas 缩放图片（返回缩放后的 Blob）
+    const scaleImageWithCanvas = async (
+        imageUrl: string,
+        scale: number
+    ): Promise<Blob | null> => {
+        try {
+            // 使用 fetch 方式加载图片，避免跨域 CORS 问题
+            const response = await fetch(imageUrl);
+            if (!response.ok) {
+                console.error('fetch 失败:', response.status, response.statusText);
+                return null;
+            }
+            const blob = await response.blob();
+            const imgUrl = URL.createObjectURL(blob);
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth * scale;
+                    canvas.height = img.naturalHeight * scale;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        URL.revokeObjectURL(imgUrl);
+                        resolve(null);
+                        return;
+                    }
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(imgUrl);
+                    canvas.toBlob((resultBlob) => {
+                        resolve(resultBlob);
+                    }, 'image/png');
+                };
+                img.onerror = (e) => {
+                    console.error('Image onerror:', e);
+                    URL.revokeObjectURL(imgUrl);
+                    resolve(null);
+                };
+                img.src = imgUrl;
+            });
+        } catch (error) {
+            console.error('scaleImageWithCanvas 异常:', error);
+            return null;
         }
     };
 
@@ -385,22 +441,29 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 const images: { base: string; [key: string]: string } = {
                     base: char.portrait || '', // base 图片来自 portrait
                 };
+                const variationDescriptions: Record<string, string> = {};
                 char.variations
                     .filter(v => v.label !== 'base') // 确保不包含 base
                     .forEach(variation => {
+                        const key = variation.type && variation.label
+                            ? `${variation.type}_${variation.label}`
+                            : variation.label || variation.type || '';
                         if (variation.img) {
                             // 键名格式：type_value
-                            const key = variation.type && variation.label 
-                                ? `${variation.type}_${variation.label}` 
-                                : variation.label || variation.type || '';
                             if (key) {
                                 images[key] = variation.img;
                             }
+                        }
+                        const description = variation.description?.trim();
+                        if (key && description) {
+                            variationDescriptions[key] = description;
                         }
                     });
 
                 const finalImages: { base: string; [key: string]: string } | undefined = 
                     char.portrait || Object.keys(images).length > 1 ? images : undefined;
+                const finalVariationDescriptions: Record<string, string> | undefined =
+                    Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined;
 
                 // 获取与玩家的关系（从 relationships 中查找）
                 const playerRelationship = char.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
@@ -418,6 +481,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     tone: char.speech || '',
                     relationship: playerRelationship?.description || undefined,
                     images: finalImages,
+                    variationDescriptions: finalVariationDescriptions,
                 };
             });
 
@@ -581,6 +645,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     }, [activeCharacterId, isAddingNew]);
 
+    // 切换角色时同步 portraitScale
+    useEffect(() => {
+        if (currentCharacter && currentCharacter.portraitScale !== undefined) {
+            setPreviewScale(currentCharacter.portraitScale);
+        }
+    }, [currentCharacter?.id]);
+
     useEffect(() => {
         // 保留用户输入态，确认保存时再统一格式
         setPersonalityInputValue(currentCharacter?.personality.join(' / ') ?? '');
@@ -609,11 +680,15 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const currentPortraitImage = currentCharacter
         ? getEffectiveImage(currentCharacter, 'base')
         : undefined;
-    const displayPortraitImage = currentPortraitImage
-        ? ((currentPortraitImage.startsWith('blob:') || currentPortraitImage.startsWith('data:'))
-            ? currentPortraitImage
-            : withCacheBust(currentPortraitImage))
-        : DEFAULT_NPC_PORTRAIT;
+    // 使用 useMemo 缓存 displayPortraitImage，避免每次渲染都调用 withCacheBust 生成新时间戳
+    // 防止 CharacterLayer 的 key 变化导致不必要的重新挂载
+    const displayPortraitImage = useMemo(() => {
+        if (!currentPortraitImage) return DEFAULT_NPC_PORTRAIT;
+        if (currentPortraitImage.startsWith('blob:') || currentPortraitImage.startsWith('data:')) {
+            return currentPortraitImage;
+        }
+        return withCacheBust(currentPortraitImage);
+    }, [currentPortraitImage]);
     const isCurrentPortraitGenerating = Boolean(
         currentCharacter && isGeneratingSingleNpcImage && generatingCharacterId === currentCharacter.id,
     );
@@ -727,12 +802,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             return null;
         }
 
+        // 如果在预览模式下调整了缩放，保存时应用缩放比例
+        const portraitScale = (isPreviewMode && previewScale !== 1) ? previewScale : character.portraitScale;
+
         return {
             ...character,
             // 用户确认修改后再统一性格标签格式
             personality: normalizePersonalityTags(personalityInputValue),
+            // 保存立绘缩放比例
+            portraitScale: portraitScale !== 1 ? portraitScale : undefined,
         };
-    }, [personalityInputValue]);
+    }, [personalityInputValue, isPreviewMode, previewScale]);
 
     // 字数统计
     const nameWords = useWordCount(currentCharacter?.name ?? '');
@@ -759,15 +839,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 打开新增差分弹窗
     const openAddVariationModal = () => {
+        setEditingVariationId(null);
         setNewVariationType('');
         setNewVariationLabel('');
         setNewVariationDescription('');
         setVariationModalOpen(true);
     };
 
+    const openEditVariationModal = (variation: Variation) => {
+        setEditingVariationId(variation.id);
+        setNewVariationType(variation.type || '');
+        setNewVariationLabel(variation.label);
+        setNewVariationDescription(variation.description || '');
+        setVariationModalOpen(true);
+    };
+
     // 关闭新增差分弹窗
     const closeVariationModal = () => {
         setVariationModalOpen(false);
+        setEditingVariationId(null);
         setNewVariationType('');
         setNewVariationLabel('');
         setNewVariationDescription('');
@@ -795,9 +885,53 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             existingVariations = currentCharacter.variations;
         }
 
-        const isDuplicate = existingVariations.some(v => v.label === trimmedLabel);
+        const isDuplicate = existingVariations.some(v => v.label === trimmedLabel && v.id !== editingVariationId);
         if (isDuplicate) {
             toast.error(`差分「${trimmedLabel}」已存在，请使用不同的名称`);
+            return;
+        }
+
+        if (editingVariationId) {
+            const targetVariation = existingVariations.find(v => v.id === editingVariationId);
+            if (!targetVariation) {
+                toast.error('未找到当前差分');
+                return;
+            }
+
+            const nextDescription = newVariationDescription || undefined;
+            const hasChanged =
+                targetVariation.label !== trimmedLabel ||
+                (targetVariation.type || '') !== newVariationType ||
+                (targetVariation.description || undefined) !== nextDescription;
+
+            if (hasChanged) {
+                const updateVariation = (variation: Variation): Variation =>
+                    variation.id === editingVariationId
+                        ? {
+                            ...variation,
+                            label: trimmedLabel,
+                            type: newVariationType,
+                            description: nextDescription,
+                        }
+                        : variation;
+
+                if (isAddingNew && newCharacterData) {
+                    setNewCharacterData({
+                        ...newCharacterData,
+                        variations: newCharacterData.variations.map(updateVariation),
+                    });
+                } else if (currentCharacter) {
+                    setCharacterData(prev =>
+                        prev.map(char =>
+                            char.id === currentCharacter.id
+                                ? { ...char, variations: char.variations.map(updateVariation) }
+                                : char
+                        )
+                    );
+                }
+                setHasUnsavedChanges(true);
+            }
+            closeVariationModal();
             return;
         }
 
@@ -906,7 +1040,73 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         if (!handlers) return false;
 
         setIsSavingCharacter(true);
+        setIsSaveOverlayVisible(true);
+
+        // 用于存储缩放处理后的数据（避免依赖异步的 setState）
+        let processedPendingImages: typeof pendingImages = {};
+
         try {
+            console.log('=== confirmEdit 开始 ===');
+            console.log('isPreviewMode:', isPreviewMode);
+            console.log('previewScale:', previewScale);
+            console.log('currentPortraitImage:', currentPortraitImage);
+            console.log('activeCharacterId:', activeCharacterId);
+            console.log('pendingImages:', pendingImages);
+
+            // 如果预览模式有缩放且不是原尺寸，需要生成缩放后的图片
+            if (isPreviewMode && previewScale !== 1 && currentPortraitImage && activeCharacterId) {
+                console.log('→ 满足缩放条件，开始处理...');
+                console.log('currentPortraitImage (原始):', currentPortraitImage);
+                console.log('displayPortraitImage (带cache bust):', displayPortraitImage);
+                toast.loading('正在处理立绘缩放...', { id: 'processing-scale' });
+                // 使用 fetch 方式加载图片（需要服务器支持 CORS 头）
+                const scaledBlob = await scaleImageWithCanvas(displayPortraitImage, previewScale);
+                toast.dismiss('processing-scale');
+                console.log('scaledBlob:', scaledBlob);
+
+                if (scaledBlob) {
+                    console.log('→ scaledBlob 成功，size:', scaledBlob.size, 'type:', scaledBlob.type);
+                    const scaledPreviewUrl = URL.createObjectURL(scaledBlob);
+                    // 清理旧的预览 URL
+                    clearPendingImageUrl(`${activeCharacterId}-base`);
+                    pendingImageUrlsRef.current[`${activeCharacterId}-base`] = scaledPreviewUrl;
+
+                    // 创建一个新的 File 对象用于上传
+                    const scaledFile = new File(
+                        [scaledBlob],
+                        `portrait_${Math.round(previewScale * 100)}pct.png`,
+                        { type: 'image/png' }
+                    );
+                    console.log('scaledFile:', scaledFile.name, scaledFile.size);
+
+                    // 直接存储到 processedPendingImages，不依赖异步的 setState
+                    processedPendingImages = {
+                        ...pendingImages,
+                        [activeCharacterId]: {
+                            ...(pendingImages[activeCharacterId] || {}),
+                            base: {
+                                file: scaledFile,
+                                previewUrl: scaledPreviewUrl,
+                                sourceType: 'upload',
+                                variant: 'base',
+                                scale: previewScale,
+                            },
+                        },
+                    };
+                    console.log('processedPendingImages 已设置:', processedPendingImages);
+                    toast.success('立绘已缩放处理');
+                } else {
+                    console.log('✗ scaledBlob 为空，缩放失败');
+                    toast.error('立绘缩放失败，将使用原图');
+                }
+            } else {
+                console.log('→ 不满足缩放条件，跳过');
+                if (!isPreviewMode) console.log('  原因: isPreviewMode = false');
+                if (previewScale === 1) console.log('  原因: previewScale === 1');
+                if (!currentPortraitImage) console.log('  原因: currentPortraitImage 为空');
+                if (!activeCharacterId) console.log('  原因: activeCharacterId 为空');
+            }
+
             const rawCharacterToSave = isAddingNew && newCharacterData
                 ? newCharacterData
                 : currentCharacter;
@@ -928,9 +1128,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             }
 
             // 先保存表单
-            const pendingImagesSnapshot = { ...pendingImages };
+            // 合并已有的 pendingImages 和处理后的数据
+            const pendingImagesSnapshot = {
+                ...pendingImages,
+                ...processedPendingImages,
+            };
             const saveResult = await handlers.confirmEdit(characterToSave);
             if (!saveResult.success) {
+                console.log('✗ 保存失败');
                 return false;
             }
 
@@ -945,14 +1150,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             // 后上传图片
             if (characterId && pendingForSavedCharacter) {
                 for (const [variant, pending] of Object.entries(pendingForSavedCharacter)) {
-                    if (!pending.file) continue;
+                    if (!pending.file) {
+                        continue;
+                    }
+
+                    const fileToUpload = pending.file;
 
                     const uploadSuccess = characterId === 'player'
-                        ? await handlers.handleUploadImage(pending.file, {
+                        ? await handlers.handleUploadImage(fileToUpload, {
                             type: 'player',
                             variant,
                         })
-                        : await handlers.handleUploadImage(pending.file, {
+                        : await handlers.handleUploadImage(fileToUpload, {
                             type: variant === 'base' ? 'npc' : 'variation',
                             characterId,
                             variant,
@@ -969,12 +1178,24 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 clearPendingImagesForCharacter(characterId);
             }
 
+            // 保存成功后退出预览模式并重置缩放
+            setIsPreviewMode(false);
+            setPreviewScale(1);
+
             setHasUnsavedChanges(false);
             setFieldErrors({});
             onDataChange?.();
+
+            // 所有操作完成后显示成功提示
+            toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
             return true;
+        } catch (error) {
+            console.error('保存时发生错误:', error);
+            toast.error('保存时发生错误');
+            return false;
         } finally {
             setIsSavingCharacter(false);
+            setIsSaveOverlayVisible(false);
         }
     };
 
@@ -1376,7 +1597,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
     return (
-        <div className={styles.panelContent}>
+        <div className={`${styles.panelContent} ${isSaveOverlayVisible ? styles.panelContentSaving : ''}`}>
             <div className={styles.panelHeader}>
                 <div>
                     <p className={styles.eyebrow}>Step 3</p>
@@ -1454,6 +1675,19 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         ) : (
                             <div className={styles.detailActionRow}>
                                 <button
+                                    className={`${styles.ghostSmall} ${isPreviewMode ? styles.ghostSmallActive : ''}`}
+                                    onClick={() => {
+                                        setIsPreviewMode(!isPreviewMode);
+                                        if (!isPreviewMode) {
+                                            // 进入预览模式时，用角色的 portraitScale 初始化
+                                            setPreviewScale(currentCharacter?.portraitScale ?? 1);
+                                        }
+                                    }}
+                                    disabled={!currentPortraitImage || isPortraitActionBusy}
+                                >
+                                    {isPreviewMode ? '退出预览' : '立绘大小预览'}
+                                </button>
+                                <button
                                     className={styles.ghostSmall}
                                     onClick={() => { void confirmEdit(); }}
                                     disabled={isPortraitActionBusy}
@@ -1465,47 +1699,167 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
                         <>
                             {/* 立绘大图区域 */}
-                            <div
-                                className={styles.portraitLarge}
-                                style={{
-                                    backgroundImage: `url('${displayPortraitImage}')`,
-                                    backgroundSize: 'contain',
-                                    backgroundPosition: 'center',
-                                    backgroundRepeat: 'no-repeat',
-                                    cursor: (isAddingNew || isPortraitActionBusy) ? 'not-allowed' : 'pointer',
-                                }}
-                                onClick={handlePortraitClick}
-                            >
-                                {currentPortraitImage && (
-                                    <button
-                                        className={styles.downloadButton}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (currentCharacter.id === 'player') {
-                                                handleDownloadImage('players', '', 'base', currentPortraitImage);
-                                            } else {
-                                                handleDownloadImage('npcs', currentCharacter.id, 'base', currentPortraitImage);
-                                            }
-                                        }}
-                                        title="下载图片"
-                                        disabled={isPortraitActionBusy}
-                                    >
-                                        <MdDownload size={18} />
-                                    </button>
-                                )}
-                                <span className={styles.portraitHint}>
-                                    {isAddingNew ? '请先确认增加角色后再上传图片' : '点击替换角色基础立绘'}
-                                </span>
-                                {isCurrentPortraitGenerating && (
-                                    <div className={styles.loadingOverlay}>
-                                        <div className={styles.loadingSpinner}></div>
-                                        <div className={styles.loadingText}>正在生成角色立绘...</div>
-                                        {singleCharacterEtaText && (
-                                            <div className={styles.loadingHint}>{singleCharacterEtaText}</div>
-                                        )}
+                            {isPreviewMode ? (
+                                // 预览模式：可调整大小
+                                <div className={styles.portraitPreviewMode}>
+                                    {/* 预览区域 */}
+                                    <div className={styles.portraitPreviewArea}>
+                                        <div className={styles.portraitPreviewCanvas}>
+                                            {currentPortraitImage && (
+                                                <CharacterLayer
+                                                    characterImage={displayPortraitImage}
+                                                    portraitScale={previewScale}
+                                                    portraitOffsetX={currentCharacter?.portraitOffsetX || 0}
+                                                    portraitOffsetY={currentCharacter?.portraitOffsetY || 0}
+                                                    characterPosition={currentCharacter?.id === 'player' ? 'right' : 'left'}
+                                                    containerClassName={styles.portraitPreviewCharacterContainer}
+                                                    useImageFallback={true}
+                                                    draggable={true}
+                                                    onPositionChange={(x, y) => {
+                                                        setCharacterData(chars => chars.map(c =>
+                                                            c.id === currentCharacter?.id
+                                                                ? { ...c, portraitOffsetX: x, portraitOffsetY: y }
+                                                                : c
+                                                        ));
+                                                    }}
+                                                />
+                                            )}
+                                            <div className={styles.portraitPreviewHint}>
+                                                {Math.round(previewScale * 100)}%
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+                                    {/* 控制区域 */}
+                                    <div className={styles.portraitPreviewControls}>
+                                        <div className={styles.portraitPreviewSection}>
+                                            <div className={styles.portraitPreviewSliderRow}>
+                                                <span className={styles.portraitPreviewLabel}>缩放</span>
+                                                <input
+                                                    type="range"
+                                                    min="0.1"
+                                                    max="3"
+                                                    step="0.05"
+                                                    value={previewScale}
+                                                    onInput={(e) => setPreviewScale(parseFloat((e.target as HTMLInputElement).value))}
+                                                    className={styles.portraitPreviewRange}
+                                                />
+                                                <span className={styles.portraitPreviewValue}>{Math.round(previewScale * 100)}%</span>
+                                            </div>
+                                        </div>
+                                        <div className={styles.portraitPreviewSection}>
+                                            <div className={styles.portraitPreviewSliderRow}>
+                                                <span className={styles.portraitPreviewLabel}>X轴</span>
+                                                <input
+                                                    type="range"
+                                                    min="-200"
+                                                    max="200"
+                                                    step="5"
+                                                    value={currentCharacter?.portraitOffsetX || 0}
+                                                    onInput={(e) => {
+                                                        setCharacterData(chars => chars.map(c =>
+                                                            c.id === currentCharacter?.id
+                                                                ? { ...c, portraitOffsetX: parseInt((e.target as HTMLInputElement).value) }
+                                                                : c
+                                                        ));
+                                                    }}
+                                                    className={styles.portraitPreviewRange}
+                                                />
+                                                <span className={styles.portraitPreviewValue}>{currentCharacter?.portraitOffsetX || 0}</span>
+                                            </div>
+                                            <div className={styles.portraitPreviewSliderRow}>
+                                                <span className={styles.portraitPreviewLabel}>Y轴</span>
+                                                <input
+                                                    type="range"
+                                                    min="-200"
+                                                    max="200"
+                                                    step="5"
+                                                    value={currentCharacter?.portraitOffsetY || 0}
+                                                    onInput={(e) => {
+                                                        setCharacterData(chars => chars.map(c =>
+                                                            c.id === currentCharacter?.id
+                                                                ? { ...c, portraitOffsetY: parseInt((e.target as HTMLInputElement).value) }
+                                                                : c
+                                                        ));
+                                                    }}
+                                                    className={styles.portraitPreviewRange}
+                                                />
+                                                <span className={styles.portraitPreviewValue}>
+                                                    {(() => {
+                                                        const val = currentCharacter?.portraitOffsetY || 0;
+                                                        const percent = Math.round((val / 200) * 100);
+                                                        if (val === 0) return '0';
+                                                        return val > 0 ? `↑${percent}` : `↓${Math.abs(percent)}`;
+                                                    })()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={styles.portraitPreviewActions}>
+                                            <button
+                                                className={styles.ghostSmall}
+                                                onClick={() => {
+                                                    setPreviewScale(1);
+                                                    setCharacterData(chars => chars.map(c =>
+                                                        c.id === currentCharacter?.id
+                                                            ? { ...c, portraitOffsetX: 0, portraitOffsetY: 0 }
+                                                            : c
+                                                    ));
+                                                }}
+                                            >
+                                                重置
+                                            </button>
+                                            <button
+                                                className={styles.ghostSmall}
+                                                onClick={() => setIsPreviewMode(false)}
+                                            >
+                                                退出预览
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                // 正常模式：上传/生成
+                                <div
+                                    className={styles.portraitLarge}
+                                    style={{
+                                        backgroundImage: `url('${displayPortraitImage}')`,
+                                        backgroundSize: 'contain',
+                                        backgroundPosition: 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        cursor: (isAddingNew || isPortraitActionBusy) ? 'not-allowed' : 'pointer',
+                                    }}
+                                    onClick={handlePortraitClick}
+                                >
+                                    {currentPortraitImage && (
+                                        <button
+                                            className={styles.downloadButton}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (currentCharacter.id === 'player') {
+                                                    handleDownloadImage('players', '', 'base', currentPortraitImage);
+                                                } else {
+                                                    handleDownloadImage('npcs', currentCharacter.id, 'base', currentPortraitImage);
+                                                }
+                                            }}
+                                            title="下载图片"
+                                            disabled={isPortraitActionBusy}
+                                        >
+                                            <MdDownload size={18} />
+                                        </button>
+                                    )}
+                                    <span className={styles.portraitHint}>
+                                        {isAddingNew ? '请先确认增加角色后再上传图片' : '点击替换角色基础立绘'}
+                                    </span>
+                                    {isCurrentPortraitGenerating && (
+                                        <div className={styles.loadingOverlay}>
+                                            <div className={styles.loadingSpinner}></div>
+                                            <div className={styles.loadingText}>正在生成角色立绘...</div>
+                                            {singleCharacterEtaText && (
+                                                <div className={styles.loadingHint}>{singleCharacterEtaText}</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className={styles.portraitImageActions}>
                                 <button
@@ -1726,6 +2080,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     {/* 下载和删除按钮 */}
                                                     <>
                                                         <button
+                                                            className={styles.variationEditButton}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openEditVariationModal(variation);
+                                                            }}
+                                                            title="编辑差分"
+                                                            disabled={isGeneratingVariation && generatingVariationId === variation.id}
+                                                        >
+                                                            <MdEdit size={14} />
+                                                        </button>
+                                                        <button
                                                             className={styles.variationDeleteButton}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -1861,7 +2226,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 <div className={styles.modalOverlay} onClick={closeVariationModal}>
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h3>新增差分</h3>
+                            <h3>{editingVariationId ? '编辑差分' : '新增差分'}</h3>
                             <button className={styles.modalClose} onClick={closeVariationModal}>×</button>
                         </div>
                         <div className={styles.modalBody}>
@@ -1905,7 +2270,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.ghostSmall} onClick={closeVariationModal}>取消</button>
-                            <button className={styles.ghostSmall} onClick={confirmAddVariation}>确认</button>
+                            <button className={styles.ghostSmall} onClick={confirmAddVariation}>
+                                {editingVariationId ? '保存' : '确认'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2067,6 +2434,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 saveButtonText="保存"
                 discardButtonText="不保存"
             />
+
+            {/* 保存遮罩层 */}
+            {isSaveOverlayVisible && (
+                <div className={styles.saveOverlay}>
+                    <div className={styles.saveOverlayContent}>
+                        <div className={styles.saveOverlaySpinner}></div>
+                        <div className={styles.saveOverlayText}>保存中，请不要切换页面</div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 });

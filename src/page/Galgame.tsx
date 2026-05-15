@@ -1,4 +1,4 @@
-﻿import { CiLocationOn } from "react-icons/ci";
+import { CiLocationOn } from "react-icons/ci";
 import styles from './Galgame.module.css';
 import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
@@ -10,7 +10,7 @@ import { MdSettings, MdOutlineAssessment, MdReplay, MdTimeline } from "react-ico
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
-import { useCharacterContainerClassName } from "../hooks/galgame/useCharacterContainerClassName";
+import CharacterLayer from "../components/Galgame/CharacterLayer";
 import { useMusicPlayer } from "../hooks/mapGalgame/useMusicPlayer";
 import GalgameHistoryModal from "../components/Galgame/GalgameHistoryModal";
 import TextModeDisplay from "../components/Galgame/TextModeDisplay";
@@ -21,7 +21,6 @@ import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState, useEffect, useRef, useMemo } from "react";
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
-import GameImageRenderer from "../components/Galgame/GameImageRenderer";
 import { useLocation, useNavigate } from "react-router-dom";
 import GameAction from "../api/rpgGame/gameAction";
 import ShareReplayModal from "../components/Galgame/ShareReplayModal";
@@ -226,12 +225,6 @@ const Galgame = () => {
     const characterAnimation = useCharacterAnimation({
         message: controller.currentMessage?.message,
         messageType: controller.currentMessage?.type,
-    });
-
-    const getCharacterContainerClassName = useCharacterContainerClassName({
-        characterPosition: controller.currentMessage?.characterPosition,
-        characterAnimation,
-        styles,
     });
 
     const { isMusicPlaying, handleMusicToggle, volume, setVolume } = useMusicPlayer({
@@ -581,14 +574,14 @@ const Galgame = () => {
                         </div>
                     )}
                     {controller.currentMessage.characterImage && !controller.isTextMode && (
-                        <div className={getCharacterContainerClassName()}>
-                            <GameImageRenderer
-                                key={controller.currentMessage.characterImage}
-                                src={controller.currentMessage.characterImage}
-                                className={styles.characterImage}
-                                useCanvas={true}
-                            />
-                        </div>
+                        <CharacterLayer
+                            characterImage={controller.currentMessage.characterImage}
+                            characterPosition={controller.currentMessage.characterPosition}
+                            portraitScale={controller.currentMessage.portraitScale}
+                            portraitOffsetX={controller.currentMessage.portraitOffsetX}
+                            portraitOffsetY={controller.currentMessage.portraitOffsetY}
+                            animation={characterAnimation}
+                        />
                     )}
                     <div className={`${styles.gameContentWrapper} ${controller.isTextMode ? styles.gameContentWrapperTextMode : ''}`}>
                         {!controller.showGalgameHistory && !controller.isTextMode && (

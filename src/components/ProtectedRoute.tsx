@@ -64,6 +64,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   })();
 
   if (!token && !pendingTokenInUrl) {
+    // 检测 /createGame?mode=stats&gameId=xxx 模式，重定向到 /game/{gameId}
+    const gameIdMatch = location.pathname.match(/\/createGame$/);
+    if (gameIdMatch) {
+      const sp = new URLSearchParams(location.search);
+      const mode = sp.get('mode');
+      const gameId = sp.get('gameId');
+      if (mode === 'stats' && gameId) {
+        return <Navigate to={`/game/${gameId}`} replace />;
+      }
+    }
     return <Navigate to="/home" state={{ from: location }} replace />;
   }
   
