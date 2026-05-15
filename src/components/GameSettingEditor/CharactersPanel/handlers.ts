@@ -363,6 +363,20 @@ export const createHandlers = (ctx: HandlersContext) => {
         return images;
     };
 
+    const buildVariationDescriptions = (character: Character): { [key: string]: string } => {
+        const descriptions: { [key: string]: string } = {};
+        character.variations
+            .filter(v => v.label !== 'base')
+            .forEach(variation => {
+                const key = getVariationImageKey(variation);
+                const description = variation.description?.trim();
+                if (key && description) {
+                    descriptions[key] = description;
+                }
+            });
+        return descriptions;
+    };
+
     // 确认修改/新增角色
     const confirmEdit = async (characterToSave: Character): Promise<ConfirmEditResult> => {
         const failResult: ConfirmEditResult = {
@@ -381,6 +395,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         if (characterToSave.id === 'player') {
             const persistedBaseImage = normalizePersistedImagePath(characterToSave.portrait);
             const images = buildCharacterImages(characterToSave, { normalize: true });
+            const variationDescriptions = buildVariationDescriptions(characterToSave);
 
             const playerData = {
                 name: characterToSave.name || '',
@@ -397,6 +412,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 portraitScale: characterToSave.portraitScale,
                 portraitOffsetX: characterToSave.portraitOffsetX,
                 portraitOffsetY: characterToSave.portraitOffsetY,
+                variationDescriptions: Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined,
             };
 
             try {
@@ -432,13 +448,14 @@ export const createHandlers = (ctx: HandlersContext) => {
         // NPC 资料保存
         const { race, job } = splitIdentity(characterToSave.identity, characterToSave.role);
         const images = buildCharacterImages(characterToSave, { normalize: true });
+        const variationDescriptions = buildVariationDescriptions(characterToSave);
 
         const finalImages: { [key: string]: string } | undefined = Object.keys(images).length > 0 ? images : undefined;
         const playerRelationship = characterToSave.relationships.find(
             r => r.name === '玩家' || r.name.toLowerCase().includes('player'),
         );
 
-        const npcData: NPC & { callName?: string } = {
+        const npcData: NPC & { callName?: string; variationDescriptions?: Record<string, string> } = {
             id: characterToSave.id.startsWith('temp-') ? `npc_${Date.now()}` : characterToSave.id,
             name: characterToSave.name || '',
             callName: characterToSave.callName || '',
@@ -454,6 +471,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             portraitScale: characterToSave.portraitScale,
             portraitOffsetX: characterToSave.portraitOffsetX,
             portraitOffsetY: characterToSave.portraitOffsetY,
+            variationDescriptions: Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined,
         };
 
         try {
@@ -565,13 +583,14 @@ export const createHandlers = (ctx: HandlersContext) => {
         const targetCharacterId = `npc_${Date.now()}`;
         const { race, job } = splitIdentity(newCharacterData.identity, newCharacterData.role);
         const images = buildCharacterImages(newCharacterData, { includeEmptyBase: true });
+        const variationDescriptions = buildVariationDescriptions(newCharacterData);
 
         const finalImages: { [key: string]: string } | undefined =
             newCharacterData.portrait || Object.keys(images).length > 1 ? images : undefined;
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
-        const newNpc: NPC & { callName?: string } = {
+        const newNpc: NPC & { callName?: string; variationDescriptions?: Record<string, string> } = {
             id: targetCharacterId,
             name: newCharacterData.name || '未命名角色',
             callName: newCharacterData.callName || '',
@@ -584,6 +603,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             tone: newCharacterData.speech || '',
             relationship: playerRelationship?.description || undefined,
             images: finalImages,
+            variationDescriptions: Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined,
         };
 
         try {

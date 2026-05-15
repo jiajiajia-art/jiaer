@@ -8,6 +8,7 @@ import type { NPCSetting, NPC } from '../../../api/galgame/EditorData.type';
 import type { NPCSetting as WorldNPCSetting, NPC as WorldNPC } from '../../../api/worldInteraction/worldInteractionApi.type';
 import { MdArrowDropDown } from 'react-icons/md';
 import { MdDownload } from 'react-icons/md';
+import { MdEdit } from 'react-icons/md';
 import { RiDeleteBin5Line } from 'react-icons/ri';
 import { withCacheBust, extractImageExtension } from './utils';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
@@ -102,6 +103,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [newVariationType, setNewVariationType] = useState<string>('');
     const [newVariationLabel, setNewVariationLabel] = useState<string>('');
     const [newVariationDescription, setNewVariationDescription] = useState<string>('');
+    const [editingVariationId, setEditingVariationId] = useState<string | null>(null);
     const playerFileInputRef = useRef<HTMLInputElement>(null);
     const npcFileInputRef = useRef<HTMLInputElement>(null);
     const variationFileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
@@ -439,22 +441,29 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 const images: { base: string; [key: string]: string } = {
                     base: char.portrait || '', // base 图片来自 portrait
                 };
+                const variationDescriptions: Record<string, string> = {};
                 char.variations
                     .filter(v => v.label !== 'base') // 确保不包含 base
                     .forEach(variation => {
+                        const key = variation.type && variation.label
+                            ? `${variation.type}_${variation.label}`
+                            : variation.label || variation.type || '';
                         if (variation.img) {
                             // 键名格式：type_value
-                            const key = variation.type && variation.label 
-                                ? `${variation.type}_${variation.label}` 
-                                : variation.label || variation.type || '';
                             if (key) {
                                 images[key] = variation.img;
                             }
+                        }
+                        const description = variation.description?.trim();
+                        if (key && description) {
+                            variationDescriptions[key] = description;
                         }
                     });
 
                 const finalImages: { base: string; [key: string]: string } | undefined = 
                     char.portrait || Object.keys(images).length > 1 ? images : undefined;
+                const finalVariationDescriptions: Record<string, string> | undefined =
+                    Object.keys(variationDescriptions).length > 0 ? variationDescriptions : undefined;
 
                 // 获取与玩家的关系（从 relationships 中查找）
                 const playerRelationship = char.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
@@ -472,6 +481,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     tone: char.speech || '',
                     relationship: playerRelationship?.description || undefined,
                     images: finalImages,
+                    variationDescriptions: finalVariationDescriptions,
                 };
             });
 
@@ -829,15 +839,25 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 打开新增差分弹窗
     const openAddVariationModal = () => {
+        setEditingVariationId(null);
         setNewVariationType('');
         setNewVariationLabel('');
         setNewVariationDescription('');
         setVariationModalOpen(true);
     };
 
+    const openEditVariationModal = (variation: Variation) => {
+        setEditingVariationId(variation.id);
+        setNewVariationType(variation.type || '');
+        setNewVariationLabel(variation.label);
+        setNewVariationDescription(variation.description || '');
+        setVariationModalOpen(true);
+    };
+
     // 关闭新增差分弹窗
     const closeVariationModal = () => {
         setVariationModalOpen(false);
+        setEditingVariationId(null);
         setNewVariationType('');
         setNewVariationLabel('');
         setNewVariationDescription('');
@@ -865,9 +885,53 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             existingVariations = currentCharacter.variations;
         }
 
-        const isDuplicate = existingVariations.some(v => v.label === trimmedLabel);
+        const isDuplicate = existingVariations.some(v => v.label === trimmedLabel && v.id !== editingVariationId);
         if (isDuplicate) {
             toast.error(`差分「${trimmedLabel}」已存在，请使用不同的名称`);
+            return;
+        }
+
+        if (editingVariationId) {
+            const targetVariation = existingVariations.find(v => v.id === editingVariationId);
+            if (!targetVariation) {
+                toast.error('未找到当前差分');
+                return;
+            }
+
+            const nextDescription = newVariationDescription || undefined;
+            const hasChanged =
+                targetVariation.label !== trimmedLabel ||
+                (targetVariation.type || '') !== newVariationType ||
+                (targetVariation.description || undefined) !== nextDescription;
+
+            if (hasChanged) {
+                const updateVariation = (variation: Variation): Variation =>
+                    variation.id === editingVariationId
+                        ? {
+                            ...variation,
+                            label: trimmedLabel,
+                            type: newVariationType,
+                            description: nextDescription,
+                        }
+                        : variation;
+
+                if (isAddingNew && newCharacterData) {
+                    setNewCharacterData({
+                        ...newCharacterData,
+                        variations: newCharacterData.variations.map(updateVariation),
+                    });
+                } else if (currentCharacter) {
+                    setCharacterData(prev =>
+                        prev.map(char =>
+                            char.id === currentCharacter.id
+                                ? { ...char, variations: char.variations.map(updateVariation) }
+                                : char
+                        )
+                    );
+                }
+                setHasUnsavedChanges(true);
+            }
+            closeVariationModal();
             return;
         }
 
@@ -2016,6 +2080,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     {/* 下载和删除按钮 */}
                                                     <>
                                                         <button
+                                                            className={styles.variationEditButton}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                openEditVariationModal(variation);
+                                                            }}
+                                                            title="编辑差分"
+                                                            disabled={isGeneratingVariation && generatingVariationId === variation.id}
+                                                        >
+                                                            <MdEdit size={14} />
+                                                        </button>
+                                                        <button
                                                             className={styles.variationDeleteButton}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -2151,7 +2226,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 <div className={styles.modalOverlay} onClick={closeVariationModal}>
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h3>新增差分</h3>
+                            <h3>{editingVariationId ? '编辑差分' : '新增差分'}</h3>
                             <button className={styles.modalClose} onClick={closeVariationModal}>×</button>
                         </div>
                         <div className={styles.modalBody}>
@@ -2195,7 +2270,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.ghostSmall} onClick={closeVariationModal}>取消</button>
-                            <button className={styles.ghostSmall} onClick={confirmAddVariation}>确认</button>
+                            <button className={styles.ghostSmall} onClick={confirmAddVariation}>
+                                {editingVariationId ? '保存' : '确认'}
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -82,11 +82,15 @@ export const baseCharacter = (): Omit<Character, 'id' | 'name' | 'callName' | 'g
 };
 
 // 将images对象转换为variations数组（过滤掉base，因为base已经存储在portrait中）
-export const imagesToVariations = (images?: Record<string, string>): Variation[] => {
+export const imagesToVariations = (
+    images?: Record<string, string>,
+    variationDescriptions?: Record<string, string>
+): Variation[] => {
     if (!images) return [];
     return Object.entries(images)
         .filter(([key]) => key !== 'base') // 过滤掉 base，base 图片已存储在 portrait 中
         .map(([key, img], idx) => {
+            const description = variationDescriptions?.[key] || undefined;
             // 尝试解析 type_value 格式
             const parsed = parseVariantKey(key);
             if (parsed) {
@@ -95,6 +99,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
                     label: parsed.value, // value 作为 label
                     img,                 // 保持原始路径，展示时再处理
                     type: parsed.type,   // type 作为 type
+                    description,
                 };
             }
             // 如果不是 type_value 格式，使用 key 作为 label 和 type
@@ -103,6 +108,7 @@ export const imagesToVariations = (images?: Record<string, string>): Variation[]
                 label: key,
                 img, // 保持原始路径，展示时再处理
                 type: key,
+                description,
             };
         });
 };
@@ -155,6 +161,7 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
     const npcRelationship = 'relationship' in npc ? npc.relationship : undefined;
 
     const images = (npc.images || undefined) as Record<string, string> | undefined;
+    const variationDescriptions = (npc as any).variationDescriptions as Record<string, string> | undefined;
     const portrait = pickBaseImage(images, DEFAULT_NPC_PORTRAIT);
 
     const mergedNpcBackground = mergeLegacyFieldsIntoBackground(npc, npc.description || '');
@@ -180,7 +187,7 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
             name: '玩家',
             description: npcRelationship,
         }] : [],
-        variations: imagesToVariations(images),
+        variations: imagesToVariations(images, variationDescriptions),
     };
 };
 
@@ -315,6 +322,7 @@ const mergeLegacyFieldsIntoBackground = (source: any, rawBackground: string): st
 
 export const playerToCharacter = (player: any): Character => {
     const { imagesObject, baseImage } = extractPlayerImages(player);
+    const variationDescriptions = player?.variationDescriptions as Record<string, string> | undefined;
     const portrait = pickBaseImage(imagesObject, baseImage) || DEFAULT_NPC_PORTRAIT;
     const playerIdentity = extractPlayerIdentity(player);
     const playerBackground = mergeLegacyFieldsIntoBackground(player, extractPlayerBackground(player));
@@ -336,7 +344,7 @@ export const playerToCharacter = (player: any): Character => {
         portraitOffsetY: player?.portraitOffsetY,
         background: playerBackground,
         relationships: [],
-        variations: imagesToVariations(imagesObject),
+        variations: imagesToVariations(imagesObject, variationDescriptions),
     };
 };
 
