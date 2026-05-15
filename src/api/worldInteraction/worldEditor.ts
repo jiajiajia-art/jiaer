@@ -196,11 +196,14 @@ const worldEditor = {
   uploadNpcImage: (
     fileId: string,
     npcId: string,
-    data: { file: File; variat: string }
+    data: { file: File; variat: string; variationDescription?: string }
   ) => {
     const formData = new FormData();
     formData.append("file", data.file);
     formData.append("variant", data.variat);
+    if (data.variationDescription !== undefined) {
+      formData.append("variationDescription", data.variationDescription);
+    }
     return api.post<UploadNpcImageResponse>(
       `/world-interaction/edit/${fileId}/npcs/${npcId}/image`,
       formData,

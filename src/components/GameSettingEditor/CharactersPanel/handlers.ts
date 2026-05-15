@@ -636,6 +636,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             type: 'player' | 'npc' | 'variation';
             characterId?: string | null;
             variant?: string;
+            variationDescription?: string;
             inputRef?: React.RefObject<HTMLInputElement | null> | { current: HTMLInputElement | null };
         }
     ): Promise<boolean> => {
@@ -660,7 +661,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             return false;
         }
 
-        const { type, characterId, variant = 'base', inputRef } = options;
+        const { type, characterId, variant = 'base', variationDescription, inputRef } = options;
 
         try {
             let response;
@@ -676,13 +677,13 @@ export const createHandlers = (ctx: HandlersContext) => {
             }
 
             if (type === 'player' || (type === 'variation' && targetCharacterId === 'player')) {
-                response = await api.uploadPlayerImage(fileId, file, variant);
+                response = await api.uploadPlayerImage(fileId, file, variant, variationDescription);
             } else if (type === 'npc' || type === 'variation') {
                 if (!targetCharacterId) {
                     toast.error('缺少角色ID，无法上传');
                     return false;
                 }
-                response = await api.uploadNpcImage(fileId, targetCharacterId, file, variant);
+                response = await api.uploadNpcImage(fileId, targetCharacterId, file, variant, variationDescription);
             } else {
                 toast.error('未知的上传类型');
                 return false;

@@ -38,10 +38,10 @@ export const createApiHelpers = (mode: string) => {
             return EditorApi.updatePlayer(fileId, data);
         },
 
-        uploadPlayerImage: async (fileId: string, file: File, variant?: string) => {
+        uploadPlayerImage: async (fileId: string, file: File, variant?: string, variationDescription?: string) => {
             return isWorldInteraction
                 ? worldEditor.uploadPlayerImage(fileId, file)
-                : EditorApi.uploadPlayerImage(fileId, { file, variant: variant || 'base' });
+                : EditorApi.uploadPlayerImage(fileId, { file, variant: variant || 'base', variationDescription });
         },
 
         generatePlayerImage: async (fileId: string) => {
@@ -118,10 +118,10 @@ export const createApiHelpers = (mode: string) => {
                 : EditorApi.deleteNpc(fileId, npcId);
         },
 
-        uploadNpcImage: async (fileId: string, npcId: string, file: File, variant?: string) => {
+        uploadNpcImage: async (fileId: string, npcId: string, file: File, variant?: string, variationDescription?: string) => {
             return isWorldInteraction
-                ? worldEditor.uploadNpcImage(fileId, npcId, { file, variat: variant || 'base' })
-                : EditorApi.uploadNpcImage(fileId, npcId, { file, variat: variant || 'base' });
+                ? worldEditor.uploadNpcImage(fileId, npcId, { file, variat: variant || 'base', variationDescription })
+                : EditorApi.uploadNpcImage(fileId, npcId, { file, variat: variant || 'base', variationDescription });
         },
 
         generateNpcImage: async (fileId: string, npcId: string) => {
