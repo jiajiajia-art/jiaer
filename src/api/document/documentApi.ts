@@ -8,6 +8,9 @@ import type {
     UpdateDocumentResponse,
     DeleteDocumentResponse,
     UploadDocumentResponse,
+    GuideOrderItem,
+    CategoryOrderItem,
+    UpdateOrderResponse,
 } from './document.type';
 
 // 文档详情返回类型
@@ -47,6 +50,14 @@ const documentApi = {
     // 删除文档（管理员）
     deleteDocument: (slug: string) =>
         api.delete<ApiResponse<DeleteDocumentResponse>>(`/documents/${encodeURIComponent(slug)}`),
+
+    // 更新指南顺序
+    updateGuideOrder: (guides: GuideOrderItem[]) =>
+        api.post<ApiResponse<UpdateOrderResponse>>('/documents/guides/order', { guides }),
+
+    // 更新分类顺序
+    updateCategoryOrder: (categories: CategoryOrderItem[]) =>
+        api.post<ApiResponse<UpdateOrderResponse>>('/documents/categories/order', { categories }),
 };
 
 export default documentApi;
