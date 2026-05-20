@@ -321,7 +321,6 @@ const AdminPanel: React.FC = () => {
     const [guideOrder, setGuideOrder] = useState<{ guide: string; order: number }[]>([]);
     const [categoryOrder, setCategoryOrder] = useState<{ guide: string; category: string; order: number }[]>([]);
     const [isSavingOrder, setIsSavingOrder] = useState(false);
-    const [activeId, setActiveId] = useState<string | null>(null);
     // 临时排序状态（拖拽过程中的预览状态）
     const [tempGuideOrder, setTempGuideOrder] = useState<{ guide: string; order: number }[]>([]);
     const [tempCategoryOrder, setTempCategoryOrder] = useState<{ guide: string; category: string; order: number }[]>([]);
@@ -396,8 +395,8 @@ const AdminPanel: React.FC = () => {
     );
 
     // DnD 拖拽开始
-    const handleDragStart = useCallback((event: DragStartEvent) => {
-        setActiveId(event.active.id as string);
+    const handleDragStart = useCallback((_event: DragStartEvent) => {
+        // 拖拽开始
     }, []);
 
     // 判断是否是分类拖拽
@@ -408,7 +407,6 @@ const AdminPanel: React.FC = () => {
     // DnD 拖拽结束（仅更新临时状态，不自动保存）
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
-        setActiveId(null);
 
         if (!over || active.id === over.id) return;
 
@@ -601,7 +599,6 @@ const AdminPanel: React.FC = () => {
                 : docs.reduce<{ guide: string; category: string; order: number }[]>((acc, doc) => {
                       const guide = doc.guide || 'default';
                       const category = doc.category || 'uncategorized';
-                      const key = `${guide}:${category}`;
                       if (!acc.find((c) => c.guide === guide && c.category === category)) {
                           const existingForGuide = acc.filter((c) => c.guide === guide);
                           acc.push({
