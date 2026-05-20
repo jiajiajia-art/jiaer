@@ -213,6 +213,10 @@ const Document: React.FC = () => {
     const [mobileGuideMenuOpen, setMobileGuideMenuOpen] = useState(false);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [activeGuide, setActiveGuide] = useState<string>('');
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [imageScale, setImageScale] = useState(1);
+    const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+    const [initialPinchScale, setInitialPinchScale] = useState(1);
     const [docState, setDocState] = useState<DocumentState>(DEFAULT_DOCUMENT_STATE);
     const articleRef = useRef<HTMLElement | null>(null);
     const userTriggeredGuideChangeRef = useRef(false);
@@ -429,6 +433,61 @@ const Document: React.FC = () => {
         }
     }, []);
 
+    const openImagePreview = useCallback((src: string) => {
+        setPreviewImage(src);
+    }, []);
+
+    const closeImagePreview = useCallback(() => {
+        setPreviewImage(null);
+        setImageScale(1);
+        setInitialPinchDistance(null);
+        setInitialPinchScale(1);
+    }, []);
+
+    const getPinchDistance = (touches: React.TouchList) => {
+        if (touches.length < 2) return 0;
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = useCallback((e: React.TouchEvent<HTMLImageElement>) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            const distance = getPinchDistance(e.touches);
+            setInitialPinchDistance(distance);
+            setInitialPinchScale(imageScale);
+        }
+    }, [imageScale]);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent<HTMLImageElement>) => {
+        if (e.touches.length === 2 && initialPinchDistance !== null) {
+            e.preventDefault();
+            const distance = getPinchDistance(e.touches);
+            const scaleFactor = distance / initialPinchDistance;
+            const newScale = Math.min(Math.max(initialPinchScale * scaleFactor, 0.5), 5);
+            setImageScale(newScale);
+        }
+    }, [initialPinchDistance, initialPinchScale]);
+
+    const handleTouchEnd = useCallback(() => {
+        setInitialPinchDistance(null);
+        setInitialPinchScale(imageScale);
+    }, [imageScale]);
+
+    useEffect(() => {
+        if (!previewImage) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                closeImagePreview();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [previewImage, closeImagePreview]);
+
     useEffect(() => {
         const handleCodeCopy = (event: Event) => {
             const button = (event.target as HTMLElement).closest('.copy-code-button');
@@ -446,6 +505,21 @@ const Document: React.FC = () => {
         document.addEventListener('click', handleCodeCopy);
         return () => document.removeEventListener('click', handleCodeCopy);
     }, [codeBlocks, copyCode]);
+
+    useEffect(() => {
+        const handleImageClick = (event: Event) => {
+            const target = event.target as HTMLElement;
+            if (target.tagName === 'IMG' && target.closest('article')) {
+                const src = (target as HTMLImageElement).src;
+                if (src) {
+                    openImagePreview(src);
+                }
+            }
+        };
+
+        document.addEventListener('click', handleImageClick);
+        return () => document.removeEventListener('click', handleImageClick);
+    }, [openImagePreview]);
 
     useEffect(() => {
         const buttons = document.querySelectorAll<HTMLButtonElement>('.copy-code-button');
@@ -807,6 +881,35 @@ const Document: React.FC = () => {
             >
                 <ArrowUpIcon />
             </button>
+
+            {previewImage && (
+                <div className={styles.imagePreviewOverlay} onClick={closeImagePreview}>
+                    <button
+                        type="button"
+                        className={styles.imagePreviewClose}
+                        onClick={closeImagePreview}
+                        aria-label="关闭"
+                    >
+                        <CloseIcon />
+                    </button>
+                    <img
+                        src={previewImage}
+                        alt="预览图片"
+                        className={styles.imagePreviewImage}
+                        style={{ transform: `scale(${imageScale})` }}
+                        onClick={(e) => e.stopPropagation()}
+                        onWheel={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                            setImageScale((prev) => Math.min(Math.max(prev + delta, 0.5), 5));
+                        }}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                    />
+                </div>
+            )}
         </div>
     );
 };

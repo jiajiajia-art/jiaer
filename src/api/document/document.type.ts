@@ -8,25 +8,20 @@ export interface DocumentItem {
     updatedAt?: string;
 }
 
-// 分类下的文档列表
-export interface CategoryDocument {
-    slug: string;
-    title: string;
-    guide: string;
-    category: string;
-    order: number;
-    updatedAt?: string;
-}
+// 分类下的文档列表（复用 DocumentItem）
+export type CategoryDocument = DocumentItem;
 
 // 分类分组
 export interface CategoryGroup {
     category: string;
+    order: number;
     documents: CategoryDocument[];
 }
 
 // 一级分组（指南）
 export interface GuideGroup {
     guide: string;
+    order: number;
     categories: CategoryGroup[];
 }
 
@@ -35,8 +30,27 @@ export interface DocumentListResponse {
     success: boolean;
     data: {
         documents: DocumentItem[];
+        guideOrder: { guide: string; order: number }[];
+        categoryOrder: { guide: string; category: string; order: number }[];
         guides: GuideGroup[];
     };
+}
+
+// 排序更新请求/响应
+export interface GuideOrderItem {
+    guide: string;
+    order: number;
+}
+
+export interface CategoryOrderItem {
+    guide: string;
+    category: string;
+    order: number;
+}
+
+export interface UpdateOrderResponse {
+    success: boolean;
+    message: string;
 }
 
 export interface DocumentDetail {

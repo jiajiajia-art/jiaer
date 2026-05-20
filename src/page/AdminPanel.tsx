@@ -1,6 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+    arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Navbar from '../components/Layout/Navbar';
 import AnnouncementModal from '../components/AnnouncementModal';
 import AdminBannerManager from '../components/AdminBannerManager';
@@ -109,6 +127,117 @@ const toSortDraftItem = (
     featured_sort_order: 'featured_sort_order' in tag ? tag.featured_sort_order ?? null : null,
 });
 
+// 可排序的指南项组件
+interface SortableGuideItemProps {
+    guideName: string;
+    docCount: number;
+    isExpanded: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+}
+
+function SortableGuideItem({ guideName, docCount, isExpanded, onToggle, children }: SortableGuideItemProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: guideName });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className={styles.guideGroup}>
+            <div
+                className={styles.guideGroupHeader}
+                onClick={onToggle}
+            >
+                <span
+                    {...attributes}
+                    {...listeners}
+                    className={styles.dragHandle}
+                    style={{ cursor: 'grab' }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    ⋮⋮
+                </span>
+                <span className={`${styles.guideGroupIcon} ${isExpanded ? styles.guideGroupIconExpanded : ''}`}>
+                    ▶
+                </span>
+                <span className={styles.guideGroupName}>{guideName}</span>
+                <span className={styles.guideGroupCount}>{docCount}</span>
+            </div>
+            {isExpanded && (
+                <div className={styles.categoryList}>
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// 可排序的分类项组件
+interface SortableCategoryItemProps {
+    categoryId: string;
+    categoryName: string;
+    docCount: number;
+    isExpanded: boolean;
+    onToggle: () => void;
+    children: React.ReactNode;
+}
+
+function SortableCategoryItem({ categoryId, categoryName, docCount, isExpanded, onToggle, children }: SortableCategoryItemProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: categoryId });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition: isDragging ? undefined : transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className={styles.categoryItem}>
+            <div
+                className={styles.categoryHeader}
+                onClick={onToggle}
+            >
+                <span
+                    {...attributes}
+                    {...listeners}
+                    className={styles.dragHandle}
+                    style={{ cursor: 'grab' }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    ⋮⋮
+                </span>
+                <span className={`${styles.categoryIcon} ${isExpanded ? styles.categoryIconExpanded : ''}`}>
+                    ▶
+                </span>
+                <span className={styles.categoryName}>{categoryName}</span>
+                <span className={styles.categoryCount}>{docCount}</span>
+            </div>
+            {isExpanded && (
+                <div className={styles.documentList}>
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
 const AdminPanel: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -188,6 +317,24 @@ const AdminPanel: React.FC = () => {
         markdown: string;
     } | null>(null);
 
+    // 指南和分类排序状态
+    const [guideOrder, setGuideOrder] = useState<{ guide: string; order: number }[]>([]);
+    const [categoryOrder, setCategoryOrder] = useState<{ guide: string; category: string; order: number }[]>([]);
+    const [isSavingOrder, setIsSavingOrder] = useState(false);
+    // 临时排序状态（拖拽过程中的预览状态）
+    const [tempGuideOrder, setTempGuideOrder] = useState<{ guide: string; order: number }[]>([]);
+    const [tempCategoryOrder, setTempCategoryOrder] = useState<{ guide: string; category: string; order: number }[]>([]);
+    // 是否有未保存的更改（仅比较顺序，不比较 order 值）
+    const hasOrderChanges = useMemo(() => {
+        const tempOrder = tempGuideOrder.map((g) => g.guide);
+        const savedOrder = guideOrder.map((g) => g.guide);
+        if (JSON.stringify(tempOrder) !== JSON.stringify(savedOrder)) return true;
+
+        const tempCatOrder = tempCategoryOrder.map((c) => `${c.guide}:${c.category}`);
+        const savedCatOrder = categoryOrder.map((c) => `${c.guide}:${c.category}`);
+        return JSON.stringify(tempCatOrder) !== JSON.stringify(savedCatOrder);
+    }, [tempGuideOrder, tempCategoryOrder, guideOrder, categoryOrder]);
+
     const previewDraftRecord = useMemo<AnnouncementRecord>(() => {
         const safeSections = sections.filter((section) => section.subtitle.trim() || section.body.trim());
         return {
@@ -234,6 +381,96 @@ const AdminPanel: React.FC = () => {
 
         return { badge: '', title: '', description: '' };
     }, [sortModalMode]);
+
+    // DnD 传感器配置
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    );
+
+    // DnD 拖拽开始
+    const handleDragStart = useCallback((_event: DragStartEvent) => {
+        // 拖拽开始
+    }, []);
+
+    // 判断是否是分类拖拽
+    const isCategoryDrag = (id: string) => id.startsWith('category:');
+
+
+
+    // DnD 拖拽结束（仅更新临时状态，不自动保存）
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        const activeId = active.id as string;
+        const overId = over.id as string;
+
+        if (isCategoryDrag(activeId) && isCategoryDrag(overId)) {
+            // 分类排序 - 更新临时状态
+            const [, guideName, activeCategory] = activeId.split(':');
+            const [, , overCategory] = overId.split(':');
+
+            if (guideName && activeCategory && overCategory) {
+                const categoriesOfGuide = tempCategoryOrder.filter((c) => c.guide === guideName);
+                const oldIndex = categoriesOfGuide.findIndex((c) => c.category === activeCategory);
+                const newIndex = categoriesOfGuide.findIndex((c) => c.category === overCategory);
+
+                if (oldIndex !== -1 && newIndex !== -1) {
+                    const newCategories = arrayMove(categoriesOfGuide, oldIndex, newIndex).map((c, index) => ({
+                        ...c,
+                        order: index,
+                    }));
+
+                    const otherCategories = tempCategoryOrder.filter((c) => c.guide !== guideName);
+                    setTempCategoryOrder([...otherCategories, ...newCategories]);
+                }
+            }
+        } else if (!isCategoryDrag(activeId) && !isCategoryDrag(overId)) {
+            // 指南排序 - 更新临时状态
+            const oldIndex = tempGuideOrder.findIndex((g) => g.guide === activeId);
+            const newIndex = tempGuideOrder.findIndex((g) => g.guide === overId);
+
+            if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+                const newOrder = arrayMove(tempGuideOrder, oldIndex, newIndex).map((g, index) => ({
+                    ...g,
+                    order: index,
+                }));
+                setTempGuideOrder(newOrder);
+            }
+        }
+    }, [tempGuideOrder, tempCategoryOrder]);
+
+    // 保存排序（点击确定按钮时调用）
+    const handleConfirmOrder = useCallback(async () => {
+        try {
+            setIsSavingOrder(true);
+            await Promise.all([
+                documentApi.updateGuideOrder(tempGuideOrder),
+                documentApi.updateCategoryOrder(tempCategoryOrder),
+            ]);
+            setGuideOrder(tempGuideOrder);
+            setCategoryOrder(tempCategoryOrder);
+            toast.success('排序已保存');
+        } catch {
+            toast.error('保存排序失败');
+        } finally {
+            setIsSavingOrder(false);
+        }
+    }, [tempGuideOrder, tempCategoryOrder]);
+
+    // 取消排序（点击取消按钮时调用）
+    const handleCancelOrder = useCallback(() => {
+        setTempGuideOrder(guideOrder);
+        setTempCategoryOrder(categoryOrder);
+    }, [guideOrder, categoryOrder]);
 
     useEffect(() => {
         if (activeTab !== 'themes' || typeof window === 'undefined') {
@@ -343,10 +580,43 @@ const AdminPanel: React.FC = () => {
         try {
             setIsLoadingDocuments(true);
             const response = await documentApi.getDocumentList();
-            setDocumentList(response.data?.data?.documents || []);
+            const data = response.data?.data;
+            setDocumentList(data?.documents || []);
+
+            // 保存指南和分类排序数据
+            // 如果 API 返回空，则从 documents 数据自动生成
+            const docs = data?.documents || [];
+            const newGuideOrder = data?.guideOrder?.length
+                ? data.guideOrder
+                : Array.from(new Set(docs.map((d) => d.guide || 'default'))).map((guide, index) => ({
+                      guide,
+                      order: index,
+                  }));
+
+            const existingCategoryOrder = data?.categoryOrder || [];
+            const newCategoryOrder = existingCategoryOrder.length
+                ? existingCategoryOrder
+                : docs.reduce<{ guide: string; category: string; order: number }[]>((acc, doc) => {
+                      const guide = doc.guide || 'default';
+                      const category = doc.category || 'uncategorized';
+                      if (!acc.find((c) => c.guide === guide && c.category === category)) {
+                          const existingForGuide = acc.filter((c) => c.guide === guide);
+                          acc.push({
+                              guide,
+                              category,
+                              order: existingForGuide.length,
+                          });
+                      }
+                      return acc;
+                  }, []);
+
+            setGuideOrder(newGuideOrder);
+            setCategoryOrder(newCategoryOrder);
+            setTempGuideOrder(newGuideOrder);
+            setTempCategoryOrder(newCategoryOrder);
 
             // 初始展开第一个指南和第一个分类，并选中第一个文档
-            const guides = response.data?.data?.guides || [];
+            const guides = data?.guides || [];
             if (guides.length > 0) {
                 const firstGuide = guides[0];
                 setExpandedGuides(new Set([firstGuide.guide]));
@@ -1584,8 +1854,14 @@ const AdminPanel: React.FC = () => {
                                         ) : documentList.length === 0 ? (
                                             <div className={styles.emptyState}>暂无文档</div>
                                         ) : (
-                                            <div className={styles.documentTreeContent}>
-                                                {/* 从 API 获取 guides 数据 */}
+                                            <DndContext
+                                                sensors={sensors}
+                                                collisionDetection={closestCenter}
+                                                onDragStart={handleDragStart}
+                                                onDragEnd={handleDragEnd}
+                                            >
+                                                <div className={styles.documentTreeContent}>
+                                                {/* 从 API 获取 guides 数据，并按 guideOrder 排序 */}
                                                 {(() => {
                                                     const guides = documentList.reduce<Record<string, Record<string, typeof documentList>>>((acc, doc) => {
                                                         const guide = doc.guide || 'default';
@@ -1596,56 +1872,95 @@ const AdminPanel: React.FC = () => {
                                                         return acc;
                                                     }, {});
 
-                                                    return Object.entries(guides).map(([guideName, categories]) => (
-                                                        <div key={guideName} className={styles.guideGroup}>
-                                                            <div
-                                                                className={styles.guideGroupHeader}
-                                                                onClick={() => toggleGuide(guideName)}
-                                                            >
-                                                                <span className={`${styles.guideGroupIcon} ${expandedGuides.has(guideName) ? styles.guideGroupIconExpanded : ''}`}>
-                                                                    ▶
-                                                                </span>
-                                                                <span className={styles.guideGroupName}>{guideName}</span>
-                                                                <span className={styles.guideGroupCount}>
-                                                                    {Object.values(categories).reduce((sum, docs) => sum + docs.length, 0)}
-                                                                </span>
-                                                            </div>
-                                                            {expandedGuides.has(guideName) && (
-                                                                <div className={styles.categoryList}>
-                                                                    {Object.entries(categories).map(([categoryName, docs]) => (
-                                                                        <div key={categoryName} className={styles.categoryItem}>
-                                                                            <div
-                                                                                className={styles.categoryHeader}
-                                                                                onClick={() => toggleCategory(`${guideName}:${categoryName}`)}
+                                                    // 按 tempGuideOrder 排序（用于显示，同时也是 SortableContext 的 items）
+                                                    const sortedGuideNames = Object.keys(guides).sort((a, b) => {
+                                                        const orderA = tempGuideOrder.find((g) => g.guide === a)?.order ?? 999;
+                                                        const orderB = tempGuideOrder.find((g) => g.guide === b)?.order ?? 999;
+                                                        return orderA - orderB;
+                                                    });
+
+                                                    return (
+                                                        <SortableContext
+                                                            items={sortedGuideNames}
+                                                            strategy={verticalListSortingStrategy}
+                                                        >
+                                                            {sortedGuideNames.map((guideName) => {
+                                                                const categories = guides[guideName];
+                                                                // 按 tempCategoryOrder 排序
+                                                                const sortedCategoryNames = [...Object.keys(categories)].sort((a, b) => {
+                                                                    const orderA = tempCategoryOrder.find((c) => c.guide === guideName && c.category === a)?.order ?? 999;
+                                                                    const orderB = tempCategoryOrder.find((c) => c.guide === guideName && c.category === b)?.order ?? 999;
+                                                                    return orderA - orderB;
+                                                                });
+
+                                                                    return (
+                                                                        <SortableGuideItem
+                                                                            key={guideName}
+                                                                            guideName={guideName}
+                                                                            docCount={Object.values(categories).reduce((sum, docs) => sum + docs.length, 0)}
+                                                                            isExpanded={expandedGuides.has(guideName)}
+                                                                            onToggle={() => toggleGuide(guideName)}
+                                                                        >
+                                                                            <SortableContext
+                                                                                items={sortedCategoryNames.map((cat) => `category:${guideName}:${cat}`)}
+                                                                                strategy={verticalListSortingStrategy}
                                                                             >
-                                                                                <span className={`${styles.categoryIcon} ${expandedCategories.has(`${guideName}:${categoryName}`) ? styles.categoryIconExpanded : ''}`}>
-                                                                                    ▶
-                                                                                </span>
-                                                                                <span className={styles.categoryName}>{categoryName}</span>
-                                                                                <span className={styles.categoryCount}>{docs.length}</span>
-                                                                            </div>
-                                                                            {expandedCategories.has(`${guideName}:${categoryName}`) && (
-                                                                                <div className={styles.documentList}>
-                                                                                    {docs.sort((a, b) => a.order - b.order).map((doc) => (
-                                                                                        <div
-                                                                                            key={doc.slug}
-                                                                                            className={`${styles.documentItem} ${selectedDocumentSlug === doc.slug ? styles.documentItemActive : ''}`}
-                                                                                            onClick={() => void handleSelectDocument(doc.slug)}
-                                                                                        >
-                                                                                            <span className={styles.documentItemIcon}>📄</span>
-                                                                                            <span className={styles.documentItemTitle}>{doc.title}</span>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ));
+                                                                            {sortedCategoryNames.map((categoryName) => {
+                                                                                const docs = categories[categoryName];
+                                                                                const categoryId = `category:${guideName}:${categoryName}`;
+                                                                                return (
+                                                                                    <SortableCategoryItem
+                                                                                        key={categoryId}
+                                                                                        categoryId={categoryId}
+                                                                                        categoryName={categoryName}
+                                                                                        docCount={docs.length}
+                                                                                        isExpanded={expandedCategories.has(`${guideName}:${categoryName}`)}
+                                                                                        onToggle={() => toggleCategory(`${guideName}:${categoryName}`)}
+                                                                                    >
+                                                                                        {docs.sort((a, b) => a.order - b.order).map((doc) => (
+                                                                                            <div
+                                                                                                key={doc.slug}
+                                                                                                className={`${styles.documentItem} ${selectedDocumentSlug === doc.slug ? styles.documentItemActive : ''}`}
+                                                                                                onClick={() => void handleSelectDocument(doc.slug)}
+                                                                                            >
+                                                                                                <span className={styles.documentItemIcon}>📄</span>
+                                                                                                <span className={styles.documentItemTitle}>{doc.title}</span>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </SortableCategoryItem>
+                                                                                );
+                                                                            })}
+                                                                        </SortableContext>
+                                                                    </SortableGuideItem>
+                                                                );
+                                                            })}
+                                                        </SortableContext>
+                                                    );
                                                 })()}
+
+                                                {/* 排序保存/取消按钮 */}
+                                                {hasOrderChanges && (
+                                                    <div className={styles.orderActions}>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.cancelButton}
+                                                            onClick={handleCancelOrder}
+                                                            disabled={isSavingOrder}
+                                                        >
+                                                            取消
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className={styles.confirmButton}
+                                                            onClick={() => void handleConfirmOrder()}
+                                                            disabled={isSavingOrder}
+                                                        >
+                                                            {isSavingOrder ? '保存中...' : '确定'}
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
+                                            </DndContext>
                                         )}
                                     </aside>
 
