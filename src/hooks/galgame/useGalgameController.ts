@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../store/useAuthStore";
 import { useGameStore } from "../../store/gameStore";
-import { useGalgameStep } from "./useGalgameStep";
+import { createGalgameActionId, useGalgameStep } from "./useGalgameStep";
 import useGalgameHistory from "./useGalgameHistory";
 import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
-import type { GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
+import type { ContextMemoryDebug, ContextMemoryStatus, GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
 import { getImageUrl, getPlayerImageUrl, DEFAULT_SCENE_IMAGE } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
@@ -34,6 +34,13 @@ type ReplayStep = {
 const REPLAY_SPEED_OPTIONS: ReplaySpeed[] = [0.5, 1, 1.5, 2];
 const REPLAY_PAGE_SIZE = 200;
 const REPLAY_PREFETCH_REMAINING = 40;
+const REQUEST_TIMEOUT_MS = 60000;
+const COMPRESSION_REQUEST_TIMEOUT_MS = 180000;
+
+function pickMainOption(options?: Array<{ id: number; text: string; isMain?: boolean }>) {
+    if (!Array.isArray(options) || options.length === 0) return null;
+    return options.find((option) => option?.isMain) || options[0] || null;
+}
 
 export const useGalgameController = () => {
     const { user } = useAuthStore();
@@ -78,21 +85,31 @@ export const useGalgameController = () => {
     const [replayLoadedOffset, setReplayLoadedOffset] = useState<number>(0);
     const [replayHasMore, setReplayHasMore] = useState<boolean>(false);
     const [replaySpeed, setReplaySpeed] = useState<ReplaySpeed>(1);
+    const [liveContextMemory, setLiveContextMemory] = useState<ContextMemoryStatus | null>(null);
+    const [memoryDebugOpen, setMemoryDebugOpen] = useState<boolean>(false);
+    const [memoryDebugData, setMemoryDebugData] = useState<ContextMemoryDebug | null>(null);
+    const [memoryDebugLoading, setMemoryDebugLoading] = useState<boolean>(false);
+    const [isAutoToCompression, setIsAutoToCompression] = useState<boolean>(false);
 
     const currentRequestIdRef = useRef<number>(0);
     const historyProcessedRef = useRef<boolean>(false);
     const requestTimeoutRef = useRef<number | null>(null);
+    const [streamActivityTick, setStreamActivityTick] = useState<number>(0);
+    const lastStreamActivityTickRef = useRef<number>(0);
     const previousStepRef = useRef<any>(null);
     const previousIsTypingRef = useRef<boolean>(false);
     const presetDataLoadedRef = useRef<boolean>(false);
     const lastRefreshRequestIdRef = useRef<number>(0);
     const refreshHistoryAfterTypingRef = useRef<(() => Promise<void>) | null>(null);
     const lastRequestActionRef = useRef<string | null>(null); // 保存最后一次请求的 action
+    const lastRequestActionIdRef = useRef<string | null>(null);
     const lastAutoResendRef = useRef<{ content: string; ts: number } | null>(null);
     const replayStepsRef = useRef<ReplayStep[]>([]);
     const replayLoadingPageRef = useRef<boolean>(false);
     const replayLoadedOffsetRef = useRef<number>(0);
     const replayHasMoreRef = useRef<boolean>(false);
+    const autoToCompressionStartCountRef = useRef<number | null>(null);
+    const autoToCompressionCompletedRef = useRef<boolean>(false);
 
     const {
         history,
@@ -101,7 +118,9 @@ export const useGalgameController = () => {
         hasMoreBefore,
         loadingMoreBefore,
         loading: historyLoading,
-        editHistory
+        editHistory,
+        historyTotal,
+        contextMemory: historyContextMemory
     } = useGalgameHistory({ disabled: isReplay });
 
     // 根据 assistant 消息数量计算当前是第几回合（用于前几回合免费 / UI 提示）
@@ -198,6 +217,12 @@ export const useGalgameController = () => {
         replayLoadingPageRef.current = false;
         setReplaySpeed(1);
         setIsAutoPlay(false);
+        setLiveContextMemory(null);
+        setMemoryDebugOpen(false);
+        setMemoryDebugData(null);
+        setIsAutoToCompression(false);
+        autoToCompressionStartCountRef.current = null;
+        autoToCompressionCompletedRef.current = false;
         // 强制重置加载标记，确保数据重新加载
         presetDataLoadedRef.current = false;
     }, [fileId, isReplay, replayId]);
@@ -377,6 +402,69 @@ export const useGalgameController = () => {
         }
     }, [updateSceneFromId, getLatestSceneById, getSceneImagePath, toSceneBackgroundUrl]);
 
+    const contextMemoryDebugEnabled = (liveContextMemory || historyContextMemory)?.debugEnabled === true;
+
+    const fetchContextMemoryDebug = useCallback(async (retryEmpty = false) => {
+        if (!contextMemoryDebugEnabled || !playableSessionId) {
+            return null;
+        }
+
+        try {
+            setMemoryDebugLoading(true);
+            for (let attempt = 0; attempt < (retryEmpty ? 3 : 1); attempt += 1) {
+                const response = await getGalgamePresetApi.getGalgameHistory(playableSessionId, {
+                    limit: 1,
+                    direction: 'before',
+                    debugContextMemory: 1,
+                });
+                const debugData = response.data?.contextMemoryDebug || null;
+                setMemoryDebugData(debugData);
+                if (debugData?.current || !retryEmpty || attempt === 2) {
+                    return debugData;
+                }
+                await new Promise((resolve) => window.setTimeout(resolve, 350));
+            }
+            return null;
+        } catch (error) {
+            console.error('[Galgame] Failed to load context memory debug:', error);
+            toast.error('加载记忆调试信息失败。');
+            return null;
+        } finally {
+            setMemoryDebugLoading(false);
+        }
+    }, [contextMemoryDebugEnabled, playableSessionId]);
+
+    const openContextMemoryDebug = useCallback(async () => {
+        if (!contextMemoryDebugEnabled) {
+            return;
+        }
+        setMemoryDebugOpen(true);
+        await fetchContextMemoryDebug();
+    }, [contextMemoryDebugEnabled, fetchContextMemoryDebug]);
+
+    const stopAutoToCompressionAndOpenDebug = useCallback(async () => {
+        if (autoToCompressionCompletedRef.current) {
+            return;
+        }
+        autoToCompressionCompletedRef.current = true;
+        setIsAutoToCompression(false);
+        setIsAutoPlay(false);
+        await fetchContextMemoryDebug(true);
+        setMemoryDebugOpen(true);
+    }, [fetchContextMemoryDebug]);
+
+    const noteStreamActivity = useCallback((data?: any) => {
+        if (data?.type === 'error' && data?.code === 'ACTION_IN_PROGRESS' && refreshHistoryAfterTypingRef.current) {
+            void refreshHistoryAfterTypingRef.current();
+        }
+        const now = Date.now();
+        if (now - lastStreamActivityTickRef.current < 1000) {
+            return;
+        }
+        lastStreamActivityTickRef.current = now;
+        setStreamActivityTick((value) => value + 1);
+    }, []);
+
     const stepHandlers = useGalgameStep({
         sessionId,
         historyLength: assistantRoundCount,
@@ -404,8 +492,22 @@ export const useGalgameController = () => {
             // 显示错误弹窗而不是 alert
             setErrorMessage(errorMsg);
             setErrorModalVisible(true);
+            if (refreshHistoryAfterTypingRef.current) {
+                void refreshHistoryAfterTypingRef.current();
+            }
         },
         isReplay,
+        isTextMode,
+        onContextMemoryUpdate: setLiveContextMemory,
+        onContextCompressionDone: (status) => {
+            if (status) {
+                setLiveContextMemory(status);
+            }
+            if (autoToCompressionStartCountRef.current !== null) {
+                void stopAutoToCompressionAndOpenDebug();
+            }
+        },
+        onStreamActivity: noteStreamActivity,
         onExhausted: () => {
             if (isReplay) {
                 if (replayTotalSteps > 0) {
@@ -417,17 +519,32 @@ export const useGalgameController = () => {
         }
     });
 
+    const textModeContextMemory = liveContextMemory || stepHandlers.contextMemory || historyContextMemory;
+
+    useEffect(() => {
+        if (!isAutoToCompression || autoToCompressionStartCountRef.current === null) {
+            return;
+        }
+        const currentCount = Number(textModeContextMemory?.compressionCount || 0);
+        if (currentCount > autoToCompressionStartCountRef.current) {
+            void stopAutoToCompressionAndOpenDebug();
+        }
+    }, [isAutoToCompression, textModeContextMemory?.compressionCount, stopAutoToCompressionAndOpenDebug]);
+
     // 请求超时检测（60秒）
     useEffect(() => {
         if (stepHandlers.isWaitingForData) {
             if (requestTimeoutRef.current) {
                 window.clearTimeout(requestTimeoutRef.current);
             }
+            const timeoutMs = stepHandlers.isCompressingContext
+                ? COMPRESSION_REQUEST_TIMEOUT_MS
+                : REQUEST_TIMEOUT_MS;
             requestTimeoutRef.current = window.setTimeout(() => {
                 if (stepHandlers.isWaitingForData) {
                     setRequestTimeoutVisible(true);
                 }
-            }, 60000);
+            }, timeoutMs);
         } else {
             if (requestTimeoutRef.current) {
                 window.clearTimeout(requestTimeoutRef.current);
@@ -441,7 +558,7 @@ export const useGalgameController = () => {
                 requestTimeoutRef.current = null;
             }
         };
-    }, [stepHandlers.isWaitingForData]);
+    }, [stepHandlers.isWaitingForData, stepHandlers.isCompressingContext, streamActivityTick]);
 
     useEffect(() => {
         const currentRequestId = stepHandlers.currentRequestId?.current || 0;
@@ -1026,6 +1143,34 @@ export const useGalgameController = () => {
         });
     }, [isReplay, replayIndex, replayTotalSteps]);
 
+    const handleAutoToCompressionToggle = useCallback(() => {
+        if (!contextMemoryDebugEnabled) {
+            return;
+        }
+        if (isReplay || !playableSessionId) {
+            toast.error('自动压测仅可在可游玩会话中使用。');
+            return;
+        }
+        if (!gameStarted) {
+            toast.error('请先开始游戏再运行自动压测。');
+            return;
+        }
+
+        setIsAutoToCompression((prev) => {
+            if (prev) {
+                autoToCompressionStartCountRef.current = null;
+                return false;
+            }
+
+            autoToCompressionStartCountRef.current = Number(textModeContextMemory?.compressionCount || 0);
+            autoToCompressionCompletedRef.current = false;
+            setMemoryDebugOpen(false);
+            setMemoryDebugData(null);
+            setIsAutoPlay(false);
+            return true;
+        });
+    }, [contextMemoryDebugEnabled, gameStarted, isReplay, playableSessionId, textModeContextMemory?.compressionCount]);
+
     const handleReplaySeek = useCallback(async (targetIndex: number) => {
         if (!isReplay) {
             return;
@@ -1100,6 +1245,7 @@ export const useGalgameController = () => {
     }, [isAutoPlay, isTextMode, isReplay, replayIndex, replaySpeed, replaySteps.length, replayTotalSteps, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
+        if (stepHandlers.isWaitingForData || stepHandlers.loading) return;
         if (!messageUtilsWithTyping.currentMessage || messageUtilsWithTyping.currentMessage.type !== 'choice' || !messageUtilsWithTyping.currentMessage.options) {
             return;
         }
@@ -1110,9 +1256,11 @@ export const useGalgameController = () => {
         if (optionIndex < 0) return;
 
         const optionText = messageUtilsWithTyping.currentMessage.options[optionIndex].text;
+        const actionId = createGalgameActionId(playableSessionId, optionText);
 
         // 保存最后一次请求的 action
         lastRequestActionRef.current = optionText;
+        lastRequestActionIdRef.current = actionId;
 
         if (stepHandlers.currentStep && stepHandlers.currentStep.type === 'choice') {
             const stepOptionIndex = stepHandlers.currentStep.options?.findIndex((opt: any) => {
@@ -1126,37 +1274,100 @@ export const useGalgameController = () => {
                     ? { text: stepOptionObj, nextId: '' }
                     : stepOptionObj;
 
-                stepHandlers.handleChoiceOption(optionData, stepOptionIndex);
+                stepHandlers.handleChoiceOption(optionData, stepOptionIndex, actionId);
                 return;
             }
         }
 
-        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex);
-    }, [stepHandlers, messageUtilsWithTyping.currentMessage, resetDisplayedSteps]);
+        stepHandlers.handleChoiceOption({ text: optionText, nextId: '' }, optionIndex, actionId);
+    }, [playableSessionId, stepHandlers, messageUtilsWithTyping.currentMessage, resetDisplayedSteps]);
+
+    useEffect(() => {
+        if (!isAutoToCompression) {
+            return;
+        }
+        if (!contextMemoryDebugEnabled || isReplay || !gameStarted) {
+            setIsAutoToCompression(false);
+            return;
+        }
+        if (autoToCompressionCompletedRef.current) {
+            return;
+        }
+        if (stepHandlers.isWaitingForData || stepHandlers.loading || stepHandlers.isCompressingContext) {
+            return;
+        }
+        if (messageUtilsWithTyping.finalIsTyping) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            const currentMessage = messageUtilsWithTyping.currentMessage;
+            if (currentMessage?.type === 'choice') {
+                const option = pickMainOption(currentMessage.options);
+                if (!option) {
+                    autoToCompressionStartCountRef.current = null;
+                    setIsAutoToCompression(false);
+                    toast.error('自动压测遇到空选项，已停止。');
+                    void openContextMemoryDebug();
+                    return;
+                }
+                handleChoiceClick(option);
+                return;
+            }
+
+            if (stepHandlers.showNextButton) {
+                handleNextMessage();
+            }
+        }, 250);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [
+        gameStarted,
+        handleChoiceClick,
+        handleNextMessage,
+        isAutoToCompression,
+        isReplay,
+        contextMemoryDebugEnabled,
+        messageUtilsWithTyping.currentMessage,
+        messageUtilsWithTyping.finalIsTyping,
+        openContextMemoryDebug,
+        stepHandlers.isCompressingContext,
+        stepHandlers.isWaitingForData,
+        stepHandlers.loading,
+        stepHandlers.showNextButton,
+    ]);
 
     const handleCustomInputSubmit = useCallback((value: string) => {
+        if (stepHandlers.isWaitingForData || stepHandlers.loading) return;
         if (!value.trim()) return;
+        const actionText = value.trim();
+        const actionId = createGalgameActionId(playableSessionId, actionText);
         // 保存最后一次请求的 action
-        lastRequestActionRef.current = value.trim();
-        stepHandlers.handleChoiceSend(value);
-    }, [stepHandlers]);
+        lastRequestActionRef.current = actionText;
+        lastRequestActionIdRef.current = actionId;
+        stepHandlers.handleChoiceSend(value, actionId);
+    }, [playableSessionId, stepHandlers]);
 
     const handleRetryLastRequest = useCallback(async () => {
         setRequestTimeoutVisible(false);
         setErrorModalVisible(false);
 
         const lastAction = lastRequestActionRef.current;
+        const lastActionId = lastRequestActionIdRef.current || createGalgameActionId(playableSessionId, lastAction || '');
         if (!lastAction) {
             toast.error('没有可重试的上次操作');
             return;
         }
 
         await stepHandlers.handleStreamAction(lastAction, {
+            actionId: lastActionId,
             onError: () => {
                 toast.error('重试失败，请稍后再试');
             }
         });
-    }, [stepHandlers]);
+    }, [playableSessionId, stepHandlers]);
 
     const handleExitGame = useCallback(() => {
         try {
@@ -1206,8 +1417,17 @@ export const useGalgameController = () => {
         allStepsForTextModal,
         currentStepIndex,
         textModalDisplayText: messageUtilsWithTyping.textModalDisplayText,
+        contextMemory: textModeContextMemory,
+        contextMemoryDebugEnabled,
+        memoryDebugOpen,
+        setMemoryDebugOpen,
+        memoryDebugData,
+        memoryDebugLoading,
+        openContextMemoryDebug,
+        isAutoToCompression,
         convertStepsToTextModalFormat: messageUtilsWithTyping.convertStepsToTextModalFormat,
         history,
+        historyTotal,
         refreshHistory,
         loadMoreHistoryBefore: loadMoreBefore,
         hasMoreHistoryBefore: hasMoreBefore,
@@ -1217,6 +1437,7 @@ export const useGalgameController = () => {
         handleStartGame,
         handleNextMessage,
         handleAutoPlayToggle,
+        handleAutoToCompressionToggle,
         handleReplaySeek,
         handleReplaySpeedChange,
         handleChoiceClick,

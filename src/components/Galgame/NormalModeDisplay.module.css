@@ -198,32 +198,20 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border-radius: 0.25rem; /* 4px */
-    mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 10%,
-        black 90%,
-        transparent 100%
-    );
-    -webkit-mask-image: linear-gradient(
-        to right,
-        transparent 0%,
-        black 16%,
-        black 90%,
-        transparent 100%
-    );
     background-color: #0000007a;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem; /* 12px */
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .choiceText {
     flex: 1;
     min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
 }
 
 .choicePrice {

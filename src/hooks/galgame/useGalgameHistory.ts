@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
-import type { History } from "../../api/galgame/getGalgamePreset.type";
+import type { ContextMemoryStatus, History } from "../../api/galgame/getGalgamePreset.type";
 import { useGameStore } from "../../store/gameStore";
 import { HOST_ADDRESS } from "../../config";
 import toast from "react-hot-toast";
@@ -22,6 +22,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [lastVisitedSceneId, setLastVisitedSceneId] = useState<string | null>(null);
+    const [contextMemory, setContextMemory] = useState<ContextMemoryStatus | null>(null);
     const initializedRef = useRef<boolean>(false);
     const { sessionId } = useGameStore();
     const disabled = options?.disabled === true;
@@ -33,6 +34,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
             setHistoryTotal(0);
             setHasMoreBefore(false);
             setLastVisitedSceneId(null);
+            setContextMemory(null);
             setLoading(false);
             return;
         }
@@ -54,6 +56,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
                 setHistoryOffset(Number(response.data.offset || 0));
                 setHistoryTotal(Number(response.data.total || response.data.history.length));
                 setHasMoreBefore(response.data.hasMoreBefore === true);
+                setContextMemory(response.data.contextMemory || null);
 
                 // 从返回的 visitedScenes 中解析当前所在场景 ID（最后一个）
                 const visitedScenes = (response.data as any).visitedScenes;
@@ -88,6 +91,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
                 setHistoryOffset(Number(response.data.offset || 0));
                 setHistoryTotal(Number(response.data.total || historyTotal));
                 setHasMoreBefore(response.data.hasMoreBefore === true);
+                setContextMemory(response.data.contextMemory || null);
             }
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to load earlier history');
@@ -141,6 +145,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
             setHistoryOffset(0);
             setHistoryTotal(0);
             setHasMoreBefore(false);
+            setContextMemory(null);
             setLoading(false);
         }
     }, [sessionId]);
@@ -166,6 +171,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
         historyOffset,
         editHistory,
         lastVisitedSceneId,
+        contextMemory,
     };
 };
 

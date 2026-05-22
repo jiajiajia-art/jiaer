@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { truncateStepsAfterChoice } from '../mapGalgame/common/interactionUtils';
-import { cleanHistoryMessage } from '../../utils/textUtils';
+import { cleanHistoryMessage, sanitizeVisualOptionText, stripNonStoryControlMarkup } from '../../utils/textUtils';
 
 interface UseStepStreamResponseOptions {
     setStepQueue: React.Dispatch<React.SetStateAction<any[]>>;
@@ -17,8 +17,10 @@ interface UseStepStreamResponseOptions {
 interface ProcessStepStreamResponseOptions {
     onSuccess?: () => void;
     onError?: (error: string) => void;
+    onGenerationRetry?: () => void;
     onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
     onFirstStep?: () => void; // 接收到后端数据，清空一些状态缓存等
+    onActivity?: (data: any) => void;
     onData?: (data: any) => void; // 任意数据回调（含 type=data/complete 等），便于业务层拿到附加字段
 }
 
@@ -26,6 +28,8 @@ interface ProcessStepStreamResponseOptions {
  * Step 流式响应处理 Hook
  * 专门用于处理包含 step 类型数据的流式输出
  */
+const SUPPRESS_ALERT_ERROR_CODES = new Set(['ACTION_IN_PROGRESS']);
+
 export const useStepStreamResponse = ({
     setStepQueue,
     setSelectedOptionIndex,
@@ -33,7 +37,6 @@ export const useStepStreamResponse = ({
     currentRequestId,
     onMissionFlag,
     onCompleteAllSteps,
-    enableFallbackEmptyChoice = false,
 }: UseStepStreamResponseOptions) => {
 
     const normalizeUserFacingStreamError = useCallback((error: unknown): string => {
@@ -60,6 +63,25 @@ export const useStepStreamResponse = ({
 
         if (
             typeof message === 'string' &&
+            message.includes('Action is already processing')
+        ) {
+            return '内容正在生成中，请稍候。';
+        }
+
+        if (
+            typeof message === 'string' &&
+            (
+                message.includes('LLM_OUTPUT_INCOMPLETE') ||
+                message.includes('Narrative generation was interrupted') ||
+                message.includes('did not return usable options') ||
+                message.includes('did not return completion metrics')
+            )
+        ) {
+            return '生成结果不完整，请重试。';
+        }
+
+        if (
+            typeof message === 'string' &&
             (
                 message.includes('Failed to acquire lock') ||
                 message.includes('Lock acquisition timeout') ||
@@ -82,7 +104,7 @@ export const useStepStreamResponse = ({
         const optionRegex = /\[OPTION:\s*([^\]]+?)\](\s*\[END_CHOICE\])?/gi;
 
         const collect = (raw: string | undefined | null, target: string[]) => {
-            let optionText = raw?.trim() || '';
+            let optionText = sanitizeVisualOptionText(raw || '');
             if (!optionText) return;
             const quotedMatch = optionText.match(/^[^"]*:\s*"([^"]+)"$/);
             if (quotedMatch && quotedMatch[1]) {
@@ -90,6 +112,7 @@ export const useStepStreamResponse = ({
             } else {
                 optionText = optionText.replace(/^["']|["']$/g, '');
             }
+            optionText = sanitizeVisualOptionText(optionText);
             if (optionText && !target.includes(optionText)) target.push(optionText);
         };
 
@@ -108,17 +131,51 @@ export const useStepStreamResponse = ({
     // 现在的策略：
     //  - 如果已有有效的 options 数组（length > 0），则保持原样；
     //  - 否则，无论类型为何，都尝试从 content 中提取 [OPTION]，成功则补全为标准的 choice 结构。
+    const sanitizeStreamStep = useCallback((rawStep: any): any => {
+        if (!rawStep || typeof rawStep !== 'object') return rawStep;
+        const cleanString = (value: unknown) => typeof value === 'string' ? stripNonStoryControlMarkup(value) : value;
+        const cleanOptionString = (value: unknown) => {
+            if (typeof value !== 'string') return value;
+            return sanitizeVisualOptionText(value);
+        };
+
+        return {
+            ...rawStep,
+            content: cleanString(rawStep.content),
+            text: cleanString(rawStep.text),
+            message: cleanString(rawStep.message),
+            title: cleanString(rawStep.title),
+            description: cleanString(rawStep.description),
+            mainOptions: Array.isArray(rawStep.mainOptions) ? rawStep.mainOptions.map(cleanOptionString).filter(Boolean) : rawStep.mainOptions,
+            options: Array.isArray(rawStep.options)
+                ? rawStep.options.map((option: any) => {
+                    if (typeof option === 'string') return cleanOptionString(option);
+                    if (option && typeof option === 'object') {
+                        return {
+                            ...option,
+                            text: cleanOptionString(option.text),
+                            content: cleanString(option.content),
+                            message: cleanString(option.message),
+                        };
+                    }
+                    return option;
+                }).filter(Boolean)
+                : rawStep.options,
+        };
+    }, []);
+
     const toChoiceIfHasOptions = useCallback((rawStep: any): any => {
-        if (!rawStep) return rawStep;
+        const step = sanitizeStreamStep(rawStep);
+        if (!step) return step;
 
         // 已有有效选项则不处理
-        if (rawStep.type === 'choice' && Array.isArray(rawStep.options) && rawStep.options.length > 0) {
-            return rawStep;
+        if (step.type === 'choice' && Array.isArray(step.options) && step.options.length > 0) {
+            return step;
         }
 
         // 统一取文案字段
-        const content: string | undefined = rawStep.content || rawStep.text || rawStep.message;
-        if (!content || typeof content !== 'string') return rawStep;
+        const content: string | undefined = step.content || step.text || step.message;
+        if (!content || typeof content !== 'string') return step;
 
         try {
             const { options, cleanedText } = cleanHistoryMessage(content);
@@ -138,8 +195,8 @@ export const useStepStreamResponse = ({
             // 忽略解析错误，保持原样
         }
 
-        return rawStep;
-    }, [extractOptionsFromText]);
+        return step;
+    }, [extractOptionsFromText, sanitizeStreamStep]);
 
     const notifyMissionFlag = useCallback(() => {
         if (!onMissionFlag) return;
@@ -192,8 +249,20 @@ export const useStepStreamResponse = ({
         // 累积顶层 response 字段（某些后端只流式返回拼接文本，不包含 step/narrativeSteps）
         let aggregatedResponse = '';
         let choiceEmittedFromResponse = false;
+        let streamFailed = false;
         try {
             let missionFlagged = false;
+            const resetTransientStreamStateForRetry = () => {
+                aggregatedResponse = '';
+                choiceEmittedFromResponse = false;
+                hasReceivedStep = false;
+                firstStepReceived = false;
+                streamFailed = false;
+                setSelectedOptionIndex(null);
+                setStepQueue([]);
+                setIsWaitingForData(true);
+                options?.onGenerationRetry?.();
+            };
             const isDuplicateStep = (prev: any[], incoming: any): boolean => {
                 if (!incoming) return false;
                 const last = prev[prev.length - 1];
@@ -274,7 +343,13 @@ export const useStepStreamResponse = ({
                         }
 
                         // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
+                        options?.onActivity?.(jsonData);
                         options?.onData?.(jsonData);
+
+                        if (jsonData.type === 'generation_retry') {
+                            resetTransientStreamStateForRetry();
+                            continue;
+                        }
 
                         if (!missionFlagged && shouldTriggerMissionFlag(jsonData)) {
                             missionFlagged = true;
@@ -283,7 +358,7 @@ export const useStepStreamResponse = ({
 
                         // 如果只返回了累计 response 文本，尝试基于 [OPTION: ...] 直接生成 choice
                         if (typeof (jsonData as any).response === 'string' && (jsonData as any).response.length > 0) {
-                            aggregatedResponse += String((jsonData as any).response);
+                            aggregatedResponse += stripNonStoryControlMarkup(String((jsonData as any).response));
                             if (!choiceEmittedFromResponse) {
                                 try {
                                 const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
@@ -314,19 +389,27 @@ export const useStepStreamResponse = ({
                         }
 
                         if (jsonData.type === 'error') {
+                            const errorCode = typeof jsonData.code === 'string' ? jsonData.code : '';
                             let errorMessage = jsonData.error || jsonData.message || '发生错误';
                             
                             if (typeof errorMessage === 'object' && errorMessage !== null) {
                                 errorMessage = errorMessage.message || errorMessage.error || JSON.stringify(errorMessage);
                             }
                             errorMessage = normalizeUserFacingStreamError(errorMessage);
+                            streamFailed = true;
                             
                             // 显示错误弹窗给用户
                             console.error('❌ 流式响应错误:', errorMessage);
-                            options?.onErrorAfterAlert?.(errorMessage);
+                            const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode);
+                            if (!suppressError) {
+                                options?.onErrorAfterAlert?.(errorMessage);
+                            }
                             setSelectedOptionIndex(null);
+                            setStepQueue([]);
                             setIsWaitingForData(false);
-                            options?.onError?.(errorMessage);
+                            if (!suppressError) {
+                                options?.onError?.(errorMessage);
+                            }
                             hasReceivedStep = true;
                             continue;
                         }
@@ -418,44 +501,9 @@ export const useStepStreamResponse = ({
                         }
 
                         // 处理 complete 事件，携带 allSteps（后端已完全生成的步骤列表）
-                        if (jsonData.type === 'complete' && Array.isArray(jsonData.allSteps)) {
+                        if (!streamFailed && jsonData.type === 'complete' && Array.isArray(jsonData.allSteps)) {
                             try {
-                                let finalAllSteps = jsonData.allSteps;
-
-                                // 仅在显式开启时（Galgame）才做「无 choice 自动补空 choice」的兜底
-                                if (enableFallbackEmptyChoice) {
-                                    // 如果整段剧情里没有任何带 options 的 choice，则在末尾补一个空选项的 choice
-                                    const hasChoiceWithOptions = finalAllSteps.some(
-                                        (s: any) =>
-                                            s &&
-                                            s.type === 'choice' &&
-                                            Array.isArray(s.options) &&
-                                            s.options.length > 0
-                                    );
-
-                                    if (!hasChoiceWithOptions) {
-                                        const syntheticChoice = {
-                                            type: 'choice',
-                                            title: undefined,
-                                            // 对于兜底空 choice，不再重复上一条叙述，交给前端用固定文案或仅展示自定义输入
-                                            description: '',
-                                            mainOptions: [],
-                                            options: [],
-                                        };
-
-                                        finalAllSteps = [...finalAllSteps, syntheticChoice];
-
-                                        // 同时往队列里塞入这个空 choice，保证前端能停在“选择/自定义输入”界面
-                                        setStepQueue((prev) => {
-                                            if (currentRequestId.current !== requestId) return prev;
-                                            const hasChoiceInQueue = prev.some(
-                                                (s: any) => s && s.type === 'choice'
-                                            );
-                                            if (hasChoiceInQueue) return prev;
-                                            return [...prev, syntheticChoice];
-                                        });
-                                    }
-                                }
+                                const finalAllSteps = jsonData.allSteps.map((s: any) => toChoiceIfHasOptions(s));
 
                                 onCompleteAllSteps?.(finalAllSteps);
                             } catch (e) {
@@ -478,9 +526,15 @@ export const useStepStreamResponse = ({
                     const jsonData = JSON.parse(dataStr);
 
                     // 透传给上层
+                    options?.onActivity?.(jsonData);
                     options?.onData?.(jsonData);
 
                     if (currentRequestId.current !== requestId) {
+                        return;
+                    }
+
+                    if (jsonData.type === 'generation_retry') {
+                        resetTransientStreamStateForRetry();
                         return;
                     }
 
@@ -491,7 +545,7 @@ export const useStepStreamResponse = ({
 
                     // 缓冲区结尾也尝试从 response 聚合文本中解析选项
                     if (typeof (jsonData as any).response === 'string' && (jsonData as any).response.length > 0) {
-                        aggregatedResponse += String((jsonData as any).response);
+                        aggregatedResponse += stripNonStoryControlMarkup(String((jsonData as any).response));
                         if (!choiceEmittedFromResponse) {
                             try {
                                 const { options: opts, cleanedText } = cleanHistoryMessage(aggregatedResponse);
@@ -523,6 +577,7 @@ export const useStepStreamResponse = ({
 
                     // 处理顶层的 error 类型
                     if (jsonData.type === 'error') {
+                        const errorCode = typeof jsonData.code === 'string' ? jsonData.code : '';
                         // 优先使用 error 字段，然后是 message 字段
                         let errorMessage = jsonData.error || jsonData.message || '发生错误';
                         
@@ -531,13 +586,20 @@ export const useStepStreamResponse = ({
                             errorMessage = errorMessage.message || errorMessage.error || JSON.stringify(errorMessage);
                         }
                         errorMessage = normalizeUserFacingStreamError(errorMessage);
+                        streamFailed = true;
                         
                         // 显示错误弹窗给用户
                         console.error('❌ 流式响应错误（缓冲区）:', errorMessage);
-                        options?.onErrorAfterAlert?.(errorMessage);
+                        const suppressError = SUPPRESS_ALERT_ERROR_CODES.has(errorCode);
+                        if (!suppressError) {
+                            options?.onErrorAfterAlert?.(errorMessage);
+                        }
                         setSelectedOptionIndex(null);
+                        setStepQueue([]);
                         setIsWaitingForData(false);
-                        options?.onError?.(errorMessage);
+                        if (!suppressError) {
+                            options?.onError?.(errorMessage);
+                        }
                         return;
                     }
 
@@ -598,7 +660,9 @@ export const useStepStreamResponse = ({
                 }
             }
 
-            options?.onSuccess?.();
+            if (!streamFailed) {
+                options?.onSuccess?.();
+            }
         } catch (error) {
             console.error('❌ 流式数据接收错误:', error);
             setSelectedOptionIndex(null);

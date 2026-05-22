@@ -137,7 +137,7 @@ export const useGalgameMessage = (
             const mainOptions =
                 rawMainOptions.map((opt: any, index: number) => ({
                     id: index + 1,
-                    text: typeof opt === 'string' ? opt : (opt.text || opt),
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
                     isMain: true as const,
                 })) || [];
 
@@ -147,7 +147,7 @@ export const useGalgameMessage = (
             const normalOptions =
                 rawOptions.map((opt: any, index: number) => ({
                     id: startId + index,
-                    text: typeof opt === 'string' ? opt : (opt.text || opt),
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
                     isMain: false as const,
                 })) || [];
 
@@ -269,7 +269,7 @@ export const useGalgameMessage = (
             const mainOptions =
                 rawMainOptions.map((opt: any, idx: number) => ({
                     id: idx + 1,
-                    text: typeof opt === 'string' ? opt : (opt.text || opt),
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
                     isMain: true as const,
                 })) || [];
 
@@ -279,7 +279,7 @@ export const useGalgameMessage = (
             const normalOptions =
                 rawOptions.map((opt: any, idx: number) => ({
                     id: startId + idx,
-                    text: typeof opt === 'string' ? opt : (opt.text || opt),
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
                     isMain: false as const,
                 })) || [];
 
