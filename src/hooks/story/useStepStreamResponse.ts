@@ -20,6 +20,7 @@ interface ProcessStepStreamResponseOptions {
     onGenerationRetry?: () => void;
     onErrorAfterAlert?: (error: string) => void; // 错误发生时的回调，传递错误信息用于显示错误弹窗
     onFirstStep?: () => void; // 接收到后端数据，清空一些状态缓存等
+    onActivity?: (data: any) => void;
     onData?: (data: any) => void; // 任意数据回调（含 type=data/complete 等），便于业务层拿到附加字段
 }
 
@@ -342,6 +343,7 @@ export const useStepStreamResponse = ({
                         }
 
                         // 透传给上层（例如 worldInteraction 想拿到 interaction / allSteps 等）
+                        options?.onActivity?.(jsonData);
                         options?.onData?.(jsonData);
 
                         if (jsonData.type === 'generation_retry') {
@@ -524,6 +526,7 @@ export const useStepStreamResponse = ({
                     const jsonData = JSON.parse(dataStr);
 
                     // 透传给上层
+                    options?.onActivity?.(jsonData);
                     options?.onData?.(jsonData);
 
                     if (currentRequestId.current !== requestId) {

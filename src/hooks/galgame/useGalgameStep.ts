@@ -27,6 +27,8 @@ interface UseGalgameStepOptions {
     isTextMode?: boolean;
     onExhausted?: () => void;
     onContextMemoryUpdate?: (status: ContextMemoryStatus) => void;
+    onContextCompressionDone?: (status: ContextMemoryStatus | null) => void;
+    onStreamActivity?: (data: any) => void;
 }
 
 export const useGalgameStep = ({
@@ -40,6 +42,8 @@ export const useGalgameStep = ({
     isTextMode = false,
     onExhausted,
     onContextMemoryUpdate,
+    onContextCompressionDone,
+    onStreamActivity,
 }: UseGalgameStepOptions) => {
     const [currentStep, setCurrentStep] = useState<any>(null);
     const [stepQueue, setStepQueue] = useState<any[]>([]);
@@ -215,10 +219,16 @@ export const useGalgameStep = ({
                             options?.onError?.(error);
                         },
                         onFirstStep: options?.onFirstStep,
+                        onActivity: onStreamActivity,
                         onData: (data) => {
                             if (data?.contextMemory) {
                                 setContextMemory(data.contextMemory);
                                 onContextMemoryUpdate?.(data.contextMemory);
+                            }
+                            if (data?.type === 'error' && data?.code === 'ACTION_IN_PROGRESS') {
+                                setIsCompressingContext(false);
+                                setLoading(false);
+                                return;
                             }
                             if (data?.type === 'context_compression_start') {
                                 setIsCompressingContext(true);
@@ -226,9 +236,10 @@ export const useGalgameStep = ({
                             }
                             if (data?.type === 'context_compression_done') {
                                 setIsCompressingContext(false);
+                                onContextCompressionDone?.(data?.contextMemory || null);
                                 return;
                             }
-                            if (data?.type === 'error' && data?.code === 'CONTEXT_COMPRESSION_FAILED') {
+                            if (data?.type === 'error') {
                                 setIsCompressingContext(false);
                             }
                         },
@@ -253,7 +264,7 @@ export const useGalgameStep = ({
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, resetStreamRetryDisplay]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay]
     );
 
     // Handle next step in queue

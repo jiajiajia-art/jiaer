@@ -14,7 +14,7 @@ const getGalgamePresetApi = {
     },
     getGalgameHistory: (
         sessionId: string,
-        params?: { offset?: number; limit?: number; direction?: 'before' | 'after' }
+        params?: { offset?: number; limit?: number; direction?: 'before' | 'after'; debugContextMemory?: 1 | '1' | boolean }
     ) =>
         api.get<GetGalgameHistoryResponse>(`/visual/session/${sessionId}/history`, { params }),
 };

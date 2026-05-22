@@ -132,6 +132,7 @@ export interface GetGalgameHistoryResponse {
   // 后端返回的已访问场景 ID 列表，最后一个元素为当前所在场景
   visitedScenes?: string[];
   contextMemory?: ContextMemoryStatus;
+  contextMemoryDebug?: ContextMemoryDebug;
   [key: string]: unknown;
 }
 
@@ -141,6 +142,7 @@ export interface ContextMemoryStatus {
   thresholdTokens: number;
   modelContextWindow: number;
   modelContextWindowConfigured?: boolean;
+  debugEnabled?: boolean;
   safePromptBudgetTokens?: number;
   maxOutputTokens?: number;
   safetyMarginTokens?: number;
@@ -157,6 +159,38 @@ export interface ContextMemoryStatus {
   compressionCount: number;
   lastCompressionEstimatedTokens: number;
   updatedAt: string | null;
+}
+
+export interface ContextMemorySnapshot {
+  version?: number;
+  summaryText?: string;
+  structured?: Record<string, unknown>;
+  updatedAt?: string | null;
+  compressedThroughMessageCount?: number;
+  triggerReason?: string;
+  compressionCount?: number;
+  provider?: string | null;
+  model?: string | null;
+  [key: string]: unknown;
+}
+
+export interface ContextMemoryCompressionHistoryItem {
+  id?: string;
+  version?: number;
+  compressedAt?: string | null;
+  updatedAt?: string | null;
+  triggerReason?: string;
+  compressedThroughMessageCount?: number;
+  compressionCount?: number;
+  summaryText?: string;
+  structured?: Record<string, unknown>;
+  snapshot?: ContextMemorySnapshot;
+  [key: string]: unknown;
+}
+
+export interface ContextMemoryDebug {
+  current: ContextMemorySnapshot | null;
+  history: ContextMemoryCompressionHistoryItem[];
 }
 
 export interface History {

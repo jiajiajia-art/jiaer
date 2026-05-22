@@ -6,7 +6,7 @@ import { BiHistory } from "react-icons/bi";
 import { LuFileText } from "react-icons/lu";
 import { RiLogoutCircleRLine } from "react-icons/ri";
 import { MdOutlineAutoStories } from "react-icons/md";
-import { MdSettings, MdOutlineAssessment, MdReplay, MdTimeline } from "react-icons/md";
+import { MdContentCopy, MdMemory, MdPlayCircleOutline, MdSettings, MdOutlineAssessment, MdReplay, MdTimeline } from "react-icons/md";
 import StoryIntroModal from "../components/Galgame/StoryIntroModal";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
@@ -191,7 +191,7 @@ const Galgame = () => {
 
     const contextMemoryPercent = useMemo(() => {
         const status = controller.contextMemory;
-        const totalTokens = status?.safePromptBudgetTokens ?? status?.modelContextWindow;
+        const totalTokens = status?.thresholdTokens || status?.safePromptBudgetTokens || status?.modelContextWindow;
         if (!status?.modelContextWindowConfigured || !totalTokens) {
             return 0;
         }
@@ -212,8 +212,19 @@ const Galgame = () => {
     };
     const contextMemoryUsedLabel = formatContextTokenCount(controller.contextMemory?.estimatedTokens);
     const contextMemoryTotalLabel = controller.contextMemory?.modelContextWindowConfigured
-        ? formatContextTokenCount(controller.contextMemory?.safePromptBudgetTokens ?? controller.contextMemory?.modelContextWindow)
+        ? formatContextTokenCount(controller.contextMemory?.thresholdTokens || controller.contextMemory?.safePromptBudgetTokens || controller.contextMemory?.modelContextWindow)
         : '未配置';
+    const totalStoryRounds = Math.floor(Number(controller.historyTotal || 0) / 2);
+    const memoryCycleRounds = Math.max(0, Math.floor(Number(controller.contextMemory?.turnsSinceCompression || 0)));
+    const memoryCycleLimit = Math.max(0, Math.floor(Number(controller.contextMemory?.safeRoundLimit || 0)));
+    const memoryCycleLabel = memoryCycleLimit > 0
+        ? `${memoryCycleRounds}/${memoryCycleLimit}`
+        : String(memoryCycleRounds);
+    const memoryDebugCurrent = controller.memoryDebugData?.current || null;
+    const memoryDebugHistory = controller.memoryDebugData?.history || [];
+    const memoryDebugStructured = memoryDebugCurrent?.structured
+        ? JSON.stringify(memoryDebugCurrent.structured, null, 2)
+        : '{}';
 
     const handleCurrentMessageRegenerate = () => {
         if (!currentAssistantHistoryIndex) {
@@ -405,10 +416,10 @@ const Galgame = () => {
         }
     };
 
-    const copyReplayLink = async (shareUrl: string) => {
+    const copyTextToClipboard = async (text: string) => {
         if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
             try {
-                await navigator.clipboard.writeText(shareUrl);
+                await navigator.clipboard.writeText(text);
                 return true;
             } catch (error) {
                 console.warn('[Replay] Failed to copy replay link with clipboard API:', error);
@@ -420,7 +431,7 @@ const Galgame = () => {
         }
 
         const textArea = document.createElement('textarea');
-        textArea.value = shareUrl;
+        textArea.value = text;
         textArea.setAttribute('readonly', 'true');
         textArea.style.position = 'fixed';
         textArea.style.opacity = '0';
@@ -443,7 +454,7 @@ const Galgame = () => {
             return;
         }
 
-        const copied = await copyReplayLink(createdReplayShare.shareUrl);
+        const copied = await copyTextToClipboard(createdReplayShare.shareUrl);
         if (!copied) {
             toast.error('复制回放链接失败');
             return;
@@ -455,6 +466,20 @@ const Galgame = () => {
         }
 
         toast.success('公开回放链接已复制');
+    };
+
+    const handleCopyMemoryDebugText = async (text: string, successMessage: string) => {
+        if (!text.trim()) {
+            return;
+        }
+
+        const copied = await copyTextToClipboard(text);
+        if (!copied) {
+            toast.error('复制失败');
+            return;
+        }
+
+        toast.success(successMessage);
     };
 
     const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
@@ -559,9 +584,16 @@ const Galgame = () => {
                     </div>
                     {!controller.isReplay && controller.gameStarted && (
                         <div className={styles.contextMemoryMeter}>
-                            <span className={styles.contextMemoryText}>
-                                已用 {contextMemoryUsedLabel} 标记，共 {contextMemoryTotalLabel}
-                            </span>
+                            <div className={styles.contextMemoryTextGroup}>
+                                <span className={styles.contextMemoryText}>
+                                    已用 {contextMemoryUsedLabel} 标记，共 {contextMemoryTotalLabel}
+                                </span>
+                                {controller.contextMemoryDebugEnabled && (
+                                    <span className={styles.contextMemoryRoundText}>
+                                        总剧情轮次 {totalStoryRounds}，本周期轮次 {memoryCycleLabel}
+                                    </span>
+                                )}
+                            </div>
                             <span
                                 className={`${styles.contextMemoryProgress} ${controller.stepHandlers.isCompressingContext ? styles.contextMemoryProgressActive : ''}`}
                                 style={{
@@ -790,6 +822,38 @@ const Galgame = () => {
                                 <span>自动</span>
                             </div>
                         </div>
+                        {controller.contextMemoryDebugEnabled && !controller.isReplay && (
+                            <div
+                                className={`${styles.buttonItem} ${controller.memoryDebugOpen ? styles.buttonItemActive : ''}`}
+                                onClick={() => {
+                                    void controller.openContextMemoryDebug();
+                                }}
+                                style={{ cursor: 'pointer' }}
+                                title="记忆调试"
+                            >
+                                <div className={styles.buttonInner}>
+                                    <MdMemory />
+                                    <span>记忆</span>
+                                </div>
+                            </div>
+                        )}
+                        {controller.contextMemoryDebugEnabled && !controller.isReplay && (
+                            <div
+                                className={`${styles.buttonItem} ${controller.isAutoToCompression ? styles.buttonItemActive : ''} ${!controller.gameStarted || controller.showGalgameHistory ? styles.buttonItemDisabled : ''}`}
+                                onClick={
+                                    !controller.gameStarted || controller.showGalgameHistory
+                                        ? undefined
+                                        : controller.handleAutoToCompressionToggle
+                                }
+                                style={{ cursor: !controller.gameStarted || controller.showGalgameHistory ? 'not-allowed' : 'pointer' }}
+                                title="自动跑到压缩"
+                            >
+                                <div className={styles.buttonInner}>
+                                    <MdPlayCircleOutline />
+                                    <span>压测</span>
+                                </div>
+                            </div>
+                        )}
                         <div
                             className={`${styles.buttonItem} ${isSettingsOpen ? styles.buttonItemActive : ''}`}
                             onClick={() => {
@@ -833,6 +897,116 @@ const Galgame = () => {
                         onRegenerate={controller.isReplay ? undefined : handleRegenerate}
                         onEditSave={controller.isReplay ? undefined : controller.editHistory}
                     />
+
+                    {controller.contextMemoryDebugEnabled && controller.memoryDebugOpen && (
+                        <div
+                            className={styles.memoryDebugOverlay}
+                            onClick={() => controller.setMemoryDebugOpen(false)}
+                        >
+                            <div
+                                className={styles.memoryDebugPanel}
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="memory-debug-title"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <div className={styles.memoryDebugHeader}>
+                                    <div>
+                                        <div id="memory-debug-title" className={styles.memoryDebugTitle}>记忆调试</div>
+                                        <div className={styles.memoryDebugMeta}>
+                                            {memoryDebugCurrent?.updatedAt || '暂无记忆快照'}
+                                        </div>
+                                    </div>
+                                    <div className={styles.memoryDebugActions}>
+                                        <button
+                                            type="button"
+                                            onClick={() => void controller.openContextMemoryDebug()}
+                                            disabled={controller.memoryDebugLoading}
+                                        >
+                                            刷新
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => controller.setMemoryDebugOpen(false)}
+                                        >
+                                            关闭
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className={styles.memoryDebugBody}>
+                                    {controller.memoryDebugLoading ? (
+                                        <div className={styles.memoryDebugEmpty}>加载中...</div>
+                                    ) : (
+                                        <>
+                                            <section className={styles.memoryDebugSection}>
+                                                <div className={styles.memoryDebugSectionHeader}>
+                                                    <div className={styles.memoryDebugSectionTitle}>当前摘要</div>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.memoryDebugCopyButton}
+                                                        onClick={() => void handleCopyMemoryDebugText(memoryDebugCurrent?.summaryText || '', '已复制当前摘要')}
+                                                        disabled={!memoryDebugCurrent?.summaryText?.trim()}
+                                                        title="Copy summary"
+                                                        aria-label="Copy summary"
+                                                    >
+                                                        <MdContentCopy />
+                                                    </button>
+                                                </div>
+                                                <div className={styles.memoryDebugSummary}>
+                                                    {memoryDebugCurrent?.summaryText || '暂无可用摘要。'}
+                                                </div>
+                                                <div className={styles.memoryDebugMetaGrid}>
+                                                    <span>次数：{memoryDebugCurrent?.compressionCount ?? 0}</span>
+                                                    <span>原因：{memoryDebugCurrent?.triggerReason || 'none'}</span>
+                                                    <span>压缩至：{memoryDebugCurrent?.compressedThroughMessageCount ?? 0}</span>
+                                                </div>
+                                            </section>
+                                            <section className={styles.memoryDebugSection}>
+                                                <div className={styles.memoryDebugSectionHeader}>
+                                                    <div className={styles.memoryDebugSectionTitle}>结构化 JSON</div>
+                                                    <button
+                                                        type="button"
+                                                        className={styles.memoryDebugCopyButton}
+                                                        onClick={() => void handleCopyMemoryDebugText(memoryDebugStructured, '已复制结构化 JSON')}
+                                                        disabled={!memoryDebugStructured.trim() || memoryDebugStructured === '{}'}
+                                                        title="Copy structured JSON"
+                                                        aria-label="Copy structured JSON"
+                                                    >
+                                                        <MdContentCopy />
+                                                    </button>
+                                                </div>
+                                                <pre className={styles.memoryDebugJson}>{memoryDebugStructured}</pre>
+                                            </section>
+                                            <section className={styles.memoryDebugSection}>
+                                                <div className={styles.memoryDebugSectionTitle}>压缩历史</div>
+                                                {memoryDebugHistory.length === 0 ? (
+                                                    <div className={styles.memoryDebugEmpty}>暂无压缩历史。</div>
+                                                ) : (
+                                                    <div className={styles.memoryDebugHistoryList}>
+                                                        {memoryDebugHistory.map((item, index) => (
+                                                            <div
+                                                                key={item.id || `${item.compressedAt || item.updatedAt || 'history'}-${index}`}
+                                                                className={styles.memoryDebugHistoryItem}
+                                                            >
+                                                                <div className={styles.memoryDebugHistoryMeta}>
+                                                                    <span>#{item.compressionCount ?? index + 1}</span>
+                                                                    <span>{item.triggerReason || 'none'}</span>
+                                                                    <span>{item.compressedAt || item.updatedAt || ''}</span>
+                                                                </div>
+                                                                <div className={styles.memoryDebugHistoryText}>
+                                                                    {item.summaryText || item.snapshot?.summaryText || '暂无摘要文本。'}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </section>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 设置弹窗放在 mainContent 内，确保限制在容器内 */}
                     <SettingsModal
