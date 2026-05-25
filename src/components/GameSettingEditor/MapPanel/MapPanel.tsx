@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './MapPanel.module.css';
 import sharedStyles from './shared.module.css';
 import type { MapPanelProps, SubScene } from './types';
@@ -15,6 +16,7 @@ export interface MapPanelRef {
 }
 
 const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: propSceneSetting, worldMapImage: propWorldMapImage, fileId, onDataChange, isActive, abilityNodeSetting: propAbilityNodeSetting }, ref) => {
+    const { t } = useTranslation();
     const [mapTab, setMapTab] = useState<'subScene' | 'scene' | 'map'>('subScene');
     
     // 本地数据状态，独立管理所有数据
@@ -215,7 +217,7 @@ const MapPanel = React.forwardRef<MapPanelRef, MapPanelProps>(({ sceneSetting: p
         <div className={styles.mapSection}>
             <div className={styles.mapHeader}>
                 <div>
-                    <p className={styles.eyebrow}>Step 5</p>
+                    <p className={styles.eyebrow}>{t('gameEditor.step5')}</p>
                     <h2>地图编辑</h2>
                     <p className={styles.subtitle}>构建三级地图结构：子场景 -{'>'} 场景 -{'>'} 地图</p>
                 </div>

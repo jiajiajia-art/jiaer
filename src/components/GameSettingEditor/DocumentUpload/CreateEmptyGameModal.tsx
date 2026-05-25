@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './CreateEmptyGameModal.module.css';
 
 interface CreateEmptyGameModalProps {
@@ -13,6 +14,7 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
     onClose,
     onSubmit,
 }) => {
+    const { t } = useTranslation();
     const [title, setTitle] = useState('');
     const [error, setError] = useState('');
 
@@ -23,7 +25,7 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
         setError('');
 
         if (!title.trim()) {
-            setError('请输入游戏名称');
+            setError(t('validation.enterGameName'));
             return;
         }
 
@@ -32,7 +34,7 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
             setTitle('');
             onClose();
         } catch (err: any) {
-            setError(err?.message || '创建失败，请重试');
+            setError(err?.message || t('createGame.createFailedRetry'));
         }
     };
 
@@ -47,7 +49,7 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modal}>
                     <div className={styles.modalHeader}>
-                        <h2 className={styles.title}>创建空游戏</h2>
+                        <h2 className={styles.title}>{t('createGame.createEmptyGame')}</h2>
                         <button 
                             className={styles.closeButton} 
                             onClick={handleClose}
@@ -59,7 +61,7 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
                     <form className={styles.modalBody} onSubmit={handleSubmit}>
                         <div className={styles.formGroup}>
                             <label htmlFor="gameTitle" className={styles.label}>
-                                游戏名称
+                                {t('profile.gameName')}
                             </label>
                             <input
                                 id="gameTitle"
@@ -70,7 +72,7 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
                                     setTitle(e.target.value);
                                     setError('');
                                 }}
-                                placeholder="请输入游戏名称"
+                                placeholder={t('validation.enterGameName')}
                                 autoFocus
                             />
                             {error && <p className={styles.errorText}>{error}</p>}
@@ -82,13 +84,13 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
                                 className={styles.cancelButton}
                                 onClick={handleClose}
                             >
-                                取消
+                                {t('createGame.cancel')}
                             </button>
                             <button
                                 type="submit"
                                 className={styles.submitButton}
                             >
-                                创建
+                                {t('createGame.create')}
                             </button>
                         </div>
                     </form>
@@ -104,4 +106,3 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
 };
 
 export default CreateEmptyGameModal;
-

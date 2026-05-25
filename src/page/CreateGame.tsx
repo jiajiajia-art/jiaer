@@ -22,8 +22,10 @@ import {
     MINI_PROGRAM_CREATOR_PC_URL,
     resolveCreatorEngine,
 } from '../utils/miniProgram';
+import { useTranslation } from 'react-i18next';
 
 const CreateGame: React.FC = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const modeParam = searchParams.get('mode') ?? 'create';
     const gameId = searchParams.get('gameId');
@@ -112,9 +114,9 @@ const CreateGame: React.FC = () => {
                 if (isMounted) {
                     const status = error?.response?.status;
                     if (status === 403 || status === 401) {
-                        toast.error('游戏尚未公开');
+                        toast.error(t('createGame.gameNotPublic'));
                     } else {
-                        setDetailError('加载游戏详情失败');
+                        setDetailError(t('createGame.loadGameDetailsFailed'));
                     }
                 }
             } finally {
@@ -152,7 +154,7 @@ const CreateGame: React.FC = () => {
             navigate('/create');
         } catch (error) {
             console.error('删除游戏失败:', error);
-            alert('删除失败，请稍后重试');
+            alert(t('createGame.deleteFailed'));
         } finally {
             setIsDeleting(false);
         }
@@ -173,12 +175,12 @@ const CreateGame: React.FC = () => {
                 navigate('/create');
             } else {
                 console.error('发布游戏失败:', response.data);
-                const errorMessage = response.data.message || '发布游戏失败';
+                const errorMessage = response.data.message || t('createGame.publishFailed');
                 alert(errorMessage);
             }
         } catch (error: any) {
             console.error('发布游戏失败:', error);
-            const errorMessage = error.response?.data?.message || error.message || '发布游戏失败';
+            const errorMessage = error.response?.data?.message || error.message || t('createGame.publishFailed');
             alert(errorMessage);
         }
     };
@@ -190,10 +192,10 @@ const CreateGame: React.FC = () => {
             if (response.data.success) {
                 navigate('/create');
             } else {
-                toast.error(response.data.message || '下架游戏失败');
+                toast.error(response.data.message || t('createGame.unpublishFailed'));
             }
         } catch (error) {
-            alert('下架游戏失败');
+            alert(t('createGame.unpublishFailed'));
         }
     };
 
@@ -213,7 +215,7 @@ const CreateGame: React.FC = () => {
         if (normalizedEngine === 'CUSTOM') {
             const appId = gameDetail?.customAppId || gameDetail?.file_id;
             if (!appId) {
-                alert('缺少自定义 AppID，无法编辑');
+                alert(t('createGame.missingCustomAppId'));
                 return;
             }
             // 方案A：跳转到自定义游戏“创建/管理”页面（编辑模式）
@@ -225,7 +227,7 @@ const CreateGame: React.FC = () => {
         if (normalizedEngine === 'ST' || normalizedEngine === 'AVG') {
             const appId = (gameDetail as any)?.customAppId || gameDetail?.file_id;
             if (!appId) {
-                alert('缺少 AppID，无法编辑');
+                alert(t('createGame.missingAppId'));
                 return;
             }
             navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
@@ -247,7 +249,7 @@ const CreateGame: React.FC = () => {
         try {
             const fileId = gameDetail?.file_id || gameDetail?.id;
             if (!fileId) {
-                toast.error('游戏信息错误，请重试');
+                toast.error(t('createGame.gameInfoError'));
                 return;
             }
 
@@ -258,15 +260,15 @@ const CreateGame: React.FC = () => {
             });
 
             if (response.data.success) {
-                toast.success('价格更新成功');
+                toast.success(t('createGame.priceUpdateSuccess'));
                 setShowPriceModal(false);
                 await refreshGameDetail();
             } else {
-                toast.error(response.data.message || '价格更新失败');
+                toast.error(response.data.message || t('createGame.priceUpdateFailed'));
             }
         } catch (error) {
             console.error('价格更新失败:', error);
-            toast.error('价格更新失败，请稍后重试');
+                toast.error(t('createGame.priceUpdateFailed'));
         }
     };
 
@@ -277,7 +279,7 @@ const CreateGame: React.FC = () => {
                 {isStatsMode && (
                     <>
                         {isLoadingDetail ? (
-                            <div className={styles.detailLoading}>加载游戏详情中...</div>
+                            <div className={styles.detailLoading}>{t('createGame.loadingGameDetails')}</div>
                         ) : detailError ? (
                             <div className={styles.detailError}>{detailError}</div>
                         ) : gameDetail ? (
@@ -295,7 +297,7 @@ const CreateGame: React.FC = () => {
                                 onUnpublish={handleUnpublishGame}
                             />
                         ) : (
-                            <div className={styles.detailError}>未找到游戏信息</div>
+                            <div className={styles.detailError}>{t('createGame.gameNotFound')}</div>
                         )}
                     </>
                 )}
@@ -332,11 +334,11 @@ const CreateGame: React.FC = () => {
             <MobileTipModal
                 isOpen={showMiniProgramTip}
                 onClose={() => setShowMiniProgramTip(false)}
-                title="请前往 PC 端操作"
+                title={t('createGame.redirectToPC')}
                 message={miniProgramTipMessage}
                 linkUrl={MINI_PROGRAM_CREATOR_PC_URL}
-                bindPhoneActionText="建议先绑定手机号"
-                bindPhoneActionHint="绑定后可在小程序端和 PC 端使用同一个账号。"
+                bindPhoneActionText={t('createGame.bindPhoneFirst')}
+                bindPhoneActionHint={t('createGame.bindPhoneTip')}
                 onBindPhoneAction={handleOpenBindPhoneGuide}
             />
 

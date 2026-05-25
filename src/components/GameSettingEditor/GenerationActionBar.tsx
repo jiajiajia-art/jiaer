@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FaCoins } from 'react-icons/fa';
 import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -9,6 +10,7 @@ interface GenerationActionBarProps {
 }
 
 const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children }) => {
+    const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
     const userId = user?.user?.userId;
     const token = user?.token;
@@ -41,9 +43,9 @@ const GenerationActionBar: React.FC<GenerationActionBarProps> = ({ children }) =
 
     return (
         <div className={styles.actionBar}>
-            <div className={styles.pointsPill} aria-label={`我的积分 ${userPoints}`}>
+            <div className={styles.pointsPill} aria-label={`${t('profile.myPoints')} ${userPoints}`}>
                 <FaCoins className={styles.pointsIcon} aria-hidden="true" />
-                <span className={styles.pointsLabel}>我的积分</span>
+                <span className={styles.pointsLabel}>{t('profile.myPoints')}</span>
                 <span className={styles.pointsValue}>{userPoints}</span>
             </div>
             {children}

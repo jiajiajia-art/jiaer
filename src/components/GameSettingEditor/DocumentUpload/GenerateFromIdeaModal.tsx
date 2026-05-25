@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './CreateEmptyGameModal.module.css';
 
 interface GenerateFromIdeaModalProps {
@@ -13,6 +14,7 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
     onClose,
     onSubmit,
 }) => {
+    const { t } = useTranslation();
     const [idea, setIdea] = useState('');
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,12 +26,12 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
         setError('');
 
         if (!idea.trim()) {
-            setError('请输入游戏创意描述');
+            setError(t('createGame.enterGameIdea'));
             return;
         }
 
         if (idea.trim().length < 10) {
-            setError('描述至少需要10个字符');
+            setError(t('createGame.ideaAtLeast10Chars'));
             return;
         }
 
@@ -41,7 +43,7 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                 onClose();
             }
         } catch (err: any) {
-            setError(err?.message || '生成失败，请重试');
+            setError(err?.message || t('createGame.generateFailedRetry'));
         } finally {
             setIsSubmitting(false);
         }
@@ -58,7 +60,7 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modal}>
                     <div className={styles.modalHeader}>
-                        <h2 className={styles.title}>一句话生成游戏</h2>
+                        <h2 className={styles.title}>{t('createGame.generateFromIdeaTitle')}</h2>
                         <button 
                             className={styles.closeButton} 
                             onClick={handleClose}
@@ -71,7 +73,7 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                     <form className={styles.modalBody} onSubmit={handleSubmit}>
                         <div className={styles.formGroup}>
                             <label htmlFor="gameIdea" className={styles.label}>
-                                游戏创意描述
+                                {t('createGame.gameIdea')}
                             </label>
                             <textarea
                                 id="gameIdea"
@@ -81,14 +83,14 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                                     setIdea(e.target.value);
                                     setError('');
                                 }}
-                                placeholder="例如：一个关于魔法学院的冒险游戏，玩家扮演学生探索神秘的地下城..."
+                                placeholder={t('createGame.gameIdeaPlaceholder')}
                                 autoFocus
                                 rows={6}
                                 disabled={isSubmitting}
                             />
                             {error && <p className={styles.errorText}>{error}</p>}
                             <p className={styles.hintText}>
-                                请详细描述你的游戏创意，包括世界观、角色、剧情等，至少10个字符
+                                {t('createGame.gameIdeaHint')}
                             </p>
                         </div>
                         
@@ -99,14 +101,14 @@ const GenerateFromIdeaModal: React.FC<GenerateFromIdeaModalProps> = ({
                                 onClick={handleClose}
                                 disabled={isSubmitting}
                             >
-                                取消
+                                {t('createGame.cancel')}
                             </button>
                             <button
                                 type="submit"
                                 className={styles.submitButton}
                                 disabled={isSubmitting || !idea.trim() || idea.trim().length < 10}
                             >
-                                {isSubmitting ? '生成中...' : '开始生成'}
+                                {isSubmitting ? t('createGame.generating') : t('createGame.startGenerate')}
                             </button>
                         </div>
                     </form>

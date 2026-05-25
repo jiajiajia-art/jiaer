@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
@@ -22,6 +23,19 @@ import {
 import styles from './Categories.module.css';
 
 const PAGE_SIZE = 12;
+
+const MODE_LABEL_KEYS = {
+    all: 'categories.modes.all',
+    'role-playing': 'categories.modes.rolePlaying',
+    world: 'categories.modes.world',
+    custom: 'categories.modes.custom',
+} as const satisfies Record<HomeListMode, string>;
+
+const SORT_LABEL_KEYS = {
+    hot: 'categories.sorts.hot',
+    recommended: 'categories.sorts.recommended',
+    latest: 'categories.sorts.latest',
+} as const satisfies Record<HomeListSort, string>;
 
 const getInitialMobileState = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -103,6 +117,7 @@ const mergeUniqueGames = (currentGames: UserGameData[], nextGames: UserGameData[
 };
 
 const Categories: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [themeTags, setThemeTags] = useState<FlatThemeTag[]>([]);
@@ -131,6 +146,22 @@ const Categories: React.FC = () => {
     const selectedMode = useMemo(() => normalizeHomeListMode(searchParams.get('mode')), [searchParams]);
     const selectedSort = useMemo(() => normalizeHomeListSort(searchParams.get('sort')), [searchParams]);
     const selectedTagId = useMemo(() => normalizeHomeListTagId(searchParams.get('tagId')), [searchParams]);
+
+    const modeOptions = useMemo(
+        () => HOME_LIST_MODE_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(MODE_LABEL_KEYS[option.value]),
+        })),
+        [t],
+    );
+
+    const sortOptions = useMemo(
+        () => HOME_LIST_SORT_OPTIONS.map((option) => ({
+            value: option.value,
+            label: t(SORT_LABEL_KEYS[option.value]),
+        })),
+        [t],
+    );
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -427,29 +458,29 @@ const Categories: React.FC = () => {
                                         type="button"
                                         className={`${styles.backButton} ${styles.backButtonInCard}`}
                                         onClick={handleBack}
-                                        aria-label="返回首页"
-                                        title="返回首页"
+                                        aria-label={t('categories.backToHome')}
+                                        title={t('categories.backToHome')}
                                     >
                                         <svg viewBox="0 0 24 24" aria-hidden="true">
                                             <path d="M15 6L9 12L15 18" />
                                         </svg>
                                     </button>
                                 )}
-                                <h2 className={`${styles.filtersTitle} ${isMobilePage ? styles.filtersTitleMobile : ''}`}>题材分类</h2>
+                                <h2 className={`${styles.filtersTitle} ${isMobilePage ? styles.filtersTitleMobile : ''}`}>{t('categories.pageTitle')}</h2>
                             </div>
 
                             <section className={styles.filterSection}>
-                                <div className={styles.filterTitle}>模式</div>
-                                {renderChipRow(HOME_LIST_MODE_OPTIONS, selectedMode, (mode) => updateFilters({ mode }))}
+                                <div className={styles.filterTitle}>{t('categories.mode')}</div>
+                                {renderChipRow(modeOptions, selectedMode, (mode) => updateFilters({ mode }))}
                             </section>
 
                             <section className={styles.filterSection}>
-                                <div className={styles.filterTitle}>排序</div>
-                                {renderChipRow(HOME_LIST_SORT_OPTIONS, selectedSort, (sort) => updateFilters({ sort }))}
+                                <div className={styles.filterTitle}>{t('categories.sort')}</div>
+                                {renderChipRow(sortOptions, selectedSort, (sort) => updateFilters({ sort }))}
                             </section>
 
                             <section className={styles.filterSection}>
-                                <div className={styles.filterTitle}>题材</div>
+                                <div className={styles.filterTitle}>{t('categories.theme')}</div>
                                 <div
                                     ref={themeScrollRef}
                                     className={`${styles.themeScrollRow} ${isThemeDragging ? styles.themeScrollRowDragging : ''}`}
@@ -466,7 +497,7 @@ const Categories: React.FC = () => {
                                         className={`${styles.tagChip} ${selectedTagId === null ? styles.tagChipActive : ''}`}
                                         onClick={() => updateFilters({ tagId: null })}
                                     >
-                                        全部
+                                        {t('categories.all')}
                                     </button>
                                     {themeTags.map((tag) => (
                                         <button
@@ -492,7 +523,7 @@ const Categories: React.FC = () => {
                             <>
                                 <GameGrid
                                     games={games}
-                                    emptyText="暂无符合当前筛选条件的作品"
+                                    emptyText={t('home.noMatchingWorks')}
                                 />
                                 {isLoadingMore && (
                                     <div className={styles.loadingMore}>

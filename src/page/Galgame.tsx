@@ -20,6 +20,7 @@ import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import { useLocation, useNavigate } from "react-router-dom";
 import GameAction from "../api/rpgGame/gameAction";
@@ -47,6 +48,7 @@ import {
 } from "./galgameControlBarDrag";
 
 const Galgame = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuthStore();
@@ -160,7 +162,7 @@ const Galgame = () => {
         controller.resetDisplayedSteps();
         controller.stepHandlers.handleRegenerate(messageIndex, {
             onError: (error) => {
-                toast.error(error || '重新生成失败，请检查网络连接');
+                toast.error(error || t('galgame.regenerateFailed'));
             }
         });
     };
@@ -396,21 +398,21 @@ const Galgame = () => {
         logVisualButtonClick("settings_restart");
         const userId = user?.user?.id;
         if (!userId || !fileId) {
-            toast.error('无法删除存档：缺少用户或游戏信息');
+            toast.error(t('galgame.cannotDeleteSave'));
             return;
         }
 
         try {
             const response = await GameAction.deletGameSession({ fileId });
             if (response.data.success) {
-                toast.success('删除成功');
+                toast.success(t('galgame.deleteSuccess'));
                 navigateBackSafe();
             } else {
-                toast.error(response.data.message || '删除失败');
+                toast.error(response.data.message || t('galgame.deleteFailed'));
             }
         } catch (error) {
             console.error('删除存档失败:', error);
-            toast.error('删除失败，请稍后重试');
+            toast.error(t('galgame.tryAgainLater'));
         } finally {
             setIsDeleteConfirmOpen(false);
         }
@@ -456,16 +458,16 @@ const Galgame = () => {
 
         const copied = await copyTextToClipboard(createdReplayShare.shareUrl);
         if (!copied) {
-            toast.error('复制回放链接失败');
+            toast.error(t('galgame.copyReplayFailed'));
             return;
         }
 
         if (createdReplayShare.visibility === 'unlisted') {
-            toast.success('回放链接已复制，仅持链接者可查看');
+            toast.success(t('galgame.replayLinkCopied'));
             return;
         }
 
-        toast.success('公开回放链接已复制');
+            toast.success(t('galgame.publicReplayCopied'));
     };
 
     const handleCopyMemoryDebugText = async (text: string, successMessage: string) => {
@@ -485,7 +487,7 @@ const Galgame = () => {
     const handleShareReplay = async ({ title, description, visibility }: { title: string; description?: string; visibility: 'public' | 'unlisted' | 'private' }) => {
         logVisualButtonClick('share_replay_create');
         if (!sessionId || !fileId) {
-            toast.error('未找到会话或游戏信息');
+            toast.error(t('galgame.sessionNotFound'));
             return;
         }
         try {
@@ -497,25 +499,25 @@ const Galgame = () => {
 
                 if (visibility === 'private') {
                     setCreatedReplayShare(null);
-                    toast.success('回放已创建，仅自己可见');
+                    toast.success(t('galgame.replayCreatedPrivate'));
                     return;
                 }
 
                 setCreatedReplayShare({ visibility, shareUrl });
             } else {
-                toast.error('创建回放失败');
+                toast.error(t('galgame.createReplayFailed'));
             }
         } catch (error) {
             const axiosError = error as AxiosError<{ code?: string; message?: string }>;
             const errorCode = axiosError.response?.data?.code;
 
             if (errorCode === 'REPLAY_TITLE_CONFLICT') {
-                toast.error('当前游戏内已存在同名回放');
+                toast.error(t('galgame.duplicateReplayTitle'));
                 return;
             }
 
             if (errorCode === 'GENERATION_IN_PROGRESS') {
-                toast.error('剧情生成仍在进行中，请稍后再试');
+                toast.error(t('galgame.generationInProgress'));
                 return;
             }
 
@@ -669,7 +671,7 @@ const Galgame = () => {
                             >
                                 <div className={styles.buttonInner}>
                                     <MdOutlineAssessment />
-                                    <span>属性</span>
+                                    <span>{t('galgame.attributes')}</span>
                                 </div>
                             </div>
                         </div>
@@ -679,7 +681,7 @@ const Galgame = () => {
                     {controller.isReplay && isReplayControlsOpen && (
                         <div className={styles.replayControlBar}>
                             <div className={styles.replayProgressHeader}>
-                                <span>进度</span>
+                                <span>{t('galgame.progress')}</span>
                                 <span>
                                     {controller.replayStepsCount > 0
                                         ? `${controller.replayIndex + 1}/${controller.replayStepsCount}`
@@ -700,7 +702,7 @@ const Galgame = () => {
                                 aria-label="Replay progress"
                             />
                             <div className={styles.replaySpeedRow}>
-                                <span className={styles.replaySpeedLabel}>自动播放速度</span>
+                                <span className={styles.replaySpeedLabel}>{t('galgame.autoPlaySpeed')}</span>
                                 <div className={styles.replaySpeedOptions}>
                                     {controller.replaySpeedOptions.map((speed) => (
                                         <button
@@ -751,7 +753,7 @@ const Galgame = () => {
                             >
                                 <div className={styles.buttonInner}>
                                     <MdOutlineAssessment />
-                                    <span>存档</span>
+                                    <span>{t('galgame.save')}</span>
                                 </div>
                             </div>
                         )}
@@ -762,7 +764,7 @@ const Galgame = () => {
                             >
                                 <div className={styles.buttonInner}>
                                     <BiHistory />
-                                    <span>历史</span>
+                                    <span>{t('galgame.history')}</span>
                                 </div>
                             </div>
                         )}
@@ -777,7 +779,7 @@ const Galgame = () => {
                             >
                                 <div className={styles.buttonInner}>
                                     <MdReplay />
-                                    <span>回放</span>
+                                    <span>{t('galgame.replay')}</span>
                                 </div>
                             </div>
                         )}
@@ -791,7 +793,7 @@ const Galgame = () => {
                             >
                                 <div className={styles.buttonInner}>
                                     <MdTimeline />
-                                    <span>进度</span>
+                                    <span>{t('galgame.progress')}</span>
                                 </div>
                             </div>
                         )}
@@ -802,7 +804,7 @@ const Galgame = () => {
                         >
                             <div className={styles.buttonInner}>
                                 <LuFileText />
-                                <span>文本</span>
+                                    <span>{t('galgame.text')}</span>
                             </div>
                         </div>
                         <div
@@ -819,7 +821,7 @@ const Galgame = () => {
                         >
                             <div className={styles.buttonInner}>
                                 <MdOutlineAutoStories />
-                                <span>自动</span>
+                                    <span>{t('galgame.auto')}</span>
                             </div>
                         </div>
                         {controller.contextMemoryDebugEnabled && !controller.isReplay && (
@@ -863,7 +865,7 @@ const Galgame = () => {
                         >
                             <div className={styles.buttonInner}>
                                 <MdSettings />
-                                <span>设置</span>
+                                    <span>{t('galgame.settings')}</span>
                             </div>
                         </div>
                         {controller.isReplay && (
@@ -874,7 +876,7 @@ const Galgame = () => {
                             >
                                 <div className={styles.buttonInner}>
                                     <RiLogoutCircleRLine />
-                                    <span>退出</span>
+                                    <span>{t('galgame.exit')}</span>
                                 </div>
                             </div>
                         )}
@@ -1077,11 +1079,11 @@ const Galgame = () => {
                     {/* 请求超时弹窗 */}
                     {renderErrorModal(
                         controller.requestTimeoutVisible,
-                        "请求超时",
-                        "网络波动或服务器繁忙，请刷新重试或稍后再试。",
+                        t('galgame.requestTimeout'),
+                        t('galgame.networkBusy'),
                         {
-                            confirmText: "重试",
-                            cancelText: "取消",
+                            confirmText: t('galgame.retry'),
+                            cancelText: t('galgame.cancel'),
                             primaryType: "confirm",
                             onConfirm: async () => {
                                 await controller.handleRetryLastRequest();
@@ -1099,11 +1101,11 @@ const Galgame = () => {
                     {/* 一般请求错误弹窗 */}
                     {renderErrorModal(
                         controller.errorModalVisible,
-                        "请求错误",
+                        t('galgame.requestError'),
                         controller.errorMessage,
                         {
-                            confirmText: "重试",
-                            cancelText: "取消",
+                            confirmText: t('galgame.retry'),
+                            cancelText: t('galgame.cancel'),
                             primaryType: "confirm",
                             onConfirm: async () => {
                                 await controller.handleRetryLastRequest();
@@ -1123,7 +1125,7 @@ const Galgame = () => {
                         isOpen={isShareOpen}
                         onClose={() => setIsShareOpen(false)}
                         onSubmit={handleShareReplay}
-                        defaultTitle={controller.presetData?.world?.title ? `${controller.presetData.world.title} · 回放` : '我的回放'}
+                        defaultTitle={controller.presetData?.world?.title ? `${controller.presetData.world.title} · ${t('galgame.replay')}` : t('galgame.myReplay')}
                     />
 
                     {createdReplayShare && (
@@ -1146,7 +1148,7 @@ const Galgame = () => {
                                                 id="replay-share-result-title"
                                                 className={replayModalStyles.title}
                                             >
-                                                回放已创建
+                                                {t('galgame.replayCreated')}
                                             </div>
                                         </div>
                                     </div>
@@ -1160,7 +1162,7 @@ const Galgame = () => {
                                             marginBottom: '12px',
                                         }}
                                     >
-                                        将此链接分享给其他玩家，对方即可在平台查看该回放。
+                                        {t('galgame.shareReplayTip')}
                                     </div>
                                     {createdReplayShare.visibility === 'unlisted' && (
                                         <div
@@ -1171,7 +1173,7 @@ const Galgame = () => {
                                                 marginBottom: '12px',
                                             }}
                                         >
-                                            仅持有链接的用户可以查看该回放。
+                                            {t('galgame.linkOnlyTip')}
                                         </div>
                                     )}
                                     <input
@@ -1192,7 +1194,7 @@ const Galgame = () => {
                                         }}
                                         onClick={handleCopyCreatedReplayLink}
                                     >
-                                        复制链接
+                                        {t('galgame.copyLink')}
                                     </button>
                                     <button
                                         type="button"
@@ -1204,7 +1206,7 @@ const Galgame = () => {
                                         }}
                                         onClick={() => setCreatedReplayShare(null)}
                                     >
-                                        关闭
+                                        {t('galgame.close')}
                                     </button>
                                 </div>
                             </div>
@@ -1216,14 +1218,14 @@ const Galgame = () => {
                         <div className={replayModalStyles.endMask}>
                             <div className={replayModalStyles.endCard}>
                                 <div className={replayModalStyles.endHeader}>
-                                    <div className={replayModalStyles.endTitle}>回放已结束</div>
+                                    <div className={replayModalStyles.endTitle}>{t('galgame.replayEnded')}</div>
                                 </div>
-                                <div className={replayModalStyles.endBody}>感谢观看</div>
+                                <div className={replayModalStyles.endBody}>{t('galgame.thanksForWatching')}</div>
                                 <div className={replayModalStyles.endFooter}>
                                     <button
                                         className={`${replayModalStyles.btn} ${replayModalStyles.btnSecondary}`}
                                         onClick={controller.handleExitGame}
-                                    >退出</button>
+                                    >{t('galgame.exit')}</button>
                                 </div>
                             </div>
                         </div>
@@ -1234,10 +1236,10 @@ const Galgame = () => {
                         isOpen={isDeleteConfirmOpen}
                         onConfirm={handleConfirmDeleteSession}
                         onCancel={() => setIsDeleteConfirmOpen(false)}
-                        title="重新开始"
-                        message="确认重新开始该游戏吗？重新开始后无法恢复。"
-                        confirmText="确认重新开始"
-                        cancelText="取消"
+                        title={t('galgame.restartGame')}
+                        message={t('galgame.confirmRestart')}
+                        confirmText={t('galgame.confirmRestartBtn')}
+                        cancelText={t('galgame.cancel')}
                     />
                 </div>
             </div>

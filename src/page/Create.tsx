@@ -1,9 +1,10 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { MdContentCopy } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './Create.module.css';
 import Navbar from '../components/Layout/Navbar';
@@ -38,6 +39,7 @@ import {
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 
 const Create: React.FC = () => {
+    const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
     const { clearState } = useEditorStore();
     const { clearAll } = useGameStore();
@@ -68,7 +70,7 @@ const Create: React.FC = () => {
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
     const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
 
-    const userName = user?.user?.nickname || user?.user?.name || '未设置昵称';
+    const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
     const debugToken = user?.user?.debugToken;
     const isMiniProgram = isMiniProgramEnv();
@@ -180,10 +182,10 @@ const Create: React.FC = () => {
 
         try {
             await navigator.clipboard.writeText(userCode);
-            toast.success('Kuran号已复制');
+            toast.success(t('create.kuranIdCopied'));
         } catch (error) {
             console.error('复制 Kuran 号失败:', error);
-            toast.error('复制失败，请稍后重试');
+            toast.error(t('create.copyFailed'));
         }
     };
 
@@ -192,10 +194,10 @@ const Create: React.FC = () => {
 
         try {
             await navigator.clipboard.writeText(debugToken);
-            toast.success('Token 已复制');
+            toast.success(t('create.tokenCopied'));
         } catch (error) {
             console.error('复制 Token 失败:', error);
-            toast.error('复制失败，请稍后重试');
+            toast.error(t('create.copyFailed'));
         }
     };
 
@@ -209,7 +211,7 @@ const Create: React.FC = () => {
             };
         }
 
-        toast.error(response.data.message || '充值失败');
+        toast.error(response.data.message || t('create.rechargeFailed'));
         return null;
     };
 
@@ -277,10 +279,10 @@ const Create: React.FC = () => {
             await loadMyGames();
 
             if (successIds.length > 0) {
-                toast.success(`已删除 ${successIds.length} 个草稿`);
+                toast.success(t('create.draftsDeleted', { count: successIds.length }));
             }
             if (failedIds.length > 0) {
-                toast.error(`有 ${failedIds.length} 个草稿删除失败，请稍后重试`);
+                toast.error(t('create.someDraftsDeleteFailed', { count: failedIds.length }));
             }
 
             // 实现批量删除确认
@@ -293,7 +295,7 @@ const Create: React.FC = () => {
             }
         } catch (error) {
             console.error('批量删除草稿失败:', error);
-            toast.error('批量删除失败，请稍后重试');
+            toast.error(t('create.batchDeleteFailed'));
         } finally {
             setIsBatchDeletingDrafts(false);
         }
@@ -307,15 +309,15 @@ const Create: React.FC = () => {
             const response = await auth.settlePoints();
             if (response.data.success && response.data.data) {
                 const settlementAmount = response.data.data.settlementAmount || 0;
-                toast.success(`结算成功，已结算 ${settlementAmount} 积分`);
+                toast.success(t('create.settleSuccess', { amount: settlementAmount }));
                 await getGameTotalStats();
                 await getUserInfo();
                 setIsSettleModalOpen(false);
             } else {
-                toast.error(response.data.message || '结算失败，请重试');
+                toast.error(response.data.message || t('create.settleFailed'));
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message || error?.message || '结算失败，请重试';
+                const errorMessage = error?.response?.data?.message || error?.message || t('create.settleFailed');
             toast.error(errorMessage);
         } finally {
             setIsSettling(false);
@@ -357,16 +359,16 @@ const Create: React.FC = () => {
                 const resp = await authFetch(`${HOST_ADDRESS}/api/custom/apps/create-empty`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: '我的AVG游戏', engine: 'AVG' }),
+                    body: JSON.stringify({ title: t('create.defaultAvgGameTitle'), engine: 'AVG' }),
                 });
                 const data = await resp.json();
                 const appId = data?.appId || data?.data?.appId;
                 if (!resp.ok || !appId) {
-                    throw new Error(data?.message || '创建 AVG 失败');
+                    throw new Error(data?.message || t('create.createAvgFailed'));
                 }
                 navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
             } catch (error: any) {
-                toast.error(String(error?.message || error || '创建 AVG 失败'));
+                toast.error(String(error?.message || error || t('create.createAvgFailed')));
             }
         }
 
@@ -383,18 +385,18 @@ const Create: React.FC = () => {
                         <div className={styles.creatorHeroCard}>
                             <div className={styles.creatorHeroMain}>
                                 <div className={styles.creatorHeroMeta}>
-                                    <div className={styles.creatorHeroEyebrow}>Creator Studio</div>
+                                    <div className={styles.creatorHeroEyebrow}>{t('create.creatorStudio')}</div>
                                     <div className={styles.creatorHeroName}>{userName}</div>
                                     <div className={styles.creatorHeroInfoRow}>
                                         <div className={styles.creatorIdentityStack}>
                                             <div className={styles.userCode}>
-                                                <span className={styles.userCodeText}>Kuran号：{userCode || '--'}</span>
+                                                <span className={styles.userCodeText}>{t('create.kuranIdPrefix')}{userCode || '--'}</span>
                                                 {userCode && (
                                                     <button
                                                         type="button"
                                                         className={styles.userCodeCopyButton}
                                                         onClick={handleCopyUserCode}
-                                                        title="复制 Kuran 号"
+                                                        title={t('profile.copyKuranId')}
                                                     >
                                                         <MdContentCopy />
                                                     </button>
@@ -407,7 +409,7 @@ const Create: React.FC = () => {
                                                         type="button"
                                                         className={styles.userCodeCopyButton}
                                                         onClick={handleCopyDebugToken}
-                                                        title="复制 Token"
+                                                        title={t('create.copyToken')}
                                                     >
                                                         <MdContentCopy />
                                                     </button>
@@ -422,14 +424,14 @@ const Create: React.FC = () => {
                                             >
                                                 <span className={styles.userPoints}>
                                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
-                                                积分：{user?.user?.points ?? 0}
+                                                {t('profile.myPoints')}：{user?.user?.points ?? 0}
                                                 </span>
                                             </button>
                                             <button
                                                 className={`${styles.payButton} ${styles.desktopPayButton}`}
                                                 onClick={() => setIsRechargeModalOpen(true)}
                                             >
-                                                <span>充值</span>
+                                                <span>{t('create.recharge')}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -442,19 +444,19 @@ const Create: React.FC = () => {
                                             className={`${styles.payButton} ${styles.mobilePayButton}`}
                                             onClick={() => setIsRechargeModalOpen(true)}
                                         >
-                                            <span>充值</span>
+                                            <span>{t('create.recharge')}</span>
                                         </button>
                                         <button
                                             className={styles.createGameButtonItem}
                                             onClick={() => setIsCreateTypeModalOpen(true)}
                                         >
                                             <HiOutlineLightBulb />
-                                            <span>创作游戏</span>
+                                            <span>{t('create.createGame')}</span>
                                         </button>
                                         <button
                                             className={styles.helpButton}
                                             onClick={() => setIsPDFModalOpen(true)}
-                                            title="PDF 模板指引"
+                                            title={t('create.pdfGuide')}
                                         >
                                             <span className={styles.helpIcon}>?</span>
                                         </button>
@@ -483,7 +485,7 @@ const Create: React.FC = () => {
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
-                                每晚12:00更新
+                                {t('create.statsUpdateTime')}
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
@@ -491,28 +493,28 @@ const Create: React.FC = () => {
                             <div className={styles.statBox}>
                                 <div className={styles.statLabel}>
                                     <IoStatsChartSharp />
-                                    <span>创作总数</span>
+                                    <span>{t('create.totalCreated')}</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalCreated}</div>
                             </div>
                             <div className={styles.statBox}>
                                 <div className={styles.statLabel}>
                                     <IoEye />
-                                    <span>作品访问次数</span>
+                                    <span>{t('create.totalViews')}</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalViews}</div>
                             </div>
                             <div className={styles.statBox}>
                                 <div className={styles.statLabel}>
                                     <TbHandClick />
-                                    <span>作品访问人数</span>
+                                    <span>{t('create.totalVisitors')}</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalClicks}</div>
                             </div>
                             <div className={`${styles.statBox} ${stats.totalAmount > 0 ? styles.statBoxWithAction : ''}`}>
                                 <div className={styles.statLabel}>
                                     <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                    <span>待结算奖励积分</span>
+                                    <span>{t('create.pendingRewardPoints')}</span>
                                 </div>
                                 <div className={styles.statActionRow}>
                                     <div className={styles.statValue}>{stats.totalAmount}</div>
@@ -522,7 +524,7 @@ const Create: React.FC = () => {
                                             className={styles.settleButton}
                                             onClick={() => setIsSettleModalOpen(true)}
                                         >
-                                            结算
+                                            {t('create.settle')}
                                         </button>
                                     )}
                                 </div>
@@ -532,7 +534,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>结算总收益（激励）</span>
+                                            <span>{t('create.totalIncentiveEarnings')}</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.totalIncentiveAmount}</div>
@@ -543,7 +545,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>待结算奖励收益</span>
+                                            <span>{t('create.pendingIncentiveEarnings')}</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.pendingIncome}</div>
@@ -554,7 +556,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>邀请码激励总收益</span>
+                                            <span>{t('create.inviteCodeTotalEarnings')}</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.inviteTotalAmount}</div>
@@ -565,7 +567,7 @@ const Create: React.FC = () => {
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                            <span>邀请码待结算收益</span>
+                                            <span>{t('create.inviteCodePendingEarnings')}</span>
                                         </div>
                                     </div>
                                     <div className={styles.statValue}>{stats.invitePendingIncome}</div>
@@ -593,7 +595,7 @@ const Create: React.FC = () => {
                                 type="button"
                                 className={`${styles.more} ${styles.moreText}`}
                             >
-                                更多
+                                {t('create.more')}
                                 <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="" />
                             </button>
                         </div>
@@ -602,7 +604,7 @@ const Create: React.FC = () => {
                             <GameGridSkeleton count={8} />
                         ) : publishedGames.length === 0 ? (
                             <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
-                                暂无发布作品
+                                {t('create.noPublishedGames')}
                             </div>
                         ) : (
                             <GameGrid
@@ -642,7 +644,7 @@ const Create: React.FC = () => {
                                                 className={styles.draftManageButton}
                                                 onClick={handleToggleSelectAllDrafts}
                                             >
-                                                {isAllDraftsSelected ? '取消全选' : '全选'}
+                                                {isAllDraftsSelected ? t('create.cancelSelectAll') : t('create.selectAll')}
                                             </button>
                                             <button
                                                 type="button"
@@ -650,14 +652,14 @@ const Create: React.FC = () => {
                                                 onClick={() => setIsBatchDeleteConfirmOpen(true)}
                                                 disabled={selectedDraftCount === 0 || isBatchDeletingDrafts}
                                             >
-                                                {isBatchDeletingDrafts ? '删除中...' : `批量删除${selectedDraftCount > 0 ? `(${selectedDraftCount})` : ''}`}
+                                                {isBatchDeletingDrafts ? t('create.deleting') : `${t('create.batchDelete')}${selectedDraftCount > 0 ? `(${selectedDraftCount})` : ''}`}
                                             </button>
                                             <button
                                                 type="button"
                                                 className={styles.draftManageButton}
                                                 onClick={handleCloseDraftManage}
                                             >
-                                                完成
+                                                {t('create.done')}
                                             </button>
                                         </>
                                     ) : (
@@ -666,7 +668,7 @@ const Create: React.FC = () => {
                                             className={styles.draftManageButton}
                                             onClick={handleOpenDraftManage}
                                         >
-                                            管理
+                                            {t('create.manage')}
                                         </button>
                                     )}
                                 </div>
@@ -676,14 +678,14 @@ const Create: React.FC = () => {
                             <GameGridSkeleton count={8} />
                         ) : draftGames.length === 0 ? (
                             <div style={{ textAlign: 'center', color: '#999', height: '100px', lineHeight: '100px' }}>
-                                开始创作你的第一个作品吧
+                                {t('create.startCreating')}
                             </div>
                         ) : (
                             <div className={styles.draftSectionBody}>
                                 {isDraftManageMode && (
                                     <div className={styles.draftManageTip}>
                                         {/* 适配移动端操作栏 */}
-                                        已选择 {selectedDraftCount} 个草稿
+                                        {t('create.draftsSelected', { count: selectedDraftCount })}
                                     </div>
                                 )}
                                 <GameGrid
@@ -707,7 +709,7 @@ const Create: React.FC = () => {
                 isCreateTypeModalOpen={isCreateTypeModalOpen}
                 isMobileTipModalOpen={isMobileTipModalOpen}
                 isMiniProgram={isMiniProgram}
-                mobileTipTitle="请前往 PC 端操作"
+                mobileTipTitle={t('create.goToPC')}
                 mobileTipMessage={mobileTipMessage}
                 mobileTipLinkUrl={MINI_PROGRAM_CREATOR_PC_URL}
                 onCloseCreateTypeModal={() => setIsCreateTypeModalOpen(false)}
@@ -728,10 +730,10 @@ const Create: React.FC = () => {
                 isOpen={isSettleModalOpen}
                 onConfirm={handleSettle}
                 onCancel={() => setIsSettleModalOpen(false)}
-                title="确认结算"
-                message={`确定要结算当前总收益 ${stats.totalAmount} 积分吗？结算后积分将转入账户余额。`}
-                confirmButtonText={isSettling ? '结算中...' : '确认结算'}
-                cancelButtonText="取消"
+                title={t('create.confirmSettle')}
+                message={t('create.settleConfirmMessage', { amount: stats.totalAmount })}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
             />
 
             <ConfirmModal
@@ -741,10 +743,10 @@ const Create: React.FC = () => {
                     if (isBatchDeletingDrafts) return;
                     setIsBatchDeleteConfirmOpen(false);
                 }}
-                title="批量删除草稿"
-                message={`确定要删除已选中的 ${selectedDraftCount} 个草稿吗？删除后不可恢复。`}
-                confirmButtonText={isBatchDeletingDrafts ? '删除中...' : '确认删除'}
-                cancelButtonText="取消"
+                title={t('create.batchDeleteDrafts')}
+                message={t('create.batchDeleteConfirmMessage', { count: selectedDraftCount })}
+                confirmButtonText={isBatchDeletingDrafts ? t('create.deletingDrafts') : t('create.confirmDelete')}
+                cancelButtonText={t('create.cancel')}
             />
 
             <PDFTemplateModal

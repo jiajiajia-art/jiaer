@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './ObjectsPanel.module.css';
 import ObjectsList from './ObjectsList';
 import ObjectDetail from './ObjectDetail';
@@ -26,6 +27,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
     objects: initialObjects = [],
     onBeforePanelChange,
 }, ref) => {
+    const { t } = useTranslation();
     const [objects, setObjects] = useState<ObjectItem[]>(initialObjects);
     const [activeObjectId, setActiveObjectId] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -361,7 +363,7 @@ const ObjectsPanel = React.forwardRef<ObjectsPanelRef, ObjectsPanelProps>(({
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
                 <div>
-                    <p className={styles.eyebrow}>Step 8</p>
+                    <p className={styles.eyebrow}>{t('gameEditor.step8')}</p>
                     <h2>物品编辑</h2>
                     <p className={styles.subtitle}>
                         管理游戏中所有物品：创建、编辑和配置物品属性

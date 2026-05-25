@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
 import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGameCreate.module.css';
@@ -45,11 +46,7 @@ const STEP_INDEX_MAP: Record<StCreateStepKey, StCreateStepIndex> = {
   assets: 2,
   rules: 3,
 };
-const STEP_ITEMS: Array<{ key: StCreateStepKey; index: StCreateStepIndex; label: string }> = [
-  { key: 'info', index: 1, label: '剧本信息' },
-  { key: 'assets', index: 2, label: '素材包' },
-  { key: 'rules', index: 3, label: '规则与渲染' },
-];
+const STEP_ITEM_KEYS: StCreateStepKey[] = ['info', 'assets', 'rules'];
 
 const normalizeThemeTagIds = (value: unknown): number[] => {
   if (!Array.isArray(value)) return [];
@@ -64,6 +61,7 @@ const isStCreateStepKey = (value: string | null): value is StCreateStepKey => (
 );
 
 const StGameCreate: React.FC = () => {
+  const { t } = useTranslation();
   const nav = useNavigate();
   const [params] = useSearchParams();
   const appIdFromQuery = params.get('appId') || '';
@@ -99,6 +97,15 @@ const StGameCreate: React.FC = () => {
   const skipNextPopstateRef = useRef(false);
   const step = STEP_INDEX_MAP[stepKey];
   const resolvedAppId = String(appIdFromQuery || appId || '').trim();
+
+  const stepItems = useMemo(
+    () => STEP_ITEM_KEYS.map((key) => ({
+      key,
+      index: STEP_INDEX_MAP[key],
+      label: t(`stGameCreate.steps.${key}`),
+    })),
+    [t],
+  );
 
   const scripts: STRegexScript[] = ((cfg.extensions?.regex_scripts) || []) as STRegexScript[];
   const entries: STCharBookEntry[] = (((cfg.extensions?.character_book)?.entries) || []) as STCharBookEntry[];
@@ -275,7 +282,7 @@ const StGameCreate: React.FC = () => {
   const canProceedToAssetsStep = () => {
     setError('');
     if (!validateThemeTags()) {
-      const message = '题材未填，请先选择作品标签。';
+      const message = t('stGameCreate.themeTagsFieldRequired');
       setError(message);
       guideToRequiredField('themeTags', message);
       return false;
@@ -444,7 +451,7 @@ const StGameCreate: React.FC = () => {
         return next;
       }
       if (prev.length >= THEME_TAG_MAX) {
-        setThemeTagError('请选择 1~2 个作品标签');
+        setThemeTagError(t('createGame.themeTagRequired'));
         return prev;
       }
       setThemeTagError('');
@@ -455,7 +462,7 @@ const StGameCreate: React.FC = () => {
 
   const validateThemeTags = (): boolean => {
     if (selectedThemeTagIds.length < THEME_TAG_MIN || selectedThemeTagIds.length > THEME_TAG_MAX) {
-      setThemeTagError('请选择 1~2 个作品标签');
+      setThemeTagError(t('createGame.themeTagRequired'));
       return false;
     }
     setThemeTagError('');
@@ -551,14 +558,14 @@ const StGameCreate: React.FC = () => {
   const validateRequiredFields = (): boolean => {
     setError('');
     if (!title.trim()) {
-      const message = '标题未填，请先填写标题。';
+      const message = t('stGameCreate.titleRequired');
       setError(message);
       guideToRequiredField('title', message);
       return false;
     }
 
     if (!validateThemeTags()) {
-      const message = '题材未填，请先选择作品标签。';
+      const message = t('stGameCreate.themeTagsFieldRequired');
       setError(message);
       guideToRequiredField('themeTags', message);
       return false;
@@ -571,12 +578,12 @@ const StGameCreate: React.FC = () => {
     setError('');
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
-      setError('标题未填，请先填写标题。');
-      throw new Error('标题未填，请先填写标题。');
+      setError(t('stGameCreate.titleRequired'));
+      throw new Error(t('stGameCreate.titleRequired'));
     }
 
     if (!validateThemeTags()) {
-      throw new Error('请选择 1~2 个作品标签');
+      throw new Error(t('createGame.themeTagRequired'));
     }
 
     try {
@@ -591,7 +598,7 @@ const StGameCreate: React.FC = () => {
         });
         const j1 = await r1.json();
         id = j1?.appId || j1?.data?.appId;
-        if (!id) throw new Error('未返回 appId');
+        if (!id) throw new Error(t('stGameCreate.noAppIdReturned'));
         setAppId(id);
       }
 
@@ -680,7 +687,7 @@ const StGameCreate: React.FC = () => {
 
     const fileId = String(publishTargetGameId || appIdFromQuery || appId || '').trim();
     if (!fileId) {
-      toast.error('缺少作品 ID，无法发布');
+      toast.error(t('stGameCreate.missingGameIdPublish'));
       return;
     }
 
@@ -693,7 +700,7 @@ const StGameCreate: React.FC = () => {
       });
 
       if (!response.data.success) {
-        const errorMessage = response.data.message || '发布游戏失败';
+        const errorMessage = response.data.message || t('stGameCreate.publishFailed');
         toast.error(errorMessage);
         return;
       }
@@ -701,7 +708,7 @@ const StGameCreate: React.FC = () => {
       setShowPublishModal(false);
       nav(`/createGame?mode=stats&gameId=${encodeURIComponent(fileId)}`);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || '发布游戏失败';
+      const errorMessage = error?.response?.data?.message || error?.message || t('stGameCreate.publishFailed');
       toast.error(errorMessage);
     } finally {
       setPublishing(false);
@@ -713,9 +720,9 @@ const StGameCreate: React.FC = () => {
       <Navbar beforeLeaveAction={runBeforeLeaveAction} />
       <div className={styles.main}>
         <div className={styles.headerRow}>
-          <h2>创建AVG模式</h2>
-          <nav className={styles.stepper} aria-label="AVG create steps">
-            {STEP_ITEMS.map((item, index) => {
+          <h2>{t('stGameCreate.pageTitle')}</h2>
+          <nav className={styles.stepper} aria-label={t('stGameCreate.stepperAriaLabel')}>
+            {stepItems.map((item, index) => {
               const active = item.key === stepKey;
               return (
                 <React.Fragment key={item.key}>
@@ -727,7 +734,7 @@ const StGameCreate: React.FC = () => {
                   >
                     {item.index}. {item.label}
                   </Link>
-                  {index < STEP_ITEMS.length - 1 ? (
+                  {index < stepItems.length - 1 ? (
                     <div className={styles.stepDivider} aria-hidden="true"></div>
                   ) : null}
                 </React.Fragment>
@@ -740,7 +747,7 @@ const StGameCreate: React.FC = () => {
           ref={titleRowRef}
           className={`${styles.formRow} ${highlightField === 'title' ? styles.requiredHighlight : ''}`}
         >
-          <label>标题</label>
+          <label>{t('stGameCreate.titleLabel')}</label>
           <input
             ref={titleInputRef}
             className={`${styles.text} ${highlightField === 'title' ? styles.inputHighlight : ''}`}
@@ -758,8 +765,8 @@ const StGameCreate: React.FC = () => {
             className={`${styles.themeTagsPanel} ${highlightField === 'themeTags' ? styles.requiredHighlight : ''}`}
           >
             <div className={styles.themeTagsHeader}>
-              <span className={styles.themeTagsLabel}>作品标签<span className={styles.requiredMark}>*</span></span>
-              <span className={styles.themeTagsHint}>最少 1 个，最多 2 个</span>
+              <span className={styles.themeTagsLabel}>{t('createGame.gameTags')}<span className={styles.requiredMark}>*</span></span>
+              <span className={styles.themeTagsHint}>{t('createGame.min1Max2Tags')}</span>
             </div>
             <div className={styles.themeTagsWrap}>
               {availableThemeTags.map((tag) => {
@@ -786,20 +793,20 @@ const StGameCreate: React.FC = () => {
             <div className={`${styles.col} ${styles.stepOneCol}`}>
               <div className={`${styles.group} ${styles.stepOneGroup}`}>
                 <div className={styles.stepOneGroupHeader}>
-                  <div className={`${styles.groupTitle} ${styles.stepOneGroupTitle}`}>提示词 / 角色卡</div>
+                  <div className={`${styles.groupTitle} ${styles.stepOneGroupTitle}`}>{t('stGameCreate.promptCard')}</div>
                   <button
                     type="button"
                     className={styles.clearFieldButton}
                     onClick={() => openClearFieldConfirm('description')}
                     disabled={!descriptionValue}
                   >
-                    一键清空
+                    {t('stGameCreate.clearAll')}
                   </button>
                 </div>
                 <textarea
                   className={`${styles.area} ${styles.stepOneArea}`}
                   rows={18}
-                  placeholder={'例：近未来的上海，玩家扮演新入职的「记忆修复师」，需要在一周内修复三名委托人的记忆。'}
+                  placeholder={t('stGameCreate.placeholderDescription')}
                   value={descriptionValue}
                   onChange={e => setCfg(s => ({
                     ...s,
@@ -811,20 +818,20 @@ const StGameCreate: React.FC = () => {
             <div className={`${styles.col} ${styles.stepOneCol}`}>
               <div className={`${styles.group} ${styles.stepOneGroup}`}>
                 <div className={styles.stepOneGroupHeader}>
-                  <div className={`${styles.groupTitle} ${styles.stepOneGroupTitle}`}>开场白 / 首页</div>
+                  <div className={`${styles.groupTitle} ${styles.stepOneGroupTitle}`}>{t('stGameCreate.openingHome')}</div>
                   <button
                     type="button"
                     className={styles.clearFieldButton}
                     onClick={() => openClearFieldConfirm('firstMes')}
                     disabled={!firstMessageValue}
                   >
-                    一键清空
+                    {t('stGameCreate.clearAll')}
                   </button>
                 </div>
                 <textarea
                   className={`${styles.area} ${styles.stepOneArea}`}
                   rows={18}
-                  placeholder={'例：你推开那家小店的门，风铃叮当作响，一股混合着咖啡与雨味的气息扑面而来。'}
+                  placeholder={t('stGameCreate.placeholderFirstMes')}
                   value={firstMessageValue}
                   onChange={e => setCfg(s => ({
                     ...s,
@@ -840,8 +847,8 @@ const StGameCreate: React.FC = () => {
           <div className={styles.columns3}>
             <div className={styles.col}>
               <div className={styles.group}>
-                <div className={styles.groupTitle}>素材包</div>
-                <div className={styles.hint}>上传图片/音频等静态资源，稍后在正则替换模板里用 {'{{ASSET_PREFIX}}'} 引用。</div>
+                <div className={styles.groupTitle}>{t('stGameCreate.assetsTitle')}</div>
+                <div className={styles.hint}>{t('stGameCreate.assetsHint', { assetPrefix: '{{ASSET_PREFIX}}' })}</div>
                 <AssetsUpload
                   ref={assetsUploadRef}
                   title={title}
@@ -860,8 +867,8 @@ const StGameCreate: React.FC = () => {
           <div className={styles.columns}>
             <div className={styles.col}>
               <div className={styles.group}>
-                <div className={styles.groupTitle}>世界书</div>
-                <div className={styles.hint}>为世界设定写规则片段，按关键词分组，方便模型查阅。</div>
+                <div className={styles.groupTitle}>{t('stGameCreate.worldBook')}</div>
+                <div className={styles.hint}>{t('stGameCreate.worldBookHint')}</div>
                 {entries.map((e, idx) => (
                   <div
                     key={e.uid || idx}
@@ -870,12 +877,12 @@ const StGameCreate: React.FC = () => {
                     onDragStart={(ev) => onDragStartEntry(idx, ev)}
                     onDragOver={(ev) => onDragOverEntry(idx, ev)}
                     onDrop={(ev) => onDropEntry(idx, ev)}
-                    title="拖动以调整优先级"
+                    title={t('stGameCreate.dragPriority')}
                   >
                     <div className={styles.row2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: 12, color: '#888' }}>优先级：{idx + 1}</div>
+                      <div style={{ fontSize: 12, color: '#888' }}>{t('stGameCreate.priority', { index: idx + 1 })}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button type="button" aria-label="删除" title="删除" onClick={() => { const next = entries.filter((_, i) => i !== idx); updateEntries(next); }} style={{ background: 'transparent', border: 'none', color: '#999', fontSize: 16, lineHeight: '1', cursor: 'pointer', padding: '4px 6px' }}>×</button>
+                        <button type="button" aria-label={t('stGameCreate.delete')} title={t('stGameCreate.delete')} onClick={() => { const next = entries.filter((_, i) => i !== idx); updateEntries(next); }} style={{ background: 'transparent', border: 'none', color: '#999', fontSize: 16, lineHeight: '1', cursor: 'pointer', padding: '4px 6px' }}>×</button>
                         <div style={{ cursor: 'grab', userSelect: 'none' }}>☰</div>
                       </div>
                     </div>
@@ -883,7 +890,7 @@ const StGameCreate: React.FC = () => {
                       <label>keys</label>
                       <input
                         className={styles.text}
-                        placeholder={'例：校规, 晚自习'}
+                        placeholder={t('stGameCreate.placeholderWorldBookKeys')}
                         value={(e.keys || []).join(',')}
                         onChange={ev => {
                           const next = [...entries];
@@ -893,11 +900,11 @@ const StGameCreate: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label>内容</label>
+                      <label>{t('stGameCreate.content')}</label>
                       <textarea
                         className={styles.area}
                         rows={3}
-                        placeholder={'例：晚自习期间禁止使用手机，被发现将扣除 10 点纪律值。'}
+                        placeholder={t('stGameCreate.placeholderWorldBookContent')}
                         value={e.content || ''}
                         onChange={ev => {
                           const next = [...entries];
@@ -920,23 +927,23 @@ const StGameCreate: React.FC = () => {
                       }];
                       updateEntries(next);
                     }}
-                  >+ 新增一条世界书条目</button>
+                  >{t('stGameCreate.addWorldBookEntry')}</button>
                 </div>
               </div>
             </div>
 
             <div className={styles.col}>
               <div className={styles.group}>
-                <div className={styles.groupTitle}>正则脚本</div>
-                <div className={styles.hint}>用于把模型输出中的特定模式替换为 HTML 片段。</div>
+                <div className={styles.groupTitle}>{t('stGameCreate.regexScripts')}</div>
+                <div className={styles.hint}>{t('stGameCreate.regexScriptsHint')}</div>
 
                 {scripts.map((r, idx) => (
                   <div key={idx} className={styles.ruleItem}>
                     <div className={styles.row2}>
-                      <label>正则</label>
+                      <label>{t('stGameCreate.regex')}</label>
                       <input
                         className={styles.text}
-                        placeholder={'例：/(好感度：(?<val>\\d+))/g'}
+                        placeholder={t('stGameCreate.placeholderRegex')}
                         value={r.findRegex || ''}
                         onChange={e => {
                           const next = [...scripts];
@@ -946,11 +953,11 @@ const StGameCreate: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label>替换内容</label>
+                      <label>{t('stGameCreate.replaceContent')}</label>
                       <textarea
                         className={styles.area}
                         rows={4}
-                        placeholder={'例：<span class="status">好感度：$<val></span>'}
+                        placeholder={t('stGameCreate.placeholderReplace')}
                         value={r.replaceString || ''}
                         onChange={e => {
                           const next = [...scripts];
@@ -966,7 +973,7 @@ const StGameCreate: React.FC = () => {
                           const next = scripts.filter((_, i) => i !== idx);
                           updateScripts(next);
                         }}
-                      >删除此规则</button>
+                      >{t('stGameCreate.deleteRule')}</button>
                     </div>
                   </div>
                 ))}
@@ -982,7 +989,7 @@ const StGameCreate: React.FC = () => {
                       }];
                       updateScripts(next);
                     }}
-                  >+ 新增一条规则</button>
+                  >{t('stGameCreate.addRule')}</button>
                 </div>
               </div>
             </div>
@@ -996,11 +1003,11 @@ const StGameCreate: React.FC = () => {
               type="button"
               className={styles.primary}
               onClick={() => handleStepNavigation('assets')}
-            >下一步：上传素材包</button>
+            >{t('stGameCreate.nextUploadAssets')}</button>
           ) : step === 2 ? (
             <>
-              <button type="button" className={styles.secondary} onClick={() => handleStepNavigation('info')}>上一步</button>
-              <button type="button" className={styles.primary} onClick={() => handleStepNavigation('rules')}>下一步：配置规则</button>
+              <button type="button" className={styles.secondary} onClick={() => handleStepNavigation('info')}>{t('stGameCreate.prev')}</button>
+              <button type="button" className={styles.primary} onClick={() => handleStepNavigation('rules')}>{t('stGameCreate.nextConfigureRules')}</button>
             </>
           ) : (
             <>
@@ -1009,42 +1016,42 @@ const StGameCreate: React.FC = () => {
                 className={styles.secondary}
                 onClick={() => handleStepNavigation('assets')}
                 disabled={saving || publishing}
-              >上一步</button>
+              >{t('stGameCreate.prev')}</button>
               <button
                 type="button"
                 className={styles.secondary}
                 disabled={saving || publishing}
                 onClick={saveToStats}
-              >{saving ? '保存中...' : '保存'}</button>
+              >{saving ? t('stGameCreate.saving') : t('common.save')}</button>
               <button
                 type="button"
                 className={styles.primary}
                 disabled={saving || publishing}
                 onClick={saveAndTest}
-              >{saving ? '保存中...' : '测试'}</button>
+              >{saving ? t('stGameCreate.saving') : t('stGameCreate.test')}</button>
               <button
                 type="button"
                 className={styles.primary}
                 disabled={saving || publishing}
                 onClick={saveAndOpenPublish}
-              >{saving ? '保存中...' : publishing ? '发布中...' : '发布'}</button>
+              >{saving ? t('stGameCreate.saving') : publishing ? t('stGameCreate.publishing') : t('stGameCreate.publish')}</button>
               <div style={{ display: 'none' }}>
               <button
                 type="button"
                 className={styles.secondary}
                 onClick={() => handleStepNavigation('assets')}
-              >上一步</button>
+              >{t('stGameCreate.prev')}</button>
               <button
                 type="button"
                 className={styles.secondary}
                 disabled={saving || publishing}
                 onClick={saveToStats}
-              >完成</button>
+              >{t('stGameCreate.done')}</button>
               <button
                 className={styles.primary}
                 disabled={saving || publishing}
                 onClick={saveAndTest}
-              >{saving ? '创建中…' : '创建并测试'}</button>
+              >{saving ? t('stGameCreate.creating') : t('stGameCreate.createAndTest')}</button>
               </div>
             </>
           )}
@@ -1057,7 +1064,7 @@ const StGameCreate: React.FC = () => {
                 className={styles.secondary}
                 onClick={() => handleStepNavigation(step === 2 ? 'info' : 'assets')}
                 disabled={saving || publishing}
-              >上一步</button>
+              >{t('stGameCreate.prev')}</button>
             ) : null}
           </div>
           <div className={styles.actionsRight}>
@@ -1066,13 +1073,13 @@ const StGameCreate: React.FC = () => {
                 type="button"
                 className={styles.primary}
                 onClick={() => handleStepNavigation('assets')}
-              >下一步：上传素材包</button>
+              >{t('stGameCreate.nextUploadAssets')}</button>
             ) : step === 2 ? (
               <button
                 type="button"
                 className={styles.primary}
                 onClick={() => handleStepNavigation('rules')}
-              >下一步：配置规则</button>
+              >{t('stGameCreate.nextConfigureRules')}</button>
             ) : (
               <>
                 <button
@@ -1080,19 +1087,19 @@ const StGameCreate: React.FC = () => {
                   className={styles.primary}
                   disabled={saving || publishing}
                   onClick={saveToStats}
-                >{saving ? '保存中...' : '保存'}</button>
+                >{saving ? t('stGameCreate.saving') : t('common.save')}</button>
                 <button
                   type="button"
                   className={styles.primary}
                   disabled={saving || publishing}
                   onClick={saveAndTest}
-                >{saving ? '保存中...' : '测试'}</button>
+                >{saving ? t('stGameCreate.saving') : t('stGameCreate.test')}</button>
                 <button
                   type="button"
                   className={styles.primary}
                   disabled={saving || publishing}
                   onClick={saveAndOpenPublish}
-                >{saving ? '保存中...' : publishing ? '发布中...' : '发布'}</button>
+                >{saving ? t('stGameCreate.saving') : publishing ? t('stGameCreate.publishing') : t('stGameCreate.publish')}</button>
               </>
             )}
           </div>
@@ -1104,30 +1111,30 @@ const StGameCreate: React.FC = () => {
             if (uploadingFromStepConfirm) return;
             setShowPendingAssetsConfirm(false);
           }}
-          title="素材还没有上传"
-          message="你当前只是把素材选进了列表，还没有真正上传到云端。现在上传后再继续下一步。"
-          confirmButtonText={uploadingFromStepConfirm ? "上传中..." : "上传并继续"}
-          cancelButtonText="留在当前页"
+          title={t('stGameCreate.pendingAssetsTitle')}
+          message={t('stGameCreate.pendingAssetsMessage')}
+          confirmButtonText={uploadingFromStepConfirm ? t('stGameCreate.uploading') : t('stGameCreate.uploadAndContinue')}
+          cancelButtonText={t('stGameCreate.stayOnPage')}
         />
         <ConfirmModal
           isOpen={showLeaveConfirm}
           onConfirm={confirmLeaveCurrentPage}
           onCancel={closeLeaveConfirm}
-          title="素材未上传"
-          message="当前素材只保存在本地，尚未上传素材包。确认离开当前页面吗？"
-          confirmButtonText="确认离开"
-          cancelButtonText="取消"
+          title={t('stGameCreate.leaveAssetsTitle')}
+          message={t('stGameCreate.leaveAssetsMessage')}
+          confirmButtonText={t('stGameCreate.confirmLeave')}
+          cancelButtonText={t('common.cancel')}
         />
         <ConfirmModal
           isOpen={clearFieldTarget !== null}
           onConfirm={clearField}
           onCancel={closeClearFieldConfirm}
-          title={clearFieldTarget === 'description' ? '清除当前的文本?' : '清除当前的文本?'}
+          title={t('stGameCreate.clearTextTitle')}
           message={clearFieldTarget === 'description'
-            ? '此操作将清空“提示词 / 角色卡”的当前所有文本'
-            : '此操作将清空“开场白 / 首页”中的当前所有文本'}
-          confirmButtonText="清除"
-          cancelButtonText="取消"
+            ? t('stGameCreate.clearDescriptionMessage')
+            : t('stGameCreate.clearFirstMesMessage')}
+          confirmButtonText={t('stGameCreate.clear')}
+          cancelButtonText={t('common.cancel')}
         />
         <PublishSettingsModal
           isOpen={showPublishModal}

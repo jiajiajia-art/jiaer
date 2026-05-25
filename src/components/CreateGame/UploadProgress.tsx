@@ -4,14 +4,15 @@ import styles from './UploadProgress.module.css';
 interface UploadProgressProps {
     isOpen: boolean;
     progress: number;
-    progressText: string;
+    progressText?: string;
     onCancel: () => void;
-    // 可选：完成后不自动关闭，展示操作按钮
     completed?: boolean;
     primaryText?: string;
     secondaryText?: string;
     onPrimary?: () => void;
     onSecondary?: () => void;
+    titleText?: string;
+    cancelText?: string;
 }
 
 const UploadProgress: React.FC<UploadProgressProps> = ({
@@ -20,17 +21,19 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
     progressText,
     onCancel,
     completed = false,
-    primaryText = '确定',
-    secondaryText = '开始测试',
+    primaryText,
+    secondaryText,
     onPrimary,
     onSecondary,
+    titleText,
+    cancelText,
 }) => {
     if (!isOpen) return null;
 
     return (
         <div className={styles.uploadOverlay}>
             <div className={styles.uploadOverlayContent}>
-                <h3 className={styles.uploadOverlayTitle}>正在创建作品</h3>
+                <h3 className={styles.uploadOverlayTitle}>{titleText}</h3>
 
                 {/* 进度条 */}
                 <div className={styles.uploadProgressContainer}>
@@ -47,7 +50,7 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
 
                 {/* 提示文字 */}
                 <p className={styles.uploadOverlayText}>
-                    {progressText || '处理中...'}
+                    {progressText}
                 </p>
 
                 {/* 操作区域 */}
@@ -70,7 +73,7 @@ const UploadProgress: React.FC<UploadProgressProps> = ({
                         onClick={onCancel}
                         type="button"
                     >
-                        取消上传
+                        {cancelText}
                     </button>
                 )}
             </div>

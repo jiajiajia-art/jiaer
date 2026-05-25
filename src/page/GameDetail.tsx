@@ -26,6 +26,7 @@ import type { SaveSummaryItem } from '../api/galgame/saves';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
+import { useTranslation } from 'react-i18next';
 
 // 检测是否在微信小程序环境
 const isWebViewEnv = (): boolean => {
@@ -42,11 +43,9 @@ const DEFAULT_PLAY_STATUS = {
     hasSave: true,
 };
 
-const REPLAY_VISIBILITY_TABS: Array<{ value: ReplayVisibility; label: string }> = [
-    { value: 'public', label: '公开' },
-    { value: 'unlisted', label: '仅链接可见' },
-    { value: 'private', label: '私密' },
-];
+const REPLAY_VISIBILITY_TABS_PUBLIC = 'public';
+const REPLAY_VISIBILITY_TABS_UNLISTED = 'unlisted';
+const REPLAY_VISIBILITY_TABS_PRIVATE = 'private';
 
 // 判断是否点赞的辅助函数
 const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
@@ -86,6 +85,7 @@ const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => 
 };
 
 const GameDetail: React.FC = () => {
+    const { t } = useTranslation();
     const { fileId: fileIdParam } = useParams<{ fileId: string }>();
     const navigate = useNavigate();
     const location = useLocation();
@@ -198,7 +198,7 @@ const GameDetail: React.FC = () => {
     // 加载游戏详情
     const fetchGameDetail = useCallback(async () => {
         if (!fileId) {
-            toast.error('游戏ID无效');
+            toast.error(t('gameDetail.gameIdInvalid'));
             navigate('/home');
             return;
         }
@@ -227,12 +227,12 @@ const GameDetail: React.FC = () => {
                     });
                 }
             } else {
-                toast.error('游戏不存在');
+                toast.error(t('gameDetail.gameNotExist'));
                 navigate('/home');
             }
         } catch (error) {
             console.error('获取游戏详情失败:', error);
-            toast.error('加载游戏详情失败');
+            toast.error(t('gameDetail.loadGameDetailsFailed'));
             navigate('/home');
         } finally {
             setIsLoading(false);
@@ -275,16 +275,16 @@ const GameDetail: React.FC = () => {
                     .catch(() => {});
                 return sessionId;
             } else {
-                toast.error(sessionResponse.data.message || '创建游戏失败，请重试');
+                toast.error(sessionResponse.data.message || t('gameDetail.createGameFailed'));
                 return null;
             }
         } catch (error: unknown) {
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || '创建游戏失败，请稍后重试';
+                const errorMessage = axiosError.response?.data?.message || t('gameDetail.createGameFailedRetry');
                 toast.error(errorMessage);
             } else {
-                toast.error('创建游戏失败，请稍后重试');
+                toast.error(t('gameDetail.createGameFailedRetry'));
             }
             return null;
         } finally {
@@ -314,12 +314,12 @@ const GameDetail: React.FC = () => {
                     .catch(() => {});
                 return response.data.data.session.session_id;
             } else {
-                toast.error(response.data.message || '创建游戏失败，请重试');
+                toast.error(response.data.message || t('gameDetail.createGameFailed'));
                 return null;
             }
         } catch (error) {
             console.error('❌ World Session 创建错误:', error);
-            toast.error('创建游戏失败，请稍后重试');
+            toast.error(t('gameDetail.createGameFailedRetry'));
             return null;
         }
     };
@@ -327,14 +327,14 @@ const GameDetail: React.FC = () => {
     // 实际开始游戏的逻辑
     const startGameInternal = async () => {
         if (!fileId || !game) {
-            toast.error('游戏信息错误，请重试');
+            toast.error(t('gameDetail.gameInfoError'));
             return;
         }
 
         // engine 映射：RPG→story，TXT→galgame，AVG→world，CUSTOM→customif
         const normalized = normalizedGameMode;
         if (!normalized) {
-            toast.error('未知的游戏类型，无法创建会话');
+            toast.error(t('gameDetail.unknownGameType'));
             return;
         }
 
@@ -343,7 +343,7 @@ const GameDetail: React.FC = () => {
             useGameStore.getState().clearAll();
             const appId = game.customAppId || fileId;
             if (!appId) {
-                toast.error('缺少自定义 AppID，无法开始游戏');
+                toast.error(t('gameDetail.missingCustomAppId'));
                 return;
             }
             navigate(`/customif/${appId}`);
@@ -421,10 +421,10 @@ const GameDetail: React.FC = () => {
                     hasSave: !!response.data.data.hasSave,
                 };
             }
-            toast.error(response.data?.message || '获取游玩状态失败');
+            toast.error(response.data?.message || t('gameDetail.getPlayStatusFailed'));
         } catch (error) {
             console.error('获取游玩状态失败:', error);
-            toast.error('获取游玩状态失败，请稍后重试');
+            toast.error(t('gameDetail.getPlayStatusFailed'));
         }
 
         return DEFAULT_PLAY_STATUS;
@@ -433,7 +433,7 @@ const GameDetail: React.FC = () => {
     const handleOpenStartOptions = async () => {
         if (!checkAuth()) return;
         if (!fileId) {
-            toast.error('游戏ID无效');
+            toast.error(t('gameDetail.gameIdInvalid'));
             return;
         }
 
@@ -455,7 +455,7 @@ const GameDetail: React.FC = () => {
 
     const handleStartNewGame = async () => {
         if (!fileId || !normalizedGameMode) {
-            toast.error('游戏ID无效');
+            toast.error(t('gameDetail.gameIdInvalid'));
             return;
         }
         
@@ -588,7 +588,7 @@ const GameDetail: React.FC = () => {
         // 备用方案：复制链接到剪贴板
         try {
             await navigator.clipboard.writeText(window.location.href);
-            toast.success('链接已复制到剪贴板');
+            toast.success(t('gameDetail.linkCopied'));
         } catch (error) {
             // 如果 clipboard API 也不可用，使用传统方法
             const textArea = document.createElement('textarea');
@@ -599,9 +599,9 @@ const GameDetail: React.FC = () => {
             textArea.select();
             try {
                 document.execCommand('copy');
-                toast.success('链接已复制到剪贴板');
+                toast.success(t('gameDetail.linkCopied'));
             } catch (err) {
-                toast.error('复制失败，请手动复制链接');
+                toast.error(t('gameDetail.copyFailed'));
             }
             document.body.removeChild(textArea);
         }
@@ -654,7 +654,7 @@ const GameDetail: React.FC = () => {
             setPreviewItem({ saveId: detail.saveId, summaryText: detail.summaryText, createdAt: detail.createdAt });
         } catch (e) {
             console.error('获取存档详情失败:', e);
-            toast.error('获取存档详情失败');
+            toast.error(t('galgame.requestError'));
             // 兜底显示列表项内容
             setPreviewItem(item);
         }
@@ -675,10 +675,10 @@ const GameDetail: React.FC = () => {
                 navigate('/galgame', { state: { saveEntry: 'load' } });
                 return;
             }
-            toast.error(resp.data.message || '加载存档失败');
+            toast.error(resp.data.message || t('galgame.requestError'));
         } catch (e) {
             console.error('加载存档失败:', e);
-            toast.error('加载存档失败，请稍后重试');
+            toast.error(t('galgame.requestError'));
         } finally {
             setIsLoading(false);
             setIsLoadSaveOpen(false);
@@ -691,7 +691,7 @@ const GameDetail: React.FC = () => {
             <div className={styles.fullscreenOverlay}>
                 <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
-                    <p>加载中...</p>
+                    <p>{t('common.loading')}</p>
                 </div>
             </div>
         );
@@ -701,9 +701,9 @@ const GameDetail: React.FC = () => {
         return (
             <div className={styles.pageContainer}>
                 <div className={styles.errorContainer}>
-                    <p>游戏不存在</p>
+                    <p>{t('gameDetail.gameNotExist')}</p>
                     <button onClick={() => navigate('/home')} className={styles.backButton}>
-                        返回首页
+                        {t('gameDetail.backToHome')}
                     </button>
                 </div>
             </div>
@@ -716,11 +716,11 @@ const GameDetail: React.FC = () => {
             {/* 顶部悬浮栏：仅返回 & 分享 */}
             <div className={styles.topBar}>
                 <div className={styles.topBarContent}>
-                    <button className={styles.backIconButton} onClick={handleBack} aria-label="返回">
+                    <button className={styles.backIconButton} onClick={handleBack} aria-label={t('gameDetail.back')}>
                         <IoChevronBack />
                     </button>
                     <div className={styles.topActions}>
-                        <button className={styles.topIconButton} onClick={handleShare} aria-label="分享">
+                        <button className={styles.topIconButton} onClick={handleShare} aria-label={t('gameDetail.share')}>
                             <FaRegShareFromSquare />
                         </button>
                     </div>
@@ -739,18 +739,18 @@ const GameDetail: React.FC = () => {
                             <div className={styles.titleLeft}>
                                 <div className={styles.titleWithButton}>
                                     <h1 className={styles.gameTitle}>
-                                        {game.title || '未命名游戏'}
+                                        {game.title || t('gameDetail.unnamedGame')}
                                     </h1>
                                     <div className={styles.headerActions}>
                                         <button
                                             className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline}`}
                                             onClick={handleLike}
                                             disabled={isLikeLoading}
-                                            aria-label="点赞"
+                                            aria-label={t('gameDetail.like')}
                                         >
                                             <img
                                                 src={`${import.meta.env.BASE_URL}data/assets/gameDetail/${isLiked ? '点赞' : '未点赞'}.png`}
-                                                alt="点赞"
+                                                alt={t('gameDetail.like')}
                                             />
                                             <span>{likeCount || 0}</span>
                                         </button>
@@ -762,7 +762,7 @@ const GameDetail: React.FC = () => {
                                         <div className={styles.ratingSection}>
                                             <span className={styles.rating}>
                                                 {game.rating_avg ?? DEFAULT_RATING}
-                                                <span className={styles.ratingUnit}>分</span>
+                                                <span className={styles.ratingUnit}>{t('gameDetail.ratingUnit')}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -786,7 +786,7 @@ const GameDetail: React.FC = () => {
                                             alt="作者头像"
                                         />
                                         <span className={styles.authorName}>
-                                            {game.author_name || '未知作者'}
+                                            {game.author_name || t('gameDetail.unknownAuthor')}
                                         </span>
                                     </div>
                                     {game.groupNo && (
@@ -796,7 +796,7 @@ const GameDetail: React.FC = () => {
                                                 className={styles.groupNoCopyBtn}
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(game.groupNo!).catch(() => {});
-                                                    toast.success('QQ群号已复制');
+                                                    toast.success(t('gameDetail.qqGroupCopied'));
                                                 }}
                                                 title="复制群号"
                                             >
@@ -811,7 +811,7 @@ const GameDetail: React.FC = () => {
 
 
                     <div className={styles.descriptionSection}>
-                        <p>{normalizeNewlines(game.description || '暂无描述')}</p>
+                        <p>{normalizeNewlines(game.description || t('gameDetail.noDescription'))}</p>
                     </div>
                 </div>
             </div>
@@ -832,7 +832,7 @@ const GameDetail: React.FC = () => {
                                     <span className={styles.loadingDot}></span>
                                 </div>
                             ) : (
-                                '开始体验'
+                                t('gameDetail.startExperience')
                             )}
                         </button>
                     </div>
@@ -847,10 +847,10 @@ const GameDetail: React.FC = () => {
                     await startGameInternal();
                 }}
                 onCancel={() => setIsUpdateWarningModalOpen(false)}
-                title="游戏已更新"
-                message={normalizeNewlines("游戏已更新，如在游戏中遇到问题，建议删除存档解决。")}
-                confirmButtonText="继续游戏"
-                cancelButtonText="取消"
+                title={t('gameDetail.gameUpdated')}
+                message={normalizeNewlines(t('gameDetail.gameUpdatedTip'))}
+                confirmButtonText={t('gameDetail.continueGame')}
+                cancelButtonText={t('common.cancel')}
             />
             {/* 登录弹窗（当前详情页也挂一份，确保能在本页触发显示，微信小程序环境不显示） */}
             {!isWebViewEnv() && (
@@ -873,7 +873,7 @@ const GameDetail: React.FC = () => {
                 onClose={() => setPreviewItem(null)}
                 item={previewItem}
                 onLoad={handleLoadSave}
-                loadButtonText={'开始体验'}
+                loadButtonText={t('gameDetail.startExperience')}
             />
             {isReplayDrawerOpen && (
                 <div className={`${styles.startOptionsOverlay} ${styles.replayDrawerOverlay}`} onClick={closeReplayDrawer}>
@@ -882,38 +882,55 @@ const GameDetail: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                         role="dialog"
                         aria-modal="true"
-                        aria-label="回放集锦"
+                        aria-label={t('gameDetail.replayHighlights')}
                     >
                         <div className={styles.startOptionsHeader}>
                             <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>回放集锦</h2>
+                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.replayHighlights')}</h2>
                             </div>
                             <button
                                 className={`${styles.startOptionsClose} ${styles.replayDrawerClose}`}
                                 onClick={closeReplayDrawer}
-                                aria-label="关闭回放集锦"
+                                aria-label={t('gameDetail.closeReplayHighlights')}
                             >
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
                         {canManageReplayTabs && (
                             <div className={styles.replayDrawerTabs} role="tablist" aria-label="回放可见范围筛选">
-                                {REPLAY_VISIBILITY_TABS.map((tab) => {
-                                    const isActive = activeReplayVisibility === tab.value;
-                                    return (
-                                        <button
-                                            key={tab.value}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={isActive}
-                                            tabIndex={isActive ? 0 : -1}
-                                            className={`${styles.replayDrawerTab} ${isActive ? styles.replayDrawerTabActive : ''}`}
-                                            onClick={() => setActiveReplayVisibility(tab.value)}
-                                        >
-                                            {tab.label}
-                                        </button>
-                                    );
-                                })}
+                                <button
+                                    key={REPLAY_VISIBILITY_TABS_PUBLIC}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC}
+                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC ? 0 : -1}
+                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC ? styles.replayDrawerTabActive : ''}`}
+                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_PUBLIC)}
+                                >
+                                    {t('gameDetail.replayVisibility.public')}
+                                </button>
+                                <button
+                                    key={REPLAY_VISIBILITY_TABS_UNLISTED}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED}
+                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED ? 0 : -1}
+                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED ? styles.replayDrawerTabActive : ''}`}
+                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_UNLISTED)}
+                                >
+                                    {t('gameDetail.replayVisibility.unlisted')}
+                                </button>
+                                <button
+                                    key={REPLAY_VISIBILITY_TABS_PRIVATE}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE}
+                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE ? 0 : -1}
+                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE ? styles.replayDrawerTabActive : ''}`}
+                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_PRIVATE)}
+                                >
+                                    {t('gameDetail.replayVisibility.private')}
+                                </button>
                             </div>
                         )}
                         <div className={styles.replayDrawerBody}>
@@ -938,14 +955,14 @@ const GameDetail: React.FC = () => {
                     >
                         <div className={styles.startOptionsHeader}>
                             <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>请选择开始方式</h2>
+                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.selectStartMethod')}</h2>
                             </div>
                             <button
                                 className={styles.startOptionsClose}
                                 onClick={closeStartOptions}
-                                aria-label="关闭"
+                                aria-label={t('common.close')}
                             >
-                                <img src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} alt="关闭" />
+                                <img src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} alt={t('common.close')} />
                             </button>
                         </div>
                         <div className={styles.startOptionsButtons}>
@@ -956,7 +973,7 @@ const GameDetail: React.FC = () => {
                                         await handleStartNewGame();
                                     }}
                                 >
-                                    新的开始
+                                    {t('gameDetail.newStart')}
                                 </button>
                                 <button
                                     className={styles.startOptionsSecondary}
@@ -966,7 +983,7 @@ const GameDetail: React.FC = () => {
                                         await handleStartGame();
                                     }}
                                 >
-                                    继续体验
+                                    {t('gameDetail.continueExperience')}
                                 </button>
                                 {isGalgame && (
                                     <button
@@ -977,7 +994,7 @@ const GameDetail: React.FC = () => {
                                             handleOpenLoadSave();
                                         }}
                                     >
-                                        读取存档
+                                        {t('gameDetail.loadSave')}
                                     </button>
                                 )}
                                 {isGalgame && (
@@ -985,7 +1002,7 @@ const GameDetail: React.FC = () => {
                                         className={styles.startOptionsGhost}
                                         onClick={openReplayDrawer}
                                     >
-                                        回放
+                                        {t('gameDetail.replay')}
                                     </button>
                                 )}
                         </div>

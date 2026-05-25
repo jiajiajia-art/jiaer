@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import styles from './DocumentsPanel.module.css';
 import { BsUpload, BsCheckCircle } from 'react-icons/bs';
@@ -35,8 +36,6 @@ interface ParseErrorModalState {
     errorDetail: string;
 }
 
-const DEFAULT_PARSE_ERROR_MESSAGE = '由于网络波动导致上传失败，请再次重试';
-
 const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     onFileUpload,
     isParsing,
@@ -47,6 +46,8 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     onGenerateFromIdea,
     mode,
 }) => {
+    const { t } = useTranslation();
+    const defaultParseErrorMessage = t('createGame.parseErrorDefault');
     const [showCreateEmptyModal, setShowCreateEmptyModal] = useState(false);
     const [showGenerateFromIdeaModal, setShowGenerateFromIdeaModal] = useState(false);
     const isVisualMode = mode === 'visual' || !mode;
@@ -67,17 +68,17 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         const fileName = file.name.toLowerCase();
         const isValidType = validTypes.some((type) => fileName.endsWith(type));
         if (!isValidType) {
-            toast.error('请上传 PDF 或 Word (.docx) 文件');
+            toast.error(t('createGame.uploadPdfOrWord'));
             return false;
         }
         return true;
-    }, []);
+    }, [t]);
 
     const openParseErrorModal = useCallback((errorDetail: string) => {
         // 实现解析失败弹窗展示
         setParseErrorModal({
             visible: true,
-            message: DEFAULT_PARSE_ERROR_MESSAGE,
+            message: defaultParseErrorMessage,
             errorDetail,
         });
     }, []);
@@ -105,23 +106,23 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         setFailedJobSnapshot({
             fileName: snapshot?.fileName || uploadedFile?.name,
             progress: snapshot?.progress ?? 0,
-            stage: snapshot?.stage || '上传失败',
+            stage: snapshot?.stage || t('createGame.uploadStage'),
             error: errorDetail,
         });
         openParseErrorModal(errorDetail);
         onParsingFailed();
-    }, [onParsingFailed, openParseErrorModal, uploadedFile?.name]);
+    }, [onParsingFailed, openParseErrorModal, t, uploadedFile?.name]);
 
     const handleCopyErrorDetail = useCallback(async () => {
         const text = parseErrorModal.errorDetail;
         if (!text) {
-            toast.error('没有可复制的报错信息');
+            toast.error(t('createGame.noErrorToCopy'));
             return;
         }
 
         try {
             await navigator.clipboard.writeText(text);
-            toast.success('报错信息已复制');
+            toast.success(t('createGame.errorCopied'));
         } catch (error) {
             const textArea = document.createElement('textarea');
             textArea.value = text;
@@ -132,15 +133,15 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
             try {
                 document.execCommand('copy');
-                toast.success('报错信息已复制');
+                toast.success(t('createGame.errorCopied'));
             } catch (copyError) {
                 console.error('复制报错信息失败:', copyError || error);
-                toast.error('复制失败，请稍后重试');
+                toast.error(t('createGame.copyFailedRetry'));
             } finally {
                 document.body.removeChild(textArea);
             }
         }
-    }, [parseErrorModal.errorDetail]);
+    }, [parseErrorModal.errorDetail, t]);
 
     const startUpload = useCallback(async (file: File) => {
         if (!validateFileType(file)) {
@@ -154,7 +155,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
         const result = await onFileUpload(file);
         if (!result.success) {
-            handleUploadFailure(result.error || '文件上传或解析失败，请重试');
+            handleUploadFailure(result.error || t('createGame.uploadParseFailed'));
             return;
         }
 
@@ -276,15 +277,15 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         if (currentJob.status === 'failed') {
             handledJobStateRef.current = handledStateKey;
             handleUploadFailure(
-                currentJob.error || '文件上传或解析失败，请重试',
+                currentJob.error || t('createGame.uploadParseFailed'),
                 {
                     fileName: currentJob.fileName,
                     progress: currentJob.progress ?? 0,
-                    stage: currentJob.stage || '解析失败',
+                    stage: currentJob.stage || t('createGame.parseFailed'),
                 },
             );
         }
-    }, [currentJob, handleUploadFailure, isParsing, onParsingSuccess]);
+    }, [currentJob, handleUploadFailure, isParsing, onParsingSuccess, t]);
 
     const handleRetry = () => {
         resetParseFeedback();
@@ -303,10 +304,10 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
     const isUploading = isParsing && !currentJob && uploadedFile;
     const progress = (currentJob?.progress ?? failedJobSnapshot?.progress) ?? 0;
-    const stage = currentJob?.stage || failedJobSnapshot?.stage || (isUploading ? '正在上传文件...' : '');
+    const stage = currentJob?.stage || failedJobSnapshot?.stage || (isUploading ? t('createGame.uploadStage') : '');
     const apiError =
         currentJob?.status === 'failed'
-            ? (currentJob.error || '文件上传或解析失败，请重试')
+            ? (currentJob.error || t('createGame.uploadParseFailed'))
             : (failedJobSnapshot?.error || null);
     const uploadEtaText = getUploadEtaText({
         status: currentJob?.status,
@@ -318,33 +319,33 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
     const parseSteps = useMemo(() => [
         {
             id: 'world',
-            label: '生成世界',
+            label: t('createGame.generatingWorld'),
             progress: 30,
             icon: HiOutlineGlobeAlt,
-            description: '正在分析文档结构，生成世界观设定...',
+            description: t('createGame.generatingWorldDesc'),
         },
         {
             id: 'npc',
-            label: '解析NPC',
+            label: t('createGame.parsingNpc'),
             progress: 55,
             icon: HiOutlineUserGroup,
-            description: '正在提取角色信息，构建 NPC 数据...',
+            description: t('createGame.parsingNpcDesc'),
         },
         {
             id: 'scene',
-            label: '解析场景',
+            label: t('createGame.parsingScene'),
             progress: 75,
             icon: HiOutlineMap,
-            description: '正在识别场景描述，整理场景节点...',
+            description: t('createGame.parsingSceneDesc'),
         },
         {
             id: 'complete',
-            label: '完成',
+            label: t('createGame.complete'),
             progress: 100,
             icon: HiOutlineCheckCircle,
-            description: '解析完成，准备跳转到下一步...',
+            description: t('createGame.parseCompleteDesc'),
         },
-    ], []);
+    ], [t]);
 
     const getCurrentStepIndex = () => {
         if (progress >= 100) return 3;
@@ -372,10 +373,10 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
                 <div>
-                    <p className={styles.eyebrow}>Step 1</p>
-                    <h2>上传设定文档 · 自动解析</h2>
+                    <p className={styles.eyebrow}>{t('gameEditor.step1')}</p>
+                    <h2>{t('createGame.uploadDocument')}</h2>
                     <p className={styles.subtitle}>
-                        一键上传 PDF / Word（.pdf / .docx），系统自动拆解世界观、角色与剧情节点
+                        {t('createGame.oneClickUploadTip')}
                     </p>
                 </div>
                 {onCreateEmptyGame && (
@@ -384,7 +385,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                         onClick={() => setShowCreateEmptyModal(true)}
                         disabled={isParsing}
                     >
-                        无文档，直接填写
+                        {t('createGame.withoutDocument')}
                     </button>
                 )}
             </div>
@@ -394,9 +395,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     <div className={styles.generateFromIdeaContent}>
                         <div className={styles.generateFromIdeaIcon}>✨</div>
                         <div className={styles.generateFromIdeaText}>
-                            <h3 className={styles.generateFromIdeaTitle}>AI 一句话生成游戏</h3>
+                            <h3 className={styles.generateFromIdeaTitle}>{t('createGame.aiGenerateFromIdea')}</h3>
                             <p className={styles.generateFromIdeaDesc}>
-                                输入你的游戏创意，AI 自动生成完整的游戏设定文档
+                                {t('createGame.aiIdeaDesc')}
                             </p>
                         </div>
                         <button
@@ -404,7 +405,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                             onClick={() => setShowGenerateFromIdeaModal(true)}
                             disabled={isParsing}
                         >
-                            立即生成
+                            {t('createGame.generateNow')}
                         </button>
                     </div>
                 </div>
@@ -412,9 +413,9 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
             <div className={styles.twoCol}>
                 <div className={styles.card}>
-                    <h3>文档导入</h3>
+                    <h3>{t('createGame.documentImport')}</h3>
                     <p className={styles.muted}>
-                        支持 PDF / Word（.pdf / .docx），解析完成后将自动跳转到「世界观表单」
+                        {t('createGame.documentUploadTip')}
                     </p>
 
                     {!uploadedFile ? (
@@ -435,7 +436,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                 onChange={handleFileSelect}
                             />
                             <div>
-                                <p>拖拽文件或<span className={styles.link}>点击上传</span></p>
+                                <p>{t('createGame.dragOrClickUpload')}</p>
                             </div>
                         </div>
                     ) : (
@@ -443,14 +444,14 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                             <span className={styles.fileName}>{uploadedFile.name}</span>
                             <span className={styles.fileSize}>{formatFileSize(uploadedFile.size)}</span>
                             {apiError && (
-                                <span className={styles.retryLink} onClick={handleRetry}>重试</span>
+                                <span className={styles.retryLink} onClick={handleRetry}>{t('common.retry')}</span>
                             )}
                         </div>
                     )}
 
                     {apiError && (
                         <>
-                            <p className={styles.errorText}>上传失败：{apiError}</p>
+                            <p className={styles.errorText}>{t('createGame.uploadFailed', { error: apiError })}</p>
                             <div className={styles.progressSection}>
                                 <div className={styles.progressHeader}>
                                     <span className={styles.progressPercentage}>
@@ -522,7 +523,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 
                     {!isParsing && !apiError && (
                         <p className={styles.mutedSmall}>
-                            解析完成后系统将自动为你打开 Step 2 继续校对。
+                            {t('createGame.step2AutoOpen')}
                         </p>
                     )}
                 </div>
@@ -549,14 +550,14 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                     <div className={styles.errorModalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.errorModalHeader}>
                             <div>
-                                <p className={styles.errorModalEyebrow}>解析失败</p>
-                                <h3>请重新上传文档</h3>
+                                <p className={styles.errorModalEyebrow}>{t('createGame.parseFailed')}</p>
+                                <h3>{t('createGame.pleaseReupload')}</h3>
                             </div>
                             <button
                                 type="button"
                                 className={styles.errorModalClose}
                                 onClick={closeParseErrorModal}
-                                aria-label="关闭解析失败弹窗"
+                                aria-label={t('createGame.closeParseErrorModal')}
                             >
                                 ×
                             </button>
@@ -565,19 +566,19 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                             <p className={styles.errorModalMessage}>{parseErrorModal.message}</p>
                             <div className={styles.errorDetailBlock}>
                                 <div className={styles.errorDetailHeader}>
-                                    <span>异常信息</span>
+                                    <span>{t('createGame.errorInfo')}</span>
                                     <button
                                         type="button"
                                         className={styles.copyErrorButton}
                                         onClick={handleCopyErrorDetail}
                                     >
-                                        复制报错信息
+                                        {t('createGame.copyErrorDetail')}
                                     </button>
                                 </div>
                                 <pre className={styles.errorDetailText}>{parseErrorModal.errorDetail}</pre>
                             </div>
                             <p className={styles.errorModalHint}>
-                                如果多次报错，请复制这个报错信息给技术人员
+                                {t('createGame.copyErrorTip')}
                             </p>
                         </div>
                         <div className={styles.errorModalFooter}>
@@ -586,7 +587,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
                                 className={styles.errorModalPrimary}
                                 onClick={closeParseErrorModal}
                             >
-                                关闭
+                                {t('common.close')}
                             </button>
                         </div>
                     </div>

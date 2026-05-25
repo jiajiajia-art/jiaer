@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { IoMailOutline, IoSearch } from 'react-icons/io5';
+import { useTranslation } from 'react-i18next';
 import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
@@ -37,6 +38,7 @@ const Navbar: React.FC<NavbarProps> = ({
     mobileOverlayScrolled = false,
     beforeLeaveAction,
 }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -243,13 +245,13 @@ const Navbar: React.FC<NavbarProps> = ({
                         className={`${styles.navLink} ${activeNav === 'home' ? styles.navLinkActive : ''}`}
                         onClick={() => runLeaveAction(() => navigate('/home'))}
                     >
-                        首页
+                        {t('nav.home')}
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === 'categories' ? styles.navLinkActive : ''}`}
                         onClick={() => runLeaveAction(() => navigate('/categories'))}
                     >
-                        分类
+                        {t('nav.categories')}
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === 'create' ? styles.navLinkActive : ''}`}
@@ -258,7 +260,7 @@ const Navbar: React.FC<NavbarProps> = ({
                             runLeaveAction(() => navigate('/create'));
                         }}
                     >
-                        创作
+                        {t('nav.create')}
                     </div>
                     <div
                         className={`${styles.navLink} ${activeNav === 'warehouse' ? styles.navLinkActive : ''}`}
@@ -267,7 +269,7 @@ const Navbar: React.FC<NavbarProps> = ({
                             runLeaveAction(() => navigate('/warehouse'));
                         }}
                     >
-                        仓库
+                        {t('nav.warehouse')}
                     </div>
                 </div>
 
@@ -280,7 +282,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                         <input
                             className={styles.searchInput}
-                            placeholder="查询游戏"
+                            placeholder={t('search.placeholder')}
                             value={searchKeyword}
                             onChange={(event) => setSearchKeyword(event.target.value)}
                             onFocus={() => {
@@ -294,18 +296,18 @@ const Navbar: React.FC<NavbarProps> = ({
                                 }
                             }}
                             autoComplete="off"
-                            aria-label="Search published games"
+                            aria-label={t('nav.searchAriaLabel')}
                         />
-                        <button type="submit" className={styles.searchIcon} aria-label="Submit game search">
+                        <button type="submit" className={styles.searchIcon} aria-label={t('nav.submitSearch')}>
                             <IoSearch />
                         </button>
 
                         {shouldShowSearchPanel ? (
                             <div className={styles.searchPanel}>
-                                {isSearching ? <div className={styles.searchEmpty}>Searching...</div> : null}
+                                {isSearching ? <div className={styles.searchEmpty}>{t('search.searching')}</div> : null}
                                 {!isSearching && searchError ? <div className={styles.searchEmpty}>{searchError}</div> : null}
                                 {!isSearching && !searchError && searchResults.length === 0 ? (
-                                    <div className={styles.searchEmpty}>没有找到游戏</div>
+                                    <div className={styles.searchEmpty}>{t('search.notFound')}</div>
                                 ) : null}
                                 {!isSearching && !searchError && searchResults.map((game) => {
                                     const gameId = getSearchResultId(game);
@@ -333,7 +335,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                 type="button"
                                 className={styles.messageButton}
                                 onClick={() => runLeaveAction(() => navigate('/messages'))}
-                                aria-label="消息中心"
+                                aria-label={t('nav.messages')}
                             >
                                 <IoMailOutline />
                                 {unreadBadgeText ? <span className={styles.messageBadge}>{unreadBadgeText}</span> : null}
@@ -364,7 +366,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 });
                                             }}
                                         >
-                                            个人中心
+                                            {t('nav.profile')}
                                         </button>
                                         {user?.user?.role === 'admin' && isDesktopLayout && (
                                             <button
@@ -376,7 +378,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                     });
                                                 }}
                                             >
-                                                管理面板
+                                                {t('nav.admin')}
                                             </button>
                                         )}
                                         <button
@@ -388,7 +390,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                                 });
                                             }}
                                         >
-                                            退出登录
+                                            {t('nav.logout')}
                                         </button>
                                     </div>
                                 )}
@@ -404,7 +406,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                     }
                                 }}
                             >
-                                登录
+                                {t('nav.login')}
                             </button>
                         )
                     )}

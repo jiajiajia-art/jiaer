@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './CharactersPanel.module.css';
 import CharacterLayer from '../../Galgame/CharacterLayer';
 import { CHARACTER_GENERATION_COST } from '../../../utils/constants';
@@ -86,6 +87,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     onDataChange,
     mode = 'visual',
 }, ref) => {
+    const { t } = useTranslation();
     const { fileId } = useGameStore();
     const { user, updateUser } = useAuthStore();
     const api = createApiHelpers(mode);
@@ -866,12 +868,12 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 确认添加差分
     const confirmAddVariation = () => {
         if (!newVariationType) {
-            toast.error('请选择差分类型');
+            toast.error(t('createGame.selectVariationType'));
             return;
         }
 
         if (!newVariationLabel || !newVariationLabel.trim()) {
-            toast.error('请输入差分标签');
+            toast.error(t('createGame.enterVariationLabel'));
             return;
         }
 
@@ -887,14 +889,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
         const isDuplicate = existingVariations.some(v => v.label === trimmedLabel && v.id !== editingVariationId);
         if (isDuplicate) {
-            toast.error(`差分「${trimmedLabel}」已存在，请使用不同的名称`);
+            toast.error(t('createGame.variationExists', { label: trimmedLabel }));
             return;
         }
 
         if (editingVariationId) {
             const targetVariation = existingVariations.find(v => v.id === editingVariationId);
             if (!targetVariation) {
-                toast.error('未找到当前差分');
+                toast.error(t('createGame.currentVariationNotFound'));
                 return;
             }
 
@@ -999,7 +1001,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         setActiveCharacterId(''); // 清空当前选中
     };
 
-    // 取消新增
+    // {t('common.cancel')}新增
     const cancelAddNew = () => {
         discardNewCharacterDraft();
     };
@@ -1009,19 +1011,19 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         const errors: { [key: string]: string } = {};
         
         if (!character.name || !character.name.trim()) {
-            errors.name = '姓名为必填字段，请填写后再提交';
+            errors.name = t('createGame.nameRequired');
         }
         if (!character.gender || !character.gender.trim()) {
-            errors.gender = '性别/形体为必填字段，请填写后再提交';
+            errors.gender = t('createGame.genderRequired');
         }
         if (!character.identity || !character.identity.trim()) {
-            errors.identity = '身份/当前身份为必填字段，请填写后再提交';
+            errors.identity = t('createGame.identityRequired');
         }
         if (!character.appearance || !character.appearance.trim()) {
-            errors.appearance = '外貌描述/Prompt为必填字段，请填写后再提交';
+            errors.appearance = t('createGame.appearanceRequired');
         }
         if (!character.speech || !character.speech.trim()) {
-            errors.speech = '口癖/语气为必填字段，请填写后再提交';
+            errors.speech = t('createGame.speechRequired');
         }
         
         setFieldErrors(errors);
@@ -1058,7 +1060,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 console.log('→ 满足缩放条件，开始处理...');
                 console.log('currentPortraitImage (原始):', currentPortraitImage);
                 console.log('displayPortraitImage (带cache bust):', displayPortraitImage);
-                toast.loading('正在处理立绘缩放...', { id: 'processing-scale' });
+                toast.loading(t('createGame.processingImage'), { id: 'processing-scale' });
                 // 使用 fetch 方式加载图片（需要服务器支持 CORS 头）
                 const scaledBlob = await scaleImageWithCanvas(displayPortraitImage, previewScale);
                 toast.dismiss('processing-scale');
@@ -1094,10 +1096,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         },
                     };
                     console.log('processedPendingImages 已设置:', processedPendingImages);
-                    toast.success('立绘已缩放处理');
+                    toast.success(t('createGame.imageScaled'));
                 } else {
                     console.log('✗ scaledBlob 为空，缩放失败');
-                    toast.error('立绘缩放失败，将使用原图');
+                    toast.error(t('createGame.imageScaleFailed'));
                 }
             } else {
                 console.log('→ 不满足缩放条件，跳过');
@@ -1122,7 +1124,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             if (attributePanelRef.current && attributePanelRef.current.hasChanges) {
                 const success = await attributePanelRef.current.saveAttributes();
                 if (!success) {
-                    toast.error('属性保存失败，请重试');
+                    toast.error(t('createGame.attributeSaveFailed'));
                     return false;
                 }
             }
@@ -1147,7 +1149,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             });
             options?.onPrimarySaved?.();
 
-            // 后上传图片
+            // 后{t('common.upload')}
             if (characterId && pendingForSavedCharacter) {
                 for (const [variant, pending] of Object.entries(pendingForSavedCharacter)) {
                     if (!pending.file) {
@@ -1187,11 +1189,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             onDataChange?.();
 
             // 所有操作完成后显示成功提示
-            toast.success(isAddingNew ? '角色创建成功' : '角色更新成功');
+            toast.success(isAddingNew ? t('createGame.characterCreated') : t('createGame.characterUpdated'));
             return true;
         } catch (error) {
             console.error('保存时发生错误:', error);
-            toast.error('保存时发生错误');
+            toast.error(t('createGame.saveError'));
             return false;
         } finally {
             setIsSavingCharacter(false);
@@ -1223,7 +1225,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     // 触发文件选择
     const handlePortraitClick = () => {
-        // 新增模式下禁止上传图片
+        // 新增模式下禁止{t('common.upload')}
         if (isAddingNew || isPortraitActionBusy) {
             return;
         }
@@ -1237,7 +1239,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     };
 
 
-    // 统一的上传图片方法 - 改为暂存预览模式，不直接上传
+    // 统一的{t('common.upload')}方法 - 改为暂存预览模式，不直接上传
     const handleUploadImage = async (
         file: File,
         options: {
@@ -1248,23 +1250,23 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         }
     ) => {
         if (isAddingNew) {
-            toast.error('请先确认增加角色后再上传图片');
+            toast.error(t('createGame.confirmAddCharacterFirst'));
             return;
         }
 
         if (isPortraitActionBusy) {
-            toast.error('当前有图片任务正在处理，请稍后再试');
+            toast.error(t('createGame.imageTaskProcessing'));
             return;
         }
 
         setIsUploadingPortrait(true);
         try {
             if (!file.type.startsWith('image/')) {
-                toast.error('请选择图片文件');
+                toast.error(t('createGame.selectImageFile'));
                 return;
             }
             if (file.size > 5 * 1024 * 1024) {
-                toast.error('图片大小不能超过 5MB');
+                toast.error(t('createGame.imageSizeTooLarge'));
                 return;
             }
 
@@ -1272,7 +1274,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             const targetCharacterId = characterId || activeCharacterId;
 
             if (!targetCharacterId || (targetCharacterId === 'player' && type !== 'player')) {
-                toast.error('缺少角色ID，无法上传');
+                toast.error(t('createGame.missingCharacterId'));
                 return;
             }
 
@@ -1318,7 +1320,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             }));
 
             setHasUnsavedChanges(true);
-            toast.success('图片已暂存，请在确认修改后保存');
+            toast.success(t('createGame.imageStaged'));
         } finally {
             if (options.inputRef && 'current' in options.inputRef && options.inputRef.current) {
                 options.inputRef.current.value = '';
@@ -1361,14 +1363,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // 新增模式下禁止上传图片
+        // 新增模式下禁止{t('common.upload')}
         if (isAddingNew) {
-            toast.error('请先确认增加角色后再上传图片');
+            toast.error(t('createGame.confirmAddCharacterFirst'));
             return;
         }
 
         if (!currentCharacter || !handlers) {
-            toast.error('缺少必要数据，无法上传');
+            toast.error(t('createGame.missingDataCannotUpload'));
             return;
         }
 
@@ -1397,12 +1399,12 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const handleRequestVariationGenerate = (variation: Variation) => {
         // 新增模式下禁止生成图片
         if (isAddingNew) {
-            toast.error('请先确认增加角色后再生成图片');
+            toast.error(t('createGame.generateImageFirst'));
             return;
         }
 
         if (!currentCharacter) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(t('createGame.missingDataCannotGenerate'));
             return;
         }
         setPendingVariationForGenerate({ variation, character: currentCharacter });
@@ -1441,7 +1443,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
 
     const confirmGenerateAllNpcImages = async () => {
         if (npcCostPoints != null && userPoints < npcCostPoints) {
-            toast.error('积分不足');
+            toast.error(t('createGame.insufficientPoints'));
             return;
         }
         setNpcCostModalOpen(false);
@@ -1461,7 +1463,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     // 点击单个 AI 生成前，先弹出积分确认
     const handleRequestSingleNpcGenerate = (character: Character) => {
         if (!fileId) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(t('createGame.missingDataCannotGenerate'));
             return;
         }
         setPendingCharacterForGenerate(character);
@@ -1500,10 +1502,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 link.click();
                 link.remove();
                 window.URL.revokeObjectURL(url);
-                toast.success('图片下载成功');
+                toast.success(t('createGame.imageDownloadSuccess'));
             } catch (error) {
                 console.error('下载 blob 图片失败:', error);
-                toast.error('下载图片失败');
+                toast.error(t('createGame.imageDownloadFailed'));
             }
             return;
         }
@@ -1518,7 +1520,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             document.body.appendChild(link);
             link.click();
             link.remove();
-            toast.success('图片下载成功');
+            toast.success(t('createGame.imageDownloadSuccess'));
             return;
         }
 
@@ -1534,11 +1536,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
-                toast.success('原生图片下载成功');
+                toast.success(t('createGame.nativeImageDownloadSuccess'));
                 return;
             } catch (error) {
                 console.error('下载图片失败:', error);
-                toast.error('下载图片失败，请稍后重试');
+                toast.error(t('createGame.imageDownloadFailedRetry'));
                 return;
             }
         }
@@ -1560,18 +1562,18 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 link.click();
                 link.remove();
                 window.URL.revokeObjectURL(url);
-                toast.success('图片下载成功');
+                toast.success(t('createGame.imageDownloadSuccess'));
                 return;
             } catch (error) {
                 console.error('下载图片失败:', error);
-                toast.error('下载图片失败，请稍后重试');
+                toast.error(t('createGame.imageDownloadFailedRetry'));
                 return;
             }
         }
 
         // 兜底：使用 api.downloadImage
         if (!fileId || !api) {
-            toast.error('缺少必要数据，无法下载');
+            toast.error(t('createGame.missingDataCannotDownload'));
             return;
         }
 
@@ -1590,10 +1592,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-            toast.success('图片下载成功');
+            toast.success(t('createGame.imageDownloadSuccess'));
         } catch (error) {
             console.error('下载图片失败:', error);
-            toast.error('下载图片失败，请稍后重试');
+            toast.error(t('createGame.imageDownloadFailedRetry'));
         }
     };
 
@@ -1601,9 +1603,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         <div className={`${styles.panelContent} ${isSaveOverlayVisible ? styles.panelContentSaving : ''}`}>
             <div className={styles.panelHeader}>
                 <div>
-                    <p className={styles.eyebrow}>Step 3</p>
-                    <h2>角色档案 & 立绘差分</h2>
-                    <p className={styles.subtitle}>解析出的角色自动列出，可逐项确认姓名、称呼、口癖与立绘</p>
+                    <p className={styles.eyebrow}>{t('gameEditor.step3')}</p>
+                    <h2>{t('createGame.characterProfile')}</h2>
+                    <p className={styles.subtitle}>{t('createGame.characterProfileTip')}</p>
                 </div>
                 <GenerationActionBar>
                     <button
@@ -1618,9 +1620,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                         />
                         <div className={styles.buttonTextContainer}>
                             <span className={styles.buttonMainText}>
-                                {isGeneratingNpcImages ? '生成中...' : '一键生成所有角色立绘'}
+                                {isGeneratingNpcImages ? t('createGame.generating') : t('createGame.generateAllCharacterPortraits')}
                             </span>
-                            <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}积分/张</span>
+                            <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}{t('createGame.pointsPerImage')}</span>
                         </div>
                     </button>
                 </GenerationActionBar>
@@ -1659,7 +1661,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             style={{ display: 'none' }}
                         />
 
-                        {/* 右侧面板头部 - 确认/取消按钮 */}
+                        {/* 右侧面板头部 - 确认/{t('common.cancel')}按钮 */}
                         {isAddingNew ? (
                             <div className={styles.detailActionRow}>
                                 <button
@@ -1667,10 +1669,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     onClick={() => { void confirmEdit(); }}
                                     disabled={isPortraitActionBusy}
                                 >
-                                    确认增加
+                                    {t('createGame.confirmAdd')}
                                 </button>
                                 <button className={styles.ghostSmall} onClick={cancelAddNew} disabled={isSavingCharacter}>
-                                    取消
+                                    {t('common.cancel')}
                                 </button>
                             </div>
                         ) : (
@@ -1686,14 +1688,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     }}
                                     disabled={!currentPortraitImage || isPortraitActionBusy}
                                 >
-                                    {isPreviewMode ? '退出预览' : '立绘大小预览'}
+                                    {isPreviewMode ? t('createGame.exitPreview') : t('createGame.portraitSizePreview')}
                                 </button>
                                 <button
                                     className={styles.ghostSmall}
                                     onClick={() => { void confirmEdit(); }}
                                     disabled={isPortraitActionBusy}
                                 >
-                                    确认修改
+                                    {t('common.confirmEdit')}
                                 </button>
                             </div>
                         )}
@@ -1734,7 +1736,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     <div className={styles.portraitPreviewControls}>
                                         <div className={styles.portraitPreviewSection}>
                                             <div className={styles.portraitPreviewSliderRow}>
-                                                <span className={styles.portraitPreviewLabel}>缩放</span>
+                                                <span className={styles.portraitPreviewLabel}>{t('createGame.scale')}</span>
                                                 <input
                                                     type="range"
                                                     min="0.1"
@@ -1749,7 +1751,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         </div>
                                         <div className={styles.portraitPreviewSection}>
                                             <div className={styles.portraitPreviewSliderRow}>
-                                                <span className={styles.portraitPreviewLabel}>X轴</span>
+                                                <span className={styles.portraitPreviewLabel}>{t('createGame.xAxis')}</span>
                                                 <input
                                                     type="range"
                                                     min="-200"
@@ -1768,7 +1770,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                 <span className={styles.portraitPreviewValue}>{currentCharacter?.portraitOffsetX || 0}</span>
                                             </div>
                                             <div className={styles.portraitPreviewSliderRow}>
-                                                <span className={styles.portraitPreviewLabel}>Y轴</span>
+                                                <span className={styles.portraitPreviewLabel}>{t('createGame.yAxis')}</span>
                                                 <input
                                                     type="range"
                                                     min="-200"
@@ -1806,13 +1808,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     ));
                                                 }}
                                             >
-                                                重置
+                                                {t('createGame.reset')}
                                             </button>
                                             <button
                                                 className={styles.ghostSmall}
                                                 onClick={() => setIsPreviewMode(false)}
                                             >
-                                                退出预览
+                                                {t('createGame.exitPreview')}
                                             </button>
                                         </div>
                                     </div>
@@ -1841,19 +1843,19 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     handleDownloadImage('npcs', currentCharacter.id, 'base', currentPortraitImage);
                                                 }
                                             }}
-                                            title="下载图片"
+                                            title={t('createGame.downloadImage')}
                                             disabled={isPortraitActionBusy}
                                         >
                                             <MdDownload size={18} />
                                         </button>
                                     )}
                                     <span className={styles.portraitHint}>
-                                        {isAddingNew ? '请先确认增加角色后再上传图片' : '点击替换角色基础立绘'}
+                                        {isAddingNew ? t('createGame.confirmAddCharacterFirst') : t('createGame.clickReplacePortrait')}
                                     </span>
                                     {isCurrentPortraitGenerating && (
                                         <div className={styles.loadingOverlay}>
                                             <div className={styles.loadingSpinner}></div>
-                                            <div className={styles.loadingText}>正在生成角色立绘...</div>
+                                            <div className={styles.loadingText}>{t('createGame.generatingCharacterPortrait')}</div>
                                             {singleCharacterEtaText && (
                                                 <div className={styles.loadingHint}>{singleCharacterEtaText}</div>
                                             )}
@@ -1868,7 +1870,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     onClick={handlePortraitClick}
                                     disabled={isAddingNew || isPortraitActionBusy}
                                 >
-                                    上传图片
+                                    {t('common.upload')}
                                 </button>
                                 {currentCharacter && (
                                     <button
@@ -1890,7 +1892,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div className={styles.formGrid}>
                                 <label>
                                     <div className={styles.labelRowWithCounter}>
-                                        <span>姓名{requiredFields.includes('name') && <span className={styles.required}>*</span>}</span>
+                                        <span>{t('createGame.name')}{requiredFields.includes('name') && <span className={styles.required}>*</span>}</span>
                                         <span className={styles.wordCounter}>
                                             {nameWords}/{CHARACTER_WORD_LIMITS.name}
                                         </span>
@@ -1912,7 +1914,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     )}
                                 </label>
                                 <label>
-                                    <span>称呼 / 昵称</span>
+                                    <span>{t('createGame.nickname')}</span>
                                     <InlineFieldSave
                                         showSave={characterFieldDirtyState.callName}
                                         onSave={() => { void confirmEdit(); }}
@@ -1927,7 +1929,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 </label>
                                 <label>
                                     <div className={styles.labelRowWithCounter}>
-                                        <span>性别 / 形体{requiredFields.includes('gender') && <span className={styles.required}>*</span>}</span>
+                                        <span>{t('createGame.gender')}{requiredFields.includes('gender') && <span className={styles.required}>*</span>}</span>
                                         <span className={styles.wordCounter}>
                                             {genderWords}/{CHARACTER_WORD_LIMITS.gender}
                                         </span>
@@ -1950,7 +1952,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 </label>
                                 <label>
                                     <div className={styles.labelRowWithCounter}>
-                                        <span>身份 / 当前身份{requiredFields.includes('identity') && <span className={styles.required}>*</span>}</span>
+                                        <span>{t('createGame.identity')}{requiredFields.includes('identity') && <span className={styles.required}>*</span>}</span>
                                         <span className={styles.wordCounter}>
                                             {identityWords}/{CHARACTER_WORD_LIMITS.identity}
                                         </span>
@@ -1973,7 +1975,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 </label>
                                 <label className={styles.wide}>
                                     <div className={styles.labelRowWithCounter}>
-                                        <span>性格标签</span>
+                                        <span>{t('createGame.personalityTags')}</span>
                                         <span className={styles.wordCounter}>
                                             {personalityWords}/{CHARACTER_WORD_LIMITS.personality}
                                         </span>
@@ -1990,13 +1992,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                         onBlur={() => {
                                             updateField('personality', normalizePersonalityTags(personalityInputValue));
                                         }}
-                                        placeholder="输入性格标签，用 / 或 ，分隔"
+                                        placeholder={t('createGame.personalityTagsPlaceholder')}
                                     />
                                     </InlineFieldSave>
                                 </label>
                                 <label className={styles.wide}>
                                     <div className={styles.labelRowWithCounter}>
-                                        <span>口癖 / 语气{requiredFields.includes('speech') && <span className={styles.required}>*</span>}</span>
+                                        <span>{t('createGame.speech')}{requiredFields.includes('speech') && <span className={styles.required}>*</span>}</span>
                                         <span className={styles.wordCounter}>
                                             {speechWords}/{CHARACTER_WORD_LIMITS.speech}
                                         </span>
@@ -2019,7 +2021,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 </label>
                                 <label className={styles.wide}>
                                     <div className={styles.labelRowWithCounter}>
-                                        <span>外貌描述 / Prompt{requiredFields.includes('appearance') && <span className={styles.required}>*</span>}</span>
+                                        <span>{t('createGame.appearance')}{requiredFields.includes('appearance') && <span className={styles.required}>*</span>}</span>
                                         <span className={styles.wordCounter}>
                                             {appearanceWords}/{CHARACTER_WORD_LIMITS.appearance}
                                         </span>
@@ -2049,10 +2051,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => setIsVariationExpanded(!isVariationExpanded)}
                                 >
-                                    <strong>立绘差分</strong>
+                                    <strong>{t('createGame.characterVariations')}</strong>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                         <span className={styles.mutedSmall}>
-                                            {currentCharacter.variations.filter(v => v.label !== 'base').length} 个差分
+                                            {t('createGame.variationsCount', { count: currentCharacter.variations.filter(v => v.label !== 'base').length })}
                                         </span>
                                         <MdArrowDropDown size={30} style={{ transform: isVariationExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                                     </div>
@@ -2086,7 +2088,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                 e.stopPropagation();
                                                                 openEditVariationModal(variation);
                                                             }}
-                                                            title="编辑差分"
+                                                            title={t('createGame.editVariation')}
                                                             disabled={isGeneratingVariation && generatingVariationId === variation.id}
                                                         >
                                                             <MdEdit size={14} />
@@ -2099,7 +2101,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                 setPendingVariationToDelete({ variation, character: currentCharacter });
                                                                 setDeleteVariationModalOpen(true);
                                                             }}
-                                                            title="删除差分"
+                                                            title={t('createGame.deleteVariation')}
                                                             disabled={isGeneratingVariation && generatingVariationId === variation.id}
                                                         >
                                                             <RiDeleteBin5Line size={14} />
@@ -2114,12 +2116,12 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                 const downloadType = currentCharacter.id === 'player' ? 'players' : 'npcs';
                                                                 handleDownloadImage(downloadType, currentCharacter.id, variantType, variation.img);
                                                             }}
-                                                            title="下载图片"
+                                                            title={t('createGame.downloadImage')}
                                                         >
                                                             <MdDownload size={14} />
                                                         </button>
                                                     </>
-                                                        {!effectiveImage && !isGeneratingVariation && <span className={styles.mutedSmall}>等待图片</span>}
+                                                        {!effectiveImage && !isGeneratingVariation && <span className={styles.mutedSmall}>{t('createGame.waitingForImage')}</span>}
                                                     </div>
                                                     <p>{variation.label}</p>
                                                     {variation.description && (
@@ -2144,7 +2146,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                             onClick={() => variationFileInputRefs.current[variation.id]?.click()}
                                                             disabled={isAddingNew || (isGeneratingVariation && generatingVariationId === variation.id)}
                                                         >
-                                                            上传图片
+                                                            {t('common.upload')}
                                                         </button>
                                                         <button
                                                             className={`${styles.ghostTiny} ${styles.generateButton}`}
@@ -2156,13 +2158,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                 alt=""
                                                                 className={styles.priceIcon}
                                                             />
-                                                            <span>{isGeneratingVariation && generatingVariationId === variation.id ? '生成中...' : `${CHARACTER_GENERATION_COST} AI生成`}</span>
+                                                            <span>{isGeneratingVariation && generatingVariationId === variation.id ? t('createGame.generating') : `${CHARACTER_GENERATION_COST} ${t('createGame.aiGenerate')}`}</span>
                                                         </button>
                                                     </div>
                                                 </div>
                                                 );
                                             })}
-                                            <button className={styles.addCard} onClick={addVariation}>+ 新差分</button>
+                                            <button className={styles.addCard} onClick={addVariation}>+ {t('createGame.newVariation')}</button>
                                         </div>
                                     )}
                                 </div>
@@ -2186,9 +2188,9 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => setIsBackgroundExpanded(!isBackgroundExpanded)}
                                 >
-                                    <strong>人物背景故事</strong>
+                                    <strong>{t('createGame.characterBackground')}</strong>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span className={styles.mutedSmall}>不限格式，选填项</span>
+                                        <span className={styles.mutedSmall}>{t('createGame.formatFreeOptional')}</span>
                                         <MdArrowDropDown size={30} style={{ transform: isBackgroundExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                                     </div>
                                 </div>
@@ -2196,7 +2198,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                     <div className={styles.formGrid}>
                                         <label className={styles.wide}>
                                             <div className={styles.labelRowWithCounter}>
-                                                <span>人物背景故事</span>
+                                                <span>{t('createGame.characterBackground')}</span>
                                                 <span className={styles.wordCounter}>
                                                     {backgroundWords}/{CHARACTER_WORD_LIMITS.background}
                                                 </span>
@@ -2209,7 +2211,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             <textarea
                                                 rows={4}
                                                 value={currentCharacter.background}
-                                                placeholder="可填写：成长经历/目标/秘密/人物关系等，会统一作为背景在剧情中生效"
+                                                placeholder={t('createGame.backgroundPlaceholder')}
                                                 {...backgroundLimit}
                                             />
                                             </InlineFieldSave>
@@ -2227,13 +2229,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 <div className={styles.modalOverlay} onClick={closeVariationModal}>
                     <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h3>{editingVariationId ? '编辑差分' : '新增差分'}</h3>
+                            <h3>{editingVariationId ? t('createGame.editVariation') : t('createGame.addVariation')}</h3>
                             <button className={styles.modalClose} onClick={closeVariationModal}>×</button>
                         </div>
                         <div className={styles.modalBody}>
                             <label>
-                                <span>差分类型<span className={styles.required}>*</span></span>
-                                <div className={styles.variationTypeGroup} role="radiogroup" aria-label="差分类型">
+                                <span>{t('createGame.variationType')}<span className={styles.required}>*</span></span>
+                                <div className={styles.variationTypeGroup} role="radiogroup" aria-label={t('createGame.variationType')}>
                                     {VARIATION_TYPES.map((type) => {
                                         const isSelected = newVariationType === type.value;
                                         return (
@@ -2256,23 +2258,23 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                 </div>
                             </label>
                             <label>
-                                <span>差分标签<span className={styles.required}>*</span></span>
+                                <span>{t('createGame.variationLabel')}<span className={styles.required}>*</span></span>
                                 <input type="text" value={newVariationLabel} onChange={(e) => setNewVariationLabel(e.target.value)} />
                             </label>
                             <label>
-                                <span>描述（可选）</span>
+                                <span>{t('createGame.descriptionOptional')}</span>
                                 <textarea
                                     rows={3}
                                     value={newVariationDescription}
                                     onChange={(e) => setNewVariationDescription(e.target.value)}
-                                    placeholder="输入差分描述..."
+                                    placeholder={t('createGame.variationLabelPlaceholder')}
                                 />
                             </label>
                         </div>
                         <div className={styles.modalFooter}>
-                            <button className={styles.ghostSmall} onClick={closeVariationModal}>取消</button>
+                            <button className={styles.ghostSmall} onClick={closeVariationModal}>{t('common.cancel')}</button>
                             <button className={styles.ghostSmall} onClick={confirmAddVariation}>
-                                {editingVariationId ? '保存' : '确认'}
+                                {editingVariationId ? t('common.save') : t('common.confirm')}
                             </button>
                         </div>
                     </div>
@@ -2284,10 +2286,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 isOpen={deleteModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
-                title="删除角色"
-                message="删除后角色数据不可恢复，请谨慎操作！"
-                confirmButtonText="确认删除"
-                cancelButtonText="我再想想"
+                title={t('createGame.deleteCharacter')}
+                message={t('createGame.deleteCharacterWarning')}
+                confirmButtonText={t('common.confirm')}
+                cancelButtonText={t('common.thinkLater')}
             />
 
             {/* 一键生成角色立绘积分提示 */}
@@ -2295,14 +2297,14 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 isOpen={npcCostModalOpen}
                 onConfirm={confirmGenerateAllNpcImages}
                 onCancel={() => setNpcCostModalOpen(false)}
-                title="积分扣除确认"
+                title={t('common.pointsDeductionConfirm')}
                 message={
                     npcCostPoints != null
-                        ? `本次一键生成角色立绘将扣除 ${npcCostPoints} 积分（当前账户积分 ${userPoints}${npcCostPoints > userPoints ? '，积分不足' : ''}），是否继续？`
-                        : `将扣除一定积分（当前积分 ${userPoints}），是否继续？`
+                        ? t('createGame.batchCharacterGenerationConfirm', { points: npcCostPoints, currentPoints: userPoints, insufficient: npcCostPoints > userPoints ? t('common.insufficient') : '' })
+                        : t('common.deductSomePoints', { currentPoints: userPoints })
                 }
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                confirmButtonText={t('common.confirmGenerate')}
+                cancelButtonText={t('common.cancel')}
             />
 
             {/* 单个角色立绘生成积分提示 */}
@@ -2310,17 +2312,17 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 isOpen={singleNpcCostModalOpen}
                 onConfirm={confirmSingleNpcGenerate}
                 onCancel={cancelSingleNpcGenerate}
-                title="积分扣除确认"
-                message={`本次生成角色立绘将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                title={t('createGame.characterPortraitGenerationConfirm')}
+                message={t('createGame.singleCharacterGenerationConfirm', { cost: CHARACTER_GENERATION_COST })}
+                confirmButtonText={t('common.confirmGenerate')}
+                cancelButtonText={t('common.cancel')}
             />
 
             {/* 一键生成角色立绘结果弹窗 */}
             <GenerateResultModal
                 isOpen={npcResultModalOpen}
                 onClose={() => setNpcResultModalOpen(false)}
-                title="角色立绘生成结果"
+                title={t('createGame.characterPortraitGenerationResult')}
                 generatedCount={npcGenerationResult?.generatedCount}
                 totalCount={npcGenerationResult?.totalCount}
                 pointsDeducted={npcGenerationResult?.pointsDeducted}
@@ -2332,10 +2334,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 isOpen={variationCostModalOpen}
                 onConfirm={confirmVariationGenerate}
                 onCancel={cancelVariationGenerate}
-                title="积分扣除确认"
-                message={`本次生成差分图片将扣除 ${CHARACTER_GENERATION_COST} 积分，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                title={t('common.pointsDeductionConfirm')}
+                message={t('createGame.variationGenerationConfirm', { cost: CHARACTER_GENERATION_COST })}
+                confirmButtonText={t('common.confirmGenerate')}
+                cancelButtonText={t('common.cancel')}
             />
 
             {/* 差分删除确认弹窗 */}
@@ -2355,10 +2357,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     setDeleteVariationModalOpen(false);
                     setPendingVariationToDelete(null);
                 }}
-                title="删除差分"
-                message="删除后差分图片不可恢复，请谨慎操作！"
-                confirmButtonText="确认删除"
-                cancelButtonText="我再想想"
+                title={t('createGame.deleteVariation')}
+                message={t('createGame.deleteVariationWarning')}
+                confirmButtonText={t('common.confirm')}
+                cancelButtonText={t('common.thinkLater')}
             />
 
             {isBatchNpcJobActive && (
@@ -2404,7 +2406,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             executePendingAction();
                         }
                     } catch (error) {
-                        toast.error('保存失败，请重试');
+                        toast.error(t('createGame.saveFailedRetry'));
                     }
                 }}
                 onDiscard={() => {
@@ -2430,10 +2432,10 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                     isBlockingSwitchRef.current = false;
                     pendingPanelActionRef.current = null;
                 }}
-                title="未保存的修改"
-                message="您有未保存的修改，是否要保存？"
-                saveButtonText="保存"
-                discardButtonText="不保存"
+                title={t('createGame.unsavedChanges')}
+                message={t('createGame.unsavedChangesMessage')}
+                saveButtonText={t('common.save')}
+                discardButtonText={t('common.discard')}
             />
 
             {/* 保存遮罩层 */}
@@ -2441,7 +2443,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 <div className={styles.saveOverlay}>
                     <div className={styles.saveOverlayContent}>
                         <div className={styles.saveOverlaySpinner}></div>
-                        <div className={styles.saveOverlayText}>保存中，请不要切换页面</div>
+                        <div className={styles.saveOverlayText}>{t('createGame.savingPleaseWait')}</div>
                     </div>
                 </div>
             )}

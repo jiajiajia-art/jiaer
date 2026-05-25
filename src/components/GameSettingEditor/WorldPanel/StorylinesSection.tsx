@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MdArrowDropDown } from 'react-icons/md';
 import styles from './WorldPanel.module.css';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
@@ -33,6 +34,7 @@ const StorylineItem: React.FC<{
     line: StoryLine;
     onStorylineChange: (id: string, key: 'tag' | 'content' | 'index', value: string | number) => void;
 }> = ({ line, onStorylineChange }) => {
+    const { t } = useTranslation();
     const tagWords = useWordCount(line.tag);
     const contentWords = useWordCount(line.content);
     const tagLimit = useWordLimit(STORYLINE_WORD_LIMITS.tag, (value) => onStorylineChange(line.id, 'tag', value));
@@ -43,7 +45,7 @@ const StorylineItem: React.FC<{
             <div className={styles.storylineMeta}>
                 <label>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <span>标签</span>
+                        <span>{t('createGame.storylineTag')}</span>
                         <span className={styles.wordCounter}>
                             {tagWords}/{STORYLINE_WORD_LIMITS.tag}
                         </span>
@@ -57,7 +59,7 @@ const StorylineItem: React.FC<{
             </div>
             <label className={styles.wide}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <span>内容</span>
+                    <span>{t('createGame.storylineContent')}</span>
                     <span className={styles.wordCounter}>
                         {contentWords}/{STORYLINE_WORD_LIMITS.content}
                     </span>
@@ -82,9 +84,10 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
     onStorylineChange,
     onRemoveStoryline,
 }) => {
+    const { t } = useTranslation();
     // 按 index 排序（用户可见的序号）
     const sortedStorylines = [...storylines].sort((a, b) => a.index - b.index);
-    
+
     // 本地状态保存用户正在输入的序号值（避免输入时被重置）
     const [editingIndex, setEditingIndex] = useState<Record<string, string>>({});
     return (
@@ -94,22 +97,22 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                     <span className={styles.fieldLabel}>
                         {isWorldInteractionMode ? (
                             <>
-                                故事线
+                                {t('createGame.storyline')}
                                 <span className={styles.required}>*</span>
-                                <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>（必填）</span>
+                                <span style={{ color: 'var(--primary)', fontWeight: 600, marginLeft: '8px' }}>{t('createGame.storylineRequired2')}</span>
                             </>
                         ) : (
-                            '故事线（可选）'
+                            t('createGame.storylineOptional')
                         )}
                     </span>
                     {isWorldInteractionMode && (
                         <span className={styles.fieldHint} style={{ fontSize: '0.8rem', color: 'rgba(224, 61, 75, 0.8)' }}>
-                            用于约束世界交互节奏，必须至少添加一条
+                            {t('createGame.storylineHint')}
                         </span>
                     )}
                     {!isExpanded && isWorldInteractionMode && storylines.length === 0 && (
                         <span className={styles.errorText} style={{ fontSize: '0.85rem', marginTop: '4px' }}>
-                            请添加至少一条故事线
+                            {t('createGame.storylineAddRequired')}
                         </span>
                     )}
                 </div>
@@ -122,7 +125,7 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                                 onAddStoryline();
                             }}
                         >
-                            + 添加故事线
+                            {t('createGame.addStoryline')}
                         </button>
                     )}
                     <MdArrowDropDown size={30} style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
@@ -131,7 +134,7 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
             {isExpanded && (
                 <>
                     <span className={styles.fieldHint} style={{ marginBottom: '16px', display: 'block' }}>
-                        用标签 + 内容描述关键剧情走向，方便约束 AI 推演。
+                        {t('createGame.storylineDescription')}
                     </span>
                     {error && (
                         <span className={styles.errorText} style={{ marginBottom: '12px', display: 'block' }}>
@@ -142,14 +145,14 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                         {sortedStorylines.length === 0 ? (
                             <p className={isWorldInteractionMode ? styles.emptyHintRequired : styles.emptyHint}>
                                 {isWorldInteractionMode
-                                    ? '⚠️ 请至少添加一条故事线（世界交互模式下为必填项）'
-                                    : '暂未添加故事线。可按时间、好感或章节自定义标签。'}
+                                    ? t('createGame.storylineEmptyRequired')
+                                    : t('createGame.storylineEmptyOptional')}
                             </p>
                         ) : (
                             sortedStorylines.map((line) => (
                                 <div key={line.id} className={styles.storylineRow}>
                                     <label className={styles.storylineOrderLabel}>
-                                        <span>序号</span>
+                                        <span>{t('createGame.storylineOrder')}</span>
                                         <input
                                             type="number"
                                             min="1"
@@ -187,7 +190,7 @@ const StorylinesSection: React.FC<StorylinesSectionProps> = ({
                                         className={styles.ghostTiny}
                                         onClick={() => onRemoveStoryline(line.id)}
                                     >
-                                        删除
+                                        {t('createGame.storylineDelete')}
                                     </button>
                                 </div>
                             ))

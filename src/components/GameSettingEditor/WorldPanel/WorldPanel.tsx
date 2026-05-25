@@ -1,5 +1,6 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useImperativeHandle } from 'react';
 import { useLayoutEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './WorldPanel.module.css';
 import type { AllGameData } from '../../../api/galgame/EditorData.type';
 import type { WorldInteractionGameData } from '../../../api/worldInteraction/worldInteractionApi.type';
@@ -105,6 +106,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     mode = 'visual',
     onDataChange,
 }, ref) => {
+    const { t } = useTranslation();
     const [title, setTitle] = useState<string>('');
     const [tagline, setTagline] = useState<string>('');
     const [era, setEra] = useState<string>('');
@@ -296,7 +298,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         } else {
             setStorylines([]);
             if (isWorldInteractionMode) {
-                setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
+                setStorylineError(t('createGame.storylineRequired'));
             }
         }
         const initialThemeTagIds = resolveInitialThemeTagIds(gameData, displayThemeTags, persistedThemeTagIds);
@@ -335,7 +337,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
                 return next;
             }
             if (prev.length >= 2) {
-                showWorldPanelErrorToast('作品标签最多选择 2 个');
+                showWorldPanelErrorToast(t('createGame.themeTagMax2'));
                 return prev;
             }
             setThemeTagError('');
@@ -430,7 +432,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
         setStorylines(prev => {
             const reordered = reorderStorylines(prev.filter(item => item.id !== id));
             if (isWorldInteractionMode && reordered.length === 0) {
-                setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
+                setStorylineError(t('createGame.storylineRequired'));
             }
             return reordered;
         });
@@ -638,30 +640,30 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
     const validateWorldSettingBeforeSave = useCallback(() => {
         const openingTrimmed = opening.trim();
         if (!openingTrimmed) {
-            setOpeningError('开场白为必填字段，请填写后再提交');
-            showWorldPanelErrorToast('开场白为必填字段，请填写后再提交');
+            setOpeningError(t('createGame.openingRequired'));
+            showWorldPanelErrorToast(t('createGame.openingRequired'));
             return false;
         }
         setOpeningError('');
 
         const openingPlotTrimmed = openingPlot.trim();
         if (!openingPlotTrimmed) {
-            setOpeningPlotError('开场剧情为必填字段，请填写后再提交');
-            showWorldPanelErrorToast('开场剧情为必填字段，请填写后再提交');
+            setOpeningPlotError(t('createGame.openingPlotRequired'));
+            showWorldPanelErrorToast(t('createGame.openingPlotRequired'));
             return false;
         }
         setOpeningPlotError('');
 
         // 实现题材标签保存校验
         if (selectedThemeTagIds.length < 1 || selectedThemeTagIds.length > 2) {
-            setThemeTagError('请选择 1~2 个作品标签');
-            showWorldPanelErrorToast('作品标签为必填，且最多选择 2 个');
+            setThemeTagError(t('createGame.themeTagRequired'));
+            showWorldPanelErrorToast(t('createGame.themeTagRequiredMax2'));
             return false;
         }
         setThemeTagError('');
 
         if (isWorldInteractionMode && storylines.length === 0) {
-            setStorylineError('请至少添加一条故事线（世界交互模式下为必填）');
+            setStorylineError(t('createGame.storylineRequired'));
             setIsStorylineExpanded(true);
             showWorldPanelErrorToast('请至少添加一条故事线（世界交互模式下为必填）');
             return false;
@@ -681,7 +683,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
         const fullWorldSetting = getFullWorldSettingData();
         if (!fullWorldSetting) {
-            showWorldPanelErrorToast('没有需要保存的世界观数据');
+            showWorldPanelErrorToast(t('createGame.noDataToSave'));
             return false;
         }
 
@@ -730,7 +732,7 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             } catch (error) {
                 pendingLeaveActionRef.current = null;
                 clearLeaveActionState(false);
-                showWorldPanelErrorToast('保存失败，请重试');
+                showWorldPanelErrorToast(t('createGame.saveFailedRetry'));
             }
         })();
 
@@ -784,8 +786,8 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
 
             <div className={styles.panelHeader}>
                 <div>
-                    <h2>世界观设定 & 叙事风格</h2>
-                    <p className={styles.subtitle}>请完善世界观基础信息，帮助 AI 更准确生成剧情与演出细节</p>
+                    <h2>{t('createGame.worldSettingNarrativeStyle')}</h2>
+                    <p className={styles.subtitle}>{t('createGame.worldSettingSubtitle')}</p>
                 </div>
             </div>
 
@@ -794,14 +796,14 @@ const WorldPanel = React.forwardRef<WorldPanelRef, WorldPanelProps>(({
             <div className={styles.formContainer}>
                 {/* 实现世界观设定标题与右上角确认按钮 */}
                 <div className={styles.cardHead}>
-                    <strong className={styles.cardTitle}>世界观设定</strong>
+                    <strong className={styles.cardTitle}>{t('createGame.worldSetting')}</strong>
                     {handleSubmit && (
                         <button
                             className={styles.ghostSmall}
                             onClick={handleConfirmSubmit}
                             disabled={!gameData || isSubmitting}
                         >
-                            {isSubmitting ? '提交中...' : '确认修改'}
+                            {isSubmitting ? t('createGame.submitting') : t('createGame.confirmEdit')}
                         </button>
                     )}
                 </div>

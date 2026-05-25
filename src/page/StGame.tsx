@@ -7,6 +7,7 @@ import StShowdownText from '../components/StGame/StShowdownText';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { buildStSceneSrcDoc } from '../utils/stSceneHtml';
+import { useTranslation } from 'react-i18next';
 
 type CreateResp = {
   success: boolean;
@@ -43,7 +44,8 @@ type SceneActionByMessagesPayload = {
 };
 
 const StGame: React.FC = () => {
-  const { appId } = useParams();
+    const { t } = useTranslation();
+    const { appId } = useParams();
   const [sessionId, setSessionId] = useState<string>('');
   const [rules, setRules] = useState<StRenderRule[]>([]);
   const [input, setInput] = useState('');
@@ -85,7 +87,7 @@ const StGame: React.FC = () => {
         const resp = await stApi.createSession(appId, { autoStart: true });
         const data: CreateResp = resp.data;
         if (cancelled) return;
-        if (!data?.success) throw new Error('创建会话失败');
+        if (!data?.success) throw new Error(t('stGame.sessionCreateFailed'));
         setSessionId(data.sessionId);
         setRules(data.renderRegex || []);
         const openingText = String(data.opening?.text || '');
@@ -255,7 +257,7 @@ const StGame: React.FC = () => {
       const resp = await stApi.actByMessages(appId, sessionId, body);
       const data = resp.data as ActResp;
       if (!data?.success) {
-        throw new Error('action-by-messages 请求失败');
+        throw new Error(t('stGame.actionByMessagesFailed'));
       }
       setRules(data.renderRegex || []);
       postSceneMessage({
@@ -393,7 +395,7 @@ const StGame: React.FC = () => {
             type: 'st:error',
             payload: {
               requestId: crypto.randomUUID(),
-              message: String((e2 as Error)?.message || e2 || '请求失败'),
+              message: String((e2 as Error)?.message || e2 || t('stGame.requestFailed')),
             },
           });
         }
@@ -518,7 +520,7 @@ const StGame: React.FC = () => {
     return () => window.removeEventListener('message', handler);
   }, [isSceneMode, sessionId, appId, send]);
 
-  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>加载中…</div>;
+  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>{t('stGame.loading')}</div>;
 
   if (isSceneMode) {
     return (
@@ -558,13 +560,13 @@ const StGame: React.FC = () => {
         <div className={styles.inputBar}>
           <input
             className={styles.text}
-            placeholder="输入…"
+            placeholder={t('stGame.inputPlaceholder')}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send(); }}
             disabled={sending}
           />
-          <button className={styles.send} onClick={() => { void send(); }} disabled={sending || !input.trim()}>发送</button>
+          <button className={styles.send} onClick={() => { void send(); }} disabled={sending || !input.trim()}>{t('stGame.send')}</button>
         </div>
       </div>
       <FooterArea />

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Pagination from './Pagination';
 import subscriptionKeysApi from '../api/subscriptionKeys/subscriptionKeysApi';
@@ -111,6 +112,7 @@ const copyText = async (text: string) => {
 };
 
 const SubscriptionAdminManager: React.FC = () => {
+    const { t } = useTranslation();
     const [planId, setPlanId] = useState<SubscriptionPlanId>('month');
     const [count, setCount] = useState('1');
     const [expireAt, setExpireAt] = useState('');
@@ -152,7 +154,7 @@ const SubscriptionAdminManager: React.FC = () => {
                 setPage(normalizedResult.page);
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, '加载会员 Key 列表失败'));
+            toast.error(getErrorMessage(error, t('admin.loadKeyListFailed')));
         } finally {
             setIsLoadingList(false);
         }

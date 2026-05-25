@@ -1,4 +1,5 @@
 import React, { useState, useRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './FunctionalNPCDetail.module.css';
 import sharedStyles from './shared.module.css';
 import ConfirmModal from '../../CommonModal/ConfirmModal';
@@ -79,7 +80,8 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
     } = props;
     const { fileId: storeFileId } = useGameStore();
     const currentFileId = fileId || storeFileId;
-    
+    const { t } = useTranslation();
+
     const [formData, setFormData] = useState<Partial<AbilityNode>>({
         node_id: '',
         authorNote: '',
@@ -530,7 +532,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
         <div className={styles.npcDetail}>
             <div className={styles.typeSwitchRow}>
                 <label>
-                    <span className={styles.typeLabel}>NPC类型 <span className={sharedStyles.required}>*</span></span>
+                    <span className={styles.typeLabel}>{t('createGame.npcType')} <span className={sharedStyles.required}>*</span></span>
                     <div className={styles.typeSelectWrapper}>
                         <select
                             value={formData.type}
@@ -563,7 +565,7 @@ const FunctionalNPCDetail = React.forwardRef<{ save: () => Promise<void>; checkO
                     <div className={styles.formGroup}>
                         <label>
                             <div className={styles.labelRowWithCounter}>
-                                <span>NPC名称 <span className={sharedStyles.required}>*</span></span>
+                                <span>{t('createGame.npcName')} <span className={sharedStyles.required}>*</span></span>
                                 <span className={styles.wordCounter}>
                                     {authorNoteWords}/{FUNCTIONAL_NPC_WORD_LIMITS.authorNote}
                                 </span>

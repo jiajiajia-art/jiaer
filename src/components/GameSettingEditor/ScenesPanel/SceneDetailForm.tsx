@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './SceneDetailForm.module.css';
 import { MdDownload } from 'react-icons/md';
 import type { LocalScene } from './handlers';
@@ -67,6 +68,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     onNameSave,
     onDescSave,
 }) => {
+    const { t } = useTranslation();
     const [isMobilePicker, setIsMobilePicker] = useState(false);
     const [isBgmPickerOpen, setIsBgmPickerOpen] = useState(false);
 
@@ -96,7 +98,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
         : scene.image;
 
     const uploadButtonText = useMemo(() =>
-        effectiveImage ? '重新上传' : '上传背景',
+        effectiveImage ? t('createGame.reupload') : t('createGame.uploadBackground'),
         [effectiveImage]
     );
 
@@ -134,7 +136,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     const selectedBgm = bgmLibrary.find((bgm) => bgm.id === scene.bgmId);
     const selectedBgmText = selectedBgm
         ? `${selectedBgm.name}${selectedBgm.description ? ` · ${selectedBgm.description}` : ''}`
-        : '不绑定特殊 BGM';
+        : t('createGame.noSpecialBgm');
 
     return (
         <>
@@ -156,7 +158,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             e.stopPropagation();
                             onDownloadImage(sceneType, scene.id, effectiveImage);
                         }}
-                        title="下载图片"
+                        title={t('createGame.downloadImage')}
                     >
                         <MdDownload size={18} />
                     </button>
@@ -164,14 +166,14 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 {showDisabledMessage ? (
                     <span className={styles.heroHint}>{disabledMessage}</span>
                 ) : effectiveImage ? (
-                    <span className={styles.heroHint}>点击替换背景</span>
+                    <span className={styles.heroHint}>{t('createGame.clickReplaceBackground')}</span>
                 ) : (
-                    <span>点击上传背景图</span>
+                    <span>{t('createGame.clickUploadBackground')}</span>
                 )}
                 {isGeneratingForThisScene && (
                     <div className="loadingOverlay">
                         <div className="loadingSpinner"></div>
-                        <div className="loadingText">正在生成场景图片...</div>
+                        <div className="loadingText">{t('createGame.generatingSceneImage')}</div>
                         {generationEtaText && (
                             <div className="loadingHint">{generationEtaText}</div>
                         )}
@@ -195,7 +197,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                         disabled={!canClearImage || isImageActionDisabled}
                         style={{ opacity: !canClearImage || isImageActionDisabled ? 0.5 : 1 }}
                     >
-                        清空当前图片
+                        {t('createGame.clearCurrentImage')}
                     </button>
                 )}
                 {scene && (
@@ -227,7 +229,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
             <div className={styles.formGrid}>
                 <label>
                     <div className={styles.labelRowWithCounter}>
-                        <span>场景名称</span>
+                        <span>{t('createGame.sceneName')}</span>
                         <span className={styles.wordCounter}>
                             {nameWords}/{SCENE_WORD_LIMITS.name}
                         </span>
@@ -246,7 +248,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                 </label>
                 <label className={styles.wide}>
                     <div className={styles.labelRowWithCounter}>
-                        <span>场景描述</span>
+                        <span>{t('createGame.sceneDescription')}</span>
                         <span className={styles.wordCounter}>
                             {descWords}/{SCENE_WORD_LIMITS.desc}
                         </span>
@@ -264,7 +266,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                     </InlineFieldSave>
                 </label>
                 <label>
-                    <span>特殊 BGM</span>
+                    <span>{t('createGame.specialBgm')}</span>
                     {isMobilePicker ? (
                         <>
                             {/* 实现移动端特殊 BGM 选项弹层。 */}
@@ -281,7 +283,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                                 <div className={styles.mobilePickerOverlay} onClick={() => setIsBgmPickerOpen(false)}>
                                     <div className={styles.mobilePickerSheet} onClick={(e) => e.stopPropagation()}>
                                         <div className={styles.mobilePickerHeader}>
-                                            <strong>选择特殊 BGM</strong>
+                                            <strong>{t('createGame.selectSpecialBgm')}</strong>
                                             <button
                                                 type="button"
                                                 className={styles.mobilePickerClose}
@@ -299,7 +301,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                                                     setIsBgmPickerOpen(false);
                                                 }}
                                             >
-                                                不绑定特殊 BGM
+                                                {t('createGame.noSpecialBgm')}
                                             </button>
                                             {bgmLibrary.map((bgm) => (
                                                 <button
@@ -329,7 +331,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                                 value={scene.bgmId}
                                 onChange={(e) => onFieldChange('bgmId', e.target.value)}
                             >
-                                <option value="">不绑定特殊 BGM</option>
+                                <option value="">{t('createGame.noSpecialBgm')}</option>
                                 {bgmLibrary.map((bgm) => (
                                     <option key={bgm.id} value={bgm.id}>
                                         {bgm.name}{bgm.description ? ` · ${bgm.description}` : ''}

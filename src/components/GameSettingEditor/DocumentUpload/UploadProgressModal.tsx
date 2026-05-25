@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useUploadStore } from '../../../store/uploadStore';
 import styles from './UploadProgressModal.module.css';
 import { getUploadEtaText } from '../../../utils/etaText';
 
 const UploadProgressModal: React.FC = () => {
+    const { t } = useTranslation();
     const { jobs, showProgressModal, setShowProgressModal, isMinimized, setIsMinimized, removeJob } = useUploadStore();
     const [currentTime, setCurrentTime] = useState(Date.now()); // 用于每秒更新时间显示
     
@@ -63,30 +65,30 @@ const UploadProgressModal: React.FC = () => {
         if (seconds < 60) return `${seconds}秒`;
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
-        return `${minutes}分${remainingSeconds}秒`;
+        return `${minutes}m ${remainingSeconds}s`;
     };
     
     return (
         <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
                 <div className={styles.modalHeader}>
-                    <h2 className={styles.title}>文件上传进度</h2>
+                    <h2 className={styles.title}>{t('createGame.uploadProgress')}</h2>
                     <div className={styles.headerActions}>
                         <button 
                             className={styles.minimizeButton}
                             onClick={() => setIsMinimized(!isMinimized)}
-                            title={isMinimized ? '展开' : '最小化'}
+                            title={isMinimized ? t('common.expand') : t('common.minimize')}
                         >
                             {isMinimized ? '▲' : '▼'}
                         </button>
                         <button 
                             className={styles.closeButton} 
                             onClick={() => setShowProgressModal(false)}
-                            title="关闭"
+                            title={t('common.close')}
                         >
                             <img 
                                 src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} 
-                                alt="关闭" 
+                                alt={t('common.close')} 
                             />
                         </button>
                     </div>

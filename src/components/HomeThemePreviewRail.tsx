@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
@@ -14,9 +15,6 @@ interface HomeThemePreviewRailProps {
     emptyText?: string;
 }
 
-const EMPTY_TEXT = '\u5F53\u524D\u6807\u7B7E\u6682\u672A\u914D\u7F6E\u5267\u672C';
-const LOADING_TEXT = '\u6B63\u5728\u52A0\u8F7D\u5267\u672C...';
-const MORE_GAMES_TEXT = '\u67E5\u770B\u66F4\u591A\u6E38\u620F';
 const DESKTOP_MEDIA_QUERY = '(hover: hover) and (pointer: fine)';
 const DESKTOP_DRAG_THRESHOLD = 8;
 
@@ -42,8 +40,9 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
     games,
     onMoreClick,
     resetKey,
-    emptyText = EMPTY_TEXT,
+    emptyText,
 }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const railRef = useRef<HTMLDivElement | null>(null);
     const dragStateRef = useRef<DragState>(createInitialDragState());
@@ -51,7 +50,8 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
     const [isDragging, setIsDragging] = useState(false);
 
     const visibleGames = useMemo(() => games.slice(0, 12), [games]);
-    const resolvedEmptyText = emptyText.includes('...') ? LOADING_TEXT : EMPTY_TEXT;
+    const displayEmptyText = emptyText ?? t('home.noScriptsForTag');
+    const moreGamesText = t('home.viewMoreGames');
 
     useEffect(() => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -123,13 +123,13 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
         const rawType = String(game.game_tags || game.engine || '').trim().toUpperCase();
         switch (rawType) {
             case 'TXT':
-                return '\u6587\u5B57\u4E92\u52A8';
+                return t('gameType.rolePlaying');
             case 'AVG':
-                return '\u4E16\u754C\u4E92\u52A8';
+                return t('gameType.world');
             case 'RPG':
-                return '\u5267\u60C5\u5192\u9669';
+                return t('gameType.story');
             case 'CUSTOM':
-                return '\u81EA\u5B9A\u4E49';
+                return t('gameType.custom');
             default:
                 return rawType;
         }
@@ -139,7 +139,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
         const tagNames = Array.isArray(game.theme_tag_names) ? game.theme_tag_names : [];
         return tagNames
             .map((name) => String(name || '').trim())
-            .filter((name) => name && name !== '\u5168\u90E8')
+            .filter((name) => name && name !== t('gameBrowse.all'))
             .slice(0, 2);
     };
 
@@ -267,7 +267,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
             {visibleGames.length === 0 ? (
                 <div className={`${styles.cardShell} ${styles.emptyCardShell}`}>
                     <div className={`${styles.card} ${styles.emptyCard}`}>
-                        <div className={styles.emptyText}>{resolvedEmptyText}</div>
+                        <div className={styles.emptyText}>{displayEmptyText}</div>
                     </div>
                 </div>
             ) : (
@@ -290,7 +290,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                                             src={coverUrl
                                                 ? addImageTimestamp(coverUrl)
                                                 : `${import.meta.env.BASE_URL}data/events/welcome.png`}
-                                            alt={game.title || `\u5267\u672C ${index + 1}`}
+                                            alt={game.title || `${t('game.script')} ${index + 1}`}
                                             className={styles.coverImage}
                                             draggable={false}
                                         />
@@ -315,7 +315,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                                         <div className={styles.coverBottomRow}>
                                             <div className={styles.cardCopy}>
                                                 <div className={styles.title} title={game.title || ''}>
-                                                    {game.title || `\u5267\u672C ${index + 1}`}
+                                                    {game.title || `${t('game.script')} ${index + 1}`}
                                                 </div>
                                                 {game.subtitle ? (
                                                     <div className={styles.subtitle} title={game.subtitle}>
@@ -346,13 +346,13 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                 type="button"
                 className={`${styles.cardButton} ${styles.moreCardButton}`}
                 onClick={onMoreClick}
-                aria-label={MORE_GAMES_TEXT}
+                aria-label={moreGamesText}
             >
                 <div className={`${styles.cardShell} ${styles.moreCardShell}`}>
                     <article className={`${styles.card} ${styles.moreCard}`}>
                         <div className={styles.moreInner}>
-                            <div className={styles.moreTitle}>{MORE_GAMES_TEXT}</div>
-                            <div className={styles.moreArrow} aria-hidden="true">{'\u2192'}</div>
+                            <div className={styles.moreTitle}>{moreGamesText}</div>
+                            <div className={styles.moreArrow} aria-hidden="true">{'→'}</div>
                         </div>
                     </article>
                 </div>

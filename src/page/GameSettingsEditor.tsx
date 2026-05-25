@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './GameSettingsEditor.module.css';
 import DocumentsPanel from '../components/GameSettingEditor/DocumentUpload/DocumentsPanel';
 import CharactersPanel, { type CharactersPanelRef } from '../components/GameSettingEditor/CharactersPanel/CharactersPanel';
@@ -26,6 +27,7 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { isMiniProgramEnv } from '../utils/miniProgram';
 
 const GameSettingsEditor = () => {
+    const { t } = useTranslation();
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { fileId, setFileId } = useGameStore();
     const [searchParams] = useSearchParams();
@@ -324,11 +326,11 @@ const GameSettingsEditor = () => {
                 <main className={`${styles.main} ${isMiniProgramTxtMode ? styles.miniProgramMain : ''}`}>
                 <header className={`${styles.topBar} ${isMiniProgramTxtMode ? styles.miniProgramTopBar : ''}`}>
                     <div>
-                        <p className={styles.eyebrow}>KURAN · CREATOR</p>
-                        <h1>游戏创作流程</h1>
+                        <p className={styles.eyebrow}>{t('createGame.eyebrow')}</p>
+                        <h1>{t('createGame.title')}</h1>
                         <p className={styles.subtitle}>
-                            Step 1 上传 Word / PDF→ Step 2 表单化校对世界观 → Step 3 角色差分 → Step 4 场景绑定 BGM
-                            {mode === 'worldInteraction' ? ' → Step 5 地图与子场景布局' : ''}
+                            {t('createGame.step1Tip')}
+                            {mode === 'worldInteraction' ? t('createGame.step5Tip') : ''}
                         </p>
                     </div>
 
@@ -348,7 +350,7 @@ const GameSettingsEditor = () => {
                             }}
                             disabled={!fileId || !gameData || isSubmitting || isLoadingData}
                         >
-                            测试体验
+                            {t('createGame.testExperience')}
                         </button>
                         <button
                             className={styles.primary}
@@ -366,7 +368,7 @@ const GameSettingsEditor = () => {
                             }}
                             disabled={!fileId || !gameData || isSubmitting || isLoadingData}
                         >
-                            直接发布
+                            {t('createGame.publishDirectly')}
                         </button>
                     </div>
                 </header>

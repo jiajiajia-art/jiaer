@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './SceneList.module.css';
 import { RiDeleteBin5Line, RiArrowDownSLine, RiArrowRightSLine } from 'react-icons/ri';
 import type { LocalScene } from './handlers';
@@ -35,6 +36,7 @@ const SceneList: React.FC<SceneListProps> = ({
     onAddNewScene,
     onAddNewSubscene,
 }) => {
+    const { t } = useTranslation();
     // 子场景折叠状态在组件内部管理
     const [subsceneCollapsed, setSubsceneCollapsed] = useState<Record<string, boolean>>({});
     // 实现移动端场景列表折叠
@@ -94,10 +96,10 @@ const SceneList: React.FC<SceneListProps> = ({
         <div className={styles.card}>
             <div className={styles.boardHead}>
                 <div>
-                    <h3>解析出的场景</h3>
+                    <h3>{t('createGame.parsedScenes')}</h3>
                 </div>
                 <button className={styles.ghostSmall} onClick={onAddNewScene}>
-                    + 新增场景
+                    + {t('createGame.addScene')}
                 </button>
             </div>
             <div className={styles.sceneList}>
@@ -125,7 +127,7 @@ const SceneList: React.FC<SceneListProps> = ({
                                         return `url('${withCacheBust(getImageUrl(img))}')`;
                                     })() }}
                                 >
-                                    {!scene.image && <span>待上传</span>}
+                                    {!scene.image && <span>{t('createGame.waitingUpload')}</span>}
                                 </div>
                                 <div className={styles.sceneMeta}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -133,7 +135,7 @@ const SceneList: React.FC<SceneListProps> = ({
                                         <button
                                             className={styles.deleteButton}
                                             onClick={(e) => onDeleteClick(scene.id, e)}
-                                            title="删除场景"
+                                            title={t('createGame.deleteScene')}
                                         >
                                             <RiDeleteBin5Line />
                                         </button>
@@ -163,7 +165,7 @@ const SceneList: React.FC<SceneListProps> = ({
                                                 )}
                                             </button>
                                             <span className={styles.subsceneHeaderText}>
-                                                子场景（{subscenes.length}）
+                                                {t('createGame.subSceneCount', { count: subscenes.length })}
                                             </span>
                                         </div>
                                         <button 
@@ -171,7 +173,7 @@ const SceneList: React.FC<SceneListProps> = ({
                                             onClick={onAddNewSubscene}
                                             style={{ fontSize: '12px', padding: '4px 8px' }}
                                         >
-                                            + 新增子场景
+                                            + {t('createGame.addSubScene')}
                                         </button>
                                     </div>
                                     {!subsceneCollapsed[scene.id] && subscenes.map((sub) => {
@@ -196,18 +198,18 @@ const SceneList: React.FC<SceneListProps> = ({
                                                         })()
                                                     }}
                                                 >
-                                                    {!subImage && <span>待生成或上传</span>}
+                                                    {!subImage && <span>{t('createGame.waitingGenerateOrUpload')}</span>}
                                                 </div>
                                                 <div className={styles.sceneMeta}>
                                                     <div className={styles.subsceneTitleRow}>
                                                         <div className={styles.subsceneTitleLeft}>
-                                                            <strong className={styles.subsceneName}>{sub.name || '未命名子场景'}</strong>
-                                                            <span className={styles.subsceneTag}>子场景</span>
+                                                            <strong className={styles.subsceneName}>{sub.name || t('createGame.unnamedSubScene')}</strong>
+                                                            <span className={styles.subsceneTag}>{t('createGame.subScene')}</span>
                                                         </div>
                                                         <button
                                                             className={styles.deleteButton}
                                                             onClick={(e) => onSubsceneDeleteClick(scene.id, subId, e)}
-                                                            title="删除子场景"
+                                                            title={t('createGame.deleteSubScene')}
                                                         >
                                                             <RiDeleteBin5Line />
                                                         </button>
@@ -229,7 +231,7 @@ const SceneList: React.FC<SceneListProps> = ({
                     className={styles.mobileToggleButton}
                     onClick={() => setIsMobileExpanded((prev) => !prev)}
                 >
-                    {isMobileExpanded ? '收起场景' : `展开全部场景（${sceneData.length}）`}
+                    {isMobileExpanded ? t('createGame.collapseAll') : t('createGame.expandAll', { count: sceneData.length })}
                 </button>
             )}
         </div>

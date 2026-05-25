@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './FunctionalNPCsPanel.module.css';
 import FunctionalNPCList from './FunctionalNPCList';
 import FunctionalNPCDetail from './FunctionalNPCDetail';
@@ -29,6 +30,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
     abilityNodeSetting,
     onBeforePanelChange,
 }, ref) => {
+    const { t } = useTranslation();
     const [abilityNodes, setAbilityNodes] = useState<AbilityNode[]>([]);
     const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -354,7 +356,7 @@ const FunctionalNPCsPanel = React.forwardRef<FunctionalNPCsPanelRef, FunctionalN
         <div className={styles.panelContent}>
             <div className={styles.panelHeader}>
                 <div>
-                    <p className={styles.eyebrow}>Step 6</p>
+                    <p className={styles.eyebrow}>{t('gameEditor.step6')}</p>
                     <h2>剧情事件插件</h2>
                     <p className={styles.subtitle}>
                         功能性NPC管理：创建和管理场景中的功能性NPC

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MdTrendingUp } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import incentiveApi from '../api/incentive/incentiveApi';
@@ -204,6 +205,7 @@ const normalizeAuthorListPayload = (payload: unknown): { list: AdminIncentiveAut
 };
 
 const CreatorIncentiveAdminManager: React.FC = () => {
+    const { t } = useTranslation();
     const [authorFilter, setAuthorFilter] = useState<'joined' | 'all' | UserSegment>('joined');
 
     const [authors, setAuthors] = useState<AdminIncentiveAuthorInfo[]>([]);
@@ -691,7 +693,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                                                 </span>
                                             </div>
                                             <div className={styles.itemMeta}>Kuran号：{author.userCode || '-'}</div>
-                                            <div className={styles.itemMeta}>手机号：{author.phoneNumber || '-'}</div>
+                                            <div className={styles.itemMeta}>{t('profile.phone') || '手机号'}：{author.phoneNumber || '-'}</div>
                                             <div className={styles.itemMeta}>用户ID：{author.userId}</div>
                                         </button>
                                     </article>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { StoryStructure, DynamicEntry } from '../../../api/galgame/EditorData.type';
 import styles from './StoryStructureAdvanced.module.css';
 import worldPanelStyles from './WorldPanel.module.css';
@@ -44,6 +45,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
     canGenerate,
     fileId,
 }) => {
+    const { t } = useTranslation();
     const [activeSubTab, setActiveSubTab] = useState<'story' | 'dynamic'>('story');
     const [collapsedPhases, setCollapsedPhases] = useState<Record<string, boolean>>({});
     const [collapsedDynamics, setCollapsedDynamics] = useState<Record<string, boolean>>({});
@@ -157,9 +159,9 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                 ...prev,
                 phases: prev.phases.map(phase => {
                     if (phase.id !== phaseId) return phase;
-                    const transitions = (phase.transitions || []).map((t, i) => {
-                        if (i !== index) return t;
-                        const baseCondition = t.condition || {
+                    const transitions = (phase.transitions || []).map((transition, i) => {
+                        if (i !== index) return transition;
+                        const baseCondition = transition.condition || {
                             minTurns: 0,
                             flags: { required: [], anyOf: [] },
                         };
@@ -169,10 +171,10 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                         };
                         switch (field) {
                             case 'targetPhase':
-                                return { ...t, targetPhase: String(value) };
+                                return { ...transition, targetPhase: String(value) };
                             case 'minTurns':
                                 return {
-                                    ...t,
+                                    ...transition,
                                     condition: {
                                         ...baseCondition,
                                         minTurns: Number(value) || 0,
@@ -184,7 +186,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                     .map(v => v.trim())
                                     .filter(Boolean);
                                 return {
-                                    ...t,
+                                    ...transition,
                                     condition: {
                                         ...baseCondition,
                                         flags: {
@@ -200,7 +202,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                     .map(v => v.trim())
                                     .filter(Boolean);
                                 return {
-                                    ...t,
+                                    ...transition,
                                     condition: {
                                         ...baseCondition,
                                         flags: {
@@ -211,9 +213,9 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                 };
                             }
                             case 'automatic':
-                                return { ...t, automatic: Boolean(value) };
+                                return { ...transition, automatic: Boolean(value) };
                             default:
-                                return t;
+                                return transition;
                         }
                     });
                     return { ...phase, transitions };
@@ -600,7 +602,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                     handleStoryEnabledChange(e.target.checked)
                                 }
                             />
-                            <span>enabled（启用 story-structure ）</span>
+                            <span>{t('createGame.storyStructureEnabled')}</span>
                         </label>
                     </div>
 
@@ -749,7 +751,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                 />
                                             </label>
                                             <div className={styles.transitionList}>
-                                                {(phase.transitions || []).map((t, index) => (
+                                                {(phase.transitions || []).map((transition, index) => (
                                                     <div
                                                         key={index}
                                                         className={styles.transitionCard}
@@ -761,7 +763,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                             <label className={styles.phaseToggle}>
                                                                 <input
                                                                     type="checkbox"
-                                                                    checked={t.automatic}
+                                                                    checked={transition.automatic}
                                                                     onChange={(e) =>
                                                                         handleTransitionFieldChange(
                                                                             phase.id,
@@ -771,7 +773,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                                         )
                                                                     }
                                                                 />
-                                                                <span>automatic</span>
+                                                                <span>{t('createGame.storyStructureAutomatic')}</span>
                                                             </label>
                                                         </div>
                                                         <div className={styles.phaseFields}>
@@ -779,7 +781,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                                 <span className={worldPanelStyles.fieldLabel}>targetPhase</span>
                                                                 <input
                                                                     type="text"
-                                                                    value={t.targetPhase}
+                                                                    value={transition.targetPhase}
                                                                     onChange={(e) =>
                                                                         handleTransitionFieldChange(
                                                                             phase.id,
@@ -794,7 +796,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                                 <span className={worldPanelStyles.fieldLabel}>condition.minTurns</span>
                                                                 <input
                                                                     type="number"
-                                                                    value={(t.condition?.minTurns ?? 0)}
+                                                                    value={(transition.condition?.minTurns ?? 0)}
                                                                     onChange={(e) =>
                                                                         handleTransitionFieldChange(
                                                                             phase.id,
@@ -809,7 +811,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                                 <span className={worldPanelStyles.fieldLabel}>condition.flags.required</span>
                                                                 <input
                                                                     type="text"
-                                                                    value={(t.condition?.flags?.required ?? []).join(', ')}
+                                                                    value={(transition.condition?.flags?.required ?? []).join(', ')}
                                                                     onChange={(e) =>
                                                                         handleTransitionFieldChange(
                                                                             phase.id,
@@ -824,7 +826,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                                                 <span className={worldPanelStyles.fieldLabel}>condition.flags.anyOf</span>
                                                                 <input
                                                                     type="text"
-                                                                    value={(t.condition?.flags?.anyOf ?? []).join(', ')}
+                                                                    value={(transition.condition?.flags?.anyOf ?? []).join(', ')}
                                                                     onChange={(e) =>
                                                                         handleTransitionFieldChange(
                                                                             phase.id,
@@ -1164,7 +1166,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                         }))
                                     }
                                 />
-                                <span>activeByDefault（默认可进入）</span>
+                                <span>{t('createGame.storyStructureActiveByDefault')}</span>
                             </label>
                             <label className={styles.inlineCheckboxRow}>
                                 <input
@@ -1177,7 +1179,7 @@ const StoryStructureAdvanced: React.FC<StoryStructureAdvancedProps> = ({
                                         }))
                                     }
                                 />
-                                <span>isFinalPhase（是否终章）</span>
+                                <span>{t('createGame.storyStructureIsFinalPhase')}</span>
                             </label>
                         </div>
                         <div className={styles.inlineModalActions}>

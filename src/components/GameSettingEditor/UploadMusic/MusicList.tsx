@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import styles from './MusicList.module.css';
 import type { SceneApiHelpers } from '../ScenesPanel/apiHelpers';
@@ -24,6 +25,7 @@ interface MusicListProps {
 }
 
 const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId, mode, sceneApi, onMusicDeleted }) => {
+    const { t } = useTranslation();
     const [playingId, setPlayingId] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
@@ -406,16 +408,16 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
     return (
         <div className={styles.musicListContainer}>
             <div className={styles.musicListHeader}>
-                <h4>BGM 音乐库</h4>
+                <h4>{t('createGame.bgmLibrary')}</h4>
                 <button className={styles.ghostSmall} onClick={onUploadClick}>
-                    + 上传音乐
+                    + {t('createGame.uploadMusic')}
                 </button>
             </div>
             {musicList.length === 0 ? (
                 <div className={styles.emptyState}>
                     <div className={styles.emptyIcon}>🎵</div>
-                    <p className={styles.emptyTitle}>暂无音乐</p>
-                    <p className={styles.emptyDescription}>点击"上传音乐"添加 BGM 文件</p>
+                    <p className={styles.emptyTitle}>{t('createGame.noMusic')}</p>
+                    <p className={styles.emptyDescription}>{t('createGame.clickToAddBgm')}</p>
                 </div>
             ) : (
                 <div className={styles.musicList}>
@@ -453,8 +455,8 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                                     <button
                                         className={styles.deleteButton}
                                         onClick={(e) => handleDeleteClick(music, e)}
-                                        aria-label="删除音乐"
-                                        title="删除音乐"
+                                        aria-label={t('createGame.deleteMusic')}
+                                        title={t('createGame.deleteMusic')}
                                     >
                                         <MdDeleteOutline size={18} />
                                     </button>
@@ -468,7 +470,7 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                                                 e.stopPropagation();
                                                 handlePlayPause(music);
                                             }}
-                                            aria-label={isPlaying ? '暂停' : '播放'}
+                                            aria-label={isPlaying ? t('createGame.pause') : t('createGame.play')}
                                             disabled={isLoading}
                                         >
                                             {isPlaying ? (
@@ -500,8 +502,8 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                                         <button
                                             className={styles.restartButton}
                                             onClick={(e) => handleRestart(music.id, e)}
-                                            aria-label="重听"
-                                            title="重听"
+                                            aria-label={t('createGame.replay')}
+                                            title={t('createGame.replay')}
                                         >
                                             ↻
                                         </button>
@@ -518,10 +520,10 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                 isOpen={deleteModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
-                title="删除音乐"
-                message={`确定要删除音乐"${musicToDelete?.name || ''}"吗？删除后不可恢复。`}
-                confirmButtonText="确认删除"
-                cancelButtonText="取消"
+                title={t('createGame.deleteMusic')}
+                message={t('createGame.deleteMusicConfirm', { name: musicToDelete?.name || '' })}
+                confirmButtonText={t('common.confirm')}
+                cancelButtonText={t('common.cancel')}
             />
         </div>
     );

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -11,32 +12,31 @@ interface SidebarProps {
 
 interface NavItem {
     id: string;
-    title: string;
-    shortTitle: string;
-    subtitle: string;
+    i18nKey: string;
 }
 
 const BRAND_IMAGE_URL = 'https://api.kurangames.com/interactive-fiction-game-avatar/1/1763447440878_dfe11825de25f8a0c21c32a9f90086cd.jpg';
 
 const modeConfigs: Record<string, NavItem[]> = {
     visual: [
-        { id: 'documents', title: '文档解析', shortTitle: '文档', subtitle: '上传设定 / 自动出稿' },
-        { id: 'world', title: '世界观表单', shortTitle: '世界观', subtitle: '可修改世界观设定' },
-        { id: 'characters', title: '角色档案', shortTitle: '角色', subtitle: '修改或添加角色立绘、差分' },
-        { id: 'scenes', title: '场景 / BGM', shortTitle: '场景', subtitle: '背景 + 配乐绑定' },
+        { id: 'documents', i18nKey: 'documents' },
+        { id: 'world', i18nKey: 'world' },
+        { id: 'characters', i18nKey: 'characters' },
+        { id: 'scenes', i18nKey: 'scenes' },
     ],
     worldInteraction: [
-        { id: 'documents', title: '文档解析', shortTitle: '文档', subtitle: '上传设定 / 自动出稿' },
-        { id: 'world', title: '世界观表单', shortTitle: '世界观', subtitle: '可修改世界观设定' },
-        { id: 'attributeGrowth', title: '属性 · 养成培养插件', shortTitle: '养成', subtitle: '属性养成培养' },
-        { id: 'characters', title: '角色档案', shortTitle: '角色', subtitle: '修改或添加角色立绘、差分' },
-        { id: 'scenes', title: '场景 / BGM', shortTitle: '场景', subtitle: '背景 + 配乐绑定' },
-        { id: 'functionalNPCs', title: '剧情事件插件', shortTitle: '事件', subtitle: '功能性 NPC 管理' },
-        { id: 'mapEdit', title: '地图编辑', shortTitle: '地图', subtitle: '子场景 / 场景 / 地图' },
+        { id: 'documents', i18nKey: 'documents' },
+        { id: 'world', i18nKey: 'world' },
+        { id: 'attributeGrowth', i18nKey: 'attributeGrowth' },
+        { id: 'characters', i18nKey: 'characters' },
+        { id: 'scenes', i18nKey: 'scenes' },
+        { id: 'functionalNPCs', i18nKey: 'functionalNPCs' },
+        { id: 'mapEdit', i18nKey: 'mapEdit' },
     ],
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed, mode = 'visual' }) => {
+    const { t } = useTranslation();
     const navItems = modeConfigs[mode] || modeConfigs.visual;
     const navRef = useRef<HTMLElement | null>(null);
     const navButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -68,8 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
     const currentItem = navItems[currentIndex];
     const currentStatus = currentItem ? getItemStatus(currentItem.id) : '';
     const progressLabel = `${currentIndex + 1} / ${navItems.length}`;
-    const progressStateLabel = isParsing ? '解析中' : currentStatus === 'done' ? '已完成' : '进行中';
-    const mobileSummaryText = `Step ${progressLabel} · ${currentItem.shortTitle}：${currentItem.subtitle}`;
+    const progressStateLabel = isParsing ? t('createGame.sidebar.parsing') : currentStatus === 'done' ? t('createGame.sidebar.completed') : t('createGame.sidebar.inProgress');
+    const mobileSummaryText = `${t('createGame.sidebar.step')} ${progressLabel} · ${t(`createGame.sidebar.${currentItem?.i18nKey}Short` as const)}：${t(`createGame.sidebar.${currentItem?.i18nKey}Subtitle` as const)}`;
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia('(max-width: 768px)').matches) {
@@ -102,8 +102,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                     />
                 </div>
                 <div>
-                    <p className={styles.brandLabel}>Kuran Studio</p>
-                    <p className={styles.brandDesc}>AI 视觉小说工坊</p>
+                    <p className={styles.brandLabel}>{t('createGame.kuranStudio')}</p>
+                    <p className={styles.brandDesc}>{t('createGame.aiVisualNovelWorkshop')}</p>
                 </div>
             </div>
 
@@ -130,9 +130,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                         >
                             <span className={styles.navBadge}>{index + 1}</span>
                             <span className={styles.navText}>
-                                <span className={styles.navTitleDesktop}>{index + 1} · {item.title}</span>
-                                <span className={styles.navTitleMobile}>{item.shortTitle}</span>
-                                <small>{item.subtitle}</small>
+                                <span className={styles.navTitleDesktop}>{index + 1} · {t(`createGame.sidebar.${item.i18nKey}` as const)}</span>
+                                <span className={styles.navTitleMobile}>{t(`createGame.sidebar.${item.i18nKey}Short` as const)}</span>
+                                <small>{t(`createGame.sidebar.${item.i18nKey}Subtitle` as const)}</small>
                             </span>
                         </button>
                     );

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './SceneDetailActions.module.css';
 
 interface SceneDetailActionsProps {
@@ -22,14 +23,16 @@ const SceneDetailActions: React.FC<SceneDetailActionsProps> = ({
     onCancelAddNewSubscene,
     onConfirmEdit,
 }) => {
+    const { t } = useTranslation();
+    
     if (isAddingNew) {
         return (
             <div className={styles.actionsContainer}>
                 <button className={styles.ghostSmall} onClick={onConfirmAddNew}>
-                    确认增加
+                    {t('common.confirmAdd')}
                 </button>
                 <button className={styles.ghostSmall} onClick={onCancelAddNew}>
-                    取消
+                    {t('common.cancel')}
                 </button>
             </div>
         );
@@ -39,11 +42,11 @@ const SceneDetailActions: React.FC<SceneDetailActionsProps> = ({
         return (
             <div className={styles.actionsContainer}>
                 <button className={styles.ghostSmall} onClick={onConfirmSubsceneEdit}>
-                    {isAddingNewSubscene ? '确认增加' : '确认修改'}
+                    {isAddingNewSubscene ? t('common.confirmAdd') : t('common.confirmEdit')}
                 </button>
                 {isAddingNewSubscene && (
                     <button className={styles.ghostSmall} onClick={onCancelAddNewSubscene}>
-                        取消
+                        {t('common.cancel')}
                     </button>
                 )}
             </div>
@@ -53,11 +56,10 @@ const SceneDetailActions: React.FC<SceneDetailActionsProps> = ({
     return (
         <div className={styles.actionsContainer}>
             <button className={styles.ghostSmall} onClick={onConfirmEdit}>
-                确认修改
+                {t('common.confirmEdit')}
             </button>
         </div>
     );
 };
 
 export default SceneDetailActions;
-

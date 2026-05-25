@@ -9,6 +9,7 @@ import promotionApi from '../api/promotion/promotionApi';
 import type { PromotionActivity, PromotionReviewStatus, PromotionSubmission } from '../api/promotion/promotion.type';
 import styles from './PromotionCenter.module.css';
 import { getImageUrl } from '../utils/constants';
+import { useTranslation } from 'react-i18next';
 
 type PromotionTab = 'activities' | 'submissions';
 type PromotionActivityStatusTone = 'active' | 'warning' | 'ended';
@@ -212,6 +213,7 @@ const buildPromotionStatusBadge = (activity: PromotionActivity): PromotionActivi
 };
 
 const PromotionCenter: React.FC = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
     const buildLimitSummary = getSubmissionLimitSummary;
     const [activeTab, setActiveTab] = useState<PromotionTab>('activities');
@@ -487,10 +489,10 @@ const PromotionCenter: React.FC = () => {
                 <div className={styles.headerRow}>
                     <button type="button" className={styles.backButton} onClick={() => window.history.back()}>
                         <span>←</span>
-                        <span>返回</span>
+                        <span>{t('promotion.back')}</span>
                     </button>
                     <div className={styles.heroCard}>
-                        <h2 className={styles.heroText}>完成投稿后获取积分奖励</h2>
+                        <h2 className={styles.heroText}>{t('promotion.heroText')}</h2>
                     </div>
                 </div>
 
@@ -500,23 +502,23 @@ const PromotionCenter: React.FC = () => {
                         className={`${styles.tabButton} ${activeTab === 'submissions' ? styles.tabButtonActive : ''}`}
                         onClick={() => setActiveTab('submissions')}
                     >
-                        我的投稿({submissionCount})
+                        {t('promotion.mySubmissions')}({submissionCount})
                     </button>
                     <button
                         type="button"
                         className={`${styles.tabButton} ${activeTab === 'activities' ? styles.tabButtonActive : ''}`}
                         onClick={() => setActiveTab('activities')}
                     >
-                        已发布活动({activities.length})
+                        {t('promotion.publishedActivities')}({activities.length})
                     </button>
                 </div>
 
                 <div className={styles.content}>
                     {isLoading ? (
-                        <div className={styles.emptyState}>正在加载推广数据...</div>
+                        <div className={styles.emptyState}>{t('promotion.loadingPromotionData')}</div>
                     ) : activeTab === 'activities' ? (
                         activities.length === 0 ? (
-                            <div className={styles.emptyState}>当前还没有已发布的推广活动。</div>
+                            <div className={styles.emptyState}>{t('promotion.noPublishedActivities')}</div>
                         ) : (
                             <div className={styles.activityGrid}>
                                 {activities.map((activity) => {
@@ -538,15 +540,15 @@ const PromotionCenter: React.FC = () => {
                                                 </div>
                                                 <div className={styles.cardSummary}>{activity.summary}</div>
                                                 <div className={styles.infoGrid}>
-                                                    <div className={styles.infoItem}>活动时间：{buildTimeSummary(activity)}</div>
-                                                    <div className={styles.infoItem}>投稿限制：{buildLimitSummary(activity)}</div>
-                                                    <div className={styles.infoItem}>奖励积分：审核通过后发放 {activity.rewardPoints} 积分</div>
+                                                    <div className={styles.infoItem}>{t('promotion.activityTime')}{buildTimeSummary(activity)}</div>
+                                                    <div className={styles.infoItem}>{t('promotion.submissionLimit')}{buildLimitSummary(activity)}</div>
+                                                    <div className={styles.infoItem}>{t('promotion.rewardPoints')}审核通过后发放 {activity.rewardPoints} 积分</div>
                                                 </div>
                                                 <div className={styles.configRow}>
-                                                    {activity.submissionConfig.acceptTexts && <span className={styles.chip}>文本投稿</span>}
-                                                    {activity.submissionConfig.acceptLinks && <span className={styles.chip}>链接投稿</span>}
-                                                    {activity.submissionConfig.acceptImages && <span className={styles.chip}>图片投稿</span>}
-                                                    {activity.submissionConfig.acceptVideos && <span className={styles.chip}>视频投稿</span>}
+                                                    {activity.submissionConfig.acceptTexts && <span className={styles.chip}>{t('promotion.textSubmission')}</span>}
+                                                    {activity.submissionConfig.acceptLinks && <span className={styles.chip}>{t('promotion.linkSubmission')}</span>}
+                                                    {activity.submissionConfig.acceptImages && <span className={styles.chip}>{t('promotion.imageSubmission')}</span>}
+                                                    {activity.submissionConfig.acceptVideos && <span className={styles.chip}>{t('promotion.videoSubmission')}</span>}
                                                 </div>
                                                 {activity.availabilityText ? (
                                                     <div className={styles.noticeText}>{activity.availabilityText}</div>
@@ -554,7 +556,7 @@ const PromotionCenter: React.FC = () => {
                                                 <div className={styles.actionRow}>
                                                     {activity.detailLinkUrl.trim() ? (
                                                         <button type="button" className={styles.secondaryButton} onClick={() => openDetail(activity)}>
-                                                        活动详情
+                                                        {t('promotion.activityDetails')}
                                                         </button>
                                                     ) : null}
                                                     <button
@@ -563,7 +565,7 @@ const PromotionCenter: React.FC = () => {
                                                         onClick={() => handleStartSubmission(activity)}
                                                         aria-disabled={activity.canSubmit === false}
                                                     >
-                                                        立即投稿
+                                                        {t('promotion.submitNow')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -573,7 +575,7 @@ const PromotionCenter: React.FC = () => {
                             </div>
                         )
                     ) : submissions.length === 0 ? (
-                        <div className={styles.emptyState}>你还没有提交过推广内容，先去参加活动吧。</div>
+                        <div className={styles.emptyState}>{t('promotion.noSubmissions')}</div>
                     ) : (
                         <div className={styles.submissionList}>
                             {submissions.map((submission) => (
@@ -589,15 +591,15 @@ const PromotionCenter: React.FC = () => {
                                             <div className={styles.submissionTitle}>{submission.activityTitle || `活动 #${submission.activityId}`}</div>
                                             <div className={styles.metaRow}>
                                                 <span className={`${styles.statusTag} ${statusClassMap[submission.reviewStatus]}`}>{statusLabelMap[submission.reviewStatus]}</span>
-                                                <span className={styles.chip}>投稿时间 {formatTime(submission.submittedAt)}</span>
-                                                {typeof submission.rewardPoints === 'number' ? <span className={styles.chip}>奖励积分 {submission.rewardPoints}</span> : null}
+                                                <span className={styles.chip}>{t('promotion.submissionTime')} {formatTime(submission.submittedAt)}</span>
+                                                {typeof submission.rewardPoints === 'number' ? <span className={styles.chip}>{t('promotion.rewardPoints')} {submission.rewardPoints}</span> : null}
                                             </div>
                                         </div>
                                     </div>
                                     <div className={styles.submissionMeta}>
                                         {submission.submitPayload.texts.length > 0 ? (
                                             <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>投稿文本</div>
+                                                <div className={styles.payloadLabel}>{t('promotion.submissionText')}</div>
                                                 <div className={styles.payloadList}>
                                                     {submission.submitPayload.texts.map((item, index) => (
                                                         <div key={`${submission.id}-text-${index}`} className={styles.payloadItem}>{item}</div>
@@ -607,7 +609,7 @@ const PromotionCenter: React.FC = () => {
                                         ) : null}
                                         {submission.submitPayload.links.length > 0 ? (
                                             <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>投稿链接</div>
+                                                <div className={styles.payloadLabel}>{t('promotion.submissionLinks')}</div>
                                                 <div className={styles.payloadList}>
                                                     {submission.submitPayload.links.map((item) => (
                                                         <a key={item} className={styles.payloadItem} href={item} target="_blank" rel="noreferrer">{item}</a>
@@ -617,7 +619,7 @@ const PromotionCenter: React.FC = () => {
                                         ) : null}
                                         {submission.submitPayload.images.length > 0 ? (
                                             <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>投稿图片</div>
+                                                <div className={styles.payloadLabel}>{t('promotion.submissionImages')}</div>
                                                 <div className={styles.payloadImageList}>
                                                     {submission.submitPayload.images.map((item) => (
                                                         <div key={item} className={styles.payloadImageWrap}>
@@ -629,17 +631,17 @@ const PromotionCenter: React.FC = () => {
                                         ) : null}
                                         {submission.submitPayload.videos.length > 0 ? (
                                             <div className={styles.payloadBlock}>
-                                                <div className={styles.payloadLabel}>投稿视频</div>
+                                                <div className={styles.payloadLabel}>{t('promotion.submissionVideos')}</div>
                                                 <div className={styles.payloadList}>
                                                     {submission.submitPayload.videos.map((item) => (
                                                         <a key={item} className={styles.videoLink} href={getImageUrl(item)} target="_blank" rel="noreferrer">
-                                                            查看视频素材
+                                                            {t('promotion.viewVideoMaterial')}
                                                         </a>
                                                     ))}
                                                 </div>
                                             </div>
                                         ) : null}
-                                        {submission.reviewRemark ? <div className={styles.payloadItem}>审核备注：{submission.reviewRemark}</div> : null}
+                                        {submission.reviewRemark ? <div className={styles.payloadItem}>{t('promotion.reviewRemark')} {submission.reviewRemark}</div> : null}
                                     </div>
                                 </article>
                             ))}
@@ -670,7 +672,7 @@ const PromotionCenter: React.FC = () => {
                                     <textarea
                                         className={styles.textarea}
                                         value={textInput}
-                                        placeholder="请输入你的推广文本内容"
+                                        placeholder={t('promotion.enterPromotionText')}
                                         onChange={(event) => setTextInput(event.target.value)}
                                     />
                                 </label>
@@ -687,7 +689,7 @@ const PromotionCenter: React.FC = () => {
                                                 <input
                                                     className={styles.input}
                                                     value={value}
-                                                    placeholder="请输入你的推广链接"
+                                                    placeholder={t('promotion.enterPromotionLink')}
                                                     onChange={(event) => handleLinkInputChange(index, event.target.value)}
                                                 />
                                                 <button
@@ -695,16 +697,16 @@ const PromotionCenter: React.FC = () => {
                                                     className={styles.linkRemoveButton}
                                                     onClick={() => handleRemoveLinkInput(index)}
                                                 >
-                                                    移除
+                                                    {t('promotion.remove')}
                                                 </button>
                                             </div>
                                         ))}
                                         <div className={styles.inlineActionRow}>
                                             <button type="button" className={styles.secondaryButton} onClick={() => setLinkInputs((prev) => [...prev, ''])}>
-                                                新增链接
+                                                {t('promotion.addLink')}
                                             </button>
                                             <button type="button" className={styles.secondaryButton} onClick={() => void handleToggleGameImport()}>
-                                                从我的作品中导入
+                                                {t('promotion.importFromMyGames')}
                                             </button>
                                         </div>
                                         {isGameImportOpen ? (

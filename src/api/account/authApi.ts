@@ -75,4 +75,7 @@ export const auth = {
 
   redeemSubscriptionKey: (data: { redeemKey: string }) =>
     api.post<ApiResponse<SubscriptionRedeemResult>>('/subscriptions/redeem', data),
+
+  googleLogin: (data: { idToken: string }) =>
+    api.post<ApiResponse<AuthResponse>>('/auth/google/login', data),
 };

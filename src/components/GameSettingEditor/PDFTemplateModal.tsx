@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './PDFTemplateModal.module.css';
 
 interface PDFTemplateModalProps {
@@ -13,6 +14,7 @@ interface PDFFile {
 
 const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
+    const { t } = useTranslation();
 
     const pdfFiles: PDFFile[] = [
         {
@@ -55,11 +57,11 @@ const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) 
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalContent}>
                     <div className={styles.modalHeader}>
-                        <h2 className={styles.modalTitle}>Funloom 创作指南</h2>
+                        <h2 className={styles.modalTitle}>{t('createGame.funloomGuide')}</h2>
                         <button className={styles.closeButton} onClick={onClose}>
                             <img 
                                 src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`} 
-                                alt="关闭" 
+                            alt={t('common.close')} 
                             />
                         </button>
                     </div>

@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './CreatorProfile.module.css';
 import {
     MdGroups,
@@ -70,21 +71,24 @@ const SectionCard: React.FC<SectionCardProps> = ({ title, icon, children, isEmpt
 };
 
 interface InfoRowProps {
-    label: string;
+    labelKey?: string;
+    label?: string;
     value?: string;
     masked?: string;
     isSecret?: boolean;
     onCopy?: () => void;
 }
 
-const InfoRow: React.FC<InfoRowProps> = ({ label, value, masked, isSecret, onCopy }) => {
+const InfoRow: React.FC<InfoRowProps> = ({ labelKey, label, value, masked, isSecret, onCopy }) => {
+    const { t } = useTranslation();
     const [showSecret, setShowSecret] = useState(false);
-    const displayValue = value || '未填写';
+    const displayValue = value || t('profile.notFilled');
     const showValue = isSecret && masked && !showSecret ? masked : displayValue;
+    const displayLabel = labelKey ? t(labelKey) : label;
 
     return (
         <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>{label}</span>
+            <span className={styles.infoLabel}>{displayLabel}</span>
             <div className={styles.infoValueWrapper}>
                 <span className={isSecret && masked && !showSecret ? styles.infoValueMasked : styles.infoValue}>
                     {showValue}
@@ -95,13 +99,13 @@ const InfoRow: React.FC<InfoRowProps> = ({ label, value, masked, isSecret, onCop
                             type="button"
                             className={styles.infoActionBtn}
                             onClick={() => setShowSecret(!showSecret)}
-                            title={showSecret ? '隐藏' : '显示'}
+                            title={showSecret ? t('password.hide') : t('password.show')}
                         >
                             {showSecret ? <MdVisibilityOff /> : <MdVisibility />}
                         </button>
                     )}
                     {onCopy && (
-                        <button type="button" className={styles.infoActionBtn} onClick={onCopy} title="复制">
+                        <button type="button" className={styles.infoActionBtn} onClick={onCopy} title={t('profile.copy')}>
                             <MdContentCopy />
                         </button>
                     )}
@@ -118,6 +122,7 @@ interface CreatorProfileFormProps {
 }
 
 const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, onSave, onCancel }) => {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState<CreatorProfileFormData>({
         groupNo: initialData.groupNo || '',
         realName: initialData.realName || '',
@@ -132,18 +137,18 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
         const newErrors: Partial<Record<keyof CreatorProfileFormData, string>> = {};
 
         if (formData.groupNo && !/^\d{5,11}$/.test(formData.groupNo)) {
-            newErrors.groupNo = 'QQ群号需为 5-11 位数字';
+            newErrors.groupNo = t('profile.groupNoError');
         }
 
         if (
             formData.idCard &&
             !/^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/.test(formData.idCard)
         ) {
-            newErrors.idCard = '身份证号格式不正确';
+            newErrors.idCard = t('profile.idCardError');
         }
 
         if (formData.bankCard && !/^\d{16,19}$/.test(formData.bankCard)) {
-            newErrors.bankCard = '银行卡号需为 16-19 位数字';
+            newErrors.bankCard = t('profile.bankCardError');
         }
 
         setErrors(newErrors);
@@ -157,9 +162,9 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
         try {
             setIsSaving(true);
             await onSave(formData);
-            toast.success('创作者资料保存成功');
+            toast.success(t('profile.saveSuccess'));
         } catch {
-            toast.error('保存失败，请稍后重试');
+            toast.error(t('profile.saveFailed'));
         } finally {
             setIsSaving(false);
         }
@@ -180,14 +185,14 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
             <div className={styles.formSection}>
                 <div className={styles.formSectionTitle}>
                     <MdGroups />
-                    <span>社群信息</span>
+                    <span>{t('profile.communityInfo')}</span>
                 </div>
                 <div className={styles.formField}>
-                    <label className={styles.formLabel}>QQ群号</label>
+                    <label className={styles.formLabel}>{t('createGame.qqGroup')}</label>
                     <input
                         type="text"
                         className={inputClass('groupNo')}
-                        placeholder="请输入QQ群号（5-11位数字）"
+                        placeholder={t('createGame.qqGroupPlaceholder') || '请输入QQ群号（5-11位数字）'}
                         value={formData.groupNo}
                         onChange={(e) => handleChange('groupNo', e.target.value.replace(/\D/g, ''))}
                         maxLength={11}
@@ -199,14 +204,14 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
             <div className={styles.formSection}>
                 <div className={styles.formSectionTitle}>
                     <MdAccountBalanceWallet />
-                    <span>收款信息</span>
+                    <span>{t('profile.paymentInfo')}</span>
                 </div>
                 <div className={styles.formField}>
-                    <label className={styles.formLabel}>真实姓名</label>
+                    <label className={styles.formLabel}>{t('profile.realName')}</label>
                     <input
                         type="text"
                         className={inputClass('realName')}
-                        placeholder="请输入真实姓名"
+                        placeholder={t('profile.realNamePlaceholder')}
                         value={formData.realName}
                         onChange={(e) => handleChange('realName', e.target.value)}
                         maxLength={50}
@@ -214,11 +219,11 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
                     {errors.realName && <span className={styles.formError}>{errors.realName}</span>}
                 </div>
                 <div className={styles.formField}>
-                    <label className={styles.formLabel}>身份证号</label>
+                    <label className={styles.formLabel}>{t('profile.idCardNo')}</label>
                     <input
                         type="text"
                         className={inputClass('idCard')}
-                        placeholder="请输入18位身份证号"
+                        placeholder={t('profile.idCardPlaceholder')}
                         value={formData.idCard}
                         onChange={(e) => handleChange('idCard', e.target.value.toUpperCase())}
                         maxLength={18}
@@ -226,11 +231,11 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
                     {errors.idCard && <span className={styles.formError}>{errors.idCard}</span>}
                 </div>
                 <div className={styles.formField}>
-                    <label className={styles.formLabel}>银行卡号</label>
+                    <label className={styles.formLabel}>{t('profile.bankCardNo')}</label>
                     <input
                         type="text"
                         className={inputClass('bankCard')}
-                        placeholder="请输入银行卡号（16-19位）"
+                        placeholder={t('profile.bankCardPlaceholder')}
                         value={formData.bankCard}
                         onChange={(e) => handleChange('bankCard', e.target.value.replace(/\D/g, ''))}
                         maxLength={19}
@@ -238,11 +243,11 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
                     {errors.bankCard && <span className={styles.formError}>{errors.bankCard}</span>}
                 </div>
                 <div className={styles.formField}>
-                    <label className={styles.formLabel}>开户银行</label>
+                    <label className={styles.formLabel}>{t('profile.bankName')}</label>
                     <input
                         type="text"
                         className={inputClass('bankBranch')}
-                        placeholder="如：中国工商银行北京中关村支行"
+                        placeholder={t('profile.bankBranchPlaceholder')}
                         value={formData.bankBranch}
                         onChange={(e) => handleChange('bankBranch', e.target.value)}
                         maxLength={100}
@@ -253,15 +258,15 @@ const CreatorProfileForm: React.FC<CreatorProfileFormProps> = ({ initialData, on
 
             <div className={styles.securityNotice}>
                 <span className={styles.securityIcon}>🔒</span>
-                <span>您的敏感信息已加密存储，仅用于提现验证</span>
+                <span>{t('profile.securityNotice')}</span>
             </div>
 
             <div className={styles.formActions}>
                 <button type="button" className={styles.cancelBtn} onClick={onCancel} disabled={isSaving}>
-                    取消
+                    {t('profile.cancel')}
                 </button>
                 <button type="submit" className={styles.saveBtn} disabled={isSaving}>
-                    {isSaving ? '保存中...' : '保存'}
+                    {isSaving ? t('profile.saving') : t('profile.save')}
                 </button>
             </div>
         </form>
@@ -274,13 +279,14 @@ interface CreatorProfileViewProps {
 }
 
 const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit }) => {
+    const { t } = useTranslation();
     const handleCopyGroupNo = async () => {
         if (data.groupNo) {
             try {
                 await navigator.clipboard.writeText(data.groupNo);
-                toast.success('QQ群号已复制');
+                toast.success(t('createGame.qqGroupCopied'));
             } catch {
-                toast.error('复制失败');
+                toast.error(t('profile.copyFailed'));
             }
         }
     };
@@ -290,37 +296,37 @@ const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit })
 
     return (
         <div className={styles.viewContainer}>
-            <SectionCard title="社群信息" icon={<MdGroups />} isEmpty={!data.groupNo}>
+            <SectionCard title={t('profile.communityInfo')} icon={<MdGroups />} isEmpty={!data.groupNo}>
                 {data.groupNo ? (
-                    <InfoRow label="QQ群号" value={data.groupNo} onCopy={handleCopyGroupNo} />
+                    <InfoRow labelKey="profile.qqGroupNo" value={data.groupNo} onCopy={handleCopyGroupNo} />
                 ) : (
                     <div className={styles.emptyState}>
-                        <span>暂未填写 QQ 群号</span>
+                        <span>{t('profile.noGroupNoYet')}</span>
                     </div>
                 )}
             </SectionCard>
 
-            <SectionCard title="收款信息" icon={<MdAccountBalanceWallet />} isEmpty={!hasPayoutData}>
+            <SectionCard title={t('profile.paymentInfo')} icon={<MdAccountBalanceWallet />} isEmpty={!hasPayoutData}>
                 {hasPayoutData ? (
                     <>
-                        <InfoRow label="真实姓名" value={data.realName || '未填写'} />
+                        <InfoRow labelKey="profile.realName" value={data.realName || t('profile.notFilled')} />
                         <InfoRow
-                            label="身份证号"
-                            value={data.idCard || '未填写'}
+                            labelKey="profile.idCardNo"
+                            value={data.idCard || t('profile.notFilled')}
                             masked={data.idCard ? maskIdCard(data.idCard) : undefined}
                             isSecret
                         />
                         <InfoRow
-                            label="银行卡号"
-                            value={data.bankCard || '未填写'}
+                            labelKey="profile.bankCardNo"
+                            value={data.bankCard || t('profile.notFilled')}
                             masked={data.bankCard ? maskBankCard(data.bankCard) : undefined}
                             isSecret
                         />
-                        <InfoRow label="开户银行" value={data.bankBranch || '未填写'} />
+                        <InfoRow labelKey="profile.bankName" value={data.bankBranch || t('profile.notFilled')} />
                     </>
                 ) : (
                     <div className={styles.emptyState}>
-                        <span>暂未填写任何收款信息</span>
+                        <span>{t('profile.noPaymentInfoYet')}</span>
                     </div>
                 )}
             </SectionCard>
@@ -328,14 +334,14 @@ const CreatorProfileView: React.FC<CreatorProfileViewProps> = ({ data, onEdit })
             <div className={styles.editButtonWrapper}>
                 <button type="button" className={styles.editButton} onClick={onEdit}>
                     <MdEdit />
-                    <span>{hasAnyData ? '编辑信息' : '填写信息'}</span>
+                    <span>{hasAnyData ? t('profile.editInfo') : t('profile.fillInfo')}</span>
                 </button>
             </div>
 
             {hasAnyData && (
                 <div className={styles.securityNotice}>
                     <span className={styles.securityIcon}>🔒</span>
-                    <span>您的敏感信息已加密存储，仅用于提现验证</span>
+                    <span>{t('profile.securityNotice')}</span>
                 </div>
             )}
         </div>

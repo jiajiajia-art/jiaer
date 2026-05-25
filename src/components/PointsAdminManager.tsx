@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import promotionApi from '../api/promotion/promotionApi';
 import type {
@@ -45,6 +46,7 @@ type PointsAdminManagerProps = {
 };
 
 const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCount, onRefreshCounts }) => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<PointsTab>('activity');
     const [rewardTasks, setRewardTasks] = useState<PromotionRewardTask[]>([]);
     const [rewardTaskPagination, setRewardTaskPagination] = useState<AdminPromotionRewardTaskPagination>(emptyRewardTaskPagination);
@@ -152,7 +154,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
     const handleLookup = async () => {
         const keyword = lookupKeyword.trim();
         if (!keyword) {
-            toast.error(lookupMode === 'userCode' ? '请输入 Kuran 号' : '请输入手机号');
+            toast.error(lookupMode === 'userCode' ? t('admin.enterKuranId') : t('profile.enterValidPhone'));
             return;
         }
         try {
@@ -313,7 +315,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                 <div className={styles.cardHeader}>
                     <div>
                         <h3 className={styles.cardTitle}>定位用户</h3>
-                        <div className={styles.cardDesc}>按 Kuran 号 或手机号精确定位用户后，再执行特殊积分调整。</div>
+                        <div className={styles.cardDesc}>{t('admin.lookupUserDesc')}</div>
                     </div>
                 </div>
                 <div className={styles.formArea}>
@@ -330,7 +332,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                             className={styles.textInput}
                             value={lookupKeyword}
                             onChange={(event) => setLookupKeyword(event.target.value)}
-                            placeholder={lookupMode === 'userCode' ? '请输入 Kuran 号' : '请输入手机号'}
+                            placeholder={lookupMode === 'userCode' ? t('admin.enterKuranId') : t('profile.enterValidPhone')}
                         />
                     </label>
                     <div className={styles.actionRow}>
@@ -378,7 +380,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                         </div>
                     </div>
                 ) : (
-                    <div className={styles.emptyState}>请先在左侧输入 Kuran 号或手机号查询用户。</div>
+                    <div className={styles.emptyState}>{t('admin.lookupUserFirst')}</div>
                 )}
             </section>
         </div>
@@ -512,7 +514,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                     <div>
                         <div className={styles.sectionBadge}>积分管理</div>
                         <h2 className={styles.heroTitle}>统一处理活动积分发放与特殊积分变更</h2>
-                        <p className={styles.heroDesc}>活动积分管理承接活动奖励发放，特殊积分管理支持按 Kuran 号 或手机号精确调整用户积分。</p>
+                        <p className={styles.heroDesc}>{t('admin.pointsManagerDesc')}</p>
                     </div>
                 </section>
 

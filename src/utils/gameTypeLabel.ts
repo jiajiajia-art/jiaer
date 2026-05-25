@@ -8,10 +8,10 @@ const TYPE_LABELS: Record<string, string> = {
     'ROLE-PLAYING': 'Role-Playing',
     WORLD: 'World',
     STORY: 'Story',
-    '\u6587\u5B57\u4E92\u52A8': 'Role-Playing',
-    '\u4E16\u754C\u4E92\u52A8': 'World',
-    '\u5267\u60C5\u5192\u9669': 'Story',
-    '\u81EA\u5B9A\u4E49': 'Custom',
+    '文字互动': 'Role-Playing',
+    '世界互动': 'World',
+    '剧情推理': 'Story',
+    '自定义': 'Custom',
 };
 
 const normalizeRawGameType = (value?: string | null): string => {

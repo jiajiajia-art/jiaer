@@ -1256,11 +1256,6 @@
 }
 
 .themeShowcaseMoreLink span:first-child {
-    font-size: 0;
-}
-
-.themeShowcaseMoreLink span:first-child::before {
-    content: '\0067E5\00770B\0066F4\00591A';
     font-size: 14px;
 }
 
@@ -1653,7 +1648,7 @@
         color: var(--primary);
     }
 
-    .themeShowcaseMoreLink span:first-child::before {
+    .themeShowcaseMoreLink span:first-child {
         font-size: 13px;
     }
 

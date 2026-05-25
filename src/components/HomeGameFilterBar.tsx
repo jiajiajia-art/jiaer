@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './HomeGameFilterBar.module.css';
 import type { FlatThemeTag } from '../utils/themeTags';
 import {
@@ -20,13 +21,7 @@ type HomeGameFilterBarProps = {
     onTagChange: (tagId: number | null) => void;
 };
 
-const ALL_LABEL = '\u5168\u90e8';
-const FILTER_TITLES = {
-    sort: '\u6392\u5e8f',
-    mode: '\u6a21\u5f0f',
-    tag: '\u9898\u6750',
-} as const;
-const CHECK_MARK = '\u2713';
+const CHECK_MARK = '✓';
 const MOBILE_BREAKPOINT = 768;
 const MOBILE_SAFE_MARGIN = 16;
 const DESKTOP_SAFE_MARGIN = 24;
@@ -40,6 +35,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
     onModeChange,
     onTagChange,
 }) => {
+    const { t } = useTranslation();
     const rootRef = useRef<HTMLDivElement | null>(null);
     const tagGroupRef = useRef<HTMLDivElement | null>(null);
     const tagTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -50,32 +46,36 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
     const tagOptions = useMemo(() => ([
         {
             value: null as number | null,
-            label: ALL_LABEL,
-            title: ALL_LABEL,
+            label: t('gameBrowse.all'),
+            title: t('gameBrowse.all'),
         },
         ...themeTags.map((tag) => ({
             value: Number(tag.id),
             label: tag.name,
             title: tag.pathLabel || tag.name,
         })),
-    ]), [themeTags]);
+    ]), [themeTags, t]);
 
     const selectedSortLabel = useMemo(
-        () => HOME_LIST_SORT_OPTIONS.find((option) => option.value === sort)?.label || HOME_LIST_SORT_OPTIONS[0]?.label || FILTER_TITLES.sort,
-        [sort],
+        () => HOME_LIST_SORT_OPTIONS.find((option) => option.value === sort)?.labelKey
+            ? t(HOME_LIST_SORT_OPTIONS.find((option) => option.value === sort)?.labelKey!)
+            : HOME_LIST_SORT_OPTIONS[0]?.labelKey
+                ? t(HOME_LIST_SORT_OPTIONS[0].labelKey)
+                : t('gameBrowse.sort'),
+        [sort, t],
     );
     const selectedModeOption = useMemo(
         () => HOME_LIST_MODE_OPTIONS.find((option) => option.value === mode) || null,
         [mode],
     );
-    const selectedModeValueLabel = selectedModeOption?.label || ALL_LABEL;
-    const selectedModeTriggerLabel = mode === 'all' ? FILTER_TITLES.mode : selectedModeValueLabel;
+    const selectedModeValueLabel = selectedModeOption?.labelKey ? t(selectedModeOption.labelKey) : t('gameBrowse.modes.all');
+    const selectedModeTriggerLabel = mode === 'all' ? t('gameBrowse.mode') : selectedModeValueLabel;
     const selectedTag = useMemo(
         () => tagOptions.find((option) => option.value === tagId) || tagOptions[0],
         [tagId, tagOptions],
     );
-    const selectedTagValueLabel = selectedTag?.label || ALL_LABEL;
-    const selectedTagTriggerLabel = tagId === null ? FILTER_TITLES.tag : selectedTagValueLabel;
+    const selectedTagValueLabel = selectedTag?.label || t('gameBrowse.all');
+    const selectedTagTriggerLabel = tagId === null ? t('gameBrowse.theme') : selectedTagValueLabel;
 
     useEffect(() => {
         if (!openDropdown) return;
@@ -191,7 +191,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('sort')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'sort'}
-                    aria-label={`${FILTER_TITLES.sort}\uff0c\u5f53\u524d${selectedSortLabel}`}
+                    aria-label={`${t('gameBrowse.sort')}，${t('common.currently')}${selectedSortLabel}`}
                     onClick={() => toggleDropdown('sort')}
                 >
                     <span className={styles.triggerText}>{selectedSortLabel}</span>
@@ -202,7 +202,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     </span>
                 </button>
                 {openDropdown === 'sort' ? (
-                    <div className={styles.menu} role="menu" aria-label="\u6392\u5e8f\u9009\u9879">
+                    <div className={styles.menu} role="menu" aria-label={t('gameBrowse.sortOptions')}>
                         {HOME_LIST_SORT_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -212,7 +212,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                                 className={`${styles.menuItem} ${sort === option.value ? styles.menuItemActive : ''}`}
                                 onClick={() => handleSortSelect(option.value)}
                             >
-                                <span className={styles.menuItemLabel}>{option.label}</span>
+                                <span className={styles.menuItemLabel}>{((option as any).labelKey ? t((option as any).labelKey) : option.label)}</span>
                                 {sort === option.value ? <span className={styles.menuItemCheck}>{CHECK_MARK}</span> : null}
                             </button>
                         ))}
@@ -228,7 +228,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('mode')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'mode'}
-                    aria-label={`${FILTER_TITLES.mode}\uff0c\u5f53\u524d${selectedModeValueLabel}`}
+                    aria-label={`${t('gameBrowse.mode')}，${t('common.currently')}${selectedModeValueLabel}`}
                     onClick={() => toggleDropdown('mode')}
                 >
                     <span className={styles.triggerText}>{selectedModeTriggerLabel}</span>
@@ -239,7 +239,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     </span>
                 </button>
                 {openDropdown === 'mode' ? (
-                    <div className={styles.menu} role="menu" aria-label="\u6a21\u5f0f\u9009\u9879">
+                    <div className={styles.menu} role="menu" aria-label={t('gameBrowse.modeOptions')}>
                         {HOME_LIST_MODE_OPTIONS.map((option) => (
                             <button
                                 key={option.value}
@@ -249,7 +249,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                                 className={`${styles.menuItem} ${mode === option.value ? styles.menuItemActive : ''}`}
                                 onClick={() => handleModeSelect(option.value)}
                             >
-                                <span className={styles.menuItemLabel}>{option.label}</span>
+                                <span className={styles.menuItemLabel}>{((option as any).labelKey ? t((option as any).labelKey) : option.label)}</span>
                                 {mode === option.value ? <span className={styles.menuItemCheck}>{CHECK_MARK}</span> : null}
                             </button>
                         ))}
@@ -266,7 +266,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                     className={getTriggerClassName('tag')}
                     aria-haspopup="menu"
                     aria-expanded={openDropdown === 'tag'}
-                    aria-label={`${FILTER_TITLES.tag}\uff0c\u5f53\u524d${selectedTagValueLabel}`}
+                    aria-label={`${t('gameBrowse.theme')}，${t('common.currently')}${selectedTagValueLabel}`}
                     onClick={() => toggleDropdown('tag')}
                 >
                     <span className={styles.triggerText}>{selectedTagTriggerLabel}</span>
@@ -281,7 +281,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                         ref={tagMenuRef}
                         className={`${styles.menu} ${styles.menuWide}`}
                         role="menu"
-                        aria-label="\u9898\u6750\u9009\u9879"
+                        aria-label={t('gameBrowse.themeOptions')}
                         style={tagMenuStyle}
                     >
                         {tagOptions.map((option) => (
@@ -294,7 +294,7 @@ const HomeGameFilterBar: React.FC<HomeGameFilterBarProps> = ({
                                 onClick={() => handleTagSelect(option.value)}
                                 title={option.title}
                             >
-                                <span className={styles.menuItemLabel}>{option.label}</span>
+                                <span className={styles.menuItemLabel}>{((option as any).labelKey ? t((option as any).labelKey) : option.label)}</span>
                                 {tagId === option.value ? <span className={styles.menuItemCheck}>{CHECK_MARK}</span> : null}
                             </button>
                         ))}

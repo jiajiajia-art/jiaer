@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './WorldMapCard.module.css';
 
 interface WorldMapCardProps {
@@ -20,14 +21,15 @@ const WorldMapCard: React.FC<WorldMapCardProps> = ({
     worldMapFileInputRef,
     onUploadChange,
 }) => {
+    const { t } = useTranslation();
     return (
         <div className={styles.uploadWorldMapCard}>
             <div className={styles.cardHead}>
                 <div>
-                    <p className={styles.eyebrow}>Step 4</p>
-                    <h2>上传或 AI 生成大地图</h2>
+                    <p className={styles.eyebrow}>{t('gameEditor.step4')}</p>
+                    <h2>{t('createGame.uploadOrGenerateMap')}</h2>
                     <p className={styles.subtitle}>
-                        用于在世界地图模式中展示场景与子场景的位置关系。
+                        {t('createGame.mapPreviewTip')}
                     </p>
                 </div>
             </div>
@@ -37,9 +39,9 @@ const WorldMapCard: React.FC<WorldMapCardProps> = ({
                 style={worldMapPreviewSrc ? { backgroundImage: `url('${worldMapPreviewSrc}')` } : {}}
             >
                 {worldMapPreviewSrc ? (
-                    <span className={styles.heroHint}>当前大地图预览</span>
+                    <span className={styles.heroHint}>{t('createGame.currentMapPreview')}</span>
                 ) : (
-                    <span>暂无大地图，请先上传或生成</span>
+                    <span>{t('createGame.noMapPleaseUpload')}</span>
                 )}
                 <div className={styles.worldMapActions}>
                     <input
@@ -59,20 +61,20 @@ const WorldMapCard: React.FC<WorldMapCardProps> = ({
                             alt="" 
                             className={styles.priceIcon} 
                         />
-                        {isGeneratingWorldMap ? '生成中...' : 'AI 生成'}
+                        {isGeneratingWorldMap ? t('createGame.generating') : t('createGame.aiGenerate')}
                     </button>
                     <button
                         className={styles.ghostSmall}
                         onClick={onUploadClick}
                         disabled={!fileId}
                     >
-                        上传
+                        {t('common.upload')}
                     </button>
                 </div>
                 {isGeneratingWorldMap && (
                     <div className="loadingOverlay">
                         <div className="loadingSpinner"></div>
-                        <div className="loadingText">正在生成大地图...</div>
+                        <div className="loadingText">{t('createGame.generatingMap')}</div>
                     </div>
                 )}
             </div>

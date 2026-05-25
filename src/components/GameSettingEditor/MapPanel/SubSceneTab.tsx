@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './SubSceneTab.module.css';
 import sharedStyles from './shared.module.css';
 import FunctionalNPCList from './FunctionalNPCList';
@@ -76,6 +77,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
         currentSubScene,
     } = useSubSceneTab({ subScenes, sceneSetting, isActive, abilityNodeSetting });
 
+    const { t } = useTranslation();
     const [saveConfirmModalOpen, setSaveConfirmModalOpen] = React.useState(false);
     const [pendingSubSceneId, setPendingSubSceneId] = React.useState<string | null>(null);
 
@@ -510,7 +512,7 @@ const SubSceneTab = React.forwardRef<SubSceneTabRef, SubSceneTabProps>(({
                                 className={styles.defaultNpcImage}
                                 draggable={false}
                             />
-                            <div className={styles.npcName}>NPC 立绘</div>
+                            <div className={styles.npcName}>{t('createGame.npcPortrait')}</div>
                         </div>
                     </div>
                     <div className={styles.npcHint}>

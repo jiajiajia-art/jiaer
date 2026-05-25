@@ -1,4 +1,5 @@
 import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from '../../page/CustomIFCreate.module.css';
 import { HOST_ADDRESS } from '../../config';
 import { authFetch } from '../../api/base';
@@ -295,7 +296,7 @@ function toAbsoluteUrl(path: string) {
 }
 
 function formatDateTime(value: string | null | undefined) {
-  if (!value) return '未知时间';
+  if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
@@ -319,9 +320,9 @@ function makeZipFileName(rawTitle: string, currentAppId?: string) {
   return `${safe || fallback}.zip`;
 }
 
-async function readErrorMessage(response: Response) {
+async function readErrorMessage(response: Response, t: (key: string, opts?: Record<string, unknown>) => string) {
   const text = await response.text();
-  if (!text) return `请求失败（${response.status}）`;
+  if (!text) return t('createGame.requestFailed', { status: response.status });
   try {
     const parsed = JSON.parse(text);
     return parsed?.message || parsed?.error || text;
@@ -468,6 +469,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
   onPendingLocalAssetsChange,
   layoutVariant = 'default',
 }, ref) => {
+  const { t } = useTranslation();
   const [sourceType, setSourceType] = useState<SourceType>('zip');
   const [multiFiles, setMultiFiles] = useState<MultiItem[]>([]);
   const [multiStats, setMultiStats] = useState<{ count: number; bytes: number; selCount: number; selBytes: number }>({
@@ -508,7 +510,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
     if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
     startAtRef.current = Date.now();
     setProgress(5);
-    setProgressText('上传中...');
+    setProgressText(t('createGame.uploading'));
     const MAX_TIME = 20_000;
     progressTimerRef.current = window.setInterval(() => {
       if (!startAtRef.current) return;
@@ -607,7 +609,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
     try {
       const response = await authFetch(`${HOST_ADDRESS}/api/custom/apps/${resolvedAppId}/assets`, { method: 'GET' });
       if (!response.ok) {
-        throw new Error(await readErrorMessage(response));
+        throw new Error(await readErrorMessage(response, t));
       }
 
       const json = await response.json() as CloudAssetsResponse;
@@ -633,7 +635,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         return next;
       });
     } catch (err: any) {
-      setCloudError(String(err?.message || err || '加载云端素材失败。'));
+        setCloudError(String(err?.message || err || t('createGame.loadCloudAssetsFailed')));
     } finally {
       setCloudLoading(false);
       setCloudReady(true);
@@ -656,7 +658,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('ZIP 组件加载失败。'));
+      script.onerror = () => reject(new Error(t('createGame.zipLibLoadFailed')));
       document.head.appendChild(script);
     });
   }
@@ -665,7 +667,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
     try {
       await ensureZipLib();
       const JSZip = (window as any).JSZip as JSZipConstructor | undefined;
-      if (!JSZip) throw new Error('ZIP 组件不可用。');
+      if (!JSZip) throw new Error(t('createGame.zipLibUnavailable'));
       const archive = await JSZip.loadAsync(await file.arrayBuffer(), {
         decodeFileName: decodeZipFileName,
       });
@@ -686,7 +688,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       }
       applyLocalSelection(list, 'zip', true);
     } catch (err: any) {
-      setError(String(err?.message || err || '读取 ZIP 文件失败。'));
+      setError(String(err?.message || err || t('createGame.readZipFailed')));
     }
   }
 
@@ -795,13 +797,13 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
     try {
       await ensureZipLib();
       const JSZip = (window as any).JSZip as JSZipConstructor | undefined;
-      if (!JSZip) throw new Error('ZIP 组件不可用。');
+      if (!JSZip) throw new Error(t('createGame.zipLibUnavailable'));
       const zip = new JSZip();
 
       for (const asset of cloudAssets) {
         const response = await fetch(toAbsoluteUrl(asset.url), { credentials: 'include' });
         if (!response.ok) {
-          throw new Error(`获取文件失败：${asset.path}`);
+          throw new Error(t('createGame.fetchFileFailed', { path: asset.path }));
         }
         zip.file(asset.localPath || asset.displayPath || asset.path, new Uint8Array(await response.arrayBuffer()));
       }
@@ -819,9 +821,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
-      toast.success('云端素材下载完成。');
+      toast.success(t('createGame.cloudAssetsDownloaded'));
     } catch (err: any) {
-      const message = String(err?.message || err || '下载云端素材失败。');
+      const message = String(err?.message || err || t('createGame.cloudAssetsDownloadFailed'));
       setCloudError(message);
       toast.error(message, { duration: 8000 });
     } finally {
@@ -866,17 +868,17 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       });
 
       if (!response.ok) {
-        throw new Error(await readErrorMessage(response));
+        throw new Error(await readErrorMessage(response, t));
       }
 
       const json = await response.json() as DeleteCloudAssetsResponse;
       await loadCloudAssets(appId);
       const deletedCount = Number(json.deleted?.deletedCount || pendingDeletion.affectedCount || 0);
-      toast.success(`已删除 ${deletedCount} 个云端素材。`);
+      toast.success(t('createGame.cloudAssetsDeleted', { count: deletedCount }));
       setPendingDeletion(null);
       setDeleteStage('review');
     } catch (err: any) {
-      const message = String(err?.message || err || '删除云端素材失败。');
+      const message = String(err?.message || err || t('createGame.deleteCloudAssetsFailed'));
       setCloudError(message);
       toast.error(message, { duration: 8000 });
     } finally {
@@ -899,13 +901,13 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
 
     try {
       if (multiFiles.length === 0) {
-        setError('未选择任何文件。');
+        setError(t('createGame.noFileSelected'));
         return false;
       }
 
       const selected = multiFiles.filter((item) => item.selected);
       if (selected.length === 0) {
-        setError('请至少选择一个待上传文件。');
+        setError(t('createGame.selectAtLeastOneFile'));
         return false;
       }
 
@@ -924,7 +926,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         if (!response.ok) throw new Error(await response.text());
         const meta = await response.json();
         nextAppId = meta?.appId || meta?.data?.appId || '';
-        if (!nextAppId) throw new Error('服务端未返回 appId。');
+        if (!nextAppId) throw new Error(t('createGame.serverNoAppId'));
         onAppReady?.(nextAppId);
       }
 
@@ -945,18 +947,18 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       const assetPrefix = uploadJson?.assetPrefix || `${HOST_ADDRESS}/public/custom/apps/${nextAppId}/assets`;
 
       setLastUploadOk(true);
-      setProgressText('上传完成');
+      setProgressText(t('createGame.uploadComplete'));
       setProgress(100);
       stopFakeProgress();
       setIsUploading(true);
       setHasPendingUpload(false);
       setLocalPanelMode('local');
-      toast.success('素材包上传成功。');
+      toast.success(t('createGame.assetsUploadSuccess'));
       await loadCloudAssets(nextAppId);
       onUploaded?.(assetPrefix);
       return true;
     } catch (err: any) {
-      let message = String(err?.message || err || '上传失败。');
+      let message = String(err?.message || err || t('createGame.uploadFailed'));
       try {
         const parsed = JSON.parse(message);
         if (parsed?.message) message = parsed.message;
@@ -967,7 +969,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       setLastUploadOk(false);
       stopFakeProgress();
       setIsUploading(false);
-      toast.error(message || '上传失败。', { duration: 8000 });
+      toast.error(message || t('createGame.uploadFailed'), { duration: 8000 });
       return false;
     } finally {
       setCreating(false);
@@ -976,10 +978,21 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
 
   const localTreeHasFiles = multiFiles.length > 0;
   const showLocalAssetsView = localTreeHasFiles && localPanelMode === 'local';
-  const localStatsText = `${multiStats.count} 个文件 | ${formatBytes(multiStats.bytes)} | 已选 ${multiStats.selCount} 个 | ${formatBytes(multiStats.selBytes)}`;
+  const localStatsText = t('createGame.localStats', {
+    count: multiStats.count,
+    totalSize: formatBytes(multiStats.bytes),
+    selCount: multiStats.selCount,
+    selSize: formatBytes(multiStats.selBytes),
+  });
   const cloudSummaryText = !appId
-    ? '首次上传后会显示云端素材。'
-    : `${cloudSummary.count} 个文件 | ${formatBytes(cloudSummary.bytes)}${cloudSummary.latestUploadedAt ? ` | 更新于 ${formatDateTime(cloudSummary.latestUploadedAt)}` : ''}`;
+    ? t('createGame.cloudStatsNoAssets')
+    : t('createGame.cloudStats', {
+      count: cloudSummary.count,
+      size: formatBytes(cloudSummary.bytes),
+      latestAt: cloudSummary.latestUploadedAt
+        ? t('createGame.latestAt', { time: formatDateTime(cloudSummary.latestUploadedAt) })
+        : '',
+    });
 
   const renderTree = (nodes: TreeNode[], kind: TreeKind) => nodes.map((node) => {
     const expandable = hasVisibleChildren(node);
@@ -988,10 +1001,14 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       : false;
     const isCloudNode = kind === 'cloud';
     const metaText = node.type === 'directory'
-      ? `${node.fileCount} 个文件${isCloudNode ? ` • ${formatBytes(node.totalBytes)}` : ''}`
+      ? isCloudNode
+        ? t('createGame.nodeMetaFileWithSize', { count: node.fileCount, size: formatBytes(node.totalBytes) })
+        : t('createGame.nodeMetaFile', { count: node.fileCount })
       : isCloudNode
-        ? `${formatBytes(node.totalBytes)}${node.uploadedAt ? ` • ${formatDateTime(node.uploadedAt)}` : ''}`
-        : `${formatBytes(node.totalBytes)}`;
+        ? node.uploadedAt
+          ? t('createGame.nodeMetaSizeWithTime', { size: formatBytes(node.totalBytes), time: formatDateTime(node.uploadedAt) })
+          : t('createGame.nodeMetaSize', { size: formatBytes(node.totalBytes) })
+        : t('createGame.nodeMetaSize', { size: formatBytes(node.totalBytes) });
 
     const safeMetaText = sanitizeAssetUiText(metaText);
 
@@ -1026,8 +1043,8 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
                 toggleExpanded(kind, node.path);
               }}
               onKeyDown={(event) => event.stopPropagation()}
-              aria-label={node.expanded ? '收起文件夹' : '展开文件夹'}
-              title={node.expanded ? '收起文件夹' : '展开文件夹'}
+              aria-label={node.expanded ? t('createGame.collapseFolder') : t('createGame.expandFolder')}
+              title={node.expanded ? t('createGame.collapseFolder') : t('createGame.expandFolder')}
               data-expanded={String(node.expanded)}
             >
               {node.expanded ? '▾' : '▸'}
@@ -1048,13 +1065,13 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
             <span className={styles.assetTreeCheckboxPlaceholder} aria-hidden="true" />
           )}
           <span className={`${styles.assetTreeIcon} ${node.type === 'directory' ? styles.assetTreeDirectoryIcon : styles.assetTreeFileIcon}`} aria-hidden="true">
-            {node.type === 'directory' ? '文件夹' : '文件'}
+            {node.type === 'directory' ? t('createGame.folder') : t('createGame.file')}
           </span>
           <div className={styles.assetTreeContent}>
             <div className={styles.assetTreeNameRow}>
               <span className={styles.assetTreeName}>{node.displayName || node.name || node.path}</span>
               {node.type === 'directory' ? (
-                <span className={styles.assetTreeBadge}>文件夹</span>
+                <span className={styles.assetTreeBadge}>{t('createGame.folder')}</span>
               ) : null}
             </div>
             <div className={styles.assetTreeMeta}>{safeMetaText}</div>
@@ -1069,8 +1086,8 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
               }}
               onKeyDown={(event) => event.stopPropagation()}
               disabled={cloudBusy}
-              aria-label={node.type === 'directory' ? '从云端删除文件夹' : '从云端删除文件'}
-              title={node.type === 'directory' ? '从云端删除文件夹' : '从云端删除文件'}
+              aria-label={node.type === 'directory' ? t('createGame.deleteCloudFolder') : t('createGame.deleteCloudFile')}
+              title={node.type === 'directory' ? t('createGame.deleteCloudFolder') : t('createGame.deleteCloudFile')}
             >
               ×
             </button>
@@ -1101,7 +1118,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         <div className={styles.cloudAssetsCard}>
           <div className={styles.cloudAssetsHeader}>
             <div className={styles.cloudAssetsHeading}>
-              <div className={styles.cloudAssetsTitle}>{showLocalAssetsView ? '本地素材' : '上传素材'}</div>
+              <div className={styles.cloudAssetsTitle}>{showLocalAssetsView ? t('createGame.localAssets') : t('createGame.uploadAssets')}</div>
               {localTreeHasFiles ? (
                 <div className={styles.cloudAssetsMeta} data-label={localStatsText} aria-label={localStatsText}>
                   {localStatsText}
@@ -1114,7 +1131,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
                 className={`${styles.assetsPanelTab} ${!showLocalAssetsView ? styles.assetsPanelTabActive : ''}`}
                 onClick={() => setLocalPanelMode('upload')}
               >
-                上传素材
+                {t('createGame.uploadAssets')}
               </button>
               <span className={styles.assetsPanelTabDivider} aria-hidden="true">&gt;</span>
               <button
@@ -1123,7 +1140,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
                 onClick={() => setLocalPanelMode('local')}
                 disabled={!localTreeHasFiles}
               >
-                本地素材
+                {t('createGame.localAssets')}
               </button>
             </div>
           </div>
@@ -1132,14 +1149,14 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
             {showLocalAssetsView ? (
               <div className={`${styles.fileRow} ${styles.localAssetsTreeArea}`}>
                 <div className={styles.listActions}>
-                  <button type="button" className={styles.smallBtn} onClick={() => selectAll(true)}>全选</button>
-                  <button type="button" className={styles.smallBtn} onClick={() => selectAll(false)}>全不选</button>
+                  <button type="button" className={styles.smallBtn} onClick={() => selectAll(true)}>{t('createGame.selectAll')}</button>
+                  <button type="button" className={styles.smallBtn} onClick={() => selectAll(false)}>{t('createGame.deselectAll')}</button>
                 </div>
                 <div className={`${styles.assetTreePanel} ${styles.localAssetTreePanel}`}>
                   <div className={styles.assetTreeHeader}>
                     <div>
-                      <div className={styles.assetTreeTitle}>本地文件</div>
-                      <div className={styles.assetTreeSubTitle}>仅文件节点支持勾选。</div>
+                      <div className={styles.assetTreeTitle}>{t('createGame.localFiles')}</div>
+                      <div className={styles.assetTreeSubTitle}>{t('createGame.fileNodeTip')}</div>
                     </div>
                   </div>
                   <div className={`${styles.assetTreeList} ${styles.localAssetTreeList}`}>
@@ -1150,9 +1167,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
             ) : (
               <>
                 <div className={styles.seg}>
-          <button type="button" className={`${styles.segBtn} ${sourceType === 'zip' ? styles.segBtnActive : ''}`} onClick={() => setSourceType('zip')}>ZIP 包</button>
-          <button type="button" className={`${styles.segBtn} ${sourceType === 'dir' ? styles.segBtnActive : ''}`} onClick={() => setSourceType('dir')}>文件夹</button>
-          <button type="button" className={`${styles.segBtn} ${sourceType === 'files' ? styles.segBtnActive : ''}`} onClick={() => setSourceType('files')}>多个文件</button>
+          <button type="button" className={`${styles.segBtn} ${sourceType === 'zip' ? styles.segBtnActive : ''}`} onClick={() => setSourceType('zip')}>{t('createGame.zipPackage')}</button>
+          <button type="button" className={`${styles.segBtn} ${sourceType === 'dir' ? styles.segBtnActive : ''}`} onClick={() => setSourceType('dir')}>{t('createGame.folder')}</button>
+          <button type="button" className={`${styles.segBtn} ${sourceType === 'files' ? styles.segBtnActive : ''}`} onClick={() => setSourceType('files')}>{t('createGame.multipleFiles')}</button>
         </div>
 
         <div
@@ -1164,15 +1181,15 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         >
           <div className={styles.dropZoneInner}>
             <div className={styles.dropContent}>
-              <h3 className={styles.dropHeading}>将 ZIP 包、文件夹或文件拖到这里</h3>
-              <p className={styles.dropHint}>点击选择文件，支持直接选择文件夹。</p>
-              <p className={styles.dropHint}>素材会保存到项目素材目录下，可直接用于渲染引用。</p>
+              <h3 className={styles.dropHeading}>{t('createGame.dragZipHere')}</h3>
+              <p className={styles.dropHint}>{t('createGame.clickSelectFiles')}</p>
+              <p className={styles.dropHint}>{t('createGame.assetsTip')}</p>
             </div>
           </div>
           <div className={styles.dropListWrapper}>
             <ul className={styles.dropList}>
-              <li>示例：上传 <code>images/hero.png</code> 后，可通过 <code>./images/hero.png</code> 引用。</li>
-              <li>建议将图片、音频等资源整理在稳定的目录结构中。</li>
+              <li>{t('createGame.zipReferenceTip')}</li>
+              <li>{t('createGame.organizeAssetsTip')}</li>
             </ul>
           </div>
         </div>
@@ -1195,7 +1212,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
             if (sourceType === 'zip') {
               const zipFile = files[0];
               if (!/\.zip$/i.test(zipFile.name || '')) {
-                setError('请选择 ZIP 文件。');
+                setError(t('createGame.selectZipFile'));
                 event.currentTarget.value = '';
                 return;
               }
@@ -1239,17 +1256,17 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         {false ? (
           <div className={styles.fileRow}>
             <div className={styles.listActions}>
-              <button type="button" className={styles.smallBtn} onClick={() => selectAll(true)}>全选</button>
-              <button type="button" className={styles.smallBtn} onClick={() => selectAll(false)}>全不选</button>
+              <button type="button" className={styles.smallBtn} onClick={() => selectAll(true)}>{t('createGame.selectAll')}</button>
+              <button type="button" className={styles.smallBtn} onClick={() => selectAll(false)}>{t('createGame.deselectAll')}</button>
             </div>
             <div className={styles.fileStats} data-label={localStatsText} aria-label={localStatsText}>
-              {`${multiStats.count} 个文件 • ${formatBytes(multiStats.bytes)} • 已选 ${multiStats.selCount} 个 • ${formatBytes(multiStats.selBytes)}`}
+              {localStatsText}
             </div>
             <div className={styles.assetTreePanel}>
               <div className={styles.assetTreeHeader}>
                 <div>
-                  <div className={styles.assetTreeTitle}>本地文件</div>
-                  <div className={styles.assetTreeSubTitle}>仅文件节点支持勾选。</div>
+                  <div className={styles.assetTreeTitle}>{t('createGame.localFiles')}</div>
+                  <div className={styles.assetTreeSubTitle}>{t('createGame.fileNodeTip')}</div>
                 </div>
               </div>
               <div className={styles.assetTreeList}>
@@ -1265,7 +1282,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
 
         <div className={styles.actions}>
           <button onClick={doUpload} disabled={creating} className={styles.primaryBtn}>
-            {creating ? '上传中...' : '上传素材包'}
+            {creating ? t('createGame.uploading') : t('createGame.uploadAssets')}
           </button>
         </div>
         </div>
@@ -1275,11 +1292,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         <div className={styles.cloudAssetsCard}>
           <div className={styles.cloudAssetsHeader}>
             <div className={styles.cloudAssetsHeading}>
-              <div className={styles.cloudAssetsTitle}>云端素材</div>
+              <div className={styles.cloudAssetsTitle}>{t('createGame.cloudAssets')}</div>
               <div className={styles.cloudAssetsMeta} data-label={cloudSummaryText} aria-label={cloudSummaryText}>
-                {!appId
-                  ? '首次上传后会显示云端素材。'
-                  : `${cloudSummary.count} 个文件 • ${formatBytes(cloudSummary.bytes)}${cloudSummary.latestUploadedAt ? ` • 更新于 ${formatDateTime(cloudSummary.latestUploadedAt)}` : ''}`}
+                {cloudSummaryText}
               </div>
             </div>
             <div className={styles.cloudAssetsActions}>
@@ -1289,7 +1304,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
                 onClick={() => void loadCloudAssets()}
                 disabled={!appId || cloudBusy}
               >
-                {cloudLoading ? '刷新中...' : '刷新'}
+                {cloudLoading ? t('createGame.refreshing') : t('createGame.refresh')}
               </button>
               <button
                 type="button"
@@ -1297,22 +1312,22 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
                 onClick={() => void downloadCloudAssetsZip()}
                 disabled={!appId || cloudAssets.length === 0 || cloudBusy}
               >
-                {downloadingCloudZip ? '正在准备 ZIP...' : '下载 ZIP'}
+                {downloadingCloudZip ? t('createGame.preparingZip') : t('createGame.downloadZip')}
               </button>
             </div>
           </div>
 
           <div className={styles.cloudAssetsBody}>
             {!appId ? (
-              <div className={styles.cloudAssetsEmpty}>先上传一次后，系统会为当前项目创建云端素材目录。</div>
+              <div className={styles.cloudAssetsEmpty}>{t('createGame.uploadOnceTip')}</div>
             ) : cloudLoading && !cloudReady ? (
-              <div className={styles.cloudAssetsEmpty}>正在加载云端素材...</div>
+              <div className={styles.cloudAssetsEmpty}>{t('createGame.loadingCloudAssets')}</div>
             ) : cloudAssets.length > 0 ? (
               <div className={`${styles.assetTreePanel} ${styles.cloudAssetTreePanel}`}>
                 <div className={styles.assetTreeHeader}>
                   <div>
-                    <div className={styles.assetTreeTitle}>云端文件</div>
-                    <div className={styles.assetTreeSubTitle}>删除文件夹时会递归删除其内容，本地选择不会变化。</div>
+                    <div className={styles.assetTreeTitle}>{t('createGame.cloudFiles')}</div>
+                    <div className={styles.assetTreeSubTitle}>{t('createGame.recursivelyDeleteTip')}</div>
                   </div>
                 </div>
                 <div className={`${styles.assetTreeList} ${styles.cloudAssetTreeList}`}>
@@ -1320,7 +1335,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
                 </div>
               </div>
             ) : (
-              <div className={styles.cloudAssetsEmpty}>当前项目暂未找到云端素材。</div>
+              <div className={styles.cloudAssetsEmpty}>{t('createGame.noCloudAssetsFound')}</div>
             )}
           </div>
 
@@ -1333,7 +1348,7 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       <UploadProgress
         isOpen={isUploading}
         progress={progress}
-        progressText={progressText}
+        progressText={progressText || t('createGame.processing')}
         onCancel={() => {
           if (abortRef.current) {
             try {
@@ -1350,23 +1365,34 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
           setProgressText('');
         }}
         completed={lastUploadOk && progress >= 100}
-        primaryText="确定"
+        primaryText={t('common.confirm')}
         onPrimary={() => setIsUploading(false)}
+        titleText={t('createGame.creating')}
+        cancelText={t('createGame.cancelUpload')}
       />
 
       <ConfirmModal
         isOpen={!!pendingDeletion}
         onConfirm={confirmDeleteCloudNode}
         onCancel={closeDeleteModal}
-        title={deleteStage === 'review' ? '删除云端素材？' : '永久删除？'}
+        title={deleteStage === 'review' ? t('createGame.deleteConfirmTitle') : t('createGame.permanentDeleteTitle')}
         message={pendingDeletion
           ? deleteStage === 'review'
-            ? `${pendingDeletion.type === 'directory' ? '文件夹' : '文件'} "${pendingDeletion.name}" \n将从云端删除 ${pendingDeletion.affectedCount} 个文件${pendingDeletion.recursive ? '（包含子内容）' : ''}。`
-            : `此操作会从云端永久删除 "${pendingDeletion.name}"，且无法撤销。`
+            ? pendingDeletion.type === 'directory'
+              ? t('createGame.deleteFolderMessage', {
+                name: pendingDeletion.name,
+                count: pendingDeletion.affectedCount,
+                recursive: pendingDeletion.recursive ? t('createGame.permanentDeleteTitle') : '',
+              })
+              : t('createGame.deleteFileMessage', {
+                name: pendingDeletion.name,
+                count: pendingDeletion.affectedCount,
+              })
+            : t('createGame.permanentDeleteMessage', { name: pendingDeletion.name })
           : ''
         }
-        confirmButtonText={deletingCloudAssets ? '删除中...' : deleteStage === 'review' ? '继续' : '永久删除'}
-        cancelButtonText="取消"
+        confirmButtonText={deletingCloudAssets ? t('createGame.deleting') : deleteStage === 'review' ? t('createGame.continue') : t('createGame.permanentlyDelete')}
+        cancelButtonText={t('common.cancel')}
       />
     </div>
   );

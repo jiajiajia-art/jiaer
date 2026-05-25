@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import styles from './UploadMusicModal.module.css';
 
@@ -16,6 +17,7 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!isOpen) return null;
+    const { t } = useTranslation();
 
     // 获取文件扩展名
     const getFileExtension = (filename: string): string => {
@@ -53,11 +55,11 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
             return;
         }
         if (!musicName.trim()) {
-            toast.error('请输入 BGM 名称');
+            toast.error(t('createGame.enterBgmName'));
             return;
         }
         if (!musicDescription.trim()) {
-            toast.error('请输入 BGM 描述');
+            toast.error(t('createGame.enterBgmDescription'));
             return;
         }
 
@@ -93,27 +95,27 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
         <div className={styles.modalOverlay} onClick={handleCancel}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
-                    <h3>上传音乐</h3>
+                    <h3>{t('createGame.uploadMusic')}</h3>
                     <button className={styles.modalClose} onClick={handleCancel}>×</button>
                 </div>
                 <div className={styles.modalBody}>
                     <label>
-                        <span>BGM 名称<span className={styles.required}>*</span></span>
+                        <span>{t('createGame.bgmName')}<span className={styles.required}>*</span></span>
                         <input
                             type="text"
                             value={musicName}
                             onChange={(e) => setMusicName(e.target.value)}
-                            placeholder="请输入 BGM 名称"
+                            placeholder={t('createGame.bgmNamePlaceholder') || '请输入 BGM 名称'}
                             disabled={isUploading}
                         />
                     </label>
                     <label>
-                        <span>BGM 描述<span className={styles.required}>*</span></span>
+                        <span>{t('createGame.bgmDescription')}<span className={styles.required}>*</span></span>
                         <textarea
                             rows={3}
                             value={musicDescription}
                             onChange={(e) => setMusicDescription(e.target.value)}
-                            placeholder="请输入 BGM 描述"
+                            placeholder={t('createGame.bgmDescription')}
                             disabled={isUploading}
                         />
                     </label>

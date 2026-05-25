@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import styles from './ScenesPanel.module.css';
 import { getImageUrl, getMusicUrlWithHost, SCENE_GENERATION_COST } from '../../../utils/constants';
@@ -87,6 +88,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
     onDataChange, 
     mode = 'visual',
 }, ref) => {
+    const { t } = useTranslation();
     const [activeSceneId, setActiveSceneId] = useState<string>('');
     const [activeSubsceneId, setActiveSubsceneId] = useState<string | null>(null);
     const [activeSubsceneDraft, setActiveSubsceneDraft] = useState<LocalScene | null>(null);
@@ -495,6 +497,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 gameData,
                 api: sceneApi,
                 updateUser,
+                t,
                 activeSceneId,
                 activeSceneDraft,
                 activeSubsceneId,
@@ -1197,7 +1200,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         imagePath?: string
     ) => {
         if (!fileId || !sceneApi) {
-            toast.error('缺少必要数据，无法下载');
+            toast.error(t('createGame.missingDataCannotDownload'));
             return;
         }
 
@@ -1212,7 +1215,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         }
 
         if (!finalImagePath) {
-            toast.error('缺少图片路径，无法下载');
+            toast.error(t('createGame.missingImagePath'));
             return;
         }
 
@@ -1247,23 +1250,23 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-            toast.success('图片下载成功');
+            toast.success(t('createGame.imageDownloadSuccess'));
         } catch (error) {
             console.error('下载图片失败:', error);
-            toast.error('下载图片失败，请稍后重试');
+            toast.error(t('createGame.imageDownloadFailedRetry'));
         }
     }, [fileId, sceneApi]);
 
     const handleUploadMusic = useCallback(async (file: File, name: string, description: string) => {
         if (!fileId || !sceneApi) {
-            toast.error('缺少必要数据，无法上传');
+            toast.error(t('createGame.missingDataCannotUpload'));
             return;
         }
 
         try {
             const response = await sceneApi.uploadMusic(fileId, file, name, description);
             if (response.data.success) {
-                toast.success('音乐上传成功');
+                toast.success(t('createGame.musicUploadSuccess'));
                 const listResponse = await sceneApi.getMusicList(fileId);
                 if (listResponse.data.success && listResponse.data.files) {
                     const uploadedFilename = response.data.filename || file.name;
@@ -1289,11 +1292,11 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     onDataChange();
                 }
             } else {
-                toast.error('音乐上传失败');
+                toast.error(t('createGame.musicUploadFailed'));
             }
         } catch (error) {
             console.error('上传音乐失败:', error);
-            toast.error('上传音乐失败，请稍后重试');
+            toast.error(t('createGame.musicUploadFailedRetry'));
             throw error;
         }
     }, [fileId, sceneApi, onDataChange]);
@@ -1314,8 +1317,8 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
 
             <div className={styles.panelHeader}>
                 <div>
-                    <h2>场景背景 & BGM 绑定</h2>
-                    <p className={styles.subtitle}>AI 生成场景描述，可直接选择上一步上传的 BGM</p>
+                    <h2>{t('createGame.sceneAndBgm')}</h2>
+                    <p className={styles.subtitle}>{t('createGame.aiSceneDescription')}</p>
                 </div>
                 <GenerationActionBar>
                     <button
@@ -1330,7 +1333,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                         />
                         <div className={styles.buttonTextContainer}>
                             <span className={styles.buttonMainText}>
-                                {isGeneratingAllSceneImages ? '生成中...' : '一键生成所有场景立绘'}
+                                {isGeneratingAllSceneImages ? t('createGame.generating') : t('createGame.generateAllScenePortraits')}
                             </span>
                             <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}积分/张</span>
                         </div>
@@ -1410,9 +1413,9 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             }}
                             isGeneratingForThisScene={isGeneratingSingleSceneImage && generatingSceneId === newSceneData.id}
                             generationEtaText={singleSceneEtaText}
-                            onImageClick={() => toast.error('请先确认新增场景，然后再上传图片')}
+                            onImageClick={() => toast.error(t('createGame.confirmAddSceneFirst'))}
                             onUploadChange={handlers.handleUploadSceneImage}
-                            onRequestRegenerate={() => toast.error('请先确认新增场景，然后再生成图片')}
+                            onRequestRegenerate={() => toast.error(t('createGame.generateImageFirstScene'))}
                             nameDirty={currentSceneFieldDirtyState.name}
                             descDirty={currentSceneFieldDirtyState.desc}
                             inlineSaveDisabled={isGeneratingSingleSceneImage || isClearingSceneImage}
@@ -1474,7 +1477,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                                 />
                             ) : (
                                 <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
-                                    <p>暂无场景数据，请点击左侧"新增场景"按钮添加场景</p>
+                                    <p>{t('createGame.noSceneData')}</p>
                                 </div>
                             )}
                         </>
@@ -1517,44 +1520,44 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 isOpen={deleteModalOpen}
                 onConfirm={handlers.handleConfirmDelete}
                 onCancel={handlers.handleCancelDelete}
-                title="删除场景"
-                message="删除后场景数据不可恢复，请谨慎操作！"
-                confirmButtonText="确认删除"
-                cancelButtonText="我再想想"
+                title={t('createGame.deleteScene')}
+                message={t('createGame.deleteSceneWarning')}
+                confirmButtonText={t('common.confirm')}
+                cancelButtonText={t('common.thinkLater')}
             />
 
             <ConfirmModal
                 isOpen={subsceneDeleteModalOpen}
                 onConfirm={handlers.handleConfirmSubsceneDelete}
                 onCancel={handlers.handleCancelSubsceneDelete}
-                title="删除子场景"
-                message="删除后子场景数据不可恢复，请谨慎操作！"
-                confirmButtonText="确认删除"
-                cancelButtonText="我再想想"
+                title={t('createGame.deleteSubScene')}
+                message={t('createGame.deleteSubSceneWarning')}
+                confirmButtonText={t('common.confirm')}
+                cancelButtonText={t('common.thinkLater')}
             />
 
             <ConfirmModal
                 isOpen={sceneCostModalOpen}
                 onConfirm={handleConfirmGenerateAllSceneImages}
                 onCancel={handleCancelGenerateAllSceneImages}
-                title="积分扣除确认"
+                title={t('common.pointsDeductionConfirm')}
                 message={
                     sceneCostPoints != null
-                        ? `本次一键生成场景立绘将扣除 ${sceneCostPoints} 积分（当前积分 ${userPoints}${sceneCostPoints > userPoints ? '，积分不足' : ''}），是否继续？`
-                        : `将扣除一定积分（当前积分 ${userPoints}），是否继续？`
+                        ? t('common.batchSceneGenerationConfirm', { points: sceneCostPoints, currentPoints: userPoints, insufficient: sceneCostPoints > userPoints ? t('common.insufficient') : '' })
+                        : t('common.deductSomePoints', { currentPoints: userPoints })
                 }
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                confirmButtonText={t('common.confirmGenerate')}
+                cancelButtonText={t('common.cancel')}
             />
 
             <ConfirmModal
                 isOpen={singleSceneCostModalOpen}
                 onConfirm={handleConfirmSingleSceneGenerate}
                 onCancel={handleCancelSingleSceneGenerate}
-                title="积分扣除确认"
-                message={`本次生成场景立绘将扣除 ${SCENE_GENERATION_COST} 积分，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                title={t('common.pointsDeductionConfirm')}
+                message={t('common.singleSceneGenerationConfirm', { cost: SCENE_GENERATION_COST })}
+                confirmButtonText={t('common.confirmGenerate')}
+                cancelButtonText={t('common.cancel')}
             />
 
             {/* 一键生成场景立绘结果弹窗 */}
@@ -1562,15 +1565,15 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 isOpen={clearSceneImageModalOpen}
                 onConfirm={handleConfirmClearSceneImage}
                 onCancel={handleCancelClearSceneImage}
-                title="清空当前场景图"
-                message="确认是否清空当前场景图并恢复默认无图？"
-                confirmButtonText="确认清空"
-                cancelButtonText="取消"
+                title={t('common.clearSceneImage')}
+                message={t('common.clearSceneImageConfirm')}
+                confirmButtonText={t('common.confirmClear')}
+                cancelButtonText={t('common.cancel')}
             />
             <GenerateResultModal
                 isOpen={sceneResultModalOpen}
                 onClose={() => setSceneResultModalOpen(false)}
-                title="场景立绘生成结果"
+                title={t('common.sceneImageGenerationResult')}
                 generatedCount={sceneGenerationResult?.generatedCount}
                 totalCount={sceneGenerationResult?.totalCount}
                 pointsDeducted={sceneGenerationResult?.pointsDeducted}
@@ -1581,10 +1584,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 isOpen={worldMapCostModalOpen}
                 onConfirm={handleConfirmGenerateWorldMap}
                 onCancel={handleCancelGenerateWorldMap}
-                title="积分扣除确认"
-                message={`本次生成大地图将扣除 ${SCENE_GENERATION_COST} 积分，是否继续？`}
-                confirmButtonText="确认生成"
-                cancelButtonText="取消"
+                title={t('common.pointsDeductionConfirm')}
+                message={t('common.worldMapGenerationConfirm', { cost: SCENE_GENERATION_COST })}
+                confirmButtonText={t('common.confirmGenerate')}
+                cancelButtonText={t('common.cancel')}
             />
 
             <UploadMusicModal
@@ -1597,14 +1600,14 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 <div className={styles.plusLoadingOverlay}>
                     <div className={styles.plusLoadingDialog}>
                         <div className={styles.plusLoadingSpinner}></div>
-                        <div className={styles.plusLoadingText}>正在生成场景立绘...</div>
+                        <div className={styles.plusLoadingText}>{t('createGame.generatingScenePortraits')}</div>
 {batchSceneEtaText && (
                             <div className={styles.plusLoadingHint}>{batchSceneEtaText}</div>
                         )}
                         {batchSceneProgressText && (
                             <div className={styles.plusLoadingHint}>{batchSceneProgressText}</div>
                         )}
-                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作</div>
+                        <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
                     </div>
                 </div>
             )}
@@ -1620,10 +1623,10 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     executePendingAction();
                 }}
                 onCancel={clearPendingActionState}
-                title="未保存的修改"
-                message="您有未保存的修改，是否要保存？"
-                saveButtonText="保存"
-                discardButtonText="不保存"
+                title={t('common.unsavedChanges')}
+                message={t('common.unsavedChangesMessage')}
+                saveButtonText={t('common.save')}
+                discardButtonText={t('common.discard')}
             />
         </div>
     );

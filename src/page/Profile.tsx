@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
+import { useTranslation } from 'react-i18next';
 import styles from './Profile.module.css';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useAuthStore } from '../store/useAuthStore';
@@ -46,10 +47,10 @@ const formatDuration = (totalSeconds: number): string => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-const getTaskActionText = (code: string): string => {
-    if (code === 'like_once') return '去点赞';
-    if (code === 'play_3_unique' || code === 'play_three_games') return '去游玩';
-    return '进行中';
+const getTaskActionText = (code: string, t: (key: string) => string): string => {
+    if (code === 'like_once') return t('profile.taskGoLike');
+    if (code === 'play_3_unique' || code === 'play_three_games') return t('profile.taskGoPlay');
+    return t('profile.taskInProgress');
 };
 const isWebViewEnv = (): boolean => {
     const win = window as any;
@@ -76,6 +77,7 @@ const formatDate = (value?: string | null): string => {
 };
 
 const Profile: React.FC = () => {
+    const { t } = useTranslation();
     const { user, logout, updateUser } = useAuthStore();
     const navigate = useNavigate();
     const [inviteCode, setInviteCode] = useState('');
@@ -131,13 +133,13 @@ const Profile: React.FC = () => {
                 const response = await auth.updateUserAvatar(croppedFile);
                 if (response.data.success && response.data.data) {
                     await getUserInfo();
-                    toast.success('头像更新');
+                    toast.success(t('profile.avatarUpdated'));
                 } else {
-                    toast.error(response.data.message || 'Failed to update avatar.');
+                    toast.error(response.data.message || t('profile.avatarUpdateFailed'));
                 }
             } catch (error) {
                 console.error('update avatar failed:', error);
-                toast.error('Failed to update avatar.');
+                toast.error(t('profile.avatarUpdateFailed'));
             } finally {
                 setIsUpdatingAvatar(false);
                 if (fileInputRef.current) {
@@ -238,7 +240,7 @@ const Profile: React.FC = () => {
             const data = await getCreatorProfile();
             setCreatorProfileData(data);
         } catch (error) {
-            console.error('获取创作者资料失败:', error);
+            console.error('Fetch creator profile failed:', error);
         }
     };
 
@@ -264,7 +266,7 @@ const Profile: React.FC = () => {
     }, [refreshDailyTasks]);
 
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
-    const userName = user?.user?.nickname || user?.user?.name || '未设置';
+    const userName = user?.user?.nickname || user?.user?.name || t('profile.userNameDefault');
     const userCode = user?.user?.userCode;
     const inviteDisplayCode = user?.user?.inviteCode || inviteCode || '002436';
 
@@ -272,21 +274,21 @@ const Profile: React.FC = () => {
         if (!userCode) return;
         try {
             await navigator.clipboard.writeText(userCode);
-            toast.success('Kuran号已复制');
+            toast.success(t('create.kuranIdCopied'));
         } catch (error) {
             console.error('copy Kuran code failed:', error);
-            toast.error('复制失败，请稍后重试');
+            toast.error(t('create.copyFailed'));
         }
     };
 
     const handleWatchAd = () => {
-        toast.error('观看广告功能开发中');
+        toast.error(t('profile.adFeatureDeveloping'));
     };
 
     const handleRedeemMembership = async () => {
         const key = redeemKey.trim().toUpperCase();
         if (!key) {
-            toast.error('请输入兑换码');
+            toast.error(t('profile.enterRedeemCode'));
             return;
         }
 
@@ -303,14 +305,14 @@ const Profile: React.FC = () => {
                     updateUser(userRes.data.data);
                 }
             } else {
-                toast.error(response.data.message || '兑换失败');
+                toast.error(response.data.message || t('profile.redeemFailed'));
             }
         } catch (error: unknown) {
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosError = error as { response?: { data?: { message?: string } } };
-                toast.error(axiosError.response?.data?.message || '兑换失败，请稍后重试');
+                toast.error(axiosError.response?.data?.message || t('profile.redeemFailed'));
             } else {
-                toast.error('兑换失败，请稍后重试');
+                toast.error(t('profile.redeemFailed'));
             }
         } finally {
             setIsRedeemingMembership(false);
@@ -320,35 +322,35 @@ const Profile: React.FC = () => {
     const handleCopyInviteCode = () => {
         if (inviteDisplayCode) {
             navigator.clipboard.writeText(inviteDisplayCode);
-            toast.success('邀请码已复制');
+            toast.success(t('profile.inviteCodeCopied'));
         } else {
-            toast.error('暂无邀请码');
+            toast.error(t('profile.noInviteCode'));
         }
     };
 
     const handleSubmitInviteCode = async () => {
         if (!inputInviteCode.trim()) {
-            toast.error('请输入邀请码');
+            toast.error(t('profile.enterInviteCode'));
             return;
         }
 
         try {
             const response = await auth.useInviteCode({ inviteCode: inputInviteCode });
             if (response.data.success) {
-                toast.success('邀请码提交成功');
+                toast.success(t('profile.inviteCodeSubmitSuccess'));
                 getUserInfo();
                 setShowInputInviteCode(false);
                 setInputInviteCode('');
             } else {
-                toast.error(response.data.message || '操作失败');
+                toast.error(response.data.message || t('profile.operationFailed'));
             }
         } catch (error: unknown) {
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || '提交邀请码失败';
+                const errorMessage = axiosError.response?.data?.message || t('profile.submitInviteCodeFailed');
                 toast.error(errorMessage);
             } else {
-                toast.error('提交邀请码失败');
+                toast.error(t('profile.submitInviteCodeFailed'));
             }
         }
     };
@@ -374,15 +376,15 @@ const Profile: React.FC = () => {
     const handleConfirmBindAccount = async () => {
         const phone = bindPhone.trim();
         if (!/^1[0-9]{10}$/.test(phone)) {
-            toast.error('请输入正确的手机号');
+            toast.error(t('profile.enterValidPhone'));
             return;
         }
         if (bindPassword.length < 6) {
-            toast.error('密码至少需6位');
+            toast.error(t('validation.passwordMinLength'));
             return;
         }
         if (bindPassword !== bindConfirmPassword) {
-            toast.error('两次输入的密码不一致');
+            toast.error(t('profile.passwordMismatch'));
             return;
         }
 
@@ -395,19 +397,19 @@ const Profile: React.FC = () => {
 
             if (response.data.success && response.data.data) {
                 updateUser(response.data.data);
-                toast.success('绑定成功！可在浏览器用手Q号 + 密码登录');
+                toast.success(t('profile.browserAccountBound'));
                 setIsBindAccountModalOpen(false);
                 clearBindAccountDraft();
             } else {
-                toast.error(response.data.message || '绑定失败，请稍后重试');
+                toast.error(response.data.message || t('profile.operationFailed'));
             }
         } catch (error: unknown) {
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || '绑定失败，请稍后重试';
+                const errorMessage = axiosError.response?.data?.message || t('profile.operationFailed');
                 toast.error(errorMessage);
             } else {
-                toast.error('绑定失败，请稍后重试');
+                toast.error(t('profile.operationFailed'));
             }
         } finally {
             setIsBindingAccount(false);
@@ -453,10 +455,10 @@ const Profile: React.FC = () => {
 
     const handleStartEditName = () => {
         if (!user) {
-            toast.error('请先登录');
+            toast.error(t('profile.pleaseLogin'));
             return;
         }
-        setEditName(userName === '未设置' ? '' : userName);
+        setEditName(userName === t('profile.userNameDefault') ? '' : userName);
         setIsEditingName(true);
     };
 
@@ -468,7 +470,7 @@ const Profile: React.FC = () => {
     const handleConfirmEditName = async () => {
         const newName = editName.trim();
         if (!newName) {
-            toast.error('昵称不能为空');
+            toast.error(t('profile.nicknameEmpty'));
             return;
         }
         if (newName === userName) {
@@ -481,14 +483,14 @@ const Profile: React.FC = () => {
             const response = await auth.updateUserInfo(newName);
             if (response.data.success && response.data.data) {
                 updateUser(response.data.data);
-                toast.success('昵称修改成功');
+                toast.success(t('profile.nicknameUpdateSuccess'));
                 setIsEditingName(false);
             } else {
-                toast.error(response.data.message || '昵称修改失败');
+                toast.error(response.data.message || t('profile.nicknameUpdateFailed'));
             }
         } catch (error) {
             console.error('update nickname failed:', error);
-            toast.error('昵称修改失败，请稍后重试');
+            toast.error(t('profile.nicknameUpdateFailed'));
         } finally {
             setIsUpdatingName(false);
         }
@@ -499,13 +501,13 @@ const Profile: React.FC = () => {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            toast.error('请选择图片文件');
+            toast.error(t('profile.selectImageFile'));
             return;
         }
 
         const maxSize = 5 * 1024 * 1024;
         if (file.size > maxSize) {
-            toast.error('图片大小不能超过 5MB');
+            toast.error(t('profile.imageTooLarge'));
             return;
         }
 
@@ -514,13 +516,13 @@ const Profile: React.FC = () => {
             const response = await auth.updateUserAvatar(file);
             if (response.data.success && response.data.data) {
                 await getUserInfo();
-                toast.success('头像更新成功');
+                toast.success(t('profile.avatarUpdateSuccess'));
             } else {
-                toast.error(response.data.message || '头像更新失败');
+                toast.error(response.data.message || t('profile.avatarUpdateFailed'));
             }
         } catch (error) {
             console.error('update avatar failed:', error);
-            toast.error('头像更新失败，请稍后重试');
+            toast.error(t('profile.avatarUpdateFailed'));
         } finally {
             setIsUpdatingAvatar(false);
             if (fileInputRef.current) {
@@ -535,13 +537,13 @@ const Profile: React.FC = () => {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            toast.error('Please select an image file.');
+            toast.error(t('profile.selectImageFile'));
             return;
         }
 
         void openCropper(file).catch((error) => {
             console.error('open avatar cropper failed:', error);
-            toast.error('Failed to load image.');
+            toast.error(t('profile.avatarUpdateFailed'));
         });
     };
     void handleAvatarChange;
@@ -556,17 +558,17 @@ const Profile: React.FC = () => {
             };
         }
 
-        toast.error(response.data.message || '充值失败！');
+            toast.error(response.data.message || t('create.rechargeFailed'));
         return null;
     };
 
     const handleClaimTask = async (taskType: DailyTaskClaimType) => {
         const result = await claimDailyTask(taskType);
         if (!result.success) {
-            toast.error(result.message || '奖励领取失败');
+            toast.error(result.message || t('profile.rewardClaimFailed'));
             return;
         }
-        toast.success(result.message || '奖励领取成功');
+        toast.success(result.message || t('profile.rewardClaimSuccess'));
         await getUserInfo();
     };
 
@@ -600,7 +602,7 @@ const Profile: React.FC = () => {
                                 <img
                                     className={styles.userAvatar}
                                     src={userAvatar}
-                                    alt={'用户头像'}
+                                    alt={'avatar'}
                                     onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
                                     style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
                                 />
@@ -612,21 +614,21 @@ const Profile: React.FC = () => {
                                     {user?.user?.isMember && user?.user?.memberEndAt ? (
                                         <div className={styles.memberInfo}>
                                             <span className={styles.memberBadge}>
-                                                {user?.user?.memberPlan === 'month' ? '月卡会员' :
-                                                user?.user?.memberPlan === 'season' ? '季卡会员' :
-                                                user?.user?.memberPlan === 'year' ? '年卡会员' : 'VIP'}
+                                                {user?.user?.memberPlan === 'month' ? t('profile.monthlyMember') :
+                                                user?.user?.memberPlan === 'season' ? t('profile.seasonalMember') :
+                                                user?.user?.memberPlan === 'year' ? t('profile.yearlyMember') : t('profile.vip')}
                                             </span>
-                                            <span className={styles.memberExpire}>{`到期时间：${formatDate(user.user.memberEndAt)}`}</span>
+                                            <span className={styles.memberExpire}>{t('profile.memberExpireDate', { date: formatDate(user.user.memberEndAt) })}</span>
                                         </div>
                                     ) : null}
                                     {userCode && (
                                         <div className={styles.userCode}>
-                                            <span className={styles.userCodeText}>{`Kuran号：${userCode}`}</span>
+                                            <span className={styles.userCodeText}>{t('profile.kuranIdLabel', { code: userCode })}</span>
                                             <button
                                                 type="button"
                                                 className={styles.userCodeCopyButton}
                                                 onClick={handleCopyUserCode}
-                                                title={'复制 Kuran 号'}
+                                                title={t('profile.copyKuranId')}
                                             >
                                                 <MdContentCopy />
                                             </button>
@@ -645,7 +647,7 @@ const Profile: React.FC = () => {
                                 className={`${styles.profileTab} ${profileTab === 'function' ? styles.profileTabActive : ''}`}
                                 onClick={() => setProfileTab('function')}
                             >
-                                功能列表
+                                {t('profile.functionListTitle')}
                             </button>
                             <button
                                 type="button"
@@ -653,7 +655,7 @@ const Profile: React.FC = () => {
                                 onClick={() => setProfileTab('creator')}
                             >
                                 <MdAccountBalanceWallet />
-                                创作者资料
+                                {t('profile.creatorProfile')}
                             </button>
                         </div>
                     )}
@@ -673,15 +675,15 @@ const Profile: React.FC = () => {
                                 <RiCopperCoinLine />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>{'我的积分'}</div>
-                                <div className={styles.functionDesc}>{`当前积分：${user?.user?.points ?? 0}`}</div>
+                                <div className={styles.functionTitle}>{t('profile.myPoints')}</div>
+                                <div className={styles.functionDesc}>{t('profile.currentPoints', { points: user?.user?.points ?? 0 })}</div>
                             </div>
                             <div className={styles.pointsActions}>
                                 <button className={styles.payButton} onClick={(e) => { e.stopPropagation(); setIsRechargeModalOpen(true); }}>
-                                    <span>{'充值'}</span>
+                                    <span>{t('profile.recharge')}</span>
                                 </button>
                                 <button className={styles.functionButton} onClick={(e) => { e.stopPropagation(); setIsCheckInModalOpen(true); }}>
-                                    {'签到'}
+                                    {t('profile.checkIn')}
                                 </button>
                             </div>
                         </div>
@@ -691,9 +693,9 @@ const Profile: React.FC = () => {
                                 <RiCopperCoinLine />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>每日任务</div>
+                                <div className={styles.functionTitle}>{t('profile.dailyTasks')}</div>
                                 <div className={styles.functionDesc}>
-                                    点赞、游玩和在线时长任务，完成后可领取积分
+                                    {t('profile.dailyTasksDesc')}
                                 </div>
                             </div>
                             <button
@@ -703,7 +705,7 @@ const Profile: React.FC = () => {
                                     void refreshDailyTasks({ silent: true });
                                 }}
                             >
-                                领积分
+                                {t('profile.claimPoints')}
                             </button>
                         </div>
 
@@ -712,12 +714,12 @@ const Profile: React.FC = () => {
                                 <div className={styles.inviteCampaignIcon}>
                                     <MdCampaign />
                                 </div>
-                                <div className={styles.inviteCampaignTitle}>邀请好友注册，双方各得 30 积分！</div>
+                                <div className={styles.inviteCampaignTitle}>{t('profile.inviteCampaignTitle')}</div>
                             </div>
                             <div className={styles.inviteCampaignCodeRow}>
                                 <div className={styles.inviteCampaignCode}>{inviteDisplayCode}</div>
                                 <button type="button" className={styles.inviteCampaignCopyBtn} onClick={handleCopyInviteCode}>
-                                    复制邀请码
+                                                                        {t('profile.copyInviteCode')}
                                 </button>
                             </div>
                             <button
@@ -725,11 +727,11 @@ const Profile: React.FC = () => {
                                 className={styles.inviteCampaignRewardBtn}
                                 onClick={() => setIsInviteRewardModalOpen(true)}
                             >
-                                领取额外奖励
+                                {t('profile.claimPoints')}
                             </button>
                             <div className={styles.inviteCampaignMeta}>
                                 <span>
-                                    已邀请 <span style={{ fontSize: '1.5em', fontWeight: 'bold' }}>{inviteStats.inviteCount}</span> 人，获取 <span>{inviteStats.inviteCount}</span> * 30 积分
+                                    {t('profile.inviteStatsText', { count: inviteStats.inviteCount })}
                                 </span>
                             </div>
                         </div>
@@ -739,11 +741,11 @@ const Profile: React.FC = () => {
                                 <MdCardMembership />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>开通会员</div>
-                                <div className={styles.functionDesc}>月卡/季卡/年卡，立即开通会员权益</div>
+                                <div className={styles.functionTitle}>{t('profile.subscribeMembership')}</div>
+                                <div className={styles.functionDesc}>{t('profile.subscribeMembershipDesc')}</div>
                             </div>
                             <button className={styles.functionButton} onClick={() => setIsMembershipRechargeModalOpen(true)}>
-                                开通
+                                                                {t('profile.subscribe')}
                             </button>
                         </div>
 
@@ -753,12 +755,12 @@ const Profile: React.FC = () => {
                                 <MdCampaign />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>激励活动</div>
+                                <div className={styles.functionTitle}>{t('profile.promotionActivities')}</div>
                                 {/* 实现推广文案更新 */}
-                                <div className={styles.functionDesc}>参加推广活动，赚取海量积分和奖励</div>
+                                <div className={styles.functionDesc}>{t('profile.promotionActivitiesDesc')}</div>
                             </div>
                             <button className={styles.functionButton} onClick={() => navigate('/promotions')}>
-                                进入
+                                                                {t('profile.enter')}
                             </button>
                         </div>
 
@@ -768,11 +770,11 @@ const Profile: React.FC = () => {
                                 <MdPlayCircleOutline />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>{'观看广告'}</div>
-                                <div className={styles.functionDesc}>{'每看一个可获得8积分'}</div>
+                                <div className={styles.functionTitle}>{t('profile.watchAd')}</div>
+                                <div className={styles.functionDesc}>{t('profile.watchAdDesc')}</div>
                             </div>
                             <button className={styles.functionButton} onClick={handleWatchAd}>
-                                {'观看'}
+                                {t('profile.watch')}
                             </button>
                         </div>
 
@@ -781,11 +783,11 @@ const Profile: React.FC = () => {
                                 <MdOutlineQrCodeScanner />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>{`我的邀请码：${user?.user?.inviteCode ? user?.user?.inviteCode : inviteCode}`}</div>
-                                <div className={styles.functionDesc}>{'朋友使用后双方+30积分'}</div>
+                                <div className={styles.functionTitle}>{t('profile.myInviteCode', { code: user?.user?.inviteCode ? user?.user?.inviteCode : inviteCode })}</div>
+                                <div className={styles.functionDesc}>{t('profile.inviteCodeAfterUse')}</div>
                             </div>
                             <button className={styles.functionButton} onClick={handleCopyInviteCode}>
-                                {'复制'}
+                                {t('profile.copy')}
                             </button>
                         </div> */}
 
@@ -796,11 +798,11 @@ const Profile: React.FC = () => {
                             {!showInputInviteCode ? (
                                 <>
                                     <div className={styles.functionText}>
-                                        <div className={styles.functionTitle}>{'输入邀请码'}</div>
-                                        <div className={styles.functionDesc}>{'仅限一次，朋友使用后双方+30积分'}</div>
+                                        <div className={styles.functionTitle}>{t('profile.enterInviteCode')}</div>
+                                        <div className={styles.functionDesc}>{t('profile.inviteCodeOneTimeUse')}</div>
                                     </div>
                                     <button className={styles.functionButton} onClick={() => setShowInputInviteCode(true)}>
-                                        {'输入'}
+                                        {t('profile.enter')}
                                     </button>
                                 </>
                             ) : (
@@ -808,7 +810,7 @@ const Profile: React.FC = () => {
                                     <input
                                         type="text"
                                         className={styles.inviteInput}
-                                        placeholder={'请输入邀请码'}
+                                        placeholder={t('profile.enterInviteCode')}
                                         value={inputInviteCode}
                                         onChange={(e) => setInputInviteCode(e.target.value)}
                                         onBlur={(e) => {
@@ -829,7 +831,7 @@ const Profile: React.FC = () => {
                                             e.preventDefault();
                                         }}
                                     >
-                                        {'提交'}
+                                        {t('profile.submit')}
                                     </button>
                                 </>
                             )}
@@ -842,11 +844,11 @@ const Profile: React.FC = () => {
                             {!showRedeemInput ? (
                                 <>
                                     <div className={styles.functionText}>
-                                        <div className={styles.functionTitle}>{'会员卡兑换'}</div>
-                                        <div className={styles.functionDesc}>{'输入兑换码可开通月卡、季卡、年卡'}</div>
+                                        <div className={styles.functionTitle}>{t('profile.membershipRedeem')}</div>
+                                        <div className={styles.functionDesc}>{t('profile.membershipRedeemDesc')}</div>
                                     </div>
                                     <button className={styles.functionButton} onClick={() => setShowRedeemInput(true)}>
-                                        {'兑换'}
+                                        {t('profile.redeem')}
                                     </button>
                                 </>
                             ) : (
@@ -854,7 +856,7 @@ const Profile: React.FC = () => {
                                     <input
                                         type="text"
                                         className={styles.inviteInput}
-                                        placeholder={'请输入兑换码'}
+                                        placeholder={t('profile.enterRedeemCode')}
                                         value={redeemKey}
                                         onChange={(e) => setRedeemKey(e.target.value)}
                                         onBlur={(e) => {
@@ -876,7 +878,7 @@ const Profile: React.FC = () => {
                                             e.preventDefault();
                                         }}
                                     >
-                                        {isRedeemingMembership ? '兑换中...' : '兑换'}
+                                        {isRedeemingMembership ? t('profile.redeeming') : t('profile.redeem')}
                                     </button>
                                 </>
                             )}
@@ -888,15 +890,15 @@ const Profile: React.FC = () => {
                                     <MdPersonAddAlt1 />
                                 </div>
                                 <div className={styles.functionText}>
-                                    <div className={styles.functionTitle}>{'浏览器登录账号'}</div>
+                                    <div className={styles.functionTitle}>{t('profile.browserLoginAccount')}</div>
                                     <div className={styles.functionDesc}>
                                         {user?.user?.phoneNumber
-                                            ? `已绑定手机号：${maskPhoneNumber(user?.user?.phoneNumber)}，可在浏览器登录`
-                                            : '设置手机号和密码，用于在浏览器中登录同一账号'}
+                                            ? t('profile.boundPhoneDesc', { phone: maskPhoneNumber(user?.user?.phoneNumber) })
+                                            : t('profile.setupPhoneDesc')}
                                     </div>
                                 </div>
                                 <button className={styles.functionButton} onClick={handleOpenBindAccountModal}>
-                                    {user?.user?.phoneNumber ? '已绑定' : '去设置'}
+                                    {user?.user?.phoneNumber ? t('profile.phoneBound') : t('profile.goSetup')}
                                 </button>
                             </div>
                         )}
@@ -906,11 +908,11 @@ const Profile: React.FC = () => {
                                 <MdGroup />
                             </div>
                             <div className={styles.functionText}>
-                                <div className={styles.functionTitle}>{'加入用户群'}</div>
-                                <div className={styles.functionDesc}>{'加群可获得20积分，及时掌握最新资讯'}</div>
+                                <div className={styles.functionTitle}>{t('profile.joinUserGroup')}</div>
+                                <div className={styles.functionDesc}>{t('profile.joinUserGroupDesc')}</div>
                             </div>
                             <button className={styles.functionButton} onClick={handleJoinGroup}>
-                                {'加入'}
+                                {t('profile.join')}
                             </button>
                         </div>
 
@@ -920,11 +922,11 @@ const Profile: React.FC = () => {
                                     <RiLogoutCircleRLine />
                                 </div>
                                 <div className={styles.functionText}>
-                                    <div className={styles.functionTitle}>{'退出登录'}</div>
-                                    <div className={styles.functionDesc}>{'退出当前账号'}</div>
+                                    <div className={styles.functionTitle}>{t('profile.logout')}</div>
+                                    <div className={styles.functionDesc}>{t('profile.logoutDesc')}</div>
                                 </div>
                                 <button className={styles.functionButton} onClick={handleLogout}>
-                                    {'退出'}
+                                    {t('profile.exit')}
                                 </button>
                             </div>
                         )}
@@ -938,18 +940,18 @@ const Profile: React.FC = () => {
                 <div className={styles.editNameModalOverlay} onClick={handleCancelEditName}>
                     <div className={styles.editNameModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>{'修改昵称'}</div>
+                            <div className={styles.editNameModalTitle}>{t('profile.editNickname')}</div>
                         </div>
                         <div className={styles.editNameModalBody}>
                             <input
                                 className={styles.editNameInput}
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                placeholder={'请输入新的昵称'}
+                                placeholder={t('profile.enterNewNickname')}
                                 maxLength={20}
                                 autoFocus
                             />
-                            <div className={styles.editNameTips}>{'昵称长度建议 1-20 个字符，避免包含敏感或违规内容。'}</div>
+                            <div className={styles.editNameTips}>{t('profile.nicknameTip')}</div>
                         </div>
                         <div className={styles.editNameModalActions}>
                             <button
@@ -958,7 +960,7 @@ const Profile: React.FC = () => {
                                 onClick={handleCancelEditName}
                                 disabled={isUpdatingName}
                             >
-                                {'取消'}
+                                {t('profile.cancel')}
                             </button>
                             <button
                                 type="button"
@@ -966,7 +968,7 @@ const Profile: React.FC = () => {
                                 onClick={handleConfirmEditName}
                                 disabled={isUpdatingName}
                             >
-                                {isUpdatingName ? '保存中...' : '确认'}
+                                {isUpdatingName ? t('profile.saving') : t('profile.confirm')}
                             </button>
                         </div>
                     </div>
@@ -983,12 +985,12 @@ const Profile: React.FC = () => {
                 >
                     <div className={styles.editNameModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>{'设置浏览器登录账号'}</div>
+                            <div className={styles.editNameModalTitle}>{t('profile.setupBrowserLogin')}</div>
                         </div>
                         <div className={styles.editNameModalBody}>
                             <input
                                 className={styles.editNameInput}
-                                placeholder={'请输入手机号'}
+                                placeholder={t('profile.enterPhone')}
                                 value={bindPhone}
                                 onChange={(e) => setBindPhone(e.target.value)}
                                 maxLength={11}
@@ -996,18 +998,18 @@ const Profile: React.FC = () => {
                             <input
                                 type="password"
                                 className={styles.editNameInput}
-                                placeholder={'请设置密码（至少6位）'}
+                                placeholder={t('profile.setPassword')}
                                 value={bindPassword}
                                 onChange={(e) => setBindPassword(e.target.value)}
                             />
                             <input
                                 type="password"
                                 className={styles.editNameInput}
-                                placeholder={'请再次输入密码'}
+                                placeholder={t('profile.confirmPassword')}
                                 value={bindConfirmPassword}
                                 onChange={(e) => setBindConfirmPassword(e.target.value)}
                             />
-                            <div className={styles.editNameTips}>{'绑定后，可在浏览器访问本站时使用手机号 + 已设置的密码登录同一账号。'}</div>
+                            <div className={styles.editNameTips}>{t('profile.bindingTip')}</div>
                         </div>
                         <div className={styles.editNameModalActions}>
                             <button
@@ -1019,7 +1021,7 @@ const Profile: React.FC = () => {
                                 }}
                                 disabled={isBindingAccount}
                             >
-                                {'取消'}
+                                {t('profile.cancel')}
                             </button>
                             <button
                                 type="button"
@@ -1027,7 +1029,7 @@ const Profile: React.FC = () => {
                                 onClick={handleConfirmBindAccount}
                                 disabled={isBindingAccount}
                             >
-                                {isBindingAccount ? '绑定中...' : '确认绑定'}
+                                {isBindingAccount ? t('profile.binding') : t('profile.bindAccount')}
                             </button>
                         </div>
                     </div>
@@ -1038,11 +1040,11 @@ const Profile: React.FC = () => {
                 <div className={styles.editNameModalOverlay} onClick={() => setIsBindAccountStatusModalOpen(false)}>
                     <div className={styles.editNameModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.editNameModalHeader}>
-                            <div className={styles.editNameModalTitle}>{'浏览器登录账号已绑定'}</div>
+                            <div className={styles.editNameModalTitle}>{t('profile.browserAccountBound')}</div>
                         </div>
                         <div className={styles.editNameModalBody}>
-                            <div className={styles.bindAccountStatusText}>{`已绑定手机号：${maskPhoneNumber(user?.user?.phoneNumber)}`}</div>
-                            <div className={styles.editNameTips}>{'你可以在浏览器端使用该手机号和已设置的密码登录同一个账号。'}</div>
+                            <div className={styles.bindAccountStatusText}>{t('profile.boundPhoneStatus', { phone: maskPhoneNumber(user?.user?.phoneNumber) })}</div>
+                            <div className={styles.editNameTips}>{t('profile.browserLoginTip')}</div>
                         </div>
                         <div className={styles.editNameModalActions}>
                             <button
@@ -1050,7 +1052,7 @@ const Profile: React.FC = () => {
                                 className={styles.editNameConfirmButton}
                                 onClick={() => setIsBindAccountStatusModalOpen(false)}
                             >
-                                {'我知道了'}
+                                {t('profile.iKnow')}
                             </button>
                         </div>
                     </div>
@@ -1101,24 +1103,24 @@ const Profile: React.FC = () => {
                 >
                     <div className={styles.dailyTaskModal} onClick={(e) => e.stopPropagation()}>
                         <div className={styles.dailyTaskModalHeader}>
-                            <div className={styles.dailyTaskModalTitle}>每日任务</div>
+                            <div className={styles.dailyTaskModalTitle}>{t('profile.tasksTitle')}</div>
                             <button
                                 type="button"
                                 className={styles.dailyTaskCloseBtn}
-                                aria-label="关闭每日任务弹窗"
+                                aria-label={t('profile.closeDailyTasks')}
                                 onClick={() => setIsDailyTaskModalOpen(false)}
                             >
                                 ×
                             </button>
                         </div>
                         {/* <div className={styles.dailyTaskSummary}>
-                            今日在线：{formatDuration(displayTotalSeconds)}
+                            {t('profile.todayOnline', { time: formatDuration(displayTotalSeconds) })}
                             <span className={styles.dailyTaskSummaryMeta}>
-                                已同步 {formatDuration(dailyTaskSummary.totalSeconds)} / 待同步 +{pendingPlatformSeconds + pendingGameSeconds}s
+                                {t('profile.synced', { time: formatDuration(dailyTaskSummary.totalSeconds) })} / {t('profile.pendingSync', { seconds: pendingPlatformSeconds + pendingGameSeconds })}
                             </span>
                         </div> */}
                         {!isTaskLoadedOnce && isTaskLoading && (
-                            <div className={styles.dailyTaskLoading}>任务加载中...</div>
+                            <div className={styles.dailyTaskLoading}>{t('profile.tasksLoading')}</div>
                         )}
                         {taskErrorMessage && (
                             <div className={styles.dailyTaskError}>{taskErrorMessage}</div>
@@ -1139,20 +1141,20 @@ const Profile: React.FC = () => {
                                     ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
                                     : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
 
-                                let statusText = task.statusText || '进行中';
+                                let statusText = task.statusText || t('profile.taskInProgress');
                                 if (task.claimed) {
-                                    statusText = '奖励已领取';
+                                    statusText = t('profile.rewardClaimed');
                                 } else if (canClaimNow) {
-                                    statusText = '已达成，待领取';
+                                    statusText = t('profile.claim');
                                 } else if (task.completed) {
-                                    statusText = '已完成';
+                                    statusText = t('profile.taskCompleted');
                                 }
 
                                 return (
                                     <div key={task.code} className={styles.dailyTaskItem}>
                                         <div className={styles.dailyTaskItemHeader}>
                                             <div className={styles.dailyTaskItemTitle}>{task.title}</div>
-                                            <div className={styles.dailyTaskReward}>+{task.rewardPoints}积分</div>
+                                            <div className={styles.dailyTaskReward}>+{task.rewardPoints}{t('profile.points')}</div>
                                         </div>
                                         <div className={styles.dailyTaskProgressRow}>
                                             <div className={styles.dailyTaskProgressBar}>
@@ -1176,11 +1178,11 @@ const Profile: React.FC = () => {
                                                         void handleClaimTask(claimTaskType);
                                                     }}
                                                 >
-                                                    {isClaimingTask ? '领取中...' : '领取'}
+                                                    {isClaimingTask ? t('profile.claiming') : t('profile.claim')}
                                                 </button>
                                             )}
                                             {!canClaimNow && claimTaskType && !task.claimed && (
-                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task.code)}</span>
+                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task.code, t)}</span>
                                             )}
                                         </div>
                                     </div>
@@ -1188,7 +1190,7 @@ const Profile: React.FC = () => {
                             })}
                         </div>
                         {hasDurationTaskFallback && (
-                            <div className={styles.dailyTaskHint}>在线任务以系统统计为准，若进度异常请点击刷新。</div>
+                            <div className={styles.dailyTaskHint}>{t('profile.tasksTip')}</div>
                         )}
                     </div>
                 </div>

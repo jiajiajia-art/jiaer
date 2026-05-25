@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
 import type { CreatorGameType } from '../../utils/miniProgram';
@@ -30,6 +31,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     onOpenMiniProgramTip,
     onOpenBindPhoneGuide,
 }) => {
+    const { t } = useTranslation();
     const handleAvgClick = () => {
         if (isMiniProgram) {
             // 小程序端只开放 TXT，AVG 统一引导去 PC 端。
@@ -79,7 +81,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 className={styles.createTypeOption}
                                 onClick={handleAvgClick}
                             >
-                                <span>AVG（内测中）</span>
+                                <span>{t('createGame.avgBeta')}</span>
                                 <span className={styles.createTypeOptionLockedTag}>
                                     {isMiniProgram ? '新' : '新'}
                                 </span>

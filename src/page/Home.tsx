@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { flushSync } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './Home.module.css';
 import HomeThemePreviewRail from '../components/HomeThemePreviewRail';
 import Navbar from '../components/Layout/Navbar';
@@ -98,6 +99,7 @@ const getCircularCarouselDistance = (currentIndex: number, targetIndex: number, 
 };
 
 const Home: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const SWIPE_THRESHOLD = 40;
     const SWIPE_CLICK_SUPPRESS_MS = 250;
@@ -2039,7 +2041,7 @@ const Home: React.FC = () => {
                                                     event.stopPropagation();
                                                     goToPrevSlide();
                                                 }}
-                                                aria-label="上一张"
+                                                aria-label={t('home.carousel.prev')}
                                             >
                                                 <span className={styles.carouselNavIcon} aria-hidden="true">
                                                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -2055,7 +2057,7 @@ const Home: React.FC = () => {
                                                     event.stopPropagation();
                                                     goToNextSlide();
                                                 }}
-                                                aria-label="下一张"
+                                                aria-label={t('home.carousel.next')}
                                             >
                                                 <span className={styles.carouselNavIcon} aria-hidden="true">
                                                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -2072,7 +2074,7 @@ const Home: React.FC = () => {
                                                     key={index}
                                                     className={`${styles.carouselIndicator} ${activeCarouselSlide === index ? styles.carouselIndicatorActive : ''}`}
                                                     onClick={() => goToSlide(index)}
-                                                    aria-label={`切换到第 ${index + 1} 张`}
+                                                    aria-label={t('home.carousel.goTo', { index: index + 1 })}
                                                 />
                                             ))}
                                         </div>
@@ -2091,7 +2093,7 @@ const Home: React.FC = () => {
                                 type="button"
                                 className={styles.homeTicker}
                                 onClick={handleHomeTickerClick}
-                                aria-label={`打开首页滚动通知：${homeTicker.text}`}
+                                aria-label={t('home.carousel.openTicker', { text: homeTicker.text })}
                             >
                                 <span className={styles.homeTickerIcon} aria-hidden="true">
                                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -2121,13 +2123,13 @@ const Home: React.FC = () => {
                                         </span>
                                     )}
                                 </span>
-                                <span className={styles.homeTickerAction}>查看</span>
+                                <span className={styles.homeTickerAction}>{t('home.view')}</span>
                             </button>
                         ) : null}
 
                         <div className={styles.themeShowcase}>{/*
-                                <h3>热门题材</h3>
-                                <button type="button" onClick={handleOpenCategories}>查看全部</button>
+                                <h3>{t('home.hotThemes')}</h3>
+                                <button type="button" onClick={handleOpenCategories}>{t('home.viewAll')}</button>
                             </div>
                             */}<div
                                 ref={themeShowcaseRef}
@@ -2161,11 +2163,11 @@ const Home: React.FC = () => {
                                     {activeShowcaseTag ? (
                                         <button
                                             type="button"
-                                            aria-label="\u67E5\u770B\u66F4\u591A"
+                                            aria-label={t('home.viewMore')}
                                             className={styles.themeShowcaseMoreLink}
                                             onClick={handleShowcaseMoreClick}
                                         >
-                                            <span>查看更多</span>
+                                            <span>{t('home.viewMore')}</span>
                                             <span className={styles.themeShowcaseMoreArrow} aria-hidden="true">›</span>
                                         </button>
                                     ) : null}
@@ -2176,7 +2178,7 @@ const Home: React.FC = () => {
                                     games={activeShowcaseGames}
                                     onMoreClick={handleShowcaseMoreClick}
                                     resetKey={themePreviewResetKey}
-                                    emptyText={showcaseLoadingKey === activeShowcaseTag?.key ? '正在加载剧本...' : '当前标签暂未配置剧本'}
+                                    emptyText={showcaseLoadingKey === activeShowcaseTag?.key ? t('home.loadingScripts') : t('home.noScriptsForTag')}
                                 />
                             </div>
                             {/* 实现首页移动端加群入口 */}
@@ -2197,7 +2199,7 @@ const Home: React.FC = () => {
                                 type="button"
                                 className={styles.mobileJoinGroupCard}
                                 onClick={() => setShowJoinGroupModal(true)}
-                                aria-label="打开官方群聊二维码"
+                                aria-label={t('home.joinGroup.openQr')}
                             >
                                 <span className={styles.mobileJoinGroupIcon} aria-hidden="true">
                                     <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
@@ -2207,12 +2209,11 @@ const Home: React.FC = () => {
                                     </svg>
                                 </span>
                                 <span className={styles.mobileJoinGroupContent}>
-                                    <span className={styles.mobileJoinGroupTitle}>官方精选交流群</span>
-                                    <span className={styles.mobileJoinGroupDesc}>一起讨论剧情，分享心得</span>
+                                    <span className={styles.mobileJoinGroupTitle}>{t('home.joinGroup.title')}</span>
+                                    <span className={styles.mobileJoinGroupDesc}>{t('home.joinGroup.desc')}</span>
                                 </span>
-                                <span className={styles.mobileJoinGroupAction}>
-                                    {/* 复用现有加群弹窗 */}
-                                    立即加入
+                                    <span className={styles.mobileJoinGroupAction}>
+                                    {t('home.joinGroup.joinNow')}
                                 </span>
                             </button>
                             {isMobileViewport ? (
@@ -2288,7 +2289,7 @@ const Home: React.FC = () => {
                                     <GameGrid
                                         games={allGames}
                                         layoutVariant="homeWide"
-                                        emptyText="暂无符合当前筛选条件的作品"
+                                        emptyText={t('home.noMatchingWorks')}
                                     />
                                     {isLoadingMoreAll && (
                                         <div style={{ padding: '20px', textAlign: 'center' }}>

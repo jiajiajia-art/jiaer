@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import sidebarStyles from './CharactersSidebar.module.css';
 import sharedStyles from './CharactersPanel.module.css';
 import { withCacheBust, normalizePersonalityTags } from './utils';
@@ -28,6 +29,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
     setIsAddingNew,
     setNewCharacterData,
 }) => {
+    const { t } = useTranslation();
     // 实现移动端角色列表折叠
     const [isMobileViewport, setIsMobileViewport] = useState(() =>
         typeof window !== 'undefined' ? window.matchMedia('(max-width: 720px)').matches : false
@@ -92,16 +94,16 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
             className={`${sharedStyles.card} ${sidebarStyles.sidebarCard}`}
         >
             <div className={sidebarStyles.sidebarHeader}>
-                <h3>解析出的角色</h3>
+                <h3>{t('createGame.parsedCharacters')}</h3>
                 <button className={sharedStyles.ghostSmall} onClick={onAddNew}>
-                    + 新增角色
+                    + {t('createGame.addCharacter')}
                 </button>
             </div>
             <div className={sidebarStyles.rosterScroll}>
                 <div className={sidebarStyles.characterRoster}>
                     {visibleCharacters.map((character) => {
                         // 侧栏角色前缀统一
-                        const sidebarRole = character.id === 'player' ? (character.role || '主角') : 'NPC';
+                        const sidebarRole = character.id === 'player' ? (character.role || t('createGame.protagonist')) : t('createGame.npc');
                         const personalityTags = normalizePersonalityTags(character.personality);
                         const isActiveCharacter = !isAddingNew && character.id === activeCharacterId;
                         return (
@@ -120,12 +122,12 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                                 />
                                 <div className={sidebarStyles.characterMeta}>
                                     <div className={sidebarStyles.characterTitleRow}>
-                                        <strong>{character.name || '未命名'}</strong>
+                                        <strong>{character.name || t('createGame.unnamed')}</strong>
                                         {character.id !== 'player' && (
                                             <button
                                                 className={sidebarStyles.deleteButton}
                                                 onClick={(e) => onDeleteCharacter(character.id, e)}
-                                                title="删除角色"
+                                                title={t('createGame.deleteCharacter')}
                                             >
                                                 <RiDeleteBin5Line />
                                             </button>
@@ -138,7 +140,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                                                 <span key={tag} className={sharedStyles.tag}>{tag}</span>
                                             ))
                                         ) : (
-                                            <span className={sharedStyles.mutedSmall}>暂无性格标签</span>
+                                                <span className={sharedStyles.mutedSmall}>{t('createGame.noPersonalityTags')}</span>
                                         )}
                                     </div>
                                 </div>
@@ -152,7 +154,7 @@ const CharactersSidebar: React.FC<CharactersSidebarProps> = ({
                         className={sidebarStyles.mobileToggleButton}
                         onClick={() => setIsMobileExpanded((prev) => !prev)}
                     >
-                        {isMobileExpanded ? '收起角色' : `展开全部角色（${characters.length}）`}
+                        {isMobileExpanded ? t('createGame.collapseCharacters') : t('createGame.expandCharacters', { count: characters.length })}
                     </button>
                 )}
             </div>

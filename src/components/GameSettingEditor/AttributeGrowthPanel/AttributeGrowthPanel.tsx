@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef, useImperativeHandle } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './AttributeGrowthPanel.module.css';
 import AttributeList from './AttributeList';
 import AttributeDetailForm from './AttributeDetailForm';
@@ -21,6 +22,7 @@ interface AttributeGrowthPanelProps {
 }
 
 const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, AttributeGrowthPanelProps>(({ attributeSetting, onDataChange }, ref) => {
+    const { t } = useTranslation();
     const { fileId } = useGameStore();
     const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
     const [attributeToDelete, setAttributeToDelete] = useState<AttributeConfig | null>(null);
@@ -287,7 +289,7 @@ const AttributeGrowthPanel = React.forwardRef<AttributeGrowthPanelRef, Attribute
     return (
         <div className={styles.panelRoot}>
             <div className={styles.header}>
-                <p className={styles.eyebrow}>STEP 6</p>
+                <p className={styles.eyebrow}>{t('gameEditor.step6').toUpperCase()}</p>
                 <h2 className={styles.title}>属性 · 养成培养插件</h2>
                 <p className={styles.subtitle}>
                     配置玩家 / NPC 的养成属性与公式，支持多属性成长与展示控制，样式保持与创作段一致。

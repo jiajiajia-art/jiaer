@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { FcGoogle } from 'react-icons/fc';
+import { useTranslation } from 'react-i18next';
 import styles from './AuthModal.module.css';
 import { auth } from '../api/account/authApi';
 import { useAuthStore } from '../store/useAuthStore';
+import { useGoogleAuth } from '../hooks/useGoogleAuth';
+import { LANGUAGE } from '../config';
+
+const isGoogleOnly = LANGUAGE === 'en';
 
 interface AuthModalProps {
     isOpen: boolean;
@@ -21,6 +27,7 @@ const isWebViewEnv = (): boolean => {
 };
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegister }) => {
+    const { t } = useTranslation();
     // 在微信小程序环境中不渲染
     if (isWebViewEnv()) {
         return null;
@@ -54,8 +61,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     const [isSendingCode, setIsSendingCode] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [submitError, setSubmitError] = useState('');
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const { login } = useAuthStore();
     const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const { loginWithGoogle } = useGoogleAuth();
 
     // 清理倒计时定时器
     useEffect(() => {
@@ -143,8 +152,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         // 如果确认密码已填写，重新验证
         if (confirmPassword && (mode === 'register' || mode === 'reset')) {
             if (value !== confirmPassword) {
-                setConfirmPasswordError('两次输入的密码不一致');
-            } else {
+                setConfirmPasswordError(t('validation.passwordMismatch'));
+                } else {
                 clearFieldError(setConfirmPasswordError, setConfirmPasswordShake);
             }
         }
@@ -157,7 +166,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
         if (value && password) {
             if (value !== password) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '两次输入的密码不一致');
+                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.passwordMismatch'));
             } else {
                 clearFieldError(setConfirmPasswordError, setConfirmPasswordShake);
             }
@@ -198,23 +207,23 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     // ========== 发送验证码 ==========
     const handleSendCode = async () => {
         if (!resetPhone) {
-            setFieldError(setResetPhoneError, setResetPhoneShake, '请输入手机号');
+            setFieldError(setResetPhoneError, setResetPhoneShake, t('validation.phoneRequired'));
             return;
         }
 
         if (!validatePhone(resetPhone)) {
-            setFieldError(setResetPhoneError, setResetPhoneShake, '请输入正确的手机号');
+            setFieldError(setResetPhoneError, setResetPhoneShake, t('validation.phoneInvalid'));
             return;
         }
 
         setIsSendingCode(true);
         try {
             await auth.sendResetCode({ phoneNumber: resetPhone });
-            setSubmitError('验证码已发送，请注意查收');
+            setSubmitError(t('auth.codeSent'));
             startCountdown();
         } catch (error: any) {
-            console.error('发送验证码失败:', error);
-            const errorMessage = error.response?.data?.message || error.message || '发送验证码失败，请稍后重试';
+            console.error('Failed to send code:', error);
+            const errorMessage = error.response?.data?.message || error.message || t('common.error');
             setSubmitError(errorMessage);
         } finally {
             setIsSendingCode(false);
@@ -229,11 +238,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         // 登录模式验证
         if (mode === 'login') {
             if (!validatePhone(phone)) {
-                setFieldError(setPhoneError, setPhoneShake, '请输入正确的手机号');
+                setFieldError(setPhoneError, setPhoneShake, t('validation.phoneInvalid'));
                 hasError = true;
             }
             if (!validatePassword(password)) {
-                setFieldError(setPasswordError, setPasswordShake, '密码至少需要6位');
+                setFieldError(setPasswordError, setPasswordShake, t('validation.passwordMinLength'));
                 hasError = true;
             }
         }
@@ -241,18 +250,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         // 注册模式验证
         if (mode === 'register') {
             if (!validatePhone(phone)) {
-                setFieldError(setPhoneError, setPhoneShake, '请输入正确的手机号');
+                setFieldError(setPhoneError, setPhoneShake, t('validation.phoneInvalid'));
                 hasError = true;
             }
             if (!validatePassword(password)) {
-                setFieldError(setPasswordError, setPasswordShake, '密码至少需要6位');
+                setFieldError(setPasswordError, setPasswordShake, t('validation.passwordMinLength'));
                 hasError = true;
             }
             if (!confirmPassword) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '请再次输入密码');
+                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.confirmPasswordRequired'));
                 hasError = true;
             } else if (password !== confirmPassword) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '两次输入的密码不一致');
+                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.passwordMismatch'));
                 hasError = true;
             }
         }
@@ -260,28 +269,28 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         // 重置密码模式验证
         if (mode === 'reset') {
             if (!resetPhone) {
-                setFieldError(setResetPhoneError, setResetPhoneShake, '请输入手机号');
+                setFieldError(setResetPhoneError, setResetPhoneShake, t('validation.phoneRequired'));
                 hasError = true;
             } else if (!validatePhone(resetPhone)) {
-                setFieldError(setResetPhoneError, setResetPhoneShake, '请输入正确的手机号');
+                setFieldError(setResetPhoneError, setResetPhoneShake, t('validation.phoneInvalid'));
                 hasError = true;
             }
             if (!verificationCode) {
-                setFieldError(setVerificationCodeError, setVerificationCodeShake, '请输入验证码');
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('validation.codeRequired'));
                 hasError = true;
             } else if (verificationCode.length !== 6) {
-                setFieldError(setVerificationCodeError, setVerificationCodeShake, '验证码为6位数字');
+                setFieldError(setVerificationCodeError, setVerificationCodeShake, t('validation.codeLength'));
                 hasError = true;
             }
             if (!validatePassword(password)) {
-                setFieldError(setPasswordError, setPasswordShake, '密码至少需要6位');
+                setFieldError(setPasswordError, setPasswordShake, t('validation.passwordMinLength'));
                 hasError = true;
             }
             if (!confirmPassword) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '请再次输入密码');
+                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.confirmPasswordRequired'));
                 hasError = true;
             } else if (password !== confirmPassword) {
-                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, '两次输入的密码不一致');
+                setFieldError(setConfirmPasswordError, setConfirmPasswordShake, t('validation.passwordMismatch'));
                 hasError = true;
             }
         }
@@ -289,12 +298,32 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
         return !hasError;
     };
 
+    // ========== Google 登录 ==========
+    const handleGoogleLogin = async () => {
+        setIsGoogleLoading(true);
+        setSubmitError('');
+        try {
+            const result = await loginWithGoogle();
+            if (result.success) {
+                resetAllStates();
+                onClose();
+            } else {
+                setSubmitError(result.message || t('auth.googleLoginFailed'));
+            }
+        } catch (error: any) {
+            console.error('Google login error:', error);
+            setSubmitError(error.message || t('auth.googleLoginFailed'));
+        } finally {
+            setIsGoogleLoading(false);
+        }
+    };
+
     // ========== 表单提交 ==========
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!validateForm()) {
-            console.log('[Auth] 表单验证失败，停止提交');
+            console.log('[Auth] Form validation failed, stopping submission');
             return;
         }
 
@@ -314,7 +343,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     resetAllStates();
                     onClose();
                 } else {
-                    throw new Error('服务器返回数据格式错误');
+                    throw new Error(t('common.error'));
                 }
             } else if (mode === 'register') {
                 const response = await auth.signup({
@@ -329,13 +358,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     setPassword('');
                     setConfirmPassword('');
                     resetErrors();
-                    setSubmitError('注册成功！请登录');
+                    setSubmitError(t('auth.registerSuccess'));
 
                     if (onRegister) {
                         onRegister(phone, password);
                     }
                 } else {
-                    throw new Error('服务器返回数据格式错误');
+                    throw new Error(t('common.error'));
                 }
             } else if (mode === 'reset') {
                 const response = await auth.resetPassword({
@@ -346,19 +375,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                 });
 
                 if (response.data?.data || response.data?.success) {
-                    setSubmitError('密码重置成功！请登录');
+                    setSubmitError(t('auth.resetSuccess'));
                     resetAllStates();
                     setTimeout(() => {
                         setMode('login');
                         setSubmitError('');
                     }, 2000);
                 } else {
-                    throw new Error('服务器返回数据格式错误');
+                    throw new Error(t('common.error'));
                 }
             }
         } catch (error: any) {
-            console.error('操作失败:', error);
-            const errorMessage = error.response?.data?.message || error.message || '操作失败，请稍后重试';
+            console.error('Operation failed:', error);
+            const errorMessage = error.response?.data?.message || error.message || t('common.error');
             setSubmitError(errorMessage);
         } finally {
             setIsLoading(false);
@@ -401,163 +430,129 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
     };
 
     // ========== 渲染辅助函数 ==========
-    const getTitle = () => {
-        switch (mode) {
-            case 'login': return '登录';
-            case 'register': return '注册';
-            case 'reset': return '重置密码';
-        }
-    };
-
     const getSubmitButtonText = () => {
-        if (isLoading) return '处理中...';
+        if (isLoading) return t('auth.submitting');
         switch (mode) {
-            case 'login': return '登录';
-            case 'register': return '注册';
-            case 'reset': return '重置密码';
+            case 'login': return t('auth.login');
+            case 'register': return t('auth.register');
+            case 'reset': return t('auth.reset');
         }
     };
 
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className={styles.modalOverlay} onClick={handleClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={handleClose}>
+        <div
+            className={`${styles.modalOverlay} ${isGoogleOnly ? styles.googleOnlyOverlay : ''}`}
+            onClick={handleClose}
+        >
+            <div
+                className={`${styles.modalContent} ${isGoogleOnly ? styles.googleOnlyContent : ''}`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <button
+                    type="button"
+                    className={`${styles.closeBtn} ${isGoogleOnly ? styles.googleOnlyCloseBtn : ''}`}
+                    onClick={handleClose}
+                >
                     ×
                 </button>
 
-                <h2 className={styles.title}>{getTitle()}</h2>
+                <h2 className={`${styles.title} ${isGoogleOnly ? styles.googleOnlyTitle : ''}`}>
+                    {t('auth.login')}
+                </h2>
 
-                <form className={styles.form} onSubmit={handleSubmit}>
-                    {/* 手机号输入 */}
-                    {mode !== 'reset' && (
-                        <div className={styles.inputGroup}>
-                            <input
-                                type="tel"
-                                className={`${styles.input} ${phoneError ? styles.inputError : ''} ${phoneShake ? styles.shake : ''}`}
-                                placeholder="请输入手机号"
-                                value={phone}
-                                onChange={handlePhoneChange}
-                                maxLength={11}
-                            />
-                            {phoneError && (
-                                <div className={styles.errorMessage}>{phoneError}</div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 手机号输入（重置） */}
-                    {(mode === 'reset') && (
-                        <div className={styles.inputGroup}>
-                            <input
-                                type="tel"
-                                className={`${styles.input} ${resetPhoneError ? styles.inputError : ''} ${resetPhoneShake ? styles.shake : ''}`}
-                                placeholder="请输入手机号"
-                                value={resetPhone}
-                                onChange={handleResetPhoneChange}
-                                maxLength={11}
-                            />
-                            {resetPhoneError && (
-                                <div className={styles.errorMessage}>{resetPhoneError}</div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 验证码输入 */}
-                    {mode === 'reset' && (
-                        <div className={styles.inputGroup}>
-                            <div className={styles.codeInputWrapper}>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    className={`${styles.input} ${styles.codeInput} ${verificationCodeError ? styles.inputError : ''} ${verificationCodeShake ? styles.shake : ''}`}
-                                    placeholder="请输入验证码"
-                                    value={verificationCode}
-                                    onChange={handleVerificationCodeChange}
-                                    maxLength={6}
-                                />
-                                <button
-                                    type="button"
-                                    className={styles.sendCodeBtn}
-                                    onClick={handleSendCode}
-                                    disabled={isSendingCode || countdown > 0 || !resetPhone || !validatePhone(resetPhone)}
-                                >
-                                    {isSendingCode ? '发送中...' : countdown > 0 ? `${countdown}秒` : '发送验证码'}
-                                </button>
+                {/* Google-only login (LANGUAGE === 'en') */}
+                {isGoogleOnly ? (
+                    <>
+                        <div className={styles.googleOnlyDivider} />
+                        <button
+                            type="button"
+                            className={`${styles.googleBtn} ${styles.googleOnlyBtn}`}
+                            onClick={handleGoogleLogin}
+                            disabled={isGoogleLoading}
+                        >
+                            <FcGoogle size={22} />
+                            <span>{isGoogleLoading ? t('auth.submitting') : t('auth.googleLogin')}</span>
+                        </button>
+                        {submitError && (
+                            <div className={styles.errorMessage} style={{ textAlign: 'center', marginTop: '12px' }}>
+                                {submitError}
                             </div>
-                            {verificationCodeError && (
-                                <div className={styles.errorMessage}>{verificationCodeError}</div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 密码输入（登录/注册） */}
-                    {mode !== 'reset' && (
-                        <div className={styles.inputGroup}>
-                            <div className={styles.passwordInputWrapper}>
+                        )}
+                    </>
+                ) : (
+                    <form className={styles.form} onSubmit={handleSubmit}>
+                        {/* 手机号输入 */}
+                        {mode !== 'reset' && (
+                            <div className={styles.inputGroup}>
                                 <input
-                                    type={passwordVisible ? 'text' : 'password'}
-                                    className={`${styles.input} ${styles.inputWithToggle} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
-                                    placeholder="请输入密码"
-                                    value={password}
-                                    onChange={handlePasswordChange}
+                                    type="tel"
+                                    className={`${styles.input} ${phoneError ? styles.inputError : ''} ${phoneShake ? styles.shake : ''}`}
+                                    placeholder={t('auth.phone')}
+                                    value={phone}
+                                    onChange={handlePhoneChange}
+                                    maxLength={11}
                                 />
-                                <button
-                                    type="button"
-                                    className={styles.togglePasswordBtn}
-                                    onClick={() => setPasswordVisible((v) => !v)}
-                                    aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
-                                >
-                                    {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
-                                </button>
+                                {phoneError && (
+                                    <div className={styles.errorMessage}>{phoneError}</div>
+                                )}
                             </div>
-                            {passwordError && (
-                                <div className={styles.errorMessage}>{passwordError}</div>
-                            )}
-                            {mode === 'login' && (
-                                <div className={styles.forgetPassword} onClick={handleForgetPassword}>
-                                    忘记密码
+                        )}
+
+                        {/* 手机号输入（重置） */}
+                        {mode === 'reset' && (
+                            <div className={styles.inputGroup}>
+                                <input
+                                    type="tel"
+                                    className={`${styles.input} ${resetPhoneError ? styles.inputError : ''} ${resetPhoneShake ? styles.shake : ''}`}
+                                    placeholder={t('auth.phone')}
+                                    value={resetPhone}
+                                    onChange={handleResetPhoneChange}
+                                    maxLength={11}
+                                />
+                                {resetPhoneError && (
+                                    <div className={styles.errorMessage}>{resetPhoneError}</div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 验证码输入 */}
+                        {mode === 'reset' && (
+                            <div className={styles.inputGroup}>
+                                <div className={styles.codeInputWrapper}>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        className={`${styles.input} ${styles.codeInput} ${verificationCodeError ? styles.inputError : ''} ${verificationCodeShake ? styles.shake : ''}`}
+                                        placeholder={t('auth.verificationCode')}
+                                        value={verificationCode}
+                                        onChange={handleVerificationCodeChange}
+                                        maxLength={6}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.sendCodeBtn}
+                                        onClick={handleSendCode}
+                                        disabled={isSendingCode || countdown > 0 || !resetPhone || !validatePhone(resetPhone)}
+                                    >
+                                        {isSendingCode ? t('auth.sending') : countdown > 0 ? `${countdown}s` : t('auth.sendCode')}
+                                    </button>
                                 </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 确认密码输入（注册） */}
-                    {mode === 'register' && (
-                        <div className={styles.inputGroup}>
-                            <div className={styles.passwordInputWrapper}>
-                                <input
-                                    type={confirmPasswordVisible ? 'text' : 'password'}
-                                    className={`${styles.input} ${styles.inputWithToggle} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
-                                    placeholder="请再次输入密码"
-                                    value={confirmPassword}
-                                    onChange={handleConfirmPasswordChange}
-                                />
-                                <button
-                                    type="button"
-                                    className={styles.togglePasswordBtn}
-                                    onClick={() => setConfirmPasswordVisible((v) => !v)}
-                                    aria-label={confirmPasswordVisible ? '隐藏密码' : '显示密码'}
-                                >
-                                    {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
-                                </button>
+                                {verificationCodeError && (
+                                    <div className={styles.errorMessage}>{verificationCodeError}</div>
+                                )}
                             </div>
-                            {confirmPasswordError && (
-                                <div className={styles.errorMessage}>{confirmPasswordError}</div>
-                            )}
-                        </div>
-                    )}
+                        )}
 
-                    {/* 新密码输入（重置） */}
-                    {mode === 'reset' && (
-                        <>
+                        {/* 密码输入（登录/注册） */}
+                        {mode !== 'reset' && (
                             <div className={styles.inputGroup}>
                                 <div className={styles.passwordInputWrapper}>
                                     <input
                                         type={passwordVisible ? 'text' : 'password'}
                                         className={`${styles.input} ${styles.inputWithToggle} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
-                                        placeholder="请输入新密码"
+                                        placeholder={t('auth.password')}
                                         value={password}
                                         onChange={handlePasswordChange}
                                     />
@@ -565,7 +560,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         type="button"
                                         className={styles.togglePasswordBtn}
                                         onClick={() => setPasswordVisible((v) => !v)}
-                                        aria-label={passwordVisible ? '隐藏密码' : '显示密码'}
+                                        aria-label={passwordVisible ? t('password.hide') : t('password.show')}
                                     >
                                         {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
                                     </button>
@@ -573,13 +568,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                 {passwordError && (
                                     <div className={styles.errorMessage}>{passwordError}</div>
                                 )}
+                                {mode === 'login' && (
+                                    <div className={styles.forgetPassword} onClick={handleForgetPassword}>
+                                        {t('auth.forgetPassword')}
+                                    </div>
+                                )}
                             </div>
+                        )}
+
+                        {/* 确认密码输入（注册） */}
+                        {mode === 'register' && (
                             <div className={styles.inputGroup}>
                                 <div className={styles.passwordInputWrapper}>
                                     <input
                                         type={confirmPasswordVisible ? 'text' : 'password'}
                                         className={`${styles.input} ${styles.inputWithToggle} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
-                                        placeholder="请再次输入新密码"
+                                        placeholder={t('auth.confirmPassword')}
                                         value={confirmPassword}
                                         onChange={handleConfirmPasswordChange}
                                     />
@@ -587,7 +591,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                         type="button"
                                         className={styles.togglePasswordBtn}
                                         onClick={() => setConfirmPasswordVisible((v) => !v)}
-                                        aria-label={confirmPasswordVisible ? '隐藏密码' : '显示密码'}
+                                        aria-label={confirmPasswordVisible ? t('password.hide') : t('password.show')}
                                     >
                                         {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
                                     </button>
@@ -596,50 +600,100 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                                     <div className={styles.errorMessage}>{confirmPasswordError}</div>
                                 )}
                             </div>
-                        </>
-                    )}
+                        )}
 
-                    {/* 提交错误信息 */}
-                    {submitError && (
-                        <div
-                            className={styles.errorMessage}
-                            style={{
-                                textAlign: 'center',
-                                marginTop: '0px',
-                                color: submitError.includes('成功') ? '#28a745' : '#DC3545'
-                            }}
+                        {/* 新密码输入（重置） */}
+                        {mode === 'reset' && (
+                            <>
+                                <div className={styles.inputGroup}>
+                                    <div className={styles.passwordInputWrapper}>
+                                        <input
+                                            type={passwordVisible ? 'text' : 'password'}
+                                            className={`${styles.input} ${styles.inputWithToggle} ${passwordError ? styles.inputError : ''} ${passwordShake ? styles.shake : ''}`}
+                                            placeholder={t('auth.newPassword')}
+                                            value={password}
+                                            onChange={handlePasswordChange}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.togglePasswordBtn}
+                                            onClick={() => setPasswordVisible((v) => !v)}
+                                            aria-label={passwordVisible ? t('password.hide') : t('password.show')}
+                                        >
+                                            {passwordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
+                                        </button>
+                                    </div>
+                                    {passwordError && (
+                                        <div className={styles.errorMessage}>{passwordError}</div>
+                                    )}
+                                </div>
+                                <div className={styles.inputGroup}>
+                                    <div className={styles.passwordInputWrapper}>
+                                        <input
+                                            type={confirmPasswordVisible ? 'text' : 'password'}
+                                            className={`${styles.input} ${styles.inputWithToggle} ${confirmPasswordError ? styles.inputError : ''} ${confirmPasswordShake ? styles.shake : ''}`}
+                                            placeholder={t('auth.confirmNewPassword')}
+                                            value={confirmPassword}
+                                            onChange={handleConfirmPasswordChange}
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.togglePasswordBtn}
+                                            onClick={() => setConfirmPasswordVisible((v) => !v)}
+                                            aria-label={confirmPasswordVisible ? t('password.hide') : t('password.show')}
+                                        >
+                                            {confirmPasswordVisible ? <FiEye size={18} /> : <FiEyeOff size={18} />}
+                                        </button>
+                                    </div>
+                                    {confirmPasswordError && (
+                                        <div className={styles.errorMessage}>{confirmPasswordError}</div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {/* 提交错误信息 */}
+                        {submitError && (
+                            <div
+                                className={styles.errorMessage}
+                                style={{
+                                    textAlign: 'center',
+                                    marginTop: '0px',
+                                    color: submitError.includes('成功') ? '#28a745' : '#DC3545'
+                                }}
+                            >
+                                {submitError}
+                            </div>
+                        )}
+
+                        {/* 提交按钮 */}
+                        <button
+                            type="submit"
+                            className={styles.submitBtn}
+                            disabled={isLoading}
                         >
-                            {submitError}
-                        </div>
-                    )}
+                            {getSubmitButtonText()}
+                        </button>
+                    </form>
+                )}
 
-                    {/* 提交按钮 */}
-                    <button
-                        type="submit"
-                        className={styles.submitBtn}
-                        disabled={isLoading}
-                    >
-                        {getSubmitButtonText()}
-                    </button>
-                </form>
-
-                {/* 模式切换 */}
-                {mode !== 'reset' && (
+                {/* 模式切换（仅非 Google-only 模式） */}
+                {!isGoogleOnly && mode !== 'reset' && (
                     <div className={styles.modeSwitch}>
                         <span>
-                            {mode === 'login' ? '还没有账号？' : '已有账号？'}
+                            {mode === 'login' ? t('auth.noAccount') : t('auth.hasAccount')}
                         </span>
                         <button type="button" onClick={handleModeSwitch} className={styles.switchBtn}>
-                            {mode === 'login' ? '立即注册' : '立即登录'}
+                            {mode === 'login' ? t('auth.registerNow') : t('auth.loginNow')}
                         </button>
                     </div>
                 )}
 
-                {mode === 'reset' && (
+                {!isGoogleOnly && mode === 'reset' && (
                     <div className={styles.modeSwitch}>
-                        <span>想起密码了？</span>
+                        <span>{t('auth.rememberPassword')}</span>
                         <button type="button" onClick={() => setMode('login')} className={styles.switchBtn}>
-                            返回登录
+                            {t('auth.backToLogin')}
                         </button>
                     </div>
                 )}

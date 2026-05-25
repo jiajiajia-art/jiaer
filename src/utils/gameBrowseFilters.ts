@@ -4,6 +4,7 @@ export type HomeListSort = 'hot' | 'recommended' | 'latest';
 export type HomeListOption<T extends string | number | null> = {
     value: T;
     label: string;
+    labelKey?: string;
 };
 
 export type HomeListFilters = {
@@ -22,16 +23,16 @@ export const DEFAULT_HOME_LIST_FILTERS: HomeListFilters = {
 };
 
 export const HOME_LIST_MODE_OPTIONS: HomeListOption<HomeListMode>[] = [
-    { value: 'all', label: '\u5168\u90E8' },
-    { value: 'role-playing', label: '\u89D2\u8272\u626E\u6F14' },
-    { value: 'world', label: 'World' },
-    { value: 'custom', label: '\u81EA\u5B9A\u4E49' },
+    { value: 'all', label: '全部', labelKey: 'gameBrowse.modes.all' },
+    { value: 'role-playing', label: '角色扮演', labelKey: 'gameBrowse.modes.rolePlaying' },
+    { value: 'world', label: 'World', labelKey: 'gameBrowse.modes.world' },
+    { value: 'custom', label: '自定义', labelKey: 'gameBrowse.modes.custom' },
 ];
 
 export const HOME_LIST_SORT_OPTIONS: HomeListOption<HomeListSort>[] = [
-    { value: 'hot', label: '\u6700\u70ED' },
-    { value: 'recommended', label: '\u63A8\u8350' },
-    { value: 'latest', label: '\u6700\u65B0' },
+    { value: 'hot', label: '最热', labelKey: 'gameBrowse.sorts.hot' },
+    { value: 'recommended', label: '推荐', labelKey: 'gameBrowse.sorts.recommended' },
+    { value: 'latest', label: '最新', labelKey: 'gameBrowse.sorts.latest' },
 ];
 
 export const normalizeHomeListMode = (value: string | null): HomeListMode => {
