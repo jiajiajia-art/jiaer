@@ -25,6 +25,12 @@ import worldEditor from '../api/worldInteraction/worldEditor';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { isMiniProgramEnv } from '../utils/miniProgram';
 
+const SCREENWRITER_SEED_KEY = 'funloom_screenwriter_seed';
+const SCREENWRITER_API_BASE_URL = 'http://localhost:3000/api';
+const SCREENWRITER_APP_URL =
+    import.meta.env.VITE_SCREENWRITER_APP_URL || 'http://127.0.0.1:5181';
+const ENABLE_SCREENWRITER_MODE = import.meta.env.VITE_ENABLE_SCREENWRITER_MODE === 'true';
+
 const GameSettingsEditor = () => {
     const { activePanel, isParsed, setActivePanel, setIsParsed } = useEditorStore();
     const { fileId, setFileId } = useGameStore();
@@ -305,6 +311,57 @@ const GameSettingsEditor = () => {
         return true;
     }, [activePanel]);
 
+    const buildScreenwriterSeed = useCallback(() => {
+        if (!gameData) return null;
+
+        const worldData = worldPanelGetDataRef.current?.();
+        const characterData = charactersPanelGetDataRef.current?.();
+        const sceneData = scenesPanelGetDataRef.current?.();
+        const worldSetting = {
+            ...(gameData.worldSetting || {}),
+            ...(worldData?.worldSetting || {}),
+        };
+        const npcSetting = characterData?.npcSetting || gameData.npcSetting;
+        const sceneSetting = sceneData?.sceneSetting || gameData.sceneSetting;
+
+        return {
+            source: 'txt-creator',
+            fileId,
+            apiBaseUrl: SCREENWRITER_API_BASE_URL,
+            gameData: {
+                worldSetting,
+                npcSetting,
+                sceneSetting,
+            },
+        };
+    }, [fileId, gameData, charactersPanelGetDataRef, scenesPanelGetDataRef, worldPanelGetDataRef]);
+
+    const openScreenwriterMode = useCallback(() => {
+        const seed = buildScreenwriterSeed();
+        if (!seed) {
+            return;
+        }
+
+        localStorage.setItem(SCREENWRITER_SEED_KEY, JSON.stringify(seed));
+        const params = new URLSearchParams({
+            source: 'txt',
+            seedKey: SCREENWRITER_SEED_KEY,
+            apiBaseUrl: SCREENWRITER_API_BASE_URL,
+        });
+        const targetUrl = `${SCREENWRITER_APP_URL.replace(/\/$/, '')}/?${params.toString()}`;
+        const targetWindow = window.open(targetUrl, '_blank');
+        if (targetWindow) {
+            window.setTimeout(() => {
+                targetWindow.postMessage({
+                    type: 'funloom-screenwriter-seed',
+                    seedKey: SCREENWRITER_SEED_KEY,
+                    apiBaseUrl: SCREENWRITER_API_BASE_URL,
+                    seed,
+                }, '*');
+            }, 800);
+        }
+    }, [buildScreenwriterSeed]);
+
     useEffect(() => () => {
         if (parsingSuccessTimerRef.current) {
             clearTimeout(parsingSuccessTimerRef.current);
@@ -333,6 +390,22 @@ const GameSettingsEditor = () => {
                     </div>
 
                     <div className={`${styles.topActions} ${isMiniProgramTxtMode ? styles.miniProgramTopActions : ''}`}>
+                        {ENABLE_SCREENWRITER_MODE && (
+                            <button
+                                className={styles.ghost}
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    const canOpenScreenwriter = await checkActivePanelBeforeAction();
+                                    if (!canOpenScreenwriter) {
+                                        return;
+                                    }
+                                    openScreenwriterMode();
+                                }}
+                                disabled={!fileId || !gameData || isSubmitting || isLoadingData || mode === 'worldInteraction'}
+                            >
+                                编剧模式
+                            </button>
+                        )}
                         <button
                             className={styles.ghost}
                             onClick={async (e) => {
