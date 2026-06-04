@@ -107,7 +107,7 @@ const CreateGame: React.FC = () => {
                     }
                     setGameDetail(data);
                 } else {
-                    setDetailError('未找到游戏详情');
+                    setDetailError(t('createGame.gameNotFound'));
                 }
             } catch (error: any) {
                 console.error('加载游戏详情失败:', error);

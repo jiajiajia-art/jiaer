@@ -83,7 +83,7 @@ const resolveClaimErrorMessage = (error: unknown): string => {
     if (error instanceof Error && error.message) {
         return error.message;
     }
-    return '浠诲姟濂栧姳棰嗗彇澶辫触';
+    return '任务奖励领取失败';
 };
 
 const hasSummaryInPayload = (payload: DailyTaskPayload): boolean => {
@@ -234,7 +234,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         try {
             const response = await dailyTaskApi.getDailyTasks();
             if (!response.data.success) {
-                throw new Error(response.data.message || '浠诲姟鏁版嵁鍔犺浇澶辫触');
+                throw new Error(response.data.message || '任务数据加载失败');
             }
             const payload = normalizeDailyTaskPayload(response.data.data);
             const nextDigest = createRewardDigest(payload.rewardsIssued);
@@ -254,7 +254,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
                 lastRewardDigest: nextDigest,
             }));
         } catch (error) {
-            const message = error instanceof Error ? error.message : '浠诲姟鏁版嵁鍔犺浇澶辫触';
+            const message = error instanceof Error ? error.message : '任务数据加载失败';
             set((prev) => ({
                 ...prev,
                 isRefreshing: false,
@@ -284,7 +284,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         try {
             const response = await dailyTaskApi.claimDailyTask(taskCode);
             if (!response.data.success) {
-                throw new Error(response.data.message || '浠诲姟濂栧姳棰嗗彇澶辫触');
+                throw new Error(response.data.message || '任务奖励领取失败');
             }
 
             if (response.data.data) {
@@ -294,7 +294,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
 
             return {
                 success: true,
-                message: response.data.message || '濂栧姳棰嗗彇鎴愬姛',
+                message: response.data.message || '奖励领取成功',
             };
         } catch (error) {
             return {

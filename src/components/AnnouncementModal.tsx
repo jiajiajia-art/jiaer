@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './AnnouncementModal.module.css';
 import type { AnnouncementRecord } from '../api/announcement/announcement.type';
 import { parseAnnouncementBody } from '../utils/announcementLinks';
@@ -35,9 +36,12 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
     announcement,
     isOpen,
     onClose,
-    badgeText = '\u9996\u9875\u516c\u544a',
+    badgeText,
     onNavigateLink,
 }) => {
+    const { t } = useTranslation();
+    const displayBadgeText = badgeText || t('common.announcement.defaultBadge');
+
     if (!isOpen || !announcement) {
         return null;
     }
@@ -62,14 +66,14 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                     type="button"
                     className={styles.closeButton}
                     onClick={onClose}
-                    aria-label="\u5173\u95ed\u516c\u544a"
+                    aria-label={t('common.announcement.close')}
                 >
-                    <span aria-hidden="true">{'\u00D7'}</span>
+                    <span aria-hidden="true">×</span>
                 </button>
 
                 <div className={styles.header}>
                     <div className={styles.headerMeta}>
-                        <div className={styles.badge}>{badgeText}</div>
+                        <div className={styles.badge}>{displayBadgeText}</div>
                         {displayDate ? <div className={styles.date}>{displayDate}</div> : null}
                     </div>
                     <h2 id={titleId} className={styles.title}>{announcement.title}</h2>
@@ -112,7 +116,7 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({
                         className={styles.confirmButton}
                         onClick={onClose}
                     >
-                        {'\u6211\u77e5\u9053\u4e86'}
+                        {t('common.announcement.acknowledged')}
                     </button>
                 </div>
             </div>

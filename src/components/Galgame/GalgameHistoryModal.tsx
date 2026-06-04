@@ -5,6 +5,7 @@ import { processGameTags } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './GalgameHistoryModal.module.css';
 import { logVisualButtonClick } from "../../api/statistics/scriptButtonEvent";
+import { useTranslation } from 'react-i18next';
 
 interface GalgameHistoryModalProps {
     isOpen: boolean;
@@ -27,6 +28,7 @@ const GalgameHistoryModal = ({
     loadingMoreBefore = false,
     onLoadMoreBefore,
 }: GalgameHistoryModalProps) => {
+    const { t } = useTranslation();
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [editContent, setEditContent] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
@@ -103,7 +105,7 @@ const GalgameHistoryModal = ({
             }
 
             const start = performance.now();
-            const processed = processGameTags(item.content || '');
+            const processed = processGameTags(item.content || '', t);
             const duration = performance.now() - start;
 
             if (duration > 20) {
@@ -169,11 +171,11 @@ const GalgameHistoryModal = ({
             }}
              onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
-                    <h2 className={styles.modalTitle}>历史记录</h2>
+                    <h2 className={styles.modalTitle}>{t('createGame.history')}</h2>
                 </div>
                 <div className={styles.modalBody} ref={modalBodyRef} onScroll={handleBodyScroll}>
                     {history.length === 0 ? (
-                        <div className={styles.emptyState}>暂无历史记录</div>
+                        <div className={styles.emptyState}>{t('createGame.noHistory')}</div>
                     ) : (
                         <div className={styles.chatMessages}>
                             {(hasMoreBefore || loadingMoreBefore) && (
@@ -226,7 +228,7 @@ const GalgameHistoryModal = ({
                                                             disabled={isSaving}
                                                         >
                                                             <MdCheck />
-                                                            <span>{isSaving ? '保存中...' : '保存'}</span>
+                                                            <span>{isSaving ? t('createGame.saving') : t('createGame.save')}</span>
                                                         </button>
                                                         <button
                                                             className={styles.cancelButton}
@@ -234,7 +236,7 @@ const GalgameHistoryModal = ({
                                                             disabled={isSaving}
                                                         >
                                                             <MdClose />
-                                                            <span>取消</span>
+                                                            <span>{t('createGame.cancel')}</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -249,20 +251,20 @@ const GalgameHistoryModal = ({
                                                             <button 
                                                                 className={styles.editButton}
                                                                 onClick={() => handleStartEdit(item.absoluteIndex, item.content || '')}
-                                                                title="编辑消息"
+                                                                title={t('createGame.editMessage')}
                                                             >
                                                                 <MdEdit />
-                                                                <span>编辑</span>
+                                                                <span>{t('createGame.edit')}</span>
                                                             </button>
                                                         )}
                                                         {onRegenerate && (
                                                             <button 
                                                                 className={styles.regenerateButton}
                                                                 onClick={() => handleRegenerate(index)}
-                                                                title="重新生成"
+                                                                title={t('createGame.regenerate')}
                                                             >
                                                                 <MdRefresh />
-                                                                <span>重新生成</span>
+                                                                <span>{t('createGame.regenerate')}</span>
                                                             </button>
                                                         )}
                                                     </div>

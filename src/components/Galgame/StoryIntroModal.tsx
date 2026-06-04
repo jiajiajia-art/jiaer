@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './StoryIntroModal.module.css';
 import type { GetGalgamePresetResponse } from '../../api/galgame/getGalgamePreset.type';
 import { HOST_ADDRESS } from '../../config';
@@ -18,10 +19,10 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
     onStartGame,
     isLoading = false,
 }) => {
-    if (!isOpen) return null;
+    const { t } = useTranslation();
 
-    const title = presetData?.world?.title || '故事';
-    const initialPlot = presetData?.world?.initialPlot || '欢迎来到这个精彩的故事世界，准备好开始你的冒险了吗？';
+    const title = useMemo(() => presetData?.world?.title || t('common.storyIntro.defaultTitle'), [presetData, t]);
+    const initialPlot = useMemo(() => presetData?.world?.initialPlot || t('common.storyIntro.defaultPlot'), [presetData, t]);
     const playerImage = presetData?.scenes.scenes[0]?.image || presetData?.scenes.scenes[0]?.images;
 
     const playerImageUrl = useMemo(() => {
@@ -31,6 +32,8 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
         }
         return `${HOST_ADDRESS}${playerImage}`;
     }, [playerImage]);
+
+    if (!isOpen) return null;
 
     return (
         <div
@@ -64,7 +67,7 @@ const StoryIntroModal: React.FC<StoryIntroModalProps> = ({
                                     <span className={styles.loadingDot}></span>
                                     <span className={styles.loadingDot}></span>
                                 </div>
-                                : '开始体验'}
+                                : t('common.storyIntro.startExperience')}
                         </button>
                 </div>
             </div>

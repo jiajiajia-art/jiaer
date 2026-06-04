@@ -1,30 +1,57 @@
-export const formatEtaMinutes = (seconds?: number | null): string => {
-    const safeSeconds = Math.max(0, Math.ceil(Number(seconds || 0)));
-    if (safeSeconds >= 60) {
-        return `${Math.ceil(safeSeconds / 60)} 分钟`;
-    }
-    return `${safeSeconds} 秒`;
+type TranslateFn = (key: string) => string;
+
+const defaultTranslations: TranslateFn = (key: string) => {
+    const translations: Record<string, string> = {
+        'minutes': '分钟',
+        'second': '秒',
+        'minutesAndSeconds': '{{minutes}} 分 {{seconds}} 秒',
+        'remaining': '预计还需',
+        'takingLonger': '耗时较长，仍在处理中，请稍候',
+        'generating': '正在生成第',
+        'generatingMoreTime': '生成时间比平时更长，请继续等待',
+        'item': '项',
+        'total': '本次共生成',
+        'completed': '已完成',
+    };
+    return translations[key] || key;
 };
 
-export const formatEtaPrecise = (seconds?: number | null): string => {
+export const formatEtaMinutes = (
+    seconds?: number | null,
+    t: TranslateFn = defaultTranslations,
+): string => {
+    const safeSeconds = Math.max(0, Math.ceil(Number(seconds || 0)));
+    if (safeSeconds >= 60) {
+        return `${Math.ceil(safeSeconds / 60)} ${t('minutes')}`;
+    }
+    return `${safeSeconds} ${t('second')}`;
+};
+
+export const formatEtaPrecise = (
+    seconds?: number | null,
+    t: TranslateFn = defaultTranslations,
+): string => {
     const safeSeconds = Math.max(0, Math.ceil(Number(seconds || 0)));
     if (safeSeconds >= 60) {
         const minutes = Math.floor(safeSeconds / 60);
         const remainSeconds = safeSeconds % 60;
         if (remainSeconds === 0) {
-            return `${minutes} 分钟`;
+            return `${minutes} ${t('minutes')}`;
         }
-        return `${minutes} 分 ${remainSeconds} 秒`;
+        return t('eta.minutesAndSeconds').replace('{{minutes}}', String(minutes)).replace('{{seconds}}', String(remainSeconds));
     }
-    return `${safeSeconds} 秒`;
+    return `${safeSeconds} ${t('second')}`;
 };
 
-export const getUploadEtaText = (params: {
-    status?: string;
-    elapsedSeconds?: number | null;
-    estimatedRemainingSeconds?: number | null;
-    estimatedTotalSeconds?: number | null;
-}): string => {
+export const getUploadEtaText = (
+    params: {
+        status?: string;
+        elapsedSeconds?: number | null;
+        estimatedRemainingSeconds?: number | null;
+        estimatedTotalSeconds?: number | null;
+    },
+    t: TranslateFn = defaultTranslations,
+): string => {
     const { status, elapsedSeconds, estimatedRemainingSeconds, estimatedTotalSeconds } = params;
 
     if (status === 'completed' || status === 'failed') {
@@ -35,14 +62,13 @@ export const getUploadEtaText = (params: {
     const totalSeconds = Math.max(0, Math.ceil(Number(estimatedTotalSeconds || 0)));
     const elapsed = Math.max(0, Math.floor(Number(elapsedSeconds || 0)));
 
-    // 实现超出预计后的兜底提示
     if (totalSeconds > 0 && elapsed >= totalSeconds && remainingSeconds === 0) {
-        return '耗时较长，仍在处理中，请稍候';
+        return t('takingLonger');
     }
 
     if (remainingSeconds <= 0) {
         return '';
     }
 
-    return `预计还需 ${formatEtaMinutes(remainingSeconds)}`;
+    return `${t('remaining')} ${formatEtaMinutes(remainingSeconds, t)}`;
 };

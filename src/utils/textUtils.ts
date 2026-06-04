@@ -390,6 +390,7 @@ const findEndChoiceStartIndex = (text: string, from: number): number => {
 
 interface ProcessTagContext {
     collectOptions: boolean;
+    translate?: (key: string, options?: Record<string, string | number>) => string;
 }
 
 interface OptionStore {
@@ -434,10 +435,12 @@ const processGameTagText = (content: string, context: ProcessTagContext, optionS
                 cursor = tag.end + 1;
                 break;
 
-            case 'SCENE_CHANGE':
-                result += tag.payload.trim() ? `场景切换：${tag.payload.trim()}` : '';
+            case 'SCENE_CHANGE': {
+                const sceneLabel = context.translate?.('common.sceneChangePrefix') || '场景切换：';
+                result += tag.payload.trim() ? `${sceneLabel}${tag.payload.trim()}` : '';
                 cursor = tag.end + 1;
                 break;
+            }
 
             case 'MAIN_OPTION': {
                 if (context.collectOptions) {
@@ -467,7 +470,7 @@ const processGameTagText = (content: string, context: ProcessTagContext, optionS
 
                 if (endChoiceStart >= 0) {
                     const innerContent = content.slice(tag.end + 1, endChoiceStart);
-                    const cleanedInner = processGameTagText(innerContent, { collectOptions: false }, optionStore).trim();
+                    const cleanedInner = processGameTagText(innerContent, { collectOptions: false, translate: context.translate }, optionStore).trim();
                     if (title) {
                         result += `【${title}】\n`;
                     }
@@ -498,7 +501,7 @@ const processGameTagText = (content: string, context: ProcessTagContext, optionS
     return result;
 };
 
-export const processGameTags = (content: string): string => {
+export const processGameTags = (content: string, translate?: (key: string, options?: Record<string, string | number>) => string): string => {
     if (!content) return '';
     content = stripNonStoryControlMarkup(content);
 
@@ -507,7 +510,7 @@ export const processGameTags = (content: string): string => {
         options: [],
     };
 
-    let result = processGameTagText(content, { collectOptions: true }, optionStore);
+    let result = processGameTagText(content, { collectOptions: true, translate }, optionStore);
     result = result.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ').trim();
 
     if (optionStore.mainOptions.length > 0 || optionStore.options.length > 0) {

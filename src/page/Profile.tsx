@@ -568,7 +568,7 @@ const Profile: React.FC = () => {
             toast.error(result.message || t('profile.rewardClaimFailed'));
             return;
         }
-        toast.success(result.message || t('profile.rewardClaimSuccess'));
+        toast.success(t('profile.rewardClaimSuccess'));
         await getUserInfo();
     };
 
@@ -1141,19 +1141,23 @@ const Profile: React.FC = () => {
                                     ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
                                     : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
 
-                                let statusText = task.statusText || t('profile.taskInProgress');
+                                let statusText = task.statusText;
                                 if (task.claimed) {
                                     statusText = t('profile.rewardClaimed');
                                 } else if (canClaimNow) {
                                     statusText = t('profile.claim');
                                 } else if (task.completed) {
                                     statusText = t('profile.taskCompleted');
+                                } else if (!statusText) {
+                                    statusText = t('profile.taskInProgress');
                                 }
 
                                 return (
                                     <div key={task.code} className={styles.dailyTaskItem}>
                                         <div className={styles.dailyTaskItemHeader}>
-                                            <div className={styles.dailyTaskItemTitle}>{task.title}</div>
+                                            <div className={styles.dailyTaskItemTitle}>
+                                                {task.titleKey ? t(task.titleKey) : task.title}
+                                            </div>
                                             <div className={styles.dailyTaskReward}>+{task.rewardPoints}{t('profile.points')}</div>
                                         </div>
                                         <div className={styles.dailyTaskProgressRow}>

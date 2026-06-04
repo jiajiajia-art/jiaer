@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "site": "interactive-fiction-c8ca8",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "**/src/**",
+      "**/dist/**"
+    ]
+  }
+}

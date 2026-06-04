@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { formatEtaPrecise } from '../../utils/etaText';
+import { useTranslation } from 'react-i18next';
 
 interface BatchImageProgressStatusLike {
     status?: string;
@@ -11,6 +12,8 @@ interface BatchImageProgressStatusLike {
 export const useBatchImageProgressText = (
     jobStatus?: BatchImageProgressStatusLike | null,
 ): string => {
+    const { t } = useTranslation();
+
     return useMemo(() => {
         if (!jobStatus) {
             return '';
@@ -21,23 +24,21 @@ export const useBatchImageProgressText = (
             return '';
         }
 
-        // 实现批量真实完成数展示
         const completedCount = Math.min(
             totalCount,
             Math.max(0, Number(jobStatus.completedCount || 0)),
         );
         const remainingSeconds = Number(jobStatus.estimatedRemainingSeconds);
-        const prefix = `本次共生成 ${totalCount} 项`;
+        const prefix = `${t('eta.total')} ${totalCount} ${t('eta.item')}`;
 
-        // 实现 ETA 可用时的完整提示
         if (
             jobStatus.status !== 'completed'
             && Number.isFinite(remainingSeconds)
             && remainingSeconds > 0
         ) {
-            return `${prefix}，预计还需 ${formatEtaPrecise(remainingSeconds)}，已完成 ${completedCount}/${totalCount} 项`;
+            return `${prefix}，${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}，${t('eta.completed')} ${completedCount}/${totalCount} ${t('eta.item')}`;
         }
 
-        return `${prefix}，已完成 ${completedCount}/${totalCount} 项`;
-    }, [jobStatus]);
+        return `${prefix}，${t('eta.completed')} ${completedCount}/${totalCount} ${t('eta.item')}`;
+    }, [jobStatus, t]);
 };

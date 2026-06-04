@@ -632,6 +632,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             pendingImages,
             pendingImageUrlsRef,
             onDataChange,
+            t,
         });
     }, [fileId, mode, api, userPoints, characterData, activeCharacterId, isAddingNew, newCharacterData, pendingImages, pendingImageUrlsRef, onDataChange]);
 
@@ -717,7 +718,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
         status: npcBatchJobStatus?.status,
         estimatedRemainingSeconds: npcBatchJobStatus?.estimatedRemainingSeconds ?? null,
         // 实现批量角色生图的数量提示
-        batchLabel: batchCharacterCount > 0 ? `本次共生成 ${batchCharacterCount} 项` : undefined,
+        batchLabel: batchCharacterCount > 0 ? `${t('eta.total')} ${batchCharacterCount} ${t('eta.item')}` : undefined,
     });
     const isPortraitActionBusy = isUploadingPortrait
         || isSavingCharacter
@@ -1883,7 +1884,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             alt=""
                                             className={styles.priceIcon}
                                         />
-                                        <span>{CHARACTER_GENERATION_COST} AI生成</span>
+                                        <span>{CHARACTER_GENERATION_COST} {t('createGame.aiGenerate')}</span>
                                     </button>
                                 )}
                             </div>
@@ -2077,7 +2078,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                     {isGeneratingVariation && generatingVariationId === variation.id && (
                                                         <div className={styles.loadingOverlay}>
                                                             <div className={styles.loadingSpinner}></div>
-                                                            <div className={styles.loadingText}>正在生成...</div>
+                                                            <div className={styles.loadingText}>{t('createGame.generating')}</div>
                                                         </div>
                                                     )}
                                                     {/* 下载和删除按钮 */}
@@ -2247,7 +2248,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                 role="radio"
                                                 aria-checked={isSelected}
                                             >
-                                                <span className={styles.variationTypeLabel}>{type.label}</span>
+                                                <span className={styles.variationTypeLabel}>{t(`createGame.variationType${type.value.charAt(0).toUpperCase() + type.value.slice(1)}`)}</span>
                                                 <span
                                                     className={`${styles.variationTypeIndicator} ${isSelected ? styles.variationTypeIndicatorActive : ''}`}
                                                     aria-hidden="true"
@@ -2367,11 +2368,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 <div className={styles.plusLoadingOverlay}>
                     <div className={styles.plusLoadingDialog}>
                         <div className={styles.plusLoadingSpinner}></div>
-                        <div className={styles.plusLoadingText}>正在生成角色立绘...</div>
+                        <div className={styles.plusLoadingText}>{t('createGame.generatingCharacterPortrait')}</div>
                         {batchCharacterEtaText && (
                             <div className={styles.plusLoadingHint}>{batchCharacterEtaText}</div>
                         )}
-                        <div className={styles.plusLoadingHint}>正在生成中，请勿离开当前页面或重复操作</div>
+                        <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
                     </div>
                 </div>
             )}

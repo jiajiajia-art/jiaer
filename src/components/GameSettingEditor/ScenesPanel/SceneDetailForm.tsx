@@ -212,7 +212,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             alt=""
                             className={styles.priceIcon}
                         />
-                        <span>{SCENE_GENERATION_COST} AI生成</span>
+                        <span>{SCENE_GENERATION_COST} {t('createGame.aiGenerate')}</span>
                     </button>
                 )}
             </div>

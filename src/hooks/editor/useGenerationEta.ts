@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatEtaPrecise } from '../../utils/etaText';
+import { useTranslation } from 'react-i18next';
 
 interface UseGenerationEtaOptions {
     active: boolean;
@@ -20,6 +21,7 @@ export const useGenerationEta = ({
     status,
     estimatedRemainingSeconds,
 }: UseGenerationEtaOptions): string => {
+    const { t } = useTranslation();
     const [startedAt, setStartedAt] = useState<number | null>(null);
     const [now, setNow] = useState<number>(Date.now());
 
@@ -68,20 +70,20 @@ export const useGenerationEta = ({
                 ? safeTotalCount
                 : Math.min(safeTotalCount, normalizedCompletedCount + 1);
             const labelPrefix = batchLabel ? `${batchLabel}，` : '';
-            return `${labelPrefix}预计还需 ${formatEtaPrecise(effectiveRemainingSeconds)}，正在生成第 ${currentIndex}/${safeTotalCount} 项`;
+            return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(effectiveRemainingSeconds, t)}，${t('eta.generating')} ${currentIndex}/${safeTotalCount} ${t('eta.item')}`;
         }
 
         if (elapsedSeconds >= safeTotalSeconds) {
-            return '生成时间比平时更长，请继续等待';
+            return t('eta.generatingMoreTime');
         }
 
         if (totalCount > 1) {
             const perItemSeconds = Math.max(1, Math.ceil(safeTotalSeconds / totalCount));
             const currentIndex = Math.min(totalCount, Math.max(1, Math.floor(elapsedSeconds / perItemSeconds) + 1));
             const labelPrefix = batchLabel ? `${batchLabel}，` : '';
-            return `${labelPrefix}预计还需 ${formatEtaPrecise(remainingSeconds)}，正在生成第 ${currentIndex}/${totalCount} 项`;
+            return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}，${t('eta.generating')} ${currentIndex}/${totalCount} ${t('eta.item')}`;
         }
 
-        return `预计还需 ${formatEtaPrecise(remainingSeconds)}`;
-    }, [active, batchLabel, completedCount, estimatedRemainingSeconds, now, startedAt, status, totalCount, totalSeconds]);
+        return `${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}`;
+    }, [active, batchLabel, completedCount, estimatedRemainingSeconds, now, startedAt, status, totalCount, totalSeconds, t]);
 };

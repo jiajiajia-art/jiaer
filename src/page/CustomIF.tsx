@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
@@ -18,6 +19,7 @@ type CreateSessionResp = {
 };
 
 const CustomIF: React.FC = () => {
+  const { t } = useTranslation();
   const { appId } = useParams();
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -48,7 +50,7 @@ const CustomIF: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!appId) { setError('缺少 appId'); setLoading(false); return; }
+      if (!appId) { setError(t('customIF.missingAppId')); setLoading(false); return; }
       try {
         setLoading(true);
         // 1) create session
@@ -95,9 +97,9 @@ const CustomIF: React.FC = () => {
     return () => { b.dispose(); bridgeRef.current = null; };
   }, [session?.sessionId, session?.version, validEntryUrl, appId, manifest]);
 
-  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>加载中…</div>;
-  if (error) return <div style={{padding:20,color:'#b91c1c'}}>错误：{error}</div>;
-  if (!session) return <div style={{padding:20}}>未获取到会话</div>;
+  if (loading) return <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh'}}>{t('common.loading')}</div>;
+  if (error) return <div style={{padding:20,color:'#b91c1c'}}>{t('customIF.errorPrefix')}{error}</div>;
+  if (!session) return <div style={{padding:20}}>{t('customIF.noSession')}</div>;
 
   // Full-window canvas: the embedded UI should occupy the entire viewport.
   // We intentionally avoid any fixed-size container so the iframe can adapt.

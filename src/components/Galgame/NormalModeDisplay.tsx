@@ -5,6 +5,7 @@ import ColoredMarkdownText from './ColoredMarkdownText';
 import { IoArrowDownCircleOutline } from 'react-icons/io5';
 import { MdAutorenew } from 'react-icons/md';
 import { OPTION_COST, INPUT_COST } from '../../utils/constants';
+import { useTranslation } from 'react-i18next';
 
 type MessageType = 'dialogue' | 'narration' | 'choice' | 'scene_change' | 'transition';
 
@@ -64,6 +65,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
     onCustomInputSubmit,
     isFreeRound = false,
 }) => {
+    const { t } = useTranslation();
     const [showCustomInput, setShowCustomInput] = useState(false);
     const [customInputValue, setCustomInputValue] = useState('');
     // 是否强制展示当前 step 的完整文本（用于点击跳过打字机效果）
@@ -143,7 +145,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 <div className={styles.core}></div>
                             </div>
                             <div className={styles.statusText}>
-                                {isCompressingContext ? '正在整理故事记忆' : 'AI 推演中'}<span className={styles.dots}></span>
+                                {isCompressingContext ? t('createGame.organizingMemory') : t('createGame.aiThinking')}<span className={styles.dots}></span>
                             </div>
                         </div>
                     )}
@@ -196,8 +198,8 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                         onRegenerateCurrentMessage();
                                     }}
                                     disabled={isWaitingForData || isCompressingContext}
-                                    title="重新生成"
-                                    aria-label="重新生成"
+                                    title={t('createGame.regenerate')}
+                                    aria-label={t('createGame.regenerate')}
                                 >
                                     <MdAutorenew />
                                 </button>
@@ -245,13 +247,13 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                             className={styles.customInputText}
                             onClick={handleCustomInputClick}
                         >
-                            <span>自定义输入</span>
+                            <span>{t('createGame.customInput')}</span>
                         </div>
                     ) : (
                         <div className={styles.customInput}>
                             <input
                                 type="text"
-                                placeholder="请输入..."
+                                placeholder={t('createGame.inputPlaceholder')}
                                 value={customInputValue}
                                 onChange={(e) => handleCustomInputChange(e.target.value)}
                                 onKeyDown={handleCustomInputKeyDown}
@@ -263,7 +265,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                                 disabled={!customInputValue.trim() || isCompressingContext}
                                 className={styles.customInputButton}
                             >
-                                <span>发送</span>
+                                <span>{t('createGame.send')}</span>
                                 {!isFreeRound && (
                                     <div className={styles.choicePrice}>
                                         <img src={`${import.meta.env.BASE_URL}data/assets/金币.png`} alt="金币" />

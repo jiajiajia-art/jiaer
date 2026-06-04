@@ -33,7 +33,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                             <div className={styles.titleIcon}>
                                 <img 
                                     src={`${import.meta.env.BASE_URL}data/assets/create/弹框左上角图案.png`} 
-                                    alt="确认图标"
+                                    alt="confirm icon"
                                     className={styles.icon}
                                 />
                             </div>

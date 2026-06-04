@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
@@ -29,6 +30,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     onCoverUploaded,
     publishing = false,
 }) => {
+    const { t } = useTranslation();
     const DESCRIPTION_MAX_LENGTH = 300;
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
@@ -69,7 +71,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     setCoverPreview(response.data.data.cover_url || null);
                 }
             } catch (error) {
-                console.error('获取发布详情失败:', error);
+                console.error('Failed to fetch publish details:', error);
             }
         };
 
@@ -78,7 +80,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
     const uploadCover = useCallback(async (file: File) => {
         if (!fileId) {
-            setCoverError('缺少文件ID，无法上传封面');
+            setCoverError(t('common.publishSettings.missingFileId'));
             return;
         }
 
@@ -87,22 +89,22 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             setCoverError(null);
             const response = await EditorApi.uploadGameCover(fileId, file);
             if (response.data.success) {
-                toast.success('封面上传成功');
+                toast.success(t('common.publishSettings.uploadSuccess'));
                 bumpCacheBust(response.data.data.coverUrl);
                 setCoverPreview(response.data.data.coverUrl);
                 if (onCoverUploaded) {
                     onCoverUploaded();
                 }
             } else {
-                setCoverError(response.data.message || '封面上传失败，请重试');
+                setCoverError(response.data.message || t('common.publishSettings.uploadFailed'));
             }
         } catch (error) {
             console.error('上传封面失败:', error);
-            setCoverError('封面上传失败，请重试');
+            setCoverError(t('common.publishSettings.uploadFailed'));
         } finally {
             setCoverUploading(false);
         }
-    }, [fileId, onCoverUploaded]);
+    }, [fileId, onCoverUploaded, t]);
 
     if (!isOpen) return null;
 
@@ -110,19 +112,18 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         if (publishing) {
             return;
         }
-        // 实现封面必填校验
         if (!coverPreview) {
-            toast.error('请上传封面图片');
+            toast.error(t('common.publishSettings.coverRequired'));
             return;
         }
 
         const trimmed = description.trim();
         if (!trimmed) {
-            toast.error('请填写游戏简介');
+            toast.error(t('common.publishSettings.descriptionRequired'));
             return;
         }
         if (trimmed.length > DESCRIPTION_MAX_LENGTH) {
-            toast.error(`简介不能超过 ${DESCRIPTION_MAX_LENGTH} 个字符`);
+            toast.error(t('common.publishSettings.descriptionTooLong', { max: DESCRIPTION_MAX_LENGTH }));
             return;
         }
 
@@ -134,12 +135,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            setCoverError('请上传图片文件');
+            setCoverError(t('common.publishSettings.invalidImageType'));
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setCoverError('图片大小不能超过 5MB');
+            setCoverError(t('common.publishSettings.imageTooLarge'));
             return;
         }
 
@@ -183,13 +184,13 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         <div className={`${styles.modal} ${styles.modalShow}`}>
             <div className={styles.publishModalContent}>
                 <button className={styles.closeBtn} onClick={onClose}>
-                    <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt="关闭" />
+                    <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt={t('common.close')} />
                 </button>
-                <h2 className={styles.modalTitle}>发布设置</h2>
+                <h2 className={styles.modalTitle}>{t('common.publishSettings.title')}</h2>
 
                 <div className={styles.formContent}>
                     <div className={styles.coverFormGroup}>
-                        <label className={styles.label}>封面图片</label>
+                        <label className={styles.label}>{t('common.publishSettings.coverImage')}</label>
                         <div
                             className={`${styles.coverUploadArea} ${(coverUploading || !fileId) ? styles.coverUploadAreaDisabled : ''}`}
                             onClick={handleCoverClick}
@@ -210,7 +211,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                                 ? coverPreview
                                                 : addImageTimestamp(getImageUrl(coverPreview))
                                         }
-                                        alt="封面预览"
+                                        alt={t('common.publishSettings.coverPreview')}
                                         className={styles.coverPreview}
                                     />
                                     <div className={styles.coverActions}>
@@ -220,15 +221,15 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                                             onClick={handleReplaceCover}
                                             disabled={coverUploading}
                                         >
-                                            更换
+                                            {t('common.publishSettings.replace')}
                                         </button>
                                     </div>
                                 </div>
                             ) : (
                                 <div className={styles.coverPlaceholder}>
                                     <BsUpload className={styles.coverUploadIcon} size={32} />
-                                    <p className={styles.coverUploadText}>点击上传封面图片</p>
-                                    <p className={styles.coverUploadHint}>支持 JPG、PNG、WEBP，最大 5MB</p>
+                                    <p className={styles.coverUploadText}>{t('common.publishSettings.clickToUpload')}</p>
+                                    <p className={styles.coverUploadHint}>{t('common.publishSettings.supportFormats')}</p>
                                 </div>
                             )}
                         </div>
@@ -238,10 +239,10 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     </div>
 
                     <div className={styles.descriptionFormGroup}>
-                        <label className={styles.label}>游戏简介</label>
+                        <label className={styles.label}>{t('common.publishSettings.gameDescription')}</label>
                         <textarea
                             className={styles.descriptionInput}
-                            placeholder={`请输入描述（不超过 ${DESCRIPTION_MAX_LENGTH} 字符）`}
+                            placeholder={t('common.publishSettings.descriptionPlaceholder', { max: DESCRIPTION_MAX_LENGTH })}
                             value={description}
                             maxLength={DESCRIPTION_MAX_LENGTH}
                             onChange={(e) => setDescription(e.target.value)}
@@ -255,7 +256,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
                     <div className={styles.buttonGroup}>
                         <button className={styles.publishBtn} onClick={handleSubmit} disabled={publishing}>
-                            发布
+                            {t('common.publishSettings.publish')}
                         </button>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ export type DailyTaskClaimType = CanonicalDailyTaskCode;
 export interface DailyTaskItem {
     code: DailyTaskCode;
     title: string;
+    titleKey?: string;
     rewardPoints: number;
     progress: number;
     target: number;
@@ -15,6 +16,7 @@ export interface DailyTaskItem {
     claimable: boolean;
     taskType: DailyTaskClaimType | null;
     statusText: string;
+    statusTextKey?: string;
 }
 
 export interface DailyTaskSummary {
@@ -47,44 +49,44 @@ export interface DailyTaskPayload {
 
 interface DailyTaskTemplate {
     code: CanonicalDailyTaskCode;
-    title: string;
+    titleKey: string;
     rewardPoints: number;
     target: number;
-    statusText: string;
+    statusTextKey: string;
     claimType: DailyTaskClaimType | null;
 }
 
 const DAILY_TASK_TEMPLATES: DailyTaskTemplate[] = [
     {
         code: 'like_once',
-        title: '点赞1个作品',
+        titleKey: 'dailyTask.likeOnce',
         rewardPoints: 5,
         target: 1,
-        statusText: '统计中',
+        statusTextKey: 'dailyTask.counting',
         claimType: 'like_once',
     },
     {
         code: 'play_3_unique',
-        title: '游玩3款作品',
+        titleKey: 'dailyTask.play3Unique',
         rewardPoints: 5,
         target: 3,
-        statusText: '统计中',
+        statusTextKey: 'dailyTask.counting',
         claimType: 'play_3_unique',
     },
     {
         code: 'online_10m',
-        title: '累计在线10分钟',
+        titleKey: 'dailyTask.online10m',
         rewardPoints: 8,
         target: 10 * 60,
-        statusText: '',
+        statusTextKey: 'dailyTask.counting',
         claimType: 'online_10m',
     },
     {
         code: 'online_30m',
-        title: '累计在线30分钟',
+        titleKey: 'dailyTask.online30m',
         rewardPoints: 28,
         target: 30 * 60,
-        statusText: '',
+        statusTextKey: 'dailyTask.counting',
         claimType: 'online_30m',
     },
 ];
@@ -207,7 +209,8 @@ const toDurationSeconds = (code: CanonicalDailyTaskCode, value: number): number 
 
 const buildDefaultTask = (template: DailyTaskTemplate): DailyTaskItem => ({
     code: template.code,
-    title: template.title,
+    title: '',
+    titleKey: template.titleKey,
     rewardPoints: template.rewardPoints,
     progress: 0,
     target: template.target,
@@ -215,7 +218,8 @@ const buildDefaultTask = (template: DailyTaskTemplate): DailyTaskItem => ({
     claimed: false,
     claimable: false,
     taskType: template.claimType,
-    statusText: template.statusText,
+    statusText: '',
+    statusTextKey: template.statusTextKey,
 });
 
 const getTemplateByCode = (code: CanonicalDailyTaskCode): DailyTaskTemplate =>
@@ -452,15 +456,20 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
         }
 
         let statusText = String(record.statusText ?? record.description ?? '').trim();
+        let statusTextKey: string | undefined;
         if (!statusText) {
             if (claimed) {
-                statusText = '奖励已领取';
+                statusText = 'Reward claimed';
+                statusTextKey = 'dailyTask.rewardClaimed';
             } else if (claimable) {
-                statusText = '已达成，待领取';
+                statusText = 'Completed, claim now';
+                statusTextKey = 'dailyTask.completed';
             } else if (completed) {
-                statusText = taskType ? '已达成，待领取' : '已完成';
+                statusText = taskType ? 'Completed, claim now' : 'Completed';
+                statusTextKey = taskType ? 'dailyTask.completed' : 'dailyTask.justCompleted';
             } else if (taskType) {
-                statusText = progress > 0 ? `${Math.min(progress, target)}/${target}` : '统计中';
+                statusText = progress > 0 ? `${Math.min(progress, target)}/${target}` : 'Counting...';
+                statusTextKey = progress > 0 ? undefined : 'dailyTask.counting';
             } else {
                 statusText = `${Math.min(progress, target)}/${target}`;
             }
@@ -468,7 +477,8 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
 
         byCode.set(canonicalCode, {
             code: canonicalCode,
-            title: rawTitle || template.title,
+            title: rawTitle || '',
+            titleKey: rawTitle ? undefined : template.titleKey,
             rewardPoints,
             progress,
             target,
@@ -477,6 +487,7 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
             claimable,
             taskType,
             statusText,
+            statusTextKey,
         });
         updatedCodeSet.add(canonicalCode);
     });

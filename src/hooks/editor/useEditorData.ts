@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import EditorApi from '../../api/galgame/EditorData';
 import MapWorldData from '../../api/worldInteraction/mapWorldData';
 import type { AllGameData } from '../../api/galgame/EditorData.type';
@@ -17,6 +18,7 @@ interface UseEditorDataReturn {
 }
 
 export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditorDataReturn => {
+    const { t } = useTranslation();
     const [gameData, setGameData] = useState<AllGameData | WorldInteractionGameData | null>(null);
     const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
     const hasFetchedRef = useRef<string | null>(null);
@@ -54,14 +56,14 @@ export const useEditorData = ({ fileId, mode }: UseEditorDataOptions): UseEditor
                 console.log('Editor data fetched successfully:', unifiedData);
             } else {
                 console.error('Failed to fetch editor data');
-                toast.error('获取游戏数据失败，请稍后重试');
+                toast.error(t('editorData.loadFailed'));
                 if (hasFetchedRef.current === id) {
                     hasFetchedRef.current = null;
                 }
             }
         } catch (error) {
             console.error('Error fetching editor data:', error);
-            toast.error('获取游戏数据失败，请稍后重试');
+            toast.error(t('editorData.loadFailed'));
             if (hasFetchedRef.current === id) {
                 hasFetchedRef.current = null;
             }

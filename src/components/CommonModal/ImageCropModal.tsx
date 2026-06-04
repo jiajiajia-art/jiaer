@@ -1,12 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import ReactCrop, { centerCrop } from 'react-image-crop';
 import type { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { IoClose } from 'react-icons/io5';
 import {
     buildCropExportAttempts,
-    CROP_EXPORT_ERROR_MESSAGE,
     MAX_UPLOAD_IMAGE_SIZE,
 } from '../../utils/uploadImageCrop';
 import styles from './ImageCropModal.module.css';
@@ -44,6 +44,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
     onClose,
     onCropComplete,
 }) => {
+    const { t } = useTranslation();
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
     const [isExporting, setIsExporting] = useState(false);
@@ -177,11 +178,11 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                 return;
             }
 
-            setExportError(CROP_EXPORT_ERROR_MESSAGE);
+            setExportError(t('common.imageCrop.exportError'));
         } finally {
             setIsExporting(false);
         }
-    }, [getCroppedImage, onCropComplete]);
+    }, [getCroppedImage, onCropComplete, t]);
 
     if (!isOpen || typeof document === 'undefined') return null;
 
@@ -227,14 +228,14 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
 
                     <div className={styles.hints}>
                         <p>{description}</p>
-                        <p>宽高比: {aspectLabel}</p>
+                        <p>{t('common.imageCrop.aspectRatio')}: {aspectLabel}</p>
                         {exportError ? <p className={styles.errorText}>{exportError}</p> : null}
                     </div>
                 </div>
 
                 <div className={styles.footer}>
                     <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isExporting}>
-                        取消
+                        {t('common.imageCrop.cancel')}
                     </button>
                     <button
                         type="button"
@@ -242,7 +243,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({
                         onClick={handleConfirm}
                         disabled={isExporting || !completedCrop?.width || !completedCrop?.height}
                     >
-                        {isExporting ? '裁剪中...' : '确认'}
+                        {isExporting ? t('common.imageCrop.cropping') : t('common.imageCrop.confirm')}
                     </button>
                 </div>
             </div>

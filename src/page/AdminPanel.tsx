@@ -1520,7 +1520,7 @@ const AdminPanel: React.FC = () => {
                                                 onPageChange={setHistoryPage}
                                                 disabled={isLoadingHistory || isSubmittingAnnouncement}
                                                 showPageNumbers={false}
-                                                summary={`\u7b2c ${historyPage} \u9875\uff0c\u5171 ${historyTotalPages} \u9875\uff0c\u5171 ${history.length} \u6761\u8bb0\u5f55`}
+                                                summary={`第 ${historyPage} 页，共 ${historyTotalPages} 页，共 ${history.length} 条记录`}
                                             />
                                         ) : null}
                                     </section>
@@ -1798,7 +1798,7 @@ const AdminPanel: React.FC = () => {
                                             totalPages={themeTotalPages}
                                             onPageChange={setThemePage}
                                             disabled={isLoadingThemes || isSavingThemes}
-                                            summary={`\u7b2c ${themePage} \u9875\uff0c\u5171 ${themeTotalPages} \u9875\uff0c\u5171 ${themeTags.length} \u6761\u8bb0\u5f55`}
+                                            summary={`第 ${themePage} 页，共 ${themeTotalPages} 页，共 ${themeTags.length} 条记录`}
                                         />
                                     ) : null}
                                 </section>

@@ -407,7 +407,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         status: sceneBatchJobStatus?.status,
         estimatedRemainingSeconds: sceneBatchJobStatus?.estimatedRemainingSeconds ?? null,
         // 实现批量场景生图的数量提示
-        batchLabel: batchSceneGenerationCount > 0 ? `本次共生成 ${batchSceneGenerationCount} 项` : undefined,
+        batchLabel: batchSceneGenerationCount > 0 ? `${t('eta.total')} ${batchSceneGenerationCount} ${t('eta.item')}` : undefined,
     });
 
     const batchSceneProgressText = useMemo(() => {
@@ -427,7 +427,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         const successCount = Math.max(0, settledCount - failedCount);
         const remainingCount = Math.max(0, totalCount - settledCount);
 
-        return `已完成 ${settledCount}/${totalCount}，成功 ${successCount}，失败 ${failedCount}，剩余 ${remainingCount}`;
+        return `${t('eta.completed')} ${settledCount}/${totalCount}，${t('eta.success')} ${successCount}，${t('eta.failed')} ${failedCount}，${t('eta.remaining')} ${remainingCount}`;
     }, [isBatchSceneJobActive, sceneBatchJobStatus]);
 
     const getEffectiveImage = (sceneId: string, subsceneId?: string): string | undefined => {
@@ -1292,7 +1292,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                     onDataChange();
                 }
             } else {
-                toast.error(t('createGame.musicUploadFailed'));
+                toast.error(t('createGame.uploadFailed'));
             }
         } catch (error) {
             console.error('上传音乐失败:', error);
@@ -1335,7 +1335,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             <span className={styles.buttonMainText}>
                                 {isGeneratingAllSceneImages ? t('createGame.generating') : t('createGame.generateAllScenePortraits')}
                             </span>
-                            <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}积分/张</span>
+                            <span className={styles.buttonSubText}>{SCENE_GENERATION_COST}{t('common.points')}/{t('eta.item')}</span>
                         </div>
                     </button>
                 </GenerationActionBar>
@@ -1521,7 +1521,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onConfirm={handlers.handleConfirmDelete}
                 onCancel={handlers.handleCancelDelete}
                 title={t('createGame.deleteScene')}
-                message={t('createGame.deleteSceneWarning')}
+                message={t('common.deleteSceneWarning')}
                 confirmButtonText={t('common.confirm')}
                 cancelButtonText={t('common.thinkLater')}
             />

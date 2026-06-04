@@ -63,6 +63,7 @@ type HomeShowcaseTag = {
     id: number;
     kind: 'special' | 'featured';
     name: string;
+    code?: string;
     configMode?: 'manual' | 'auto';
     autoSort?: SpecialThemeAutoSort | null;
 };
@@ -74,6 +75,8 @@ const HOME_PAGE_DEFAULT_FILTERS: HomeListFilters = {
 
 const clampValue = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const normalizeShowcaseTagName = (name: string) => String(name || '').trim().toLowerCase();
+const getShowcaseTagI18nCode = (code: string | undefined): string | undefined =>
+    code ? `home.specialThemeTagCodes.${code}` : undefined;
 const getGameUniqueKey = (game: UserGameData, fallbackIndex?: number): string => {
     const fileId = String(game.file_id || '').trim();
     if (fileId) return `file:${fileId}`;
@@ -209,6 +212,7 @@ const Home: React.FC = () => {
             id: Number(tag.id),
             kind: 'special' as const,
             name: String(tag.name || ''),
+            code: String(tag.code || ''),
             configMode: tag.config_mode,
             autoSort: tag.auto_sort,
         })).filter((tag) => tag.name);
@@ -910,15 +914,13 @@ const Home: React.FC = () => {
 
         try {
             let games: UserGameData[] = [];
-            if (showcaseTag.kind === 'special') {
-                const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12);
-                if (response.data.success) {
-                    // 实现加载普通热门题材剧本预览
-                    games = response.data.data || [];
-                    // 实现特殊标签剧本预览读取
-                    games = response.data.data || [];
-                }
-            } else {
+        if (showcaseTag.kind === 'special') {
+            const response = await specialThemeTagsApi.getPublicTagGames(showcaseTag.id, 12);
+            if (response.data.success) {
+                // 实现加载普通热门题材剧本预览
+                games = response.data.data || [];
+            }
+        } else {
                 const response = await libraryDataApi.getGameData('no-discount', {
                     limit: '12',
                     offset: '0',
@@ -2148,7 +2150,7 @@ const Home: React.FC = () => {
                                         className={`${styles.themeShowcaseItem} ${activeShowcaseTagKey === tag.key ? styles.themeShowcaseItemActive : ''}`}
                                         onClick={() => handleThemeClick(tag)}
                                     >
-                                        {tag.name}
+                                        {tag.code ? t(getShowcaseTagI18nCode(tag.code)!) || tag.name : tag.name}
                                     </button>
                                 ))}
                             </div>
@@ -2157,7 +2159,9 @@ const Home: React.FC = () => {
                                     <div className={styles.themeShowcaseTitleGroup}>
                                         <span className={styles.themeShowcaseTitleMarker} aria-hidden="true" />
                                         <h3 className={styles.themeShowcaseTitle}>
-                                            {activeShowcaseTag?.name || ''}
+                                            {activeShowcaseTag?.code
+                                                ? t(getShowcaseTagI18nCode(activeShowcaseTag.code)!) || activeShowcaseTag.name
+                                                : activeShowcaseTag?.name || ''}
                                         </h3>
                                     </div>
                                     {activeShowcaseTag ? (

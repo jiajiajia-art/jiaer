@@ -2,6 +2,7 @@
 import styles from './SaveModal.module.css';
 import { streamSaveSummary, savesApi } from '../../api/galgame/saves';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface SaveModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ const SaveModal: React.FC<SaveModalProps> = ({
   onSaveSuccess,
   defaultSaveMode,
 }) => {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState('');
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -70,7 +72,7 @@ const SaveModal: React.FC<SaveModalProps> = ({
 
   const handleStart = useCallback(async () => {
     if (!sessionId) {
-      toast.error('请先开始游戏');
+      toast.error(t('saveModal.startFirst'));
       return;
     }
 
@@ -97,21 +99,21 @@ const SaveModal: React.FC<SaveModalProps> = ({
             });
           },
           onError: (msg) => {
-            toast.error(msg || '生成失败');
+            toast.error(msg || t('saveModal.generationFailed'));
           },
           onDone: () => {
-            toast.success('摘要已生成');
+            toast.success(t('saveModal.summaryGenerated'));
           },
         },
         ctrl.signal,
       );
     } catch (e: any) {
-      toast.error(e?.message || '生成失败');
+      toast.error(e?.message || t('saveModal.generationFailed'));
     } finally {
       setIsStreaming(false);
       abortRef.current = null;
     }
-  }, [sessionId]);
+  }, [sessionId, t]);
 
   const executeSave = useCallback(
     async (saveAction: 'create' | 'overwrite', targetSaveId?: string) => {
@@ -134,15 +136,15 @@ const SaveModal: React.FC<SaveModalProps> = ({
           const mode = (resp as any).data?.mode || 'create';
           const overwritten = (resp as any).data?.overwritten;
           if (mode === 'overwrite' && overwritten) {
-            toast.success('存档已覆盖');
+            toast.success(t('saveModal.saveOverwritten'));
           } else {
-            toast.success('存档已保存');
+            toast.success(t('saveModal.saveSuccess'));
           }
           setShowConfirm(false);
           onClose();
           onSaveSuccess?.();
         } else {
-          toast.success('存档已保存');
+          toast.success(t('saveModal.saveSuccess'));
           setShowConfirm(false);
           onClose();
           onSaveSuccess?.();
@@ -151,18 +153,18 @@ const SaveModal: React.FC<SaveModalProps> = ({
         const code = e?.response?.data?.code;
         const msg =
           code === 'MAX_SAVES_REACHED'
-            ? '最多 5 个存档，请删除后再试'
+            ? t('saveModal.maxSavesReached')
             : code === 'TARGET_SAVE_NOT_FOUND'
-              ? '目标存档不存在'
+              ? t('saveModal.targetSaveNotFound')
               : code === 'INVALID_SAVE_ACTION'
-                ? '操作类型错误'
-                : e?.response?.data?.message || e?.message || '保存失败';
+                ? t('saveModal.invalidSaveAction')
+                : e?.response?.data?.message || e?.message || t('saveModal.saveFailed');
         toast.error(msg);
       } finally {
         setIsSaving(false);
       }
     },
-    [canSave, sessionId, fileId, summary, candidateId, onClose, onSaveSuccess],
+    [canSave, sessionId, fileId, summary, candidateId, onClose, onSaveSuccess, t],
   );
 
   const handleSave = useCallback(() => {
@@ -173,7 +175,7 @@ const SaveModal: React.FC<SaveModalProps> = ({
       if (defaultSaveMode === 'overwrite') {
         const firstSaveId = saveList[0]?.saveId;
         if (!firstSaveId) {
-          toast.error('暂无可覆盖的存档');
+          toast.error(t('saveModal.noSaveToOverwrite'));
           return;
         }
         void executeSave('overwrite', firstSaveId);
@@ -186,7 +188,7 @@ const SaveModal: React.FC<SaveModalProps> = ({
 
     // 无默认模式则让用户在弹窗中选择
     setShowConfirm(true);
-  }, [canSave, sessionId, fileId, defaultSaveMode, saveList, executeSave]);
+  }, [canSave, sessionId, fileId, defaultSaveMode, saveList, executeSave, t]);
 
   if (!isOpen) return null;
 
@@ -194,7 +196,7 @@ const SaveModal: React.FC<SaveModalProps> = ({
     <div className={styles.overlay} onClick={() => !isStreaming && onClose()}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <div className={styles.title}>存档</div>
+          <div className={styles.title}>{t('saveModal.title')}</div>
           <button className={styles.closeBtn} onClick={() => !isStreaming && onClose()} disabled={isStreaming}>
             ×
           </button>
@@ -203,22 +205,22 @@ const SaveModal: React.FC<SaveModalProps> = ({
           <textarea
             ref={textRef}
             className={styles.textarea}
-            placeholder={'请点击“开始存档”，或自行输入摘要…'}
+            placeholder={t('saveModal.placeholder')}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             disabled={isStreaming || isSaving}
           />
           <div className={styles.hintRow}>
-            <span>至少 10 个字后可保存</span>
-            <span>{charCount} 字</span>
+            <span>{t('saveModal.minCharsRequired')}</span>
+            <span>{t('saveModal.chars', { count: charCount })}</span>
           </div>
         </div>
         <div className={styles.footer}>
           <button className={styles.btn} onClick={handleStart} disabled={isStreaming || !sessionId}>
-            开始存档
+            {t('saveModal.startSave')}
           </button>
           <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleSave} disabled={!canSave}>
-            {isSaving ? '保存中...' : '保存存档'}
+            {isSaving ? t('saveModal.saving') : t('saveModal.saveGame')}
           </button>
         </div>
       </div>
@@ -227,7 +229,7 @@ const SaveModal: React.FC<SaveModalProps> = ({
       {showConfirm && (
         <div className={styles.confirmOverlay}>
           <div className={styles.confirmModal}>
-            <div className={styles.confirmHeader}>选择存档方式</div>
+            <div className={styles.confirmHeader}>{t('saveModal.selectSaveMethod')}</div>
             <div className={styles.confirmBody}>
               <button
                 className={`${styles.confirmBtn} ${styles.confirmBtnCreate}`}
@@ -236,8 +238,8 @@ const SaveModal: React.FC<SaveModalProps> = ({
                 }}
                 disabled={isSaving}
               >
-                <span className={styles.confirmBtnTitle}>新建存档</span>
-                <span className={styles.confirmBtnDesc}>创建新的存档槽位（最多 5 个）</span>
+                <span className={styles.confirmBtnTitle}>{t('saveModal.newSave')}</span>
+                <span className={styles.confirmBtnDesc}>{t('saveModal.newSaveDesc')}</span>
               </button>
               {saveList.length > 0 && (
                 <button
@@ -250,14 +252,14 @@ const SaveModal: React.FC<SaveModalProps> = ({
                   }}
                   disabled={isSaving}
                 >
-                  <span className={styles.confirmBtnTitle}>覆盖存档</span>
-                  <span className={styles.confirmBtnDesc}>覆盖已有存档（不占用新槽位）</span>
+                  <span className={styles.confirmBtnTitle}>{t('saveModal.overwriteSave')}</span>
+                  <span className={styles.confirmBtnDesc}>{t('saveModal.overwriteDesc')}</span>
                 </button>
               )}
             </div>
             <div className={styles.confirmFooter}>
               <button className={styles.confirmCancelBtn} onClick={() => setShowConfirm(false)} disabled={isSaving}>
-                取消
+                {t('saveModal.cancel')}
               </button>
             </div>
           </div>

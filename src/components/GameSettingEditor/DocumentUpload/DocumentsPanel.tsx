@@ -314,7 +314,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
         elapsedSeconds: currentJob?.elapsedSeconds,
         estimatedRemainingSeconds: currentJob?.estimatedRemainingSeconds,
         estimatedTotalSeconds: currentJob?.estimatedTotalSeconds,
-    });
+    }, (key) => t(`eta.${key}`));
 
     const parseSteps = useMemo(() => [
         {

@@ -19,6 +19,7 @@ interface HandlersContext {
     api: ApiHelpers;
     userPoints: number;
     updateUser?: (user: Partial<User>) => void;
+    t: (key: string) => string;
     // State setters
     characterData: Character[];
     setCharacterData: React.Dispatch<React.SetStateAction<Character[]>>;
@@ -88,10 +89,13 @@ export const createHandlers = (ctx: HandlersContext) => {
         newCharacterData,
         onDataChange,
         pendingImageUrlsRef,
+        t,
     } = ctx;
 
     const replaceCharacter = (list: Character[], targetCharacterId: string, nextCharacter: Character): Character[] =>
         list.map((character) => character.id === targetCharacterId ? nextCharacter : character);
+
+    const tToast = (key: string, fallback: string) => t(key) || fallback;
 
     const bumpExistingCharacterImageCache = () => {
         characterData.forEach((character) => {
@@ -387,7 +391,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         };
 
         if (!fileId || !characterToSave) {
-            toast.error('缺少必要数据，无法保存修改');
+            toast.error(t('common.editorSubmit.missingData'));
             return failResult;
         }
 
@@ -418,7 +422,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             try {
                 const response = await api.updatePlayer(fileId, playerData as any);
                 if (!response.data?.success) {
-                    toast.error('更新主角信息失败');
+                    toast.error(t('createGame.updateCharacterFailed'));
                     return failResult;
                 }
 
@@ -440,7 +444,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 };
             } catch (error) {
                 console.error('更新主角信息时出错:', error);
-                toast.error('更新主角信息失败，请重试');
+                toast.error(t('createGame.updatePlayerFailedRetry'));
                 return failResult;
             }
         }
@@ -543,7 +547,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         }
 
         if (characterToDelete === 'player') {
-            toast.error('不能删除玩家角色');
+            toast.error(tToast('createGame.cannotDeletePlayerCharacter', '不能删除玩家角色'));
             return;
         }
 
@@ -561,16 +565,16 @@ export const createHandlers = (ctx: HandlersContext) => {
                     }
                     return filtered;
                 });
-                toast.success('角色删除成功');
+                toast.success(tToast('createGame.characterDeleted', '角色删除成功'));
                 if (onDataChange) {
                     onDataChange();
                 }
             } else {
-                toast.error('删除角色失败');
+                toast.error(tToast('createGame.deleteCharacterFailed', '删除角色失败'));
             }
         } catch (error) {
             console.error('删除角色时出错:', error);
-            toast.error('删除角色失败，请重试');
+            toast.error(tToast('createGame.deleteCharacterFailedRetry', '删除角色失败，请重试'));
         }
     };
 
@@ -609,7 +613,7 @@ export const createHandlers = (ctx: HandlersContext) => {
         try {
             const createResponse = await api.addNpc(fileId, newNpc);
             if (!createResponse.data?.success) {
-                toast.error('创建角色失败，无法上传图片');
+                toast.error(tToast('createGame.createCharacterFailedUploadImage', '创建角色失败，无法上传图片'));
                 return null;
             }
 
@@ -624,7 +628,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             return targetCharacterId;
         } catch (error) {
             console.error('创建角色时出错:', error);
-            toast.error('创建角色失败，请重试');
+            toast.error(tToast('createGame.createCharacterFailedRetry', '创建角色失败，请重试'));
             return null;
         }
     };
@@ -642,24 +646,26 @@ export const createHandlers = (ctx: HandlersContext) => {
     ): Promise<boolean> => {
         const validateFile = (file: File): boolean => {
             if (!file.type.startsWith('image/')) {
-                toast.error('请选择图片文件');
+                toast.error(tToast('createGame.pleaseSelectImageFile', '请选择图片文件'));
                 return false;
             }
             if (file.size > 5 * 1024 * 1024) {
-                toast.error('图片大小不能超过 5MB');
+                toast.error(tToast('createGame.imageSizeCannotExceed5MB', '图片大小不能超过 5MB'));
                 return false;
             }
             return true;
         };
+
 
         if (!validateFile(file)) {
             return false;
         }
 
         if (!fileId) {
-            toast.error('缺少文件ID，无法上传');
+            toast.error(tToast('createGame.missingFileIdCannotUpload', '缺少文件ID，无法上传'));
             return false;
         }
+
 
         const { type, characterId, variant = 'base', variationDescription, inputRef } = options;
 
@@ -680,17 +686,18 @@ export const createHandlers = (ctx: HandlersContext) => {
                 response = await api.uploadPlayerImage(fileId, file, variant, variationDescription);
             } else if (type === 'npc' || type === 'variation') {
                 if (!targetCharacterId) {
-                    toast.error('缺少角色ID，无法上传');
+                    toast.error(tToast('createGame.missingCharacterIdCannotUpload', '缺少角色ID，无法上传'));
                     return false;
                 }
+
                 response = await api.uploadNpcImage(fileId, targetCharacterId, file, variant, variationDescription);
             } else {
-                toast.error('未知的上传类型');
+                toast.error(tToast('createGame.unknownUploadType', '未知的上传类型'));
                 return false;
             }
 
             if (!response.data?.success) {
-                toast.error('上传失败，请重试');
+                toast.error(tToast('createGame.uploadFailed', '上传失败，请重试'));
                 return false;
             }
 
@@ -782,7 +789,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             return true;
         } catch (error) {
             console.error('上传图片失败:', error);
-            toast.error('上传图片失败，请重试');
+            toast.error(tToast('createGame.uploadFailedRetry', '上传图片失败，请重试'));
             return false;
         } finally {
             if (inputRef && 'current' in inputRef && inputRef.current) {
@@ -800,16 +807,16 @@ export const createHandlers = (ctx: HandlersContext) => {
             setGeneratingCharacterId(npc.id);
             const response = await api.generateNpcImage(fileId, npc.id);
             if (response.data?.success && response.data.blob) {
-                toast.success('NPC图片生成成功，请在确认修改后保存');
+                toast.success(tToast('createGame.npcImageGeneratedSaveLater', 'NPC图片生成成功，请在确认修改后保存'));
 
                 // 直接使用返回的 blob 数据
                 await setPendingImage(npc.id, response.data.blob, 'base');
                 await refreshUserPoints();
             } else {
-                toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
+                toast.error(tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'));
             }
         } catch (error) {
-            toast.error('重新生成NPC图片失败，请检查网络连接');
+            toast.error(tToast('createGame.regenerateNpcImageFailedCheckNetwork', '重新生成NPC图片失败，请检查网络连接'));
         } finally {
             setIsGeneratingSingleNpcImage(false);
             setGeneratingCharacterId(null);
@@ -824,16 +831,16 @@ export const createHandlers = (ctx: HandlersContext) => {
             setGeneratingCharacterId(playerChar.id);
             const response = await api.generatePlayerImage(fileId);
             if (response.data?.success && response.data.blob) {
-                toast.success('主角图片生成成功，请在确认修改后保存');
+                toast.success(tToast('createGame.playerImageGeneratedSaveLater', '主角图片生成成功，请在确认修改后保存'));
 
                 // 直接使用返回的 blob 数据
                 await setPendingImage('player', response.data.blob, 'base');
                 await refreshUserPoints();
             } else {
-                toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
+                toast.error(tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'));
             }
         } catch (error) {
-            toast.error('重新生成主角图片失败，请检查网络连接');
+            toast.error(tToast('createGame.regeneratePlayerImageFailedCheckNetwork', '重新生成主角图片失败，请检查网络连接'));
         } finally {
             setIsGeneratingSingleNpcImage(false);
             setGeneratingCharacterId(null);
@@ -843,12 +850,12 @@ export const createHandlers = (ctx: HandlersContext) => {
     // 重新生成差分图片（改为暂存模式）
     const regenerateVariationImage = async (variation: Variation, currentCharacter: Character | null) => {
         if (!fileId || !variation || !currentCharacter) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(tToast('createGame.missingDataCannotGenerate', '缺少必要数据，无法生成'));
             return;
         }
 
         if (!currentCharacter.portrait) {
-            toast.error('请先上传角色基础立绘');
+            toast.error(tToast('createGame.pleaseUploadCharacterBasePortrait', '请先上传角色基础立绘'));
             return;
         }
 
@@ -866,7 +873,7 @@ export const createHandlers = (ctx: HandlersContext) => {
 
             const imageResponse = response.data as GenerateImgeResponse;
             if (imageResponse?.success && imageResponse.imagePath) {
-                toast.success('差分图片生成成功');
+                toast.success(tToast('createGame.variationImageGenerated', '差分图片生成成功'));
 
                 // 直接使用返回的 imagePath 更新角色数据
                 const newVariation: Variation = {
@@ -888,17 +895,17 @@ export const createHandlers = (ctx: HandlersContext) => {
                 }));
                 await refreshUserPoints();
             } else {
-                toast.error(response.data?.message || '当前使用人数过多，请稍后再试');
+                toast.error(tToast('createGame.currentUserCountTooHighTryLater', '当前使用人数过多，请稍后再试'));
             }
         } catch (error) {
-            toast.error('生成差分图片失败，请检查网络连接');
+            toast.error(tToast('createGame.generateVariationImageFailedCheckNetwork', '生成差分图片失败，请检查网络连接'));
         }
     };
 
     // 删除差分图片
     const deleteVariationImage = async (variation: Variation, currentCharacter: Character | null) => {
         if (!fileId || !variation || !currentCharacter) {
-            toast.error('缺少必要数据，无法删除差分');
+            toast.error(tToast('createGame.missingDataCannotDeleteVariation', '缺少必要数据，无法删除差分'));
             return;
         }
 
@@ -918,13 +925,13 @@ export const createHandlers = (ctx: HandlersContext) => {
                         variations: char.variations.filter(v => v.id !== variation.id),
                     };
                 }));
-                toast.success('差分删除成功');
+                toast.success(tToast('createGame.variationDeleted', '差分删除成功'));
             } else {
-                toast.error('删除差分失败');
+                toast.error(tToast('createGame.deleteVariationFailed', '删除差分失败'));
             }
         } catch (error) {
             console.error('删除差分失败:', error);
-            toast.error('删除差分失败，请稍后重试');
+            toast.error(tToast('createGame.deleteVariationFailedRetry', '删除差分失败，请稍后重试'));
         }
     };
 
@@ -932,7 +939,7 @@ export const createHandlers = (ctx: HandlersContext) => {
     const generateAllNpcImages = async (npcCostPoints: number | null) => {
         let lastJobStatus: BatchImageJobStatus | null = null;
         if (!fileId) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(tToast('createGame.missingDataCannotGenerate', '缺少必要数据，无法生成'));
             return;
         }
         try {
@@ -990,7 +997,7 @@ export const createHandlers = (ctx: HandlersContext) => {
     // 打开积分确认弹窗
     const openNpcCostModal = async () => {
         if (!fileId) {
-            toast.error('缺少必要数据，无法生成');
+            toast.error(tToast('createGame.missingDataCannotGenerate', '缺少必要数据，无法生成'));
             return;
         }
         try {
@@ -1003,7 +1010,7 @@ export const createHandlers = (ctx: HandlersContext) => {
             }
         } catch (error) {
             console.error('获取角色生图积分消耗失败:', error);
-            toast.error('获取积分消耗失败，请稍后重试');
+            toast.error(tToast('createGame.fetchNpcImageCostFailedRetry', '获取积分消耗失败，请稍后重试'));
         } finally {
             setIsLoadingNpcCost(false);
         }

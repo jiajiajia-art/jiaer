@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BsUpload } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../../api/galgame/EditorData';
@@ -20,6 +21,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
     coverUrl,
     onCoverUploaded,
 }) => {
+    const { t } = useTranslation();
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
     const [coverUploading, setCoverUploading] = useState(false);
@@ -31,7 +33,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
 
     const uploadCover = useCallback(async (file: File) => {
         if (!fileId) {
-            setCoverError('Missing file id.');
+            setCoverError(t('common.coverUpload.missingFileId'));
             return;
         }
 
@@ -43,18 +45,18 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                 const nextCoverUrl = response.data.data.coverUrl;
                 bumpCacheBust(nextCoverUrl);
                 setCoverPreview(nextCoverUrl);
-                toast.success('封面更新');
+                toast.success(t('common.coverUpload.uploadSuccess'));
                 onCoverUploaded?.();
             } else {
-                setCoverError(response.data.message || 'Failed to upload cover.');
+                setCoverError(response.data.message || t('common.coverUpload.uploadFailed'));
             }
         } catch (error) {
             console.error('upload world cover failed:', error);
-            setCoverError('Failed to upload cover.');
+            setCoverError(t('common.coverUpload.uploadFailed'));
         } finally {
             setCoverUploading(false);
         }
-    }, [fileId, onCoverUploaded]);
+    }, [fileId, onCoverUploaded, t]);
 
     const {
         cropPreset,
@@ -78,14 +80,14 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            setCoverError('Please upload an image file.');
+            setCoverError(t('common.coverUpload.invalidImage'));
             return;
         }
 
         setCoverError(null);
         void openCropper(file).catch((error) => {
             console.error('open world cover cropper failed:', error);
-            setCoverError('Failed to load image.');
+            setCoverError(t('common.coverUpload.imageLoadFailed'));
         });
     };
 
@@ -103,7 +105,7 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
 
     return (
         <div className={styles.uploadCover}>
-            <h2>游戏封面</h2>
+            <h2>{t('common.coverUpload.title')}</h2>
             <div className={styles.coverUploadArea} onClick={handleCoverClick}>
                 <input
                     ref={coverInputRef}
@@ -131,15 +133,15 @@ const CoverUpload: React.FC<CoverUploadProps> = ({
                                 onClick={handleReplaceCover}
                                 disabled={coverUploading}
                             >
-                                更换
+                                {t('common.coverUpload.replace')}
                             </button>
                         </div>
                     </div>
                 ) : (
                     <div className={styles.coverPlaceholder}>
                         <BsUpload className={styles.coverUploadIcon} size={32} />
-                        <p className={styles.coverUploadText}>点击上传封面图片</p>
-                        <p className={styles.coverUploadHint}>支持 JPG, PNG, WEBP，5MB以内</p>
+                        <p className={styles.coverUploadText}>{t('common.coverUpload.clickToUpload')}</p>
+                        <p className={styles.coverUploadHint}>{t('common.coverUpload.supportFormats')}</p>
                     </div>
                 )}
             </div>

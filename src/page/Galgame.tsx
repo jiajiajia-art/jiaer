@@ -191,6 +191,7 @@ const Galgame = () => {
         controller.stepHandlers.isWaitingForData,
     ]);
 
+    /*
     const contextMemoryPercent = useMemo(() => {
         const status = controller.contextMemory;
         const totalTokens = status?.thresholdTokens || status?.safePromptBudgetTokens || status?.modelContextWindow;
@@ -222,6 +223,8 @@ const Galgame = () => {
     const memoryCycleLabel = memoryCycleLimit > 0
         ? `${memoryCycleRounds}/${memoryCycleLimit}`
         : String(memoryCycleRounds);
+    */
+
     const memoryDebugCurrent = controller.memoryDebugData?.current || null;
     const memoryDebugHistory = controller.memoryDebugData?.history || [];
     const memoryDebugStructured = memoryDebugCurrent?.structured
@@ -584,7 +587,7 @@ const Galgame = () => {
                         <CiLocationOn />
                         <span>{controller.currentScene?.name}</span>
                     </div>
-                    {!controller.isReplay && controller.gameStarted && (
+                    {/* {!controller.isReplay && controller.gameStarted && (
                         <div className={styles.contextMemoryMeter}>
                             <div className={styles.contextMemoryTextGroup}>
                                 <span className={styles.contextMemoryText}>
@@ -606,7 +609,7 @@ const Galgame = () => {
                                 <span className={styles.contextMemoryBusy}>整理中</span>
                             )}
                         </div>
-                    )}
+                    )} */}
                     {controller.currentMessage.characterImage && !controller.isTextMode && (
                         <CharacterLayer
                             characterImage={controller.currentMessage.characterImage}

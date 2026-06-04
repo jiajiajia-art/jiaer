@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './SettingsModal.module.css';
+import { useTranslation } from 'react-i18next';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   volume,
   onVolumeChange,
 }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
   const volumePercent = Math.round((volume ?? 0) * 100);
 
@@ -31,14 +33,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h3 className={styles.title}>设置</h3>
+          <h3 className={styles.title}>{t('createGame.settings')}</h3>
         </div>
 
         <div className={styles.body}>
           <div className={styles.row}>
             <div className={styles.rowLabel}>
-              <div className={styles.rowTitle}>音乐</div>
-              <div className={styles.rowDesc}>背景音乐开关</div>
+              <div className={styles.rowTitle}>{t('createGame.music')}</div>
+              <div className={styles.rowDesc}>{t('createGame.musicToggle')}</div>
             </div>
             <label className={styles.toggle}>
               <input
@@ -52,7 +54,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className={styles.row}>
             <div className={styles.rowLabel}>
-              <div className={styles.rowTitle}>音量</div>
+              <div className={styles.rowTitle}>{t('createGame.volume')}</div>
               <div className={styles.rowDesc}>0 - 100</div>
             </div>
             <div className={styles.sliderWrap}>
@@ -79,12 +81,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 className={styles.dangerButton}
                 onClick={onDeleteSession}
               >
-                <span>重新开始</span>
+                <span>{t('createGame.restart')}</span>
               </button>
             )}
             {!hideExitButton && (
               <button className={styles.dangerButton} onClick={onExitGame}>
-                <span>保存并退出</span>
+                <span>{t('createGame.saveAndExit')}</span>
               </button>
             )}
           </div>

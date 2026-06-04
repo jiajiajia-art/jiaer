@@ -43,10 +43,10 @@ const emptyConfig: PromotionSubmissionConfig = {
 const defaultReviewFilters: ReviewFilters = { activityId: undefined, activityPeriod: 'all', reviewStatus: 'all', keyword: '', page: 1 };
 const emptyPagination: AdminPromotionSubmissionPagination = { page: 1, pageSize: 10, total: 0, totalPages: 1 };
 const submissionConfigFields: SubmissionConfigField[] = [
-  { label: '\u4e0a\u4f20\u6587\u672c', acceptKey: 'acceptTexts', requireKey: 'requireTexts' },
-  { label: '\u4e0a\u4f20\u94fe\u63a5', acceptKey: 'acceptLinks', requireKey: 'requireLinks' },
-  { label: '\u4e0a\u4f20\u56fe\u7247', acceptKey: 'acceptImages', requireKey: 'requireImages' },
-  { label: '\u4e0a\u4f20\u89c6\u9891', acceptKey: 'acceptVideos', requireKey: 'requireVideos' },
+  { label: '上传文本', acceptKey: 'acceptTexts', requireKey: 'requireTexts' },
+  { label: '上传链接', acceptKey: 'acceptLinks', requireKey: 'requireLinks' },
+  { label: '上传图片', acceptKey: 'acceptImages', requireKey: 'requireImages' },
+  { label: '上传视频', acceptKey: 'acceptVideos', requireKey: 'requireVideos' },
 ];
 const statusLabelMap: Record<PromotionReviewStatus, string> = {
   pending_review: '待审核',
@@ -129,7 +129,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const isValidDetailLink = (value: string) => !value.trim() || value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://');
-const buildOncePerActivityLimitSummary = () => '\u6d3b\u52a8\u671f\u5185\u9650\u5236\u4e00\u6b21';
+const buildOncePerActivityLimitSummary = () => '活动期内限制一次';
 const buildLimitSummary = (activity: PromotionActivity) => activity.submissionLimitType === 'rolling_window' ? `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次` : '活动期内无限次';
 const buildTimeSummary = (activity: PromotionActivity) => activity.isLongTerm ? '长期活动' : `${formatTime(activity.startAt)} - ${formatTime(activity.endAt)}`;
 const getSubmissionDisplayName = (submission: PromotionSubmission) => submission.nickname || submission.userCode || submission.phoneNumber || '-';
@@ -147,9 +147,9 @@ const getSubmissionLimitSummary = (activity: PromotionActivity) => {
     return buildOncePerActivityLimitSummary();
   }
   if (activity.submissionLimitType === 'rolling_window') {
-    return `\u6bcf ${activity.submissionLimitDays} \u5929\u9650 ${activity.submissionLimitCount} \u6b21`;
+    return `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次`;
   }
-  return '\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21';
+  return '活动期内无限次';
 };
 
 type PromotionAdminManagerProps = {
@@ -584,31 +584,31 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
 
   const renderForm = () => (
     <section className={styles.card}>
-      <div className={styles.cardHeader}><div><h3 className={styles.cardTitle}>{selectedActivity ? '\u7f16\u8f91\u63a8\u5e7f\u6d3b\u52a8' : '\u65b0\u589e\u63a8\u5e7f\u6d3b\u52a8'}</h3></div></div>
+      <div className={styles.cardHeader}><div><h3 className={styles.cardTitle}>{selectedActivity ? '编辑推广活动' : '新增推广活动'}</h3></div></div>
       <div className={styles.formArea}>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u6807\u9898'}<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u6458\u8981'}<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u8be6\u60c5\u8df3\u8f6c\u5730\u5740\uff08\u53ef\u9009\uff09'}<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u5c01\u9762'}<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => { handleUploadCoverForCrop(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt={'\u6d3b\u52a8\u5c01\u9762'} />}</label>
-        <label className={styles.fieldLabel}>{'\u6d3b\u52a8\u65f6\u95f4'}<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />{'\u957f\u671f\u6d3b\u52a8'}</label></label>
+        <label className={styles.fieldLabel}>活动标题<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
+        <label className={styles.fieldLabel}>活动摘要<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
+        <label className={styles.fieldLabel}>活动详情跳转地址（可选）<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
+        <label className={styles.fieldLabel}>活动封面<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => { handleUploadCoverForCrop(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt="活动封面" />}</label>
+        <label className={styles.fieldLabel}>活动时间<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />长期活动</label></label>
         {!form.isLongTerm && (
           <div className={styles.inlineGrid}>
-            <label className={styles.fieldLabel}>{'\u5f00\u59cb\u65f6\u95f4'}<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.startAt)} onChange={(event) => setForm((prev) => ({ ...prev, startAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
-            <label className={styles.fieldLabel}>{'\u7ed3\u675f\u65f6\u95f4'}<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.endAt)} onChange={(event) => setForm((prev) => ({ ...prev, endAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
+            <label className={styles.fieldLabel}>开始时间<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.startAt)} onChange={(event) => setForm((prev) => ({ ...prev, startAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
+            <label className={styles.fieldLabel}>截止时间<input className={styles.textInput} type="datetime-local" value={formatDateTimeLocal(form.endAt)} onChange={(event) => setForm((prev) => ({ ...prev, endAt: normalizeDateTimeLocal(event.target.value) }))} /></label>
           </div>
         )}
-        <label className={styles.fieldLabel}>{'\u6295\u7a3f\u6b21\u6570\u9650\u5236'}<select className={styles.select} value={form.submissionLimitType} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitType: event.target.value as PromotionSubmissionLimitType, submissionLimitDays: event.target.value === 'rolling_window' ? (prev.submissionLimitDays || 1) : null, submissionLimitCount: event.target.value === 'rolling_window' ? (prev.submissionLimitCount || 1) : null }))}><option value="unlimited">{'\u6d3b\u52a8\u671f\u5185\u65e0\u9650\u6b21'}</option><option value="once_per_activity">{'\u6d3b\u52a8\u671f\u5185\u9650\u5236\u4e00\u6b21'}</option><option value="rolling_window">{'\u6bcf a \u5929\u9650 b \u6b21'}</option></select></label>
+        <label className={styles.fieldLabel}>投稿次数限制<select className={styles.select} value={form.submissionLimitType} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitType: event.target.value as PromotionSubmissionLimitType, submissionLimitDays: event.target.value === 'rolling_window' ? (prev.submissionLimitDays || 1) : null, submissionLimitCount: event.target.value === 'rolling_window' ? (prev.submissionLimitCount || 1) : null }))}><option value="unlimited">活动期内无限次</option><option value="once_per_activity">活动期内限制一次</option><option value="rolling_window">每 a 天限 b 次</option></select></label>
         {form.submissionLimitType === 'rolling_window' && (
           <div className={styles.inlineGrid}>
-            <label className={styles.fieldLabel}>{'a \u5929'}<input className={styles.textInput} type="number" value={form.submissionLimitDays ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitDays: Number(event.target.value || 0) }))} /></label>
-            <label className={styles.fieldLabel}>{'b \u6b21'}<input className={styles.textInput} type="number" value={form.submissionLimitCount ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitCount: Number(event.target.value || 0) }))} /></label>
+            <label className={styles.fieldLabel}>{'天（a）'}<input className={styles.textInput} type="number" value={form.submissionLimitDays ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitDays: Number(event.target.value || 0) }))} /></label>
+            <label className={styles.fieldLabel}>{'次（b）'}<input className={styles.textInput} type="number" value={form.submissionLimitCount ?? ''} onChange={(event) => setForm((prev) => ({ ...prev, submissionLimitCount: Number(event.target.value || 0) }))} /></label>
           </div>
         )}
-        <label className={styles.fieldLabel}>{'\u5ba1\u6838\u901a\u8fc7\u5956\u52b1\u79ef\u5206'}<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
-        <label className={styles.fieldLabel}>{'\u6392\u5e8f\u503c'}<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
-        <label className={styles.fieldLabel}>{'\u53d1\u5e03\u72b6\u6001'}<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">{'\u8349\u7a3f'}</option><option value="published">{'\u5df2\u53d1\u5e03'}</option></select></label>
+        <label className={styles.fieldLabel}>审核通过奖励积分<input className={styles.textInput} type="number" value={form.rewardPoints} onChange={(event) => setForm((prev) => ({ ...prev, rewardPoints: Number(event.target.value || 0) }))} /></label>
+        <label className={styles.fieldLabel}>排序值<input className={styles.textInput} type="number" value={form.sortOrder} onChange={(event) => setForm((prev) => ({ ...prev, sortOrder: Number(event.target.value || 0) }))} /></label>
+        <label className={styles.fieldLabel}>发布状态<select className={styles.select} value={form.status} onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as PromotionActivityPayload['status'] }))}><option value="draft">草稿</option><option value="published">已发布</option></select></label>
         <div className={styles.configSection}>
-          <div className={styles.fieldLabel}>{'\u6295\u7a3f\u65b9\u5f0f\u914d\u7f6e'}</div>
+          <div className={styles.fieldLabel}>投稿方式配置</div>
           <div className={styles.configList}>
             {submissionConfigFields.map((field) => (
               <div key={field.acceptKey} className={styles.configItem}>
@@ -616,11 +616,11 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
                 <div className={styles.toggleRow}>
                   <label className={styles.switchLabel}>
                     <input type="checkbox" checked={form.submissionConfig[field.acceptKey]} onChange={(event) => updateSubmissionConfigAccept(field, event.target.checked)} />
-                    {'\u542f\u7528'}
+                    启用
                   </label>
                   <label className={`${styles.switchLabel} ${!form.submissionConfig[field.acceptKey] ? styles.switchLabelDisabled : ''}`}>
                     <input type="checkbox" checked={form.submissionConfig[field.requireKey]} disabled={!form.submissionConfig[field.acceptKey]} onChange={(event) => updateSubmissionConfigRequired(field, event.target.checked)} />
-                    {'\u5fc5\u586b'}
+                    必填
                   </label>
                 </div>
               </div>
@@ -628,8 +628,8 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
           </div>
         </div>
         <div className={styles.actionRow}>
-          <button type="button" className={styles.secondaryButton} onClick={resetForm}>{'\u6e05\u7a7a'}</button>
-          <button type="button" className={styles.primaryButton} onClick={() => void handleSave()} disabled={isSaving}>{isSaving ? '\u4fdd\u5b58\u4e2d...' : selectedActivity ? '\u4fdd\u5b58\u4fee\u6539' : '\u521b\u5efa\u6d3b\u52a8'}</button>
+          <button type="button" className={styles.secondaryButton} onClick={resetForm}>清空</button>
+          <button type="button" className={styles.primaryButton} onClick={() => void handleSave()} disabled={isSaving}>{isSaving ? '保存中...' : selectedActivity ? '保存修改' : '创建活动'}</button>
         </div>
       </div>
     </section>
@@ -737,7 +737,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
         totalPages={submissionPagination.totalPages}
         onPageChange={handleReviewPageChange}
         disabled={isLoadingSubmissions}
-        summary={`\u7b2c ${submissionPagination.page} \u9875\uff0c\u5171 ${submissionPagination.totalPages} \u9875\uff0c\u5171 ${submissionPagination.total} \u6761\u8bb0\u5f55`}
+        summary={`第 ${submissionPagination.page} 页，共 ${submissionPagination.totalPages} 页，共 ${submissionPagination.total} 条记录`}
       />
     </section>
   );

@@ -10,6 +10,7 @@ interface UploadMusicModalProps {
 }
 
 const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, onConfirm }) => {
+    const { t } = useTranslation();
     const [musicFile, setMusicFile] = useState<File | null>(null);
     const [musicName, setMusicName] = useState('');
     const [musicDescription, setMusicDescription] = useState('');
@@ -17,7 +18,6 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!isOpen) return null;
-    const { t } = useTranslation();
 
     // 获取文件扩展名
     const getFileExtension = (filename: string): string => {
@@ -36,12 +36,12 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
         if (file) {
             // 验证文件格式（使用扩展名，因为 MIME 类型可能不准确）
             if (!isValidAudioFile(file)) {
-                toast.error('请选择音频文件（MP3、WAV、OGG、M4A、AAC、FLAC、WEBM）');
+                toast.error(t('createGame.uploadMusicErrors.invalidAudioFile'));
                 return;
             }
             // 验证文件大小（例如：最大 10MB）
             if (file.size > 10 * 1024 * 1024) {
-                toast.error('文件大小不能超过 10MB');
+                toast.error(t('createGame.uploadMusicErrors.fileTooLarge'));
                 return;
             }
             setMusicFile(file);
@@ -51,7 +51,7 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
     const handleConfirm = async () => {
         // 验证必填项
         if (!musicFile) {
-            toast.error('请选择要上传的音乐文件');
+            toast.error(t('createGame.uploadMusicErrors.selectMusicFile'));
             return;
         }
         if (!musicName.trim()) {
@@ -96,7 +96,9 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
                     <h3>{t('createGame.uploadMusic')}</h3>
-                    <button className={styles.modalClose} onClick={handleCancel}>×</button>
+                    <button className={styles.modalClose} onClick={handleCancel} aria-label={t('common.close')}>
+                        ×
+                    </button>
                 </div>
                 <div className={styles.modalBody}>
                     <label>
@@ -121,7 +123,7 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
                     </label>
                     <div className={styles.uploadSection}>
                         <span className={styles.uploadLabel}>
-                            上传文件<span className={styles.required}>*</span>
+                            {t('createGame.uploadMusicFile')}<span className={styles.required}>*</span>
                         </span>
                         <div
                             className={`${styles.uploadArea} ${musicFile ? styles.uploadAreaHasFile : ''}`}
@@ -142,11 +144,11 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
                                 if (file) {
                                     // 验证文件格式（使用扩展名，因为 MIME 类型可能不准确）
                                     if (!isValidAudioFile(file)) {
-                                        toast.error('请选择音频文件（MP3、WAV、OGG、M4A、AAC、FLAC、WEBM）');
+                                        toast.error(t('createGame.uploadMusicErrors.invalidAudioFile'));
                                         return;
                                     }
                                     if (file.size > 10 * 1024 * 1024) {
-                                        toast.error('文件大小不能超过 10MB');
+                                        toast.error(t('createGame.uploadMusicErrors.fileTooLarge'));
                                         return;
                                     }
                                     setMusicFile(file);
@@ -183,14 +185,15 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
                                             }
                                         }}
                                         disabled={isUploading}
+                                        aria-label={t('createGame.uploadMusicErrors.removeSelectedFile')}
                                     >
                                         ×
                                     </button>
                                 </div>
                             ) : (
                                 <div className={styles.uploadPlaceholder}>
-                                    <p className={styles.uploadText}>点击或拖拽文件到此处上传</p>
-                                    <p className={styles.uploadHint}>支持 MP3、WAV、OGG、M4A、AAC、FLAC、WEBM 格式，最大 10MB</p>
+                                    <p className={styles.uploadText}>{t('createGame.uploadMusicDropHint')}</p>
+                                    <p className={styles.uploadHint}>{t('createGame.uploadMusicSupportHint')}</p>
                                 </div>
                             )}
                         </div>
@@ -202,14 +205,14 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
                         onClick={handleCancel}
                         disabled={isUploading}
                     >
-                        取消
+                        {t('common.cancel')}
                     </button>
                     <button
                         className={styles.ghostSmall}
                         onClick={handleConfirm}
                         disabled={isUploading}
                     >
-                        {isUploading ? '上传中...' : '确认上传'}
+                        {isUploading ? t('createGame.uploading') : t('createGame.confirmUpload')}
                     </button>
                 </div>
             </div>

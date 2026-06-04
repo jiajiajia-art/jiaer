@@ -6,6 +6,7 @@ import type { ReplaySummary, ReplayVisibility } from '../../api/galgame/replay';
 import type { AxiosError } from 'axios';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 import styles from './ReplayList.module.css';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   fileId: string;
@@ -15,15 +16,15 @@ interface Props {
   currentUserId?: string;
 }
 
-const getVisibilityLabel = (visibility: ReplaySummary['visibility']) => {
-  switch (visibility) {
+const getVisibilityLabel = (vis: ReplaySummary['visibility'], t: (key: string) => string) => {
+  switch (vis) {
     case 'private':
-      return '私密';
+      return t('createGame.replayVisibilityPrivate');
     case 'unlisted':
-      return '仅链接可见';
+      return t('createGame.replayVisibilityUnlisted');
     case 'public':
     default:
-      return '公开';
+      return t('createGame.replayVisibilityPublic');
   }
 };
 
@@ -46,6 +47,7 @@ const ReplayList: React.FC<Props> = ({
   visibility,
   currentUserId,
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [items, setItems] = useState<ReplaySummary[]>([]);
@@ -92,7 +94,7 @@ const ReplayList: React.FC<Props> = ({
           setTotal(resp.data?.total || 0);
         }
       } catch {
-        if (!cancelled) setError('加载回放失败');
+        if (!cancelled) setError(t('createGame.loadReplayFailed'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -178,16 +180,16 @@ const ReplayList: React.FC<Props> = ({
   const handleCopyLink = async (item: ReplaySummary) => {
     const copied = await copyReplayLink(item.replayId);
     if (!copied) {
-      toast.error('复制回放链接失败');
+      toast.error(t('createGame.copyReplayLinkFailed'));
       return;
     }
 
     if (item.visibility === 'unlisted') {
-      toast.success('回放链接已复制，仅持链接者可查看');
+      toast.success(t('createGame.replayLinkCopied'));
       return;
     }
 
-    toast.success('公开回放链接已复制');
+    toast.success(t('createGame.publicReplayLinkCopied'));
   };
 
   const handleRequestDelete = (item: ReplaySummary) => {
@@ -208,22 +210,22 @@ const ReplayList: React.FC<Props> = ({
       setExpandedReplayId((prev) =>
         prev === pendingDeleteReplay.replayId ? null : prev,
       );
-      toast.success('回放已删除');
+      toast.success(t('createGame.replayDeleted'));
     } catch (deleteError) {
       const axiosError = deleteError as AxiosError<{ message?: string }>;
       const status = axiosError.response?.status;
 
       if (status === 403) {
-        toast.error('只能删除自己创建的回放');
+        toast.error(t('createGame.canOnlyDeleteOwnReplay'));
       } else if (status === 404) {
         setItems((prev) => prev.filter((item) => item.replayId !== pendingDeleteReplay.replayId));
         setTotal((prev) => Math.max(prev - 1, 0));
         setExpandedReplayId((prev) =>
           prev === pendingDeleteReplay.replayId ? null : prev,
         );
-        toast.error('回放不存在或已删除');
+        toast.error(t('createGame.replayNotExist'));
       } else {
-        toast.error('删除回放失败，请稍后重试');
+        toast.error(t('createGame.deleteReplayFailed'));
       }
     } finally {
       setDeletingReplayId(null);
@@ -232,7 +234,7 @@ const ReplayList: React.FC<Props> = ({
   };
 
   if (loading) {
-    return <div className={styles.statusMessage}>正在加载回放...</div>;
+    return <div className={styles.statusMessage}>{t('createGame.loadingReplay')}</div>;
   }
 
   if (error) {
@@ -240,7 +242,7 @@ const ReplayList: React.FC<Props> = ({
   }
 
   if (!items.length) {
-    return <div className={styles.statusMessage}>暂无回放</div>;
+    return <div className={styles.statusMessage}>{t('createGame.noReplay')}</div>;
   }
 
   return (
@@ -267,7 +269,7 @@ const ReplayList: React.FC<Props> = ({
               role="button"
               tabIndex={0}
               aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? '收起' : '展开'}回放操作：${item.title}`}
+              aria-label={`${isExpanded ? t('createGame.collapse') : t('createGame.expand')}${t('createGame.replayOperation')}：${item.title}`}
               onClick={() => handleToggleReplay(item.replayId)}
               onKeyDown={(event) => handleReplayKeyDown(event, item.replayId)}
             >
@@ -282,9 +284,9 @@ const ReplayList: React.FC<Props> = ({
                           ...getVisibilityStyle(item.visibility),
                         }}
                       >
-                        {getVisibilityLabel(item.visibility)}
+                        {getVisibilityLabel(item.visibility, t)}
                       </span>
-                      {isOwnReplay && <span className={styles.mineTag}>我的</span>}
+                      {isOwnReplay && <span className={styles.mineTag}>{t('createGame.mine')}</span>}
                     </div>
                   )}
                 </div>
@@ -295,7 +297,7 @@ const ReplayList: React.FC<Props> = ({
                   {typeof item.stepsCount === 'number' && (
                     <>
                       <span className={styles.replayMetaSeparator}>|</span>
-                      <span>{item.stepsCount} 步</span>
+                      <span>{item.stepsCount} {t('createGame.steps')}</span>
                     </>
                   )}
                 </div>
@@ -319,7 +321,7 @@ const ReplayList: React.FC<Props> = ({
                     className={styles.playButton}
                     disabled={isDeleting}
                   >
-                    播放
+                    {t('createGame.play')}
                   </button>
                   {item.visibility !== 'private' && (
                     <button
@@ -330,7 +332,7 @@ const ReplayList: React.FC<Props> = ({
                       className={styles.copyButton}
                       disabled={isDeleting}
                     >
-                      复制链接
+                      {t('createGame.copyLink')}
                     </button>
                   )}
                   {isOwnReplay && (
@@ -340,7 +342,7 @@ const ReplayList: React.FC<Props> = ({
                       className={styles.deleteButton}
                       disabled={isDeleting}
                     >
-                      {isDeleting ? '删除中...' : '删除'}
+                      {isDeleting ? t('createGame.deleting') : t('createGame.delete')}
                     </button>
                   )}
                 </div>
@@ -356,7 +358,7 @@ const ReplayList: React.FC<Props> = ({
             onClick={() => setOffset((prev) => prev + limit)}
             className={styles.loadMoreButton}
           >
-            加载更多
+            {t('createGame.loadMore')}
           </button>
         </div>
       )}
@@ -364,10 +366,10 @@ const ReplayList: React.FC<Props> = ({
         isOpen={!!pendingDeleteReplay}
         onConfirm={handleDeleteReplay}
         onCancel={() => setPendingDeleteReplayId(null)}
-        title="删除回放"
-        message="确认删除该回放？删除后不可恢复。"
-        confirmButtonText="确认删除"
-        cancelButtonText="取消"
+        title={t('createGame.deleteReplay')}
+        message={t('createGame.confirmDeleteReplay')}
+        confirmButtonText={t('createGame.confirmDelete')}
+        cancelButtonText={t('createGame.cancel')}
       />
     </div>
   );

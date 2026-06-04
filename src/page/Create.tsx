@@ -469,7 +469,7 @@ const Create: React.FC = () => {
                     <div className={styles.statsSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/create/我的数据.png`} alt="" />
+                                <img src={`${import.meta.env.BASE_URL}${t('create.images.myData')}`} alt="" />
                             </div>
                             <img
                                 className={styles.sectionDividerDesktop}
@@ -579,7 +579,7 @@ const Create: React.FC = () => {
                     <div className={styles.shopSection}>
                         <div className={styles.sectionHeader}>
                             <div className={styles.sectionTitle}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/create/发布作品.png`} alt="" />
+                                <img src={`${import.meta.env.BASE_URL}${t('create.images.publishWorks')}`} alt="" />
                             </div>
                             <img
                                 className={styles.sectionDividerDesktop}
@@ -623,7 +623,7 @@ const Create: React.FC = () => {
                     <div className={styles.shopSection}>
                         <div className={`${styles.sectionHeader} ${styles.draftSectionHeader}`}>
                             <div className={styles.sectionTitle}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/create/草稿箱.png`} alt="" />
+                                <img src={`${import.meta.env.BASE_URL}${t('create.images.draftBox')}`} alt="" />
                             </div>
                             <img
                                 className={styles.sectionDividerDesktop}

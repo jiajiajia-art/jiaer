@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../api/galgame/EditorData';
 import worldEditor from '../../api/worldInteraction/worldEditor';
@@ -35,8 +36,20 @@ const normalizeThemeTagIds = (ids?: number[]) =>
         ? ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)
         : [];
 
-const isSameThemeTagIds = (left: number[], right: number[]) =>
-    JSON.stringify([...left].sort((a, b) => a - b)) === JSON.stringify([...right].sort((a, b) => a - b));
+const isSameThemeTagIds = (left: number[], right: number[]) => {
+    if (left.length !== right.length) return false;
+
+    const sortedLeft = [...left].sort((a, b) => a - b);
+    const sortedRight = [...right].sort((a, b) => a - b);
+
+    for (let index = 0; index < sortedLeft.length; index += 1) {
+        if (sortedLeft[index] !== sortedRight[index]) {
+            return false;
+        }
+    }
+
+    return true;
+};
 
 export const useEditorSubmit = ({
     fileId,
@@ -45,6 +58,7 @@ export const useEditorSubmit = ({
     mode,
     onDataRefresh,
 }: UseEditorSubmitOptions): UseEditorSubmitReturn => {
+    const { t } = useTranslation();
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const worldPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
     const charactersPanelGetDataRef = useRef<(() => Partial<AllGameData | WorldInteractionGameData> | null) | null>(null);
@@ -52,7 +66,7 @@ export const useEditorSubmit = ({
 
     const handleSubmit = useCallback(async (options?: { onSuccess?: () => void; silentSuccess?: boolean }) => {
         if (!fileId || !gameData) {
-            toast.error('缺少必要数据，无法提交');
+            toast.error(t('common.editorSubmit.missingData'));
             return false;
         }
 
@@ -70,7 +84,7 @@ export const useEditorSubmit = ({
 
                         // 实现题材必填校验
                         if (themeTagIds.length < 1 || themeTagIds.length > 2) {
-                            toast.error('作品标签为必填，且最多选择 2 个');
+                            toast.error(t('common.editorSubmit.themeTagRequired'));
                             setIsSubmitting(false);
                             return false;
                         }
@@ -82,7 +96,7 @@ export const useEditorSubmit = ({
                                 response = await EditorApi.updateWorldSetting(fileId, worldData.worldSetting as Partial<GalgameWorldSetting>);
                             }
                         } else if (!hasThemeTagChanges) {
-                            toast.error('没有需要保存的修改');
+                            toast.error(t('common.editorSubmit.noChangesToSave'));
                             setIsSubmitting(false);
                             return false;
                         }
@@ -94,7 +108,7 @@ export const useEditorSubmit = ({
                                 tagIds: themeTagIds,
                             });
                             if (!tagResponse.data?.success) {
-                                toast.error('作品标签保存失败，请重试');
+                                toast.error(t('common.editorSubmit.tagSaveFailed'));
                                 return false;
                             }
                         }
@@ -154,7 +168,7 @@ export const useEditorSubmit = ({
                     }
                     break;
                 default:
-                    toast.error('当前面板不支持提交');
+                    toast.error(t('common.editorSubmit.panelNotSupported'));
                     setIsSubmitting(false);
                     return false;
             }
@@ -162,21 +176,21 @@ export const useEditorSubmit = ({
             if (response && response.data?.success) {
                 // 实现保存成功后先同步前端基线
                 options?.onSuccess?.();
-                toast.success('修改已保存');
+                toast.success(t('common.editorSubmit.saveSuccess'));
                 await onDataRefresh();
                 return true;
             } else {
-                toast.error('保存失败，请重试');
+                toast.error(t('common.editorSubmit.saveFailed'));
                 return false;
             }
         } catch (error) {
-            console.error('更新数据时出错:', error);
-            toast.error('保存失败，请重试');
+            console.error(t('common.editorSubmit.error'), error);
+            toast.error(t('common.editorSubmit.saveFailed'));
             return false;
         } finally {
             setIsSubmitting(false);
         }
-    }, [fileId, gameData, activePanel, mode, onDataRefresh]);
+    }, [fileId, gameData, activePanel, mode, onDataRefresh, t]);
 
     return {
         isSubmitting,

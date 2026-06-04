@@ -542,6 +542,13 @@
     box-shadow: 0 0 0 4px rgba(224, 61, 75, 0.1);
 }
 
+.fileSelectedHint {
+    font-size: 13px;
+    color: #888;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
 .textarea {
     min-height: 112px;
     resize: vertical;

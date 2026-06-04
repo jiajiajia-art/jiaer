@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
@@ -23,8 +24,8 @@ type MessageFeedItem =
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
     | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null });
 
-const formatTime = (value?: string | null) => {
-    if (!value) return '暂无时间';
+const formatTime = (value?: string | null, fallbackText?: string) => {
+    if (!value) return fallbackText || '暂无时间';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
 };
@@ -50,45 +51,46 @@ const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' |
 const markCollectionAsRead = <T extends { isRead: boolean }>(items: T[]) =>
     items.map((item) => (item.isRead ? item : { ...item, isRead: true }));
 
-const getSubmissionStatusLabel = (status: PromotionReviewStatus) => {
+const getSubmissionStatusLabel = (status: PromotionReviewStatus, t: (key: string, options?: Record<string, unknown>) => string) => {
     switch (status) {
         case 'approved':
-            return '审核通过';
+            return t('messages.statusApproved');
         case 'rejected':
-            return '审核驳回';
+            return t('messages.statusRejected');
         case 'reward_pending':
-            return '奖励待下发';
+            return t('messages.statusRewardPending');
         case 'reward_issued':
-            return '奖励已发放';
+            return t('messages.statusRewardIssued');
         default:
-            return '待审核';
+            return t('messages.statusPending');
     }
 };
 
-const getSubmissionMessageTitle = (notification: MessagePromotionSubmissionNotification) => {
-    const activityName = notification.activityTitle?.trim() || `活动 #${notification.activityId}`;
-    return `《${activityName}》投稿状态更新`;
+const getSubmissionMessageTitle = (notification: MessagePromotionSubmissionNotification, t: (key: string, options?: Record<string, unknown>) => string) => {
+    const activityName = notification.activityTitle?.trim() || `#${notification.activityId}`;
+    return t('messages.activitySubmissionMessage', { activityName });
 };
 
-const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotification) => {
+const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotification, t: (key: string, options?: Record<string, unknown>) => string) => {
     switch (notification.reviewStatus) {
         case 'approved':
-            return '官方小助手已将你的投稿审核为通过，你可以前往我的投稿查看详情。';
+            return t('messages.submissionApproved');
         case 'rejected':
             return notification.reviewRemark
-                ? `官方小助手已驳回你的投稿，备注：${notification.reviewRemark}`
-                : '官方小助手已驳回你的投稿，请前往我的投稿查看审核备注。';
+                ? t('messages.submissionRejectedWithRemark', { remark: notification.reviewRemark })
+                : t('messages.submissionRejected');
         case 'reward_pending':
-            return '你的投稿已进入奖励待下发队列，请前往我的投稿查看当前进度。';
+            return t('messages.submissionRewardPending');
         case 'reward_issued':
-            return '你的投稿奖励已发放完成，请前往我的投稿确认奖励状态。';
+            return t('messages.submissionRewardIssued');
         default:
-            return '你的投稿状态有更新，请前往我的投稿查看详情。';
+            return t('messages.submissionStatusUpdated');
     }
 };
 
 const Messages: React.FC = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { setUnreadCount } = useMessageStore();
     const [messageCenter, setMessageCenter] = useState<MessageCenterData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -104,11 +106,11 @@ const Messages: React.FC = () => {
             setMessageCenter(nextData);
             setUnreadCount(nextData?.unreadCount || 0);
         } catch (error) {
-            toast.error(getErrorMessage(error, '消息中心加载失败'));
+            toast.error(getErrorMessage(error, t('messages.loadFailed')));
         } finally {
             setIsLoading(false);
         }
-    }, [setUnreadCount]);
+    }, [setUnreadCount, t]);
 
     useEffect(() => {
         void loadMessages();
@@ -204,9 +206,9 @@ const Messages: React.FC = () => {
             applyReadState(messageType, sourceId, nextUnreadCount);
             setUnreadCount(nextUnreadCount);
         } catch (error) {
-            toast.error(getErrorMessage(error, '消息已读状态更新失败'));
+            toast.error(getErrorMessage(error, t('messages.readStatusFailed')));
         }
-    }, [applyReadState, setUnreadCount, unreadCount]);
+    }, [applyReadState, setUnreadCount, unreadCount, t]);
 
     const handleMarkAllRead = useCallback(async () => {
         if (isMarkingAllRead || unreadCount <= 0) {
@@ -220,11 +222,11 @@ const Messages: React.FC = () => {
             applyAllReadState(nextUnreadCount);
             setUnreadCount(nextUnreadCount);
         } catch (error) {
-            toast.error(getErrorMessage(error, '消息批量已读失败'));
+            toast.error(getErrorMessage(error, t('messages.batchReadFailed')));
         } finally {
             setIsMarkingAllRead(false);
         }
-    }, [applyAllReadState, isMarkingAllRead, setUnreadCount, unreadCount]);
+    }, [applyAllReadState, isMarkingAllRead, setUnreadCount, unreadCount, t]);
 
     const handleOpenAnnouncement = useCallback(async (announcement: MessageAnnouncement) => {
         await markMessageAsRead('announcement', announcement.sourceId, announcement.isRead);
@@ -265,8 +267,8 @@ const Messages: React.FC = () => {
             <div className={styles.pageBody}>
                 <section className={styles.hero}>
                     <div className={styles.heroContent}>
-                        <div className={styles.badge}>消息中心</div>
-                        <h1 className={styles.title}>查看通知</h1>
+                        <div className={styles.badge}>{t('messages.pageTitle')}</div>
+                        <h1 className={styles.title}>{t('messages.viewNotifications')}</h1>
                     </div>
 
                     <div className={styles.heroActions}>
@@ -277,7 +279,7 @@ const Messages: React.FC = () => {
                                 onClick={() => void loadMessages()}
                                 disabled={isLoading}
                             >
-                                {isLoading ? '刷新中...' : '刷新列表'}
+                                {isLoading ? t('messages.refreshing') : t('messages.refreshList')}
                             </button>
                             {unreadCount > 0 ? (
                                 <button
@@ -286,7 +288,7 @@ const Messages: React.FC = () => {
                                     onClick={() => void handleMarkAllRead()}
                                     disabled={isMarkingAllRead}
                                 >
-                                    {isMarkingAllRead ? '处理中...' : '一键已读'}
+                                    {isMarkingAllRead ? t('messages.processing') : t('messages.markAllRead')}
                                 </button>
                             ) : null}
                         </div>
@@ -295,9 +297,9 @@ const Messages: React.FC = () => {
 
                 <section className={styles.feedCard}>
                     <div className={styles.list}>
-                        {isLoading ? <div className={styles.emptyState}>正在加载消息列表...</div> : null}
+                        {isLoading ? <div className={styles.emptyState}>{t('messages.loadingMessages')}</div> : null}
                         {!isLoading && messageFeed.length === 0 ? (
-                            <div className={styles.emptyState}>当前还没有可展示的消息内容。</div>
+                            <div className={styles.emptyState}>{t('messages.noMessages')}</div>
                         ) : null}
 
                         {!isLoading && messageFeed.map((item) => {
@@ -317,18 +319,18 @@ const Messages: React.FC = () => {
                                     >
                                         <div className={styles.messageHeader}>
                                             <div className={styles.titleBlock}>
-                                                <span className={`${styles.typeTag} ${styles.typeTagAnnouncement}`}>公告</span>
+                                                <span className={`${styles.typeTag} ${styles.typeTagAnnouncement}`}>{t('messages.announcement')}</span>
                                                 <div className={styles.messageTitle}>{item.title}</div>
                                             </div>
-                                            <span className={stateClassName}>{isRead ? '已读' : '未读'}</span>
+                                            <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
                                         </div>
 
                                         <div className={styles.messageText}>
-                                            {toAnnouncementPlainText(item.sections[0]?.body || '') || '点击查看公告详情'}
+                                            {toAnnouncementPlainText(item.sections[0]?.body || '') || t('messages.clickToViewAnnouncement')}
                                         </div>
 
                                         <div className={styles.messageMeta}>
-                                            <span className={styles.metaItem}>发布时间：{formatTime(item.sortTime)}</span>
+                                            <span className={styles.metaItem}>{t('messages.publishedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
                                         </div>
                                     </article>
                                 );
@@ -352,16 +354,16 @@ const Messages: React.FC = () => {
                                             <div className={styles.messageMain}>
                                                 <div className={styles.messageHeader}>
                                                     <div className={styles.titleBlock}>
-                                                        <span className={`${styles.typeTag} ${styles.typeTagPromotion}`}>活动</span>
+                                                        <span className={`${styles.typeTag} ${styles.typeTagPromotion}`}>{t('messages.activity')}</span>
                                                         <div className={styles.messageTitle}>{item.title}</div>
                                                     </div>
-                                                    <span className={stateClassName}>{isRead ? '已读' : '未读'}</span>
+                                                    <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
                                                 </div>
 
-                                                <div className={styles.messageText}>{item.summary || '点击查看活动详情'}</div>
+                                                <div className={styles.messageText}>{item.summary || t('messages.clickToViewActivity')}</div>
 
                                                 <div className={styles.messageMeta}>
-                                                    <span className={styles.metaItem}>发布时间：{formatTime(item.sortTime)}</span>
+                                                    <span className={styles.metaItem}>{t('messages.publishedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -383,29 +385,29 @@ const Messages: React.FC = () => {
                                             <img
                                                 className={styles.promotionCover}
                                                 src={coverImageUrl}
-                                                alt={item.activityTitle || '投稿状态消息'}
+                                                alt={item.activityTitle || t('messages.submissionStatusUpdate')}
                                             />
                                             </div>
                                         ) : (
-                                            <div className={styles.promotionCoverPlaceholder}>投稿</div>
+                                            <div className={styles.promotionCoverPlaceholder}>{t('messages.submission')}</div>
                                         )}
                                         <div className={styles.messageMain}>
                                             <div className={styles.messageHeader}>
                                                 <div className={styles.titleBlock}>
-                                                    <span className={`${styles.typeTag} ${styles.typeTagSubmission}`}>投稿</span>
-                                                    <div className={styles.messageTitle}>{getSubmissionMessageTitle(item)}</div>
+                                                    <span className={`${styles.typeTag} ${styles.typeTagSubmission}`}>{t('messages.submission')}</span>
+                                                    <div className={styles.messageTitle}>{getSubmissionMessageTitle(item, t)}</div>
                                                 </div>
-                                                <span className={stateClassName}>{isRead ? '已读' : '未读'}</span>
+                                                <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
                                             </div>
 
-                                            <div className={styles.messageText}>{getSubmissionMessageText(item)}</div>
+                                            <div className={styles.messageText}>{getSubmissionMessageText(item, t)}</div>
                                             {item.reviewRemark ? (
-                                                <div className={styles.submissionRemark}>审核备注：{item.reviewRemark}</div>
+                                                <div className={styles.submissionRemark}>{t('messages.reviewRemark')}{item.reviewRemark}</div>
                                             ) : null}
 
                                             <div className={styles.messageMeta}>
-                                                <span className={styles.metaItem}>状态：{getSubmissionStatusLabel(item.reviewStatus)}</span>
-                                                <span className={styles.metaItem}>更新时间：{formatTime(item.sortTime)}</span>
+                                                <span className={styles.metaItem}>{t('messages.status')}{getSubmissionStatusLabel(item.reviewStatus, t)}</span>
+                                                <span className={styles.metaItem}>{t('messages.updatedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -421,7 +423,7 @@ const Messages: React.FC = () => {
                 isOpen={Boolean(selectedAnnouncement)}
                 onClose={() => setSelectedAnnouncement(null)}
                 onNavigateLink={handleAnnouncementLinkNavigate}
-                badgeText="消息公告"
+                badgeText={t('messages.announcement')}
             />
             <MobileBottomNav />
         </div>

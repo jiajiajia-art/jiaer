@@ -24,13 +24,15 @@ type PromotionActivityStatusBadge = {
     tone: PromotionActivityStatusTone;
 };
 
-const statusLabelMap: Record<PromotionReviewStatus, string> = {
-    pending_review: '待审核',
-    approved: '审核通过',
-    rejected: '审核驳回',
-    reward_pending: '奖励待下发',
-    reward_issued: '奖励已发放',
-};
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+const statusLabelMap = (t: TranslateFn): Record<PromotionReviewStatus, string> => ({
+    pending_review: t('promotion.pendingReview'),
+    approved: t('promotion.approved'),
+    rejected: t('promotion.rejected'),
+    reward_pending: t('promotion.rewardPending'),
+    reward_issued: t('promotion.rewardIssued'),
+});
 
 const statusClassMap: Record<PromotionReviewStatus, string> = {
     pending_review: styles.statusPending,
@@ -48,8 +50,8 @@ const activityStatusClassMap: Record<PromotionActivityStatusTone, string> = {
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-const formatTime = (value?: string | null) => {
-    if (!value) return '未记录';
+const formatTime = (value?: string | null, t?: TranslateFn) => {
+    if (!value) return t ? t('promotion.unrecorded') : '未记录';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
 };
@@ -63,16 +65,16 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
 };
 
-const buildTimeSummary = (activity: PromotionActivity) => {
-    if (activity.isLongTerm) return '长期活动';
-    return `${formatTime(activity.startAt)} - ${formatTime(activity.endAt)}`;
+const buildTimeSummary = (activity: PromotionActivity, t: TranslateFn) => {
+    if (activity.isLongTerm) return t('promotion.longTermActivity');
+    return `${formatTime(activity.startAt, t)} - ${formatTime(activity.endAt, t)}`;
 };
 
-const buildLimitSummary = (activity: PromotionActivity) => {
+const buildLimitSummary = (activity: PromotionActivity, t: TranslateFn) => {
     if (activity.submissionLimitType === 'rolling_window') {
-        return `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次`;
+        return t('promotion.everyNDaysLimitedN', { days: activity.submissionLimitDays, count: activity.submissionLimitCount });
     }
-    return '活动期内无限次';
+    return t('promotion.unlimitedDuringActivity');
 };
 
 const normalizeSubmissionConfig = (activity: PromotionActivity): PromotionActivity => {
@@ -96,13 +98,13 @@ const normalizeSubmissionConfig = (activity: PromotionActivity): PromotionActivi
     };
 };
 
-const getMissingRequiredSubmissionItems = (activity: PromotionActivity, payload: SubmissionDraftPayload) => {
+const getMissingRequiredSubmissionItems = (activity: PromotionActivity, payload: SubmissionDraftPayload, t: TranslateFn) => {
     const missingItems: string[] = [];
 
-    if (activity.submissionConfig.requireTexts && payload.texts.length === 0) missingItems.push('文本');
-    if (activity.submissionConfig.requireLinks && payload.links.length === 0) missingItems.push('链接');
-    if (activity.submissionConfig.requireImages && payload.images.length === 0) missingItems.push('图片');
-    if (activity.submissionConfig.requireVideos && payload.videos.length === 0) missingItems.push('视频');
+    if (activity.submissionConfig.requireTexts && payload.texts.length === 0) missingItems.push(t('promotion.text'));
+    if (activity.submissionConfig.requireLinks && payload.links.length === 0) missingItems.push(t('promotion.link'));
+    if (activity.submissionConfig.requireImages && payload.images.length === 0) missingItems.push(t('promotion.image'));
+    if (activity.submissionConfig.requireVideos && payload.videos.length === 0) missingItems.push(t('promotion.video'));
 
     return missingItems;
 };
@@ -114,14 +116,14 @@ const hasAnyAcceptedSubmissionContent = (activity: PromotionActivity, payload: S
     || (activity.submissionConfig.acceptVideos && payload.videos.length > 0)
 );
 
-const getSubmissionLimitSummary = (activity: PromotionActivity) => {
+const getSubmissionLimitSummary = (activity: PromotionActivity, t: TranslateFn) => {
     if (activity.submissionLimitType === 'once_per_activity') {
-        return '活动期内限制一次';
+        return t('promotion.oncePerActivity');
     }
     if (activity.submissionLimitType === 'rolling_window') {
-        return `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次`;
+        return t('promotion.everyNDaysLimitedN', { days: activity.submissionLimitDays, count: activity.submissionLimitCount });
     }
-    return '活动期内无限次';
+    return t('promotion.unlimitedDuringActivity');
 };
 void buildLimitSummary;
 
@@ -130,11 +132,12 @@ const getImportableGameId = (game: UserGameData) => String(game.file_id || game.
 const getActivitySubmissionAvailability = (
     activity: PromotionActivity,
     mySubmissions: PromotionSubmission[],
+    t: TranslateFn,
 ): Pick<PromotionActivity, 'canSubmit' | 'availabilityText'> => {
     if (activity.canSubmit === false) {
         return {
             canSubmit: false,
-            availabilityText: activity.availabilityText || '当前活动暂不可投稿',
+            availabilityText: activity.availabilityText || t('promotion.currentActivityNotSubmittable'),
         };
     }
 
@@ -143,7 +146,7 @@ const getActivitySubmissionAvailability = (
     if (activity.submissionLimitType === 'once_per_activity' && activitySubmissions.length > 0) {
         return {
             canSubmit: false,
-            availabilityText: '当前活动每个账号仅可投稿一次',
+            availabilityText: t('promotion.eachAccountCanOnlySubmitOnce'),
         };
     }
 
@@ -165,7 +168,7 @@ const getActivitySubmissionAvailability = (
             if (submissionCountInWindow >= limitCount) {
                 return {
                     canSubmit: false,
-                    availabilityText: `当前活动每 ${activity.submissionLimitDays} 天仅可投稿 ${activity.submissionLimitCount} 次`,
+                    availabilityText: t('promotion.eachAccountCanOnlySubmitN', { days: activity.submissionLimitDays, count: activity.submissionLimitCount }),
                 };
             }
         }
@@ -180,21 +183,21 @@ const getActivitySubmissionAvailability = (
 const hydrateActivitySubmissionAvailability = (
     activityList: PromotionActivity[],
     mySubmissions: PromotionSubmission[],
+    t: TranslateFn,
 ): PromotionActivity[] => activityList.map((activity) => ({
     ...activity,
-    ...getActivitySubmissionAvailability(activity, mySubmissions),
+    ...getActivitySubmissionAvailability(activity, mySubmissions, t),
 }));
 
-const buildPromotionStatusBadge = (activity: PromotionActivity): PromotionActivityStatusBadge | null => {
-    // 实现 活动状态标识计算
+const buildPromotionStatusBadge = (activity: PromotionActivity, t: TranslateFn): PromotionActivityStatusBadge | null => {
     if (activity.canSubmit === false) {
         return activity.availabilityText === '活动已结束'
-            ? { label: '已结束', tone: 'ended' }
+            ? { label: t('promotion.activityEnded'), tone: 'ended' }
             : null;
     }
 
     if (activity.isLongTerm) {
-        return { label: '进行中', tone: 'active' };
+        return { label: t('promotion.activityInProgress'), tone: 'active' };
     }
 
     if (!activity.endAt) {
@@ -208,7 +211,7 @@ const buildPromotionStatusBadge = (activity: PromotionActivity): PromotionActivi
 
     const remainingDays = Math.max(1, Math.ceil((endTime - Date.now()) / DAY_IN_MS));
     return remainingDays > 0
-        ? { label: `活动还有 ${remainingDays} 天`, tone: 'warning' }
+        ? { label: t('promotion.activityDaysLeft', { days: remainingDays }), tone: 'warning' }
         : null;
 };
 
@@ -226,6 +229,8 @@ const PromotionCenter: React.FC = () => {
     const [linkInputs, setLinkInputs] = useState(['']);
     const [imageFiles, setImageFiles] = useState<FileList | null>(null);
     const [videoFiles, setVideoFiles] = useState<FileList | null>(null);
+    const imageFileInputRef = useRef<HTMLInputElement>(null);
+    const videoFileInputRef = useRef<HTMLInputElement>(null);
     const [publishedGames, setPublishedGames] = useState<UserGameData[]>([]);
     const [hasLoadedPublishedGames, setHasLoadedPublishedGames] = useState(false);
     const [isLoadingPublishedGames, setIsLoadingPublishedGames] = useState(false);
@@ -253,16 +258,17 @@ const PromotionCenter: React.FC = () => {
             const nextActivities = hydrateActivitySubmissionAvailability(
                 (activityResponse.data.data || []).map(normalizeSubmissionConfig),
                 nextSubmissions,
+                t,
             );
 
             setActivities(nextActivities);
             setSubmissions(nextSubmissions);
         } catch (error) {
-            toast.error(getErrorMessage(error, '推广数据加载失败'));
+            toast.error(getErrorMessage(error, t('promotion.publishDataLoadFailed')));
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         void loadData();
@@ -270,7 +276,6 @@ const PromotionCenter: React.FC = () => {
 
     useEffect(() => {
         if (requestedTab === 'submissions') {
-            // 实现 消息跳转后自动切到我的投稿
             setActiveTab('submissions');
             return;
         }
@@ -287,10 +292,9 @@ const PromotionCenter: React.FC = () => {
 
         const targetSubmission = submissions.find((submission) => submission.id === requestedSubmissionId);
         if (!targetSubmission) {
-            // 实现 投稿不存在时的单次提示
             if (missingSubmissionNoticeRef.current !== requestedSubmissionId) {
                 missingSubmissionNoticeRef.current = requestedSubmissionId;
-                toast.error('未找到对应投稿记录');
+                toast.error(t('promotion.submissionNotFound'));
             }
             setHighlightedSubmissionId(null);
             focusedSubmissionIdRef.current = null;
@@ -304,7 +308,6 @@ const PromotionCenter: React.FC = () => {
         if (cardElement && focusedSubmissionIdRef.current !== requestedSubmissionId) {
             focusedSubmissionIdRef.current = requestedSubmissionId;
 
-            // 实现 投稿卡片滚动定位
             window.requestAnimationFrame(() => {
                 cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
@@ -315,7 +318,7 @@ const PromotionCenter: React.FC = () => {
         }, 2600);
 
         return () => window.clearTimeout(timer);
-    }, [activeTab, isLoading, requestedSubmissionId, submissions]);
+    }, [activeTab, isLoading, requestedSubmissionId, submissions, t]);
 
     const submissionCount = submissions.length;
 
@@ -323,9 +326,9 @@ const PromotionCenter: React.FC = () => {
         const latestActivity = activities.find((item) => item.id === activity.id) || activity;
         return {
             ...latestActivity,
-            ...getActivitySubmissionAvailability(latestActivity, submissions),
+            ...getActivitySubmissionAvailability(latestActivity, submissions, t),
         };
-    }, [activities, submissions]);
+    }, [activities, submissions, t]);
 
     const resetSubmitState = () => {
         setSelectedActivity(null);
@@ -334,23 +337,25 @@ const PromotionCenter: React.FC = () => {
         setImageFiles(null);
         setVideoFiles(null);
         setIsGameImportOpen(false);
+        if (imageFileInputRef.current) imageFileInputRef.current.value = '';
+        if (videoFileInputRef.current) videoFileInputRef.current.value = '';
     };
 
     const handleStartSubmission = useCallback((activity: PromotionActivity) => {
         const nextActivity = resolveActivitySubmissionState(activity);
         if (nextActivity.canSubmit === false) {
-            toast.error(nextActivity.availabilityText || '当前活动暂不可投稿');
+            toast.error(nextActivity.availabilityText || t('promotion.activityNotSubmittableFallback'));
             return;
         }
 
         setSelectedActivity(nextActivity);
-    }, [resolveActivitySubmissionState]);
+    }, [resolveActivitySubmissionState, t]);
 
     const openDetail = (activity: PromotionActivity) => {
         const detailLinkUrl = activity.detailLinkUrl.trim();
 
         if (!detailLinkUrl) {
-            toast.error('当前活动暂未配置详情地址');
+            toast.error(t('promotion.activityNotConfigured'));
             return;
         }
 
@@ -368,28 +373,26 @@ const PromotionCenter: React.FC = () => {
             setIsLoadingPublishedGames(true);
             const response = await getGameDataApi.getUserData({ limit: 500 });
             if (!response.data.success) {
-                throw new Error('我的作品加载失败');
+                throw new Error(t('promotion.myGamesLoadFailed'));
             }
 
             const gameList = response.data.data || [];
 
-            // 实现 已发布作品筛选
             setPublishedGames(gameList.filter((game) => game.is_public === 1 && Boolean(getImportableGameId(game))));
             setHasLoadedPublishedGames(true);
         } catch (error) {
-            toast.error(getErrorMessage(error, '我的作品加载失败'));
+            toast.error(getErrorMessage(error, t('promotion.myGamesLoadFailed')));
             setPublishedGames([]);
         } finally {
             setIsLoadingPublishedGames(false);
         }
-    }, []);
+    }, [t]);
 
     const handleToggleGameImport = useCallback(async () => {
         const nextOpen = !isGameImportOpen;
         setIsGameImportOpen(nextOpen);
 
         if (nextOpen && !hasLoadedPublishedGames && !isLoadingPublishedGames) {
-            // 实现 从我的作品中导入投稿链接
             await loadPublishedGames();
         }
     }, [hasLoadedPublishedGames, isGameImportOpen, isLoadingPublishedGames, loadPublishedGames]);
@@ -403,7 +406,6 @@ const PromotionCenter: React.FC = () => {
     };
 
     const handleRemoveLinkInput = (index: number) => {
-        // 实现 投稿链接移除
         setLinkInputs((prev) => {
             const nextInputs = prev.filter((_, inputIndex) => inputIndex !== index);
             return nextInputs.length > 0 ? nextInputs : [''];
@@ -418,7 +420,6 @@ const PromotionCenter: React.FC = () => {
 
         const importedLink = `${window.location.origin}/funloom/game/${encodeURIComponent(fileId)}`;
 
-        // 实现 导入链接写入空白输入框
         setLinkInputs((prev) => {
             const firstEmptyIndex = prev.findIndex((item) => item.trim().length === 0);
             if (firstEmptyIndex >= 0) {
@@ -437,7 +438,7 @@ const PromotionCenter: React.FC = () => {
 
         if (currentActivity.canSubmit === false) {
             setSelectedActivity(currentActivity);
-            toast.error(currentActivity.availabilityText || '当前活动暂不可投稿');
+            toast.error(currentActivity.availabilityText || t('promotion.activityNotSubmittableFallback'));
             return;
         }
 
@@ -450,19 +451,18 @@ const PromotionCenter: React.FC = () => {
             images: Array.from(imageFiles || []),
             videos: Array.from(videoFiles || []),
         };
-        const missingRequiredItems = getMissingRequiredSubmissionItems(currentActivity, submissionPayload);
+        const missingRequiredItems = getMissingRequiredSubmissionItems(currentActivity, submissionPayload, t);
 
         if (missingRequiredItems.length > 0) {
-            toast.error(`缺少必填投稿内容：${missingRequiredItems.join('、')}`);
+            toast.error(t('promotion.missingRequiredContent') + missingRequiredItems.join('、'));
             return;
         }
 
         if (!hasAnyAcceptedSubmissionContent(currentActivity, submissionPayload)) {
-            toast.error('请至少提交一种推广内容');
+            toast.error(t('promotion.submitAtLeastOne'));
             return;
         }
 
-        // 实现 多类型投稿表单组装
         submissionPayload.texts.forEach((item) => formData.append('texts', item));
         submissionPayload.links.forEach((item) => formData.append('links', item));
         submissionPayload.images.forEach((file) => formData.append('images', file));
@@ -471,12 +471,12 @@ const PromotionCenter: React.FC = () => {
         try {
             setIsSubmitting(true);
             await promotionApi.submit(currentActivity.id, formData);
-            toast.success('投稿成功');
+            toast.success(t('promotion.submissionSuccess'));
             resetSubmitState();
             await loadData();
             setActiveTab('submissions');
         } catch (error) {
-            toast.error(getErrorMessage(error, '投稿失败'));
+            toast.error(getErrorMessage(error, t('promotion.submissionFailed')));
         } finally {
             setIsSubmitting(false);
         }
@@ -522,7 +522,7 @@ const PromotionCenter: React.FC = () => {
                         ) : (
                             <div className={styles.activityGrid}>
                                 {activities.map((activity) => {
-                                    const statusBadge = buildPromotionStatusBadge(activity);
+                                    const statusBadge = buildPromotionStatusBadge(activity, t);
 
                                     return (
                                         <article key={activity.id} className={styles.card}>
@@ -540,9 +540,9 @@ const PromotionCenter: React.FC = () => {
                                                 </div>
                                                 <div className={styles.cardSummary}>{activity.summary}</div>
                                                 <div className={styles.infoGrid}>
-                                                    <div className={styles.infoItem}>{t('promotion.activityTime')}{buildTimeSummary(activity)}</div>
-                                                    <div className={styles.infoItem}>{t('promotion.submissionLimit')}{buildLimitSummary(activity)}</div>
-                                                    <div className={styles.infoItem}>{t('promotion.rewardPoints')}审核通过后发放 {activity.rewardPoints} 积分</div>
+                                                    <div className={styles.infoItem}>{t('promotion.activityTime')}{buildTimeSummary(activity, t)}</div>
+                                                    <div className={styles.infoItem}>{t('promotion.submissionLimit')}{buildLimitSummary(activity, t)}</div>
+                                                    <div className={styles.infoItem}>{t('promotion.rewardPoints')}{t('promotion.rewardPointsAfterApproval', { points: activity.rewardPoints })}</div>
                                                 </div>
                                                 <div className={styles.configRow}>
                                                     {activity.submissionConfig.acceptTexts && <span className={styles.chip}>{t('promotion.textSubmission')}</span>}
@@ -588,10 +588,10 @@ const PromotionCenter: React.FC = () => {
                                 >
                                     <div className={styles.submissionHeader}>
                                         <div>
-                                            <div className={styles.submissionTitle}>{submission.activityTitle || `活动 #${submission.activityId}`}</div>
+                                            <div className={styles.submissionTitle}>{submission.activityTitle || `#${submission.activityId}`}</div>
                                             <div className={styles.metaRow}>
-                                                <span className={`${styles.statusTag} ${statusClassMap[submission.reviewStatus]}`}>{statusLabelMap[submission.reviewStatus]}</span>
-                                                <span className={styles.chip}>{t('promotion.submissionTime')} {formatTime(submission.submittedAt)}</span>
+                                                <span className={`${styles.statusTag} ${statusClassMap[submission.reviewStatus]}`}>{statusLabelMap(t)[submission.reviewStatus]}</span>
+                                                <span className={styles.chip}>{t('promotion.submissionTime')} {formatTime(submission.submittedAt, t)}</span>
                                                 {typeof submission.rewardPoints === 'number' ? <span className={styles.chip}>{t('promotion.rewardPoints')} {submission.rewardPoints}</span> : null}
                                             </div>
                                         </div>
@@ -623,7 +623,7 @@ const PromotionCenter: React.FC = () => {
                                                 <div className={styles.payloadImageList}>
                                                     {submission.submitPayload.images.map((item) => (
                                                         <div key={item} className={styles.payloadImageWrap}>
-                                                        <img className={styles.payloadImage} src={getImageUrl(item)} alt="投稿图片" />
+                                                        <img className={styles.payloadImage} src={getImageUrl(item)} alt={t('promotion.submissionImages')} />
                                                         </div>
                                                     ))}
                                                 </div>
@@ -653,11 +653,11 @@ const PromotionCenter: React.FC = () => {
             {selectedActivity ? (
                 <div className={styles.modalOverlay} onClick={resetSubmitState}>
                     <div className={styles.modalCard} onClick={(event) => event.stopPropagation()}>
-                        <h2 className={styles.modalTitle}>投稿到“{selectedActivity.title}”</h2>
+                        <h2 className={styles.modalTitle}>{t('promotion.submitActivity', { title: selectedActivity.title })}</h2>
                         <div className={styles.infoGrid}>
-                            <div className={styles.infoItem}>活动时间：{buildTimeSummary(selectedActivity)}</div>
-                            <div className={styles.infoItem}>投稿限制：{buildLimitSummary(selectedActivity)}</div>
-                            <div className={styles.infoItem}>奖励积分：审核通过后发放 {selectedActivity.rewardPoints} 积分</div>
+                            <div className={styles.infoItem}>{t('promotion.activityTime')}{buildTimeSummary(selectedActivity, t)}</div>
+                            <div className={styles.infoItem}>{t('promotion.submissionLimit')}{buildLimitSummary(selectedActivity, t)}</div>
+                            <div className={styles.infoItem}>{t('promotion.rewardPoints')}{t('promotion.rewardPointsAfterApproval', { points: selectedActivity.rewardPoints })}</div>
                         </div>
                         {selectedActivity.availabilityText ? (
                             <div className={styles.noticeText}>{selectedActivity.availabilityText}</div>
@@ -666,9 +666,8 @@ const PromotionCenter: React.FC = () => {
                             {selectedActivity.submissionConfig.acceptTexts ? (
                                 <label
                                     className={`${styles.fieldLabel} ${styles.decoratedFieldLabel} ${selectedActivity.submissionConfig.requireTexts ? styles.decoratedFieldLabelRequired : ''}`}
-                                    data-label="文本投稿"
                                 >
-                                    文本投稿
+                                    {t('promotion.textSubmission')}
                                     <textarea
                                         className={styles.textarea}
                                         value={textInput}
@@ -680,9 +679,8 @@ const PromotionCenter: React.FC = () => {
                             {selectedActivity.submissionConfig.acceptLinks ? (
                                 <label
                                     className={`${styles.fieldLabel} ${styles.decoratedFieldLabel} ${selectedActivity.submissionConfig.requireLinks ? styles.decoratedFieldLabelRequired : ''}`}
-                                    data-label="链接投稿"
                                 >
-                                    链接投稿
+                                    {t('promotion.linkSubmission')}
                                     <div className={styles.linkFieldGroup}>
                                         {linkInputs.map((value, index) => (
                                             <div key={`link-${index}`} className={styles.linkInputRow}>
@@ -711,11 +709,11 @@ const PromotionCenter: React.FC = () => {
                                         </div>
                                         {isGameImportOpen ? (
                                             <div className={styles.importPanel}>
-                                                <div className={styles.importTitle}>选择已发布作品</div>
+                                                <div className={styles.importTitle}>{t('promotion.selectPublishedGames')}</div>
                                                 {isLoadingPublishedGames ? (
-                                                    <div className={styles.importState}>正在加载已发布作品...</div>
+                                                    <div className={styles.importState}>{t('promotion.loadingMyGames')}</div>
                                                 ) : publishedGames.length === 0 ? (
-                                                    <div className={styles.importState}>暂无已发布作品可导入</div>
+                                                    <div className={styles.importState}>{t('promotion.noPublishedActivitiesToImport')}</div>
                                                 ) : (
                                                     <div className={styles.importGameList}>
                                                         {publishedGames.map((game) => {
@@ -735,10 +733,10 @@ const PromotionCenter: React.FC = () => {
                                                                         alt={game.title || gameId}
                                                                     />
                                                                     <div className={styles.importGameInfo}>
-                                                                        <div className={styles.importGameName}>{game.title || '未命名作品'}</div>
+                                                                        <div className={styles.importGameName}>{game.title || t('promotion.untitledGame')}</div>
                                                                         <div className={styles.importGameMeta}>{gameId}</div>
                                                                     </div>
-                                                                    <span className={styles.importGameAction}>导入链接</span>
+                                                                    <span className={styles.importGameAction}>{t('promotion.importLink')}</span>
                                                                 </button>
                                                             );
                                                         })}
@@ -752,31 +750,69 @@ const PromotionCenter: React.FC = () => {
                             {selectedActivity.submissionConfig.acceptImages ? (
                                 <label
                                     className={`${styles.fieldLabel} ${styles.decoratedFieldLabel} ${selectedActivity.submissionConfig.requireImages ? styles.decoratedFieldLabelRequired : ''}`}
-                                    data-label="图片投稿"
                                 >
-                                    图片投稿
-                                    <input className={styles.input} type="file" accept="image/*" multiple onChange={(event) => setImageFiles(event.target.files)} />
+                                    {t('promotion.imageSubmission')}
+                                    <input
+                                        ref={imageFileInputRef}
+                                        className={styles.input}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        style={{ display: 'none' }}
+                                        onChange={(event) => setImageFiles(event.target.files)}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.secondaryButton}
+                                        onClick={() => imageFileInputRef.current?.click()}
+                                    >
+                                        {t('promotion.selectImageFile')}
+                                    </button>
+                                    {imageFiles && imageFiles.length > 0 && (
+                                        <span className={styles.fileSelectedHint}>
+                                            {t('promotion.filesSelected', { count: imageFiles.length })}
+                                        </span>
+                                    )}
                                 </label>
                             ) : null}
                             {selectedActivity.submissionConfig.acceptVideos ? (
                                 <label
                                     className={`${styles.fieldLabel} ${styles.decoratedFieldLabel} ${selectedActivity.submissionConfig.requireVideos ? styles.decoratedFieldLabelRequired : ''}`}
-                                    data-label="视频投稿"
                                 >
-                                    视频投稿
-                                    <input className={styles.input} type="file" accept="video/*" multiple onChange={(event) => setVideoFiles(event.target.files)} />
+                                    {t('promotion.videoSubmission')}
+                                    <input
+                                        ref={videoFileInputRef}
+                                        className={styles.input}
+                                        type="file"
+                                        accept="video/*"
+                                        multiple
+                                        style={{ display: 'none' }}
+                                        onChange={(event) => setVideoFiles(event.target.files)}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.secondaryButton}
+                                        onClick={() => videoFileInputRef.current?.click()}
+                                    >
+                                        {t('promotion.selectVideoFile')}
+                                    </button>
+                                    {videoFiles && videoFiles.length > 0 && (
+                                        <span className={styles.fileSelectedHint}>
+                                            {t('promotion.filesSelected', { count: videoFiles.length })}
+                                        </span>
+                                    )}
                                 </label>
                             ) : null}
                         </div>
                         <div className={styles.modalActions}>
-                            <button type="button" className={styles.secondaryButton} onClick={resetSubmitState}>取消</button>
+                            <button type="button" className={styles.secondaryButton} onClick={resetSubmitState}>{t('promotion.cancel')}</button>
                             <button
                                 type="button"
                                 className={styles.primaryButton}
                                 onClick={() => void handleSubmit()}
                                 disabled={isSubmitting || selectedActivity.canSubmit === false}
                             >
-                                {isSubmitting ? '提交中...' : '确认投稿'}
+                                {isSubmitting ? t('promotion.submitting') : t('promotion.confirmSubmit')}
                             </button>
                         </div>
                     </div>

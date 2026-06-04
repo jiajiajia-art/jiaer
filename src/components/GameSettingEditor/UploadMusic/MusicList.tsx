@@ -96,7 +96,7 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                     return blobUrl;
                 }
             } catch (error) {
-                console.error('获取音频文件失败:', error);
+                console.error(t('createGame.uploadMusicErrors.fetchMusicFailed'), error);
                 setLoadingMusic(prev => ({ ...prev, [music.id]: false }));
             }
         }
@@ -134,14 +134,14 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
             if (!urlToUse) {
                 urlToUse = await getMusicUrl(music);
                 if (!urlToUse) {
-                    console.error('无法获取音频 URL');
+                    console.error(t('createGame.uploadMusicErrors.cannotGetAudioUrl'));
                     return;
                 }
             }
 
             // 如果 URL 发生变化，需要重新加载
             if (audio.src !== urlToUse && audio.currentSrc !== urlToUse) {
-                console.log('设置音频 URL:', urlToUse);
+                console.log(t('createGame.uploadMusicErrors.setAudioUrl'), urlToUse);
                 audio.src = urlToUse;
                 // 等待音频加载完成
                 try {
@@ -149,21 +149,21 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                         const timeout = setTimeout(() => {
                             audio.removeEventListener('canplay', onCanPlay);
                             audio.removeEventListener('error', onError);
-                            reject(new Error('音频加载超时'));
+                            reject(new Error(t('createGame.uploadMusicErrors.audioLoadTimeout')));
                         }, 10000); // 10秒超时
 
                         const onCanPlay = () => {
                             clearTimeout(timeout);
                             audio.removeEventListener('canplay', onCanPlay);
                             audio.removeEventListener('error', onError);
-                            console.log('音频加载完成，可以播放');
+                            console.log(t('createGame.uploadMusicErrors.audioReady'));
                             resolve();
                         };
                         const onError = () => {
                             clearTimeout(timeout);
                             audio.removeEventListener('canplay', onCanPlay);
                             audio.removeEventListener('error', onError);
-                            reject(new Error('音频加载失败'));
+                            reject(new Error(t('createGame.uploadMusicErrors.audioLoadFailed')));
                         };
                         audio.addEventListener('canplay', onCanPlay);
                         audio.addEventListener('error', onError);
@@ -173,12 +173,12 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
                             audio.removeEventListener('error', onError);
                             resolve();
                         } else {
-                            console.log('开始加载音频，readyState:', audio.readyState);
+                            console.log(t('createGame.uploadMusicErrors.startLoadingAudio'), audio.readyState);
                             audio.load();
                         }
                     });
                 } catch (error) {
-                    console.error('等待音频加载失败:', error);
+                    console.error(t('createGame.uploadMusicErrors.waitAudioLoadFailed'), error);
                     return;
                 }
             }
@@ -186,10 +186,10 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
             // 播放新的音乐
             try {
                 await audio.play();
-                console.log('音频播放成功');
+                console.log(t('createGame.uploadMusicErrors.audioPlaySuccess'));
                 setPlayingId(music.id);
             } catch (error) {
-                console.error('播放音频失败:', error);
+                console.error(t('createGame.uploadMusicErrors.audioPlayFailed'), error);
                 setPlayingId(null);
             }
         }
@@ -314,7 +314,7 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
             const actualFilename = extractFilename(musicToDelete.filename);
             await sceneApi.deleteMusic(fileId, actualFilename);
             
-            toast.success('音乐删除成功');
+            toast.success(t('createGame.uploadMusicErrors.deleteMusicSuccess'));
             
             // 清理相关状态
             if (musicUrls[musicToDelete.id]?.startsWith('blob:')) {
@@ -335,7 +335,7 @@ const MusicList: React.FC<MusicListProps> = ({ musicList, onUploadClick, fileId,
             setMusicToDelete(null);
         } catch (error) {
             console.error('删除音乐失败:', error);
-            toast.error('删除音乐失败，请稍后重试');
+            toast.error(t('createGame.uploadMusicErrors.deleteMusicFailed'));
         }
     };
 

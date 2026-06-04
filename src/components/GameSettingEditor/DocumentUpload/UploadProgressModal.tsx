@@ -34,15 +34,15 @@ const UploadProgressModal: React.FC = () => {
     const getStatusText = (status: string) => {
         switch (status) {
             case 'uploading':
-                return '上传中';
+                return t('createGame.statusUpload');
             case 'processing':
-                return '解析中';
+                return t('createGame.statusParsing');
             case 'completed':
-                return '完成';
+                return t('createGame.statusComplete');
             case 'failed':
-                return '失败';
+                return t('createGame.statusFailed');
             default:
-                return '处理中';
+                return t('createGame.statusProcessing');
         }
     };
     
@@ -62,7 +62,7 @@ const UploadProgressModal: React.FC = () => {
     
     const formatTime = (timestamp: number) => {
         const seconds = Math.floor((currentTime - timestamp) / 1000);
-        if (seconds < 60) return `${seconds}秒`;
+        if (seconds < 60) return `${seconds}s`;
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes}m ${remainingSeconds}s`;
@@ -102,7 +102,7 @@ const UploadProgressModal: React.FC = () => {
                             elapsedSeconds: job.elapsedSeconds,
                             estimatedRemainingSeconds: job.estimatedRemainingSeconds,
                             estimatedTotalSeconds: job.estimatedTotalSeconds,
-                        });
+                        }, t);
 
                         return (
                         <div key={job.jobId} className={styles.jobItem}>
@@ -123,7 +123,7 @@ const UploadProgressModal: React.FC = () => {
                                         className={styles.removeButton}
                                         onClick={() => removeJob(job.jobId)}
                                     >
-                                        移除
+                                        {t('createGame.remove')}
                                     </button>
                                 ) : null}
                             </div>
@@ -145,7 +145,7 @@ const UploadProgressModal: React.FC = () => {
                             
                             <div className={styles.jobDetails}>
                                 <span className={styles.stage} title={job.stage}>
-                                    {job.stage || '处理中'}
+                                    {job.stage || t('createGame.statusProcessing')}
                                 </span>
                                 <span className={styles.time}>
                                     {formatTime(job.startTime)}
@@ -163,7 +163,7 @@ const UploadProgressModal: React.FC = () => {
                             
                             {job.status === 'completed' && job.fileId && (
                                 <div className={styles.successMessage}>
-                                    文件ID: {job.fileId}
+                                    {t('createGame.fileId')}: {job.fileId}
                                 </div>
                             )}
                         </div>

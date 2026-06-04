@@ -64,10 +64,10 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className={styles.createTypeModalHeader}>
-                            <div className={styles.createTypeModalTitle}>选择需创建游戏类型</div>
+                            <div className={styles.createTypeModalTitle}>{t('createGame.selectGameTypeTitle')}</div>
                         </div>
                         <div className={styles.createTypeModalDesc}>
-                            请选择你要创作的游戏形态，我们会为你匹配合适的创作流程。
+                            {t('createGame.selectGameTypeDesc')}
                         </div>
                         <div className={styles.createTypeOptions}>
                             <button
@@ -75,7 +75,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 onClick={() => onSelectGameType('txt')}
                             >
                                 <span>TXT</span>
-                                <span className={styles.createTypeOptionRecommend}>推荐</span>
+                                <span className={styles.createTypeOptionRecommend}>{t('createGame.recommend')}</span>
                             </button>
                             <button
                                 className={styles.createTypeOption}
@@ -83,16 +83,16 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             >
                                 <span>{t('createGame.avgBeta')}</span>
                                 <span className={styles.createTypeOptionLockedTag}>
-                                    {isMiniProgram ? '新' : '新'}
+                                    {isMiniProgram ? t('createGame.new') : t('createGame.new')}
                                 </span>
                             </button>
                             <button
                                 className={styles.createTypeOption}
                                 onClick={handleCustomClick}
                             >
-                                <span>自定义</span>
+                                <span>{t('createGame.custom')}</span>
                                 <span className={styles.createTypeOptionRecommend}>
-                                    {isMiniProgram ? '新' : '新'}
+                                    {isMiniProgram ? t('createGame.new') : t('createGame.new')}
                                 </span>
                             </button>
                             <button
@@ -101,7 +101,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 disabled
                             >
                                 <span>RPG</span>
-                                <span className={styles.createTypeOptionLocked}>待解锁</span>
+                                <span className={styles.createTypeOptionLocked}>{t('createGame.locked')}</span>
                             </button>
                         </div>
                         <div className={styles.createTypeModalFooter}>
@@ -110,7 +110,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 onClick={onCloseCreateTypeModal}
                                 className={styles.createTypeCancelButton}
                             >
-                                取消
+                                {t('createGame.cancel')}
                             </button>
                         </div>
                     </div>
@@ -123,8 +123,8 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                 title={mobileTipTitle}
                 message={mobileTipMessage}
                 linkUrl={mobileTipLinkUrl}
-                bindPhoneActionText="建议先绑定手机号"
-                bindPhoneActionHint="绑定后可在小程序端和 PC 端使用同一个账号。"
+                bindPhoneActionText={t('createGame.bindPhoneFirst')}
+                bindPhoneActionHint={t('createGame.bindPhoneTip')}
                 onBindPhoneAction={onOpenBindPhoneGuide}
             />
         </>

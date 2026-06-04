@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import styles from './MobileBottomNav.module.css';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { isCreatorRoutePath, isMiniProgramEnv } from '../../utils/miniProgram';
@@ -13,37 +14,38 @@ const normalize = (path: string) => {
         : normalized;
 };
 
-const navItems: Array<{
-    key: BottomNavKey;
-    label: string;
-    iconActive: string;
-    iconInactive: string;
-}> = [
-    {
-        key: 'home',
-        label: '首页',
-        iconInactive: 'data/assets/切图/首页02.png',
-        iconActive: 'data/assets/切图/首页01.png',
-    },
-    {
-        key: 'create',
-        label: '创作',
-        iconInactive: 'data/assets/切图/创作02.png',
-        iconActive: 'data/assets/切图/创作01.png',
-    },
-    {
-        key: 'profile',
-        label: '我的',
-        iconInactive: 'data/assets/切图/我的02.png',
-        iconActive: 'data/assets/切图/我的01.png',
-    },
-];
-
 const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, initialize } = useAuthStore();
     const { setIsAuthModalOpen } = authModalStore();
+
+    const navItems: Array<{
+        key: BottomNavKey;
+        labelKey: string;
+        iconActive: string;
+        iconInactive: string;
+    }> = [
+        {
+            key: 'home',
+            labelKey: 'common.nav.home',
+            iconInactive: 'data/assets/切图/首页02.png',
+            iconActive: 'data/assets/切图/首页01.png',
+        },
+        {
+            key: 'create',
+            labelKey: 'common.nav.create',
+            iconInactive: 'data/assets/切图/创作02.png',
+            iconActive: 'data/assets/切图/创作01.png',
+        },
+        {
+            key: 'profile',
+            labelKey: 'common.nav.profile',
+            iconInactive: 'data/assets/切图/我的02.png',
+            iconActive: 'data/assets/切图/我的01.png',
+        },
+    ];
 
     useEffect(() => {
         initialize();
@@ -92,7 +94,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
 
     return (
         <div className={styles.container}>
-            {navItems.map(({ key, label, iconActive, iconInactive }) => {
+            {navItems.map(({ key, labelKey, iconActive, iconInactive }) => {
                 const isActive = activeKey === key;
                 const iconSrc = `${import.meta.env.BASE_URL}${isActive ? iconActive : iconInactive}`;
 
@@ -103,8 +105,8 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                         className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
                         onClick={() => handleNav(key)}
                     >
-                        <img src={iconSrc} alt={label} className={styles.icon} />
-                        <span className={styles.label}>{label}</span>
+                        <img src={iconSrc} alt={t(labelKey)} className={styles.icon} />
+                        <span className={styles.label}>{t(labelKey)}</span>
                     </button>
                 );
             })}

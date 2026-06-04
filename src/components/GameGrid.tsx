@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AiOutlineLike } from 'react-icons/ai';
 import { IoGameControllerOutline } from 'react-icons/io5';
 import { RiMoneyCnyCircleLine } from 'react-icons/ri';
@@ -37,6 +38,7 @@ const GameGrid: React.FC<GameGridProps> = ({
     emptyText,
 }) => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const gridClassName = [
         styles.grid4,
         layoutVariant === 'homeWide' ? styles.gridHomeWide : '',
@@ -205,9 +207,9 @@ const GameGrid: React.FC<GameGridProps> = ({
                             {showIncentive && (
                                 <div
                                     className={`${styles.incentiveTag} ${status === 'finished' ? styles.incentiveFinished : ''}`}
-                                    title={status === 'finished' ? '激励已结算' : '激励计划'}
+                                    title={status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
                                 >
-                                    {status === 'finished' ? '激励已结算' : '激励计划'}
+                                    {status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
                                 </div>
                             )}
 

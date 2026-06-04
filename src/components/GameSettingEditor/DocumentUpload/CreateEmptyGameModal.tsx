@@ -77,7 +77,6 @@ const CreateEmptyGameModal: React.FC<CreateEmptyGameModalProps> = ({
                             />
                             {error && <p className={styles.errorText}>{error}</p>}
                         </div>
-                        
                         <div className={styles.buttonGroup}>
                             <button
                                 type="button"

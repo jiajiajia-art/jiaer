@@ -47,7 +47,7 @@ const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) 
             link.click();
             document.body.removeChild(link);
         } catch (error) {
-            console.error('下载失败:', error);
+            console.error('Download failed:', error);
             window.open(`${import.meta.env.BASE_URL}${filePath.startsWith('/') ? filePath.slice(1) : filePath}`, '_blank');
         }
     };
@@ -77,7 +77,7 @@ const PDFTemplateModal: React.FC<PDFTemplateModalProps> = ({ isOpen, onClose }) 
                                         className={styles.downloadButton}
                                         onClick={() => handleDownload(pdf.path)}
                                     >
-                                        下载
+                                        {t('common.download')}
                                     </button>
                                 </div>
                             ))}

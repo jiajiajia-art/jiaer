@@ -19,40 +19,40 @@ export type CropExportAttempt = {
     scale: number;
 };
 
-export const uploadCropPresets: Record<UploadCropPresetKey, UploadCropPreset> = {
+export const uploadCropPresets: Record<UploadCropPresetKey, Omit<UploadCropPreset, 'title' | 'description'> & { titleKey: string; descriptionKey: string }> = {
     gameCover: {
-        title: '调整游戏封面',
+        titleKey: 'common.imageCrop.gameCover.title',
         aspectRatio: 16 / 9,
         aspectLabel: '16:9',
-        description: '拖动裁剪区域以选择可见封面区域',
+        descriptionKey: 'common.imageCrop.gameCover.description',
         defaultCropScale: 0.94,
     },
     homeBanner: {
-        title: '调整banner',
+        titleKey: 'common.imageCrop.homeBanner.title',
         aspectRatio: 16 / 9,
         aspectLabel: '16:9',
-        description: '拖动裁剪区域以选择banner展示区域',
+        descriptionKey: 'common.imageCrop.homeBanner.description',
         defaultCropScale: 0.94,
     },
     avatar: {
-        title: '调整头像',
+        titleKey: 'common.imageCrop.avatar.title',
         aspectRatio: 1,
         aspectLabel: '1:1',
-        description: '拖动裁剪区域以选择可见的头像区域',
+        descriptionKey: 'common.imageCrop.avatar.description',
         defaultCropScale: 0.82,
     },
     promotionCover: {
-        title: '调整封面',
+        titleKey: 'common.imageCrop.promotionCover.title',
         aspectRatio: 4 / 3,
         aspectLabel: '4:3',
-        description: '拖动裁剪区域以选择可见封面区域',
+        descriptionKey: 'common.imageCrop.promotionCover.description',
         defaultCropScale: 0.90,
     },
     objectIcon: {
-        title: '调整物体',
+        titleKey: 'common.imageCrop.objectIcon.title',
         aspectRatio: 1,
         aspectLabel: '1:1',
-        description: '拖动裁剪区域以选择可见物体图像',
+        descriptionKey: 'common.imageCrop.objectIcon.description',
         defaultCropScale: 0.86,
     },
 };
@@ -60,7 +60,6 @@ export const uploadCropPresets: Record<UploadCropPresetKey, UploadCropPreset> = 
 export const MAX_UPLOAD_IMAGE_SIZE = 5 * 1024 * 1024;
 export const CROP_EXPORT_SCALES = [1, 0.9, 0.8, 0.7, 0.6];
 export const CROP_EXPORT_QUALITIES = [0.92, 0.85, 0.78, 0.7];
-export const CROP_EXPORT_ERROR_MESSAGE = 'Cropped image is still over 5MB after compression. Please reduce the crop area or choose another image.';
 
 export function getMimeTypeExtension(mimeType: string): string {
     switch (mimeType) {

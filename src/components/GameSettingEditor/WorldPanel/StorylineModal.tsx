@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import styles from './WorldPanel.module.css';
 import { useWordLimit, useWordCount } from '../../../hooks/editor/useWordLimit';
 
@@ -33,6 +34,7 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
     onClose,
     onSave,
 }) => {
+    const { t } = useTranslation();
     const [tag, setTag] = useState('');
     const [content, setContent] = useState('');
     const [index, setIndex] = useState<number>(defaultIndex);
@@ -83,13 +85,13 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
-                    <h3>{storyline ? '编辑故事线' : '添加故事线'}</h3>
+                    <h3>{storyline ? t('createGame.storylineModalEditTitle') : t('createGame.storylineModalAddTitle')}</h3>
                     <button className={styles.modalCloseBtn} onClick={onClose}>×</button>
                 </div>
                 <div className={styles.modalBody}>
                     <div className={styles.formGroup}>
                         <label>
-                            <span>序号 <span className={styles.required}>*</span></span>
+                            <span>{t('createGame.storylineOrder')} <span className={styles.required}>*</span></span>
                             <input
                                 type="number"
                                 min="1"
@@ -126,14 +128,14 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
                                         }
                                     }
                                 }}
-                                placeholder="输入序号"
+                                placeholder={t('createGame.storylineModalIndexPlaceholder')}
                             />
                         </label>
                     </div>
                     <div className={styles.formGroup}>
                         <label>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                <span>标签 <span className={styles.required}>*</span></span>
+                                <span>{t('createGame.storylineTag')} <span className={styles.required}>*</span></span>
                                 <span className={styles.wordCounter}>
                                     {tagWords}/{STORYLINE_WORD_LIMITS.tag}
                                 </span>
@@ -142,7 +144,7 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
                                 type="text"
                                 value={tag}
                                 {...tagLimit}
-                                placeholder="例如：阶段 1、第一章、关键转折点"
+                                placeholder={t('createGame.storylineModalTagPlaceholder')}
                                 autoFocus
                             />
                         </label>
@@ -150,7 +152,7 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
                     <div className={styles.formGroup}>
                         <label>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                <span>内容</span>
+                                <span>{t('createGame.storylineContent')}</span>
                                 <span className={styles.wordCounter}>
                                     {contentWords}/{STORYLINE_WORD_LIMITS.content}
                                 </span>
@@ -159,21 +161,21 @@ const StorylineModal: React.FC<StorylineModalProps> = ({
                                 rows={6}
                                 value={content}
                                 {...contentLimit}
-                                placeholder="描述关键剧情走向..."
+                                placeholder={t('createGame.storylineModalContentPlaceholder')}
                             />
                         </label>
                     </div>
                 </div>
                 <div className={styles.modalFooter}>
                     <button className={styles.ghost} onClick={onClose}>
-                        取消
+                        {t('common.cancel')}
                     </button>
                     <button
                         className={styles.primary}
                         onClick={handleSave}
                         disabled={!tag.trim() || index < 1 || index > maxIndex}
                     >
-                        保存
+                        {t('common.save')}
                     </button>
                 </div>
             </div>

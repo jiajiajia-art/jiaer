@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { UploadCropPreset, UploadCropPresetKey } from '../utils/uploadImageCrop';
 import {
     fileToDataUrl,
@@ -19,8 +20,16 @@ type UseImageCropperOptions = {
 };
 
 export function useImageCropper({ preset, onCropped }: UseImageCropperOptions) {
+    const { t } = useTranslation();
     const [pendingCropFile, setPendingCropFile] = useState<PendingCropFile | null>(null);
-    const cropPreset: UploadCropPreset = useMemo(() => uploadCropPresets[preset], [preset]);
+    const rawPreset = useMemo(() => uploadCropPresets[preset], [preset]);
+    const cropPreset: UploadCropPreset = useMemo(() => ({
+        title: t(rawPreset.titleKey),
+        aspectRatio: rawPreset.aspectRatio,
+        aspectLabel: rawPreset.aspectLabel,
+        description: t(rawPreset.descriptionKey),
+        defaultCropScale: rawPreset.defaultCropScale,
+    }), [rawPreset, t]);
 
     const openCropper = useCallback(async (file: File) => {
         const imageSrc = await fileToDataUrl(file);

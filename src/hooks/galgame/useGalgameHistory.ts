@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
 import type { ContextMemoryStatus, History } from "../../api/galgame/getGalgamePreset.type";
 import { useGameStore } from "../../store/gameStore";
@@ -14,6 +15,7 @@ export interface HistoryWithId extends History {
 const HISTORY_PAGE_SIZE = 80;
 
 const useGalgameHistory = (options?: { disabled?: boolean }) => {
+    const { t } = useTranslation();
     const [history, setHistory] = useState<History[]>([]);
     const [historyOffset, setHistoryOffset] = useState<number>(0);
     const [historyTotal, setHistoryTotal] = useState<number>(0);
@@ -68,7 +70,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
                 }
             }
         } catch (error) {
-            setError(error instanceof Error ? error.message : '获取历史记录失败');
+            setError(error instanceof Error ? error.message : t('galgame.historyLoadFailed'));
         } finally {
             setLoading(false);
         }
@@ -94,7 +96,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
                 setContextMemory(response.data.contextMemory || null);
             }
         } catch (error) {
-            setError(error instanceof Error ? error.message : 'Failed to load earlier history');
+            setError(error instanceof Error ? error.message : t('galgame.historyLoadEarlierFailed'));
         } finally {
             setLoadingMoreBefore(false);
         }
@@ -102,7 +104,7 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
 
     const editHistory = useCallback(async (historyIndex: number, content: string): Promise<boolean> => {
         if (!sessionId) {
-            toast.error('没有 sessionId');
+            toast.error(t('galgame.historyMissingSessionId'));
             return false;
         }
 
@@ -117,17 +119,17 @@ const useGalgameHistory = (options?: { disabled?: boolean }) => {
             );
 
             if (response.ok) {
-                toast.success('编辑保存成功');
+                toast.success(t('galgame.historySaveSuccess'));
                 // 刷新历史记录
                 await fetchHistory();
                 return true;
             } else {
-                toast.error('保存失败');
+                toast.error(t('galgame.historySaveFailed'));
                 return false;
             }
         } catch (error) {
-            console.error('编辑保存错误:', error);
-            toast.error('保存失败');
+            console.error(t('galgame.historyEditSaveError') + ':', error);
+            toast.error(t('galgame.historySaveFailed'));
             return false;
         }
     }, [sessionId, fetchHistory]);

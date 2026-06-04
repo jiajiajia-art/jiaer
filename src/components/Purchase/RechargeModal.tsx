@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
@@ -10,6 +11,7 @@ type RechargeTabType = 'points' | 'membership';
 interface MembershipPlan {
     planId: PlanId;
     name: string;
+    shortName: string;
     price: number;
 }
 
@@ -19,24 +21,6 @@ interface FirstChargePlan {
     firstChargePoints: number;
     noFirstChargeBonus?: boolean;
 }
-
-const MEMBERSHIP_PLANS: MembershipPlan[] = [
-    {
-        planId: 'month',
-        name: '月卡',
-        price: 28,
-    },
-    {
-        planId: 'season',
-        name: '季卡',
-        price: 78,
-    },
-    {
-        planId: 'year',
-        name: '年卡',
-        price: 248,
-    },
-];
 
 const FIRST_CHARGE_PLANS: FirstChargePlan[] = [
     { planId: 'pr_1', amount: 1, firstChargePoints: 19 },
@@ -79,6 +63,8 @@ const isMiniProgramEnv = (): boolean => {
 };
 
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstCharge, fixedTab }) => {
+    const { t } = useTranslation();
+
     const closeAndReload = useCallback(() => {
         onClose();
         window.location.reload();
@@ -100,6 +86,27 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'points');
     const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
     const [selectedFirstChargePlanId, setSelectedFirstChargePlanId] = useState<PointsPlanId | null>(null);
+
+    const MEMBERSHIP_PLANS: MembershipPlan[] = [
+        {
+            planId: 'month',
+            name: t('profile.monthlyMember'),
+            shortName: t('profile.monthlyMemberShort'),
+            price: 28,
+        },
+        {
+            planId: 'season',
+            name: t('profile.seasonalMember'),
+            shortName: t('profile.seasonalMemberShort'),
+            price: 78,
+        },
+        {
+            planId: 'year',
+            name: t('profile.yearlyMember'),
+            shortName: t('profile.yearlyMemberShort'),
+            price: 248,
+        },
+    ];
 
     useEffect(() => {
         if (!isOpen) {
@@ -147,11 +154,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         }
 
-        const numericValue = parseFloat(value || '0');
-        if (!isNaN(numericValue)) {
-            if (numericValue > 0 && numericValue < MIN_AMOUNT) {
-                setInputError(`充值金额不能低于 ${MIN_AMOUNT} 元`);
-            } else {
+            const numericValue = parseFloat(value || '0');
+            if (!isNaN(numericValue)) {
+                if (numericValue > 0 && numericValue < MIN_AMOUNT) {
+                    setInputError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
+                } else {
                 setInputError('');
             }
             const matchedPlan = FIRST_CHARGE_PLANS.find((plan) => plan.amount === numericValue);
@@ -214,14 +221,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         e.preventDefault();
 
         if (inFlightRef.current) {
-            toast.error('请求处理中，请勿重复点击');
+            toast.error(t('rechargeModal.doNotRepeatClick'));
             return;
         }
 
         // 会员卡充值分支
         if (rechargeTab === 'membership') {
             if (selectedPlanIndex < 0 || selectedPlanIndex >= MEMBERSHIP_PLANS.length) {
-                toast.error('请选择要购买的会员卡套餐');
+                toast.error(t('rechargeModal.selectMembershipPlan'));
                 return;
             }
             const selectedPlan = MEMBERSHIP_PLANS[selectedPlanIndex];
@@ -247,12 +254,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                             mp.navigateTo({
                                 url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
                             });
-                            toast.success('正在跳转支付页面...');
+                            toast.success(t('rechargeModal.redirectingToPayment'));
                         } else {
-                            toast.error('当前小程序环境不支持支付，请稍后重试');
+                            toast.error(t('rechargeModal.miniProgramNotSupported'));
                         }
                         setPaymentStatus('failed');
-                        setPollingError(data.message || '发起微信支付失败，请重试。');
+                        setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
                     }
                     setIsLoading(false);
                     return;
@@ -269,7 +276,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 }
             } catch (error) {
                 console.error('充值失败:', error);
-                const errorMessage = getErrorMessage(error, '发起支付请求失败，请稍后重试。');
+                const errorMessage = getErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
                 setPaymentStatus('failed');
                 setPollingError(errorMessage);
                 toast.error(errorMessage);
@@ -282,7 +289,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
         // 积分充值分支
         if (isComposingRef.current) {
-            toast.error('请输入完成后再提交');
+            toast.error(t('rechargeModal.pleaseInputComplete'));
             return;
         }
 
@@ -292,13 +299,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
         if (!amount) {
             if (amountText) {
-                setInputError(`充值金额不能低于 ${MIN_AMOUNT} 元`);
+                setInputError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
             }
             return;
         }
 
         if (amount < MIN_AMOUNT) {
-            setInputError(`充值金额不能低于 ${MIN_AMOUNT} 元`);
+            setInputError(t('rechargeModal.amountTooLow', { amount: MIN_AMOUNT }));
             return;
         }
 
@@ -322,16 +329,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     setOrderId(outTradeNo);
                     const mp = (window as WindowWithWx).wx?.miniProgram;
                     if (mp && typeof mp.postMessage === 'function') {
-                        const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
-                        mp.navigateTo({
-                            url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
-                        });
-                        toast.success('正在跳转支付页面...');
-                    } else {
-                        toast.error('当前小程序环境不支持支付，请稍后重试');
-                    }
-                    setPaymentStatus('failed');
-                    setPollingError(data.message || '发起微信支付失败，请重试。');
+                            const payParamsStr = encodeURIComponent(JSON.stringify(payParams));
+                            mp.navigateTo({
+                                url: `/pages/pay/pay?outTradeNo=${outTradeNo}&payParams=${payParamsStr}`
+                            });
+                            toast.success(t('rechargeModal.redirectingToPayment'));
+                        } else {
+                            toast.error(t('rechargeModal.miniProgramNotSupported'));
+                        }
+                        setPaymentStatus('failed');
+                        setPollingError(data.message || t('rechargeModal.paymentRequestFailed'));
                 }
                 setIsLoading(false);
                 return;
@@ -348,7 +355,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         } catch (error) {
             console.error('充值失败:', error);
-            const errorMessage = getErrorMessage(error, '发起支付请求失败，请稍后重试。');
+            const errorMessage = getErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
             setPaymentStatus('failed');
             setPollingError(errorMessage);
             toast.error(errorMessage);
@@ -378,12 +385,12 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     return;
                 }
             } catch {
-                setPollingError('查询支付状态失败，稍后自动重试...');
+                setPollingError(t('rechargeModal.queryPaymentStatusFailed'));
             }
 
             if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
                 setPaymentStatus('failed');
-                setPollingError('暂未确认到支付结果，请稍后刷新账户或重新充值。');
+                setPollingError(t('rechargeModal.paymentPending'));
                 return;
             }
 
@@ -412,7 +419,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     window.clearInterval(intervalId);
                     setTimeLeft(0);
                     setPaymentStatus('failed');
-                    setPollingError('二维码已超时，请重新发起充值。');
+                    setPollingError(t('rechargeModal.qrCodeExpired'));
                     return 0;
                 }
                 return prev - 1;
@@ -450,13 +457,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const pointsTabContent = (
         <>
             <div className={styles.fixedAmounts}>
-                <div className={styles.amountsLabel}>选择充值金额</div>
+                <div className={styles.amountsLabel}>{t('rechargeModal.selectAmount')}</div>
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
                         const hasBonus = !plan.noFirstChargeBonus;
                         const isFirstYuan = plan.planId === 'pr_1';
                         const isSixYuan = plan.planId === 'pr_6';
-                        const tagText = isFirstYuan ? '首充送积分' : '首充双倍';
+                        const tagText = isFirstYuan ? t('rechargeModal.firstChargeBonus') : t('rechargeModal.firstChargeDouble');
                         return (
                             <button
                                 key={plan.planId}
@@ -467,16 +474,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 {hasBonus ? (
                                     <div className={`${styles.firstChargeTag} ${!firstChargeAvailable ? styles.firstChargeTagInactive : ''}`}>{tagText}</div>
                                 ) : (
-                                    isSixYuan && <div className={styles.noBonusTag}>无首充赠礼</div>
+                                    isSixYuan && <div className={styles.noBonusTag}>{t('rechargeModal.noFirstChargeBonus')}</div>
                                 )}
                                 <div className={styles.amountTopSection}>
-                                    <div className={styles.amountMainPoints}>{calculatePoints(plan.amount)}积分</div>
-                                    <div className={styles.amountPriceMeta}>金额：¥{plan.amount}元</div>
+                                    <div className={styles.amountMainPoints}>{calculatePoints(plan.amount)}{t('rechargeModal.points')}</div>
+                                    <div className={styles.amountPriceMeta}>{t('rechargeModal.amount', { amount: plan.amount })}</div>
                                 </div>
                                 {hasBonus ? (
-                                    <div className={styles.amountFirstChargePoints}>首充送{plan.firstChargePoints}积分</div>
+                                    <div className={styles.amountFirstChargePoints}>{t('rechargeModal.firstChargeGive', { points: plan.firstChargePoints })}</div>
                                 ) : (
-                                    isSixYuan && <div className={styles.amountNoBonus}>无首充赠送</div>
+                                    isSixYuan && <div className={styles.amountNoBonus}>{t('rechargeModal.noBonus')}</div>
                                 )}
                             </button>
                         );
@@ -485,13 +492,13 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             </div>
 
             <div className={styles.customAmount}>
-                <div className={styles.customLabel}>或输入自定义金额</div>
+                <div className={styles.customLabel}>{t('rechargeModal.customAmount')}</div>
                 <div className={styles.customInputWrapper}>
-                    <span className={styles.currencySymbol}>￥</span>
+                    <span className={styles.currencySymbol}>{t('rechargeModal.currencySymbol')}</span>
                     <input
                         type="text"
                         className={`${styles.customInput} ${inputError ? styles.inputError : ''}`}
-                        placeholder="请输入金额"
+                        placeholder={t('rechargeModal.enterAmount')}
                         value={amountText}
                         onChange={handleCustomAmountChange}
                         onCompositionStart={() => {
@@ -514,11 +521,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             {currentAmount && currentAmount >= MIN_AMOUNT && (
                 <div className={styles.rechargeSummary}>
                     <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>充值金额：</span>
-                        <span className={styles.summaryValue}>￥{currentAmount.toFixed(2)}</span>
+                        <span className={styles.summaryLabel}>{t('rechargeModal.rechargeAmount')}</span>
+                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{currentAmount.toFixed(2)}</span>
                     </div>
                     <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>获得积分：</span>
+                        <span className={styles.summaryLabel}>{t('rechargeModal.receivePoints')}</span>
                         <span className={styles.summaryValue}>{displayPoints}</span>
                     </div>
                 </div>
@@ -530,7 +537,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 className={styles.submitBtn}
                 disabled={!currentAmount || currentAmount < MIN_AMOUNT || isLoading}
             >
-                {isLoading ? '处理中...' : `确认充值 ￥${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
+                {isLoading
+                    ? t('rechargeModal.processing')
+                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
             </button>
             {/* <button type="button" className={styles.submitBtn} disabled>
                 临时维护
@@ -543,46 +552,50 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const allPlanBenefits = [
         {
             planId: 'free',
-            name: '普通',
+            name: t('rechargeModal.free'),
+            shortName: t('rechargeModal.free'),
             price: 0,
             color: '#999',
             tagBg: '#999',
             perks: [
-                { name: '免积分回合数', values: ['30', '100', '100', '100'] },
-                { name: '每日签到加成', values: ['0%', '0%', '+100%', '+210%'] },
+                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
+                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
             ],
         },
         {
             planId: 'month',
-            name: '月卡',
+            name: t('profile.monthlyMember'),
+            shortName: t('profile.monthlyMemberShort'),
             price: 28,
             color: '#228b22',
             tagBg: '#228b22',
             perks: [
-                { name: '免积分回合数', values: ['30', '100', '100', '100'] },
-                { name: '每日签到加成', values: ['0%', '0%', '+100%', '+210%'] },
+                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
+                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
             ],
         },
         {
             planId: 'season',
-            name: '季卡',
+            name: t('profile.seasonalMember'),
+            shortName: t('profile.seasonalMemberShort'),
             price: 78,
             color: '#e57373',
             tagBg: '#e57373',
             perks: [
-                { name: '免积分回合数', values: ['30', '100', '100', '100'] },
-                { name: '每日签到加成', values: ['0%', '0%', '+100%', '+210%'] },
+                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
+                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
             ],
         },
         {
             planId: 'year',
-            name: '年卡',
+            name: t('profile.yearlyMember'),
+            shortName: t('profile.yearlyMemberShort'),
             price: 248,
             color: '#d4a84b',
             tagBg: '#d4a84b',
             perks: [
-                { name: '免积分回合数', values: ['30', '100', '100', '100'] },
-                { name: '每日签到加成', values: ['0%', '0%', '+100%', '+210%'] },
+                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
+                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
             ],
         },
     ];
@@ -599,17 +612,17 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         onClick={() => setSelectedPlanIndex(index)}
                     >
                         <span className={styles.planItemName}>{plan.name}</span>
-                        <span className={styles.planItemPrice}>￥{plan.price}</span>
+                        <span className={styles.planItemPrice}>{t('rechargeModal.currencySymbol')}{plan.price}</span>
                     </button>
                 ))}
             </div>
 
             {/* 会员权益对比表 - 百度网盘风格 */}
             <div className={styles.benefitsComparison}>
-                <div className={styles.comparisonTitle}>用户等级特权</div>
+                <div className={styles.comparisonTitle}>{t('rechargeModal.membershipBenefits')}</div>
                 <div className={styles.comparisonTable}>
                     <div className={styles.comparisonHeader}>
-                        <span className={styles.comparisonLabel}>特权名称</span>
+                        <span className={styles.comparisonLabel}>{t('rechargeModal.benefitName')}</span>
                         {allPlanBenefits.map((plan) => (
                             <span
                                 key={plan.planId}
@@ -617,10 +630,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 style={{ color: plan.color }}
                             >
                                 <span className={styles.planTag} style={{ background: plan.tagBg }}>
-                                    {plan.name}
+                                    {plan.shortName}
                                 </span>
                                 <span className={styles.planPriceSmall}>
-                                    {plan.price > 0 ? `￥${plan.price}` : '免费'}
+                                    {plan.price > 0 ? `${t('rechargeModal.currencySymbol')}${plan.price}` : t('rechargeModal.free')}
                                 </span>
                             </span>
                         ))}
@@ -653,7 +666,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 className={styles.submitBtn}
                 disabled={selectedPlanIndex < 0 || isLoading}
             >
-                {isLoading ? '处理中...' : `确认购买 ${MEMBERSHIP_PLANS[selectedPlanIndex]?.name || '会员卡'}`}
+                {isLoading ? t('rechargeModal.processing') : `${t('rechargeModal.confirmPurchase')} ${MEMBERSHIP_PLANS[selectedPlanIndex]?.name || t('rechargeModal.membershipTab')}`}
             </button>
             {/* <button type="button" className={styles.submitBtn} disabled>
             临时维护
@@ -669,7 +682,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     ×
                 </button>
 
-                <h2 className={styles.title}>账户充值</h2>
+                <h2 className={styles.title}>{t('rechargeModal.title')}</h2>
 
                 {!fixedTab && (
                     <div className={styles.tabBar}>
@@ -678,14 +691,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                             className={`${styles.tabBtn} ${rechargeTab === 'points' ? styles.tabBtnActive : ''}`}
                             onClick={() => setRechargeTab('points')}
                         >
-                            积分充值
+                            {t('rechargeModal.pointsTab')}
                         </button>
                         <button
                             type="button"
                             className={`${styles.tabBtn} ${rechargeTab === 'membership' ? styles.tabBtnActive : ''}`}
                             onClick={() => setRechargeTab('membership')}
                         >
-                            会员卡充值
+                            {t('rechargeModal.membershipTab')}
                         </button>
                     </div>
                 )}
@@ -704,29 +717,29 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     ×
                 </button>
                 <div className={styles.qrSection}>
-                    <div className={styles.qrTitle}>微信扫码支付</div>
-                    <img src={qrCodeUrl || ''} alt="支付二维码" className={styles.qrImage} />
-                    <div className={styles.qrHint}>请使用手机扫码完成支付</div>
+                    <div className={styles.qrTitle}>{t('rechargeModal.scanToPay')}</div>
+                    <img src={qrCodeUrl || ''} alt="payment QR code" className={styles.qrImage} />
+                    <div className={styles.qrHint}>{t('rechargeModal.scanQrCode')}</div>
                     {paymentStatus === 'polling' && (
                         <div className={styles.countdownText}>
-                            剩余 {timeLeft}s 自动失效
+                            {t('rechargeModal.qrCodeExpire', { seconds: timeLeft })}
                         </div>
                     )}
-                    {paymentStatus === 'success' && <div className={styles.successText}>支付成功，可关闭弹窗。</div>}
+                    {paymentStatus === 'success' && <div className={styles.successText}>{t('rechargeModal.paymentSuccess')}</div>}
                     {paymentStatus === 'failed' && (
                         <div className={styles.errorText}>
-                            {pollingError || '暂未确认到支付结果，请稍后刷新账户或重新充值。'}
+                            {pollingError || t('rechargeModal.paymentPending')}
                         </div>
                     )}
                     <div className={styles.qrActions}>
                         {paymentStatus === 'success' && (
                             <button type="button" className={styles.qrActionBtn} onClick={closeAndReload}>
-                                完成
+                                {t('rechargeModal.done')}
                             </button>
                         )}
                         {paymentStatus === 'failed' && (
                             <button type="button" className={styles.qrActionBtn} onClick={handleRestart}>
-                                重新发起充值
+                                {t('rechargeModal.restartRecharge')}
                             </button>
                         )}
                     </div>

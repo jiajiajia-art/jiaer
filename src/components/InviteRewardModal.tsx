@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { auth } from '../api/account/authApi';
 import type { InviteRewardItem } from '../api/account/auth.type';
 import styles from './InviteRewardModal.module.css';
@@ -133,6 +134,7 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
     onClose,
     onClaimSuccess,
 }) => {
+    const { t } = useTranslation();
     const [isFetching, setIsFetching] = useState(false);
     const [isClaimingThreshold, setIsClaimingThreshold] = useState<number | null>(null);
     const [inviteCount, setInviteCount] = useState(0);
@@ -155,16 +157,16 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
                 setInviteCount(Math.max(0, response.data.data.inviteCount || 0));
                 setRewards(response.data.data.rewards || []);
             } else {
-                toast.error(response.data.message || '获取邀请进度失败');
+                toast.error(response.data.message || t('inviteReward.fetchProgressFailed'));
             }
         } catch {
             if (requestId !== fetchRequestIdRef.current || !isOpenRef.current) return;
-            toast.error('获取邀请进度失败，请稍后重试');
+            toast.error(t('inviteReward.fetchProgressFailedRetry'));
         } finally {
             if (requestId !== fetchRequestIdRef.current) return;
             setIsFetching(false);
         }
-    }, []);
+    }, [t]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -204,18 +206,18 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
         try {
             const response = await auth.claimInviteReward({ threshold });
             if (response.data.success && response.data.data) {
-                toast.success(`领取成功，获得 ${response.data.data.pointsAwarded} 积分`);
+                toast.success(t('inviteReward.claimSuccess', { points: response.data.data.pointsAwarded }));
                 onClaimSuccess?.();
                 await fetchInviteStats();
             } else {
-                toast.error(response.data.message || '领取失败');
+                toast.error(response.data.message || t('inviteReward.claimFailed'));
             }
         } catch (error: unknown) {
             if (error && typeof error === 'object' && 'response' in error) {
                 const axiosError = error as { response?: { data?: { message?: string } } };
-                toast.error(axiosError.response?.data?.message || '领取失败，请稍后重试');
+                toast.error(axiosError.response?.data?.message || t('inviteReward.claimFailed'));
             } else {
-                toast.error('领取失败，请稍后重试');
+                toast.error(t('inviteReward.claimFailed'));
             }
         } finally {
             setIsClaimingThreshold(null);
@@ -227,16 +229,16 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.content} onClick={(event) => event.stopPropagation()}>
-                <button type="button" className={styles.closeButton} onClick={onClose}>
+                <button type="button" className={styles.closeButton} onClick={onClose} aria-label={t('inviteReward.closeModal')}>
                     ×
                 </button>
 
                 <div className={styles.header}>
-                    <h3 className={styles.title}>邀请进度</h3>
+                    <h3 className={styles.title}>{t('inviteReward.title')}</h3>
                     <p className={styles.subtitle}>
-                        已邀请 <span className={styles.highlight}>{inviteCount}</span> 人，累计已领取
+                        {t('inviteReward.invited')} <span className={styles.highlight}>{inviteCount}</span> {t('inviteReward.people')}，{t('inviteReward.totalClaimed')}
                         <span className={styles.highlight}> {earnedPoints} </span>
-                        积分
+                        {t('inviteReward.points')}
                     </p>
                 </div>
 
@@ -258,13 +260,15 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
                                 className={`${styles.ruleItem} ${reached ? styles.ruleItemReached : ''}`}
                             >
                                 <div className={styles.ruleMain}>
-                                    {isTenStepRule ? `邀请达到 ${rule.threshold} 人` : `邀请 ${rule.threshold} 人`}
+                                    {isTenStepRule
+                                        ? t('inviteReward.inviteReach', { count: rule.threshold })
+                                        : t('inviteReward.invite', { count: rule.threshold })}
                                 </div>
-                                <div className={styles.ruleReward}>+{rule.points} 积分</div>
+                                <div className={styles.ruleReward}>+{rule.points} {t('inviteReward.points')}</div>
                                 {shouldShowAction && (
                                     <>
                                         {rule.claimed ? (
-                                            <span className={`${styles.claimBtn} ${styles.claimBtnDone}`}>已领取</span>
+                                            <span className={`${styles.claimBtn} ${styles.claimBtnDone}`}>{t('inviteReward.claimed')}</span>
                                         ) : rule.claimable ? (
                                             <button
                                                 type="button"
@@ -274,10 +278,10 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
                                                     void handleClaimReward(rule.threshold, rule.claimable);
                                                 }}
                                             >
-                                                {isClaimingThreshold === rule.threshold ? '领取中...' : '领取奖励'}
+                                                {isClaimingThreshold === rule.threshold ? t('inviteReward.claiming') : t('inviteReward.claimReward')}
                                             </button>
                                         ) : (
-                                            <span className={styles.claimHint}>{hasReachedByCount ? '待领取' : '进行中'}</span>
+                                            <span className={styles.claimHint}>{hasReachedByCount ? t('inviteReward.pendingClaim') : t('inviteReward.inProgress')}</span>
                                         )}
                                         <div className={styles.ruleProgress}>
                                             <div className={styles.ruleProgressTrack}>
@@ -296,10 +300,10 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
                         );
                     })}
                     {isFetching && (
-                        <div className={styles.loadingText}>正在加载邀请进度...</div>
+                        <div className={styles.loadingText}>{t('inviteReward.loadingInviteProgress')}</div>
                     )}
                     {!isFetching && visibleRewards.length === 0 && (
-                        <div className={styles.loadingText}>暂无邀请奖励数据</div>
+                        <div className={styles.loadingText}>{t('inviteReward.noInviteData')}</div>
                     )}
                 </div>
 
@@ -308,18 +312,23 @@ const InviteRewardModal: React.FC<InviteRewardModalProps> = ({
                         ? (
                             nextClaimableRule
                                 ? (
-                                    `已达成本档，可领取 ${nextClaimableRule.points} 积分奖励`
+                                    t('inviteReward.reachCurrentTier', { points: nextClaimableRule.points })
                                 )
                                 : (
                                     nextLockedRule
-                                        ? `再邀请 ${Math.max(0, nextLockedRule.threshold - inviteCount)} 人可领取 +${nextLockedRule.points} 积分`
-                                        : '已达成全部邀请奖励档位'
+                                        ? t('inviteReward.inviteMoreForPoints', {
+                                            count: Math.max(0, nextLockedRule.threshold - inviteCount),
+                                            points: nextLockedRule.points,
+                                        })
+                                        : t('inviteReward.allRewardsCompleted')
                                 )
                         )
                         : (
                             nextLockedRule
-                                ? `再邀请 ${Math.max(0, nextLockedRule.threshold - inviteCount)} 人可解锁下一档奖励`
-                                : '已达成全部邀请奖励档位'
+                                ? t('inviteReward.inviteMoreToUnlock', {
+                                    count: Math.max(0, nextLockedRule.threshold - inviteCount),
+                                })
+                                : t('inviteReward.allRewardsCompleted')
                         )}
                 </p>
             </div>

@@ -75,9 +75,9 @@ const Pagination: React.FC<PaginationProps> = ({
                     className={`${styles.navButton} ${styles.prevNextButton}`}
                     onClick={() => handlePageChange(safeCurrentPage - 1)}
                     disabled={disabled || safeCurrentPage <= 1}
-                    aria-label={'\u4e0a\u4e00\u9875'}
+                    aria-label="上一页"
                 >
-                    {'\u4e0a\u4e00\u9875'}
+                    上一页
                 </button>
 
                 {showPageNumbers ? (
@@ -89,7 +89,7 @@ const Pagination: React.FC<PaginationProps> = ({
                             onClick={() => handlePageChange(page)}
                             disabled={disabled}
                             aria-current={page === safeCurrentPage ? 'page' : undefined}
-                            aria-label={`\u7b2c ${page} \u9875`}
+                            aria-label={`第 ${page} 页`}
                         >
                             {page}
                         </button>
@@ -101,9 +101,9 @@ const Pagination: React.FC<PaginationProps> = ({
                     className={`${styles.navButton} ${styles.prevNextButton}`}
                     onClick={() => handlePageChange(safeCurrentPage + 1)}
                     disabled={disabled || safeCurrentPage >= safeTotalPages}
-                    aria-label={'\u4e0b\u4e00\u9875'}
+                    aria-label="下一页"
                 >
-                    {'\u4e0b\u4e00\u9875'}
+                    下一页
                 </button>
             </div>
 

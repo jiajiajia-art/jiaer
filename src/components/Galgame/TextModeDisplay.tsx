@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, memo } from 'react';
 import { extractPlainText } from '../../utils/textUtils';
 import ColoredMarkdownText from './ColoredMarkdownText';
 import styles from './TextModeDisplay.module.css';
+import { useTranslation } from 'react-i18next';
 
 interface TextModalStep {
     id: string;
@@ -50,6 +51,7 @@ interface MessageItemProps {
     onChoiceClick?: (option: { id: number; text: string }) => void;
     onCustomInputSubmit?: (value: string) => void;
     isFreeRound?: boolean;
+    t: (key: string) => string;
 }
 
 const MessageItem = memo<MessageItemProps>(({ 
@@ -62,6 +64,7 @@ const MessageItem = memo<MessageItemProps>(({
     onChoiceClick, 
     onCustomInputSubmit,
     isFreeRound = false,
+    t,
 }) => {
     const [customInput, setCustomInput] = useState('');
 
@@ -99,7 +102,7 @@ const MessageItem = memo<MessageItemProps>(({
         return (
             <div className={styles.messageWrapper}>
                 <div className={styles.narrationBubble}>
-                    <div className={styles.narrationLabel}>旁白</div>
+                    <div className={styles.narrationLabel}>{t('createGame.narration')}</div>
                     <div className={styles.narrationContent}>
                         <ColoredMarkdownText text={displayText} showCursor={isCurrentStep && isTyping} />
                     </div>
@@ -164,26 +167,26 @@ const MessageItem = memo<MessageItemProps>(({
                                         {extractPlainText(opt.text)}
                                     </span>
                                     {!isFreeRound && (
-                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}积分</span>
+                                        <span className={styles.pointsCost}>-{POINTS_CONFIG.option}{t('createGame.pointsUnit')}</span>
                                     )}
                                 </div>
                             ))}
                         </div>
                     )}
-                    
+
                     {/* 自定义输入区域：即使没有 options 也允许自定义输入 */}
                     <div className={styles.customInputSection}>
                         <div className={styles.customInputHeader}>
-                            <span>{hasOptions ? '或者自定义输入' : '自定义输入'}</span>
+                            <span>{hasOptions ? t('createGame.orCustomInput') : t('createGame.customInput')}</span>
                             {!isFreeRound && (
-                                <span className={styles.pointsCostHint}>消耗 {POINTS_CONFIG.custom} 积分</span>
+                                <span className={styles.pointsCostHint}>{t('createGame.pointsCostHint').replace('{{cost}}', String(POINTS_CONFIG.custom))}</span>
                             )}
                         </div>
                         <div className={styles.customInputWrapper}>
                             <input
                                 type="text"
                                 className={styles.customInput}
-                                placeholder="输入你想说的话或行动..."
+                                placeholder={t('createGame.inputPlaceholder')}
                                 value={customInput}
                                 onChange={(e) => setCustomInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
@@ -194,7 +197,7 @@ const MessageItem = memo<MessageItemProps>(({
                                 onClick={handleCustomSubmit}
                                 disabled={!customInput.trim() || isTyping || isCompressingContext}
                             >
-                                发送
+                                {t('createGame.send')}
                             </button>
                         </div>
                     </div>
@@ -223,6 +226,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     onCustomInputSubmit,
     isFreeRound = false,
 }) => {
+    const { t } = useTranslation();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const shouldStickToBottomRef = useRef(true);
     const hasInitialAutoScrolledRef = useRef(false);
@@ -275,7 +279,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
     return (
         <div className={styles.textModeContainer}>
             {steps.length === 0 && !isWaitingForData ? (
-                <div className={styles.emptyState}>暂无内容</div>
+                <div className={styles.emptyState}>{t('createGame.noContent')}</div>
             ) : (
                 <div className={styles.messagesContainer} ref={messagesContainerRef}>
                     {steps.map((step, index) => {
@@ -301,6 +305,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 onChoiceClick={onChoiceClick}
                                 onCustomInputSubmit={onCustomInputSubmit}
                                 isFreeRound={isFreeRound}
+                                t={t}
                             />
                         );
                     })}
@@ -313,7 +318,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                                 <div className={styles.core}></div>
                             </div>
                             <div className={styles.statusText}>
-                                {isCompressingContext ? '正在整理故事记忆' : 'AI 推演中'}<span className={styles.dots}></span>
+                                {isCompressingContext ? t('createGame.organizingMemory') : t('createGame.aiThinking')}<span className={styles.dots}></span>
                             </div>
                         </div>
                     )}

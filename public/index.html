@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Handler</title>
+</head>
+<body>
+    <p>Loading...</p>
+    <script src="/__/firebase/9.22.0/firebase-app-compat.js"></script>
+    <script src="/__/firebase/9.22.0/firebase-auth-compat.js"></script>
+    <script>
+        firebase.initializeApp({
+            apiKey: "AIzaSyD95CxX22-h6DRUZb9S8TsSMzPnuad8xoo",
+            authDomain: "interactive-fiction-c8ca8.firebaseapp.com",
+            projectId: "interactive-fiction-c8ca8"
+        });
+        firebase.auth().getRedirectResult().then(function(result) {
+            if (result.user) {
+                window.close();
+            } else {
+                document.body.innerText = 'No result';
+            }
+        }).catch(function(error) {
+            document.body.innerText = 'Error: ' + error.message;
+        });
+    </script>
+</body>
+</html>

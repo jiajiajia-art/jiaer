@@ -8,6 +8,7 @@ import type { NPC as WorldNPC } from '../../../api/worldInteraction/worldInterac
 import type { Character, Variation } from './types';
 import { DEFAULT_NPC_PORTRAIT } from './types';
 import { getPlayerImageUrl } from '../../../utils/constants';
+import i18n from '../../../i18n';
 
 // 辅助函数：获取 npcs（兼容两种模式）
 export function getNpcs(data: AllGameData | WorldInteractionGameData) {
@@ -333,7 +334,7 @@ export const playerToCharacter = (player: any): Character => {
         name: player?.name || '玩家',
         callName: extractCallName(player, player?.name || '玩家'),
         gender: player?.gender || '',
-        role: '主角',
+        role: i18n.t('createGame.protagonist'),
         identity: playerIdentity,
         personality: normalizePersonalityTags(player?.personality),
         speech: player?.tone || '',

@@ -1,6 +1,8 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./FloatingJoinGroup.module.css";
 import { useNavigate } from "react-router-dom";
+import { LANGUAGE } from "../config";
 
 interface FloatingJoinGroupProps {
     qrSrc?: string;
@@ -12,7 +14,6 @@ interface MobilePosition {
     y: number;
 }
 
-// 移动端拖拽边界和默认尺寸要与紧凑版移动端样式保持一致。
 const MOBILE_BREAKPOINT = 768;
 const MOBILE_SIDE_GAP = 8;
 const MOBILE_TOP_GAP = 88;
@@ -21,7 +22,6 @@ const MOBILE_BUTTON_WIDTH = 72;
 const MOBILE_BUTTON_HEIGHT = 88;
 const MOBILE_DRAG_THRESHOLD = 6;
 const MOBILE_POSITION_STORAGE_KEY = "floatingJoinGroupMobilePosition";
-const PROMOTION_HINT_LABEL = "\u5df2\u7ecf\u52a0\u7fa4\uff1f\u53bb\u6295\u7a3f\u7fa4\u804a\u5929\u622a\u56fe\u76f4\u63a5\u9886\u79ef\u5206";
 
 const getDefaultMobilePosition = (): MobilePosition => {
     if (typeof window === "undefined") {
@@ -38,6 +38,7 @@ const getDefaultMobilePosition = (): MobilePosition => {
 };
 
 const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc }) => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isMobileViewport, setIsMobileViewport] = useState(
@@ -67,7 +68,6 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
         return { width, height };
     }, []);
 
-    // 限制移动端悬浮按钮始终留在视口内，并避开底部导航区域。
     const clampMobilePosition = useCallback((position: MobilePosition): MobilePosition => {
         if (typeof window === "undefined") {
             return position;
@@ -139,7 +139,6 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
             return undefined;
         }
 
-        // 桌面端走固定定位样式，移动端则恢复并维护可拖拽的位置。
         const handleViewportChange = () => {
             const nextIsMobile = window.innerWidth <= MOBILE_BREAKPOINT;
             setIsMobileViewport(nextIsMobile);
@@ -164,7 +163,6 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
         };
     }, [clampMobilePosition, readSavedMobilePosition]);
 
-    // 轻点打开弹窗，移动距离超过阈值后切换为拖拽模式。
     const handleMobilePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
         if (!isMobileViewport) {
             return;
@@ -254,7 +252,6 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
         navigate("/promotions");
     };
 
-    // 只有移动端会以内联样式覆盖位置，桌面端仍使用 CSS 的右侧固定布局。
     const buttonStyle = isMobileViewport && mobilePosition
         ? {
             left: `${mobilePosition.x}px`,
@@ -269,32 +266,32 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
             <button
                 ref={buttonRef}
                 type="button"
-                className={`${styles.floatingButton} ${isDragging ? styles.floatingButtonDragging : ""}`}
+                className={`${styles.floatingButton} ${LANGUAGE === 'en' ? styles.floatingButtonHorizontal : ''} ${isDragging ? styles.floatingButtonDragging : ""}`}
                 style={buttonStyle}
                 onClick={handleButtonClick}
                 onPointerDown={handleMobilePointerDown}
                 onPointerMove={handleMobilePointerMove}
                 onPointerUp={handleMobilePointerEnd}
                 onPointerCancel={handleMobilePointerEnd}
-                aria-label="打开群聊二维码"
+                aria-label={t('home.joinGroup.openQrGroup')}
                 aria-haspopup="dialog"
                 aria-expanded={isOpen}
             >
-                <span className={styles.label}>加入群聊</span>
-
-                <span className={styles.iconStack} aria-hidden="true">
-                    <span className={styles.iconWrap}>
-                        <svg viewBox="0 0 64 64" className={styles.wechatIcon} xmlns="http://www.w3.org/2000/svg">
+                <span className={`${styles.iconStack} ${LANGUAGE === 'en' ? styles.iconStackHorizontal : ''}`} aria-hidden="true">
+                    <span className={`${styles.iconWrap} ${LANGUAGE === 'en' ? styles.iconWrapHorizontal : ''}`}>
+                        <svg viewBox="0 0 64 64" className={`${styles.wechatIcon} ${LANGUAGE === 'en' ? styles.wechatIconHorizontal : ''}`} xmlns="http://www.w3.org/2000/svg">
                             <path d="M24.31 15.55c-10.79 0-19.54 7.03-19.54 15.7 0 4.99 2.9 9.43 7.42 12.31l-2.03 6.44 7.42-3.74c2.11.59 4.38.91 6.73.91 10.79 0 19.54-7.03 19.54-15.7s-8.75-15.92-19.54-15.92Zm-7.7 12.4c-1.24 0-2.24-.99-2.24-2.24s1-2.24 2.24-2.24 2.24.99 2.24 2.24-.99 2.24-2.24 2.24Zm15.3 0c-1.24 0-2.24-.99-2.24-2.24s1-2.24 2.24-2.24 2.24.99 2.24 2.24-.99 2.24-2.24 2.24Z" />
                             <path d="M46.62 31.93c-7.01 0-12.7 4.51-12.7 10.08 0 5.58 5.69 10.08 12.7 10.08 1.52 0 3.04-.23 4.42-.7l5 2.52-1.37-4.36c3.04-1.95 4.88-4.83 4.88-7.54 0-5.58-5.68-10.08-12.92-10.08Zm-4.18 8.13c-.77 0-1.39-.61-1.39-1.38 0-.77.62-1.39 1.39-1.39.77 0 1.39.62 1.39 1.39 0 .77-.61 1.38-1.39 1.38Zm8.36 0c-.77 0-1.39-.61-1.39-1.38 0-.77.62-1.39 1.39-1.39.77 0 1.39.62 1.39 1.39 0 .77-.61 1.38-1.39 1.38Z" />
                         </svg>
                     </span>
-                    <span className={`${styles.iconWrap} ${styles.qqIconWrap}`}>
-                        <svg viewBox="0 0 1024 1024" className={styles.qqPenguinIcon} xmlns="http://www.w3.org/2000/svg">
+                    <span className={`${styles.iconWrap} ${styles.qqIconWrap} ${LANGUAGE === 'en' ? styles.iconWrapHorizontal : ''}`}>
+                        <svg viewBox="0 0 1024 1024" className={`${styles.qqPenguinIcon} ${LANGUAGE === 'en' ? styles.qqPenguinIconHorizontal : ''}`} xmlns="http://www.w3.org/2000/svg">
                             <path d="M666.122449 909.061224c-10.44898 0-21.420408-1.044898-31.869388-2.612244-39.183673-4.702041-74.710204-23.510204-100.832653-53.289796-13.583673 5.22449-28.212245 5.22449-41.795918 0-21.420408 28.212245-61.64898 48.065306-108.669388 53.289796-66.35102 7.314286-138.44898-11.493878-144.718367-55.379592-5.22449-34.481633 37.093878-61.126531 81.502041-75.755102-25.6-28.212245-43.363265-63.738776-51.2-101.355102l-0.522449 0.522449c-25.077551 31.346939-41.795918 50.155102-61.126531 50.155102-2.089796 0-4.179592-0.522449-6.269388-1.044898-7.314286-2.612245-13.061224-8.881633-17.240816-18.808164-16.195918-34.481633-9.404082-100.310204 15.15102-150.465306 0 0 0-0.522449 0.522449-0.522449 12.538776-22.465306 27.689796-43.363265 45.453061-62.171428-6.269388-11.493878-10.44898-24.032653-12.016326-37.093878v-3.134694c0.522449-19.330612 10.44898-37.093878 26.644898-47.542857-10.971429-73.142857 9.926531-147.330612 58.514286-203.232653 49.110204-56.946939 120.163265-88.816327 194.873469-86.204081h4.702041c65.306122 0 129.567347 26.122449 177.110204 72.097959 49.110204 47.542857 76.8 112.326531 77.844898 180.767347v7.314285c0.522449 9.926531 0 19.330612-1.044898 29.257143 14.106122 8.881633 21.420408 20.37551 21.420408 48.065306 0 13.583673-1.044898 27.689796-9.926531 36.04898 13.061224 17.763265 28.734694 42.840816 41.27347 62.693877l2.612245 4.179592c20.37551 32.391837 23.510204 74.187755 22.987755 96.130613 0 17.240816-2.089796 58.514286-18.285714 70.530612-3.657143 2.612245-7.314286 3.657143-12.016327 3.657143h-4.179592c-26.122449 0-41.273469-23.510204-57.991837-48.587755l-1.567347-2.089796c-8.881633 36.571429-26.122449 71.053061-50.677551 99.265306 27.167347 9.404082 83.069388 31.346939 75.755103 73.142857-5.746939 35.526531-55.902041 62.171429-114.416327 62.171428z m-388.702041-63.738775z m250.253061-11.493878z m276.375511-140.016326z m-47.020409-235.102041z" fill="#7BD4EF" />
                         </svg>
                     </span>
                 </span>
+
+                <span className={`${styles.label} ${LANGUAGE === 'en' ? styles.labelHorizontal : ''}`}>{t('home.joinGroup.joinGroupChat')}</span>
 
                 <span className={styles.mobileEntryIconWrap} aria-hidden="true">
                     <svg viewBox="0 0 1024 1024" className={styles.mobileEntryIcon} xmlns="http://www.w3.org/2000/svg">
@@ -320,14 +317,14 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
                         aria-labelledby="floating-join-group-title"
                     >
                         <h3 id="floating-join-group-title" className={styles.modalTitle}>
-                            扫描二维码加入群聊
+                            {t('home.joinGroup.scanQrJoin')}
                         </h3>
 
                         <div className={styles.qrGrid}>
                             <div className={styles.qrFrame}>
                                 <img
                                     src={qqGroupQrSrc}
-                                    alt="QQ群二维码"
+                                    alt={t('home.joinGroup.qqGroupQr')}
                                     className={styles.qrImage}
                                     onError={(event) => {
                                         (event.target as HTMLImageElement).src = fallbackSrc;
@@ -339,13 +336,13 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
                             <div className={styles.qrFrame}>
                                 <img
                                     src={wechatQrSrc}
-                                    alt="微信群二维码"
+                                    alt={t('home.joinGroup.wechatGroupQr')}
                                     className={styles.qrImage}
                                     onError={(event) => {
                                         (event.target as HTMLImageElement).src = fallbackSrc;
                                     }}
                                 />
-                                <div className={styles.qrLabel}>微信</div>
+                                <div className={styles.qrLabel}>{t('home.wechat') || 'WeChat'}</div>
                             </div>
                         </div>
 
@@ -354,7 +351,7 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
                             className={styles.promotionHintButton}
                             onClick={handleNavigateToPromotions}
                         >
-                            {PROMOTION_HINT_LABEL}
+                            {t('home.joinGroup.goToPromotionGroup')}
                         </button>
 
                         <button
@@ -362,7 +359,7 @@ const FloatingJoinGroup: React.FC<FloatingJoinGroupProps> = ({ qrSrc, qqQrSrc })
                             className={styles.closeButton}
                             onClick={() => setIsOpen(false)}
                         >
-                            关闭
+                            {t('home.joinGroup.close')}
                         </button>
                     </div>
                 </div>

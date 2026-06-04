@@ -570,7 +570,7 @@ const GameDetail: React.FC = () => {
         if (canNativeShare) {
             try {
                 await navigator.share({
-                    title: game?.title || '游戏',
+                    title: game?.title || t('createGame.game'),
                     text: game?.description || '',
                     url: window.location.href,
                 });
@@ -588,7 +588,7 @@ const GameDetail: React.FC = () => {
         // 备用方案：复制链接到剪贴板
         try {
             await navigator.clipboard.writeText(window.location.href);
-            toast.success(t('gameDetail.linkCopied'));
+            toast.success(t('linkCopied'));
         } catch (error) {
             // 如果 clipboard API 也不可用，使用传统方法
             const textArea = document.createElement('textarea');
@@ -599,9 +599,9 @@ const GameDetail: React.FC = () => {
             textArea.select();
             try {
                 document.execCommand('copy');
-                toast.success(t('gameDetail.linkCopied'));
+                toast.success(t('linkCopied'));
             } catch (err) {
-                toast.error(t('gameDetail.copyFailed'));
+                toast.error(t('copyFailed'));
             }
             document.body.removeChild(textArea);
         }
@@ -772,7 +772,7 @@ const GameDetail: React.FC = () => {
                                             className={styles.replayMetaButton}
                                             onClick={openReplayDrawer}
                                         >
-                                            <span className={styles.replayEntryLabel}>回放集锦</span>
+                                            <span className={styles.replayEntryLabel}>{t('gameDetail.replayHighlights')}</span>
                                             <span className={styles.replayEntryArrow} aria-hidden="true">&gt;</span>
                                         </button>
                                     )}
@@ -791,14 +791,14 @@ const GameDetail: React.FC = () => {
                                     </div>
                                     {game.groupNo && (
                                         <span className={styles.groupNoTag}>
-                                            QQ群：{game.groupNo}
+                                            {t('createGame.qqGroup')}: {game.groupNo}
                                             <button
                                                 className={styles.groupNoCopyBtn}
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(game.groupNo!).catch(() => {});
                                                     toast.success(t('gameDetail.qqGroupCopied'));
                                                 }}
-                                                title="复制群号"
+                                                title={t('createGame.copyGroupNo')}
                                             >
                                                 <MdContentCopy />
                                             </button>
@@ -897,7 +897,7 @@ const GameDetail: React.FC = () => {
                             </button>
                         </div>
                         {canManageReplayTabs && (
-                            <div className={styles.replayDrawerTabs} role="tablist" aria-label="回放可见范围筛选">
+                            <div className={styles.replayDrawerTabs} role="tablist" aria-label={t('createGame.replayVisibilityFilter')}>
                                 <button
                                     key={REPLAY_VISIBILITY_TABS_PUBLIC}
                                     type="button"
@@ -955,7 +955,7 @@ const GameDetail: React.FC = () => {
                     >
                         <div className={styles.startOptionsHeader}>
                             <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.selectStartMethod')}</h2>
+                                <h2 className={styles.startOptionsTitle}>{t('selectStartMethod')}</h2>
                             </div>
                             <button
                                 className={styles.startOptionsClose}
@@ -973,7 +973,7 @@ const GameDetail: React.FC = () => {
                                         await handleStartNewGame();
                                     }}
                                 >
-                                    {t('gameDetail.newStart')}
+                                    {t('newStart')}
                                 </button>
                                 <button
                                     className={styles.startOptionsSecondary}
@@ -983,7 +983,7 @@ const GameDetail: React.FC = () => {
                                         await handleStartGame();
                                     }}
                                 >
-                                    {t('gameDetail.continueExperience')}
+                                    {t('continueExperience')}
                                 </button>
                                 {isGalgame && (
                                     <button
@@ -994,7 +994,7 @@ const GameDetail: React.FC = () => {
                                             handleOpenLoadSave();
                                         }}
                                     >
-                                        {t('gameDetail.loadSave')}
+                                        {t('loadSave')}
                                     </button>
                                 )}
                                 {isGalgame && (
@@ -1002,7 +1002,7 @@ const GameDetail: React.FC = () => {
                                         className={styles.startOptionsGhost}
                                         onClick={openReplayDrawer}
                                     >
-                                        {t('gameDetail.replay')}
+                                        {t('replay')}
                                     </button>
                                 )}
                         </div>

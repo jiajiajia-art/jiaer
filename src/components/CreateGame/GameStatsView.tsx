@@ -16,6 +16,7 @@ import LoadSaveListModal from './LoadSaveListModal';
 import SavePreviewModal from './SavePreviewModal';
 import type { SaveSummaryItem } from '../../api/galgame/saves';
 import { isMiniProgramEnv } from '../../utils/miniProgram';
+import { useTranslation } from 'react-i18next';
 
 const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => {
     const normalizeRaw = (value?: string | null) => {
@@ -61,6 +62,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     onPublish,
     onUnpublish,
 }) => {
+    const { t } = useTranslation();
     const { user } = useAuthStore();
     const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const navigate = useNavigate();
@@ -80,7 +82,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         }
 
         if (!user?.user?.userId || !user?.user?.id) {
-            alert('用户信息错误，无法创建 session');
+            alert(t('createGame.userInfoError'));
             return { sessionId: null, redirectUrl: '' };
         }
 
@@ -88,14 +90,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         try {
             const normalized = normalizeGameMode(gameDetail?.engine, gameDetail?.game_tags);
             if (!normalized) {
-                alert('未知的游戏类型，无法创建会话');
+                alert(t('createGame.unknownGameType'));
                 return { sessionId: null, redirectUrl: '' };
             }
 
             if (normalized === 'customif') {
                 const appId = gameDetail?.customAppId || gameDetail?.file_id;
                 if (!appId) {
-                    alert('缺少自定义 AppID，无法开始游戏');
+                    alert(t('createGame.missingCustomAppIdStart'));
                     return { sessionId: null, redirectUrl: '' };
                 }
                 // 不创建 session，直接跳转宿主页
@@ -112,7 +114,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     const sessionId = response.data.data.session;
                     return { sessionId, redirectUrl: '/galgame' };
                 }
-                alert(response.data.message || '创建游戏失败，请重试');
+                alert(response.data.message || t('createGame.createGameFailed'));
                 return { sessionId: null, redirectUrl: '' };
             }
 
@@ -122,15 +124,15 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     const sessionId = response.data.session.sessionId;
                     return { sessionId, redirectUrl: '/galgameMap' };
                 }
-                alert(response.data.message || '创建游戏失败，请重试');
+                alert(response.data.message || t('createGame.createGameFailed'));
                 return { sessionId: null, redirectUrl: '' };
             }
 
-            alert('未知的游戏类型，无法创建会话');
+            alert(t('createGame.unknownGameType'));
             return { sessionId: null, redirectUrl: '' };
         } catch (error) {
             console.error('❌ Session 创建错误:', error);
-            alert('创建游戏失败，请稍后重试');
+            alert(t('createGame.createGameFailedRetry'));
             return { sessionId: null, redirectUrl: '' };
         } finally {
             setIsLoading(false);
@@ -150,7 +152,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
         const fileId = gameDetail?.file_id || gameDetail?.id;
         if (!fileId) {
-            alert('游戏信息错误，请重试');
+            alert(t('createGame.gameInfoError'));
             return;
         }
 
@@ -189,10 +191,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 navigate('/galgame', { state: { saveEntry: 'load' } });
                 return;
             }
-            alert(resp.data.message || '加载存档失败');
+            alert(resp.data.message || t('createGame.loadSaveFailed'));
         } catch (e) {
             console.error('加载存档失败:', e);
-            alert('加载存档失败，请稍后重试');
+            alert(t('createGame.loadSaveFailedRetry'));
         } finally {
             setIsLoading(false);
             setIsLoadSaveOpen(false);
@@ -219,13 +221,13 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             >
                 <div className={styles.heroOverlay}>
                     <div className={styles.heroContent}>
-                        <div className={styles.heroTitle}>{gameDetail.title || '未命名剧本'}</div>
+                        <div className={styles.heroTitle}>{gameDetail.title || t('createGame.untitledScript')}</div>
                         <div className={styles.heroMeta}>
                             <span className={styles.heroRating}>
                                 {(Number(gameDetail.rating_avg ?? 0)).toFixed(1)}
                             </span>
                             <span className={styles.heroMetaLabel}>
-                                {(gameDetail.rating_count || 0).toLocaleString()} 人评论
+                                {(gameDetail.rating_count || 0).toLocaleString()} {t('createGame.reviews')}
                             </span>
                         </div>
                         <div className={styles.heroPrimaryActions}>
@@ -234,7 +236,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                 onClick={handleStartGame}
                                 disabled={isLoading}
                             >
-                                {isLoading ? '加载中...' : '开始测试'}
+                                {isLoading ? t('createGame.loading') : t('createGame.startTesting')}
                             </button>
 
                             {
@@ -244,14 +246,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                         onClick={onPublish}
                                         disabled={isLoading}
                                     >
-                                        发布
+                                        {t('createGame.publish')}
                                     </button>
                                     : <button
                                         className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
                                         onClick={() => onUnpublish(gameDetail.file_id)}
                                         disabled={isLoading}
                                     >
-                                        下架
+                                        {t('createGame.unpublish')}
                                     </button>
                             }
 
@@ -271,36 +273,36 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 <div className={styles.statsSection}>
                     <div className={styles.sectionHeader}>
                         <div className={styles.sectionTitle}>
-                            <img src={`${import.meta.env.BASE_URL}data/assets/create/我的数据.png`} alt="我的数据" />
+                            <img src={`${import.meta.env.BASE_URL}${t('create.images.myData')}`} alt={t('createGame.myData')} />
                         </div>
-                        <img className={styles.sectionDividerDesktop} src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} alt="分界线" />
+                        <img className={styles.sectionDividerDesktop} src={`${import.meta.env.BASE_URL}data/assets/home/分界线.png`} alt={t('createGame.divider')} />
                         <button
                             type="button"
                             className={`${styles.more} ${styles.moreText}`}
                         >
-                            每晚12:00更新
-                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt="箭头" />
+                            {t('createGame.statsUpdateDaily')}
+                            <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt={t('createGame.arrow')} />
                         </button>
                     </div>
                     <div className={styles.statsGrid}>
                         <div className={styles.statBox}>
                             <div className={styles.statLabel}>
                                 <IoEye />
-                                <span>浏览量</span>
+                                <span>{t('createGame.views')}</span>
                             </div>
                             <div className={styles.statValue}>{gameStats?.pv || 0}</div>
                         </div>
                         <div className={styles.statBox}>
                             <div className={styles.statLabel}>
                                 <TbHandClick />
-                                <span>点击</span>
+                                <span>{t('createGame.clicks')}</span>
                             </div>
                             <div className={styles.statValue}>{gameStats?.pv || 0}</div>
                         </div>
                         <div className={styles.statBox}>
                             <div className={styles.statLabel}>
                                 <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                <span>收益</span>
+                                <span>{t('createGame.earnings')}</span>
                             </div>
                             <div className={styles.statValue}>{gameStats?.count || 0}</div>
                         </div>
@@ -312,7 +314,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                         className={styles.editGameBtn}
                         onClick={onEdit}
                     >
-                        编辑游戏
+                        {t('createGame.editGame')}
                     </button>
 
                     <button
@@ -320,7 +322,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                         onClick={onDelete}
                         disabled={isDeleting}
                     >
-                        {isDeleting ? '删除中...' : '删除游戏'}
+                        {isDeleting ? t('createGame.deleting') : t('createGame.deleteGame')}
                     </button>
                 </div>
             </div>

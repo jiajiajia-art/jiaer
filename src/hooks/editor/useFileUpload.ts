@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import EditorApi from '../../api/galgame/EditorData';
 import worldEditor from '../../api/worldInteraction/worldEditor';
@@ -74,7 +75,7 @@ interface UseFileUploadReturn {
 /**
  * 提取后端错误信息
  */
-const getBackendErrorMessage = (error: unknown, fallback = '上传失败，请重试'): string => {
+const getBackendErrorMessage = (error: unknown, fallback: string): string => {
     const anyError = error as {
         message?: string;
         response?: {
@@ -96,7 +97,7 @@ const getBackendErrorMessage = (error: unknown, fallback = '上传失败，请�
 /**
  * 提取非异常响应中的错误文案
  */
-const getResponseErrorMessage = (payload: unknown, fallback = '上传失败，请重试'): string => {
+const getResponseErrorMessage = (payload: unknown, fallback = 'Upload failed, please try again'): string => {
     const responseData = payload as {
         error?: string;
         message?: string;
@@ -106,6 +107,7 @@ const getResponseErrorMessage = (payload: unknown, fallback = '上传失败，�
 };
 
 export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions): UseFileUploadReturn => {
+    const { t } = useTranslation();
     const { setFileId, setIsPreset } = useGameStore();
     const { setIsParsed } = useEditorStore();
     const { addJob, updateJob, removeJob } = useUploadStore();
@@ -128,12 +130,12 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 if (Date.now() - started > timeoutMs) {
                     updateJob(jobId, {
                         status: 'failed',
-                        error: '上传超时，请重试',
+                        error: t('createGame.uploadTimeout'),
                     });
                     setTimeout(() => {
                         removeJob(jobId);
                     }, 3000);
-                    toast.error('上传超时，请重试');
+                    toast.error(t('createGame.uploadTimeout'));
                     return;
                 }
 
@@ -151,7 +153,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                         fileId: runningData.fileId || null,
                         status: isQueuedOrPending ? 'uploading' : 'processing',
                         progress: runningData.progress || 0,
-                        stage: runningData.stage || (isQueuedOrPending ? '排队中' : '处理中'),
+                        stage: runningData.stage || (isQueuedOrPending ? t('createGame.inQueue') : t('createGame.statusProcessing')),
                         error: null,
                         elapsedSeconds: runningData.elapsedSeconds ?? null,
                         estimatedRemainingSeconds: runningData.estimatedRemainingSeconds ?? null,
@@ -174,7 +176,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                             fileId: completedData.fileId,
                             status: 'completed',
                             progress: 100,
-                            stage: '完成',
+                            stage: t('createGame.statusComplete'),
                             elapsedSeconds: completedData.elapsedSeconds ?? null,
                             estimatedRemainingSeconds: completedData.estimatedRemainingSeconds ?? 0,
                             estimatedTotalSeconds: completedData.estimatedTotalSeconds ?? completedData.elapsedSeconds ?? null,
@@ -183,7 +185,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
 
                         onUploadComplete(completedData.fileId, dataMode).catch((error) => {
                             console.error('Error fetching editor data after upload:', error);
-                            toast.error('文件解析完成，但加载数据失败，请刷新页面');
+                            toast.error(t('createGame.parsingCompleteLoadFailed'));
                         });
 
                         setTimeout(() => {
@@ -192,7 +194,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     } else {
                         updateJob(jobId, {
                             status: 'failed',
-                            error: '完成但缺少 fileId',
+                            error: t('createGame.parsingCompleteMissingFileId'),
                         });
                         setTimeout(() => {
                             removeJob(jobId);
@@ -200,7 +202,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                     }
                 } else if (statusData.status === 'failed') {
                     const failedData = statusData as JobStatusResponseFailed;
-                    const errMsg = failedData.error || '解析失败，请重试';
+                    const errMsg = failedData.error || t('createGame.parsingFailed');
                     updateJob(jobId, {
                         status: 'failed',
                         error: errMsg,
@@ -216,15 +218,15 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 } else if (statusData.status === 'unknown') {
                     updateJob(jobId, {
                         status: 'failed',
-                        error: '任务不存在或已回收',
+                        error: t('createGame.jobNotFound'),
                     });
-                    toast.error('任务不存在或已回收，请重试上传');
+                    toast.error(t('createGame.jobNotFoundRetry'));
                     setTimeout(() => {
                         removeJob(jobId);
                     }, 3000);
                 }
             } catch (error) {
-                const errMsg = getBackendErrorMessage(error, '轮询状态失败，请重试');
+                const errMsg = getBackendErrorMessage(error, t('createGame.pollingFailed'));
                 console.error('Error polling upload status:', error);
                 updateJob(jobId, {
                     status: 'failed',
@@ -277,13 +279,13 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 console.error('Unexpected upload response: 200 but no fileId in body');
                 return {
                     success: false,
-                    error: getResponseErrorMessage(legacy, '上传失败，请重试'),
+                    error: getResponseErrorMessage(legacy, t('createGame.uploadFailed')),
                 };
             }
 
             if (uploadResponse.status !== 202) {
                 console.error('Unexpected upload response status:', uploadResponse.status);
-                const errorMessage = getResponseErrorMessage(uploadResponse.data, '上传失败，请重试');
+                const errorMessage = getResponseErrorMessage(uploadResponse.data, t('createGame.uploadFailed'));
                 toast.error(errorMessage);
                 return {
                     success: false,
@@ -294,7 +296,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
             const accepted = uploadResponse.data;
             if (!accepted.success || !accepted.jobId) {
                 console.error('Invalid 202 Accepted payload', accepted);
-                const errorMessage = getResponseErrorMessage(accepted, '上传失败，请重试');
+                const errorMessage = getResponseErrorMessage(accepted, t('createGame.uploadFailed'));
                 toast.error(errorMessage);
                 return {
                     success: false,
@@ -321,7 +323,7 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 success: true,
             };
         } catch (error) {
-            const errorMessage = getBackendErrorMessage(error, '上传失败，请重试');
+            const errorMessage = getBackendErrorMessage(error, t('createGame.uploadFailed'));
             console.error('[useFileUpload] Upload failed:', {
                 mode: mode || 'visual',
                 fileName: file.name,
@@ -335,11 +337,11 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                 error: errorMessage,
             };
         }
-    }, [mode, onUploadComplete, setFileId, setIsParsed, setIsPreset, startPollingUploadStatus, updateJob]);
+    }, [mode, t, onUploadComplete, setFileId, setIsParsed, setIsPreset, startPollingUploadStatus, updateJob]);
 
     const handleGenerateFromIdea = useCallback(async (idea: string): Promise<boolean> => {
         if (mode === 'worldInteraction') {
-            toast.error('一句话生成功能仅在 visual 模式下可用');
+            toast.error(t('createGame.ideaGenerationOnlyVisual'));
             return false;
         }
         try {
@@ -359,14 +361,14 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
 
             if (response.status !== 202) {
                 console.error('Unexpected generate response status:', response.status);
-                toast.error('生成失败，请重试');
+                toast.error(t('createGame.generateFailedRetry'));
                 return false;
             }
 
             const accepted = response.data;
             if (!accepted.success || !accepted.jobId) {
                 console.error('Invalid 202 Accepted payload', accepted);
-                toast.error('生成失败，请重试');
+                toast.error(t('createGame.generateFailedRetry'));
                 return false;
             }
 
@@ -379,16 +381,16 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
             }
 
             const generateStartTime = Date.now();
-            console.log('[一句话生成] 开始轮询，jobId:', jobId);
-            startPollingUploadStatus(jobId, `生成游戏：${idea.substring(0, 20)}...`, 'visual', generateStartTime);
+            console.log('[一句话生成] 开始轮询, jobId:', jobId);
+            startPollingUploadStatus(jobId, `${t('createGame.generatingGame')}：${idea.substring(0, 20)}...`, 'visual', generateStartTime);
 
             return true;
         } catch (error) {
             console.error('Error generating from idea:', error);
-            toast.error('生成失败，请重试');
+            toast.error(t('createGame.generateFailedRetry'));
             return false;
         }
-    }, [mode, setFileId, setIsParsed, setIsPreset, updateJob, startPollingUploadStatus]);
+    }, [mode, t, setFileId, setIsParsed, setIsPreset, updateJob, startPollingUploadStatus]);
 
     return {
         handleFileUpload,

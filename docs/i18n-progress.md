@@ -1,6 +1,6 @@
 # 国际化 (i18n) 改造进度
 
-> 更新时间: 2026-05-21
+> 更新时间: 2026-06-02 15:33
 
 ## 概述
 
@@ -22,8 +22,8 @@
 | 文件 | 状态 | Key 数量 |
 |------|------|----------|
 | `src/i18n/index.ts` | ✅ 完成 | - |
-| `src/i18n/locales/zh.json` | ✅ 完成 | ~420 keys |
-| `src/i18n/locales/en.json` | ✅ 完成 | ~420 keys |
+| `src/i18n/locales/zh.json` | ✅ 完成 | ~460 keys |
+| `src/i18n/locales/en.json` | ✅ 完成 | ~460 keys |
 
 ### 新增翻译 Keys (2026-05-21)
 
@@ -44,11 +44,190 @@
 | `auth.networkError` | 网络错误 | Network error | 网络错误提示 |
 | `createGame.sidebar.*` | 导航栏完整国际化 | Full sidebar i18n | Sidebar.tsx 导航项国际化 (step/documents/world/characters/scenes/attributeGrowth/functionalNPCs/mapEdit + parsing/completed/inProgress) |
 
+### 新增翻译 Keys (2026-05-27)
+
+| Key | 中文 | 英文 | 用途 |
+|-----|------|------|------|
+| `createGame.selectGameTypeTitle` | 选择需创建游戏类型 | Select Game Type to Create | 创建游戏类型选择弹窗标题 |
+| `createGame.selectGameTypeDesc` | 请选择你要创作的游戏形态，我们会为你匹配合适的创作流程。 | Please select the type of game you want to create... | 创建游戏类型选择描述 |
+| `createGame.recommend` | 推荐 | Recommended | 推荐标签 |
+| `createGame.new` | 新 | New | 新功能标签 |
+| `createGame.custom` | 自定义 | Custom | 自定义选项 |
+| `createGame.locked` | 待解锁 | Locked | 待解锁标签 |
+| `createGame.cancel` | 取消 | Cancel | 取消按钮 |
+| `createGame.bindPhoneFirst` | 建议先绑定手机号 | It is recommended to bind your phone number first | 绑定手机提示 |
+| `createGame.bindPhoneTip` | 绑定后可在小程序端和 PC 端使用同一个账号。 | After binding, you can use the same account on both... | 绑定手机说明 |
+| `createGame.generationComplete` | 生成结果 | Generation Complete | 生成结果弹窗标题 |
+| `createGame.successGenerated` | 成功生成 {{count}} 张图片 | Successfully generated {{count}} image(s) | 成功生成提示 |
+| `createGame.thisTimeDeducted` | 本次扣除 {{points}} 积分 | Points deducted this time: {{points}} | 积分扣除提示 |
+| `createGame.remainingPoints` | 剩余 {{points}} 积分 | Remaining points: {{points}} | 剩余积分提示 |
+| `common.retry` | 重试 | Retry | 重试按钮 |
+| `eta.minutes` | 分钟 | minutes | 时间单位 |
+| `eta.second` | 秒 | seconds | 时间单位 |
+| `eta.minutesAndSeconds` | {{minutes}} 分 {{seconds}} 秒 | {{minutes}} min {{seconds}} sec | 复合时间格式 |
+| `eta.remaining` | 预计还需 | Estimated remaining | 预计剩余时间 |
+| `eta.takingLonger` | 耗时较长，仍在处理中，请稍候 | Taking longer than expected, still processing... | 处理耗时提示 |
+| `eta.generating` | 正在生成第 | Generating item | 生成进度 |
+| `eta.generatingMoreTime` | 生成时间比平时更长，请继续等待 | Generation is taking longer than usual... | 超时提示 |
+| `eta.item` | 项 | items | 项目计数 |
+| `eta.total` | 本次共生成 | Total to generate | 总数提示 |
+| `eta.completed` | 已完成 | Completed | 已完成状态 |
+| `eta.success` | 成功 | Success | 成功状态 |
+| `eta.failed` | 失败 | Failed | 失败状态 |
+| `eta.remaining` | 剩余 | Remaining | 剩余数量 |
+
+### 新增翻译 Keys (2026-05-27 下午)
+
+| Key | 中文 | 英文 | 用途 |
+|-----|------|------|------|
+| `createGame.generatingCharacterPortrait` | 正在生成角色立绘... | Generating character portrait... | 角色立绘生成中 |
+| `createGame.generatingDoNotLeave` | 正在生成中，请勿离开当前页面或重复操作 | Generating, please do not leave the page... | 生成中提示 |
+| `createGame.generatingScenePortraits` | 正在生成场景立绘... | Generating scene portraits... | 场景立绘生成中 |
+| `createGame.divider` | 分界线 | Divider | 分隔线图片 alt |
+| `createGame.statsUpdateDaily` | 每晚12:00更新 | Updates daily at 12:00 AM | 统计更新时间提示 |
+| `createGame.arrow` | 箭头 | Arrow | 箭头图片 alt |
+| `createGame.views` | 浏览量 | Views | 浏览量标签 |
+| `createGame.clicks` | 点击 | Clicks | 点击量标签 |
+| `createGame.earnings` | 收益 | Earnings | 收益标签 |
+| `createGame.untitledScript` | 未命名剧本 | Untitled Script | 未命名游戏标题 |
+| `createGame.reviews` | 人评论 | reviews | 评论数后缀 |
+| `createGame.loading` | 加载中... | Loading... | 加载状态 |
+| `createGame.startTesting` | 开始测试 | Start Testing | 开始测试按钮 |
+| `createGame.publish` | 发布 | Publish | 发布按钮 |
+| `createGame.unpublish` | 下架 | Unpublish | 下架按钮 |
+| `createGame.editGame` | 编辑游戏 | Edit Game | 编辑游戏按钮 |
+| `createGame.deleting` | 删除中... | Deleting... | 删除中状态 |
+| `createGame.deleteGame` | 删除游戏 | Delete Game | 删除游戏按钮 |
+| `createGame.userInfoError` | 用户信息错误，无法创建 session | User info error, cannot create session | 用户信息错误提示 |
+| `createGame.unknownGameType` | 未知的游戏类型，无法创建会话 | Unknown game type, cannot create session | 未知游戏类型提示 |
+| `createGame.missingCustomAppIdStart` | 缺少自定义 AppID，无法开始游戏 | Missing custom AppID, cannot start game | 缺少 AppID 提示 |
+| `createGame.createGameFailed` | 创建游戏失败，请重试 | Failed to create game, please try again | 创建失败提示 |
+| `createGame.loadSaveFailed` | 加载存档失败 | Failed to load save | 加载存档失败提示 |
+| `createGame.loadMore` | 加载更多 | Load More | 加载更多按钮 |
+| `createGame.game` | 游戏 | Game | 游戏默认标题 |
+| `createGame.replayVisibilityPrivate` | 私密 | Private | 回放可见性 - 私密 |
+| `createGame.replayVisibilityUnlisted` | 仅链接可见 | Unlisted | 回放可见性 - 仅链接可见 |
+| `createGame.replayVisibilityPublic` | 公开 | Public | 回放可见性 - 公开 |
+| `createGame.loadReplayFailed` | 加载回放失败 | Failed to load replays | 加载回放失败提示 |
+| `createGame.copyReplayLinkFailed` | 复制回放链接失败 | Failed to copy replay link | 复制链接失败提示 |
+| `createGame.replayLinkCopied` | 回放链接已复制，仅持链接者可查看 | Replay link copied, only link holders can view | 复制成功提示 |
+| `createGame.publicReplayLinkCopied` | 公开回放链接已复制 | Public replay link copied | 复制成功提示 |
+| `createGame.replayDeleted` | 回放已删除 | Replay deleted | 删除成功提示 |
+| `createGame.canOnlyDeleteOwnReplay` | 只能删除自己创建的回放 | You can only delete your own replays | 删除权限错误 |
+| `createGame.replayNotExist` | 回放不存在或已删除 | Replay does not exist or has been deleted | 回放不存在提示 |
+| `createGame.deleteReplayFailed` | 删除回放失败，请稍后重试 | Failed to delete replay, please try again later | 删除失败提示 |
+| `createGame.loadingReplay` | 正在加载回放... | Loading replays... | 加载状态 |
+| `createGame.noReplay` | 暂无回放 | No replays yet | 空状态 |
+| `createGame.collapse` | 收起 | Collapse | 收起按钮 |
+| `createGame.expand` | 展开 | Expand | 展开按钮 |
+| `createGame.mine` | 我的 | Mine | 我的标签 |
+| `createGame.steps` | 步 | steps | 步数单位 |
+| `createGame.play` | 播放 | Play | 播放按钮 |
+| `createGame.copyLink` | 复制链接 | Copy Link | 复制链接按钮 |
+| `createGame.deleting` | 删除中... | Deleting... | 删除中状态 |
+| `createGame.delete` | 删除 | Delete | 删除按钮 |
+| `createGame.deleteReplay` | 删除回放 | Delete Replay | 删除弹窗标题 |
+| `createGame.confirmDeleteReplay` | 确认删除该回放？删除后不可恢复。 | Confirm delete this replay? This action cannot be undone. | 删除确认消息 |
+| `createGame.confirmDelete` | 确认删除 | Confirm Delete | 确认删除按钮 |
+| `createGame.authorAvatar` | 作者头像 | Author Avatar | 作者头像 alt |
+| `createGame.copyGroupNo` | 复制群号 | Copy Group Number | 复制群号按钮 title |
+| `createGame.replayVisibilityFilter` | 回放可见范围筛选 | Replay Visibility Filter | 回放筛选 aria-label |
+| `createGame.replayOperation` | 回放操作 | Replay Operation | 回放操作标签 |
+| `createGame.settings` | 设置 | Settings | 设置弹窗标题 |
+| `createGame.music` | 音乐 | Music | 音乐开关标签 |
+| `createGame.musicToggle` | 背景音乐开关 | Background Music Toggle | 音乐开关描述 |
+| `createGame.volume` | 音量 | Volume | 音量标签 |
+| `createGame.restart` | 重新开始 | Restart | 重新开始按钮 |
+| `createGame.saveAndExit` | 保存并退出 | Save and Exit | 保存并退出按钮 |
+| `createGame.narration` | 旁白 | Narration | 旁白标签 |
+| `createGame.pointsUnit` | 积分 | Points | 积分单位 |
+| `createGame.orCustomInput` | 或者自定义输入 | Or custom input | 或者自定义输入 |
+| `createGame.customInput` | 自定义输入 | Custom Input | 自定义输入 |
+| `createGame.pointsCostHint` | 消耗 {{cost}} 积分 | Costs {{cost}} points | 积分消耗提示 |
+| `createGame.inputPlaceholder` | 输入你想说的话或行动... | Enter what you want to say... | 输入框占位符 |
+| `createGame.send` | 发送 | Send | 发送按钮 |
+| `createGame.noContent` | 暂无内容 | No content yet | 空状态 |
+| `createGame.organizingMemory` | 正在整理故事记忆 | Organizing story memory | 整理记忆状态 |
+| `createGame.aiThinking` | AI 推演中 | AI Thinking | AI 思考状态 |
+| `createGame.history` | 历史记录 | History | 历史记录标题 |
+| `createGame.noHistory` | 暂无历史记录 | No history yet | 空状态 |
+| `createGame.saving` | 保存中... | Saving... | 保存中状态 |
+| `createGame.save` | 保存 | Save | 保存按钮 |
+| `createGame.editMessage` | 编辑消息 | Edit Message | 编辑按钮 title |
+| `createGame.edit` | 编辑 | Edit | 编辑按钮文本 |
+| `createGame.regenerate` | 重新生成 | Regenerate | 重新生成按钮 |
+| `createGame.myReplay` | 我的回放 | My Replay | 默认标题 |
+| `createGame.close` | 关闭 | Close | 关闭按钮 |
+| `createGame.titleLabel` | 标题 | Title | 标题标签 |
+| `createGame.titlePlaceholder` | 如：第一章·与艾琳的选择 | e.g., Chapter 1·Choice with Eileen | 标题占位符 |
+| `createGame.descriptionOptional` | 简介（可选） | Description (Optional) | 描述标签 |
+| `createGame.descriptionPlaceholder` | 简要说明这个回放发生了什么 | Briefly describe what happened... | 描述占位符 |
+| `createGame.visibility` | 可见性 | Visibility | 可见性标签 |
+| `createGame.public` | 公开 | Public | 公开选项 |
+| `createGame.unlisted` | 不公开（持链接可见） | Unlisted (Link holders only) | 不公开选项 |
+| `createGame.privateVisibility` | 私密（仅自己可见） | Private (Only visible to you) | 私密选项 |
+| `createGame.creating` | 创建中… | Creating... | 创建中状态 |
+| `createGame.createReplay` | 创建回放 | Create Replay | 创建回放按钮 |
+| `common.download` | 下载 | Download | 下载按钮 |
+| `home.specialThemeTagCodes.official-picks` | 官方精选 | Featured | 首页 special theme tag 翻译 |
+
+### 新增翻译 Keys (2026-06-02)
+
+| Key | 中文 | 英文 | 用途 |
+|-----|------|------|------|
+| `createGame.storylineModalEditTitle` | 编辑故事线 | Edit Storyline | 故事线编辑弹窗标题 |
+| `createGame.storylineModalAddTitle` | 添加故事线 | Add Storyline | 故事线添加弹窗标题 |
+| `createGame.storylineModalIndexPlaceholder` | 输入序号 | Enter order number | 序号输入框占位符 |
+| `createGame.storylineModalTagPlaceholder` | 例如：阶段 1、第一章、关键转折点 | e.g., Stage 1, Chapter 1, Key Turning Point | 标签输入框占位符 |
+| `createGame.storylineModalContentPlaceholder` | 描述关键剧情走向... | Describe key plot developments... | 内容输入框占位符 |
+| `createGame.statusUpload` | 上传中 | Uploading | 上传状态 |
+| `createGame.statusParsing` | 解析中 | Parsing | 解析状态 |
+| `createGame.statusComplete` | 完成 | Complete | 完成状态 |
+| `createGame.statusFailed` | 失败 | Failed | 失败状态 |
+| `createGame.statusProcessing` | 处理中 | Processing | 处理状态 |
+| `createGame.remove` | 移除 | Remove | 移除按钮 |
+| `createGame.fileId` | 文件ID | File ID | 文件ID标签 |
+| `common.minute` | 分 | min | 分钟单位 |
+| `common.second` | 秒 | seconds | 秒单位 |
+| `createGame.uploadTimeout` | 上传超时，请重试 | Upload timeout, please retry | 超时错误 |
+| `createGame.parsingCompleteLoadFailed` | 文件解析完成，但加载数据失败，请刷新页面 | File parsing complete, but failed to load data... | 加载失败提示 |
+| `createGame.parsingCompleteMissingFileId` | 完成但缺少 fileId | Completed but missing fileId | 缺少 fileId 错误 |
+| `createGame.parsingFailed` | 解析失败，请重试 | Parsing failed, please retry | 解析失败提示 |
+| `createGame.jobNotFound` | 任务不存在或已回收 | Task does not exist or has been recycled | 任务不存在错误 |
+| `createGame.jobNotFoundRetry` | 任务不存在或已回收，请重试上传 | Task does not exist or has been recycled... | 重试提示 |
+| `createGame.pollingFailed` | 轮询状态失败，请重试 | Status polling failed, please retry | 轮询失败提示 |
+| `createGame.ideaGenerationOnlyVisual` | 一句话生成功能仅在 visual 模式下可用 | Idea generation is only available in visual mode | 模式不支持提示 |
+| `createGame.generatingGame` | 生成游戏 | Generating game | 生成游戏标题 |
+| `createGame.inQueue` | 排队中 | In queue | 排队状态 |
+| `createGame.uploadFailed` | 上传失败，请重试 | Upload failed, please retry | 上传失败提示 |
+
+---
+
+## API i18n 映射 (2026-06-02)
+
+### `/api/auth/special-theme-tags` 响应字段
+
+| 字段 | 说明 | i18n 映射 |
+|------|------|-----------|
+| `code` | 标签唯一标识 | `home.specialThemeTagCodes.{code}` |
+| `name` | 后端返回名称（不直接使用） | fallback |
+
+> **展示优先级**: i18n 翻译 → API name (fallback)
+
 ---
 
 ## 新增文件
 
-### Firebase 集成文件
+### Utils 工具函数 ✅
+||| 文件 | 说明 |
+||------|------|
+|| `src/utils/etaText.ts` | ETA 文本格式化工具，支持可选翻译函数参数 |
+
+### Hooks ✅
+||| 文件 | 说明 |
+||------|------|
+|| `src/hooks/editor/useBatchImageProgressText.ts` | 批量图片进度文本 Hook，内置 i18n |
+|| `src/hooks/editor/useGenerationEta.ts` | 生成 ETA Hook，内置 i18n |
 || 文件 | 说明 |
 |------|------|
 | `src/config/firebase.ts` | Firebase 配置文件，包含 Firebase 应用初始化和认证实例 |
@@ -127,6 +306,7 @@
 | `src/components/CreateGame/GameForm.tsx` | ✅ |
 | `src/components/CreateGame/GameStatsView.tsx` | ✅ |
 | `src/components/CreateGame/UploadProgress.tsx` | ✅ |
+| `src/components/CreateGame/CreateGameModals.tsx` | ✅ |
 
 #### Galgame Galgame 游戏组件
 | 文件 | 状态 |
@@ -142,6 +322,7 @@
 | `src/components/Galgame/ShareReplayModal.tsx` | ✅ |
 | `src/components/Galgame/TextModeDisplay.tsx` | ✅ |
 | `src/components/Galgame/GameBackgroundRenderer.tsx` | ✅ |
+| `src/components/Galgame/NormalModeDisplay.tsx` | ✅ |
 
 #### GalgameMap Galgame 地图组件
 | 文件 | 状态 |
@@ -236,7 +417,7 @@
 
 | 模块 | 中文 Key 数量 | 英文 Key 数量 |
 |------|-------------|--------------|
-| common | 10 | 10 |
+| common | 11 | 11 |
 | home | 13 | 13 |
 | galgame | 39 | 39 |
 | create | 48 | 48 |
@@ -247,11 +428,12 @@
 | validation | 9 | 9 |
 | password | 2 | 2 |
 | language | 4 | 4 |
-| createGame | 95+ | 95+ |
+| createGame | 200+ | 200+ |
 | gameDetail | 37 | 37 |
 | stGame | 6 | 6 |
 | promotion | 61 | 61 |
-| **总计** | **~720** | **~720** |
+| eta | 11 | 11 |
+| **总计** | **~850** | **~850** |
 
 ---
 
@@ -280,6 +462,44 @@
   - `AuthModal.tsx` 添加 Google 登录按钮和逻辑
   - `authApi.ts` 添加 `googleLogin` API 方法
   - 添加国际化 keys：`auth.googleLogin`、`auth.googleLoginFailed`、`auth.loginCancelled`、`auth.networkError`
+- [x] **GameStatsView.tsx** (2026-05-27)：
+  - 新增 23 个翻译 keys（myData、divider、statsUpdateDaily、arrow、views、clicks、earnings、untitledScript、reviews、loading、startTesting、publish、unpublish、editGame、deleting、deleteGame、userInfoError、unknownGameType、missingCustomAppIdStart、createGameFailed、loadSaveFailed、loadSaveFailedRetry、aiGenerate）
+  - 替换所有硬编码中文：统计面板标签、按钮文本、alert 消息、图片 alt 属性
+- [x] **SceneDetailForm.tsx** (2026-05-27)：AI生成 按钮文本国际化
+- [x] **CharactersPanel.tsx** (2026-05-27)：AI生成 按钮文本国际化（1处）
+- [x] **ReplayList.tsx** (2026-05-27)：
+  - 新增 26 个翻译 keys（replayVisibilityPrivate/Unlisted/Public、loadReplayFailed、copyReplayLinkFailed、replayLinkCopied、publicReplayLinkCopied、replayDeleted、canOnlyDeleteOwnReplay、replayNotExist、deleteReplayFailed、loadingReplay、noReplay、collapse、expand、mine、steps、play、copyLink、deleting、delete、loadMore、deleteReplay、confirmDeleteReplay、confirmDelete、replayOperation）
+  - 替换所有硬编码中文：可见性标签、按钮文本、toast 消息、空状态、ConfirmModal
+- [x] **GameDetail.tsx** (2026-05-27)：
+  - 回放集锦标签：`回放集锦` → `t('gameDetail.replayHighlights')`
+  - QQ群号：`QQ群：` → `{t('gameDetail.qqGroup')}: `
+  - 作者头像 alt：`作者头像` → `t('createGame.authorAvatar')`
+  - 复制群号 title：`复制群号` → `t('createGame.copyGroupNo')`
+  - 回放筛选 aria-label：`回放可见范围筛选` → `t('createGame.replayVisibilityFilter')`
+  - 默认标题：`'游戏'` → `t('createGame.game')`
+- [x] **SettingsModal.tsx** (2026-05-27)：设置弹窗国际化（设置、音乐、背景音乐开关、音量、重新开始、保存并退出）
+- [x] **TextModeDisplay.tsx** (2026-05-27)：文本模式国际化（旁白、积分、输入、自定义输入、发送、空状态、AI思考、整理记忆）
+- [x] **GalgameHistoryModal.tsx** (2026-05-27)：历史记录弹窗国际化（历史记录、空状态、编辑、重新生成、保存、取消）
+- [x] **ShareReplayModal.tsx** (2026-05-27)：分享回放弹窗国际化（标题、简介、可见性、创建回放）
+- [x] **CreateGame.tsx** (2026-05-27)：
+  - 将 `'未找到游戏详情'` 替换为 `t('createGame.gameNotFound')`
+- [x] **CreateGameModals.tsx** (2026-05-27 下午)：
+  - 新增 9 个翻译 keys
+  - 所有弹窗文本国际化（标题、描述、标签、按钮）
+- [x] **NormalModeDisplay.tsx** (2026-05-27 下午)：
+  - 所有中文文本国际化（自定义输入、输入框 placeholder、发送按钮、AI思考、整理记忆）
+- [x] **GenerateResultModal.tsx** (2026-05-27 下午)：
+  - 新增 5 个翻译 keys
+  - 默认值改为使用 `t()` 函数
+- [x] **etaText.ts / useBatchImageProgressText.ts / useGenerationEta.ts** (2026-05-27 下午)：
+  - 重构 `etaText.ts` 支持可选翻译函数参数
+  - `useBatchImageProgressText.ts` 内置 `useTranslation`
+  - `useGenerationEta.ts` 内置 `useTranslation`
+  - 新增 `eta` 节翻译（11个keys）
+- [x] **CharactersPanel.tsx** (2026-05-27 下午)：
+  - 批量生成角色立绘进度文本国际化
+- [x] **ScenesPanel.tsx** (2026-05-27 下午)：
+  - 批量生成场景立绘进度文本国际化
 
 ### 待完成 ⏳
 - [ ] 测试语言切换功能
@@ -310,6 +530,18 @@
 - 添加故事线按钮
 - 空状态提示
 - 序号标签、删除按钮
+
+##### StorylineModal.tsx ✅ 已完成 (2026-06-02)
+
+- 添加 `useTranslation` hook
+- 标题：编辑故事线 / 添加故事线 (`storylineModalEditTitle` / `storylineModalAddTitle`)
+- 序号标签 (`storylineOrder`)
+- 序号占位符 (`storylineModalIndexPlaceholder`)
+- 标签占位符 (`storylineModalTagPlaceholder`)
+- 内容标签 (`storylineContent`)
+- 内容占位符 (`storylineModalContentPlaceholder`)
+- 取消按钮 (`common.cancel`)
+- 保存按钮 (`common.save`)
 
 ##### Step 3 - CharactersPanel ✅ 已完成
 
@@ -441,16 +673,59 @@
 | `CreateGameModals.tsx` | 82 | `AVG（内测中）` | 中文 |
 | `CreatorProfile.tsx` | 186 | `QQ群号` | 中文 |
 
-#### 10. AttributeGrowthPanel 组件 ✅ 已完成
+##### GameStatsView.tsx ✅ 已完成 (2026-05-27)
+- `myData` - 我的数据
+- `divider` - 分界线
+- `statsUpdateDaily` - 每晚12:00更新
+- `arrow` - 箭头
+- `views` - 浏览量
+- `clicks` - 点击
+- `earnings` - 收益
+- `untitledScript` - 未命名剧本
+- `reviews` - 人评论
+- `loading` - 加载中...
+- `startTesting` - 开始测试
+- `publish` - 发布
+- `unpublish` - 下架
+- `editGame` - 编辑游戏
+- `deleting` - 删除中...
+- `deleteGame` - 删除游戏
+- `userInfoError` - 用户信息错误
+- `unknownGameType` - 未知的游戏类型
+- `missingCustomAppIdStart` - 缺少自定义 AppID
+- `createGameFailed` - 创建游戏失败
+- `loadSaveFailed` - 加载存档失败
+- `loadSaveFailedRetry` - 加载存档失败（重试）
+
+##### `textUtils.ts` 场景切换文案 ✅ 已完成 (2026-06-04)
+- `sceneChangePrefix` - 场景切换：
+- 已将 `SCENE_CHANGE` 解析结果中的固定前缀改为翻译 key，并在历史记录渲染链路中传入 `t`
+
 
 | 文件 | 行号 | 硬编码文本 | 类型 |
 |------|------|-----------|------|
 | `AttributeDetailForm.tsx` | 67 | `NPC 属性` | 中文 |
 
+#### 本次补充说明（2026-06-04）
+
+本次在 `GameStatsView.tsx` 这一块继续完善国际化记录，重点不是新增组件，而是把已经完成的文案改造过程补写得更清楚，便于后续追踪和补齐遗漏项。
+
+- 这一段记录的是 `GameStatsView.tsx` 相关的统计面板文案国际化状态，包含“我的数据”“分界线”“每晚12:00更新”“浏览量”“点击”“收益”“未命名剧本”“人评论”“加载中”“开始测试”“发布”“下架”“编辑游戏”“删除中”“删除游戏”等按钮、标签和状态文案。
+- 同时也把异常和兜底提示一并纳入记录，例如“用户信息错误”“未知的游戏类型”“缺少自定义 AppID”“创建游戏失败”“加载存档失败”等，这些属于运行时提示，之前容易在页面翻译完成后被忽略。
+- 这类文案的国际化重点是统一命名和统一接入翻译 key，避免同义文案在不同组件里重复硬编码，后续便于维护和批量替换。
+- 由于这个模块偏“管理台 / 数据统计”性质，文案里混有业务词和界面词，所以在记录时除了说明 key 名称，也尽量保留原始中文语义，方便英文翻译对照和审核。
+- 如果后续还继续整理 `CreateGame` 相关统计、运营或编辑区块，建议沿用同样的记录方式，把“已完成的 key + 作用场景 + 未覆盖的边角提示”一起写清楚。
+
+#### 这部分的记录价值
+
+- 方便确认 `GameStatsView.tsx` 已经完成到什么程度。
+- 方便后续检查是否遗漏了统计面板里的状态提示、按钮 title、空状态文案。
+- 方便把“页面主文案”和“异常提示文案”一起纳入国际化范围，避免只完成视觉文本、没完成行为文本。
+
+####`textUtils.ts` 中 `SCENE_CHANGE` 的输出文案 `场景切换：`
+
 ---
-
 ### 中优先级 - 技术性 UI 标签
-
 #### StoryStructureAdvanced.tsx 中的复杂字段标签
 
 以下字段标签需要国际化（技术性内容，中英文混排）：
@@ -541,7 +816,8 @@ const MyComponent = () => {
 ## 进度总结
 
 - **总文件数**: 约 139 个 TSX 文件 + 156 个 TS 文件
-- **已完成国际化**: 约 130 个文件
-- **完成率**: ~95%
-- **主要翻译模块**: 16 个模块，720+ 个翻译 key
+- **已完成国际化**: 约 135 个文件
+- **完成率**: ~97%
+- **主要翻译模块**: 17 个模块，850+ 个翻译 key
 - **Firebase 集成**: 已完成 Google 登录功能
+- **最新更新 (2026-05-27 下午)**: eta 工具函数国际化、CreateGameModals、GenerateResultModal、NormalModeDisplay 等组件国际化

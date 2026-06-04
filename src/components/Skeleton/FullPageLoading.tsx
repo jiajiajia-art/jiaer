@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 interface FullPageLoadingProps {
     rootClassName: string;
@@ -9,6 +10,8 @@ const FullPageLoading: React.FC<FullPageLoadingProps> = ({
     rootClassName,
     contentClassName,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <div className={rootClassName}>
             <div className={contentClassName}>
@@ -27,7 +30,7 @@ const FullPageLoading: React.FC<FullPageLoadingProps> = ({
                     />
 
                     <div style={{ color: "var(--primary)", fontSize: "16px" }}>
-                        正在获取数据...
+                        {t('common.fullPageLoading.fetchingData')}
                     </div>
                 </div>
             </div>
