@@ -33,10 +33,12 @@ const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => 
     const normalizedEngine = normalizeRaw(engine);
     if (normalizedEngine === 'CUSTOM') return 'customif' as const;
     if (normalizedEngine === 'ST') return 'st' as const;
+    if (normalizedEngine === 'IVG') return 'interactive-video' as const;
     if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
 
     const normalizedTags = normalizeRaw(gameTags);
     if (normalizedTags === 'CUSTOM') return 'customif' as const;
+    if (normalizedTags === 'IVG') return 'interactive-video' as const;
     if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
 
     return '';
@@ -104,6 +106,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
             if (normalized === 'st') {
                 return { sessionId: null, redirectUrl: `/st/${fileId}` };
+            }
+
+            if (normalized === 'interactive-video') {
+                return { sessionId: null, redirectUrl: `/interactive-video/${fileId}` };
             }
 
             if (normalized === 'TXT') {

@@ -1,0 +1,367 @@
+.pageRoot {
+    min-height: 100vh;
+    background: #f7f8fb;
+}
+
+.editorShell {
+    width: min(var(--app-desktop-shell-max, 1180px), calc(100% - 48px));
+    margin: 0 auto;
+    padding: 32px 0 96px;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.iconTextButton,
+.secondaryAction,
+.primaryAction,
+.downloadWideButton {
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.iconTextButton {
+    min-height: 38px;
+    padding: 0 14px;
+    background: #fff;
+    color: #2b3445;
+    border: 1px solid rgba(17, 24, 39, 0.1);
+}
+
+.iconTextButton:hover:not(:disabled),
+.secondaryAction:hover:not(:disabled),
+.primaryAction:hover:not(:disabled),
+.downloadWideButton:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.iconTextButton:disabled,
+.secondaryAction:disabled,
+.primaryAction:disabled,
+.downloadWideButton:disabled,
+.themeTagChip:disabled {
+    cursor: wait;
+    opacity: 0.62;
+}
+
+.headerBand {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 28px;
+    padding: 28px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    box-shadow: 0 16px 36px rgba(18, 25, 38, 0.08);
+}
+
+.eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    color: #fb4655;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.headerBand h1,
+.statePanel h1 {
+    margin: 0;
+    color: #161922;
+    font-size: 28px;
+    line-height: 1.25;
+}
+
+.headerBand p,
+.statePanel p,
+.panelHint {
+    margin: 10px 0 0;
+    color: #667085;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 320px;
+}
+
+.statusPill {
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.saveStatusPill {
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.published {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+}
+
+.draft {
+    background: rgba(251, 70, 85, 0.1);
+    color: #d92d3a;
+}
+
+.saved {
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+}
+
+.dirty {
+    background: rgba(245, 158, 11, 0.16);
+    color: #b45309;
+}
+
+.secondaryAction,
+.primaryAction {
+    min-height: 38px;
+    padding: 0 14px;
+}
+
+.secondaryAction {
+    background: #fff5f6;
+    color: #d92d3a;
+}
+
+.dangerAction {
+    background: #fff1f2;
+    color: #be123c;
+}
+
+.primaryAction,
+.downloadWideButton {
+    background: #fb4655;
+    color: #fff;
+}
+
+.editGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.editPanel,
+.statePanel {
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid rgba(17, 24, 39, 0.08);
+    box-shadow: 0 12px 28px rgba(18, 25, 38, 0.06);
+}
+
+.editPanel {
+    padding: 22px;
+}
+
+.statePanel {
+    padding: 36px;
+    color: #3a4354;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.panelActions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.panelHeader h2 {
+    margin: 0;
+    color: #182033;
+    font-size: 20px;
+    line-height: 1.35;
+}
+
+.savingHint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fb4655;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.inlineSaveButton {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #fb4655;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.inlineSaveButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.themeTagsWrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.themeTagChip {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(31, 41, 55, 0.14);
+    background: #fff;
+    color: #344054;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.themeTagChip:hover:not(:disabled) {
+    border-color: rgba(251, 70, 85, 0.55);
+    color: #d92d3a;
+}
+
+.themeTagChipActive {
+    border-color: #fb4655;
+    background: #fb4655;
+    color: #fff;
+}
+
+.themeTagChipActive:hover:not(:disabled) {
+    color: #fff;
+}
+
+.errorText {
+    margin-top: 12px;
+    color: #b42318;
+    font-size: 13px;
+}
+
+.emptyHint {
+    color: #667085;
+    font-size: 14px;
+}
+
+.metaList {
+    display: grid;
+    gap: 10px;
+    margin: 18px 0;
+}
+
+.metaList div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.metaList span {
+    color: #667085;
+    font-size: 13px;
+}
+
+.metaList strong {
+    color: #182033;
+    font-size: 13px;
+    text-align: right;
+    word-break: break-all;
+}
+
+.downloadWideButton {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 16px;
+    margin-top: 10px;
+}
+
+.unpublishWideButton {
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid rgba(190, 18, 60, 0.18);
+}
+
+@media (max-width: 900px) {
+    .editorShell {
+        width: calc(100% - 32px);
+        padding-top: 24px;
+    }
+
+    .headerBand,
+    .toolbar,
+    .panelHeader {
+        flex-direction: column;
+    }
+
+    .headerActions {
+        justify-content: flex-start;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .editGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .headerBand,
+    .editPanel,
+    .statePanel {
+        padding: 18px;
+    }
+
+    .headerBand h1,
+    .statePanel h1 {
+        font-size: 22px;
+    }
+
+    .secondaryAction,
+    .primaryAction,
+    .iconTextButton {
+        width: 100%;
+    }
+}

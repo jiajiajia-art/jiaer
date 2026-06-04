@@ -1,0 +1,1034 @@
+.pageRoot {
+    min-height: 100vh;
+    background: #111313;
+    color: #f5f0e8;
+    display: flex;
+    flex-direction: column;
+}
+
+.landscapeVideoPage {
+    --ivg-landscape-frame: 1;
+}
+
+.header {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #171a19;
+}
+
+.iconButton,
+.headerButton,
+.messagePanel button {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f5f0e8;
+    border-radius: 8px;
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.iconButton {
+    width: 40px;
+    font-size: 20px;
+}
+
+.headerButton {
+    padding: 0 14px;
+    margin-left: auto;
+}
+
+.headerTitle {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.headerTitle span {
+    font-size: 16px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.headerTitle small {
+    color: #9fb2a9;
+    font-size: 12px;
+}
+
+.playerGrid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.stage {
+    min-width: 0;
+    padding: 24px;
+}
+
+.monitor {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 112px);
+    min-height: 520px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #050606;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+}
+
+.textScene {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px;
+    background:
+        linear-gradient(135deg, rgba(31, 55, 50, 0.9), rgba(12, 15, 15, 0.94)),
+        radial-gradient(circle at 80% 20%, rgba(229, 179, 95, 0.22), transparent 34%);
+}
+
+.textScene span,
+.endingModal span {
+    color: #e5b35f;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.textScene h1,
+.endingModal h1 {
+    margin: 10px 0 12px;
+    font-size: 32px;
+    line-height: 1.2;
+}
+
+.textScene p,
+.endingModal p {
+    margin: 0;
+    color: #e5ddd0;
+    font-size: 16px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+}
+
+.playOverlayButton {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 128px;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgba(229, 179, 95, 0.42);
+    border-radius: 8px;
+    background: rgba(5, 6, 6, 0.76);
+    color: #fff8ea;
+    font-size: 15px;
+    font-weight: 800;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+}
+
+.playOverlayButton svg {
+    font-size: 24px;
+}
+
+.choiceDock {
+    position: absolute;
+    left: 50%;
+    right: auto;
+    bottom: clamp(42px, 6vh, 72px);
+    transform: translateX(-50%);
+    width: min(440px, calc(100% - 36px));
+    max-height: min(58%, 440px);
+    overflow: auto;
+    display: grid;
+    gap: 8px;
+    scrollbar-color: rgba(164, 184, 204, 0.18) transparent;
+}
+
+.choiceButton {
+    width: 100%;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(164, 184, 204, 0.18);
+    border-radius: 0;
+    background: rgba(5, 8, 12, 0.9);
+    color: #d7e4f0;
+    padding: 9px 16px;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition:
+        border-color 120ms ease,
+        background 120ms ease,
+        color 120ms ease;
+}
+
+.choiceButton strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: normal;
+}
+
+.choiceButton:hover {
+    border-color: rgba(229, 179, 95, 0.36);
+    background: rgba(229, 179, 95, 0.16);
+    color: #fff8ea;
+}
+
+.noChoices,
+.videoNotice {
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #c8d4cf;
+}
+
+.videoNotice {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+}
+
+.sidePanel {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    background: #191d1b;
+    padding: 18px;
+    overflow-y: auto;
+}
+
+.panelSection {
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panelSection:first-child {
+    padding-top: 0;
+}
+
+.sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f5f0e8;
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.variableList,
+.historyList {
+    display: grid;
+    gap: 8px;
+}
+
+.variableRow,
+.historyItem {
+    min-height: 38px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px;
+}
+
+.variableRow span,
+.historyItem span,
+.emptyText {
+    color: #9fb2a9;
+    font-size: 13px;
+}
+
+.variableRow strong,
+.historyItem strong {
+    color: #f5f0e8;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.openTreeButton {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid rgba(229, 179, 95, 0.3);
+    border-radius: 8px;
+    background: rgba(229, 179, 95, 0.1);
+    color: #f5f0e8;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-start;
+    padding: 0 14px;
+    text-align: left;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.openTreeButton:hover {
+    background: rgba(229, 179, 95, 0.16);
+}
+
+.openTreeButton span {
+    margin-left: auto;
+    color: #b4c2bc;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mobileToolsButton,
+.mobileToolsOverlay {
+    display: none;
+}
+
+.treeOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.treeDialog {
+    width: min(1180px, 100%);
+    height: min(760px, calc(100vh - 48px));
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    background: #101413;
+    box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
+}
+
+.treeDialogHeader {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 18px 0 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: #171a19;
+}
+
+.treeDialogTitle {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.treeDialogActions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.treeDialogHeader span {
+    color: #e5b35f;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.treeDialogHeader h2 {
+    margin: 2px 0 0;
+    color: #f5f0e8;
+    font-size: 18px;
+}
+
+.treeProgress {
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 4px 8px;
+    border: 1px solid rgba(229, 179, 95, 0.28);
+    border-radius: 7px;
+    background: rgba(229, 179, 95, 0.1);
+    color: #e7d1a5;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.treeProgressCompact {
+    display: none;
+}
+
+.treeCloseButton {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f5f0e8;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.treeCanvas {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 42%),
+        #0d1110;
+}
+
+.treeCanvas :global(.react-flow__pane) {
+    cursor: grab;
+}
+
+.treeCanvas :global(.react-flow__pane:active) {
+    cursor: grabbing;
+}
+
+.treeCanvas :global(.react-flow__controls) {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+.treeHandle {
+    width: 1px;
+    height: 1px;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+}
+
+.treePlotButton,
+.treeChoiceCard {
+    position: relative;
+    width: 238px;
+    min-height: 84px;
+    display: grid;
+    align-content: center;
+    gap: 6px;
+    padding: 14px 40px 14px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 58%),
+        #171d1b;
+    color: #f5f0e8;
+    text-align: left;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
+}
+
+.treePlotButton {
+    cursor: pointer;
+}
+
+.treePlotButton:disabled {
+    cursor: default;
+}
+
+.treePlotButton span,
+.treeChoiceCard span {
+    color: #9fb2a9;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.treePlotButton strong,
+.treeChoiceCard strong {
+    overflow: hidden;
+    color: #f5f0e8;
+    font-size: 15px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.treePlotButton em {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    color: #e5b35f;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.treePlotVisited,
+.treeChoiceVisited {
+    border-color: rgba(229, 179, 95, 0.48);
+    background:
+        linear-gradient(135deg, rgba(229, 179, 95, 0.16), transparent 56%),
+        #171d1b;
+}
+
+.treePlotCurrent {
+    border-color: rgba(72, 183, 148, 0.74);
+    background:
+        linear-gradient(135deg, rgba(72, 183, 148, 0.2), rgba(229, 179, 95, 0.12)),
+        #17201d;
+    box-shadow:
+        0 0 0 1px rgba(72, 183, 148, 0.22),
+        0 18px 42px rgba(72, 183, 148, 0.14);
+}
+
+.treePlotEnding {
+    border-color: rgba(242, 111, 111, 0.5);
+    background:
+        linear-gradient(135deg, rgba(242, 111, 111, 0.18), transparent 58%),
+        #171d1b;
+}
+
+.treePlotDisabled {
+    opacity: 0.72;
+}
+
+.treeChoiceCard {
+    border-color: rgba(229, 179, 95, 0.32);
+    background:
+        linear-gradient(135deg, rgba(229, 179, 95, 0.12), transparent 58%),
+        #1a1711;
+}
+
+.treeEmpty {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    color: #9fb2a9;
+}
+
+.endingOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.68);
+}
+
+.endingModal,
+.messagePanel,
+.loadingPanel {
+    width: min(560px, 100%);
+    border-radius: 8px;
+    background: #f9f3e9;
+    color: #17201d;
+    padding: 28px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+}
+
+.endingModal p {
+    color: #394640;
+}
+
+.endingActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.endingActions button {
+    min-height: 40px;
+    border: 1px solid rgba(23, 32, 29, 0.16);
+    border-radius: 8px;
+    background: #17201d;
+    color: #fff;
+    padding: 0 14px;
+    cursor: pointer;
+}
+
+.endingActions button:nth-child(3) {
+    background: transparent;
+    color: #17201d;
+}
+
+.messagePanel,
+.loadingPanel {
+    margin: auto;
+}
+
+.messagePanel h1 {
+    margin: 0 0 10px;
+}
+
+.messagePanel p {
+    color: #52615b;
+}
+
+.messagePanel button {
+    background: #17201d;
+    color: #fff;
+    padding: 0 14px;
+}
+
+@media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .pageRoot {
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .header {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: 14px;
+        z-index: 31;
+        width: auto;
+        height: auto;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        pointer-events: none;
+    }
+
+    .header .iconButton {
+        width: 44px;
+        min-height: 44px;
+        pointer-events: auto;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        color: rgba(255, 255, 255, 0.72);
+        filter: none;
+        backdrop-filter: none;
+    }
+
+    .headerTitle,
+    .headerButton {
+        display: none;
+    }
+
+    .playerGrid {
+        grid-template-columns: 1fr;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .stage {
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+    }
+
+    .monitor {
+        height: 100%;
+        min-height: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .sidePanel {
+        display: none;
+    }
+
+    .mobileToolsButton {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        right: 16px;
+        z-index: 30;
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.72);
+        box-shadow: none;
+        filter: none;
+        backdrop-filter: none;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobileToolsButton svg {
+        font-size: 23px;
+    }
+
+    .header .iconButton svg,
+    .mobileToolsButton svg,
+    .treeCloseButton svg {
+        display: block;
+    }
+
+    .mobileToolsButton span {
+        display: none;
+    }
+
+    .mobileToolsOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 34;
+        display: block;
+        background: rgba(0, 0, 0, 0.46);
+    }
+
+    .mobileToolsSheet {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        max-height: min(72dvh, 620px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom: 0;
+        border-radius: 18px 18px 0 0;
+        background: #171a19;
+        box-shadow: 0 -20px 70px rgba(0, 0, 0, 0.46);
+    }
+
+    .mobileToolsHeader {
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mobileToolsHeaderActions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .mobileToolsHeader strong {
+        color: #f5f0e8;
+        font-size: 15px;
+    }
+
+    .mobileRestartButton {
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid rgba(229, 179, 95, 0.34);
+        border-radius: 8px;
+        background: rgba(229, 179, 95, 0.12);
+        color: #fff8ea;
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .mobileToolsClose {
+        width: 36px;
+        height: 36px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #f5f0e8;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .mobileToolsTabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        padding: 12px 14px 0;
+    }
+
+    .mobileToolsTabs button {
+        min-height: 36px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #b4c2bc;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .mobileToolsTabs .mobileToolsTabActive {
+        border-color: rgba(229, 179, 95, 0.42);
+        background: rgba(229, 179, 95, 0.14);
+        color: #fff8ea;
+    }
+
+    .mobileToolsContent {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 2px 16px 18px;
+    }
+
+    .mobileToolsContent .panelSection {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .treeOverlay {
+        place-items: stretch;
+        padding: 0;
+    }
+
+    .treeDialog {
+        position: relative;
+        width: 100vw;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .treeDialogHeader {
+        position: absolute;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        left: 10px;
+        right: 10px;
+        z-index: 6;
+        height: auto;
+        min-height: 0;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 0;
+        border-bottom: 0;
+        background: transparent;
+        pointer-events: none;
+    }
+
+    .treeDialogTitle {
+        width: fit-content;
+        max-width: 34vw;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border: 1px solid rgba(229, 179, 95, 0.28);
+        border-radius: 999px;
+        background: rgba(16, 20, 19, 0.84);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+    }
+
+    .treeDialogTitle span {
+        display: none;
+    }
+
+    .treeDialogTitle h2 {
+        margin: 0;
+        overflow: hidden;
+        font-size: 13px;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .treeDialogActions {
+        align-items: flex-start;
+        gap: 8px;
+        pointer-events: auto;
+    }
+
+    .treeProgress {
+        max-width: 132px;
+        padding: 7px 9px;
+        border-radius: 999px;
+        background: rgba(16, 20, 19, 0.84);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+    }
+
+    .treeProgressFull {
+        display: none;
+    }
+
+    .treeProgressCompact {
+        display: inline-block;
+    }
+
+    .treeCloseButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        color: rgba(255, 255, 255, 0.72);
+        filter: none;
+        backdrop-filter: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .endingOverlay {
+        padding: 12px;
+    }
+
+    .endingModal,
+    .messagePanel,
+    .loadingPanel {
+        width: min(560px, calc(100vw - 24px));
+        max-height: calc(100dvh - 24px);
+        overflow: auto;
+    }
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+    .landscapeVideoPage .stage {
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .landscapeVideoPage .monitor {
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 16 / 9;
+    }
+}
+
+@media (max-width: 980px) and (orientation: landscape), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .stage {
+        padding: 10px 12px;
+    }
+
+    .monitor {
+        height: calc(100dvh - 20px);
+        min-height: 0;
+    }
+
+    .mobileToolsButton {
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        right: 14px;
+    }
+
+    .mobileToolsSheet {
+        max-height: 88dvh;
+    }
+}
+
+@media (max-width: 640px) {
+    .header {
+        padding: 0;
+    }
+
+    .headerButton {
+        padding: 0 10px;
+    }
+
+    .textScene {
+        padding: 28px;
+    }
+
+    .textScene h1,
+    .endingModal h1 {
+        font-size: 24px;
+    }
+
+    .choiceDock {
+        width: calc(100% - 24px);
+        bottom: 24px;
+    }
+
+    .treeOverlay {
+        place-items: stretch;
+        padding: 0;
+    }
+
+    .treeDialog {
+        width: 100vw;
+        height: 100dvh;
+        min-height: 0;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .treeDialogHeader {
+        top: calc(env(safe-area-inset-top, 0px) + 8px);
+        height: auto;
+        padding: 0;
+    }
+
+    .treeDialogTitle {
+        max-width: 32vw;
+        padding: 6px 9px;
+    }
+
+    .treeDialogTitle h2 {
+        font-size: 12px;
+    }
+
+    .treeDialogActions {
+        gap: 8px;
+    }
+
+    .treeProgress {
+        max-width: 112px;
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .treeProgressFull {
+        display: none;
+    }
+
+    .treeProgressCompact {
+        display: inline-block;
+    }
+
+    .treeCloseButton {
+        width: 44px;
+        height: 44px;
+    }
+
+    .mobileToolsButton {
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        right: 12px;
+    }
+
+    .mobileToolsSheet {
+        max-height: 76dvh;
+    }
+
+    .treePlotButton,
+    .treeChoiceCard {
+        width: 214px;
+    }
+}

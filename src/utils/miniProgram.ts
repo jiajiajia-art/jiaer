@@ -3,7 +3,7 @@ type MiniProgramWindow = Window & {
 };
 
 export type CreatorGameType = 'rpg' | 'txt' | 'avg' | 'custom' | 'st';
-export type CreatorEngine = 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'ST';
+export type CreatorEngine = 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'ST' | 'IVG';
 
 export const MINI_PROGRAM_CREATOR_PC_URL = 'https://funloom.kurangames.com/funloom/home';
 
@@ -13,6 +13,7 @@ const CREATOR_ENGINE_LABELS: Record<CreatorEngine, string> = {
     AVG: 'AVG',
     CUSTOM: '自定义',
     ST: '自由',
+    IVG: '互动影游',
 };
 
 const CREATOR_TYPE_TO_ENGINE: Record<CreatorGameType, CreatorEngine> = {

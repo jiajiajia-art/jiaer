@@ -8,6 +8,7 @@ export interface UserGameData {
     cover_url: string;
     doc_url: string;
     files: string;
+    version?: string | number;
     price_amount: number|null;
     special_price_amount: number;
     rating_avg: string|null;
@@ -26,8 +27,8 @@ export interface UserGameData {
     game_tags: string;
     is_preset: number;
     // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）
-    // RPG → story, TXT → galgame, AVG → world, CUSTOM → customif
-    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM';
+    // RPG -> story, TXT -> galgame, AVG -> world, CUSTOM -> customif, IVG -> interactive-video
+    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG';
     customAppId?: string;
     needDeleted: boolean;
     display_cover_url: string;

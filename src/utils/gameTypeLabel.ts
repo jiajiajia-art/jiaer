@@ -5,6 +5,7 @@ const TYPE_LABELS: Record<string, string> = {
     AVG: 'World',
     RPG: 'Story',
     CUSTOM: 'Custom',
+    IVG: '\u4E92\u52A8\u5F71\u6E38',
     'ROLE-PLAYING': 'Role-Playing',
     WORLD: 'World',
     STORY: 'Story',

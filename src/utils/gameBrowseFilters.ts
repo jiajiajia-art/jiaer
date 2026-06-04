@@ -1,4 +1,4 @@
-export type HomeListMode = 'all' | 'role-playing' | 'world' | 'custom';
+export type HomeListMode = 'all' | 'role-playing' | 'world' | 'custom' | 'interactive-video';
 export type HomeListSort = 'hot' | 'recommended' | 'latest';
 
 export type HomeListOption<T extends string | number | null> = {
@@ -26,6 +26,7 @@ export const HOME_LIST_MODE_OPTIONS: HomeListOption<HomeListMode>[] = [
     { value: 'role-playing', label: '\u89D2\u8272\u626E\u6F14' },
     { value: 'world', label: 'World' },
     { value: 'custom', label: '\u81EA\u5B9A\u4E49' },
+    { value: 'interactive-video', label: '\u4E92\u52A8\u5F71\u6E38' },
 ];
 
 export const HOME_LIST_SORT_OPTIONS: HomeListOption<HomeListSort>[] = [
@@ -38,6 +39,7 @@ export const normalizeHomeListMode = (value: string | null): HomeListMode => {
     if (value === 'role-playing') return 'role-playing';
     if (value === 'world' || value === 'avg') return 'world';
     if (value === 'custom') return 'custom';
+    if (value === 'interactive-video' || value === 'ivg') return 'interactive-video';
     return DEFAULT_HOME_LIST_MODE;
 };
 
