@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MdArrowBack, MdDownload, MdPlayArrow, MdRefresh, MdSave } from 'react-icons/md';
+import { MdArrowBack, MdCheck, MdClose, MdDownload, MdEdit, MdPlayArrow, MdRefresh, MdSave } from 'react-icons/md';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
@@ -9,7 +9,7 @@ import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import GameAction from '../api/rpgGame/gameAction';
-import { downloadInteractiveVideoPackage } from '../api/interactiveVideo';
+import { downloadInteractiveVideoPackage, updateInteractiveVideoTitle } from '../api/interactiveVideo';
 import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { resolveCreatorEngine } from '../utils/miniProgram';
@@ -86,11 +86,16 @@ const InteractiveVideoEdit: React.FC = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
     const [isUnpublishing, setIsUnpublishing] = useState(false);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [titleDraft, setTitleDraft] = useState('');
+    const [isSavingTitle, setIsSavingTitle] = useState(false);
+    const [titleError, setTitleError] = useState('');
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [pageError, setPageError] = useState('');
     const [themeTagError, setThemeTagError] = useState('');
 
     const normalizedFileId = fileId.trim();
+    const currentTitle = gameDetail?.title || '未命名互动影游';
     const isPublished = Number(gameDetail?.is_public) === 1;
     const hasUnsavedThemeTags = !areSameThemeTagIds(selectedThemeTagIds, savedThemeTagIds);
     const canSaveThemeTags = selectedThemeTagIds.length >= THEME_TAG_MIN
@@ -135,6 +140,9 @@ const InteractiveVideoEdit: React.FC = () => {
                 : [];
             const themeTagIds = normalizeThemeTagIds(detail.theme_tag_ids);
             setGameDetail(detail);
+            setTitleDraft(detail.title || '');
+            setIsEditingTitle(false);
+            setTitleError('');
             setThemeTags(tags);
             setSelectedThemeTagIds(themeTagIds);
             setSavedThemeTagIds(themeTagIds);
@@ -211,6 +219,66 @@ const InteractiveVideoEdit: React.FC = () => {
 
         setSelectedThemeTagIds(nextIds);
         setThemeTagError(nextIds.length < THEME_TAG_MIN ? '至少选择 1 个作品题材。' : '');
+    };
+
+    const handleStartTitleEdit = () => {
+        setTitleDraft(gameDetail?.title || '');
+        setTitleError('');
+        setIsEditingTitle(true);
+    };
+
+    const handleCancelTitleEdit = () => {
+        setTitleDraft(gameDetail?.title || '');
+        setTitleError('');
+        setIsEditingTitle(false);
+    };
+
+    const handleSaveTitle = async () => {
+        if (!normalizedFileId || isSavingTitle) return;
+        const nextTitle = titleDraft.trim();
+        if (!nextTitle) {
+            const message = '作品名称不能为空。';
+            setTitleError(message);
+            toast.error(message);
+            return;
+        }
+        if (nextTitle.length > 80) {
+            const message = '作品名称不能超过 80 个字符。';
+            setTitleError(message);
+            toast.error(message);
+            return;
+        }
+        if (nextTitle === (gameDetail?.title || '').trim()) {
+            setIsEditingTitle(false);
+            setTitleError('');
+            return;
+        }
+
+        setIsSavingTitle(true);
+        setTitleError('');
+        try {
+            const response = await updateInteractiveVideoTitle(normalizedFileId, nextTitle);
+            if (!response.data?.success) {
+                throw new Error(response.data?.message || '作品名称保存失败');
+            }
+            const savedTitle = response.data.data?.title || nextTitle;
+            setGameDetail((current) => current ? {
+                ...current,
+                title: savedTitle,
+                subtitle: response.data.data?.subtitle ?? current.subtitle,
+                updated_at: response.data.data?.updated_at ?? current.updated_at,
+            } : current);
+            setTitleDraft(savedTitle);
+            setIsEditingTitle(false);
+            toast.success('作品名称已保存');
+        } catch (error) {
+            console.error('保存互动影游名称失败:', error);
+            const message = await getErrorMessage(error, '作品名称保存失败，请稍后重试。');
+            setTitleError(message);
+            toast.error(message);
+        } finally {
+            setIsSavingTitle(false);
+        }
     };
 
     const handleOpenPublishModal = () => {
@@ -336,10 +404,63 @@ const InteractiveVideoEdit: React.FC = () => {
                 ) : gameDetail ? (
                     <>
                         <section className={styles.headerBand}>
-                            <div>
+                            <div className={styles.titleBlock}>
                                 <span className={styles.eyebrow}>互动影游编辑</span>
-                                <h1>{gameDetail.title || '未命名互动影游'}</h1>
-                                <p>在这里维护平台发布信息，并下载可导入 002 工具的云端项目包。</p>
+                                {isEditingTitle ? (
+                                    <div className={styles.titleEditRow}>
+                                        <input
+                                            value={titleDraft}
+                                            onChange={(event) => setTitleDraft(event.target.value)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter') {
+                                                    event.preventDefault();
+                                                    void handleSaveTitle();
+                                                }
+                                                if (event.key === 'Escape') {
+                                                    event.preventDefault();
+                                                    handleCancelTitleEdit();
+                                                }
+                                            }}
+                                            maxLength={80}
+                                            autoFocus
+                                            aria-label="作品名称"
+                                        />
+                                        <button
+                                            type="button"
+                                            className={styles.titleIconButton}
+                                            onClick={() => void handleSaveTitle()}
+                                            disabled={isSavingTitle}
+                                            title="保存名称"
+                                            aria-label="保存名称"
+                                        >
+                                            <MdCheck />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={styles.titleIconButton}
+                                            onClick={handleCancelTitleEdit}
+                                            disabled={isSavingTitle}
+                                            title="取消修改"
+                                            aria-label="取消修改"
+                                        >
+                                            <MdClose />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className={styles.titleDisplayRow}>
+                                        <h1>{currentTitle}</h1>
+                                        <button
+                                            type="button"
+                                            className={styles.titleEditButton}
+                                            onClick={handleStartTitleEdit}
+                                            title="修改游戏名称"
+                                            aria-label="修改游戏名称"
+                                        >
+                                            <MdEdit />
+                                        </button>
+                                    </div>
+                                )}
+                                {titleError ? <div className={styles.titleError}>{titleError}</div> : null}
                             </div>
                             <div className={styles.headerActions}>
                                 <span className={`${styles.statusPill} ${isPublished ? styles.published : styles.draft}`}>

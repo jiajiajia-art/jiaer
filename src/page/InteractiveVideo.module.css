@@ -538,11 +538,15 @@
 
 .endingOverlay {
     position: fixed;
-    inset: 0;
+    top: 88px;
+    right: calc(360px + 24px);
+    bottom: 24px;
+    left: 24px;
     z-index: 40;
     display: grid;
     place-items: center;
     padding: 24px;
+    border-radius: 8px;
     background: rgba(0, 0, 0, 0.68);
 }
 
@@ -899,7 +903,9 @@
     }
 
     .endingOverlay {
+        inset: 0;
         padding: 12px;
+        border-radius: 0;
     }
 
     .endingModal,

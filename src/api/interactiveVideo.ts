@@ -53,6 +53,17 @@ export type InteractiveVideoSessionResponse = {
     sessionVersion?: string;
 };
 
+export type UpdateInteractiveVideoTitleResponse = {
+    success: boolean;
+    message?: string;
+    data?: {
+        fileId: string;
+        title: string;
+        subtitle?: string;
+        updated_at?: string;
+    };
+};
+
 export const createInteractiveVideoSession = (payload: {
     fileId: string;
     restart?: boolean;
@@ -71,6 +82,12 @@ export const downloadInteractiveVideoPackage = (fileId: string) =>
     api.get<Blob>(`/interactive-video/games/${encodeURIComponent(fileId)}/package`, {
         responseType: 'blob',
     });
+
+export const updateInteractiveVideoTitle = (fileId: string, title: string) =>
+    api.patch<UpdateInteractiveVideoTitleResponse>(
+        `/interactive-video/games/${encodeURIComponent(fileId)}/title`,
+        { title },
+    );
 
 export const toBackendAssetUrl = (path?: string | null): string => {
     if (!path) return '';
