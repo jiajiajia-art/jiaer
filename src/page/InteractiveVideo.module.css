@@ -1,31 +1,156 @@
 .pageRoot {
+    --ivg-bg: #fff7f8;
+    --ivg-surface: #ffffff;
+    --ivg-surface-muted: #fff1f3;
+    --ivg-panel: #fffafb;
+    --ivg-border: rgba(224, 61, 75, 0.18);
+    --ivg-border-strong: rgba(224, 61, 75, 0.34);
+    --ivg-text: #17201d;
+    --ivg-text-soft: #5d6b65;
+    --ivg-muted: #7d8a84;
+    --ivg-accent: #fb5b67;
+    --ivg-accent-strong: #e03d4b;
+    --ivg-on-accent: #ffffff;
+    --ivg-accent-soft: rgba(251, 91, 103, 0.1);
+    --ivg-accent-mid: rgba(251, 91, 103, 0.18);
+    --ivg-green: #48b794;
+    --ivg-monitor: #050606;
+    --ivg-control-bg: rgba(255, 255, 255, 0.92);
+    --ivg-control-hover: rgba(251, 91, 103, 0.12);
+    --ivg-control-text: #17201d;
+    --ivg-overlay: rgba(255, 244, 246, 0.74);
+    --ivg-loader-surface: linear-gradient(145deg, #ffffff 0%, #fff1f3 100%);
+    --ivg-tree-canvas: #fff7f8;
+    --ivg-shadow: 0 18px 48px rgba(224, 61, 75, 0.14);
+    --ivg-float-bg: rgba(255, 255, 255, 0.9);
+    --ivg-float-border: rgba(224, 61, 75, 0.22);
+    --ivg-float-text: #17201d;
+    --ivg-float-shadow: 0 12px 30px rgba(224, 61, 75, 0.14);
+    --ivg-icon-float-bg: transparent;
+    --ivg-icon-float-text: #e03d4b;
+    --ivg-icon-float-border: transparent;
+    --ivg-sheet-shadow: 0 -20px 70px rgba(224, 61, 75, 0.16);
+    --ivg-scrim: rgba(69, 19, 27, 0.32);
+    --ivg-flow-control-bg: #ffffff;
+    --ivg-flow-control-text: #17201d;
     min-height: 100vh;
-    background: #111313;
-    color: #f5f0e8;
+    background: var(--ivg-bg);
+    color: var(--ivg-text);
     display: flex;
     flex-direction: column;
+}
+
+.pageRootDark {
+    --ivg-bg: #111313;
+    --ivg-surface: #171a19;
+    --ivg-surface-muted: #202623;
+    --ivg-panel: #191d1b;
+    --ivg-border: rgba(255, 255, 255, 0.1);
+    --ivg-border-strong: rgba(229, 179, 95, 0.34);
+    --ivg-text: #f5f0e8;
+    --ivg-text-soft: #e5ddd0;
+    --ivg-muted: #9fb2a9;
+    --ivg-accent: #e5b35f;
+    --ivg-accent-strong: #e5b35f;
+    --ivg-on-accent: #17201d;
+    --ivg-accent-soft: rgba(229, 179, 95, 0.1);
+    --ivg-accent-mid: rgba(229, 179, 95, 0.16);
+    --ivg-green: #48b794;
+    --ivg-monitor: #050606;
+    --ivg-control-bg: rgba(5, 8, 12, 0.9);
+    --ivg-control-hover: rgba(229, 179, 95, 0.16);
+    --ivg-control-text: #d7e4f0;
+    --ivg-overlay: rgba(0, 0, 0, 0.42);
+    --ivg-loader-surface: linear-gradient(145deg, #171a19 0%, #080909 100%);
+    --ivg-tree-canvas: #0d1110;
+    --ivg-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
+    --ivg-float-bg: rgba(16, 20, 19, 0.84);
+    --ivg-float-border: rgba(229, 179, 95, 0.28);
+    --ivg-float-text: #f5f0e8;
+    --ivg-float-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    --ivg-icon-float-bg: transparent;
+    --ivg-icon-float-text: rgba(255, 255, 255, 0.72);
+    --ivg-icon-float-border: transparent;
+    --ivg-sheet-shadow: 0 -20px 70px rgba(0, 0, 0, 0.46);
+    --ivg-scrim: rgba(0, 0, 0, 0.46);
+    --ivg-flow-control-bg: rgba(255, 255, 255, 0.94);
+    --ivg-flow-control-text: #111313;
 }
 
 .landscapeVideoPage {
     --ivg-landscape-frame: 1;
 }
 
+.portraitVideoPage {
+    --ivg-portrait-frame: 1;
+}
+
+.portalRoot {
+    min-height: 0;
+    display: contents;
+    background: transparent;
+}
+
+.portalViewportFrame {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    min-height: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.portalRootViewportDesktop {
+    --ivg-portal-viewport: desktop;
+}
+
+.portalRootViewportPortrait {
+    --ivg-portal-viewport: portrait;
+}
+
+.portalRootViewportLandscape {
+    --ivg-portal-viewport: landscape;
+}
+
+.portalRootDesktop {
+    --ivg-portal-posture: desktop;
+}
+
+.portalRootMobilePortraitVideo {
+    --ivg-portal-posture: mobile-portrait-video;
+}
+
+.portalRootMobileLandscapeVideo {
+    --ivg-portal-posture: mobile-landscape-video;
+}
+
+.portalRootLandscapeRotated {
+    --ivg-portal-rotation: landscape-rotated;
+}
+
 .header {
-    height: 64px;
+    position: fixed;
+    top: 32px;
+    left: 32px;
+    z-index: 31;
+    width: auto;
+    height: auto;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 0 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: #171a19;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
 }
 
 .iconButton,
 .headerButton,
+.themeToggleButton,
+.sidePanelActionButton,
 .messagePanel button {
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f0e8;
+    border: 1px solid var(--ivg-border);
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
     border-radius: 8px;
     min-height: 38px;
     display: inline-flex;
@@ -40,9 +165,38 @@
     font-size: 20px;
 }
 
+.header .iconButton {
+    width: 44px;
+    min-height: 44px;
+    pointer-events: auto;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    color: var(--ivg-icon-float-text);
+}
+
+.header .iconButton:hover {
+    color: var(--ivg-accent-strong);
+}
+
 .headerButton {
     padding: 0 14px;
+}
+
+.headerActions {
     margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.themeToggleButton {
+    padding: 0 12px;
+    font-weight: 800;
+}
+
+.themeToggleButton svg {
+    font-size: 17px;
 }
 
 .headerTitle {
@@ -60,7 +214,7 @@
 }
 
 .headerTitle small {
-    color: #9fb2a9;
+    color: var(--ivg-muted);
     font-size: 12px;
 }
 
@@ -79,12 +233,12 @@
 .monitor {
     position: relative;
     width: 100%;
-    height: calc(100vh - 112px);
+    height: calc(100vh - 48px);
     min-height: 520px;
     overflow: hidden;
     border-radius: 8px;
-    background: #050606;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    background: var(--ivg-monitor);
+    box-shadow: inset 0 0 0 1px var(--ivg-border);
 }
 
 .video {
@@ -101,29 +255,33 @@
     justify-content: center;
     padding: 56px;
     background:
-        linear-gradient(135deg, rgba(31, 55, 50, 0.9), rgba(12, 15, 15, 0.94)),
-        radial-gradient(circle at 80% 20%, rgba(229, 179, 95, 0.22), transparent 34%);
+        linear-gradient(135deg, var(--ivg-surface), var(--ivg-surface-muted)),
+        radial-gradient(circle at 80% 20%, var(--ivg-accent-mid), transparent 34%);
 }
 
 .textScene span,
-.endingModal span {
-    color: #e5b35f;
+.endingModal span,
+.restartConfirmModal span {
+    color: var(--ivg-accent-strong);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0;
 }
 
 .textScene h1,
-.endingModal h1 {
+.endingModal h1,
+.restartConfirmModal h1 {
     margin: 10px 0 12px;
     font-size: 32px;
     line-height: 1.2;
+    color: var(--ivg-text);
 }
 
 .textScene p,
-.endingModal p {
+.endingModal p,
+.restartConfirmModal p {
     margin: 0;
-    color: #e5ddd0;
+    color: var(--ivg-text-soft);
     font-size: 16px;
     line-height: 1.75;
     white-space: pre-wrap;
@@ -140,10 +298,10 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border: 1px solid rgba(229, 179, 95, 0.42);
+    border: 1px solid var(--ivg-border-strong);
     border-radius: 8px;
-    background: rgba(5, 6, 6, 0.76);
-    color: #fff8ea;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
     font-size: 15px;
     font-weight: 800;
     backdrop-filter: blur(10px);
@@ -152,6 +310,63 @@
 
 .playOverlayButton svg {
     font-size: 24px;
+}
+
+.videoTransitionOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--ivg-overlay);
+    color: var(--ivg-text);
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+}
+
+.videoTransitionOverlay strong {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.videoTransitionLoader {
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+
+.videoTransitionLoader span {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--ivg-border);
+    border-top-color: var(--ivg-accent-strong);
+    border-radius: 999px;
+    animation: ivgLoadingSpin 0.9s linear infinite;
+}
+
+.videoTransitionLoader span:nth-child(2) {
+    inset: 10px;
+    border-color: var(--ivg-accent-soft);
+    border-bottom-color: var(--ivg-muted);
+    animation-duration: 0.68s;
+    animation-direction: reverse;
+}
+
+.preloadPool {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.preloadPool video {
+    width: 1px;
+    height: 1px;
 }
 
 .choiceDock {
@@ -174,10 +389,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(164, 184, 204, 0.18);
+    border: 1px solid var(--ivg-border);
     border-radius: 0;
-    background: rgba(5, 8, 12, 0.9);
-    color: #d7e4f0;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
     padding: 9px 16px;
     text-align: center;
     backdrop-filter: blur(10px);
@@ -202,17 +417,26 @@
 }
 
 .choiceButton:hover {
-    border-color: rgba(229, 179, 95, 0.36);
-    background: rgba(229, 179, 95, 0.16);
-    color: #fff8ea;
+    border-color: var(--ivg-border-strong);
+    background: var(--ivg-control-hover);
+    color: var(--ivg-text);
+}
+
+.choiceDockPortrait,
+.choiceDockLandscape {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.choiceDockOne .choiceButton {
+    justify-self: center;
 }
 
 .noChoices,
 .videoNotice {
     border-radius: 8px;
     padding: 12px 14px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #c8d4cf;
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-text-soft);
 }
 
 .videoNotice {
@@ -222,42 +446,85 @@
 }
 
 .sidePanel {
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
-    background: #191d1b;
+    border-left: 1px solid var(--ivg-border);
+    background: var(--ivg-panel);
     padding: 18px;
     overflow-y: auto;
 }
 
-.panelSection {
-    padding: 16px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.sidePanelHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--ivg-border);
 }
 
-.panelSection:first-child {
-    padding-top: 0;
+.sidePanelTitle {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+    overflow: hidden;
+    color: var(--ivg-text);
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidePanelHeaderActions {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidePanelActionButton {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+    background: transparent;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.sidePanelActionButton svg {
+    font-size: 18px;
+}
+
+.sidePanelActionButton:hover {
+    border-color: var(--ivg-border-strong);
+    background: var(--ivg-control-hover);
+    color: var(--ivg-accent-strong);
+}
+
+.panelSection {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ivg-border);
 }
 
 .sectionTitle {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #f5f0e8;
+    color: var(--ivg-text);
     font-size: 14px;
     font-weight: 800;
     margin-bottom: 12px;
 }
 
-.variableList,
-.historyList {
+.variableList {
     display: grid;
     gap: 8px;
 }
 
-.variableRow,
-.historyItem {
+.variableRow {
     min-height: 38px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--ivg-surface-muted);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -266,47 +533,166 @@
 }
 
 .variableRow span,
-.historyItem span,
 .emptyText {
-    color: #9fb2a9;
+    color: var(--ivg-muted);
     font-size: 13px;
 }
 
-.variableRow strong,
-.historyItem strong {
-    color: #f5f0e8;
+.variableRow strong {
+    color: var(--ivg-text);
     font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.openTreeButton {
-    width: 100%;
-    min-height: 48px;
-    border: 1px solid rgba(229, 179, 95, 0.3);
-    border-radius: 8px;
-    background: rgba(229, 179, 95, 0.1);
-    color: #f5f0e8;
-    display: flex;
+.historyPanelSection {
+    min-height: 0;
+}
+
+.historyList {
+    position: relative;
+    display: grid;
+    gap: 0;
+    max-height: min(320px, 32dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px 2px 2px 0;
+}
+
+.historyList::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: 1px;
+    background: var(--ivg-border-strong);
+}
+
+.historyItem {
+    position: relative;
+    min-height: 38px;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
-    justify-content: flex-start;
-    padding: 0 14px;
+    gap: 8px;
+    padding: 7px 0 7px 32px;
+}
+
+.historyItem::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    border: 2px solid var(--ivg-accent-strong);
+    border-radius: 999px;
+    background: var(--ivg-panel);
+    transform: translateY(-50%);
+    box-shadow: 0 0 0 3px var(--ivg-panel);
+}
+
+.historyItem span {
+    color: var(--ivg-muted);
+    font-size: 11px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.historyItem strong {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ivg-text);
+    font-size: 13px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.historyList .emptyText {
+    padding: 8px 0 0 32px;
+}
+
+.openTreeButton {
+    position: relative;
+    width: 100%;
+    min-height: 72px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--ivg-accent-strong) 74%, var(--ivg-border));
+    border-radius: 8px;
+    background:
+        linear-gradient(135deg, var(--ivg-accent-strong), var(--ivg-accent)),
+        var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
+    display: grid;
+    align-content: center;
+    padding: 14px 14px 18px;
     text-align: left;
     font-weight: 800;
+    box-shadow: 0 14px 32px color-mix(in srgb, var(--ivg-accent-strong) 20%, transparent);
     cursor: pointer;
 }
 
 .openTreeButton:hover {
-    background: rgba(229, 179, 95, 0.16);
+    border-color: var(--ivg-accent-strong);
+    background:
+        linear-gradient(135deg, var(--ivg-accent), var(--ivg-accent-strong)),
+        var(--ivg-accent-strong);
 }
 
-.openTreeButton span {
-    margin-left: auto;
-    color: #b4c2bc;
-    font-size: 12px;
+.openTreeButtonContent {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.openTreeButtonContent svg {
+    flex: 0 0 auto;
+    font-size: 20px;
+}
+
+.openTreeButtonText {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.openTreeButtonText strong {
+    overflow: hidden;
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.openTreeButtonText small {
+    color: color-mix(in srgb, var(--ivg-on-accent) 76%, transparent);
+    font-size: 11px;
     font-weight: 700;
+}
+
+.openTreeProgressTrack {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    left: 12px;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ivg-on-accent) 26%, transparent);
+}
+
+.openTreeProgressFill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--ivg-on-accent);
 }
 
 .mobileToolsButton,
@@ -321,7 +707,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: rgba(0, 0, 0, 0.72);
+    background: color-mix(in srgb, var(--ivg-bg) 32%, rgba(0, 0, 0, 0.72));
 }
 
 .treeDialog {
@@ -331,10 +717,10 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--ivg-border);
     border-radius: 20px;
-    background: #101413;
-    box-shadow: 0 24px 90px rgba(0, 0, 0, 0.48);
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-shadow);
 }
 
 .treeDialogHeader {
@@ -344,8 +730,8 @@
     justify-content: space-between;
     gap: 16px;
     padding: 0 18px 0 22px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: #171a19;
+    border-bottom: 1px solid var(--ivg-border);
+    background: var(--ivg-surface);
 }
 
 .treeDialogTitle {
@@ -363,7 +749,7 @@
 }
 
 .treeDialogHeader span {
-    color: #e5b35f;
+    color: var(--ivg-accent-strong);
     font-size: 11px;
     font-weight: 900;
     letter-spacing: 0;
@@ -371,7 +757,7 @@
 
 .treeDialogHeader h2 {
     margin: 2px 0 0;
-    color: #f5f0e8;
+    color: var(--ivg-text);
     font-size: 18px;
 }
 
@@ -380,10 +766,10 @@
     max-width: 100%;
     overflow: hidden;
     padding: 4px 8px;
-    border: 1px solid rgba(229, 179, 95, 0.28);
+    border: 1px solid var(--ivg-border-strong);
     border-radius: 7px;
-    background: rgba(229, 179, 95, 0.1);
-    color: #e7d1a5;
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-accent-strong);
     font-size: 12px;
     font-weight: 800;
     line-height: 1.2;
@@ -400,10 +786,10 @@
     height: 38px;
     display: grid;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid var(--ivg-border);
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #f5f0e8;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
     font-size: 20px;
     cursor: pointer;
 }
@@ -412,9 +798,11 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    overscroll-behavior: contain;
+    touch-action: none;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 42%),
-        #0d1110;
+        linear-gradient(180deg, var(--ivg-accent-soft), transparent 42%),
+        var(--ivg-tree-canvas);
 }
 
 .treeCanvas :global(.react-flow__pane) {
@@ -429,6 +817,16 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+.treeCanvas :global(.react-flow__controls-button) {
+    border-bottom-color: var(--ivg-border);
+    background: var(--ivg-flow-control-bg);
+    color: var(--ivg-flow-control-text);
+}
+
+.treeCanvas :global(.react-flow__controls-button:hover) {
+    background: var(--ivg-accent-soft);
 }
 
 .treeHandle {
@@ -448,12 +846,12 @@
     align-content: center;
     gap: 6px;
     padding: 14px 40px 14px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
+    border: 1px solid var(--ivg-border);
     border-radius: 18px;
     background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 58%),
-        #171d1b;
-    color: #f5f0e8;
+        linear-gradient(135deg, var(--ivg-accent-soft), transparent 58%),
+        var(--ivg-surface);
+    color: var(--ivg-text);
     text-align: left;
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
 }
@@ -468,7 +866,7 @@
 
 .treePlotButton span,
 .treeChoiceCard span {
-    color: #9fb2a9;
+    color: var(--ivg-muted);
     font-size: 12px;
     font-weight: 700;
 }
@@ -476,7 +874,7 @@
 .treePlotButton strong,
 .treeChoiceCard strong {
     overflow: hidden;
-    color: #f5f0e8;
+    color: var(--ivg-text);
     font-size: 15px;
     line-height: 1.35;
     text-overflow: ellipsis;
@@ -487,7 +885,7 @@
     position: absolute;
     top: 12px;
     right: 12px;
-    color: #e5b35f;
+    color: var(--ivg-accent-strong);
     font-size: 11px;
     font-style: normal;
     font-weight: 900;
@@ -495,27 +893,27 @@
 
 .treePlotVisited,
 .treeChoiceVisited {
-    border-color: rgba(229, 179, 95, 0.48);
+    border-color: var(--ivg-border-strong);
     background:
-        linear-gradient(135deg, rgba(229, 179, 95, 0.16), transparent 56%),
-        #171d1b;
+        linear-gradient(135deg, var(--ivg-accent-mid), transparent 56%),
+        var(--ivg-surface);
 }
 
 .treePlotCurrent {
-    border-color: rgba(72, 183, 148, 0.74);
+    border-color: color-mix(in srgb, var(--ivg-green) 74%, transparent);
     background:
         linear-gradient(135deg, rgba(72, 183, 148, 0.2), rgba(229, 179, 95, 0.12)),
-        #17201d;
+        var(--ivg-surface-muted);
     box-shadow:
         0 0 0 1px rgba(72, 183, 148, 0.22),
         0 18px 42px rgba(72, 183, 148, 0.14);
 }
 
 .treePlotEnding {
-    border-color: rgba(242, 111, 111, 0.5);
+    border-color: var(--ivg-border-strong);
     background:
-        linear-gradient(135deg, rgba(242, 111, 111, 0.18), transparent 58%),
-        #171d1b;
+        linear-gradient(135deg, var(--ivg-accent-mid), transparent 58%),
+        var(--ivg-surface);
 }
 
 .treePlotDisabled {
@@ -523,17 +921,17 @@
 }
 
 .treeChoiceCard {
-    border-color: rgba(229, 179, 95, 0.32);
+    border-color: var(--ivg-border-strong);
     background:
-        linear-gradient(135deg, rgba(229, 179, 95, 0.12), transparent 58%),
-        #1a1711;
+        linear-gradient(135deg, var(--ivg-accent-soft), transparent 58%),
+        var(--ivg-surface-muted);
 }
 
 .treeEmpty {
     flex: 1;
     display: grid;
     place-items: center;
-    color: #9fb2a9;
+    color: var(--ivg-muted);
 }
 
 .endingOverlay {
@@ -547,22 +945,100 @@
     place-items: center;
     padding: 24px;
     border-radius: 8px;
-    background: rgba(0, 0, 0, 0.68);
+    background: color-mix(in srgb, var(--ivg-bg) 28%, rgba(0, 0, 0, 0.68));
+}
+
+.restartConfirmOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 46;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--ivg-scrim);
+}
+
+.restartConfirmModal {
+    position: relative;
+    width: min(420px, 100%);
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-surface);
+    color: var(--ivg-text);
+    padding: 28px;
+    box-shadow: var(--ivg-shadow);
+}
+
+.restartConfirmModal h1 {
+    padding-right: 44px;
+    font-size: 24px;
+}
+
+.restartConfirmModal p {
+    color: var(--ivg-text-soft);
+    font-size: 14px;
+    line-height: 1.65;
 }
 
 .endingModal,
 .messagePanel,
 .loadingPanel {
+    position: relative;
     width: min(560px, 100%);
     border-radius: 8px;
-    background: #f9f3e9;
-    color: #17201d;
+    background: var(--ivg-surface);
+    color: var(--ivg-text);
     padding: 28px;
-    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--ivg-shadow);
 }
 
 .endingModal p {
-    color: #394640;
+    color: var(--ivg-text-soft);
+}
+
+.endingCloseButton,
+.restartConfirmClose {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.restartConfirmActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.restartConfirmActions button {
+    min-height: 40px;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.restartConfirmSecondary {
+    border: 1px solid var(--ivg-border);
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+}
+
+.restartConfirmPrimary {
+    border: 1px solid var(--ivg-accent-strong);
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
 }
 
 .endingActions {
@@ -574,17 +1050,16 @@
 
 .endingActions button {
     min-height: 40px;
-    border: 1px solid rgba(23, 32, 29, 0.16);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--ivg-border-strong);
     border-radius: 8px;
-    background: #17201d;
-    color: #fff;
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
     padding: 0 14px;
     cursor: pointer;
-}
-
-.endingActions button:nth-child(3) {
-    background: transparent;
-    color: #17201d;
 }
 
 .messagePanel,
@@ -597,13 +1072,115 @@
 }
 
 .messagePanel p {
-    color: #52615b;
+    color: var(--ivg-text-soft);
 }
 
 .messagePanel button {
-    background: #17201d;
-    color: #fff;
+    background: var(--ivg-accent-strong);
+    color: var(--ivg-on-accent);
     padding: 0 14px;
+}
+
+.loadingPanel {
+    width: min(620px, calc(100% - 48px));
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    overflow: hidden;
+    border: 1px solid var(--ivg-border-strong);
+    background:
+        radial-gradient(circle at 50% 0%, var(--ivg-accent-mid), transparent 40%),
+        var(--ivg-loader-surface);
+    color: var(--ivg-text);
+    text-align: center;
+}
+
+.loadingOrb {
+    position: relative;
+    width: 72px;
+    height: 72px;
+}
+
+.loadingOrbit,
+.loadingOrbitInner,
+.loadingCore {
+    position: absolute;
+    border-radius: 999px;
+}
+
+.loadingOrbit {
+    inset: 0;
+    border: 2px solid var(--ivg-border);
+    border-top-color: var(--ivg-accent-strong);
+    animation: ivgLoadingSpin 1.2s linear infinite;
+}
+
+.loadingOrbitInner {
+    inset: 14px;
+    border: 2px solid var(--ivg-accent-soft);
+    border-bottom-color: var(--ivg-muted);
+    animation: ivgLoadingSpin 0.86s linear infinite reverse;
+}
+
+.loadingCore {
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    background: var(--ivg-accent-strong);
+    box-shadow: 0 0 26px var(--ivg-accent-mid);
+    transform: translate(-50%, -50%);
+    animation: ivgLoadingPulse 1.5s ease-in-out infinite;
+}
+
+.loadingEyebrow {
+    color: var(--ivg-accent-strong);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 0;
+}
+
+.loadingPanel h1 {
+    margin: 0;
+    color: var(--ivg-text);
+    font-size: 26px;
+    line-height: 1.2;
+}
+
+.loadingPanel p {
+    margin: 0;
+    color: var(--ivg-muted);
+    font-size: 14px;
+}
+
+@keyframes ivgLoadingSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes ivgLoadingPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+        opacity: 0.58;
+        transform: translate(-50%, -50%) scale(1.22);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loadingOrbit,
+    .loadingOrbitInner,
+    .loadingCore,
+    .videoTransitionLoader span {
+        animation: none;
+    }
 }
 
 @media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
@@ -629,15 +1206,16 @@
         width: 44px;
         min-height: 44px;
         pointer-events: auto;
-        border: 0;
-        background: transparent;
+        border: 1px solid var(--ivg-icon-float-border);
+        background: var(--ivg-icon-float-bg);
         box-shadow: none;
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--ivg-icon-float-text);
         filter: none;
         backdrop-filter: none;
     }
 
     .headerTitle,
+    .headerActions,
     .headerButton {
         display: none;
     }
@@ -674,10 +1252,10 @@
         height: 44px;
         display: grid;
         place-items: center;
-        border: 0;
+        border: 1px solid var(--ivg-icon-float-border);
         border-radius: 999px;
-        background: transparent;
-        color: rgba(255, 255, 255, 0.72);
+        background: var(--ivg-icon-float-bg);
+        color: var(--ivg-icon-float-text);
         box-shadow: none;
         filter: none;
         backdrop-filter: none;
@@ -704,7 +1282,7 @@
         inset: 0;
         z-index: 34;
         display: block;
-        background: rgba(0, 0, 0, 0.46);
+        background: var(--ivg-scrim);
     }
 
     .mobileToolsSheet {
@@ -716,11 +1294,11 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid var(--ivg-border);
         border-bottom: 0;
         border-radius: 18px 18px 0 0;
-        background: #171a19;
-        box-shadow: 0 -20px 70px rgba(0, 0, 0, 0.46);
+        background: var(--ivg-surface);
+        box-shadow: var(--ivg-sheet-shadow);
     }
 
     .mobileToolsHeader {
@@ -730,7 +1308,7 @@
         justify-content: space-between;
         gap: 12px;
         padding: 0 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid var(--ivg-border);
     }
 
     .mobileToolsHeaderActions {
@@ -740,7 +1318,7 @@
     }
 
     .mobileToolsHeader strong {
-        color: #f5f0e8;
+        color: var(--ivg-text);
         font-size: 15px;
     }
 
@@ -750,10 +1328,10 @@
         align-items: center;
         justify-content: center;
         gap: 6px;
-        border: 1px solid rgba(229, 179, 95, 0.34);
+        border: 1px solid var(--ivg-border-strong);
         border-radius: 8px;
-        background: rgba(229, 179, 95, 0.12);
-        color: #fff8ea;
+        background: var(--ivg-accent-soft);
+        color: var(--ivg-text);
         padding: 0 10px;
         font-size: 13px;
         font-weight: 800;
@@ -765,10 +1343,10 @@
         height: 36px;
         display: grid;
         place-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        border: 1px solid var(--ivg-border);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.06);
-        color: #f5f0e8;
+        background: var(--ivg-control-bg);
+        color: var(--ivg-control-text);
         font-size: 18px;
         cursor: pointer;
     }
@@ -782,19 +1360,19 @@
 
     .mobileToolsTabs button {
         min-height: 36px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid var(--ivg-border);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #b4c2bc;
+        background: var(--ivg-control-bg);
+        color: var(--ivg-muted);
         font-size: 13px;
         font-weight: 800;
         cursor: pointer;
     }
 
     .mobileToolsTabs .mobileToolsTabActive {
-        border-color: rgba(229, 179, 95, 0.42);
-        background: rgba(229, 179, 95, 0.14);
-        color: #fff8ea;
+        border-color: var(--ivg-border-strong);
+        background: var(--ivg-accent-soft);
+        color: var(--ivg-text);
     }
 
     .mobileToolsContent {
@@ -806,6 +1384,14 @@
     .mobileToolsContent .panelSection {
         padding-bottom: 0;
         border-bottom: 0;
+    }
+
+    .mobileToolsContent .openTreeButton {
+        min-height: 76px;
+    }
+
+    .mobileToolsContent .historyList {
+        max-height: min(44dvh, 360px);
     }
 
     .treeOverlay {
@@ -846,10 +1432,11 @@
         align-items: center;
         gap: 6px;
         padding: 7px 10px;
-        border: 1px solid rgba(229, 179, 95, 0.28);
+        border: 1px solid var(--ivg-float-border);
         border-radius: 999px;
-        background: rgba(16, 20, 19, 0.84);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        background: var(--ivg-float-bg);
+        color: var(--ivg-float-text);
+        box-shadow: none;
         backdrop-filter: blur(12px);
     }
 
@@ -876,8 +1463,9 @@
         max-width: 132px;
         padding: 7px 9px;
         border-radius: 999px;
-        background: rgba(16, 20, 19, 0.84);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        border-color: var(--ivg-float-border);
+        background: var(--ivg-float-bg);
+        box-shadow: var(--ivg-float-shadow);
         backdrop-filter: blur(12px);
     }
 
@@ -893,22 +1481,24 @@
         width: 44px;
         height: 44px;
         border-radius: 999px;
-        border: 0;
-        background: transparent;
+        border: 1px solid var(--ivg-icon-float-border);
+        background: var(--ivg-icon-float-bg);
         box-shadow: none;
-        color: rgba(255, 255, 255, 0.72);
+        color: var(--ivg-icon-float-text);
         filter: none;
         backdrop-filter: none;
         -webkit-tap-highlight-color: transparent;
     }
 
-    .endingOverlay {
+    .endingOverlay,
+    .restartConfirmOverlay {
         inset: 0;
         padding: 12px;
         border-radius: 0;
     }
 
     .endingModal,
+    .restartConfirmModal,
     .messagePanel,
     .loadingPanel {
         width: min(560px, calc(100vw - 24px));
@@ -964,7 +1554,8 @@
     }
 
     .textScene h1,
-    .endingModal h1 {
+    .endingModal h1,
+    .restartConfirmModal h1 {
         font-size: 24px;
     }
 
@@ -1037,4 +1628,389 @@
     .treeChoiceCard {
         width: 214px;
     }
+}
+
+@media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .choiceDock {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+        width: min(420px, calc(100% - 28px));
+        max-height: min(48dvh, 360px);
+        gap: 8px;
+        overscroll-behavior: contain;
+    }
+
+    .choiceDockLandscape {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(660px, calc(100% - 44px));
+        max-height: min(46dvh, 260px);
+    }
+
+    .choiceDockPortrait {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .choiceDockLandscape.choiceDockOne {
+        grid-template-columns: minmax(180px, 320px);
+        justify-content: center;
+    }
+
+    .choiceDockLandscape.choiceDockThree .choiceButton:nth-child(3) {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: min(320px, 100%);
+    }
+
+    .choiceDockPortrait.choiceDockOne .choiceButton {
+        width: min(320px, 100%);
+    }
+
+    .choiceButton {
+        min-height: 46px;
+        padding: 9px 12px;
+        touch-action: manipulation;
+    }
+
+    .mobileThemeButton {
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 980px) and (orientation: portrait) {
+    .landscapeVideoPage {
+        position: fixed;
+        top: 0;
+        left: 100vw;
+        width: 100dvh;
+        height: 100vw;
+        min-height: 0;
+        overflow: hidden;
+        transform: rotate(90deg);
+        transform-origin: top left;
+    }
+
+    .landscapeVideoPage .playerGrid,
+    .landscapeVideoPage .stage,
+    .landscapeVideoPage .monitor {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .landscapeVideoPage .stage {
+        display: block;
+        padding: 0;
+    }
+
+    .landscapeVideoPage .monitor {
+        aspect-ratio: auto;
+        border-radius: 0;
+    }
+
+    .portraitVideoPage .choiceDock,
+    .choiceDockPortrait {
+        grid-template-columns: minmax(0, 1fr);
+        width: min(420px, calc(100% - 28px));
+    }
+
+    .treeDialogHeader {
+        position: relative;
+        top: auto;
+        right: auto;
+        left: auto;
+        z-index: 6;
+        min-height: calc(env(safe-area-inset-top, 0px) + 64px);
+        align-items: center;
+        gap: 12px;
+        padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+        border-bottom: 1px solid var(--ivg-border);
+        background: var(--ivg-surface);
+        pointer-events: auto;
+    }
+
+    .treeDialogTitle {
+        width: auto;
+        max-width: none;
+        flex: 1;
+        display: grid;
+        gap: 2px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .treeDialogTitle span {
+        display: block;
+    }
+
+    .treeDialogTitle h2 {
+        font-size: 16px;
+        line-height: 1.2;
+        white-space: normal;
+    }
+
+    .treeDialogActions {
+        align-items: center;
+    }
+
+    .treeProgress {
+        max-width: 128px;
+        background: var(--ivg-accent-soft);
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+
+    .treeCloseButton {
+        border: 1px solid var(--ivg-icon-float-border);
+        border-radius: 999px;
+        background: var(--ivg-icon-float-bg);
+        color: var(--ivg-icon-float-text);
+        box-shadow: none;
+    }
+
+    .treePlotButton,
+    .treeChoiceCard {
+        width: min(236px, calc(100vw - 64px));
+    }
+}
+
+@media (max-width: 640px) {
+    .choiceDock {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+        width: min(420px, calc(100% - 24px));
+    }
+
+    .choiceDockLandscape {
+        width: min(620px, calc(100% - 32px));
+    }
+}
+
+@media (max-width: 980px) and (orientation: landscape), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .choiceDock,
+    .choiceDockPortrait,
+    .choiceDockLandscape {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(760px, calc(100% - 160px));
+        max-height: min(44dvh, 240px);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(38px, 7dvh, 54px));
+        gap: 10px;
+    }
+
+    .choiceDockOne,
+    .choiceDockLandscape.choiceDockOne {
+        grid-template-columns: minmax(220px, 340px);
+        justify-content: center;
+        width: min(420px, calc(100% - 120px));
+    }
+
+    .choiceDockThree .choiceButton:nth-child(3),
+    .choiceDockLandscape.choiceDockThree .choiceButton:nth-child(3) {
+        grid-column: 1 / -1;
+        justify-self: center;
+        width: min(360px, 100%);
+    }
+
+    .choiceDockFour,
+    .choiceDockLandscape.choiceDockFour {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .choiceButton {
+        min-height: 40px;
+        padding: 7px 10px;
+    }
+
+    .choiceButton strong {
+        font-size: 12px;
+        line-height: 1.24;
+    }
+}
+
+.portalRootMobilePortraitVideo .portalViewportFrame,
+.portalRootMobileLandscapeVideo .portalViewportFrame {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+}
+
+.portalRootMobileLandscapeVideo.portalRootViewportPortrait .portalViewportFrame {
+    top: 0;
+    right: auto;
+    bottom: auto;
+    left: 100vw;
+    width: 100dvh;
+    height: 100vw;
+    transform: rotate(90deg);
+    transform-origin: top left;
+}
+
+.portalRootMobilePortraitVideo .mobileToolsOverlay,
+.portalRootMobileLandscapeVideo .mobileToolsOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 34;
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--ivg-scrim);
+}
+
+.portalRootMobilePortraitVideo .treeOverlay,
+.portalRootMobileLandscapeVideo .treeOverlay,
+.portalRootMobilePortraitVideo .endingOverlay,
+.portalRootMobileLandscapeVideo .endingOverlay,
+.portalRootMobilePortraitVideo .restartConfirmOverlay,
+.portalRootMobileLandscapeVideo .restartConfirmOverlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.portalRootMobilePortraitVideo .mobileToolsSheet,
+.portalRootMobileLandscapeVideo .mobileToolsSheet {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ivg-border);
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-sheet-shadow);
+}
+
+.portalRootMobilePortraitVideo .mobileToolsSheet {
+    max-height: min(72%, 620px);
+}
+
+.portalRootMobileLandscapeVideo .mobileToolsSheet {
+    max-height: min(58%, 340px);
+}
+
+.portalRootMobilePortraitVideo .treeOverlay,
+.portalRootMobileLandscapeVideo .treeOverlay {
+    place-items: stretch;
+    padding: 0;
+}
+
+.portalRootMobilePortraitVideo .treeDialog,
+.portalRootMobileLandscapeVideo .treeDialog {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+}
+
+.portalRootMobilePortraitVideo .treeDialogHeader,
+.portalRootMobileLandscapeVideo .treeDialogHeader {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    z-index: 6;
+    min-height: calc(env(safe-area-inset-top, 0px) + 60px);
+    align-items: center;
+    gap: 12px;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px;
+    border-bottom: 1px solid var(--ivg-border);
+    background: var(--ivg-surface);
+    pointer-events: auto;
+}
+
+.portalRootMobilePortraitVideo .treeDialogTitle,
+.portalRootMobileLandscapeVideo .treeDialogTitle {
+    width: auto;
+    max-width: none;
+    flex: 1;
+    display: grid;
+    gap: 2px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.portalRootMobilePortraitVideo .treeDialogTitle span,
+.portalRootMobileLandscapeVideo .treeDialogTitle span {
+    display: block;
+}
+
+.portalRootMobilePortraitVideo .treeDialogTitle h2,
+.portalRootMobileLandscapeVideo .treeDialogTitle h2 {
+    margin: 2px 0 0;
+    font-size: 16px;
+    line-height: 1.2;
+    white-space: normal;
+}
+
+.portalRootMobilePortraitVideo .treeDialogActions,
+.portalRootMobileLandscapeVideo .treeDialogActions {
+    align-items: center;
+    gap: 8px;
+}
+
+.portalRootMobilePortraitVideo .treeProgress,
+.portalRootMobileLandscapeVideo .treeProgress {
+    max-width: 128px;
+    background: var(--ivg-accent-soft);
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+.portalRootMobilePortraitVideo .treeCloseButton,
+.portalRootMobileLandscapeVideo .treeCloseButton {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--ivg-icon-float-border);
+    border-radius: 999px;
+    background: var(--ivg-icon-float-bg);
+    color: var(--ivg-icon-float-text);
+    box-shadow: none;
+}
+
+.portalRootMobilePortraitVideo .treePlotButton,
+.portalRootMobilePortraitVideo .treeChoiceCard {
+    width: min(236px, calc(100vw - 64px));
+}
+
+.portalRootMobileLandscapeVideo .treeDialogHeader {
+    min-height: 54px;
+    padding: 8px 14px;
+}
+
+.portalRootMobileLandscapeVideo .treeDialogTitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.portalRootMobileLandscapeVideo .treeDialogTitle h2 {
+    margin: 0;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.portalRootMobileLandscapeVideo .treeProgressFull {
+    display: none;
+}
+
+.portalRootMobileLandscapeVideo .treeProgressCompact {
+    display: inline-block;
+}
+
+.portalRootMobileLandscapeVideo .treePlotButton,
+.portalRootMobileLandscapeVideo .treeChoiceCard {
+    width: 238px;
 }

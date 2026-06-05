@@ -1,17 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { IoArrowBack, IoClose, IoGitBranchOutline, IoPlayCircleOutline, IoRefresh, IoStatsChartOutline } from 'react-icons/io5';
+import { IoArrowBack, IoClose, IoGitBranchOutline, IoMoonOutline, IoPlayCircleOutline, IoRefresh, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
 import {
     Background,
+    BaseEdge,
     Controls,
+    getSmoothStepPath,
     Handle,
     MarkerType,
     Position,
     ReactFlow,
+    useStore,
     type Edge as FlowEdge,
+    type EdgeProps,
+    type EdgeTypes,
     type Node as FlowNode,
     type NodeProps,
+    type ReactFlowInstance,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -122,6 +129,10 @@ type StoryManifest = {
 type PlaybackMode = 'fresh' | 'replay';
 type MobileToolsTab = 'variables' | 'tree' | 'history';
 type VideoAspect = 'unknown' | 'portrait' | 'landscape';
+type VideoPreloadStatus = 'loading' | 'ready' | 'error';
+type InteractiveVideoTheme = 'light' | 'dark';
+type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
+type PortalPostureMode = 'desktop' | 'mobilePortraitVideo' | 'mobileLandscapeVideo';
 type InteractiveVideoRouteState = {
     fromGameDetail?: boolean;
 } | null;
@@ -142,6 +153,25 @@ type InteractiveVideoTreeCanvasProps = {
     currentNodeId: string | null;
     sessionState: InteractiveVideoSessionState;
     onRollback: (nodeId: string) => void;
+    portalPostureMode: PortalPostureMode;
+    isPortalRotatedLandscape: boolean;
+};
+
+type RotatedTreePanState = {
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startViewport: {
+        x: number;
+        y: number;
+        zoom: number;
+    };
+};
+
+type BranchVideoPreload = {
+    optionId: string;
+    nodeId: string;
+    url: string;
 };
 
 type InteractiveVideoTreeBranchLayout = {
@@ -159,12 +189,24 @@ type InteractiveVideoTreePlotLayout = {
     branches: InteractiveVideoTreeBranchLayout[];
 };
 
+type InteractiveVideoTreeEdgeAnchor = {
+    sourceX: number;
+    sourceY: number;
+    targetX: number;
+    targetY: number;
+};
+
 const TREE_COLUMN_WIDTH = 320;
 const TREE_ROW_HEIGHT = 128;
 const TREE_PADDING_X = 96;
 const TREE_PADDING_Y = 96;
 const TREE_NODE_ORIGIN: [number, number] = [0, 0.5];
 const TREE_PRO_OPTIONS = { hideAttribution: true };
+const TREE_DEFAULT_FIT_PADDING = 0.22;
+const TREE_MOBILE_PORTRAIT_FIT_PADDING = 0.08;
+const TREE_MOBILE_LANDSCAPE_FIT_PADDING = 0.12;
+const TREE_DEFAULT_MIN_ZOOM = 0.32;
+const TREE_MOBILE_MIN_ZOOM = 0.18;
 
 const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState => ({
     currentNodeId: entryNodeId,
@@ -318,18 +360,19 @@ const resolveVideoUrl = (video: StoryVideo | undefined, manifest: StoryManifest 
     return toBackendAssetUrl(`${base}${mediaId}.${getVideoExtension(video)}`);
 };
 
-const buildReachableStoryNodeIds = (
+const buildReachableRouteEdges = (
     story: StoryProject,
     startNodeId: string | null | undefined = story.entryNodeId,
 ) => {
     const storyNodeMap = new Map(story.nodes.map((node) => [node.id, node]));
-    const edgeTargetsBySourceOption = new Map<string, string[]>();
+    const edgesBySourceOption = new Map<string, StoryEdge[]>();
     const reachableNodeIds = new Set<string>();
+    const routeEdgesById = new Map<string, StoryEdge>();
 
     story.edges.forEach((edge) => {
-        if (!edge.sourceOptionId) return;
+        if (!edge.sourceOptionId || !storyNodeMap.has(edge.source) || !storyNodeMap.has(edge.target)) return;
         const key = `${edge.source}:${edge.sourceOptionId}`;
-        edgeTargetsBySourceOption.set(key, [...(edgeTargetsBySourceOption.get(key) || []), edge.target]);
+        edgesBySourceOption.set(key, [...(edgesBySourceOption.get(key) || []), edge]);
     });
 
     const visitNode = (nodeId: string | null | undefined) => {
@@ -342,37 +385,115 @@ const buildReachableStoryNodeIds = (
         if (nodeKind === 'ending') return;
 
         getNodeOptions(node).forEach((option) => {
-            (edgeTargetsBySourceOption.get(`${nodeId}:${option.id}`) || []).forEach(visitNode);
+            (edgesBySourceOption.get(`${nodeId}:${option.id}`) || []).forEach((edge) => {
+                routeEdgesById.set(getEdgeRuntimeId(edge), edge);
+                visitNode(edge.target);
+            });
         });
     };
 
     visitNode(startNodeId);
-    return reachableNodeIds;
+    return routeEdgesById;
 };
 
-const calculateUnlockProgress = ({
+const calculateRouteExploreProgress = ({
     story,
     startNodeId,
-    unlockedNodeIds,
+    sessionState,
 }: {
     story: StoryProject;
     startNodeId: string | null | undefined;
-    unlockedNodeIds: string[];
+    sessionState?: InteractiveVideoSessionState | null;
 }) => {
-    const reachableNodeIds = buildReachableStoryNodeIds(story, startNodeId);
-    const unlockedSet = new Set(unlockedNodeIds);
-    const unlockedCount = Array.from(reachableNodeIds).filter((nodeId) => unlockedSet.has(nodeId)).length;
-    const totalCount = reachableNodeIds.size;
+    const routeEdgesById = buildReachableRouteEdges(story, startNodeId);
+    const totalCount = routeEdgesById.size;
+
+    if (totalCount === 0) {
+        return {
+            exploredCount: 0,
+            totalCount: 0,
+            percent: 100,
+            isLinear: true,
+        };
+    }
+
+    const routeEdgeLookup = new Map<string, StoryEdge>();
+    const routeEdgeByHistoryStep = new Map<string, StoryEdge>();
+
+    routeEdgesById.forEach((edge, routeId) => {
+        routeEdgeLookup.set(routeId, edge);
+        if (edge.id) routeEdgeLookup.set(edge.id, edge);
+        routeEdgeLookup.set(`${edge.source}:${edge.sourceOptionId || ''}`, edge);
+        routeEdgeByHistoryStep.set(`${edge.source}:${edge.sourceOptionId || ''}:${edge.target}`, edge);
+    });
+
+    const exploredRouteIds = new Set<string>();
+    const addExploredEdge = (edge?: StoryEdge) => {
+        if (!edge) return;
+        const routeId = getEdgeRuntimeId(edge);
+        if (routeEdgesById.has(routeId)) {
+            exploredRouteIds.add(routeId);
+        }
+    };
+
+    (sessionState?.unlocked?.edgeIds || []).forEach((edgeId) => {
+        addExploredEdge(routeEdgeLookup.get(edgeId));
+    });
+
+    (sessionState?.history || []).forEach((item, index, history) => {
+        if (item.edgeId) {
+            addExploredEdge(routeEdgeLookup.get(item.edgeId));
+        }
+
+        const previousItem = index > 0 ? history[index - 1] : null;
+        if (previousItem?.nodeId && item.optionId && item.nodeId) {
+            addExploredEdge(routeEdgeByHistoryStep.get(`${previousItem.nodeId}:${item.optionId}:${item.nodeId}`));
+        }
+    });
+
+    const exploredCount = exploredRouteIds.size;
 
     return {
-        unlockedCount,
+        exploredCount,
         totalCount,
-        percent: totalCount === 0 ? 100 : Math.round((unlockedCount / totalCount) * 100),
+        percent: Math.round((exploredCount / totalCount) * 100),
+        isLinear: false,
     };
 };
 
 const isMobileViewport = () =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 980px)').matches;
+
+const getViewportMode = (): ViewportMode => {
+    if (typeof window === 'undefined') return 'desktop';
+
+    const visualViewport = window.visualViewport;
+    const width = visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 0;
+    const height = visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+    const mobileByWidth = window.matchMedia('(max-width: 980px)').matches;
+    const mobileByLandscapeSize = window.matchMedia('(max-height: 720px) and (max-width: 1280px) and (orientation: landscape)').matches;
+    const mobileByViewportSize = Math.min(width, height) <= 720 && Math.max(width, height) <= 1280;
+
+    if (!mobileByWidth && !mobileByLandscapeSize && !mobileByViewportSize) {
+        return 'desktop';
+    }
+
+    return width > height ? 'mobileLandscape' : 'mobilePortrait';
+};
+
+const getPortalPostureMode = (
+    viewportMode: ViewportMode,
+    hasVideo: boolean,
+    videoAspect: VideoAspect,
+): PortalPostureMode => {
+    if (viewportMode === 'desktop') return 'desktop';
+    return hasVideo && videoAspect === 'landscape' ? 'mobileLandscapeVideo' : 'mobilePortraitVideo';
+};
+
+const mapRotatedLandscapePointerDelta = (screenDx: number, screenDy: number) => ({
+    x: screenDy,
+    y: -screenDx,
+});
 
 const tryLockScreenOrientation = (orientation: 'landscape' | 'portrait') => {
     if (!isMobileViewport() || typeof screen === 'undefined') return;
@@ -599,6 +720,98 @@ const interactiveVideoTreeNodeTypes = {
     interactiveVideoTree: InteractiveVideoTreeNode,
 };
 
+const areTreeEdgeAnchorsEqual = (
+    previous: InteractiveVideoTreeEdgeAnchor | null,
+    next: InteractiveVideoTreeEdgeAnchor | null,
+) => {
+    if (previous === next) return true;
+    if (!previous || !next) return false;
+    return previous.sourceX === next.sourceX
+        && previous.sourceY === next.sourceY
+        && previous.targetX === next.targetX
+        && previous.targetY === next.targetY;
+};
+
+function InteractiveVideoTreeEdge({
+    id,
+    source,
+    target,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    style,
+    markerStart,
+    markerEnd,
+    interactionWidth,
+    label,
+    labelStyle,
+    labelShowBg,
+    labelBgStyle,
+    labelBgPadding,
+    labelBgBorderRadius,
+    pathOptions,
+}: EdgeProps) {
+    const edgeAnchor = useStore(
+        useCallback((state): InteractiveVideoTreeEdgeAnchor | null => {
+            const sourceNode = state.nodeInternals.get(source);
+            const targetNode = state.nodeInternals.get(target);
+            const sourcePosition = sourceNode?.positionAbsolute;
+            const targetPosition = targetNode?.positionAbsolute;
+            const sourceWidth = sourceNode?.width ?? 0;
+
+            if (!sourcePosition || !targetPosition || !sourceWidth) {
+                return null;
+            }
+
+            return {
+                sourceX: sourcePosition.x + sourceWidth,
+                sourceY: sourcePosition.y,
+                targetX: targetPosition.x,
+                targetY: targetPosition.y,
+            };
+        }, [source, target]),
+        areTreeEdgeAnchorsEqual,
+    );
+    const resolvedSourceX = edgeAnchor?.sourceX ?? sourceX;
+    const resolvedSourceY = edgeAnchor?.sourceY ?? sourceY;
+    const resolvedTargetX = edgeAnchor?.targetX ?? targetX;
+    const resolvedTargetY = edgeAnchor?.targetY ?? targetY;
+    const [path, labelX, labelY] = getSmoothStepPath({
+        sourceX: resolvedSourceX,
+        sourceY: resolvedSourceY,
+        sourcePosition: Position.Right,
+        targetX: resolvedTargetX,
+        targetY: resolvedTargetY,
+        targetPosition: Position.Left,
+        borderRadius: pathOptions?.borderRadius,
+        offset: pathOptions?.offset,
+    });
+
+    return (
+        <BaseEdge
+            id={id}
+            path={path}
+            labelX={labelX}
+            labelY={labelY}
+            label={label}
+            labelStyle={labelStyle}
+            labelShowBg={labelShowBg}
+            labelBgStyle={labelBgStyle}
+            labelBgPadding={labelBgPadding}
+            labelBgBorderRadius={labelBgBorderRadius}
+            style={style}
+            markerStart={markerStart}
+            markerEnd={markerEnd}
+            interactionWidth={interactionWidth}
+        />
+    );
+}
+
+const interactiveVideoTreeEdgeTypes: EdgeTypes = {
+    interactiveVideoTreeEdge: InteractiveVideoTreeEdge,
+};
+
 const getTreeChoiceNodeId = (sourceNodeId: string, optionId: string) => `choice:${sourceNodeId}:${optionId}`;
 
 const buildInteractiveVideoTreeFlow = (
@@ -702,7 +915,7 @@ const buildInteractiveVideoTreeFlow = (
             id,
             source,
             target,
-            type: 'smoothstep',
+            type: 'interactiveVideoTreeEdge',
             animated: active,
             markerEnd: {
                 type: MarkerType.ArrowClosed,
@@ -848,27 +1061,181 @@ function InteractiveVideoTreeCanvas({
     currentNodeId,
     sessionState,
     onRollback,
+    portalPostureMode,
+    isPortalRotatedLandscape,
 }: InteractiveVideoTreeCanvasProps) {
+    const treeCanvasRef = useRef<HTMLDivElement | null>(null);
+    const treeInstanceRef = useRef<ReactFlowInstance<InteractiveVideoTreeNodeData> | null>(null);
+    const fitFrameRef = useRef<number | null>(null);
+    const nextFitFrameRef = useRef<number | null>(null);
+    const rotatedPanRef = useRef<RotatedTreePanState | null>(null);
+    const fitPadding = portalPostureMode === 'desktop'
+        ? TREE_DEFAULT_FIT_PADDING
+        : portalPostureMode === 'mobileLandscapeVideo'
+            ? TREE_MOBILE_LANDSCAPE_FIT_PADDING
+            : TREE_MOBILE_PORTRAIT_FIT_PADDING;
+    const minZoom = portalPostureMode === 'desktop' ? TREE_DEFAULT_MIN_ZOOM : TREE_MOBILE_MIN_ZOOM;
     const treeFlow = useMemo(
         () => buildInteractiveVideoTreeFlow(story, currentNodeId, sessionState, onRollback),
         [story, currentNodeId, sessionState, onRollback],
     );
+
+    const cancelScheduledFit = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        if (fitFrameRef.current !== null) {
+            window.cancelAnimationFrame(fitFrameRef.current);
+            fitFrameRef.current = null;
+        }
+        if (nextFitFrameRef.current !== null) {
+            window.cancelAnimationFrame(nextFitFrameRef.current);
+            nextFitFrameRef.current = null;
+        }
+    }, []);
+
+    const fitTreeView = useCallback(() => {
+        const treeInstance = treeInstanceRef.current;
+        if (!treeInstance || !treeFlow.nodes.length) return;
+        treeInstance.fitView({
+            padding: fitPadding,
+            minZoom,
+            maxZoom: 1.45,
+            duration: 180,
+        });
+    }, [fitPadding, minZoom, treeFlow.nodes.length]);
+
+    const scheduleFitTreeView = useCallback(() => {
+        if (typeof window === 'undefined') {
+            fitTreeView();
+            return;
+        }
+
+        cancelScheduledFit();
+        fitFrameRef.current = window.requestAnimationFrame(() => {
+            fitFrameRef.current = null;
+            nextFitFrameRef.current = window.requestAnimationFrame(() => {
+                nextFitFrameRef.current = null;
+                fitTreeView();
+            });
+        });
+    }, [cancelScheduledFit, fitTreeView]);
+
+    useEffect(() => {
+        scheduleFitTreeView();
+    }, [scheduleFitTreeView, treeFlow]);
+
+    useEffect(() => () => cancelScheduledFit(), [cancelScheduledFit]);
+
+    useEffect(() => {
+        const treeCanvas = treeCanvasRef.current;
+        if (!treeCanvas) return undefined;
+
+        scheduleFitTreeView();
+        if (typeof ResizeObserver === 'undefined') return undefined;
+
+        const observer = new ResizeObserver(() => scheduleFitTreeView());
+        observer.observe(treeCanvas);
+        return () => observer.disconnect();
+    }, [scheduleFitTreeView]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const handleViewportChange = () => scheduleFitTreeView();
+        window.addEventListener('resize', handleViewportChange);
+        window.addEventListener('orientationchange', handleViewportChange);
+        return () => {
+            window.removeEventListener('resize', handleViewportChange);
+            window.removeEventListener('orientationchange', handleViewportChange);
+        };
+    }, [scheduleFitTreeView]);
+
+    useEffect(() => {
+        if (!isPortalRotatedLandscape) {
+            rotatedPanRef.current = null;
+        }
+    }, [isPortalRotatedLandscape]);
+
+    const handleRotatedTreePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isPortalRotatedLandscape || !event.isPrimary || event.button !== 0) return;
+        if (!(event.target instanceof Element)) return;
+        if (event.target.closest('button, a, input, textarea, select, [role="button"], .react-flow__controls, .react-flow__node')) return;
+
+        const treeInstance = treeInstanceRef.current;
+        if (!treeInstance) return;
+
+        rotatedPanRef.current = {
+            pointerId: event.pointerId,
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            startViewport: treeInstance.getViewport(),
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.preventDefault();
+    }, [isPortalRotatedLandscape]);
+
+    const handleRotatedTreePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        const panState = rotatedPanRef.current;
+        if (!isPortalRotatedLandscape || !panState || event.pointerId !== panState.pointerId) return;
+
+        const treeInstance = treeInstanceRef.current;
+        if (!treeInstance) return;
+
+        const localDelta = mapRotatedLandscapePointerDelta(
+            event.clientX - panState.startClientX,
+            event.clientY - panState.startClientY,
+        );
+        treeInstance.setViewport(
+            {
+                x: panState.startViewport.x + localDelta.x,
+                y: panState.startViewport.y + localDelta.y,
+                zoom: panState.startViewport.zoom,
+            },
+            { duration: 0 },
+        );
+        event.preventDefault();
+    }, [isPortalRotatedLandscape]);
+
+    const stopRotatedTreePointerPan = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        const panState = rotatedPanRef.current;
+        if (!panState || event.pointerId !== panState.pointerId) return;
+
+        rotatedPanRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        event.preventDefault();
+    }, []);
 
     if (!treeFlow.nodes.length) {
         return <div className={styles.treeEmpty}>No unlocked routes yet.</div>;
     }
 
     return (
-        <div className={styles.treeCanvas}>
+        <div
+            className={styles.treeCanvas}
+            ref={treeCanvasRef}
+            onPointerDown={handleRotatedTreePointerDown}
+            onPointerMove={handleRotatedTreePointerMove}
+            onPointerUp={stopRotatedTreePointerPan}
+            onPointerCancel={stopRotatedTreePointerPan}
+            onLostPointerCapture={stopRotatedTreePointerPan}
+        >
             <ReactFlow
                 nodes={treeFlow.nodes}
                 edges={treeFlow.edges}
                 nodeTypes={interactiveVideoTreeNodeTypes}
+                edgeTypes={interactiveVideoTreeEdgeTypes}
                 nodeOrigin={TREE_NODE_ORIGIN}
+                onInit={(instance) => {
+                    treeInstanceRef.current = instance;
+                    scheduleFitTreeView();
+                }}
                 fitView
-                fitViewOptions={{ padding: 0.22 }}
-                minZoom={0.32}
+                fitViewOptions={{ padding: fitPadding, minZoom, maxZoom: 1.45 }}
+                minZoom={minZoom}
                 maxZoom={1.45}
+                panOnDrag={!isPortalRotatedLandscape}
+                zoomOnPinch={!isPortalRotatedLandscape}
                 nodesDraggable={false}
                 nodesConnectable={false}
                 edgesFocusable={false}
@@ -897,11 +1264,12 @@ const InteractiveVideo: React.FC = () => {
     const [sessionId, setSessionId] = useState('');
     const [sessionState, setSessionState] = useState<InteractiveVideoSessionState | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
+    const [, setIsSyncing] = useState(false);
     const [loadError, setLoadError] = useState('');
     const [videoGate, setVideoGate] = useState(false);
     const [videoError, setVideoError] = useState('');
     const [endingModalOpen, setEndingModalOpen] = useState(false);
+    const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
     const [versionMismatch, setVersionMismatch] = useState<InteractiveVideoSessionResponse | null>(null);
     const [playbackMode, setPlaybackMode] = useState<PlaybackMode>('fresh');
     const [showManualPlay, setShowManualPlay] = useState(false);
@@ -909,6 +1277,14 @@ const InteractiveVideo: React.FC = () => {
     const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
     const [mobileToolsTab, setMobileToolsTab] = useState<MobileToolsTab>('tree');
     const [videoAspect, setVideoAspect] = useState<VideoAspect>('unknown');
+    const [stageAspect, setStageAspect] = useState<VideoAspect>('unknown');
+    const [viewportMode, setViewportMode] = useState<ViewportMode>(() => getViewportMode());
+    const [isBranchTransitioning, setIsBranchTransitioning] = useState(false);
+    const [isVideoBuffering, setIsVideoBuffering] = useState(false);
+    const [preloadedVideoStatus, setPreloadedVideoStatus] = useState<Record<string, VideoPreloadStatus>>({});
+    const [ivgTheme, setIvgTheme] = useState<InteractiveVideoTheme>('light');
+    const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
+    const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
 
     const fileId = String(fileIdParam || '').trim();
@@ -919,8 +1295,19 @@ const InteractiveVideo: React.FC = () => {
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
     const currentVideoUrl = useMemo(() => resolveVideoUrl(getNodeVideo(currentNode), manifest), [currentNode, manifest]);
-
     const projectTitle = manifest?.title || story?.outline?.projectTitle || story?.title || 'Interactive Video';
+
+    const markPreloadedVideoStatus = useCallback((url: string, status: VideoPreloadStatus) => {
+        setPreloadedVideoStatus((current) => (
+            current[url] === status ? current : { ...current, [url]: status }
+        ));
+    }, []);
+
+    const markPreloadedVideoAspect = useCallback((url: string, aspect: VideoAspect) => {
+        if (aspect === 'unknown') return;
+        if (preloadedVideoAspectRef.current[url] === aspect) return;
+        preloadedVideoAspectRef.current = { ...preloadedVideoAspectRef.current, [url]: aspect };
+    }, []);
 
     const returnToGameDetail = useCallback(() => {
         if (launchedFromGameDetail && typeof window !== 'undefined' && window.history.length > 1) {
@@ -960,6 +1347,11 @@ const InteractiveVideo: React.FC = () => {
         setIsTreeOpen(false);
         setIsMobileToolsOpen(false);
         setVideoAspect('unknown');
+        setStageAspect('unknown');
+        setIsBranchTransitioning(false);
+        setIsVideoBuffering(false);
+        setPreloadedVideoStatus({});
+        preloadedVideoAspectRef.current = {};
         try {
             const response = await createInteractiveVideoSession({
                 fileId,
@@ -1004,8 +1396,49 @@ const InteractiveVideo: React.FC = () => {
     }, [loadSession]);
 
     useEffect(() => {
-        setVideoAspect('unknown');
+        const preloadedAspect = currentVideoUrl ? preloadedVideoAspectRef.current[currentVideoUrl] : undefined;
+        setVideoAspect(preloadedAspect || 'unknown');
     }, [currentNode?.id, currentVideoUrl]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
+        const updateViewportMode = () => setViewportMode(getViewportMode());
+        const visualViewport = window.visualViewport;
+
+        updateViewportMode();
+        visualViewport?.addEventListener('resize', updateViewportMode);
+        window.addEventListener('resize', updateViewportMode);
+        window.addEventListener('orientationchange', updateViewportMode);
+
+        return () => {
+            visualViewport?.removeEventListener('resize', updateViewportMode);
+            window.removeEventListener('resize', updateViewportMode);
+            window.removeEventListener('orientationchange', updateViewportMode);
+        };
+    }, []);
+
+    useEffect(() => {
+        const monitor = monitorRef.current;
+        if (!monitor || typeof window === 'undefined') return undefined;
+
+        const updateStageAspect = () => {
+            const rect = monitor.getBoundingClientRect();
+            setStageAspect(getVideoAspect(rect.width, rect.height));
+        };
+
+        updateStageAspect();
+        const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateStageAspect) : null;
+        resizeObserver?.observe(monitor);
+        window.addEventListener('resize', updateStageAspect);
+        window.addEventListener('orientationchange', updateStageAspect);
+
+        return () => {
+            resizeObserver?.disconnect();
+            window.removeEventListener('resize', updateStageAspect);
+            window.removeEventListener('orientationchange', updateStageAspect);
+        };
+    }, [currentNode?.id, currentVideoUrl, videoAspect]);
 
     useEffect(() => {
         const video = videoRef.current;
@@ -1044,11 +1477,14 @@ const InteractiveVideo: React.FC = () => {
         setEndingModalOpen(false);
         setVideoError('');
         setShowManualPlay(false);
+        setIsVideoBuffering(Boolean(currentVideoUrl));
         if (currentVideoUrl) {
             setVideoGate(true);
             return;
         }
         setVideoGate(false);
+        setIsBranchTransitioning(false);
+        setIsVideoBuffering(false);
         if (isEndingNode && currentNode) {
             setEndingModalOpen(true);
         }
@@ -1079,14 +1515,62 @@ const InteractiveVideo: React.FC = () => {
         };
     }, [currentNode?.id, currentVideoUrl, playbackMode, videoGate]);
 
-    const availableOptions = useMemo(() => {
-        if (!currentNode || !sessionState || isEndingNode || videoGate) return [];
+    const currentNodeOptions = useMemo(() => {
+        if (!currentNode || !sessionState || isEndingNode) return [];
         return getNodeOptions(currentNode).filter((option) => optionIsAvailable(option, sessionState.variables, variableMap));
-    }, [currentNode, isEndingNode, sessionState, variableMap, videoGate]);
+    }, [currentNode, isEndingNode, sessionState, variableMap]);
+
+    const branchVideoPreloads = useMemo<BranchVideoPreload[]>(() => {
+        if (!story || !currentNode || currentNodeOptions.length === 0) return [];
+
+        const usedUrls = new Set<string>();
+        return currentNodeOptions.reduce<BranchVideoPreload[]>((items, option) => {
+            const edge = story.edges.find((item) => item.source === currentNode.id && item.sourceOptionId === option.id);
+            const targetNode = edge ? nodeMap.get(edge.target) : null;
+            const url = resolveVideoUrl(getNodeVideo(targetNode), manifest);
+            if (!edge || !targetNode || !url || url === currentVideoUrl || usedUrls.has(url)) {
+                return items;
+            }
+
+            usedUrls.add(url);
+            items.push({
+                optionId: option.id,
+                nodeId: targetNode.id,
+                url,
+            });
+            return items;
+        }, []);
+    }, [currentNode, currentNodeOptions, currentVideoUrl, manifest, nodeMap, story]);
+
+    useEffect(() => {
+        const activeUrls = new Set(branchVideoPreloads.map((item) => item.url));
+        setPreloadedVideoStatus((current) => {
+            let changed = false;
+            const next: Record<string, VideoPreloadStatus> = {};
+
+            activeUrls.forEach((url) => {
+                next[url] = current[url] || 'loading';
+                if (!current[url]) changed = true;
+            });
+
+            Object.keys(current).forEach((url) => {
+                if (!activeUrls.has(url)) changed = true;
+            });
+
+            return changed ? next : current;
+        });
+    }, [branchVideoPreloads]);
+
+    const availableOptions = useMemo(() => {
+        if (videoGate) return [];
+        return currentNodeOptions;
+    }, [currentNodeOptions, videoGate]);
 
     const handleVideoComplete = () => {
         setVideoGate(false);
         setShowManualPlay(false);
+        setIsBranchTransitioning(false);
+        setIsVideoBuffering(false);
         if (isEndingNode) {
             setEndingModalOpen(true);
         }
@@ -1120,11 +1604,15 @@ const InteractiveVideo: React.FC = () => {
             targetWasUnlocked ||
             (sessionState.unlocked?.optionIds || []).includes(option.id) ||
             (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
+        const targetVideoUrl = resolveVideoUrl(getNodeVideo(targetNode), manifest);
 
         setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
         setShowManualPlay(false);
         setEndingModalOpen(false);
-        setVideoGate(Boolean(resolveVideoUrl(getNodeVideo(targetNode), manifest)));
+        setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadedVideoStatus[targetVideoUrl] !== 'ready');
+        setIsVideoBuffering(Boolean(targetVideoUrl));
+        setVideoGate(Boolean(targetVideoUrl));
         const sourceSnapshots = ensureSnapshot(
             sessionState,
             currentNode.id,
@@ -1177,10 +1665,14 @@ const InteractiveVideo: React.FC = () => {
         const variables = snapshot?.variables
             ? { ...snapshot.variables }
             : resolveVariablesForHistory(story, history);
+        const targetVideoUrl = resolveVideoUrl(getNodeVideo(targetNode), manifest);
         setPlaybackMode('replay');
         setShowManualPlay(false);
         setEndingModalOpen(false);
-        setVideoGate(Boolean(resolveVideoUrl(getNodeVideo(targetNode), manifest)));
+        setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadedVideoStatus[targetVideoUrl] !== 'ready');
+        setIsVideoBuffering(Boolean(targetVideoUrl));
+        setVideoGate(Boolean(targetVideoUrl));
         const nextState: InteractiveVideoSessionState = {
             ...sessionState,
             currentNodeId: nodeId,
@@ -1206,7 +1698,23 @@ const InteractiveVideo: React.FC = () => {
         setPlaybackMode('fresh');
         setShowManualPlay(false);
         setEndingModalOpen(false);
+        setRestartConfirmOpen(false);
+        setIsBranchTransitioning(false);
+        setIsVideoBuffering(false);
         await loadSession(true);
+    };
+
+    const openRestartConfirm = () => {
+        setRestartConfirmOpen(true);
+    };
+
+    const closeRestartConfirm = () => {
+        setRestartConfirmOpen(false);
+    };
+
+    const handleConfirmRestart = () => {
+        setRestartConfirmOpen(false);
+        void handleRestart();
     };
 
     const handleTreeRollback = (nodeId: string) => {
@@ -1220,26 +1728,43 @@ const InteractiveVideo: React.FC = () => {
         setIsTreeOpen(true);
     };
 
-    const unlockedNodeIds = sessionState?.unlocked?.nodeIds || [];
-    const unlockProgress = useMemo(
+    const handleOpenTreeFromEnding = () => {
+        setEndingModalOpen(false);
+        handleOpenTree();
+    };
+
+    const routeExploreProgress = useMemo(
         () =>
             story
-                ? calculateUnlockProgress({
+                ? calculateRouteExploreProgress({
                     story,
                     startNodeId: story.entryNodeId,
-                    unlockedNodeIds,
+                    sessionState,
                 })
-                : { unlockedCount: 0, totalCount: 0, percent: 100 },
-        [story, unlockedNodeIds],
+                : { exploredCount: 0, totalCount: 0, percent: 100, isLinear: true },
+        [story, sessionState],
     );
-    const unlockProgressLabel = `\u8282\u70b9\u89e3\u9501\u8fdb\u5ea6 ${unlockProgress.percent}%`;
-    const compactUnlockProgressLabel = `${unlockProgress.unlockedCount}/${unlockProgress.totalCount} | ${unlockProgress.percent}%`;
+    const routeExploreProgressLabel = routeExploreProgress.isLinear
+        ? '\u7ebf\u6027\u5267\u60c5'
+        : `\u8def\u7ebf\u63a2\u7d22 ${routeExploreProgress.percent}%`;
+    const compactRouteExploreProgressLabel = routeExploreProgress.isLinear
+        ? '\u7ebf\u6027\u5267\u60c5'
+        : `${routeExploreProgress.exploredCount}/${routeExploreProgress.totalCount} | ${routeExploreProgress.percent}%`;
     const history = sessionState?.history || [];
 
     if (isLoading) {
         return (
             <div className={styles.pageRoot}>
-                <div className={styles.loadingPanel}>Loading interactive video...</div>
+                <div className={styles.loadingPanel}>
+                    <div className={styles.loadingOrb} aria-hidden="true">
+                        <div className={styles.loadingOrbit} />
+                        <div className={styles.loadingOrbitInner} />
+                        <div className={styles.loadingCore} />
+                    </div>
+                    <span className={styles.loadingEyebrow}>FUNLOOM IVG</span>
+                    <h1>Preparing interactive video</h1>
+                    <p>Loading story package and media map...</p>
+                </div>
             </div>
         );
     }
@@ -1301,27 +1826,38 @@ const InteractiveVideo: React.FC = () => {
                 <IoGitBranchOutline />
                 {'\u5267\u60c5\u6811'}
             </div>
-            <button type="button" className={styles.openTreeButton} onClick={handleOpenTree}>
-                <IoGitBranchOutline />
-                {'\u6253\u5f00\u5267\u60c5\u6811'}
-                <span>{compactUnlockProgressLabel}</span>
+            <button type="button" className={styles.openTreeButton} onClick={handleOpenTree} aria-label="Open story tree">
+                <span className={styles.openTreeButtonContent}>
+                    <IoGitBranchOutline />
+                    <span className={styles.openTreeButtonText}>
+                        <strong>{'\u6253\u5f00\u5267\u60c5\u6811'}</strong>
+                        <small>{compactRouteExploreProgressLabel}</small>
+                    </span>
+                </span>
+                <span className={styles.openTreeProgressTrack} aria-hidden="true">
+                    <span className={styles.openTreeProgressFill} style={{ width: `${routeExploreProgress.percent}%` }} />
+                </span>
             </button>
         </section>
     );
 
     const renderHistoryPanel = () => (
-        <section className={styles.panelSection}>
+        <section className={`${styles.panelSection} ${styles.historyPanelSection}`}>
             <div className={styles.sectionTitle}>{'\u5386\u53f2'}</div>
             <div className={styles.historyList}>
-                {history.map((item, index) => {
-                    const node = nodeMap.get(item.nodeId);
-                    return (
-                        <div key={`${item.nodeId}:${index}`} className={styles.historyItem}>
-                            <span>{String(index + 1).padStart(2, '0')}</span>
-                            <strong>{item.title || getNodeTitle(node)}</strong>
-                        </div>
-                    );
-                })}
+                {history.length > 0 ? (
+                    history.map((item, index) => {
+                        const node = nodeMap.get(item.nodeId);
+                        return (
+                            <div key={`${item.nodeId}:${index}`} className={styles.historyItem}>
+                                <span>{String(index + 1).padStart(2, '0')}</span>
+                                <strong>{item.title || getNodeTitle(node)}</strong>
+                            </div>
+                        );
+                    })
+                ) : (
+                    <div className={styles.emptyText}>{'\u6682\u65e0\u5386\u53f2'}</div>
+                )}
             </div>
         </section>
     );
@@ -1342,45 +1878,237 @@ const InteractiveVideo: React.FC = () => {
         const video = event.currentTarget;
         setVideoAspect(getVideoAspect(video.videoWidth, video.videoHeight));
     };
+    const shouldUseLandscapeChoiceLayout = videoAspect === 'landscape' || stageAspect === 'landscape';
 
     const pageClassName = [
         styles.pageRoot,
+        ivgTheme === 'dark' ? styles.pageRootDark : '',
         currentVideoUrl && videoAspect === 'landscape' ? styles.landscapeVideoPage : '',
+        currentVideoUrl && videoAspect === 'portrait' ? styles.portraitVideoPage : '',
     ].filter(Boolean).join(' ');
 
+    const choiceDockClassName = [
+        styles.choiceDock,
+        shouldUseLandscapeChoiceLayout ? styles.choiceDockLandscape : styles.choiceDockPortrait,
+        availableOptions.length === 1 ? styles.choiceDockOne : '',
+        availableOptions.length === 2 ? styles.choiceDockTwo : '',
+        availableOptions.length === 3 ? styles.choiceDockThree : '',
+        availableOptions.length >= 4 ? styles.choiceDockFour : '',
+    ].filter(Boolean).join(' ');
+
+    const portalPostureMode = getPortalPostureMode(viewportMode, Boolean(currentVideoUrl), videoAspect);
+    const isLandscapePortalRotated = portalPostureMode === 'mobileLandscapeVideo' && viewportMode === 'mobilePortrait';
+    const portalRootClassName = [
+        styles.pageRoot,
+        ivgTheme === 'dark' ? styles.pageRootDark : '',
+        styles.portalRoot,
+        viewportMode === 'desktop' ? styles.portalRootViewportDesktop : '',
+        viewportMode === 'mobilePortrait' ? styles.portalRootViewportPortrait : '',
+        viewportMode === 'mobileLandscape' ? styles.portalRootViewportLandscape : '',
+        portalPostureMode === 'desktop' ? styles.portalRootDesktop : '',
+        portalPostureMode === 'mobilePortraitVideo' ? styles.portalRootMobilePortraitVideo : '',
+        portalPostureMode === 'mobileLandscapeVideo' ? styles.portalRootMobileLandscapeVideo : '',
+        isLandscapePortalRotated ? styles.portalRootLandscapeRotated : '',
+    ].filter(Boolean).join(' ');
+    const renderIvgPortal = (content: React.ReactNode) =>
+        typeof document !== 'undefined'
+            ? createPortal(
+                <div className={portalRootClassName}>
+                    <div className={styles.portalViewportFrame}>{content}</div>
+                </div>,
+                document.body,
+            )
+            : null;
+
+    const mobileToolsPortal = isMobileToolsOpen
+        ? renderIvgPortal(
+            <div className={styles.mobileToolsOverlay} onClick={() => setIsMobileToolsOpen(false)}>
+                <section className={styles.mobileToolsSheet} onClick={(event) => event.stopPropagation()}>
+                    <header className={styles.mobileToolsHeader}>
+                        <strong>{'\u64ad\u653e\u5de5\u5177'}</strong>
+                        <div className={styles.mobileToolsHeaderActions}>
+                            <button type="button" className={styles.mobileRestartButton} onClick={openRestartConfirm}>
+                                <IoRefresh />
+                                {'\u91cd\u5f00'}
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.mobileToolsClose} ${styles.mobileThemeButton}`}
+                                onClick={() => setIvgTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+                                aria-label={ivgTheme === 'dark' ? 'Switch to day mode' : 'Switch to night mode'}
+                            >
+                                {ivgTheme === 'dark' ? <IoSunnyOutline /> : <IoMoonOutline />}
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.mobileToolsClose}
+                                onClick={() => setIsMobileToolsOpen(false)}
+                                aria-label="Close player tools"
+                            >
+                                <IoClose />
+                            </button>
+                        </div>
+                    </header>
+                    <div className={styles.mobileToolsTabs} role="tablist" aria-label="Player tools">
+                        {mobileToolTabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                className={mobileToolsTab === tab.id ? styles.mobileToolsTabActive : ''}
+                                onClick={() => setMobileToolsTab(tab.id)}
+                                role="tab"
+                                aria-selected={mobileToolsTab === tab.id}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    <div className={styles.mobileToolsContent}>{renderMobileToolsPanel()}</div>
+                </section>
+            </div>,
+        )
+        : null;
+
+    const treePortal = isTreeOpen
+        ? renderIvgPortal(
+            <div className={styles.treeOverlay} onClick={() => setIsTreeOpen(false)}>
+                <section className={styles.treeDialog} onClick={(event) => event.stopPropagation()}>
+                    <header className={styles.treeDialogHeader}>
+                        <div className={styles.treeDialogTitle}>
+                            <span>STORY TREE</span>
+                            <h2>剧情树</h2>
+                        </div>
+                        <div className={styles.treeDialogActions}>
+                            <code className={`${styles.treeProgress} ${styles.treeProgressFull}`}>{routeExploreProgressLabel}</code>
+                            <code className={`${styles.treeProgress} ${styles.treeProgressCompact}`}>{compactRouteExploreProgressLabel}</code>
+                            <button
+                                type="button"
+                                className={styles.treeCloseButton}
+                                onClick={() => setIsTreeOpen(false)}
+                                aria-label="Close story tree"
+                            >
+                                <IoClose />
+                            </button>
+                        </div>
+                    </header>
+                    <InteractiveVideoTreeCanvas
+                        story={story}
+                        currentNodeId={currentNode.id}
+                        sessionState={sessionState}
+                        onRollback={handleTreeRollback}
+                        portalPostureMode={portalPostureMode}
+                        isPortalRotatedLandscape={isLandscapePortalRotated}
+                    />
+                </section>
+            </div>,
+        )
+        : null;
+
+    const restartConfirmPortal = restartConfirmOpen
+        ? renderIvgPortal(
+            <div className={styles.restartConfirmOverlay} onClick={closeRestartConfirm}>
+                <div
+                    className={styles.restartConfirmModal}
+                    onClick={(event) => event.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ivgRestartConfirmTitle"
+                >
+                    <button
+                        type="button"
+                        className={styles.restartConfirmClose}
+                        onClick={closeRestartConfirm}
+                        aria-label="Close restart confirmation"
+                    >
+                        <IoClose />
+                    </button>
+                    <span>{'\u91cd\u5f00'}</span>
+                    <h1 id="ivgRestartConfirmTitle">{'\u786e\u8ba4\u91cd\u5f00'}</h1>
+                    <p>{'\u8fd9\u4f1a\u6e05\u7a7a\u5f53\u524d\u6e38\u73a9\u8fdb\u5ea6\u5e76\u91cd\u65b0\u5f00\u59cb\u3002'}</p>
+                    <div className={styles.restartConfirmActions}>
+                        <button type="button" className={styles.restartConfirmSecondary} onClick={closeRestartConfirm}>
+                            {'\u53d6\u6d88'}
+                        </button>
+                        <button type="button" className={styles.restartConfirmPrimary} onClick={handleConfirmRestart}>
+                            {'\u91cd\u65b0\u5f00\u59cb'}
+                        </button>
+                    </div>
+                </div>
+            </div>,
+        )
+        : null;
+
+    const endingPortal = endingModalOpen
+        ? renderIvgPortal(
+            <div className={styles.endingOverlay} onClick={() => setEndingModalOpen(false)}>
+                <div className={styles.endingModal} onClick={(event) => event.stopPropagation()}>
+                    <button
+                        type="button"
+                        className={styles.endingCloseButton}
+                        onClick={() => setEndingModalOpen(false)}
+                        aria-label="Close ending"
+                    >
+                        <IoClose />
+                    </button>
+                    <span>ENDING</span>
+                    <h1>{getNodeTitle(currentNode)}</h1>
+                    <p>{getNodeBody(currentNode)}</p>
+                    <div className={styles.endingActions}>
+                        <button type="button" onClick={handleOpenTreeFromEnding}>
+                            <IoGitBranchOutline />
+                            {"\u6253\u5F00\u5267\u60C5\u6811"}
+                        </button>
+                    </div>
+                </div>
+            </div>,
+        )
+        : null;
+
     return (
+        <>
         <div className={pageClassName}>
             <header className={styles.header}>
                 <button type="button" className={styles.iconButton} onClick={returnToGameDetail} aria-label="Back">
                     <IoArrowBack />
                 </button>
-                <div className={styles.headerTitle}>
-                    <span>{projectTitle}</span>
-                    <small>{isSyncing ? 'Saving...' : `v${manifest?.version || sessionState.gameVersion || '-'}`}</small>
-                </div>
-                <button type="button" className={styles.headerButton} onClick={handleRestart}>
-                    <IoRefresh />
-                    重开
-                </button>
             </header>
 
             <main className={styles.playerGrid}>
                 <section className={styles.stage}>
-                    <div className={styles.monitor}>
+                    <div className={styles.monitor} ref={monitorRef}>
                         {currentVideoUrl ? (
                             <video
                                 ref={videoRef}
                                 key={`${currentNode.id}:${currentVideoUrl}:${playbackMode}`}
                                 className={styles.video}
                                 src={currentVideoUrl}
-                                controls
+                                controls={videoGate}
                                 autoPlay
                                 preload="auto"
                                 playsInline
+                                onLoadStart={() => setIsVideoBuffering(true)}
                                 onLoadedMetadata={handleVideoMetadata}
-                                onPlay={() => setShowManualPlay(false)}
+                                onLoadedData={() => {
+                                    setIsBranchTransitioning(false);
+                                    setIsVideoBuffering(false);
+                                }}
+                                onCanPlay={() => setIsVideoBuffering(false)}
+                                onCanPlayThrough={() => {
+                                    setIsBranchTransitioning(false);
+                                    setIsVideoBuffering(false);
+                                }}
+                                onPlay={() => {
+                                    setShowManualPlay(false);
+                                    setIsBranchTransitioning(false);
+                                    setIsVideoBuffering(false);
+                                }}
+                                onPlaying={() => setIsVideoBuffering(false)}
+                                onWaiting={() => setIsVideoBuffering(true)}
+                                onStalled={() => setIsVideoBuffering(true)}
                                 onEnded={handleVideoComplete}
                                 onError={() => {
+                                    setIsBranchTransitioning(false);
+                                    setIsVideoBuffering(false);
                                     setVideoError('视频加载失败');
                                     handleVideoComplete();
                                 }}
@@ -1400,10 +2128,20 @@ const InteractiveVideo: React.FC = () => {
                             </button>
                         )}
 
+                        {currentVideoUrl && videoGate && !showManualPlay && (isBranchTransitioning || isVideoBuffering) && (
+                            <div className={styles.videoTransitionOverlay} aria-live="polite">
+                                <div className={styles.videoTransitionLoader} aria-hidden="true">
+                                    <span />
+                                    <span />
+                                </div>
+                                <strong>{isBranchTransitioning ? 'Preparing next scene...' : 'Preparing scene...'}</strong>
+                            </div>
+                        )}
+
                         {videoError && <div className={styles.videoNotice}>{videoError}</div>}
 
                         {!isEndingNode && !videoGate && (
-                            <div className={styles.choiceDock}>
+                            <div className={choiceDockClassName}>
                                 {availableOptions.length > 0 ? (
                                     availableOptions.map((option) => (
                                         <button
@@ -1420,55 +2158,58 @@ const InteractiveVideo: React.FC = () => {
                                 )}
                             </div>
                         )}
+
+                        {branchVideoPreloads.length > 0 && (
+                            <div className={styles.preloadPool} aria-hidden="true">
+                                {branchVideoPreloads.map((item) => (
+                                    <video
+                                        key={`${item.optionId}:${item.nodeId}:${item.url}`}
+                                        src={item.url}
+                                        preload="auto"
+                                        muted
+                                        playsInline
+                                        onLoadStart={() => markPreloadedVideoStatus(item.url, 'loading')}
+                                        onLoadedMetadata={(event) => {
+                                            const video = event.currentTarget;
+                                            markPreloadedVideoAspect(item.url, getVideoAspect(video.videoWidth, video.videoHeight));
+                                        }}
+                                        onLoadedData={() => markPreloadedVideoStatus(item.url, 'ready')}
+                                        onCanPlayThrough={() => markPreloadedVideoStatus(item.url, 'ready')}
+                                        onError={() => markPreloadedVideoStatus(item.url, 'error')}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </section>
 
                 <aside className={styles.sidePanel}>
-                    <section className={styles.panelSection}>
-                        <div className={styles.sectionTitle}>
-                            <IoStatsChartOutline />
-                            变量
+                    <div className={styles.sidePanelHeader}>
+                        <h2 className={styles.sidePanelTitle} title={projectTitle}>{projectTitle}</h2>
+                        <div className={styles.sidePanelHeaderActions}>
+                            <button
+                                type="button"
+                                className={styles.sidePanelActionButton}
+                                onClick={() => setIvgTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+                                aria-label={ivgTheme === 'dark' ? 'Switch to day mode' : 'Switch to night mode'}
+                                title={ivgTheme === 'dark' ? '\u65e5\u95f4' : '\u591c\u95f4'}
+                            >
+                                {ivgTheme === 'dark' ? <IoSunnyOutline /> : <IoMoonOutline />}
+                            </button>
+                            <button
+                                type="button"
+                                className={styles.sidePanelActionButton}
+                                onClick={openRestartConfirm}
+                                aria-label="Restart interactive video"
+                                title={'\u91cd\u5f00'}
+                            >
+                                <IoRefresh />
+                            </button>
                         </div>
-                        <div className={styles.variableList}>
-                            {(story.variables || []).length > 0 ? (
-                                (story.variables || []).map((variable) => (
-                                    <div key={variable.id} className={styles.variableRow}>
-                                        <span>{variable.name || variable.id}</span>
-                                        <strong>{String(sessionState.variables[variable.id] ?? getVariableInitialValue(variable))}</strong>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className={styles.emptyText}>暂无变量</div>
-                            )}
-                        </div>
-                    </section>
-
-                    <section className={styles.panelSection}>
-                        <div className={styles.sectionTitle}>
-                            <IoGitBranchOutline />
-                            剧情树
-                        </div>
-                        <button type="button" className={styles.openTreeButton} onClick={() => setIsTreeOpen(true)}>
-                            <IoGitBranchOutline />
-                            打开剧情树
-                            <span>{unlockProgress.unlockedCount}/{unlockProgress.totalCount} | {unlockProgress.percent}%</span>
-                        </button>
-                    </section>
-
-                    <section className={styles.panelSection}>
-                        <div className={styles.sectionTitle}>历史</div>
-                        <div className={styles.historyList}>
-                            {history.map((item, index) => {
-                                const node = nodeMap.get(item.nodeId);
-                                return (
-                                    <div key={`${item.nodeId}:${index}`} className={styles.historyItem}>
-                                        <span>{String(index + 1).padStart(2, '0')}</span>
-                                        <strong>{item.title || getNodeTitle(node)}</strong>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
+                    </div>
+                    {renderTreePanel()}
+                    {renderVariablesPanel()}
+                    {renderHistoryPanel()}
                 </aside>
             </main>
 
@@ -1479,100 +2220,15 @@ const InteractiveVideo: React.FC = () => {
                 aria-label="Open player tools"
             >
                 <IoGitBranchOutline />
-                <span>{unlockProgress.percent}%</span>
+                <span>{routeExploreProgress.percent}%</span>
             </button>
 
-            {isMobileToolsOpen && (
-                <div className={styles.mobileToolsOverlay} onClick={() => setIsMobileToolsOpen(false)}>
-                    <section className={styles.mobileToolsSheet} onClick={(event) => event.stopPropagation()}>
-                        <header className={styles.mobileToolsHeader}>
-                            <strong>{'\u64ad\u653e\u5de5\u5177'}</strong>
-                            <div className={styles.mobileToolsHeaderActions}>
-                                <button type="button" className={styles.mobileRestartButton} onClick={handleRestart}>
-                                    <IoRefresh />
-                                    {'\u91cd\u5f00'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className={styles.mobileToolsClose}
-                                    onClick={() => setIsMobileToolsOpen(false)}
-                                    aria-label="Close player tools"
-                                >
-                                    <IoClose />
-                                </button>
-                            </div>
-                        </header>
-                        <div className={styles.mobileToolsTabs} role="tablist" aria-label="Player tools">
-                            {mobileToolTabs.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    className={mobileToolsTab === tab.id ? styles.mobileToolsTabActive : ''}
-                                    onClick={() => setMobileToolsTab(tab.id)}
-                                    role="tab"
-                                    aria-selected={mobileToolsTab === tab.id}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-                        <div className={styles.mobileToolsContent}>{renderMobileToolsPanel()}</div>
-                    </section>
-                </div>
-            )}
-
-            {isTreeOpen && (
-                <div className={styles.treeOverlay} onClick={() => setIsTreeOpen(false)}>
-                    <section className={styles.treeDialog} onClick={(event) => event.stopPropagation()}>
-                        <header className={styles.treeDialogHeader}>
-                            <div className={styles.treeDialogTitle}>
-                                <span>STORY TREE</span>
-                                <h2>剧情树</h2>
-                            </div>
-                            <div className={styles.treeDialogActions}>
-                                <code className={`${styles.treeProgress} ${styles.treeProgressFull}`}>{unlockProgressLabel}</code>
-                                <code className={`${styles.treeProgress} ${styles.treeProgressCompact}`}>{compactUnlockProgressLabel}</code>
-                                <button
-                                    type="button"
-                                    className={styles.treeCloseButton}
-                                    onClick={() => setIsTreeOpen(false)}
-                                    aria-label="Close story tree"
-                                >
-                                    <IoClose />
-                                </button>
-                            </div>
-                        </header>
-                        <InteractiveVideoTreeCanvas
-                            story={story}
-                            currentNodeId={currentNode.id}
-                            sessionState={sessionState}
-                            onRollback={handleTreeRollback}
-                        />
-                    </section>
-                </div>
-            )}
-
-            {endingModalOpen && (
-                <div className={styles.endingOverlay} onClick={() => setEndingModalOpen(false)}>
-                    <div className={styles.endingModal} onClick={(event) => event.stopPropagation()}>
-                        <span>ENDING</span>
-                        <h1>{getNodeTitle(currentNode)}</h1>
-                        <p>{getNodeBody(currentNode)}</p>
-                        <div className={styles.endingActions}>
-                            <button type="button" onClick={handleRestart}>
-                                重新开始
-                            </button>
-                            <button type="button" onClick={returnToGameDetail}>
-                                返回详情
-                            </button>
-                            <button type="button" onClick={() => setEndingModalOpen(false)}>
-                                关闭
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
+        {mobileToolsPortal}
+        {treePortal}
+        {restartConfirmPortal}
+        {endingPortal}
+        </>
     );
 };
 
