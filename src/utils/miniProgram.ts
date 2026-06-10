@@ -2,7 +2,7 @@ type MiniProgramWindow = Window & {
     __wxjs_environment?: string;
 };
 
-export type CreatorGameType = 'rpg' | 'txt' | 'avg' | 'custom' | 'st';
+export type CreatorGameType = 'rpg' | 'txt' | 'avg' | 'custom' | 'st' | 'ivg';
 export type CreatorEngine = 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'ST' | 'IVG';
 
 export const MINI_PROGRAM_CREATOR_PC_URL = 'https://funloom.kurangames.com/funloom/home';
@@ -22,6 +22,7 @@ const CREATOR_TYPE_TO_ENGINE: Record<CreatorGameType, CreatorEngine> = {
     avg: 'AVG',
     custom: 'CUSTOM',
     st: 'ST',
+    ivg: 'IVG',
 };
 
 // 统一识别微信小程序环境，避免各页面出现不同的平台判断逻辑。

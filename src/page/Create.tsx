@@ -322,7 +322,7 @@ const Create: React.FC = () => {
         }
     };
 
-    const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st'>) => {
+    const openMiniProgramTypeTip = (type: Extract<CreatorGameType, 'avg' | 'custom' | 'st' | 'ivg'>) => {
         // 小程序端暂不开放 AVG / 自定义编辑，统一引导去 PC 端。
         setMobileTipMessage(getMiniProgramCreatorBlockedMessage(type));
         setIsMobileTipModalOpen(true);
@@ -331,7 +331,7 @@ const Create: React.FC = () => {
     const handleSelectGameType = async (type: CreatorGameType) => {
         // 小程序端当前只允许 TXT 模式进入创作者编辑器。
         if (isMiniProgram && !isMiniProgramCreatorTypeSupported(type)) {
-            if (type === 'avg' || type === 'custom' || type === 'st') {
+            if (type === 'avg' || type === 'custom' || type === 'st' || type === 'ivg') {
                 openMiniProgramTypeTip(type);
             }
             setIsCreateTypeModalOpen(false);

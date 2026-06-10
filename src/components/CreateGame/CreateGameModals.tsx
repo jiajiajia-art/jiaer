@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { FaWindows } from 'react-icons/fa';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
 import type { CreatorGameType } from '../../utils/miniProgram';
+
+const IVG_TOOL_DOWNLOAD_FILE_NAME = 'Funloom互动影游工具-Windows.zip';
+const IVG_TOOL_DOWNLOAD_PATH = `/pdf/${IVG_TOOL_DOWNLOAD_FILE_NAME}`;
+const IVG_TUTORIAL_URL = 'https://avyx4ypb3lx.feishu.cn/docx/WTcZdQPipofJq1xb1A4caq6Tngd';
+
+const getPublicAssetUrl = (path: string) =>
+    `${import.meta.env.BASE_URL}${path.startsWith('/') ? path.slice(1) : path}`;
 
 interface CreateGameModalsProps {
     isCreateTypeModalOpen: boolean;
@@ -30,6 +38,9 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
     onOpenMiniProgramTip,
     onOpenBindPhoneGuide,
 }) => {
+    const [isIvgToolModalOpen, setIsIvgToolModalOpen] = useState(false);
+    const ivgToolDownloadUrl = getPublicAssetUrl(IVG_TOOL_DOWNLOAD_PATH);
+
     const handleAvgClick = () => {
         if (isMiniProgram) {
             // 小程序端只开放 TXT，AVG 统一引导去 PC 端。
@@ -50,6 +61,22 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
 
         onSelectGameType('custom');
     };
+
+    const handleIvgClick = () => {
+        if (isMiniProgram) {
+            onCloseCreateTypeModal();
+            onOpenMiniProgramTip('ivg');
+            return;
+        }
+
+        onCloseCreateTypeModal();
+        setIsIvgToolModalOpen(true);
+    };
+
+    const handleCloseIvgToolModal = () => {
+        setIsIvgToolModalOpen(false);
+    };
+
     return (
         <>
             {isCreateTypeModalOpen && (
@@ -86,6 +113,15 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             </button>
                             <button
                                 className={styles.createTypeOption}
+                                onClick={handleIvgClick}
+                            >
+                                <span>互动影游</span>
+                                <span className={styles.createTypeOptionRecommend}>
+                                    新
+                                </span>
+                            </button>
+                            <button
+                                className={styles.createTypeOption}
                                 onClick={handleCustomClick}
                             >
                                 <span>自定义</span>
@@ -106,6 +142,52 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                             <button
                                 type="button"
                                 onClick={onCloseCreateTypeModal}
+                                className={styles.createTypeCancelButton}
+                            >
+                                取消
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {isIvgToolModalOpen && (
+                <div
+                    className={styles.createTypeModalOverlay}
+                    onClick={handleCloseIvgToolModal}
+                >
+                    <div
+                        className={`${styles.createTypeModal} ${styles.ivgToolModal}`}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className={styles.createTypeModalHeader}>
+                            <div className={styles.createTypeModalTitle}>互动影游创作工具</div>
+                        </div>
+                        <div className={styles.createTypeModalDesc}>
+                            下载 Windows 创作工具开始制作互动影游，也可以先查看教程了解完整流程。
+                        </div>
+                        <div className={styles.ivgToolActions}>
+                            <a
+                                className={`${styles.ivgToolAction} ${styles.ivgToolDownloadAction}`}
+                                href={ivgToolDownloadUrl}
+                                download={IVG_TOOL_DOWNLOAD_FILE_NAME}
+                            >
+                                <FaWindows className={styles.ivgToolActionIcon} aria-hidden="true" />
+                                <span>下载工具</span>
+                            </a>
+                            <a
+                                className={styles.ivgToolAction}
+                                href={IVG_TUTORIAL_URL}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                教程引导
+                            </a>
+                        </div>
+                        <div className={styles.createTypeModalFooter}>
+                            <button
+                                type="button"
+                                onClick={handleCloseIvgToolModal}
                                 className={styles.createTypeCancelButton}
                             >
                                 取消

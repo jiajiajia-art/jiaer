@@ -145,6 +145,56 @@
     color: #4B5563;
 }
 
+.ivgToolModal {
+    max-width: 440px;
+}
+
+.ivgToolActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.ivgToolAction {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    background-color: #ffffff;
+    color: #b91c1c;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ivgToolAction:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(248, 113, 113, 0.18);
+}
+
+.ivgToolDownloadAction {
+    background-color: #FB4655;
+    border-color: #FB4655;
+    color: #ffffff;
+}
+
+.ivgToolActionIcon {
+    width: 18px;
+    height: 18px;
+}
+
+@media (max-width: 480px) {
+    .ivgToolActions {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* 邀请码输入相关样式 */
 .inviteCodeCloseButton {
     position: absolute;
