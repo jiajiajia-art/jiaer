@@ -4,7 +4,7 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
 // 测试环境
 // export const HOST_ADDRESS = 'https://api-test.kurangames.com';
 // 生产环境
-//export const HOST_ADDRESS = 'https://api.kurangames.com';
+// export const HOST_ADDRESS = 'https://api.kurangames.com';
 export const HOST_ADDRESS = 'http://localhost:3000';
 export const RECORD_CONVERSION = import.meta.env.PROD
   ? true
