@@ -190,7 +190,8 @@
       "all": "All",
       "rolePlaying": "Role-Playing",
       "world": "World",
-      "custom": "Custom"
+      "custom": "Custom",
+      "interactiveVideo": "Interactive Video"
     },
     "modeOptions": "Mode Options",
     "theme": "Theme",
@@ -243,7 +244,8 @@
       "all": "All",
       "rolePlaying": "Role-Playing",
       "world": "World",
-      "custom": "Custom"
+      "custom": "Custom",
+      "interactiveVideo": "Interactive Video"
     },
     "sorts": {
       "hot": "Hot",
@@ -628,6 +630,11 @@
     "bindPhoneFirst": "It is recommended to bind your phone number first",
     "bindPhoneTip": "After binding, you can use the same account on both mini-program and PC.",
     "avgBeta": "AVG (Beta)",
+    "interactiveVideo": "Interactive Video",
+    "ivgToolTitle": "Interactive Video Creation Tool",
+    "ivgToolDesc": "Download the Windows creation tool to start making interactive video games, or read the tutorial first.",
+    "downloadTool": "Download Tool",
+    "tutorialGuide": "Tutorial",
     "funloomGuide": "Funloom Creation Guide",
     "kuranStudio": "Kuran Studio",
     "aiVisualNovelWorkshop": "AI Visual Novel Workshop",

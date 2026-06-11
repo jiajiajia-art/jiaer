@@ -29,6 +29,7 @@
     "react-image-crop": "^11.0.10",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.9.4",
+    "reactflow": "^11.11.4",
     "showdown": "^2.1.0",
     "uuid": "^13.0.0",
     "uuidv4": "^6.2.13",

@@ -234,6 +234,14 @@ const CreateGame: React.FC = () => {
             return;
         }
 
+        if (normalizedEngine === 'IVG') {
+            const fileId = gameDetail?.file_id || gameDetail?.id;
+            if (fileId) {
+                navigate(`/interactive-video/edit/${encodeURIComponent(fileId)}`);
+            }
+            return;
+        }
+
         // 其他类型按原编辑器处理
         setFileId(gameId);
         setIsPreset(gameDetail?.is_preset == 1);

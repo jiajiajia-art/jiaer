@@ -75,10 +75,12 @@ const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => 
     const normalizedEngine = normalizeRaw(engine);
     if (normalizedEngine === 'CUSTOM') return 'customif' as const;
     if (normalizedEngine === 'ST') return 'st' as const;
+    if (normalizedEngine === 'IVG') return 'interactive-video' as const;
     if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
 
     const normalizedTags = normalizeRaw(gameTags);
     if (normalizedTags === 'CUSTOM') return 'customif' as const;
+    if (normalizedTags === 'IVG') return 'interactive-video' as const;
     if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
 
     return '';
@@ -356,6 +358,12 @@ const GameDetail: React.FC = () => {
             return;
         }
 
+        if (normalized === 'interactive-video') {
+            useGameStore.getState().clearAll();
+            navigate(`/interactive-video/${fileId}`, { state: { fromGameDetail: true } });
+            return;
+        }
+
         if (normalized === 'TXT') {
             // 进入游戏前清理旧状态
             useGameStore.getState().clearAll();
@@ -437,8 +445,8 @@ const GameDetail: React.FC = () => {
             return;
         }
 
-        // CUSTOM/ST 模式：直接开始，不需要弹窗
-        if (normalizedGameMode === 'customif' || normalizedGameMode === 'st') {
+        // CUSTOM/ST/IVG 模式：直接开始，不需要弹窗
+        if (normalizedGameMode === 'customif' || normalizedGameMode === 'st' || normalizedGameMode === 'interactive-video') {
             await startGameInternal();
             return;
         }
@@ -474,6 +482,11 @@ const GameDetail: React.FC = () => {
 
         if (normalizedGameMode === 'st') {
             navigate(`/st/${fileId}`);
+            return;
+        }
+
+        if (normalizedGameMode === 'interactive-video') {
+            navigate(`/interactive-video/${fileId}`, { state: { fromGameDetail: true } });
             return;
         }
 

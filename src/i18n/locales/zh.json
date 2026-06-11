@@ -190,7 +190,8 @@
       "all": "全部",
       "rolePlaying": "角色扮演",
       "world": "World",
-      "custom": "自定义"
+      "custom": "自定义",
+      "interactiveVideo": "互动影游"
     },
     "modeOptions": "模式选项",
     "theme": "题材",
@@ -243,7 +244,8 @@
       "all": "全部",
       "rolePlaying": "角色扮演",
       "world": "World",
-      "custom": "自定义"
+      "custom": "自定义",
+      "interactiveVideo": "互动影游"
     },
     "sorts": {
       "hot": "最热",
@@ -630,6 +632,11 @@
     "bindPhoneFirst": "建议先绑定手机号",
     "bindPhoneTip": "绑定后可在小程序端和 PC 端使用同一个账号。",
     "avgBeta": "AVG（内测中）",
+    "interactiveVideo": "互动影游",
+    "ivgToolTitle": "互动影游创作工具",
+    "ivgToolDesc": "下载 Windows 创作工具开始制作互动影游，也可以先查看教程了解完整流程。",
+    "downloadTool": "下载工具",
+    "tutorialGuide": "教程引导",
     "funloomGuide": "Funloom 创作指南",
     "kuranStudio": "Kuran Studio",
     "aiVisualNovelWorkshop": "AI 视觉小说工坊",

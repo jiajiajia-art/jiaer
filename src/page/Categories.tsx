@@ -29,6 +29,7 @@ const MODE_LABEL_KEYS = {
     'role-playing': 'categories.modes.rolePlaying',
     world: 'categories.modes.world',
     custom: 'categories.modes.custom',
+    'interactive-video': 'categories.modes.interactiveVideo',
 } as const satisfies Record<HomeListMode, string>;
 
 const SORT_LABEL_KEYS = {

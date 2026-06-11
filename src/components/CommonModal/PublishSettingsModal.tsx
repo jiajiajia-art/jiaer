@@ -108,7 +108,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 
     if (!isOpen) return null;
 
-    const handleSubmit = () => {
+    const handleSubmit = (event?: React.MouseEvent<HTMLButtonElement>) => {
+        event?.preventDefault();
+        event?.stopPropagation();
         if (publishing) {
             return;
         }
@@ -183,7 +185,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     return (
         <div className={`${styles.modal} ${styles.modalShow}`}>
             <div className={styles.publishModalContent}>
-                <button className={styles.closeBtn} onClick={onClose}>
+                <button type="button" className={styles.closeBtn} onClick={onClose}>
                     <img src={`${import.meta.env.BASE_URL}data/assets/关闭.png`} alt={t('common.close')} />
                 </button>
                 <h2 className={styles.modalTitle}>{t('common.publishSettings.title')}</h2>
@@ -255,7 +257,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                     </div>
 
                     <div className={styles.buttonGroup}>
-                        <button className={styles.publishBtn} onClick={handleSubmit} disabled={publishing}>
+                        <button type="button" className={styles.publishBtn} onClick={handleSubmit} disabled={publishing}>
                             {t('common.publishSettings.publish')}
                         </button>
                     </div>

@@ -40,7 +40,7 @@ import {
 type CarouselItem = UserGameData | BannerItem;
 
 const isBannerCarouselItem = (item: CarouselItem): item is BannerItem => 'image_url' in item;
-const PROTECTED_PATH_PREFIXES = ['/analytics', '/create', '/createGame', '/warehouse', '/profile', '/promotions', '/admin', '/galgame', '/galgameMap', '/customif'];
+const PROTECTED_PATH_PREFIXES = ['/analytics', '/create', '/createGame', '/warehouse', '/profile', '/promotions', '/admin', '/galgame', '/galgameMap', '/customif', '/interactive-video'];
 const DESKTOP_CAROUSEL_BREAKPOINT = 768;
 const MOBILE_NAVBAR_HEIGHT = 60;
 const DESKTOP_CAROUSEL_RATIO = 9 / 5;
