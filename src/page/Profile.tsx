@@ -12,6 +12,7 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import CheckInModal from '../components/CheckInModal';
 import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
 import InviteRewardModal from '../components/InviteRewardModal';
+import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CreatorProfile, { type CreatorProfileFormData } from '../components/CreatorProfile.tsx';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import {
@@ -39,6 +40,7 @@ import {
 } from '../api/statistics/dailyTask.type';
 import { getCreatorProfile, saveCreatorProfile } from '../api/incentive/creatorProfileApi';
 import type { CreatorProfileData } from '../components/CreatorProfile.tsx';
+import { getApiErrorMessage } from '../utils/error';
 
 const formatDuration = (totalSeconds: number): string => {
     const safe = Math.max(0, Math.floor(totalSeconds));
@@ -53,16 +55,12 @@ const getTaskActionText = (code: string, t: (key: string) => string): string => 
     return t('profile.taskInProgress');
 };
 const isWebViewEnv = (): boolean => {
-    const win = window as any;
-    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+    const win = window as unknown as Record<string, unknown>;
+    return String(win.__wxjs_environment ?? '').toLowerCase() === 'miniprogram';
 };
 
 const maskPhoneNumber = (phone?: string): string => {
-    if (!phone) return '';
-    if (phone.length < 7) return phone;
-    if (phone.length === 11) {
-        return `${phone.slice(0, 3)}****${phone.slice(7)}`;
-    }
+    if (!phone || phone.length < 7) return phone ?? '';
     return `${phone.slice(0, 3)}****${phone.slice(-4)}`;
 };
 
@@ -107,6 +105,7 @@ const Profile: React.FC = () => {
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
     const [isDailyTaskModalOpen, setIsDailyTaskModalOpen] = useState(false);
     const [isInviteRewardModalOpen, setIsInviteRewardModalOpen] = useState(false);
+    const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [inviteStats, setInviteStats] = useState<{ inviteCount: number; claimedPoints: number }>({
         inviteCount: 0,
         claimedPoints: 0,
@@ -308,12 +307,7 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || t('profile.redeemFailed'));
             }
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                toast.error(axiosError.response?.data?.message || t('profile.redeemFailed'));
-            } else {
-                toast.error(t('profile.redeemFailed'));
-            }
+            toast.error(getApiErrorMessage(error, t('profile.redeemFailed')));
         } finally {
             setIsRedeemingMembership(false);
         }
@@ -345,13 +339,7 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || t('profile.operationFailed'));
             }
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || t('profile.submitInviteCodeFailed');
-                toast.error(errorMessage);
-            } else {
-                toast.error(t('profile.submitInviteCodeFailed'));
-            }
+            toast.error(getApiErrorMessage(error, t('profile.submitInviteCodeFailed')));
         }
     };
 
@@ -404,13 +392,7 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || t('profile.operationFailed'));
             }
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || t('profile.operationFailed');
-                toast.error(errorMessage);
-            } else {
-                toast.error(t('profile.operationFailed'));
-            }
+            toast.error(getApiErrorMessage(error, t('profile.operationFailed')));
         } finally {
             setIsBindingAccount(false);
         }
@@ -496,41 +478,6 @@ const Profile: React.FC = () => {
         }
     };
 
-    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            toast.error(t('profile.selectImageFile'));
-            return;
-        }
-
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            toast.error(t('profile.imageTooLarge'));
-            return;
-        }
-
-        try {
-            setIsUpdatingAvatar(true);
-            const response = await auth.updateUserAvatar(file);
-            if (response.data.success && response.data.data) {
-                await getUserInfo();
-                toast.success(t('profile.avatarUpdateSuccess'));
-            } else {
-                toast.error(response.data.message || t('profile.avatarUpdateFailed'));
-            }
-        } catch (error) {
-            console.error('update avatar failed:', error);
-            toast.error(t('profile.avatarUpdateFailed'));
-        } finally {
-            setIsUpdatingAvatar(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-
     const handleAvatarChangeForCrop = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         e.target.value = '';
@@ -546,7 +493,6 @@ const Profile: React.FC = () => {
             toast.error(t('profile.avatarUpdateFailed'));
         });
     };
-    void handleAvatarChange;
 
     const handleRecharge = async (order: PayOrderRequest) => {
         const response = await payApi.getPayQrCode(order);
@@ -687,6 +633,29 @@ const Profile: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {user?.user?.diamonds !== undefined && (
+                            <div className={styles.functionItem} onClick={() => navigate('/asset/details')}>
+                                <div className={styles.functionIcon}>
+                                    <svg className={styles.creatorAssetIconDiamond} viewBox="0 0 1024 1024" width="18" height="18">
+                                        <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#ffffff"/>
+                                    </svg>
+                                </div>
+                                <div className={styles.functionText}>
+                                    <div className={styles.functionTitle}>{t('profile.myDiamonds')}</div>
+                                    <div className={styles.functionDesc}>{t('profile.currentDiamonds', { diamonds: user?.user?.diamonds ?? 0 })}</div>
+                                </div>
+                                <button
+                                    className={styles.exchangeButton}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsExchangeModalOpen(true);
+                                    }}
+                                >
+                                    {t('profile.exchange')}
+                                </button>
+                            </div>
+                        )}
 
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -1094,6 +1063,14 @@ const Profile: React.FC = () => {
                 isOpen={redeemSuccessPlanId !== null}
                 onClose={() => setRedeemSuccessPlanId(null)}
                 planId={redeemSuccessPlanId ?? 'month'}
+            />
+
+            <ExchangeModal
+                isOpen={isExchangeModalOpen}
+                onClose={() => setIsExchangeModalOpen(false)}
+                onSuccess={() => {
+                    void getUserInfo();
+                }}
             />
 
             {isDailyTaskModalOpen && (

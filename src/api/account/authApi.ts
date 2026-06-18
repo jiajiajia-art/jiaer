@@ -5,6 +5,8 @@ import type {
   AuthResponse,
   BindAccountRequest,
   CheckInResponse,
+  ExchangeDiamondsRequest,
+  ExchangeDiamondsResponse,
   GetPointsActivitiesParams,
   LoginRequest,
   MembershipSignInStatus,
@@ -44,8 +46,10 @@ export const auth = {
   getSignInStatus: () =>
     api.get<ApiResponse<MembershipSignInStatus>>('/auth/user/signin-status'),
 
-  getPointsActivities: (params: GetPointsActivitiesParams) =>
-    api.get<ApiResponse<PointsActivitiesResponse>>('/auth/user/points/activities', { params }),
+  getPointsActivities: (params: GetPointsActivitiesParams) => {
+    const mergedParams = { ...params, currency: params.currency || 'points' };
+    return api.get<ApiResponse<PointsActivitiesResponse>>('/auth/user/points/activities', { params: mergedParams });
+  },
 
   useInviteCode: (data: { inviteCode: string }) =>
     api.post<ApiResponse<null>>('/auth/invite/use-code', data),
@@ -78,4 +82,7 @@ export const auth = {
 
   googleLogin: (data: { idToken: string }) =>
     api.post<ApiResponse<AuthResponse>>('/auth/google/login', data),
+
+  exchangeDiamonds: (data: ExchangeDiamondsRequest) =>
+    api.post<ApiResponse<ExchangeDiamondsResponse>>('/auth/currency/exchange', data),
 };

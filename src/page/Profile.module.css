@@ -349,6 +349,34 @@
     cursor: pointer;
 }
 
+.exchangeButton {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    color: #fff;
+    cursor: pointer;
+}
+
+.exchangeButton:hover {
+    background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(251, 70, 85, 0.3);
+}
+
+.exchangeButton:active {
+    transform: translateY(0);
+}
+
 .functionButton:not(.functionButtonCheckIn):not(.functionButtonSignedIn):hover {
     background: linear-gradient(135deg, #e03545 0%, #e94a5a 100%);
     transform: translateY(-1px);

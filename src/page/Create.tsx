@@ -35,6 +35,7 @@ import {
     MINI_PROGRAM_CREATOR_PC_URL,
     type CreatorGameType,
 } from '../utils/miniProgram';
+import { getApiErrorMessage } from '../utils/error';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 
@@ -308,17 +309,30 @@ const Create: React.FC = () => {
         try {
             const response = await auth.settlePoints();
             if (response.data.success && response.data.data) {
-                const settlementAmount = response.data.data.settlementAmount || 0;
-                toast.success(t('create.settleSuccess', { amount: settlementAmount }));
+                const data = response.data.data;
+                const pointsAmount = data.pointsSettled || 0;
+                const diamondsAmount = data.diamondsSettled || 0;
+
+                let successMsg = '';
+                if (pointsAmount > 0 && diamondsAmount > 0) {
+                    successMsg = t('create.settleSuccessDual', { points: pointsAmount, diamonds: diamondsAmount });
+                } else if (pointsAmount > 0) {
+                    successMsg = t('create.settleSuccess', { amount: pointsAmount });
+                } else if (diamondsAmount > 0) {
+                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
+                } else {
+                    successMsg = t('create.settleSuccessZero');
+                }
+
+                toast.success(successMsg);
                 await getGameTotalStats();
                 await getUserInfo();
                 setIsSettleModalOpen(false);
             } else {
                 toast.error(response.data.message || t('create.settleFailed'));
             }
-        } catch (error: any) {
-                const errorMessage = error?.response?.data?.message || error?.message || t('create.settleFailed');
-            toast.error(errorMessage);
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
         } finally {
             setIsSettling(false);
         }
@@ -383,85 +397,101 @@ const Create: React.FC = () => {
                 <div className={styles.main}>
                     <div className={styles.creatorHeroSection}>
                         <div className={styles.creatorHeroCard}>
-                            <div className={styles.creatorHeroMain}>
-                                <div className={styles.creatorHeroMeta}>
-                                    <div className={styles.creatorHeroEyebrow}>{t('create.creatorStudio')}</div>
-                                    <div className={styles.creatorHeroName}>{userName}</div>
-                                    <div className={styles.creatorHeroInfoRow}>
-                                        <div className={styles.creatorIdentityStack}>
-                                            <div className={styles.userCode}>
-                                                <span className={styles.userCodeText}>{t('create.kuranIdPrefix')}{userCode || '--'}</span>
-                                                {userCode && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.userCodeCopyButton}
-                                                        onClick={handleCopyUserCode}
-                                                        title={t('profile.copyKuranId')}
-                                                    >
-                                                        <MdContentCopy />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className={styles.debugToken}>
-                                                <span className={styles.debugTokenText}>Token：{debugToken || '--'}</span>
-                                                {debugToken && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.userCodeCopyButton}
-                                                        onClick={handleCopyDebugToken}
-                                                        title={t('create.copyToken')}
-                                                    >
-                                                        <MdContentCopy />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className={styles.userCredit}>
+                            <div className={styles.creatorHeroLeft}>
+                                <div className={styles.creatorHeroEyebrow}>Creator Studio</div>
+                                <div className={styles.creatorHeroName}>{userName}</div>
+
+                                <div className={styles.creatorAccountCard}>
+                                    <div className={styles.creatorAccountHalf}>
+                                        <span className={styles.creatorAccountLabel}>{t('create.kuranIdPrefix')}</span>
+                                        <span className={styles.creatorAccountValue}>{userCode || '--'}</span>
+                                        {userCode && (
                                             <button
                                                 type="button"
-                                                className={styles.userPointsButton}
-                                                onClick={() => navigate('/points/details')}
+                                                className={styles.creatorAccountCopyButton}
+                                                onClick={handleCopyUserCode}
+                                                title={t('profile.copyKuranId')}
                                             >
-                                                <span className={styles.userPoints}>
-                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.priceIcon} />
-                                                {t('profile.myPoints')}：{user?.user?.points ?? 0}
-                                                </span>
+                                                <MdContentCopy />
                                             </button>
+                                        )}
+                                    </div>
+                                    <div className={styles.creatorAccountDivider} />
+                                    <div className={styles.creatorAccountHalf}>
+                                        <span className={styles.creatorAccountLabel}>Token:</span>
+                                        <span className={styles.creatorAccountValue}>{debugToken || '--'}</span>
+                                        {debugToken && (
                                             <button
-                                                className={`${styles.payButton} ${styles.desktopPayButton}`}
-                                                onClick={() => setIsRechargeModalOpen(true)}
+                                                type="button"
+                                                className={styles.creatorAccountCopyButton}
+                                                onClick={handleCopyDebugToken}
+                                                title={t('create.copyToken')}
                                             >
-                                                <span>{t('create.recharge')}</span>
+                                                <MdContentCopy />
                                             </button>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                <div className={styles.creatorHeroActions}>
-                                    {/* 适配移动端按钮并排布局 */}
-                                    <div className={styles.createGameButtonRow}>
-                                        <button
-                                            className={`${styles.payButton} ${styles.mobilePayButton}`}
-                                            onClick={() => setIsRechargeModalOpen(true)}
-                                        >
-                                            <span>{t('create.recharge')}</span>
-                                        </button>
-                                        <button
-                                            className={styles.createGameButtonItem}
-                                            onClick={() => setIsCreateTypeModalOpen(true)}
-                                        >
-                                            <HiOutlineLightBulb />
-                                            <span>{t('create.createGame')}</span>
-                                        </button>
-                                        <button
-                                            className={styles.helpButton}
-                                            onClick={() => setIsPDFModalOpen(true)}
-                                            title={t('create.pdfGuide')}
-                                        >
-                                            <span className={styles.helpIcon}>?</span>
-                                        </button>
+                                <div className={styles.creatorAssets}>
+                                    <div className={styles.creatorAssetCard}>
+                                        <div>
+                                            <div className={styles.creatorAssetHeader}>
+                                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" className={styles.creatorAssetIcon} />
+                                                <span className={styles.creatorAssetLabel}>{t('profile.myPoints')}</span>
+                                            </div>
+                                            <div className={styles.creatorAssetRow}>
+                                                <div className={styles.creatorAssetValue}>{user?.user?.points ?? 0}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className={styles.creatorAssetCard}>
+                                        <div>
+                                            <div className={styles.creatorAssetHeader}>
+                                                <svg className={styles.creatorAssetIconDiamond} viewBox="0 0 1024 1024">
+                                                    <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#FB4655"/>
+                                                </svg>
+                                                <span className={styles.creatorAssetLabel}>{t('profile.myDiamonds')}</span>
+                                            </div>
+                                            <div className={styles.creatorAssetRow}>
+                                                <div className={styles.creatorAssetValue}>{user?.user?.diamonds ?? 0}</div>
+                                            </div>
+                                        </div>
+                                        <div className={styles.creatorAssetActionsBox}>
+                                            <button
+                                                type="button"
+                                                className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
+                                                onClick={() => navigate('/diamonds-details')}
+                                            >
+                                                {t('create.withdraw')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}
+                                                onClick={() => setIsRechargeModalOpen(true)}
+                                            >
+                                                {t('create.recharge')}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className={styles.creatorHeroActions}>
+                                <button
+                                    className={styles.creatorPrimaryButton}
+                                    onClick={() => setIsCreateTypeModalOpen(true)}
+                                >
+                                    <HiOutlineLightBulb />
+                                    <span>{t('create.createGame')}</span>
+                                </button>
+                                <button
+                                    className={styles.creatorHelpButton}
+                                    onClick={() => setIsPDFModalOpen(true)}
+                                    title={t('create.pdfGuide')}
+                                >
+                                    <span className={styles.creatorHelpIcon}>?</span>
+                                </button>
                             </div>
                         </div>
                     </div>

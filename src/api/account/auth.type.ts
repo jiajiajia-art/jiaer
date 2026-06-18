@@ -44,6 +44,7 @@ export interface User {
   nickname: string;
   avatarUrl: string;
   points: number;
+  diamonds?: number;
   inviteCode: string;
   hasSignedIn: boolean;
   firstCharge?: boolean;
@@ -89,7 +90,6 @@ export interface SendCodeRequest {
 
 // 重置密码请求
 export interface ResetPasswordRequest {
-  phoneNumber: string;
   code: string;
   newPassword: string;
   confirmNewPassword: string;
@@ -98,10 +98,12 @@ export interface ResetPasswordRequest {
 // 结算奖励
 export interface SettlePointsResponse {
   userId: string;
-  settlementAmount: number;
+  pointsSettled: number;
+  diamondsSettled?: number;
+  pointsFileCount?: number;
+  diamondFileCount?: number;
   settlementTime: string;
   lastSettlementTime: string | null;
-  gameCount: number;
 }
 
 export interface SubscriptionRedeemResult {
@@ -134,35 +136,42 @@ export interface InviteClaimResult {
 
 // 积分活动查询
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
+export type PointsActivityCurrency = 'all' | 'points' | 'diamonds';
 
 export interface GetPointsActivitiesParams {
+  currency?: PointsActivityCurrency;
   direction?: PointsActivityDirection;
-  month?: number;
   year?: number;
+  month?: number;
   page?: number;
   pageSize?: number;
 }
 
 export interface PointsActivityItem {
-  id: number;
+  currency: 'points' | 'diamonds';
   activityType: string;
+  amount: number;
   direction: 'income' | 'expense';
-  title: string;
-  subtitle?: string;
-  type: string;
-  points: number;
-  description: string;
   occurredAt: string;
-  createdAt: string;
+  id: number;
+  title: string;
+  subtitle: string;
 }
 
 export interface PointsActivitiesResponse {
-  currentPoints: number;
+  points: number;
+  diamonds: number;
   items: PointsActivityItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+}
+
+// 钻石兑换积分
+export interface ExchangeDiamondsRequest {
+  diamonds: number;
+}
+
+export interface ExchangeDiamondsResponse {
+  diamondsSpent: number;
+  pointsEarned: number;
+  remainingDiamonds: number;
+  remainingPoints: number;
 }
