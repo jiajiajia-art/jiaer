@@ -13,4 +13,4 @@ export const RECORD_CONVERSION = import.meta.env.PROD
   : import.meta.env.VITE_RECORD_CONVERSION === 'true';
 
 // Language: 'zh' | 'en' — hardcoded, no user switching
-export const LANGUAGE: 'zh' | 'en' = 'en'
+export const LANGUAGE: 'zh' | 'en' = 'zh'

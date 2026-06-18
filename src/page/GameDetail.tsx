@@ -968,7 +968,7 @@ const GameDetail: React.FC = () => {
                     >
                         <div className={styles.startOptionsHeader}>
                             <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>{t('selectStartMethod')}</h2>
+                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.selectStartMethod')}</h2>
                             </div>
                             <button
                                 className={styles.startOptionsClose}
@@ -986,7 +986,7 @@ const GameDetail: React.FC = () => {
                                         await handleStartNewGame();
                                     }}
                                 >
-                                    {t('newStart')}
+                                    {t('gameDetail.newStart')}
                                 </button>
                                 <button
                                     className={styles.startOptionsSecondary}
@@ -996,7 +996,7 @@ const GameDetail: React.FC = () => {
                                         await handleStartGame();
                                     }}
                                 >
-                                    {t('continueExperience')}
+                                    {t('gameDetail.continueExperience')}
                                 </button>
                                 {isGalgame && (
                                     <button
@@ -1007,7 +1007,7 @@ const GameDetail: React.FC = () => {
                                             handleOpenLoadSave();
                                         }}
                                     >
-                                        {t('loadSave')}
+                                        {t('gameDetail.loadSave')}
                                     </button>
                                 )}
                                 {isGalgame && (
@@ -1015,7 +1015,7 @@ const GameDetail: React.FC = () => {
                                         className={styles.startOptionsGhost}
                                         onClick={openReplayDrawer}
                                     >
-                                        {t('replay')}
+                                        {t('gameDetail.replay')}
                                     </button>
                                 )}
                         </div>
