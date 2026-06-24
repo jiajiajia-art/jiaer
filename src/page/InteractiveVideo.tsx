@@ -50,6 +50,18 @@ type StoryVideo = {
     url?: string;
 };
 
+type StoryVideoSequenceSegment = {
+    segmentId?: string;
+    index?: number;
+    status?: string;
+    video?: StoryVideo;
+};
+
+type StoryVideoSequence = {
+    status?: string;
+    segments?: StoryVideoSequenceSegment[];
+};
+
 type StoryMutation = {
     id?: string;
     variableId?: string;
@@ -80,6 +92,7 @@ type StoryNode = {
     title?: string;
     body?: string;
     video?: StoryVideo;
+    videoSequence?: StoryVideoSequence;
     mutations?: StoryMutation[];
     options?: StoryChoiceOption[];
     data?: {
@@ -87,6 +100,7 @@ type StoryNode = {
         title?: string;
         body?: string;
         video?: StoryVideo;
+        videoSequence?: StoryVideoSequence;
         mutations?: StoryMutation[];
         options?: StoryChoiceOption[];
     };
@@ -240,6 +254,8 @@ const getNodeBody = (node?: StoryNode | null): string => {
 };
 
 const getNodeVideo = (node?: StoryNode | null): StoryVideo | undefined => node?.data?.video || node?.video;
+const getNodeVideoSequence = (node?: StoryNode | null): StoryVideoSequence | undefined =>
+    node?.data?.videoSequence || node?.videoSequence;
 const getNodeOptions = (node?: StoryNode | null): StoryChoiceOption[] => node?.data?.options || node?.options || [];
 const getNodeMutations = (node?: StoryNode | null): StoryMutation[] => node?.data?.mutations || node?.mutations || [];
 
@@ -358,6 +374,22 @@ const resolveVideoUrl = (video: StoryVideo | undefined, manifest: StoryManifest 
     if (!mediaId || !manifest?.mediaBaseUrl) return '';
     const base = manifest.mediaBaseUrl.endsWith('/') ? manifest.mediaBaseUrl : `${manifest.mediaBaseUrl}/`;
     return toBackendAssetUrl(`${base}${mediaId}.${getVideoExtension(video)}`);
+};
+
+const getNodeVideoUrls = (node: StoryNode | null | undefined, manifest: StoryManifest | null): string[] => {
+    const sequence = getNodeVideoSequence(node);
+    const sequenceUrls = Array.isArray(sequence?.segments)
+        ? sequence.segments
+            .slice()
+            .sort((left, right) => Number(left.index ?? 0) - Number(right.index ?? 0))
+            .map((segment) => resolveVideoUrl(segment.video, manifest))
+            .filter(Boolean)
+        : [];
+
+    if (sequenceUrls.length > 0) return sequenceUrls;
+
+    const singleVideoUrl = resolveVideoUrl(getNodeVideo(node), manifest);
+    return singleVideoUrl ? [singleVideoUrl] : [];
 };
 
 const buildReachableRouteEdges = (
@@ -1283,6 +1315,7 @@ const InteractiveVideo: React.FC = () => {
     const [isVideoBuffering, setIsVideoBuffering] = useState(false);
     const [preloadedVideoStatus, setPreloadedVideoStatus] = useState<Record<string, VideoPreloadStatus>>({});
     const [ivgTheme, setIvgTheme] = useState<InteractiveVideoTheme>('light');
+    const [currentSequenceVideoIndex, setCurrentSequenceVideoIndex] = useState(0);
     const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
     const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -1294,7 +1327,9 @@ const InteractiveVideo: React.FC = () => {
     const variableMap = useMemo(() => new Map((story?.variables || []).map((variable) => [variable.id, variable])), [story?.variables]);
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
-    const currentVideoUrl = useMemo(() => resolveVideoUrl(getNodeVideo(currentNode), manifest), [currentNode, manifest]);
+    const currentVideoUrls = useMemo(() => getNodeVideoUrls(currentNode, manifest), [currentNode, manifest]);
+    const currentVideoUrlsKey = currentVideoUrls.join('|');
+    const currentVideoUrl = currentVideoUrls[currentSequenceVideoIndex] || currentVideoUrls[0] || '';
     const projectTitle = manifest?.title || story?.outline?.projectTitle || story?.title || 'Interactive Video';
 
     const markPreloadedVideoStatus = useCallback((url: string, status: VideoPreloadStatus) => {
@@ -1375,7 +1410,8 @@ const InteractiveVideo: React.FC = () => {
             const loadedCurrentNode = initialState.currentNodeId
                 ? loadedStory.nodes.find((node) => node.id === initialState.currentNodeId)
                 : null;
-            setVideoGate(Boolean(resolveVideoUrl(getNodeVideo(loadedCurrentNode), loadedManifest)));
+            setCurrentSequenceVideoIndex(0);
+            setVideoGate(getNodeVideoUrls(loadedCurrentNode, loadedManifest).length > 0);
             setSessionState(initialState);
         } catch (error: any) {
             const responseData = error?.response?.data as InteractiveVideoSessionResponse | undefined;
@@ -1399,6 +1435,10 @@ const InteractiveVideo: React.FC = () => {
         const preloadedAspect = currentVideoUrl ? preloadedVideoAspectRef.current[currentVideoUrl] : undefined;
         setVideoAspect(preloadedAspect || 'unknown');
     }, [currentNode?.id, currentVideoUrl]);
+
+    useEffect(() => {
+        setCurrentSequenceVideoIndex(0);
+    }, [currentNode?.id, currentVideoUrlsKey]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
@@ -1527,7 +1567,7 @@ const InteractiveVideo: React.FC = () => {
         return currentNodeOptions.reduce<BranchVideoPreload[]>((items, option) => {
             const edge = story.edges.find((item) => item.source === currentNode.id && item.sourceOptionId === option.id);
             const targetNode = edge ? nodeMap.get(edge.target) : null;
-            const url = resolveVideoUrl(getNodeVideo(targetNode), manifest);
+            const url = getNodeVideoUrls(targetNode, manifest)[0] || '';
             if (!edge || !targetNode || !url || url === currentVideoUrl || usedUrls.has(url)) {
                 return items;
             }
@@ -1567,6 +1607,18 @@ const InteractiveVideo: React.FC = () => {
     }, [currentNodeOptions, videoGate]);
 
     const handleVideoComplete = () => {
+        if (currentSequenceVideoIndex < currentVideoUrls.length - 1) {
+            const nextIndex = currentSequenceVideoIndex + 1;
+            const nextUrl = currentVideoUrls[nextIndex] || '';
+            setCurrentSequenceVideoIndex(nextIndex);
+            setShowManualPlay(false);
+            setIsBranchTransitioning(false);
+            setIsVideoBuffering(Boolean(nextUrl));
+            setVideoAspect(nextUrl ? preloadedVideoAspectRef.current[nextUrl] || 'unknown' : 'unknown');
+            setVideoGate(Boolean(nextUrl));
+            return;
+        }
+
         setVideoGate(false);
         setShowManualPlay(false);
         setIsBranchTransitioning(false);
@@ -1604,9 +1656,10 @@ const InteractiveVideo: React.FC = () => {
             targetWasUnlocked ||
             (sessionState.unlocked?.optionIds || []).includes(option.id) ||
             (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
-        const targetVideoUrl = resolveVideoUrl(getNodeVideo(targetNode), manifest);
+        const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
 
         setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
+        setCurrentSequenceVideoIndex(0);
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
@@ -1665,8 +1718,9 @@ const InteractiveVideo: React.FC = () => {
         const variables = snapshot?.variables
             ? { ...snapshot.variables }
             : resolveVariablesForHistory(story, history);
-        const targetVideoUrl = resolveVideoUrl(getNodeVideo(targetNode), manifest);
+        const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
         setPlaybackMode('replay');
+        setCurrentSequenceVideoIndex(0);
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
