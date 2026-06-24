@@ -53,6 +53,7 @@ const Create: React.FC = () => {
         totalViews: 0,
         totalClicks: 0,
         totalAmount: 0,
+        totalDiamondsAmount: 0,
         totalIncentiveAmount: 0,
         pendingIncome: 0,
         inviteTotalAmount: 0,
@@ -64,6 +65,7 @@ const Create: React.FC = () => {
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
     const [mobileTipMessage, setMobileTipMessage] = useState('');
     const [isSettleModalOpen, setIsSettleModalOpen] = useState(false);
+    const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
     const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
     const [isDraftManageMode, setIsDraftManageMode] = useState(false);
@@ -76,6 +78,10 @@ const Create: React.FC = () => {
     const debugToken = user?.user?.debugToken;
     const isMiniProgram = isMiniProgramEnv();
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
+
+    const handleWithdrawClick = () => {
+        toast.error(t('create.withdrawDeveloping'));
+    };
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
     const { publishedGames, draftGames } = useMemo(() => {
@@ -130,10 +136,11 @@ const Create: React.FC = () => {
             const response = await statisticsApi.getALLGameStats();
             if (response.data.success && response.data.data) {
                 setStats({
-                    totalCreated: response.data.data.Count ?? 0,
+                    totalCreated: response.data.data.count ?? 0,
                     totalViews: response.data.data.pv ?? 0,
                     totalClicks: response.data.data.uv ?? 0,
-                    totalAmount: response.data.data.totalAmount ?? 0,
+                    totalAmount: response.data.data.totalPointsAmount ?? 0,
+                    totalDiamondsAmount: response.data.data.totalDiamondsAmount ?? 0,
                     totalIncentiveAmount: response.data.data.totalIncentiveAmount ?? 0,
                     pendingIncome: response.data.data.pendingIncome ?? 0,
                     inviteTotalAmount: response.data.data.inviteTotalAmount ?? 0,
@@ -307,7 +314,7 @@ const Create: React.FC = () => {
 
         setIsSettling(true);
         try {
-            const response = await auth.settlePoints();
+            const response = await auth.settlePoints('points');
             if (response.data.success && response.data.data) {
                 const data = response.data.data;
                 const pointsAmount = data.pointsSettled || 0;
@@ -328,6 +335,37 @@ const Create: React.FC = () => {
                 await getGameTotalStats();
                 await getUserInfo();
                 setIsSettleModalOpen(false);
+            } else {
+                toast.error(response.data.message || t('create.settleFailed'));
+            }
+        } catch (error: unknown) {
+            toast.error(getApiErrorMessage(error, t('create.settleFailed')));
+        } finally {
+            setIsSettling(false);
+        }
+    };
+
+    const handleSettleDiamonds = async () => {
+        if (isSettling) return;
+
+        setIsSettling(true);
+        try {
+            const response = await auth.settlePoints('diamonds');
+            if (response.data.success && response.data.data) {
+                const data = response.data.data;
+                const diamondsAmount = data.diamondsSettled || 0;
+
+                let successMsg = '';
+                if (diamondsAmount > 0) {
+                    successMsg = t('create.settleSuccessDiamonds', { amount: diamondsAmount });
+                } else {
+                    successMsg = t('create.settleSuccessZero');
+                }
+
+                toast.success(successMsg);
+                await getGameTotalStats();
+                await getUserInfo();
+                setIsSettleDiamondsModalOpen(false);
             } else {
                 toast.error(response.data.message || t('create.settleFailed'));
             }
@@ -461,7 +499,7 @@ const Create: React.FC = () => {
                                             <button
                                                 type="button"
                                                 className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
-                                                onClick={() => navigate('/diamonds-details')}
+                                                onClick={handleWithdrawClick}
                                             >
                                                 {t('create.withdraw')}
                                             </button>
@@ -559,6 +597,24 @@ const Create: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+                            <div className={`${styles.statBox} ${stats.totalDiamondsAmount > 0 ? styles.statBoxWithAction : ''}`}>
+                                    <div className={styles.statLabel}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/create/钻石.svg`} alt="" />
+                                        <span>{t('create.pendingRewardDiamonds')}</span>
+                                    </div>
+                                    <div className={styles.statActionRow}>
+                                        <div className={styles.statValue}>{stats.totalDiamondsAmount}</div>
+                                        {stats.totalDiamondsAmount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={styles.settleButton}
+                                                onClick={() => setIsSettleDiamondsModalOpen(true)}
+                                            >
+                                                {t('create.settle')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             {isWorkIncentive && (
                                 <div className={styles.statBox}>
                                     <div className={styles.statLabel} style={{ justifyContent: 'space-between', width: '100%' }}>
@@ -762,6 +818,16 @@ const Create: React.FC = () => {
                 onCancel={() => setIsSettleModalOpen(false)}
                 title={t('create.confirmSettle')}
                 message={t('create.settleConfirmMessage', { amount: stats.totalAmount })}
+                confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
+                cancelButtonText={t('create.cancel')}
+            />
+
+            <ConfirmModal
+                isOpen={isSettleDiamondsModalOpen}
+                onConfirm={handleSettleDiamonds}
+                onCancel={() => setIsSettleDiamondsModalOpen(false)}
+                title={t('create.confirmSettleDiamonds')}
+                message={t('create.settleConfirmDiamondsMessage', { amount: stats.totalDiamondsAmount })}
                 confirmButtonText={isSettling ? t('create.settling') : t('create.confirmSettleBtn')}
                 cancelButtonText={t('create.cancel')}
             />

@@ -326,6 +326,94 @@
     color: rgba(0, 0, 0, 0.5);
 }
 
+/* 结算货币类型选择 */
+.shareTypeFormGroup {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* 自定义下拉框 */
+.customSelectWrapper {
+    position: relative;
+}
+
+.customSelectTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    font-size: 14px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.customSelectTrigger:hover {
+    border-color: #e74c3c;
+}
+
+.customSelectTriggerOpen {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.customSelectArrow {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+    color: #666;
+}
+
+.customSelectArrowOpen {
+    transform: rotate(180deg);
+}
+
+.customSelectDropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: auto;
+    right: 0;
+    min-width: 100%;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.customSelectOption {
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.customSelectOption:hover {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.customSelectOptionSelected {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    font-weight: 600;
+}
+
 /* 移动端适配 (768px以下) */
 @media (max-width: 768px) {
     .modal {

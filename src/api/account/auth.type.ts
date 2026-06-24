@@ -1,5 +1,8 @@
 export type MembershipPlanId = 'month' | 'season' | 'year';
 
+export type Currency = import('../common/currency').Currency;
+export type CurrencyWithAll = import('../common/currency').CurrencyWithAll;
+
 export interface MembershipSignInStatus {
   signedInToday: boolean;
   canClaim: boolean;
@@ -90,6 +93,7 @@ export interface SendCodeRequest {
 
 // 重置密码请求
 export interface ResetPasswordRequest {
+  phoneNumber: string;
   code: string;
   newPassword: string;
   confirmNewPassword: string;
@@ -100,10 +104,8 @@ export interface SettlePointsResponse {
   userId: string;
   pointsSettled: number;
   diamondsSettled?: number;
-  pointsFileCount?: number;
-  diamondFileCount?: number;
+  totalFileCount?: number;
   settlementTime: string;
-  lastSettlementTime: string | null;
 }
 
 export interface SubscriptionRedeemResult {
@@ -136,7 +138,7 @@ export interface InviteClaimResult {
 
 // 积分活动查询
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
-export type PointsActivityCurrency = 'all' | 'points' | 'diamonds';
+export type PointsActivityCurrency = CurrencyWithAll;
 
 export interface GetPointsActivitiesParams {
   currency?: PointsActivityCurrency;
@@ -148,7 +150,7 @@ export interface GetPointsActivitiesParams {
 }
 
 export interface PointsActivityItem {
-  currency: 'points' | 'diamonds';
+  currency: Currency;
   activityType: string;
   amount: number;
   direction: 'income' | 'expense';

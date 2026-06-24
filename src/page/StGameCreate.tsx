@@ -15,6 +15,7 @@ import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
 import GameAction from '../api/rpgGame/gameAction';
 import toast from 'react-hot-toast';
+import type { Currency } from '../api/common/currency';
 
 const emptyConfig: StConfig = {
   regex: [],
@@ -682,7 +683,7 @@ const StGameCreate: React.FC = () => {
     setShowPublishModal(false);
   };
 
-  const handlePublishGame = async (description: string) => {
+  const handlePublishGame = async (description: string, shareType?: Currency) => {
     if (publishing) return;
 
     const fileId = String(publishTargetGameId || appIdFromQuery || appId || '').trim();
@@ -697,6 +698,7 @@ const StGameCreate: React.FC = () => {
         fileId,
         priceAmount: 0,
         description,
+        shareType,
       });
 
       if (!response.data.success) {
@@ -1142,6 +1144,7 @@ const StGameCreate: React.FC = () => {
           onPublish={handlePublishGame}
           fileId={publishTargetGameId || undefined}
           publishing={publishing}
+          engine="ST"
         />
       </div>
       <FooterArea />

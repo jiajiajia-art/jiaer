@@ -6,6 +6,7 @@ import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useGameStore } from '../../store/gameStore';
+import type { Currency } from '../../api/common/currency';
 
 interface UseEditorSessionOptions {
     fileId: string | null;
@@ -14,7 +15,7 @@ interface UseEditorSessionOptions {
 
 interface UseEditorSessionReturn {
     createGalgameSession: () => Promise<string | null>;
-    handlePublishGame: (description?: string) => Promise<void>;
+    handlePublishGame: (description?: string, shareType?: Currency) => Promise<void>;
 }
 
 export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): UseEditorSessionReturn => {
@@ -64,7 +65,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
     }, [user?.user?.id, fileId, navigate, setFileId, setSessionId, setIsPreset, mode]);
 
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
-    const handlePublishGame = useCallback(async (description?: string): Promise<void> => {
+    const handlePublishGame = useCallback(async (description?: string, shareType?: Currency): Promise<void> => {
         if (!fileId) return;
 
         try {
@@ -72,6 +73,7 @@ export const useEditorSession = ({ fileId, mode }: UseEditorSessionOptions): Use
                 fileId: fileId,
                 priceAmount: 0,
                 description: description ?? '',
+                shareType,
             });
 
             if (response.data.success) {

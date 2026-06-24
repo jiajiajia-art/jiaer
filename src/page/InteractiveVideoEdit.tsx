@@ -14,6 +14,7 @@ import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal
 import { useAuthStore } from '../store/useAuthStore';
 import { resolveCreatorEngine } from '../utils/miniProgram';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
+import type { Currency } from '../api/common/currency';
 import styles from './InteractiveVideoEdit.module.css';
 
 const THEME_TAG_MIN = 1;
@@ -297,7 +298,7 @@ const InteractiveVideoEdit: React.FC = () => {
         setShowPublishModal(true);
     };
 
-    const handlePublishGame = async (description: string) => {
+    const handlePublishGame = async (description: string, shareType?: Currency) => {
         if (!normalizedFileId || isPublishing) return;
         setIsPublishing(true);
         try {
@@ -305,6 +306,7 @@ const InteractiveVideoEdit: React.FC = () => {
                 fileId: normalizedFileId,
                 priceAmount: 0,
                 description,
+                shareType,
             });
             if (!response.data?.success) {
                 throw new Error(response.data?.message || '发布失败');
@@ -637,6 +639,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     coverUrl={gameDetail.cover_url}
                     onCoverUploaded={loadEditData}
                     publishing={isPublishing}
+                    engine="INTERACTIVE-VIDEO"
                 />
             ) : null}
             <MobileBottomNav />

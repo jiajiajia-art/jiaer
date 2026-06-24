@@ -1,6 +1,7 @@
 // src/api/auth.ts
 import type { ApiResponse } from "../api.types";
 import { api } from "../base";
+import type { Currency } from "../common/currency";
 import type {
   AuthResponse,
   BindAccountRequest,
@@ -74,8 +75,8 @@ export const auth = {
   bindAccount: (data: BindAccountRequest) =>
     api.post<ApiResponse<User>>('/auth/bind/account', data),
 
-  settlePoints: () =>
-    api.post<ApiResponse<SettlePointsResponse>>('/auth/games/points/settle'),
+  settlePoints: (type?: Currency) =>
+    api.post<ApiResponse<SettlePointsResponse>>('/auth/games/points/settle', type ? { type } : {}),
 
   redeemSubscriptionKey: (data: { redeemKey: string }) =>
     api.post<ApiResponse<SubscriptionRedeemResult>>('/subscriptions/redeem', data),

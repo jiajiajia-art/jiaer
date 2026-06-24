@@ -351,12 +351,8 @@ export class CustomIFHostBridge {
 
   private async handlePointsPay(payload: CustomIFPointsPayPayload){
     const requestId = payload.requestId || crypto.randomUUID();
-    const body: any = {
-      sessionId: this.session.sessionId,
+    const body = {
       amount: payload.amount,
-      reason: payload.reason,
-      metadata: payload.metadata,
-      dryRun: !!payload.dryRun,
       idempotencyKey: requestId,
     };
     try {
@@ -376,6 +372,7 @@ export class CustomIFHostBridge {
             success: false,
             consumed: json?.consumed,
             balance: json?.balance,
+            currency: json?.currency,
             code: json?.code || 'HTTP_ERROR',
             message: json?.message || resp.statusText,
             txnId: json?.txnId,
@@ -390,6 +387,7 @@ export class CustomIFHostBridge {
           success: true,
           consumed: json?.consumed,
           balance: json?.balance,
+          currency: json?.currency,
           txnId: json?.txnId,
         },
       });

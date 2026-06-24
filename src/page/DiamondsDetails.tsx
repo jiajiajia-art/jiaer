@@ -49,11 +49,6 @@ function formatActivityTime(value: string) {
     return `${partMap.year}-${partMap.month}-${partMap.day} ${partMap.hour}:${partMap.minute}`;
 }
 
-const CURRENCY_TAB_LABEL: Record<PointsActivityItem['currency'], string> = {
-    points: 'points',
-    diamonds: 'diamonds',
-};
-
 const DiamondsDetails: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -61,14 +56,13 @@ const DiamondsDetails: React.FC = () => {
     const defaultYear = now.getFullYear();
     const defaultMonth = now.getMonth() + 1;
     const [currencyTab, setCurrencyTab] = useState<PointsActivityCurrency>('diamonds');
-    const [direction, setDirection] = useState<PointsActivityDirection>('all');
+    const direction: PointsActivityDirection = 'all';
     const [selectedYear, setSelectedYear] = useState<number | null>(defaultYear);
     const [selectedMonth, setSelectedMonth] = useState<number | null>(defaultMonth);
     const [draftYear, setDraftYear] = useState<number | null>(defaultYear);
     const [draftMonth, setDraftMonth] = useState<number | null>(defaultMonth);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [currentDiamonds, setCurrentDiamonds] = useState(0);
-    const [currentPoints, setCurrentPoints] = useState(0);
     const [items, setItems] = useState<PointsActivityItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [page, setPage] = useState(1);
@@ -111,7 +105,6 @@ const DiamondsDetails: React.FC = () => {
 
             const payload = response.data.data;
             setCurrentDiamonds(payload.diamonds ?? 0);
-            setCurrentPoints(payload.points ?? 0);
             setItems((prev) => (append ? [...prev, ...payload.items] : payload.items));
             setTotalPages(1);
             setPage(nextPage);
@@ -321,7 +314,6 @@ const DiamondsDetails: React.FC = () => {
                                     const isIncome = item.direction === 'income';
                                     const displayAmount = item.amount;
                                     const displayTime = item.occurredAt;
-                                    const typeLabel = CURRENCY_TAB_LABEL[item.currency];
                                     return (
                                         <article key={`${item.currency}-${item.activityType}-${item.id}`} className={styles.item}>
                                             <div className={styles.itemMain}>

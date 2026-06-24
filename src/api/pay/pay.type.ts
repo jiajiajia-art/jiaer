@@ -1,7 +1,8 @@
-export type OrderType = 'points' | 'subscription';
+export type OrderType = 'points' | 'subscription' | 'diamonds';
 
 export type PlanId = 'month' | 'season' | 'year';
 export type PointsPlanId = 'pr_1' | 'pr_6' | 'pr_24' | 'pr_45' | 'pr_95' | 'pr_198';
+export type DiamondsPlanId ='dr_1' | 'dr_6' | 'dr_24' | 'dr_45' | 'dr_95' | 'dr_198';
 
 export interface PointsOrderRequest {
     orderType: 'points';
@@ -16,7 +17,14 @@ export interface SubscriptionOrderRequest {
     amount?: number;
 }
 
-export type PayOrderRequest = PointsOrderRequest | SubscriptionOrderRequest;
+export interface DiamondsOrderRequest {
+    orderType: 'diamonds';
+    amount: number;
+    planId?: DiamondsPlanId;
+    description?: string;
+}
+
+export type PayOrderRequest = PointsOrderRequest | SubscriptionOrderRequest | DiamondsOrderRequest;
 
 export type PayRequest = PayOrderRequest;
 

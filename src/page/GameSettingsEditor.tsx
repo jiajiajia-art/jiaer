@@ -25,6 +25,7 @@ import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { isMiniProgramEnv } from '../utils/miniProgram';
+import type { Currency } from '../api/common/currency';
 
 const SCREENWRITER_SEED_KEY = 'funloom_screenwriter_seed';
 const SCREENWRITER_API_BASE_URL = 'http://localhost:3000/api';
@@ -282,8 +283,8 @@ const GameSettingsEditor = () => {
         setActivePanel(panelId);
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel]);
 
-    const onPublishGame = useCallback(async (description?: string) => {
-        await handlePublishGame(description);
+    const onPublishGame = useCallback(async (description?: string, shareType?: Currency) => {
+        await handlePublishGame(description, shareType);
         setShowPublishModal(false);
     }, [handlePublishGame]);
 
@@ -603,6 +604,7 @@ const GameSettingsEditor = () => {
                         onClose={() => setShowPublishModal(false)}
                         onPublish={onPublishGame}
                         fileId={fileId || undefined}
+                        engine="AVG"
                     />
                 )}
             </div>

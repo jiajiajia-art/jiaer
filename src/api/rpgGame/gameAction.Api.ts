@@ -1,9 +1,11 @@
 import type { UserGameData } from "../home/getGameData.type";
+import type { Currency } from "../common/currency";
 
 export interface PublishGameRequest {
     fileId: string;
     priceAmount: number;
     description: string;
+    shareType?: Currency;
 }
 
 export interface PublishGameResponse {

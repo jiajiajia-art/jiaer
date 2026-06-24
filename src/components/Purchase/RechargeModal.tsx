@@ -4,9 +4,9 @@ import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
 import toast from 'react-hot-toast';
-import type { PayOrderRequest, PlanId, PointsPlanId } from '../../api/pay/pay.type';
+import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.type';
 
-type RechargeTabType = 'points' | 'membership';
+type RechargeTabType = 'diamonds' | 'membership';
 
 interface MembershipPlan {
     planId: PlanId;
@@ -15,20 +15,20 @@ interface MembershipPlan {
     price: number;
 }
 
-interface FirstChargePlan {
-    planId: PointsPlanId;
+interface DiamondPlan {
+    planId: DiamondsPlanId;
     amount: number;
-    firstChargePoints: number;
+    firstChargeDiamonds: number;
     noFirstChargeBonus?: boolean;
 }
 
-const FIRST_CHARGE_PLANS: FirstChargePlan[] = [
-    { planId: 'pr_1', amount: 1, firstChargePoints: 19 },
-    { planId: 'pr_6', amount: 6, firstChargePoints: 60, noFirstChargeBonus: true },
-    { planId: 'pr_24', amount: 24, firstChargePoints: 240 },
-    { planId: 'pr_45', amount: 45, firstChargePoints: 450 },
-    { planId: 'pr_95', amount: 95, firstChargePoints: 950 },
-    { planId: 'pr_198', amount: 198, firstChargePoints: 1980 },
+const FIRST_CHARGE_PLANS: DiamondPlan[] = [
+    { planId: 'dr_1', amount: 1, firstChargeDiamonds: 19 },
+    { planId: 'dr_6', amount: 6, firstChargeDiamonds: 60, noFirstChargeBonus: true },
+    { planId: 'dr_24', amount: 24, firstChargeDiamonds: 240 },
+    { planId: 'dr_45', amount: 45, firstChargeDiamonds: 450 },
+    { planId: 'dr_95', amount: 95, firstChargeDiamonds: 950 },
+    { planId: 'dr_198', amount: 198, firstChargeDiamonds: 1980 },
 ];
 
 interface WechatMiniProgram {
@@ -83,9 +83,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [pollingError, setPollingError] = useState<string>('');
     const [timeLeft, setTimeLeft] = useState(COUNTDOWN_SECONDS);
 
-    const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'points');
+    const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'diamonds');
     const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
-    const [selectedFirstChargePlanId, setSelectedFirstChargePlanId] = useState<PointsPlanId | null>(null);
+    const [selectedFirstChargePlanId, setSelectedFirstChargePlanId] = useState<DiamondsPlanId | null>(null);
 
     const MEMBERSHIP_PLANS: MembershipPlan[] = [
         {
@@ -118,7 +118,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setPaymentStatus('idle');
             setPollingError('');
             setTimeLeft(COUNTDOWN_SECONDS);
-            setRechargeTab(fixedTab ?? 'points');
+            setRechargeTab(fixedTab ?? 'diamonds');
             setSelectedPlanIndex(-1);
             setSelectedFirstChargePlanId(null);
         }
@@ -130,7 +130,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         }
     }, [isOpen, fixedTab, rechargeTab]);
 
-    const handleFixedAmountClick = (plan: FirstChargePlan) => {
+    const handleFixedAmountClick = (plan: DiamondPlan) => {
         setAmountText(String(plan.amount));
         setSelectedFirstChargePlanId(plan.planId);
         setInputError('');
@@ -178,7 +178,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         return null;
     };
 
-    const calculatePoints = (amount: number): number => {
+    const calculateDiamonds = (amount: number): number => {
         return Math.floor(amount * POINTS_PER_YUAN);
     };
 
@@ -287,7 +287,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
-        // 积分充值分支
+        // 钻石充值分支
         if (isComposingRef.current) {
             toast.error(t('rechargeModal.pleaseInputComplete'));
             return;
@@ -310,10 +310,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         }
 
         const orderData: PayOrderRequest = {
-            orderType: 'points',
+            orderType: 'diamonds',
             amount,
             ...(firstChargeAvailable && selectedFirstChargePlanId ? { planId: selectedFirstChargePlanId } : {}),
-            description: `积分充值 ${amount} 元`,
+            description: `钻石充值 ${amount} 元`,
         };
 
         inFlightRef.current = true;
@@ -448,21 +448,21 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const firstChargeAvailable = isFirstCharge !== false;
     const currentAmount = getCurrentAmount();
-    const currentPoints = currentAmount ? calculatePoints(currentAmount) : 0;
+    const currentDiamonds = currentAmount ? calculateDiamonds(currentAmount) : 0;
     const selectedFirstChargePlan = FIRST_CHARGE_PLANS.find((plan) => plan.planId === selectedFirstChargePlanId) || null;
-    const displayPoints = selectedFirstChargePlan?.noFirstChargeBonus
-        ? currentPoints
-        : (firstChargeAvailable ? (currentPoints + (selectedFirstChargePlan?.firstChargePoints ?? 0)) : currentPoints);
+    const displayDiamonds = selectedFirstChargePlan?.noFirstChargeBonus
+        ? currentDiamonds
+        : (firstChargeAvailable ? (currentDiamonds + (selectedFirstChargePlan?.firstChargeDiamonds ?? 0)) : currentDiamonds);
 
-    const pointsTabContent = (
+    const diamondsTabContent = (
         <>
             <div className={styles.fixedAmounts}>
                 <div className={styles.amountsLabel}>{t('rechargeModal.selectAmount')}</div>
                 <div className={styles.amountsGrid}>
                     {FIRST_CHARGE_PLANS.map((plan) => {
                         const hasBonus = !plan.noFirstChargeBonus;
-                        const isFirstYuan = plan.planId === 'pr_1';
-                        const isSixYuan = plan.planId === 'pr_6';
+                        const isFirstYuan = plan.planId === 'dr_1';
+                        const isSixYuan = plan.planId === 'dr_6';
                         const tagText = isFirstYuan ? t('rechargeModal.firstChargeBonus') : t('rechargeModal.firstChargeDouble');
                         return (
                             <button
@@ -477,11 +477,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                     isSixYuan && <div className={styles.noBonusTag}>{t('rechargeModal.noFirstChargeBonus')}</div>
                                 )}
                                 <div className={styles.amountTopSection}>
-                                    <div className={styles.amountMainPoints}>{calculatePoints(plan.amount)}{t('rechargeModal.points')}</div>
+                                    <div className={styles.amountMainPoints}>{calculateDiamonds(plan.amount)}{t('rechargeModal.diamonds')}</div>
                                     <div className={styles.amountPriceMeta}>{t('rechargeModal.amount', { amount: plan.amount })}</div>
                                 </div>
                                 {hasBonus ? (
-                                    <div className={styles.amountFirstChargePoints}>{t('rechargeModal.firstChargeGive', { points: plan.firstChargePoints })}</div>
+                                    <div className={styles.amountFirstChargePoints}>{t('rechargeModal.firstChargeGive', { points: plan.firstChargeDiamonds })}</div>
                                 ) : (
                                     isSixYuan && <div className={styles.amountNoBonus}>{t('rechargeModal.noBonus')}</div>
                                 )}
@@ -525,8 +525,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{currentAmount.toFixed(2)}</span>
                     </div>
                     <div className={styles.summaryRow}>
-                        <span className={styles.summaryLabel}>{t('rechargeModal.receivePoints')}</span>
-                        <span className={styles.summaryValue}>{displayPoints}</span>
+                        <span className={styles.summaryLabel}>{t('rechargeModal.receiveDiamonds')}</span>
+                        <span className={styles.summaryValue}>{displayDiamonds}</span>
                     </div>
                 </div>
             )}
@@ -688,10 +688,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     <div className={styles.tabBar}>
                         <button
                             type="button"
-                            className={`${styles.tabBtn} ${rechargeTab === 'points' ? styles.tabBtnActive : ''}`}
-                            onClick={() => setRechargeTab('points')}
+                            className={`${styles.tabBtn} ${rechargeTab === 'diamonds' ? styles.tabBtnActive : ''}`}
+                            onClick={() => setRechargeTab('diamonds')}
                         >
-                            {t('rechargeModal.pointsTab')}
+                            {t('rechargeModal.diamondsTab')}
                         </button>
                         <button
                             type="button"
@@ -704,7 +704,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 )}
 
                 <form className={styles.form} onSubmit={handleSubmit}>
-                    {rechargeTab === 'points' ? pointsTabContent : membershipTabContent}
+                    {rechargeTab === 'diamonds' ? diamondsTabContent : membershipTabContent}
                 </form>
             </div>
         </div>

@@ -616,7 +616,7 @@ const Profile: React.FC = () => {
                         />
                     ) : (
                     <div className={styles.functionList}>
-                        <div className={styles.functionItem} onClick={() => navigate('/points/details')}>
+                        <div className={styles.functionItem} onClick={() => navigate('/asset/details')}>
                             <div className={styles.functionIcon}>
                                 <RiCopperCoinLine />
                             </div>
