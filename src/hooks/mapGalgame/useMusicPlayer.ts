@@ -21,6 +21,7 @@ export const useMusicPlayer = ({
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const currentSceneIdRef = useRef<string | null>(null);
     const isLoadingMusicRef = useRef<boolean>(false);
+    const hasResetMusicForCurrentGameRef = useRef<boolean>(false);
 
     const loadAndPlaySceneMusic = useCallback(
         async (scene?: GetGalgamePresetResponse['scenes']['scenes'][0] | null, autoPlay: boolean = true) => {
@@ -43,9 +44,10 @@ export const useMusicPlayer = ({
             }
 
             if (currentSceneIdRef.current === sceneId && currentMusicUrl) {
-                if (autoPlay && isMusicPlaying && audioRef.current) {
+                if (autoPlay && audioRef.current) {
                     try {
                         await audioRef.current.play();
+                        setIsMusicPlaying(true);
                     } catch (error) {
                         console.log('播放音乐失败:', error);
                     }
@@ -74,7 +76,6 @@ export const useMusicPlayer = ({
 
                 const musicUrl = URL.createObjectURL(response.data);
 
-                // 清理之前的音频
                 if (audioRef.current) {
                     audioRef.current.pause();
                     audioRef.current.src = '';
@@ -90,20 +91,14 @@ export const useMusicPlayer = ({
                 audioRef.current = audio;
                 setCurrentMusicUrl(musicUrl);
 
-                // 等待音频可以播放
                 await new Promise<void>((resolve, reject) => {
-                    const handleCanPlay = () => {
-                        resolve();
-                    };
-                    const handleError = () => {
-                        reject(new Error('音乐加载失败'));
-                    };
+                    const handleCanPlay = () => resolve();
+                    const handleError = () => reject(new Error('音乐加载失败'));
                     audio.addEventListener('canplay', handleCanPlay, { once: true });
                     audio.addEventListener('error', handleError, { once: true });
                     audio.load();
                 });
 
-                // 如果需要自动播放，则播放音乐并更新状态
                 if (autoPlay && audioRef.current === audio) {
                     try {
                         await audio.play();
@@ -117,7 +112,6 @@ export const useMusicPlayer = ({
 
                 isLoadingMusicRef.current = false;
             } catch (error) {
-                // 只在真正失败时处理
                 if (audioRef.current) {
                     audioRef.current.pause();
                     audioRef.current.src = '';
@@ -132,7 +126,7 @@ export const useMusicPlayer = ({
                 audioRef.current = null;
             }
         },
-        [presetId, currentScene, isMusicPlaying, currentMusicUrl]
+        [presetId, currentScene, currentMusicUrl, volume]
     );
 
     const handleMusicToggle = useCallback(async () => {
@@ -147,7 +141,7 @@ export const useMusicPlayer = ({
                 try {
                     await audioRef.current.play();
                 } catch (error) {
-                    console.warn('播放音乐:', error);
+                    console.warn('播放音乐失败:', error);
                 }
             } else if (currentScene) {
                 await loadAndPlaySceneMusic(currentScene, true);
@@ -163,21 +157,34 @@ export const useMusicPlayer = ({
         }
     }, []);
 
-    // 同步音量到音频实例
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.volume = volume;
         }
     }, [volume]);
 
-    // 进入页面时，如果有场景音乐，默认播放
+    useEffect(() => {
+        if (!gameStarted) {
+            hasResetMusicForCurrentGameRef.current = false;
+            return;
+        }
+
+        if (hasResetMusicForCurrentGameRef.current || !currentScene?.id || !currentScene?.soundtrack) {
+            return;
+        }
+
+        hasResetMusicForCurrentGameRef.current = true;
+        currentSceneIdRef.current = null;
+        isLoadingMusicRef.current = false;
+        setIsMusicPlaying(true);
+    }, [gameStarted, currentScene?.id, currentScene?.soundtrack]);
+
     useEffect(() => {
         if (!isLoading && currentScene?.id && currentScene?.soundtrack && !gameStarted) {
             loadAndPlaySceneMusic(currentScene, true);
         }
     }, [isLoading, currentScene?.id, currentScene?.soundtrack, gameStarted, loadAndPlaySceneMusic]);
 
-    // 游戏开始后，场景切换时自动播放音乐
     useEffect(() => {
         if (!gameStarted || !currentScene?.id || !currentScene?.soundtrack) {
             return;
@@ -186,20 +193,18 @@ export const useMusicPlayer = ({
         loadAndPlaySceneMusic(currentScene, true);
     }, [currentScene?.id, currentScene?.soundtrack, gameStarted, loadAndPlaySceneMusic]);
 
-    // 同步音乐播放状态
     useEffect(() => {
         if (!audioRef.current || !currentMusicUrl) return;
 
         if (isMusicPlaying) {
             audioRef.current.play().catch(() => {
-                // 静默处理自动播放策略限制等非关键错误
+                // Ignore autoplay policy failures.
             });
         } else {
             audioRef.current.pause();
         }
     }, [isMusicPlaying, currentMusicUrl]);
 
-    // 清理资源
     useEffect(() => {
         return () => {
             if (audioRef.current) {
@@ -216,4 +221,3 @@ export const useMusicPlayer = ({
         setVolume: setVolumeLevel,
     };
 };
-
