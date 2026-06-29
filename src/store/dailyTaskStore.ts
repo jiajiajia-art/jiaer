@@ -1,11 +1,10 @@
-﻿import type { AxiosError } from 'axios';
+import type { AxiosError } from 'axios';
 import { create } from 'zustand';
 import dailyTaskApi from '../api/statistics/dailyTaskApi';
 import {
     createDefaultDailyTaskList,
     normalizeDailyTaskPayload,
-    type CanonicalDailyTaskCode,
-    type DailyTaskClaimType,
+    type DailyTaskClaimRequest,
     type DailyTaskItem,
     type DailyTaskPayload,
     type DailyTaskRewardIssue,
@@ -20,13 +19,13 @@ interface DailyTaskState {
     lastSyncedAt: number | null;
     summary: DailyTaskSummary;
     tasks: DailyTaskItem[];
-    updatedCodes: CanonicalDailyTaskCode[];
+    updatedTaskKeys: string[];
     rewardsIssued: DailyTaskRewardIssue[];
     lastRewardDigest: string;
     pendingPlatformSeconds: number;
     pendingGameSeconds: number;
     flushInFlight: number;
-    claimingTaskMap: Record<DailyTaskClaimType, boolean>;
+    taskActionLoadingMap: Record<string, boolean>;
     setPendingSeconds: (kind: 'platform' | 'game', value: number) => void;
     addPendingSeconds: (kind: 'platform' | 'game', delta: number) => void;
     clearPendingSeconds: (kind: 'platform' | 'game') => void;
@@ -35,7 +34,10 @@ interface DailyTaskState {
     getDisplayTotalSeconds: () => number;
     syncFromPayload: (payload: DailyTaskPayload | null | undefined) => boolean;
     refreshDailyTasks: (options?: { silent?: boolean }) => Promise<void>;
-    claimDailyTask: (taskCode: DailyTaskClaimType) => Promise<{ success: boolean; message: string }>;
+    acceptDailyTask: (task: Pick<DailyTaskItem, 'key' | 'taskId'>) => Promise<{ success: boolean; message: string }>;
+    claimDailyTask: (
+        task: Pick<DailyTaskItem, 'key' | 'claimRequest'>,
+    ) => Promise<{ success: boolean; message: string }>;
     consumeRewardsIssued: () => DailyTaskRewardIssue[];
     reset: () => void;
 }
@@ -46,18 +48,12 @@ const defaultSummary: DailyTaskSummary = {
     totalSeconds: 0,
 };
 
-const defaultTasks = createDefaultDailyTaskList();
-const defaultClaimingTaskMap: Record<DailyTaskClaimType, boolean> = {
-    like_once: false,
-    play_3_unique: false,
-    online_10m: false,
-    online_30m: false,
-};
+const createDefaultTaskActionLoadingMap = (): Record<string, boolean> => ({});
 
 const createRewardDigest = (items: DailyTaskRewardIssue[]): string =>
     JSON.stringify(
         items.map((item) => ({
-            code: String(item.taskCode ?? item.code ?? ''),
+            code: String(item.taskCode ?? item.code ?? item.taskId ?? ''),
             points: Number(item.points ?? item.rewardPoints ?? item.pointsAwarded ?? 0),
             message: String(item.message ?? ''),
         })),
@@ -67,14 +63,24 @@ const claimErrorMessageMap: Record<string, string> = {
     INVALID_TASK_CODE: '任务类型无效',
     TASK_ALREADY_REWARDED: '今日该任务奖励已领取',
     TASK_NOT_COMPLETED: '任务未达成，暂不可领取',
+    TASK_NOT_ACCEPTED: '请先领取任务',
 };
 
-const resolveClaimErrorMessage = (error: unknown): string => {
+const acceptErrorMessageMap: Record<string, string> = {
+    TASK_NOT_FOUND: '任务不存在或未发布',
+    TASK_NOT_ACTIVE: '任务当前不在有效期内',
+};
+
+const resolveActionErrorMessage = (
+    error: unknown,
+    fallbackMessage: string,
+    errorMessageMap?: Record<string, string>,
+): string => {
     if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as AxiosError<{ message?: string; errorCode?: string }>;
         const data = axiosError.response?.data;
-        if (data?.errorCode && claimErrorMessageMap[data.errorCode]) {
-            return claimErrorMessageMap[data.errorCode];
+        if (data?.errorCode && errorMessageMap?.[data.errorCode]) {
+            return errorMessageMap[data.errorCode];
         }
         if (data?.message) {
             return data.message;
@@ -83,7 +89,7 @@ const resolveClaimErrorMessage = (error: unknown): string => {
     if (error instanceof Error && error.message) {
         return error.message;
     }
-    return '任务奖励领取失败';
+    return fallbackMessage;
 };
 
 const hasSummaryInPayload = (payload: DailyTaskPayload): boolean => {
@@ -109,23 +115,53 @@ const hasSummaryInPayload = (payload: DailyTaskPayload): boolean => {
     return summaryKeys.some((key) => summaryRecord[key] !== undefined && summaryRecord[key] !== null);
 };
 
-const mergeTasksByUpdatedCodes = (
+const mergeTasksByUpdatedKeys = (
     prevTasks: DailyTaskItem[],
     nextTasks: DailyTaskItem[],
-    updatedCodes: CanonicalDailyTaskCode[],
+    updatedTaskKeys: string[],
 ): DailyTaskItem[] => {
-    if (!updatedCodes.length) {
-        return prevTasks;
+    if (!updatedTaskKeys.length) {
+        return nextTasks;
     }
-    const updatedCodeSet = new Set(updatedCodes);
-    const nextTaskMap = new Map(nextTasks.map((task) => [task.code, task]));
-    return prevTasks.map((task) => {
-        if (!updatedCodeSet.has(task.code as CanonicalDailyTaskCode)) {
-            return task;
+
+    const updatedKeySet = new Set(updatedTaskKeys);
+    const mergedTaskMap = new Map<string, DailyTaskItem>();
+
+    prevTasks.forEach((task) => {
+        if (!updatedKeySet.has(task.key)) {
+            mergedTaskMap.set(task.key, task);
         }
-        return nextTaskMap.get(task.code) ?? task;
     });
+
+    nextTasks.forEach((task) => {
+        mergedTaskMap.set(task.key, task);
+    });
+
+    return nextTasks.map((task) => mergedTaskMap.get(task.key) ?? task);
 };
+
+const setTaskActionLoading = (
+    prevMap: Record<string, boolean>,
+    taskKey: string,
+    loading: boolean,
+): Record<string, boolean> => {
+    if (!taskKey) return prevMap;
+    if (loading) {
+        return {
+            ...prevMap,
+            [taskKey]: true,
+        };
+    }
+    const nextMap = { ...prevMap };
+    delete nextMap[taskKey];
+    return nextMap;
+};
+
+const hasValidClaimRequest = (claimRequest: DailyTaskClaimRequest | null | undefined): claimRequest is DailyTaskClaimRequest =>
+    Boolean(claimRequest && (
+        (typeof claimRequest.taskCode === 'string' && claimRequest.taskCode.trim())
+        || typeof claimRequest.taskId === 'number'
+    ));
 
 export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
     isLoading: false,
@@ -134,14 +170,14 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
     errorMessage: '',
     lastSyncedAt: null,
     summary: defaultSummary,
-    tasks: defaultTasks,
-    updatedCodes: [],
+    tasks: createDefaultDailyTaskList(),
+    updatedTaskKeys: [],
     rewardsIssued: [],
     lastRewardDigest: '',
     pendingPlatformSeconds: 0,
     pendingGameSeconds: 0,
     flushInFlight: 0,
-    claimingTaskMap: defaultClaimingTaskMap,
+    taskActionLoadingMap: createDefaultTaskActionLoadingMap(),
 
     setPendingSeconds: (kind, value) =>
         set((state) => {
@@ -207,8 +243,8 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
             errorMessage: '',
             lastSyncedAt: Date.now(),
             summary: payloadHasSummary ? normalized.summary : prev.summary,
-            tasks: mergeTasksByUpdatedCodes(prev.tasks, normalized.tasks, normalized.updatedCodes),
-            updatedCodes: normalized.updatedCodes,
+            tasks: mergeTasksByUpdatedKeys(prev.tasks, normalized.tasks, normalized.updatedTaskKeys),
+            updatedTaskKeys: normalized.updatedTaskKeys,
             rewardsIssued: hasNewReward ? normalized.rewardsIssued : [],
             lastRewardDigest: nextDigest,
         }));
@@ -249,7 +285,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
                 lastSyncedAt: Date.now(),
                 summary: payload.summary,
                 tasks: payload.tasks,
-                updatedCodes: payload.updatedCodes,
+                updatedTaskKeys: payload.updatedTaskKeys,
                 rewardsIssued: rewardsChanged ? payload.rewardsIssued : [],
                 lastRewardDigest: nextDigest,
             }));
@@ -264,9 +300,68 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         }
     },
 
-    claimDailyTask: async (taskCode) => {
+    acceptDailyTask: async (task) => {
+        const taskKey = task.key;
+        const taskId = task.taskId;
         const state = get();
-        if (state.claimingTaskMap[taskCode]) {
+
+        if (!taskKey || typeof taskId !== 'number') {
+            return {
+                success: false,
+                message: '任务参数缺失',
+            };
+        }
+
+        if (state.taskActionLoadingMap[taskKey]) {
+            return {
+                success: false,
+                message: '任务处理中，请稍候',
+            };
+        }
+
+        set((prev) => ({
+            ...prev,
+            taskActionLoadingMap: setTaskActionLoading(prev.taskActionLoadingMap, taskKey, true),
+        }));
+
+        try {
+            const response = await dailyTaskApi.acceptDailyTask(taskId);
+            if (!response.data.success) {
+                throw new Error(response.data.message || '任务领取失败');
+            }
+
+            await get().refreshDailyTasks({ silent: true });
+
+            return {
+                success: true,
+                message: response.data.message || '任务领取成功',
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: resolveActionErrorMessage(error, '任务领取失败', acceptErrorMessageMap),
+            };
+        } finally {
+            set((prev) => ({
+                ...prev,
+                taskActionLoadingMap: setTaskActionLoading(prev.taskActionLoadingMap, taskKey, false),
+            }));
+        }
+    },
+
+    claimDailyTask: async (task) => {
+        const taskKey = task.key;
+        const claimRequest = task.claimRequest;
+        const state = get();
+
+        if (!taskKey || !hasValidClaimRequest(claimRequest)) {
+            return {
+                success: false,
+                message: '任务参数缺失',
+            };
+        }
+
+        if (state.taskActionLoadingMap[taskKey]) {
             return {
                 success: false,
                 message: '任务奖励领取中，请稍候',
@@ -275,14 +370,11 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
 
         set((prev) => ({
             ...prev,
-            claimingTaskMap: {
-                ...prev.claimingTaskMap,
-                [taskCode]: true,
-            },
+            taskActionLoadingMap: setTaskActionLoading(prev.taskActionLoadingMap, taskKey, true),
         }));
 
         try {
-            const response = await dailyTaskApi.claimDailyTask(taskCode);
+            const response = await dailyTaskApi.claimDailyTask(claimRequest);
             if (!response.data.success) {
                 throw new Error(response.data.message || '任务奖励领取失败');
             }
@@ -299,15 +391,12 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
         } catch (error) {
             return {
                 success: false,
-                message: resolveClaimErrorMessage(error),
+                message: resolveActionErrorMessage(error, '任务奖励领取失败', claimErrorMessageMap),
             };
         } finally {
             set((prev) => ({
                 ...prev,
-                claimingTaskMap: {
-                    ...prev.claimingTaskMap,
-                    [taskCode]: false,
-                },
+                taskActionLoadingMap: setTaskActionLoading(prev.taskActionLoadingMap, taskKey, false),
             }));
         }
     },
@@ -332,13 +421,12 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
             lastSyncedAt: null,
             summary: defaultSummary,
             tasks: createDefaultDailyTaskList(),
-            updatedCodes: [],
+            updatedTaskKeys: [],
             rewardsIssued: [],
             lastRewardDigest: '',
             pendingPlatformSeconds: 0,
             pendingGameSeconds: 0,
             flushInFlight: 0,
-            claimingTaskMap: defaultClaimingTaskMap,
+            taskActionLoadingMap: createDefaultTaskActionLoadingMap(),
         }),
 }));
-

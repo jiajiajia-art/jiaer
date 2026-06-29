@@ -1,13 +1,20 @@
-﻿export const DAILY_TASK_ORDER = ['like_once', 'play_3_unique', 'online_10m', 'online_30m'] as const;
+export const DAILY_TASK_ORDER = ['like_once', 'play_3_unique', 'online_10m', 'online_30m'] as const;
 
 export type CanonicalDailyTaskCode = (typeof DAILY_TASK_ORDER)[number];
 export type DailyTaskCode = CanonicalDailyTaskCode | string;
 export type DailyTaskClaimType = CanonicalDailyTaskCode;
 
+export interface DailyTaskClaimRequest {
+    taskCode?: string;
+    taskId?: number;
+}
+
 export interface DailyTaskItem {
+    key: string;
     code: DailyTaskCode;
     title: string;
     titleKey?: string;
+    description?: string;
     rewardPoints: number;
     progress: number;
     target: number;
@@ -15,8 +22,18 @@ export interface DailyTaskItem {
     claimed: boolean;
     claimable: boolean;
     taskType: DailyTaskClaimType | null;
+    claimRequest: DailyTaskClaimRequest | null;
     statusText: string;
     statusTextKey?: string;
+    taskSource?: string;
+    taskId?: number;
+    taskKind?: string;
+    accepted?: boolean;
+    acceptRequired?: boolean;
+    acceptedAt?: string | null;
+    gameFileId?: string;
+    gameTitle?: string;
+    isDynamic?: boolean;
 }
 
 export interface DailyTaskSummary {
@@ -28,6 +45,7 @@ export interface DailyTaskSummary {
 export interface DailyTaskRewardIssue {
     code?: string;
     taskCode?: string;
+    taskId?: number;
     points?: number;
     rewardPoints?: number;
     pointsAwarded?: number;
@@ -54,6 +72,17 @@ interface DailyTaskTemplate {
     target: number;
     statusTextKey: string;
     claimType: DailyTaskClaimType | null;
+}
+
+interface ResolvedTaskState {
+    completed: boolean;
+    claimed: boolean;
+    claimable: boolean;
+    accepted: boolean;
+    acceptRequired: boolean;
+    acceptedAt: string | null;
+    statusText: string;
+    statusTextKey?: string;
 }
 
 const DAILY_TASK_TEMPLATES: DailyTaskTemplate[] = [
@@ -137,6 +166,14 @@ const normalizeStatus = (rawStatus: unknown): string => String(rawStatus ?? '').
 
 export const isDurationTaskCode = (code: string): boolean => code === 'online_10m' || code === 'online_30m';
 
+export const isDynamicDurationDailyTask = (
+    task: Pick<DailyTaskItem, 'taskKind' | 'taskSource' | 'taskId'>,
+): boolean => Boolean(isDynamicDailyTask(task) && task.taskKind === 'play_specific_game_duration');
+
+export const isDynamicDailyTask = (
+    task: Pick<DailyTaskItem, 'isDynamic' | 'taskSource' | 'taskId'>,
+): boolean => Boolean(task.isDynamic || task.taskSource === 'config' || typeof task.taskId === 'number');
+
 export const toDailyTaskClaimType = (code: string): DailyTaskClaimType | null => {
     const normalized = normalizeCode(code);
     if (normalized === 'like_once') return 'like_once';
@@ -208,6 +245,7 @@ const toDurationSeconds = (code: CanonicalDailyTaskCode, value: number): number 
 };
 
 const buildDefaultTask = (template: DailyTaskTemplate): DailyTaskItem => ({
+    key: template.code,
     code: template.code,
     title: '',
     titleKey: template.titleKey,
@@ -218,8 +256,12 @@ const buildDefaultTask = (template: DailyTaskTemplate): DailyTaskItem => ({
     claimed: false,
     claimable: false,
     taskType: template.claimType,
+    claimRequest: template.claimType ? { taskCode: template.claimType } : null,
     statusText: '',
     statusTextKey: template.statusTextKey,
+    accepted: true,
+    acceptRequired: false,
+    isDynamic: false,
 });
 
 const getTemplateByCode = (code: CanonicalDailyTaskCode): DailyTaskTemplate =>
@@ -289,10 +331,114 @@ const resolveTaskProgress = (record: Record<string, unknown>): number => {
     return 0;
 };
 
+const resolveTaskState = (
+    record: Record<string, unknown>,
+    options: {
+        progress: number;
+        target: number;
+        claimRequest: DailyTaskClaimRequest | null;
+        isDynamic: boolean;
+        defaultAccepted?: boolean;
+        defaultAcceptRequired?: boolean;
+    },
+): ResolvedTaskState => {
+    const normalizedStatus = normalizeStatus(record.status ?? record.taskStatus ?? record.state);
+    const claimedByStatus = normalizedStatus === 'claimed' || normalizedStatus === 'rewarded';
+    const claimableByStatus = ['claimable', 'can_claim', 'ready_to_claim', 'pending_claim'].includes(normalizedStatus);
+    const completedByStatus = ['completed', 'finish', 'finished', 'done', 'achieved'].includes(normalizedStatus);
+
+    const completed =
+        toBoolean(record.completed, record.isCompleted, record.done, record.achieved)
+        || completedByStatus
+        || options.progress >= options.target;
+
+    const claimedByField = toBoolean(
+        record.rewarded,
+        record.isRewarded,
+        record.claimed,
+        record.isClaimed,
+        record.rewardClaimed,
+        record.received,
+        record.isReceived,
+    );
+
+    const claimableByField = toBoolean(
+        record.claimable,
+        record.canClaim,
+        record.canReceiveReward,
+        record.receivable,
+        record.availableToClaim,
+    );
+
+    let claimed = claimedByField || claimedByStatus;
+    let claimable = claimableByField || claimableByStatus;
+
+    if (!claimed && completed && !claimable) {
+        claimable = true;
+    }
+
+    if (claimed) {
+        claimable = false;
+    }
+
+    const accepted = options.isDynamic
+        ? toBoolean(record.accepted, record.isAccepted, options.defaultAccepted)
+        : true;
+    const acceptRequired = options.isDynamic
+        ? toBoolean(record.acceptRequired, record.requiresAccept, options.defaultAcceptRequired)
+        : false;
+    const acceptedAtRaw = record.acceptedAt;
+    const acceptedAt = typeof acceptedAtRaw === 'string' && acceptedAtRaw.trim()
+        ? acceptedAtRaw
+        : null;
+
+    let statusText = String(record.statusText ?? '').trim();
+    let statusTextKey: string | undefined;
+    if (!statusText) {
+        if (claimed) {
+            statusText = 'Reward claimed';
+            statusTextKey = 'dailyTask.rewardClaimed';
+        } else if (claimable) {
+            statusText = 'Completed, claim now';
+            statusTextKey = 'dailyTask.completed';
+        } else if (options.isDynamic && acceptRequired && !accepted) {
+            statusText = 'Claim task';
+        } else if (completed) {
+            statusText = options.claimRequest ? 'Completed, claim now' : 'Completed';
+            statusTextKey = options.claimRequest ? 'dailyTask.completed' : 'dailyTask.justCompleted';
+        } else if (options.claimRequest || options.isDynamic) {
+            statusText = options.progress > 0 ? `${Math.min(options.progress, options.target)}/${options.target}` : 'Counting...';
+            statusTextKey = options.progress > 0 ? undefined : 'dailyTask.counting';
+        } else {
+            statusText = `${Math.min(options.progress, options.target)}/${options.target}`;
+        }
+    }
+
+    return {
+        completed,
+        claimed,
+        claimable,
+        accepted,
+        acceptRequired,
+        acceptedAt,
+        statusText,
+        statusTextKey,
+    };
+};
+
+const buildTaskKey = (record: Record<string, unknown>, rawCode: string): string => {
+    const taskSource = String(record.taskSource ?? record.source ?? '').trim().toLowerCase();
+    const taskId = Math.max(0, Math.floor(toFiniteNumber(record.taskId, record.id)));
+    if (taskSource === 'config' || taskId > 0) {
+        return taskId > 0 ? `config:${taskId}` : `config:${normalizeCode(rawCode)}`;
+    }
+    return normalizeCode(rawCode);
+};
+
 export interface NormalizedDailyTaskPayload {
     summary: DailyTaskSummary;
     tasks: DailyTaskItem[];
-    updatedCodes: CanonicalDailyTaskCode[];
+    updatedTaskKeys: string[];
     rewardsIssued: DailyTaskRewardIssue[];
 }
 
@@ -310,7 +456,7 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
                 totalSeconds: 0,
             },
             tasks: defaultTasks,
-            updatedCodes: [],
+            updatedTaskKeys: [],
             rewardsIssued: [],
         };
     }
@@ -354,8 +500,10 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
     const totalSeconds = totalSecondsRaw > 0 ? totalSecondsRaw : platformSeconds + gameSeconds;
 
     const rawTasks = getRawTaskArray(payload);
-    const updatedCodeSet = new Set<CanonicalDailyTaskCode>();
-    const byCode = new Map<CanonicalDailyTaskCode, DailyTaskItem>();
+    const updatedTaskKeySet = new Set<string>();
+    const fixedTaskMap = new Map<CanonicalDailyTaskCode, DailyTaskItem>();
+    const dynamicTaskMap = new Map<string, DailyTaskItem>();
+    const dynamicTaskOrder: string[] = [];
 
     rawTasks.forEach((rawTask) => {
         const record = toRecord(rawTask);
@@ -370,6 +518,7 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
             ?? '',
         );
         const rawTitle = String(record.title ?? record.name ?? record.label ?? record.taskName ?? '');
+        const description = String(record.description ?? '').trim();
         const rawTarget = Math.max(
             0,
             Math.floor(
@@ -384,12 +533,71 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
                 ),
             ),
         );
+        const taskSource = String(record.taskSource ?? record.source ?? '').trim().toLowerCase();
+        const taskId = Math.max(0, Math.floor(toFiniteNumber(record.taskId, record.id)));
+        const isDynamic = taskSource === 'config' || taskId > 0;
+
+        if (isDynamic) {
+            const key = buildTaskKey(record, rawCode || rawTitle || String(taskId));
+            const target = Math.max(1, rawTarget || 1);
+            const progress = Math.max(0, resolveTaskProgress(record));
+            const rewardPoints = Math.max(
+                0,
+                Math.floor(
+                    toFiniteNumber(
+                        record.rewardPoints,
+                        record.points,
+                        record.reward,
+                    ),
+                ),
+            );
+            const claimRequest = taskId > 0 ? { taskId } : null;
+            const state = resolveTaskState(record, {
+                progress,
+                target,
+                claimRequest,
+                isDynamic: true,
+                defaultAccepted: false,
+                defaultAcceptRequired: true,
+            });
+
+            dynamicTaskMap.set(key, {
+                key,
+                code: rawCode || `config_${taskId || dynamicTaskOrder.length + 1}`,
+                title: rawTitle || description || `Task ${taskId || dynamicTaskOrder.length + 1}`,
+                description,
+                rewardPoints,
+                progress,
+                target,
+                completed: state.completed,
+                claimed: state.claimed,
+                claimable: state.claimable,
+                taskType: null,
+                claimRequest,
+                statusText: state.statusText,
+                statusTextKey: state.statusTextKey,
+                taskSource: taskSource || 'config',
+                taskId: taskId > 0 ? taskId : undefined,
+                taskKind: String(record.taskKind ?? '').trim() || undefined,
+                accepted: state.accepted,
+                acceptRequired: state.acceptRequired,
+                acceptedAt: state.acceptedAt,
+                gameFileId: String(record.gameFileId ?? '').trim() || undefined,
+                gameTitle: String(record.gameTitle ?? '').trim() || undefined,
+                isDynamic: true,
+            });
+            if (!dynamicTaskOrder.includes(key)) {
+                dynamicTaskOrder.push(key);
+            }
+            updatedTaskKeySet.add(key);
+            return;
+        }
+
         const canonicalCode = detectCanonicalCode(rawCode, rawTitle, rawTarget);
         if (!canonicalCode) return;
 
         const template = getTemplateByCode(canonicalCode);
         const rawProgress = resolveTaskProgress(record);
-
         const target = Math.max(
             1,
             toDurationSeconds(
@@ -398,17 +606,6 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
             ),
         );
         const progress = Math.max(0, toDurationSeconds(canonicalCode, rawProgress));
-
-        const normalizedStatus = normalizeStatus(record.status ?? record.taskStatus ?? record.state);
-        const claimedByStatus = normalizedStatus === 'claimed' || normalizedStatus === 'rewarded';
-        const claimableByStatus = ['claimable', 'can_claim', 'ready_to_claim', 'pending_claim'].includes(normalizedStatus);
-        const completedByStatus = ['completed', 'finish', 'finished', 'done', 'achieved'].includes(normalizedStatus);
-
-        const completed =
-            toBoolean(record.completed, record.isCompleted, record.done, record.achieved)
-            || completedByStatus
-            || progress >= target;
-
         const rewardPoints = Math.max(
             0,
             Math.floor(
@@ -420,79 +617,45 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
                 ),
             ),
         );
-
         const taskType = toDailyTaskClaimType(
             String(record.taskCode ?? record.taskType ?? record.claimType ?? rawCode),
         ) || template.claimType;
+        const taskCodeForClaim = String(record.taskCode ?? rawCode ?? taskType ?? canonicalCode).trim();
+        const claimRequest = taskCodeForClaim ? { taskCode: taskCodeForClaim } : null;
+        const state = resolveTaskState(record, {
+            progress,
+            target,
+            claimRequest,
+            isDynamic: false,
+        });
 
-        const claimedByField = toBoolean(
-            record.rewarded,
-            record.isRewarded,
-            record.claimed,
-            record.isClaimed,
-            record.rewardClaimed,
-            record.received,
-            record.isReceived,
-        );
-
-        const claimableByField = toBoolean(
-            record.claimable,
-            record.canClaim,
-            record.canReceiveReward,
-            record.receivable,
-            record.availableToClaim,
-        );
-
-        let claimed = claimedByField || claimedByStatus;
-        let claimable = claimableByField || claimableByStatus;
-
-        if (!claimed && completed && !claimable) {
-            // All task rewards are manual-claim now.
-            claimable = true;
-        }
-
-        if (claimed) {
-            claimable = false;
-        }
-
-        let statusText = String(record.statusText ?? record.description ?? '').trim();
-        let statusTextKey: string | undefined;
-        if (!statusText) {
-            if (claimed) {
-                statusText = 'Reward claimed';
-                statusTextKey = 'dailyTask.rewardClaimed';
-            } else if (claimable) {
-                statusText = 'Completed, claim now';
-                statusTextKey = 'dailyTask.completed';
-            } else if (completed) {
-                statusText = taskType ? 'Completed, claim now' : 'Completed';
-                statusTextKey = taskType ? 'dailyTask.completed' : 'dailyTask.justCompleted';
-            } else if (taskType) {
-                statusText = progress > 0 ? `${Math.min(progress, target)}/${target}` : 'Counting...';
-                statusTextKey = progress > 0 ? undefined : 'dailyTask.counting';
-            } else {
-                statusText = `${Math.min(progress, target)}/${target}`;
-            }
-        }
-
-        byCode.set(canonicalCode, {
+        fixedTaskMap.set(canonicalCode, {
+            key: canonicalCode,
             code: canonicalCode,
             title: rawTitle || '',
             titleKey: rawTitle ? undefined : template.titleKey,
+            description,
             rewardPoints,
             progress,
             target,
-            completed,
-            claimed,
-            claimable,
+            completed: state.completed,
+            claimed: state.claimed,
+            claimable: state.claimable,
             taskType,
-            statusText,
-            statusTextKey,
+            claimRequest,
+            statusText: state.statusText,
+            statusTextKey: state.statusTextKey,
+            accepted: true,
+            acceptRequired: false,
+            isDynamic: false,
         });
-        updatedCodeSet.add(canonicalCode);
+        updatedTaskKeySet.add(canonicalCode);
     });
 
-    const tasks = DAILY_TASK_ORDER.map((code) => byCode.get(code) || buildDefaultTask(getTemplateByCode(code)));
+    const fixedTasks = DAILY_TASK_ORDER.map((code) => fixedTaskMap.get(code) || buildDefaultTask(getTemplateByCode(code)));
+    const dynamicTasks = dynamicTaskOrder
+        .map((key) => dynamicTaskMap.get(key))
+        .filter((task): task is DailyTaskItem => Boolean(task));
 
     return {
         summary: {
@@ -500,8 +663,8 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
             gameSeconds,
             totalSeconds,
         },
-        tasks,
-        updatedCodes: Array.from(updatedCodeSet),
+        tasks: [...fixedTasks, ...dynamicTasks],
+        updatedTaskKeys: Array.from(updatedTaskKeySet),
         rewardsIssued: collectRewardsIssued(payload),
     };
 };

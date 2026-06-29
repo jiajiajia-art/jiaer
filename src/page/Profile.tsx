@@ -35,8 +35,9 @@ import { useImageCropper } from '../hooks/useImageCropper';
 import ImageCropModal from '../components/CommonModal/ImageCropModal';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import {
+    isDynamicDailyTask,
+    isDynamicDurationDailyTask,
     isDurationTaskCode,
-    type DailyTaskClaimType,
 } from '../api/statistics/dailyTask.type';
 import { getCreatorProfile, saveCreatorProfile } from '../api/incentive/creatorProfileApi';
 import type { CreatorProfileData } from '../components/CreatorProfile.tsx';
@@ -49,9 +50,16 @@ const formatDuration = (totalSeconds: number): string => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-const getTaskActionText = (code: string, t: (key: string) => string): string => {
-    if (code === 'like_once') return t('profile.taskGoLike');
-    if (code === 'play_3_unique' || code === 'play_three_games') return t('profile.taskGoPlay');
+const getTaskActionText = (
+    task: {
+        code: string;
+        gameTitle?: string;
+    },
+    t: (key: string, options?: Record<string, unknown>) => string,
+): string => {
+    if (task.code === 'like_once') return t('profile.taskGoLike');
+    if (task.code === 'play_3_unique' || task.code === 'play_three_games') return t('profile.taskGoPlay');
+    if (task.gameTitle) return t('profile.taskGoPlaySpecific', { gameTitle: task.gameTitle });
     return t('profile.taskInProgress');
 };
 const isWebViewEnv = (): boolean => {
@@ -164,8 +172,9 @@ const Profile: React.FC = () => {
         isLoadedOnce: isTaskLoadedOnce,
         isLoading: isTaskLoading,
         errorMessage: taskErrorMessage,
-        claimingTaskMap,
+        taskActionLoadingMap,
         refreshDailyTasks,
+        acceptDailyTask,
         claimDailyTask,
         getDisplayTotalSeconds,
     } = useDailyTaskStore(useShallow((state) => ({
@@ -173,8 +182,9 @@ const Profile: React.FC = () => {
         isLoadedOnce: state.isLoadedOnce,
         isLoading: state.isLoading,
         errorMessage: state.errorMessage,
-        claimingTaskMap: state.claimingTaskMap,
+        taskActionLoadingMap: state.taskActionLoadingMap,
         refreshDailyTasks: state.refreshDailyTasks,
+        acceptDailyTask: state.acceptDailyTask,
         claimDailyTask: state.claimDailyTask,
         getDisplayTotalSeconds: state.getDisplayTotalSeconds,
     })));
@@ -508,8 +518,17 @@ const Profile: React.FC = () => {
         return null;
     };
 
-    const handleClaimTask = async (taskType: DailyTaskClaimType) => {
-        const result = await claimDailyTask(taskType);
+    const handleAcceptTask = async (task: Parameters<typeof acceptDailyTask>[0]) => {
+        const result = await acceptDailyTask(task);
+        if (!result.success) {
+            toast.error(result.message || t('profile.taskAcceptFailed'));
+            return;
+        }
+        toast.success(t('profile.taskAcceptSuccess'));
+    };
+
+    const handleClaimTask = async (task: Parameters<typeof claimDailyTask>[0]) => {
+        const result = await claimDailyTask(task);
         if (!result.success) {
             toast.error(result.message || t('profile.rewardClaimFailed'));
             return;
@@ -1104,10 +1123,14 @@ const Profile: React.FC = () => {
                         )}
                         <div className={styles.dailyTaskList}>
                             {dailyTasks.map((task) => {
-                                const isDurationTask = isDurationTaskCode(task.code);
-                                const claimTaskType = task.taskType;
-                                const isClaimingTask = claimTaskType ? claimingTaskMap[claimTaskType] : false;
-                                const canClaimNow = Boolean(claimTaskType) && task.claimable && !task.claimed;
+                                const isFixedDurationTask = isDurationTaskCode(task.code);
+                                const isDynamicDurationTask = isDynamicDurationDailyTask(task);
+                                const isDurationTask = isFixedDurationTask || isDynamicDurationTask;
+                                const isDynamicTask = isDynamicDailyTask(task);
+                                const isTaskActionLoading = Boolean(taskActionLoadingMap[task.key]);
+                                const canClaimNow = Boolean(task.claimRequest) && task.claimable && !task.claimed;
+                                const canAcceptNow = isDynamicTask && task.acceptRequired && !task.accepted && !task.claimed;
+                                const isInProgressTask = isDynamicTask && task.accepted && !task.claimable && !task.claimed;
                                 const effectiveProgress = isDurationTask
                                     ? Math.max(task.progress, displayTotalSeconds)
                                     : task.progress;
@@ -1122,7 +1145,11 @@ const Profile: React.FC = () => {
                                 if (task.claimed) {
                                     statusText = t('profile.rewardClaimed');
                                 } else if (canClaimNow) {
-                                    statusText = t('profile.claim');
+                                    statusText = t('profile.taskClaimReward');
+                                } else if (canAcceptNow) {
+                                    statusText = t('profile.taskAccept');
+                                } else if (isInProgressTask) {
+                                    statusText = t('profile.taskInProgress');
                                 } else if (task.completed) {
                                     statusText = t('profile.taskCompleted');
                                 } else if (!statusText) {
@@ -1130,13 +1157,16 @@ const Profile: React.FC = () => {
                                 }
 
                                 return (
-                                    <div key={task.code} className={styles.dailyTaskItem}>
+                                    <div key={task.key} className={styles.dailyTaskItem}>
                                         <div className={styles.dailyTaskItemHeader}>
                                             <div className={styles.dailyTaskItemTitle}>
                                                 {task.titleKey ? t(task.titleKey) : task.title}
                                             </div>
                                             <div className={styles.dailyTaskReward}>+{task.rewardPoints}{t('profile.points')}</div>
                                         </div>
+                                        {task.description && (
+                                            <div className={styles.dailyTaskDescription}>{task.description}</div>
+                                        )}
                                         <div className={styles.dailyTaskProgressRow}>
                                             <div className={styles.dailyTaskProgressBar}>
                                                 <div
@@ -1150,20 +1180,40 @@ const Profile: React.FC = () => {
                                             <span className={`${styles.dailyTaskStatus} ${task.completed ? styles.dailyTaskStatusDone : ''}`}>
                                                 {statusText}
                                             </span>
-                                            {canClaimNow && claimTaskType && (
+                                            {canAcceptNow && (
                                                 <button
                                                     type="button"
                                                     className={styles.dailyTaskClaimBtn}
-                                                    disabled={isClaimingTask}
+                                                    disabled={isTaskActionLoading}
                                                     onClick={() => {
-                                                        void handleClaimTask(claimTaskType);
+                                                        if (typeof task.taskId === 'number') {
+                                                            void handleAcceptTask({
+                                                                key: task.key,
+                                                                taskId: task.taskId,
+                                                            });
+                                                        }
                                                     }}
                                                 >
-                                                    {isClaimingTask ? t('profile.claiming') : t('profile.claim')}
+                                                    {isTaskActionLoading ? t('profile.claiming') : t('profile.taskAccept')}
                                                 </button>
                                             )}
-                                            {!canClaimNow && claimTaskType && !task.claimed && (
-                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task.code, t)}</span>
+                                            {canClaimNow && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.dailyTaskClaimBtn}
+                                                    disabled={isTaskActionLoading}
+                                                    onClick={() => {
+                                                        void handleClaimTask({
+                                                            key: task.key,
+                                                            claimRequest: task.claimRequest,
+                                                        });
+                                                    }}
+                                                >
+                                                    {isTaskActionLoading ? t('profile.claiming') : t('profile.taskClaimReward')}
+                                                </button>
+                                            )}
+                                            {!canAcceptNow && !canClaimNow && !task.claimed && (
+                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task, t)}</span>
                                             )}
                                         </div>
                                     </div>

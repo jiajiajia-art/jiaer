@@ -711,6 +711,12 @@
     color: #FB4655;
 }
 
+.dailyTaskDescription {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #666;
+}
+
 .dailyTaskProgressRow {
     display: flex;
     align-items: center;
