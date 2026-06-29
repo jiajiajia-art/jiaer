@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
+import FavoriteGameUpdateModal from '../components/FavoriteGameUpdateModal';
 import messageApi from '../api/message/messageApi';
 import type {
     MessageAnnouncement,
     MessageCenterData,
+    MessageFavoriteGameUpdateNotification,
     MessagePromotion,
     MessagePromotionSubmissionNotification,
     MessageType,
@@ -24,7 +26,8 @@ import styles from './Messages.module.css';
 type MessageFeedItem =
     | (MessageAnnouncement & { itemType: 'announcement'; sortTime: string | null })
     | (MessagePromotion & { itemType: 'promotion'; sortTime: string | null })
-    | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null });
+    | (MessagePromotionSubmissionNotification & { itemType: 'promotion_submission_status'; sortTime: string | null })
+    | (MessageFavoriteGameUpdateNotification & { itemType: 'favorite_game_updated'; sortTime: string | null });
 
 const formatTime = (value?: string | null, fallbackText?: string) => {
     if (!value) return fallbackText || '暂无时间';
@@ -71,6 +74,14 @@ const getSubmissionMessageTitle = (notification: MessagePromotionSubmissionNotif
     return t('messages.activitySubmissionMessage', { activityName });
 };
 
+const getFavoriteGameUpdateListPreview = (notification: MessageFavoriteGameUpdateNotification, t: (key: string, options?: Record<string, unknown>) => string) => {
+    const versionNotes = notification.versionNotes?.trim();
+    if (versionNotes) {
+        return versionNotes;
+    }
+    return t('messages.clickToViewFavoriteGameUpdate');
+};
+
 const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotification, t: (key: string, options?: Record<string, unknown>) => string) => {
     switch (notification.reviewStatus) {
         case 'approved':
@@ -97,6 +108,7 @@ const Messages: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<MessageAnnouncement | null>(null);
+    const [selectedFavoriteGameUpdate, setSelectedFavoriteGameUpdate] = useState<MessageFavoriteGameUpdateNotification | null>(null);
 
     const loadMessages = useCallback(async () => {
         try {
@@ -143,7 +155,13 @@ const Messages: React.FC = () => {
             sortTime: item.createdAt || null,
         }));
 
-        return [...announcements, ...promotions, ...promotionSubmissionNotifications].sort((left, right) => {
+        const favoriteGameUpdateNotifications = (messageCenter?.favoriteGameUpdateNotifications || []).map((item) => ({
+            ...item,
+            itemType: 'favorite_game_updated' as const,
+            sortTime: item.createdAt || null,
+        }));
+
+        return [...announcements, ...promotions, ...promotionSubmissionNotifications, ...favoriteGameUpdateNotifications].sort((left, right) => {
             const leftTime = new Date(left.sortTime || 0).getTime();
             const rightTime = new Date(right.sortTime || 0).getTime();
             return rightTime - leftTime;
@@ -172,12 +190,19 @@ const Messages: React.FC = () => {
                     : item
             ));
 
+            const favoriteGameUpdateNotifications = (prev.favoriteGameUpdateNotifications || []).map((item) => (
+                messageType === 'favorite_game_updated' && item.sourceId === sourceId
+                    ? { ...item, isRead: true }
+                    : item
+            ));
+
             return {
                 ...prev,
                 unreadCount: nextUnreadCount,
                 announcements,
                 promotions,
                 promotionSubmissionNotifications,
+                favoriteGameUpdateNotifications,
             };
         });
     }, []);
@@ -192,6 +217,7 @@ const Messages: React.FC = () => {
                 announcements: markCollectionAsRead(prev.announcements),
                 promotions: markCollectionAsRead(prev.promotions),
                 promotionSubmissionNotifications: markCollectionAsRead(prev.promotionSubmissionNotifications),
+                favoriteGameUpdateNotifications: markCollectionAsRead(prev.favoriteGameUpdateNotifications || []),
             };
         });
     }, []);
@@ -258,6 +284,11 @@ const Messages: React.FC = () => {
         await markMessageAsRead('promotion_submission_status', notification.sourceId, notification.isRead);
         navigate(`/promotions?tab=submissions&submissionId=${notification.submissionId}`);
     }, [markMessageAsRead, navigate]);
+
+    const handleOpenFavoriteGameUpdateNotification = useCallback(async (notification: MessageFavoriteGameUpdateNotification) => {
+        await markMessageAsRead('favorite_game_updated', notification.sourceId, notification.isRead);
+        setSelectedFavoriteGameUpdate({ ...notification, isRead: true });
+    }, [markMessageAsRead]);
 
     return (
         <div className={styles.pageRoot}>
@@ -370,6 +401,36 @@ const Messages: React.FC = () => {
                                 );
                             }
 
+                            if (item.itemType === 'favorite_game_updated') {
+                                return (
+                                    <article
+                                        key={`favorite-game-updated-${item.sourceId}`}
+                                        className={cardClassName}
+                                        onClick={() => void handleOpenFavoriteGameUpdateNotification(item)}
+                                    >
+                                        <div className={styles.messageHeader}>
+                                            <div className={styles.titleBlock}>
+                                                <span className={`${styles.typeTag} ${styles.typeTagFavoriteGame}`}>{t('messages.favoriteGameUpdate')}</span>
+                                                <div className={styles.messageTitle}>
+                                                    {t('messages.favoriteGameUpdatedTitle', {
+                                                        gameTitle: item.gameTitle?.trim() || item.fileId,
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <span className={stateClassName}>{isRead ? t('messages.read') : t('messages.unread')}</span>
+                                        </div>
+
+                                        <div className={styles.messageText}>
+                                            {getFavoriteGameUpdateListPreview(item, t)}
+                                        </div>
+
+                                        <div className={styles.messageMeta}>
+                                            <span className={styles.metaItem}>{t('messages.updatedAt')}{formatTime(item.sortTime, t('messages.noTime'))}</span>
+                                        </div>
+                                    </article>
+                                );
+                            }
+
                             const coverImageUrl = item.activityCoverImageUrl ? getImageUrl(item.activityCoverImageUrl) : '';
 
                             return (
@@ -423,6 +484,12 @@ const Messages: React.FC = () => {
                 onClose={() => setSelectedAnnouncement(null)}
                 onNavigateLink={handleAnnouncementLinkNavigate}
                 badgeText={t('messages.announcement')}
+            />
+            <FavoriteGameUpdateModal
+                notification={selectedFavoriteGameUpdate}
+                isOpen={Boolean(selectedFavoriteGameUpdate)}
+                onClose={() => setSelectedFavoriteGameUpdate(null)}
+                badgeText={t('messages.favoriteGameUpdate')}
             />
             <MobileBottomNav />
             {externalLinkCopyModal}

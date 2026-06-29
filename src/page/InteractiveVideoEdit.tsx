@@ -298,7 +298,7 @@ const InteractiveVideoEdit: React.FC = () => {
         setShowPublishModal(true);
     };
 
-    const handlePublishGame = async (description: string, shareType?: Currency) => {
+    const handlePublishGame = async (description: string, shareType?: Currency, versionNotes?: string, notifyFavoritedUsers?: boolean) => {
         if (!normalizedFileId || isPublishing) return;
         setIsPublishing(true);
         try {
@@ -307,6 +307,8 @@ const InteractiveVideoEdit: React.FC = () => {
                 priceAmount: 0,
                 description,
                 shareType,
+                versionNotes,
+                notifyFavoritedUsers,
             });
             if (!response.data?.success) {
                 throw new Error(response.data?.message || '发布失败');
@@ -317,6 +319,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     ...current,
                     is_public: Number(published.is_public),
                     description: published.description ?? current.description,
+                    version_notes: published.version_notes ?? current.version_notes,
                     cover_url: published.cover_url ?? current.cover_url,
                     price_amount: published.price_amount ?? current.price_amount,
                     special_price_amount: published.special_price_amount ?? current.special_price_amount,

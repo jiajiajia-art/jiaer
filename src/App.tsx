@@ -19,6 +19,7 @@ import CustomIFCreate from './page/CustomIFCreate';
 import InteractiveVideo from './page/InteractiveVideo';
 import InteractiveVideoEdit from './page/InteractiveVideoEdit';
 import GameDetail from './page/GameDetail';
+import Favorites from './page/Favorites';
 import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
@@ -78,6 +79,7 @@ function App() {
           <Route path="/asset/details" element={<AssetDetails />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/promotions" element={<PromotionCenter />} />

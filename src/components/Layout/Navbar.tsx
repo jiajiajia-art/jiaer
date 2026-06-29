@@ -6,6 +6,7 @@ import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { useMessageStore } from '../../store/useMessageStore';
+import { useMessageRealtime } from '../../hooks/useMessageRealtime';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
@@ -52,6 +53,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const { isAuthenticated, initialize, logout, user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { unreadCount, refreshUnreadCount, clearUnreadCount } = useMessageStore();
+    useMessageRealtime();
     const avatarContainerRef = useRef<HTMLDivElement | null>(null);
     const searchBoxRef = useRef<HTMLFormElement | null>(null);
     const searchRequestIdRef = useRef(0);
@@ -367,6 +369,17 @@ const Navbar: React.FC<NavbarProps> = ({
                                             }}
                                         >
                                             {t('nav.profile')}
+                                        </button>
+                                        <button
+                                            className={styles.menuBtn}
+                                            onClick={() => {
+                                                runLeaveAction(() => {
+                                                    navigate('/favorites');
+                                                    setShowUserMenu(false);
+                                                });
+                                            }}
+                                        >
+                                            {t('nav.favorites')}
                                         </button>
                                         {user?.user?.role === 'admin' && isDesktopLayout && (
                                             <button

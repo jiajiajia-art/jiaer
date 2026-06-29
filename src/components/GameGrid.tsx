@@ -23,6 +23,7 @@ interface GameGridProps {
     isSelectionMode?: boolean;
     layoutVariant?: GameGridLayoutVariant;
     emptyText?: string;
+    showUnpublishedBadge?: boolean;
 }
 
 const GameGrid: React.FC<GameGridProps> = ({
@@ -36,6 +37,7 @@ const GameGrid: React.FC<GameGridProps> = ({
     isSelectionMode = false,
     layoutVariant = 'default',
     emptyText,
+    showUnpublishedBadge = false,
 }) => {
     const navigate = useNavigate();
     const { t } = useTranslation();
@@ -168,6 +170,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                 const PrimaryIcon = showIncentive ? RiMoneyCnyCircleLine : IoGameControllerOutline;
                 const typeLabel = getTypeLabel(meta);
                 const themeLabel = getThemeLabel(meta);
+                const isUnpublished = Number(meta.is_public) !== 1;
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
 
@@ -210,6 +213,12 @@ const GameGrid: React.FC<GameGridProps> = ({
                                     title={status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
                                 >
                                     {status === 'finished' ? t('profile.incentiveSettled') : t('profile.incentivePlan')}
+                                </div>
+                            )}
+
+                            {showUnpublishedBadge && isUnpublished && (
+                                <div className={styles.unpublishedTag} title={t('favorites.unpublished')}>
+                                    {t('favorites.unpublished')}
                                 </div>
                             )}
 

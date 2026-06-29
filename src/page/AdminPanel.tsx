@@ -48,6 +48,7 @@ import {
     type AnnouncementSelectionRange,
 } from '../utils/announcementLinkInsert';
 import styles from './AdminPanel.module.css';
+import { useMessageStore } from '../store/useMessageStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
 type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks';
@@ -245,6 +246,7 @@ function SortableCategoryItem({ categoryId, categoryName, docCount, isExpanded, 
 const AdminPanel: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const refreshUnreadCount = useMessageStore((state) => state.refreshUnreadCount);
     const activeTab = useMemo<AdminTab>(
         () => resolveAdminTab(location.pathname, location.search),
         [location.pathname, location.search],
@@ -1160,6 +1162,7 @@ const AdminPanel: React.FC = () => {
             }
             applyRecordToEditor(record);
             await loadHistory(record.id);
+            void refreshUnreadCount();
             toast.success('公告发布成功');
         } catch (error) {
             toast.error(extractErrorMessage(error, '公告发布失败'));

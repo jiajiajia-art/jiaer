@@ -132,6 +132,25 @@
     border-color: #B69B74;
 } */
 
+.notifyCheckboxRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.78);
+    cursor: pointer;
+    user-select: none;
+}
+
+.notifyCheckbox {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
 .buttonGroup {
     display: flex;
     gap: 15px;

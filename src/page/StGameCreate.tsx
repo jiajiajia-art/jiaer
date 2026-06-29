@@ -683,7 +683,7 @@ const StGameCreate: React.FC = () => {
     setShowPublishModal(false);
   };
 
-  const handlePublishGame = async (description: string, shareType?: Currency) => {
+  const handlePublishGame = async (description: string, shareType?: Currency, versionNotes?: string, notifyFavoritedUsers?: boolean) => {
     if (publishing) return;
 
     const fileId = String(publishTargetGameId || appIdFromQuery || appId || '').trim();
@@ -699,6 +699,8 @@ const StGameCreate: React.FC = () => {
         priceAmount: 0,
         description,
         shareType,
+        versionNotes,
+        notifyFavoritedUsers,
       });
 
       if (!response.data.success) {

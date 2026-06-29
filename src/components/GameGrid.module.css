@@ -127,6 +127,20 @@
     border-color: rgba(40, 167, 69, 1);
 }
 
+.unpublishedTag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(224, 61, 75, 0.95);
+    color: #fff;
+    border: 1px solid rgba(224, 61, 75, 1);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 4;
+}
+
 .goodsTypeTag {
     position: absolute;
     top: 8px;

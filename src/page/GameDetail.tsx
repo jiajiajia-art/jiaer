@@ -6,6 +6,7 @@ import { useAuthStore, authModalStore } from '../store/useAuthStore';
 import { useGameStore } from '../store/gameStore';
 import statisticsApi from '../api/statistics/statisticsApi';
 import GameAction from '../api/rpgGame/gameAction';
+import favoriteApi from '../api/favorite/favoriteApi';
 import getGameDataApi from '../api/home/getGameData';
 import { RECORD_CONVERSION } from '../config';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
@@ -17,6 +18,7 @@ import { getImageUrl } from '../utils/constants';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
 import { MdContentCopy } from 'react-icons/md';
 import { IoChevronBack } from 'react-icons/io5';
+import { AiOutlineStar, AiFillStar } from 'react-icons/ai';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
@@ -36,6 +38,7 @@ const isWebViewEnv = (): boolean => {
 
 // 常量
 const LIKE_DEBOUNCE_DELAY = 300;
+const FAVORITE_DEBOUNCE_DELAY = 300;
 const DEFAULT_RATING = '9.0';
 const DEFAULT_AVATAR_PATH = 'data/assets/defaultAvatar.png';
 const DEFAULT_PLAY_STATUS = {
@@ -108,8 +111,10 @@ const GameDetail: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [game, setGame] = useState<UserGameData | null>(null);
     const [isLiked, setIsLiked] = useState(false);
+    const [isFavorited, setIsFavorited] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const [isLikeLoading, setIsLikeLoading] = useState(false);
+    const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
     const [isUpdateWarningModalOpen, setIsUpdateWarningModalOpen] = useState(false);
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
@@ -122,6 +127,7 @@ const GameDetail: React.FC = () => {
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const favoriteDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasRecordedViewRef = useRef(false);
     
     const lastTrackedLocationKeyRef = useRef<string | null>(null);
@@ -222,6 +228,7 @@ const GameDetail: React.FC = () => {
                 const gameData = response.data.data;
                 setGame(gameData);
                 setIsLiked(checkIsLiked(gameData.reaction));
+                setIsFavorited(Boolean(gameData.isFavorited));
                 setLikeCount(gameData.like_count || 0);
                 setGameDetailToStore(gameData);
 
@@ -593,11 +600,49 @@ const GameDetail: React.FC = () => {
         }, LIKE_DEBOUNCE_DELAY);
     };
 
+    const handleFavorite = () => {
+        if (!checkAuth() || isFavoriteLoading) return;
+
+        if (favoriteDebounceTimerRef.current) {
+            clearTimeout(favoriteDebounceTimerRef.current);
+        }
+
+        favoriteDebounceTimerRef.current = setTimeout(async () => {
+            if (!fileId || !userId) return;
+
+            setIsFavoriteLoading(true);
+            try {
+                const response = await favoriteApi.toggle({ fileId });
+
+                if (response.data.success && response.data.data) {
+                    const nextFavorited = response.data.data.isFavorited;
+                    setIsFavorited(nextFavorited);
+                    if (game) {
+                        setGame({
+                            ...game,
+                            isFavorited: nextFavorited,
+                        });
+                    }
+                    toast.success(nextFavorited ? t('gameDetail.favoriteAdded') : t('gameDetail.favoriteRemoved'));
+                }
+            } catch (error) {
+                console.error('收藏操作失败:', error);
+                toast.error(t('gameDetail.favoriteFailed'));
+            } finally {
+                setIsFavoriteLoading(false);
+                favoriteDebounceTimerRef.current = null;
+            }
+        }, FAVORITE_DEBOUNCE_DELAY);
+    };
+
     // 清理定时器
     useEffect(() => {
         return () => {
             if (likeDebounceTimerRef.current) {
                 clearTimeout(likeDebounceTimerRef.current);
+            }
+            if (favoriteDebounceTimerRef.current) {
+                clearTimeout(favoriteDebounceTimerRef.current);
             }
         };
     }, []);
@@ -803,6 +848,16 @@ const GameDetail: React.FC = () => {
                                     </h1>
                                     <div className={styles.headerActions}>
                                         <button
+                                            type="button"
+                                            className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                                            onClick={handleFavorite}
+                                            disabled={isFavoriteLoading}
+                                            aria-label={t('gameDetail.favorite')}
+                                            aria-pressed={isFavorited}
+                                        >
+                                            {isFavorited ? <AiFillStar /> : <AiOutlineStar />}
+                                        </button>
+                                        <button
                                             className={`${styles.likeButton} ${isLiked ? styles.liked : ''} ${styles.likeInline}`}
                                             onClick={handleLike}
                                             disabled={isLikeLoading}
@@ -870,9 +925,19 @@ const GameDetail: React.FC = () => {
                     </div>
 
 
+                    <h3 className={styles.detailSectionTitle}>{t('gameDetail.gameIntroduction')}</h3>
                     <div className={styles.descriptionSection}>
                         <p>{normalizeNewlines(game.description || t('gameDetail.noDescription'))}</p>
                     </div>
+
+                    {game.version_notes?.trim() ? (
+                        <>
+                            <h3 className={styles.detailSectionTitle}>{t('gameDetail.versionNotes')}</h3>
+                            <div className={styles.descriptionSection}>
+                                <p>{normalizeNewlines(game.version_notes)}</p>
+                            </div>
+                        </>
+                    ) : null}
                 </div>
             </div>
 

@@ -62,6 +62,10 @@
       "coverRequired": "Please upload a cover image",
       "descriptionRequired": "Please fill in the game description",
       "descriptionTooLong": "Description cannot exceed {{max}} characters",
+      "versionNotes": "Version Notes",
+      "versionNotesPlaceholder": "Enter version notes (optional, max {{max}} characters)",
+      "versionNotesTooLong": "Version notes cannot exceed {{max}} characters",
+      "notifyFavoritedUsers": "Notify users who favorited this game",
       "fetchDetailFailed": "Failed to fetch publish details",
       "coverPreview": "Cover Preview",
       "replace": "Replace"
@@ -154,6 +158,7 @@
     "read": "Read",
     "unread": "Unread",
     "clickToViewAnnouncement": "Click to view announcement details",
+    "clickToViewFavoriteGameUpdate": "Click to view update details",
     "clickToViewActivity": "Click to view activity details",
     "publishedAt": "Published: ",
     "status": "Status: ",
@@ -175,7 +180,11 @@
     "submissionRewardPending": "Your submission is in the reward distribution queue. Please check the progress in My Submissions.",
     "submissionRewardIssued": "Your submission reward has been issued. Please confirm the reward status in My Submissions.",
     "submissionStatusUpdated": "Your submission status has been updated. Please view the details in My Submissions.",
-    "activitySubmissionMessage": "《{{activityName}}》Submission Status Update"
+    "activitySubmissionMessage": "《{{activityName}}》Submission Status Update",
+    "favoriteGameUpdate": "Notification",
+    "favoriteGameUpdatedTitle": "Favorited work: {{gameTitle}} has been updated",
+    "favoriteGameUpdatedWithoutNotes": "{{gameTitle}}",
+    "favoriteGameUpdatedWithNotes": "{{gameTitle}}\n{{versionNotes}}"
   },
   "gameBrowse": {
     "sort": "Sort",
@@ -518,6 +527,7 @@
     "submitSearch": "Submit game search",
     "messages": "Messages",
     "profile": "Profile",
+    "favorites": "Favorites",
     "admin": "Admin",
     "logout": "Logout",
     "login": "Login"
@@ -1233,9 +1243,15 @@
     "back": "Back",
     "share": "Share",
     "like": "Like",
+    "favorite": "Favorite",
+    "favoriteAdded": "Added to favorites",
+    "favoriteRemoved": "Removed from favorites",
+    "favoriteFailed": "Failed to update favorite, please try again",
     "unnamedGame": "Unnamed Game",
     "unknownAuthor": "Unknown Author",
     "noDescription": "No description",
+    "gameIntroduction": "Game Introduction",
+    "versionNotes": "Version Notes",
     "startExperience": "Start Experience",
     "gameUpdated": "Game Updated",
     "gameUpdatedTip": "Game has been updated. If you encounter any issues while playing, it is recommended to delete save data.",
@@ -1256,6 +1272,13 @@
     "copyFailed": "Copy failed, please copy manually",
     "getPlayStatusFailed": "Failed to get play status",
     "ratingUnit": "point"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "empty": "No favorited games yet",
+    "back": "Back",
+    "unpublished": "Unpublished",
+    "unpublishedHint": "This game has been unpublished and cannot be opened"
   },
   "stGame": {
     "loading": "Loading...",

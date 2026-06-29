@@ -62,6 +62,10 @@
       "coverRequired": "请上传封面图片",
       "descriptionRequired": "请填写游戏简介",
       "descriptionTooLong": "简介不能超过 {{max}} 个字符",
+      "versionNotes": "版本说明",
+      "versionNotesPlaceholder": "请输入版本说明（选填，不超过 {{max}} 字符）",
+      "versionNotesTooLong": "版本说明不能超过 {{max}} 个字符",
+      "notifyFavoritedUsers": "是否通知已收藏该游戏用户",
       "fetchDetailFailed": "获取发布详情失败",
       "coverPreview": "封面预览",
       "replace": "更换"
@@ -154,6 +158,7 @@
     "read": "已读",
     "unread": "未读",
     "clickToViewAnnouncement": "点击查看公告详情",
+    "clickToViewFavoriteGameUpdate": "点击查看更新详情",
     "clickToViewActivity": "点击查看活动详情",
     "publishedAt": "发布时间：",
     "status": "状态：",
@@ -175,7 +180,11 @@
     "submissionRewardPending": "你的投稿已进入奖励待下发队列，请前往我的投稿查看当前进度。",
     "submissionRewardIssued": "你的投稿奖励已发放完成，请前往我的投稿确认奖励状态。",
     "submissionStatusUpdated": "你的投稿状态有更新，请前往我的投稿查看详情。",
-    "activitySubmissionMessage": "《{{activityName}}》投稿状态更新"
+    "activitySubmissionMessage": "《{{activityName}}》投稿状态更新",
+    "favoriteGameUpdate": "通知",
+    "favoriteGameUpdatedTitle": "收藏的作品：{{gameTitle}}已更新",
+    "favoriteGameUpdatedWithoutNotes": "{{gameTitle}}",
+    "favoriteGameUpdatedWithNotes": "{{gameTitle}}\n{{versionNotes}}"
   },
   "gameBrowse": {
     "sort": "排序",
@@ -519,6 +528,7 @@
     "submitSearch": "提交游戏搜索",
     "messages": "消息中心",
     "profile": "个人中心",
+    "favorites": "收藏夹",
     "admin": "管理面板",
     "logout": "退出登录",
     "login": "登录"
@@ -1236,9 +1246,15 @@
     "back": "返回",
     "share": "分享",
     "like": "点赞",
+    "favorite": "收藏",
+    "favoriteAdded": "已加入收藏",
+    "favoriteRemoved": "已取消收藏",
+    "favoriteFailed": "收藏操作失败，请稍后重试",
     "unnamedGame": "未命名游戏",
     "unknownAuthor": "未知作者",
     "noDescription": "暂无描述",
+    "gameIntroduction": "游戏简介",
+    "versionNotes": "版本说明",
     "startExperience": "开始体验",
     "gameUpdated": "游戏已更新",
     "gameUpdatedTip": "游戏已更新，如在游戏中遇到问题，建议删除存档解决。",
@@ -1259,6 +1275,13 @@
     "copyFailed": "复制失败，请手动复制链接",
     "getPlayStatusFailed": "获取游玩状态失败",
     "ratingUnit": "分"
+  },
+  "favorites": {
+    "title": "收藏夹",
+    "empty": "暂无收藏的游戏",
+    "back": "返回",
+    "unpublished": "已下架",
+    "unpublishedHint": "该游戏已下架，暂不可进入"
   },
   "stGame": {
     "loading": "加载中...",

@@ -283,8 +283,8 @@ const GameSettingsEditor = () => {
         setActivePanel(panelId);
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel]);
 
-    const onPublishGame = useCallback(async (description?: string, shareType?: Currency) => {
-        await handlePublishGame(description, shareType);
+    const onPublishGame = useCallback(async (description?: string, shareType?: Currency, versionNotes?: string, notifyFavoritedUsers?: boolean) => {
+        await handlePublishGame(description, shareType, versionNotes, notifyFavoritedUsers);
         setShowPublishModal(false);
     }, [handlePublishGame]);
 

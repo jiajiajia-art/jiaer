@@ -15,7 +15,7 @@ import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
 interface PublishSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onPublish: (description: string, shareType?: Currency) => Promise<void> | void;
+    onPublish: (description: string, shareType?: Currency, versionNotes?: string, notifyFavoritedUsers?: boolean) => Promise<void> | void;
     fileId?: string;
     coverUrl?: string;
     onCoverUploaded?: () => void;
@@ -88,11 +88,14 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
 }) => {
     const { t } = useTranslation();
     const DESCRIPTION_MAX_LENGTH = 300;
+    const VERSION_NOTES_MAX_LENGTH = 500;
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
     const [coverUploading, setCoverUploading] = useState<boolean>(false);
     const [coverError, setCoverError] = useState<string | null>(null);
     const [description, setDescription] = useState<string>('');
+    const [versionNotes, setVersionNotes] = useState<string>('');
+    const [notifyFavoritedUsers, setNotifyFavoritedUsers] = useState<boolean>(false);
     const [shareType, setShareType] = useState<'points' | 'diamonds'>('points');
 
     const isTxtMode = !gameTags && !engine || gameTags === 'TXT' || engine === 'TXT';
@@ -114,7 +117,10 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     });
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            setNotifyFavoritedUsers(false);
+            return;
+        }
         // 同步发布弹窗封面回显
         setCoverPreview(coverUrl || null);
     }, [coverUrl, isOpen]);
@@ -128,6 +134,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 if (response.data.success && response.data.data) {
                     // 同步发布弹窗最新详情
                     setDescription(response.data.data.description || '');
+                    setVersionNotes(response.data.data.version_notes || '');
                     setCoverPreview(response.data.data.cover_url || null);
                 }
             } catch (error) {
@@ -189,7 +196,18 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return;
         }
 
-        onPublish(trimmed, requiresShareType ? shareType : undefined);
+        const trimmedVersionNotes = versionNotes.trim();
+        if (trimmedVersionNotes.length > VERSION_NOTES_MAX_LENGTH) {
+            toast.error(t('common.publishSettings.versionNotesTooLong', { max: VERSION_NOTES_MAX_LENGTH }));
+            return;
+        }
+
+        onPublish(
+            trimmed,
+            requiresShareType ? shareType : undefined,
+            trimmedVersionNotes,
+            notifyFavoritedUsers,
+        );
     };
 
     const handleCoverSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,6 +343,32 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             />
                         </div>
                     )}
+
+                    <div className={styles.descriptionFormGroup}>
+                        <label className={styles.label}>{t('common.publishSettings.versionNotes')}</label>
+                        <textarea
+                            className={styles.descriptionInput}
+                            placeholder={t('common.publishSettings.versionNotesPlaceholder', { max: VERSION_NOTES_MAX_LENGTH })}
+                            value={versionNotes}
+                            maxLength={VERSION_NOTES_MAX_LENGTH}
+                            onChange={(e) => setVersionNotes(e.target.value)}
+                        />
+                        <div className={styles.descriptionMetaRow}>
+                            <span className={styles.descriptionCount}>
+                                {versionNotes.length}/{VERSION_NOTES_MAX_LENGTH}
+                            </span>
+                        </div>
+                    </div>
+
+                    <label className={styles.notifyCheckboxRow}>
+                        <input
+                            type="checkbox"
+                            className={styles.notifyCheckbox}
+                            checked={notifyFavoritedUsers}
+                            onChange={(event) => setNotifyFavoritedUsers(event.target.checked)}
+                        />
+                        <span>{t('common.publishSettings.notifyFavoritedUsers')}</span>
+                    </label>
 
                     <div className={styles.buttonGroup}>
                         <button type="button" className={styles.publishBtn} onClick={handleSubmit} disabled={publishing}>

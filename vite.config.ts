@@ -7,11 +7,12 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // 后端 API 代理
+      // 后端 API 代理（含 WebSocket 升级）
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
+        ws: true,
       },
       // 注意：开发环境使用 signInWithPopup，不需要 Firebase Auth 代理
       // 生产环境部署到 Firebase Hosting，也不需代理

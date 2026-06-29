@@ -214,11 +214,48 @@
 
 .headerActions {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
     gap: 0.625rem;
     margin-left: auto;
     flex-shrink: 0;
+}
+
+.favoriteButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(0, 0, 0, 0.55);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.favoriteButton:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.12);
+    transform: translateY(-0.0625rem);
+}
+
+.favoriteButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.favoriteButton svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.favoriteButton.favorited {
+    background: rgba(255, 193, 7, 0.16);
+    border-color: #f5b400;
+    color: #f5b400;
 }
 
 .headerLikeButton {
@@ -456,6 +493,13 @@
 
 
 /* ==================== 描述区域 ==================== */
+.detailSectionTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.88);
+    margin: 0 0 0.75rem;
+}
+
 .descriptionSection {
     padding: 1.35rem 1.5rem;
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.025), rgba(0, 0, 0, 0.035));

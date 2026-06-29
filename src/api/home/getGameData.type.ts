@@ -5,6 +5,7 @@ export interface UserGameData {
     title: string;
     subtitle: string;
     description: string;
+    version_notes?: string | null;
     cover_url: string;
     doc_url: string;
     files: string;
@@ -55,6 +56,8 @@ export interface UserGameData {
     incentive_settled_amount?: number;
     /** QQ群号，有值则渲染 */
     groupNo?: string;
+    /** 当前用户是否已收藏该游戏 */
+    isFavorited?: boolean;
 }
 
 export interface UserGameResponse {
