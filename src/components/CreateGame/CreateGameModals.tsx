@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaWindows } from 'react-icons/fa';
+import { FaDesktop } from 'react-icons/fa';
 import styles from './CreateGameModals.module.css';
 import MobileTipModal from './MobileTipModal';
 import type { CreatorGameType } from '../../utils/miniProgram';
@@ -174,7 +174,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 href={ivgToolDownloadUrl}
                                 download={IVG_TOOL_DOWNLOAD_FILE_NAME}
                             >
-                                <FaWindows className={styles.ivgToolActionIcon} aria-hidden="true" />
+                                <FaDesktop className={styles.ivgToolActionIcon} aria-hidden="true" />
                                 <span>{t('createGame.downloadTool')}</span>
                             </a>
                             <a

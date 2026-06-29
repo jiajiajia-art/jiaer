@@ -7,7 +7,8 @@ export type ScriptButtonType =
     | 'settings_restart'
     | 'history_edit'
     | 'history_regenerate'
-    | 'settings_toggle_bgm';
+    | 'settings_toggle_bgm'
+    | 'music_toggle_mute';
 
 export interface ScriptButtonEventPayload {
     buttonType: ScriptButtonType;

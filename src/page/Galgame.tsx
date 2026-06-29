@@ -243,7 +243,7 @@ const Galgame = () => {
         messageType: controller.currentMessage?.type,
     });
 
-    const { isMusicPlaying, handleMusicToggle, volume, setVolume } = useMusicPlayer({
+    const { isMusicPlaying, handleMusicToggle, volume, setVolume, hasMusic, isMusicLoading } = useMusicPlayer({
         presetId: fileId || '',
         currentScene: controller.currentScene,
         gameStarted: controller.gameStarted,
@@ -583,9 +583,31 @@ const Galgame = () => {
                         <div className={styles.injuryBloodSplatter}></div>
                     )}
                     <div id="custom-ui-root" className={styles.customUIRoot}></div>
-                    <div className={`${styles.topHeader} ${controller.isTextMode ? styles.topHeaderTextMode : ''}`}>
-                        <CiLocationOn />
-                        <span>{controller.currentScene?.name}</span>
+                    <div className={styles.topBar}>
+                        {hasMusic && (
+                            <div
+                                className={`${styles.musicButton} ${!isMusicPlaying && !isMusicLoading ? styles.musicButtonMuted : ''}`}
+                                onClick={handleMusicToggle}
+                            >
+                                <div className={styles.musicButtonInner}>
+                                    {isMusicLoading ? (
+                                        <div className={styles.musicLoading}></div>
+                                    ) : !isMusicPlaying ? (
+                                        <>
+                                            <img src={`${import.meta.env.BASE_URL}data/assets/bgm.png`} alt="BGM" />
+                                            <div className={styles.muteSlash}></div>
+                                        </>
+                                    ) : (
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/bgm.png`} alt="BGM" />
+                                    )}
+                                    <span>{t('galgame.music')}</span>
+                                </div>
+                            </div>
+                        )}
+                        <div className={`${styles.topHeader} ${controller.isTextMode ? styles.topHeaderTextMode : ''}`}>
+                            <CiLocationOn />
+                            <span>{controller.currentScene?.name}</span>
+                        </div>
                     </div>
                     {/* {!controller.isReplay && controller.gameStarted && (
                         <div className={styles.contextMemoryMeter}>

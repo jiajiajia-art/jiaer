@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import styles from './UploadMusicModal.module.css';
 
+const MAX_UPLOAD_MUSIC_SIZE_BYTES = 5 * 1024 * 1024;
+
 interface UploadMusicModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -39,8 +41,8 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
                 toast.error(t('createGame.uploadMusicErrors.invalidAudioFile'));
                 return;
             }
-            // 验证文件大小（例如：最大 10MB）
-            if (file.size > 10 * 1024 * 1024) {
+            // 验证文件大小（最大 5MB）
+            if (file.size > MAX_UPLOAD_MUSIC_SIZE_BYTES) {
                 toast.error(t('createGame.uploadMusicErrors.fileTooLarge'));
                 return;
             }
@@ -147,7 +149,7 @@ const UploadMusicModal: React.FC<UploadMusicModalProps> = ({ isOpen, onClose, on
                                         toast.error(t('createGame.uploadMusicErrors.invalidAudioFile'));
                                         return;
                                     }
-                                    if (file.size > 10 * 1024 * 1024) {
+                                    if (file.size > MAX_UPLOAD_MUSIC_SIZE_BYTES) {
                                         toast.error(t('createGame.uploadMusicErrors.fileTooLarge'));
                                         return;
                                     }

@@ -30,6 +30,25 @@
     pointer-events: none;
 }
 
+/* 顶部栏容器 - 包含位置信息和音乐按钮 */
+.topBar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 0.75rem 0;
+    z-index: 100;
+}
+
+.topBar > .topHeader {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 .topHeader {
     background: #37333480;
     padding: 0.625rem 1.25rem; /* 10px 20px */
@@ -41,13 +60,107 @@
     font-size: 0.875rem; /* 14px */
     font-weight: 600;
     position: relative;
-    z-index: 100;
-    width: fit-content;
-    margin: 1rem auto 0.75rem; /* 16px auto 12px */
     border-radius: 1.25rem; /* 20px */
     min-width: 11.25rem; /* 180px */
     transition: all 0.3s ease;
     flex-shrink: 0;
+}
+
+.topHeader svg {
+    font-size: 1.125rem; /* 18px */
+}
+
+/* 音乐按钮 - 顶部栏左侧，菱形 */
+.musicButton {
+    flex-shrink: 0;
+    width: 2.625rem;
+    height: 2.625rem;
+    background: rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(0.625rem);
+    -webkit-backdrop-filter: blur(0.625rem);
+    border-radius: 0.75rem;
+    transform: rotate(45deg);
+    border: 0.0625rem solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-left: 0.85rem;
+}
+
+.musicButton:active {
+    transform: rotate(45deg) scale(0.9);
+}
+
+/* 静音状态 - 降低透明度 */
+.musicButtonMuted {
+    opacity: 0.5;
+    filter: grayscale(50%);
+}
+
+.musicButtonMuted:active {
+    transform: rotate(45deg) scale(0.85);
+}
+
+.musicButtonInner {
+    width: 100%;
+    height: 100%;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    padding: 0.375rem;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transform: rotate(-45deg);
+    position: relative;
+}
+
+.musicButtonInner svg,
+.musicButtonInner img {
+    width: 1rem;
+    height: 1rem;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
+}
+
+.musicButtonInner span {
+    font-weight: 600;
+    font-size: 0.5rem;
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+/* 静音斜杠 */
+.muteSlash {
+    position: absolute;
+    width: 1.4px;
+    height: 140%;
+    background: linear-gradient(to bottom, transparent, #fff 30%, #fff 70%, transparent);
+    transform: rotate(45deg);
+    pointer-events: none;
+}
+
+/* 音乐加载中动画 */
+.musicLoading {
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: musicSpin 0.8s linear infinite;
+}
+
+@keyframes musicSpin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .exitButton {
@@ -69,10 +182,6 @@
 
 .exitButton:active {
     transform: scale(0.95);
-}
-
-.topHeader svg {
-    font-size: 1.125rem; /* 18px */
 }
 
 /* 文本模式下的位置显示 */
