@@ -18,6 +18,7 @@ import type {
 import Pagination from './Pagination';
 import styles from './PromotionAdminManager.module.css';
 import { getImageUrl } from '../utils/constants';
+import { buildPromotionInternalLinkExample } from '../utils/promotionNavigation';
 import { useImageCropper } from '../hooks/useImageCropper';
 import ImageCropModal from './CommonModal/ImageCropModal';
 
@@ -79,6 +80,7 @@ const createEmptyForm = (): PromotionActivityPayload => ({
   coverImageUrl: '',
   summary: '',
   detailLinkUrl: '',
+  internalLinkUrl: '',
   submissionConfig: { ...emptyConfig },
   isLongTerm: true,
   startAt: null,
@@ -129,6 +131,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const isValidDetailLink = (value: string) => !value.trim() || value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://');
+const isValidInternalLink = (value: string) => !value.trim() || value.startsWith('/');
 const buildOncePerActivityLimitSummary = () => '活动期内限制一次';
 const buildLimitSummary = (activity: PromotionActivity) => activity.submissionLimitType === 'rolling_window' ? `每 ${activity.submissionLimitDays} 天限 ${activity.submissionLimitCount} 次` : '活动期内无限次';
 const buildTimeSummary = (activity: PromotionActivity) => activity.isLongTerm ? '长期活动' : `${formatTime(activity.startAt)} - ${formatTime(activity.endAt)}`;
@@ -266,6 +269,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       coverImageUrl: activity.coverImageUrl,
       summary: activity.summary,
       detailLinkUrl: activity.detailLinkUrl,
+      internalLinkUrl: activity.internalLinkUrl || '',
       submissionConfig: normalizeSubmissionConfig(activity.submissionConfig),
       isLongTerm: activity.isLongTerm,
       startAt: activity.startAt,
@@ -318,6 +322,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
     if (!form.summary.trim()) return toast.error('活动摘要不能为空'), false;
     if (!form.coverImageUrl.trim()) return toast.error('活动封面不能为空'), false;
     if (!isValidDetailLink(form.detailLinkUrl)) return toast.error('活动详情跳转地址仅支持站内路径或 http/https 链接'), false;
+    if (!isValidInternalLink(form.internalLinkUrl)) return toast.error('站内跳转链接必须以 / 开头'), false;
     if (!form.submissionConfig.acceptTexts && !form.submissionConfig.acceptLinks && !form.submissionConfig.acceptImages && !form.submissionConfig.acceptVideos) return toast.error('请至少启用一种投稿方式'), false;
 
     if (!form.isLongTerm) {
@@ -366,6 +371,7 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
     const normalizedForm: PromotionActivityPayload = {
       ...form,
       detailLinkUrl: form.detailLinkUrl.trim(),
+      internalLinkUrl: form.internalLinkUrl.trim(),
       // 实现 投稿方式配置规范化
       submissionConfig: normalizeSubmissionConfig(form.submissionConfig),
     };
@@ -588,6 +594,16 @@ const PromotionAdminManager: React.FC<PromotionAdminManagerProps> = ({ pendingRe
       <div className={styles.formArea}>
         <label className={styles.fieldLabel}>活动标题<input className={styles.textInput} value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} /></label>
         <label className={styles.fieldLabel}>活动摘要<textarea className={styles.textArea} value={form.summary} onChange={(event) => setForm((prev) => ({ ...prev, summary: event.target.value }))} /></label>
+        <label className={styles.fieldLabel}>
+          站内跳转链接（可选）
+          <input
+            className={styles.textInput}
+            value={form.internalLinkUrl}
+            onChange={(event) => setForm((prev) => ({ ...prev, internalLinkUrl: event.target.value }))}
+            placeholder={buildPromotionInternalLinkExample(form.title)}
+          />
+          <span className={styles.fieldHint}>用于广告/轮播等入口跳转，示例：{buildPromotionInternalLinkExample(form.title)}</span>
+        </label>
         <label className={styles.fieldLabel}>活动详情跳转地址（可选）<input className={styles.textInput} value={form.detailLinkUrl} onChange={(event) => setForm((prev) => ({ ...prev, detailLinkUrl: event.target.value }))} placeholder="/game/xxx or https://example.com" /></label>
         <label className={styles.fieldLabel}>活动封面<input className={styles.textInput} type="file" accept="image/*" onChange={(event) => { handleUploadCoverForCrop(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />{form.coverImageUrl && <img className={styles.coverPreview} src={getImageUrl(form.coverImageUrl)} alt="活动封面" />}</label>
         <label className={styles.fieldLabel}>活动时间<label className={styles.switchLabel}><input type="checkbox" checked={form.isLongTerm} onChange={(event) => setForm((prev) => ({ ...prev, isLongTerm: event.target.checked, startAt: event.target.checked ? null : prev.startAt, endAt: event.target.checked ? null : prev.endAt }))} />长期活动</label></label>

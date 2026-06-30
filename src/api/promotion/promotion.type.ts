@@ -34,6 +34,7 @@ export interface PromotionActivity {
     summary: string;
     contentBody?: string;
     detailLinkUrl: string;
+    internalLinkUrl: string;
     submissionConfig: PromotionSubmissionConfig;
     isLongTerm: boolean;
     startAt: string | null;
@@ -145,6 +146,7 @@ export interface PromotionActivityPayload {
     summary: string;
     contentBody?: string;
     detailLinkUrl: string;
+    internalLinkUrl: string;
     submissionConfig: PromotionSubmissionConfig;
     isLongTerm: boolean;
     startAt: string | null;

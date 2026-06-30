@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -9,6 +9,13 @@ import promotionApi from '../api/promotion/promotionApi';
 import type { PromotionActivity, PromotionReviewStatus, PromotionSubmission } from '../api/promotion/promotion.type';
 import styles from './PromotionCenter.module.css';
 import { getImageUrl } from '../utils/constants';
+import {
+    findPromotionActivityByHash,
+    getPromotionActivityAnchorId,
+    openConfiguredLink,
+    resolvePromotionAdLink,
+} from '../utils/promotionNavigation';
+import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import { useTranslation } from 'react-i18next';
 
 type PromotionTab = 'activities' | 'submissions';
@@ -217,6 +224,9 @@ const buildPromotionStatusBadge = (activity: PromotionActivity, t: TranslateFn):
 
 const PromotionCenter: React.FC = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { requestCopy, modal: externalLinkCopyModal } = useExternalLinkCopyModal();
     const [searchParams] = useSearchParams();
     const buildLimitSummary = getSubmissionLimitSummary;
     const [activeTab, setActiveTab] = useState<PromotionTab>('activities');
@@ -236,8 +246,11 @@ const PromotionCenter: React.FC = () => {
     const [isLoadingPublishedGames, setIsLoadingPublishedGames] = useState(false);
     const [isGameImportOpen, setIsGameImportOpen] = useState(false);
     const [highlightedSubmissionId, setHighlightedSubmissionId] = useState<number | null>(null);
+    const [highlightedActivityId, setHighlightedActivityId] = useState<number | null>(null);
     const submissionCardRefs = useRef<Record<number, HTMLElement | null>>({});
+    const activityCardRefs = useRef<Record<number, HTMLElement | null>>({});
     const focusedSubmissionIdRef = useRef<number | null>(null);
+    const focusedActivityIdRef = useRef<number | null>(null);
     const missingSubmissionNoticeRef = useRef<number | null>(null);
 
     const requestedTab = searchParams.get('tab');
@@ -280,10 +293,10 @@ const PromotionCenter: React.FC = () => {
             return;
         }
 
-        if (requestedTab === 'activities') {
+        if (requestedTab === 'activities' || location.hash) {
             setActiveTab('activities');
         }
-    }, [requestedTab]);
+    }, [location.hash, requestedTab]);
 
     useEffect(() => {
         if (!requestedSubmissionId || activeTab !== 'submissions' || isLoading) {
@@ -319,6 +332,43 @@ const PromotionCenter: React.FC = () => {
 
         return () => window.clearTimeout(timer);
     }, [activeTab, isLoading, requestedSubmissionId, submissions, t]);
+
+    useEffect(() => {
+        if (isLoading || activeTab !== 'activities') {
+            return;
+        }
+
+        const targetActivity = findPromotionActivityByHash(activities, location.hash);
+        if (!targetActivity) {
+            setHighlightedActivityId(null);
+            focusedActivityIdRef.current = null;
+            return;
+        }
+
+        setHighlightedActivityId(targetActivity.id);
+
+        const cardElement = activityCardRefs.current[targetActivity.id];
+        if (cardElement && focusedActivityIdRef.current !== targetActivity.id) {
+            focusedActivityIdRef.current = targetActivity.id;
+
+            window.requestAnimationFrame(() => {
+                cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        }
+
+        const timer = window.setTimeout(() => {
+            setHighlightedActivityId((current) => (current === targetActivity.id ? null : current));
+        }, 2600);
+
+        return () => window.clearTimeout(timer);
+    }, [activeTab, activities, isLoading, location.hash]);
+
+    const navigateConfiguredLink = useCallback((url: string) => {
+        openConfiguredLink(url, {
+            navigate,
+            onExternalLinkCopy: requestCopy,
+        });
+    }, [navigate, requestCopy]);
 
     const submissionCount = submissions.length;
 
@@ -359,13 +409,18 @@ const PromotionCenter: React.FC = () => {
             return;
         }
 
-        if (detailLinkUrl.startsWith('http://') || detailLinkUrl.startsWith('https://')) {
-            window.open(detailLinkUrl, '_blank', 'noopener,noreferrer');
+        navigateConfiguredLink(detailLinkUrl);
+    };
+
+    const openPromotionAd = (activity: PromotionActivity) => {
+        const targetLink = resolvePromotionAdLink(activity);
+
+        if (!targetLink) {
+            toast.error(t('promotion.activityNotConfigured'));
             return;
         }
 
-        const detailPath = detailLinkUrl.startsWith('/') ? detailLinkUrl : `/${detailLinkUrl}`;
-        window.location.href = `${window.location.origin}/funloom${detailPath}`;
+        navigateConfiguredLink(targetLink);
     };
 
     const loadPublishedGames = useCallback(async () => {
@@ -525,8 +580,35 @@ const PromotionCenter: React.FC = () => {
                                     const statusBadge = buildPromotionStatusBadge(activity, t);
 
                                     return (
-                                        <article key={activity.id} className={styles.card}>
-                                            <div className={`${styles.imageGuard} ${styles.imageGuardLight}`}>
+                                        <article
+                                            key={activity.id}
+                                            id={getPromotionActivityAnchorId(activity.title)}
+                                            ref={(element) => {
+                                                activityCardRefs.current[activity.id] = element;
+                                            }}
+                                            className={`${styles.card} ${highlightedActivityId === activity.id ? styles.cardHighlighted : ''}`}
+                                        >
+                                            <div
+                                                className={`${styles.imageGuard} ${styles.imageGuardLight} ${resolvePromotionAdLink(activity) ? styles.clickableCover : ''}`}
+                                                onClick={() => {
+                                                    if (!resolvePromotionAdLink(activity)) {
+                                                        return;
+                                                    }
+                                                    openPromotionAd(activity);
+                                                }}
+                                                onKeyDown={(event) => {
+                                                    if (event.key !== 'Enter' && event.key !== ' ') {
+                                                        return;
+                                                    }
+                                                    if (!resolvePromotionAdLink(activity)) {
+                                                        return;
+                                                    }
+                                                    event.preventDefault();
+                                                    openPromotionAd(activity);
+                                                }}
+                                                role={resolvePromotionAdLink(activity) ? 'button' : undefined}
+                                                tabIndex={resolvePromotionAdLink(activity) ? 0 : undefined}
+                                            >
                                                 <img className={styles.cover} src={getImageUrl(activity.coverImageUrl)} alt={activity.title} />
                                             </div>
                                             <div className={styles.cardBody}>
@@ -820,6 +902,7 @@ const PromotionCenter: React.FC = () => {
             ) : null}
 
             <MobileBottomNav hidden />
+            {externalLinkCopyModal}
         </div>
     );
 };

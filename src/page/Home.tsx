@@ -36,6 +36,8 @@ import {
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
+import { openConfiguredLink } from '../utils/promotionNavigation';
+import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 
 type CarouselItem = UserGameData | BannerItem;
 
@@ -104,6 +106,7 @@ const getCircularCarouselDistance = (currentIndex: number, targetIndex: number, 
 const Home: React.FC = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { requestCopy, modal: externalLinkCopyModal } = useExternalLinkCopyModal();
     const SWIPE_THRESHOLD = 40;
     const SWIPE_CLICK_SUPPRESS_MS = 250;
     //const [fileMetas, setFileMetas] = useState<UserGameData[]>([]);
@@ -1691,26 +1694,26 @@ const Home: React.FC = () => {
         const safeLink = linkUrl.trim();
         if (!safeLink) return;
 
-        if (safeLink.startsWith('http://') || safeLink.startsWith('https://')) {
-            window.open(safeLink, '_blank', 'noopener,noreferrer');
-            return;
-        }
-
-        if (safeLink.startsWith('/')) {
-            navigate(safeLink);
-        }
+        openConfiguredLink(safeLink, {
+            navigate,
+            onExternalLinkCopy: requestCopy,
+        });
     };
 
-    const isProtectedPath = useCallback((linkUrl: string) => (
-        PROTECTED_PATH_PREFIXES.some((prefix) => linkUrl === prefix || linkUrl.startsWith(`${prefix}/`) || linkUrl.startsWith(`${prefix}?`))
-    ), []);
+    const isProtectedPath = useCallback((linkUrl: string) => {
+        const pathOnly = linkUrl.split('#')[0].split('?')[0];
+        return PROTECTED_PATH_PREFIXES.some((prefix) => pathOnly === prefix || pathOnly.startsWith(`${prefix}/`));
+    }, []);
 
     const navigateToHomeTickerLink = useCallback((linkUrl: string, allowAuthPrompt = true) => {
         const safeLink = linkUrl.trim();
         if (!safeLink) return;
 
         if (safeLink.startsWith('http://') || safeLink.startsWith('https://')) {
-            window.open(safeLink, '_blank', 'noopener,noreferrer');
+            openConfiguredLink(safeLink, {
+                navigate,
+                onExternalLinkCopy: requestCopy,
+            });
             return;
         }
 
@@ -1718,15 +1721,16 @@ const Home: React.FC = () => {
             return;
         }
 
-        if (allowAuthPrompt && isProtectedPath(safeLink) && !isAuthenticated) {
-            // 瀹炵幇鏈櫥褰曞厛鎷夎捣鐧诲綍鍐嶈烦杞?            pendingTickerAuthRef.current = true;
+        const pathOnly = safeLink.split('#')[0].split('?')[0];
+        if (allowAuthPrompt && isProtectedPath(pathOnly) && !isAuthenticated) {
+            pendingTickerAuthRef.current = true;
             setPendingTickerLink(safeLink);
             setIsAuthModalOpen(true);
             return;
         }
 
         navigate(safeLink);
-    }, [isAuthenticated, isProtectedPath, navigate, setIsAuthModalOpen]);
+    }, [isAuthenticated, isProtectedPath, navigate, requestCopy, setIsAuthModalOpen]);
     navigateToHomeTickerLinkRef.current = navigateToHomeTickerLink;
 
     const handleHomeTickerClick = useCallback(() => {
@@ -2335,6 +2339,7 @@ const Home: React.FC = () => {
                 onNavigateLink={handleAnnouncementLinkNavigate}
             />
             <MobileBottomNav />
+            {externalLinkCopyModal}
         </div>
     );
 };

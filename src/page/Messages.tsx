@@ -17,6 +17,8 @@ import type { PromotionReviewStatus } from '../api/promotion/promotion.type';
 import { useMessageStore } from '../store/useMessageStore';
 import { getImageUrl } from '../utils/constants';
 import { toAnnouncementPlainText } from '../utils/announcementLinks';
+import { openConfiguredLink, resolvePromotionAdLink } from '../utils/promotionNavigation';
+import { useExternalLinkCopyModal } from '../hooks/useExternalLinkCopyModal';
 import styles from './Messages.module.css';
 
 type MessageFeedItem =
@@ -42,8 +44,6 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 
     return fallback;
 };
-
-const normalizeInternalLink = (linkUrl: string) => (linkUrl.startsWith('/') ? linkUrl : `/${linkUrl}`);
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
     item.publishedAt || item.updatedAt || item.createdAt || null;
@@ -91,6 +91,7 @@ const getSubmissionMessageText = (notification: MessagePromotionSubmissionNotifi
 const Messages: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
+    const { requestCopy, modal: externalLinkCopyModal } = useExternalLinkCopyModal();
     const { setUnreadCount } = useMessageStore();
     const [messageCenter, setMessageCenter] = useState<MessageCenterData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -241,19 +242,17 @@ const Messages: React.FC = () => {
     const handleOpenPromotion = useCallback(async (promotion: MessagePromotion) => {
         await markMessageAsRead('promotion', promotion.sourceId, promotion.isRead);
 
-        const targetLink = (promotion.detailLinkUrl || '').trim();
+        const targetLink = resolvePromotionAdLink(promotion);
         if (!targetLink) {
             navigate('/promotions');
             return;
         }
 
-        if (targetLink.startsWith('http://') || targetLink.startsWith('https://')) {
-            window.open(targetLink, '_blank', 'noopener,noreferrer');
-            return;
-        }
-
-        navigate(normalizeInternalLink(targetLink));
-    }, [markMessageAsRead, navigate]);
+        openConfiguredLink(targetLink, {
+            navigate,
+            onExternalLinkCopy: requestCopy,
+        });
+    }, [markMessageAsRead, navigate, requestCopy]);
 
     const handleOpenPromotionSubmissionNotification = useCallback(async (notification: MessagePromotionSubmissionNotification) => {
         await markMessageAsRead('promotion_submission_status', notification.sourceId, notification.isRead);
@@ -426,6 +425,7 @@ const Messages: React.FC = () => {
                 badgeText={t('messages.announcement')}
             />
             <MobileBottomNav />
+            {externalLinkCopyModal}
         </div>
     );
 };
