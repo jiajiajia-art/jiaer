@@ -89,9 +89,35 @@
 
 .tableWrapper {
     overflow-x: auto;
+    overflow-y: hidden;
     border-radius: 16px;
     border: 1px solid rgba(228, 205, 187, 0.72);
     background: rgba(255, 252, 249, 0.96);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(181, 135, 92, 0.5) rgba(246, 236, 224, 0.5);
+}
+
+.tableWrapper::-webkit-scrollbar {
+    height: 10px;
+}
+
+.tableWrapper::-webkit-scrollbar-track {
+    background: rgba(246, 236, 224, 0.5);
+    border-radius: 5px;
+}
+
+.tableWrapper::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #b56f3b, #d79c68);
+    border-radius: 5px;
+    border: 2px solid rgba(246, 236, 224, 0.5);
+}
+
+.tableWrapper::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #a5602f, #c48850);
+}
+
+.tableWrapper::-webkit-scrollbar-corner {
+    background: rgba(246, 236, 224, 0.5);
 }
 
 .table {

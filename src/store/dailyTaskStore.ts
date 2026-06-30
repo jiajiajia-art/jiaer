@@ -115,29 +115,37 @@ const hasSummaryInPayload = (payload: DailyTaskPayload): boolean => {
     return summaryKeys.some((key) => summaryRecord[key] !== undefined && summaryRecord[key] !== null);
 };
 
+const isActiveDynamicTask = (task: DailyTaskItem): boolean =>
+    !!task.isDynamic && !task.claimed && (task.progress > 0 || !!task.accepted);
+
 const mergeTasksByUpdatedKeys = (
     prevTasks: DailyTaskItem[],
     nextTasks: DailyTaskItem[],
     updatedTaskKeys: string[],
 ): DailyTaskItem[] => {
-    if (!updatedTaskKeys.length) {
-        return nextTasks;
-    }
-
-    const updatedKeySet = new Set(updatedTaskKeys);
     const mergedTaskMap = new Map<string, DailyTaskItem>();
 
-    prevTasks.forEach((task) => {
-        if (!updatedKeySet.has(task.key)) {
+    if (updatedTaskKeys.length) {
+        const updatedKeySet = new Set(updatedTaskKeys);
+        prevTasks.forEach((task) => {
+            if (!updatedKeySet.has(task.key)) {
+                mergedTaskMap.set(task.key, task);
+            }
+        });
+    } else {
+        prevTasks.forEach((task) => {
             mergedTaskMap.set(task.key, task);
-        }
-    });
+        });
+    }
 
     nextTasks.forEach((task) => {
         mergedTaskMap.set(task.key, task);
     });
 
-    return nextTasks.map((task) => mergedTaskMap.get(task.key) ?? task);
+    const fixedTasks = nextTasks.filter((task) => !task.isDynamic);
+    const mergedDynamicTasks = Array.from(mergedTaskMap.values()).filter(isActiveDynamicTask);
+
+    return [...fixedTasks, ...mergedDynamicTasks];
 };
 
 const setTaskActionLoading = (
@@ -276,6 +284,13 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
             const nextDigest = createRewardDigest(payload.rewardsIssued);
             const rewardsChanged = nextDigest !== get().lastRewardDigest;
 
+            const currentTasks = get().tasks;
+            const mergedTasks = mergeTasksByUpdatedKeys(
+                currentTasks,
+                payload.tasks,
+                [], // no specific keys to track — preserve all active dynamic tasks
+            );
+
             set((prev) => ({
                 ...prev,
                 isLoadedOnce: true,
@@ -284,7 +299,7 @@ export const useDailyTaskStore = create<DailyTaskState>((set, get) => ({
                 errorMessage: '',
                 lastSyncedAt: Date.now(),
                 summary: payload.summary,
-                tasks: payload.tasks,
+                tasks: mergedTasks,
                 updatedTaskKeys: payload.updatedTaskKeys,
                 rewardsIssued: rewardsChanged ? payload.rewardsIssued : [],
                 lastRewardDigest: nextDigest,

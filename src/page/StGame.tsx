@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGame.module.css';
 import { stApi, type StChatMessage, type StRenderRule } from '../api/stGame';
@@ -56,6 +56,12 @@ type SceneActionByMessagesPayload = {
 const StGame: React.FC = () => {
     const { t } = useTranslation();
     const { appId } = useParams();
+    const [searchParams] = useSearchParams();
+    const sessionSource = useMemo<'link' | 'game_detail' | 'history' | 'other'>(() => {
+        const raw = String(searchParams.get('source') || '').trim().toLowerCase();
+        if (raw === 'link' || raw === 'game_detail' || raw === 'history') return raw;
+        return 'other';
+    }, [searchParams]);
   const [sessionId, setSessionId] = useState<string>('');
   const [rules, setRules] = useState<StRenderRule[]>([]);
   const [input, setInput] = useState('');
@@ -94,7 +100,7 @@ const StGame: React.FC = () => {
       if (!appId) return;
       try {
         setLoading(true);
-        const resp = await stApi.createSession(appId, { autoStart: true });
+        const resp = await stApi.createSession(appId, { autoStart: true, source: sessionSource });
         const data: CreateResp = resp.data;
         if (cancelled) return;
         if (!data?.success) throw new Error(t('stGame.sessionCreateFailed'));

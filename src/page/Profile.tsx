@@ -54,6 +54,7 @@ const getTaskActionText = (
     task: {
         code: string;
         gameTitle?: string;
+        gameFileId?: string;
     },
     t: (key: string, options?: Record<string, unknown>) => string,
 ): string => {
@@ -61,6 +62,12 @@ const getTaskActionText = (
     if (task.code === 'play_3_unique' || task.code === 'play_three_games') return t('profile.taskGoPlay');
     if (task.gameTitle) return t('profile.taskGoPlaySpecific', { gameTitle: task.gameTitle });
     return t('profile.taskInProgress');
+};
+
+const isTaskPlayable = (task: { code: string; gameFileId?: string }): boolean => {
+    if (task.gameFileId) return true;
+    if (task.code === 'play_3_unique' || task.code === 'play_three_games') return true;
+    return false;
 };
 const isWebViewEnv = (): boolean => {
     const win = window as unknown as Record<string, unknown>;
@@ -1131,13 +1138,15 @@ const Profile: React.FC = () => {
                                 const canClaimNow = Boolean(task.claimRequest) && task.claimable && !task.claimed;
                                 const canAcceptNow = isDynamicTask && task.acceptRequired && !task.accepted && !task.claimed;
                                 const isInProgressTask = isDynamicTask && task.accepted && !task.claimable && !task.claimed;
-                                const effectiveProgress = isDurationTask
+                                const effectiveProgress = isFixedDurationTask
                                     ? Math.max(task.progress, displayTotalSeconds)
                                     : task.progress;
                                 const progressDenominator = Math.max(task.target, 1);
                                 const progressRatio = Math.min(1, Math.max(0, effectiveProgress / progressDenominator));
                                 const progressPercent = Math.round(progressRatio * 100);
-                                const progressText = isDurationTask
+                                const progressText = isFixedDurationTask
+                                    ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
+                                    : isDynamicDurationTask
                                     ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
                                     : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
 
@@ -1213,7 +1222,20 @@ const Profile: React.FC = () => {
                                                 </button>
                                             )}
                                             {!canAcceptNow && !canClaimNow && !task.claimed && (
-                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task, t)}</span>
+                                                isTaskPlayable(task) ? (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.dailyTaskGoPlayBtn}
+                                                        onClick={() => {
+                                                            const targetGameFileId = task.gameFileId || task.key.replace(/^(play_specific_game_\d+_|config_\d+_)/, '');
+                                                            navigate(`/game/${targetGameFileId}?source=history`);
+                                                        }}
+                                                    >
+                                                        {getTaskActionText(task, t)}
+                                                    </button>
+                                                ) : (
+                                                    <span className={styles.dailyTaskActionText}>{getTaskActionText(task, t)}</span>
+                                                )
                                             )}
                                         </div>
                                     </div>

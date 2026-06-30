@@ -779,6 +779,23 @@
     font-weight: 600;
 }
 
+.dailyTaskGoPlayBtn {
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #FB4655 0%, #FF7D7D 100%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.dailyTaskGoPlayBtn:hover {
+    opacity: 0.9;
+}
+
 .dailyTaskClaimBtn {
     border: none;
     border-radius: 999px;

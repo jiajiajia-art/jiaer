@@ -385,7 +385,7 @@ const GameDetail: React.FC = () => {
 
         if (normalized === 'st') {
             useGameStore.getState().clearAll();
-            navigate(`/st/${fileId}`);
+            navigate(`/st/${fileId}?source=game_detail`);
             return;
         }
 
@@ -520,7 +520,7 @@ const GameDetail: React.FC = () => {
         }
 
         if (normalizedGameMode === 'st') {
-            navigate(`/st/${fileId}`);
+            navigate(`/st/${fileId}?source=game_detail`);
             return;
         }
 

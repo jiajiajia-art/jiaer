@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import ConfirmModal from './CommonModal/ConfirmModal';
 import dailyTasksApi, {
     type AdminDailyTaskConfig,
     type AdminDailyTaskPayload,
@@ -46,7 +47,6 @@ const createEmptyForm = (): DailyTaskFormState => ({
 const statusLabelMap: Record<AdminDailyTaskStatus, string> = {
     draft: '草稿',
     published: '已发布',
-    offline: '已下线',
 };
 
 const taskKindLabelMap: Record<AdminDailyTaskKind, string> = {
@@ -108,6 +108,8 @@ const DailyTasksAdminManager: React.FC = () => {
     const [form, setForm] = useState<DailyTaskFormState>(createEmptyForm());
     const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [taskToDelete, setTaskToDelete] = useState<AdminDailyTaskConfig | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Game search state
     const [gameSearchKeyword, setGameSearchKeyword] = useState('');
@@ -202,8 +204,11 @@ const DailyTasksAdminManager: React.FC = () => {
     };
 
     const handleSelectGame = (game: UserGameData) => {
-        updateForm('gameFileId', game.file_id);
-        updateForm('selectedGameTitle', game.title || game.file_id);
+        setForm((prev) => ({
+            ...prev,
+            gameFileId: game.file_id,
+            selectedGameTitle: game.title || game.file_id,
+        }));
         setGameSearchKeyword('');
         setGameSearchResults([]);
         setShowGameDropdown(false);
@@ -215,13 +220,6 @@ const DailyTasksAdminManager: React.FC = () => {
         setGameSearchKeyword('');
         setGameSearchResults([]);
         setShowGameDropdown(false);
-    };
-
-    const handleGameSearchFocus = () => {
-        if (form.gameFileId) {
-            setGameSearchKeyword(getSelectedGameTitle());
-        }
-        setShowGameDropdown(true);
     };
 
     const resetModalState = () => {
@@ -374,6 +372,22 @@ const DailyTasksAdminManager: React.FC = () => {
         }
     };
 
+    const handleDeleteTask = async () => {
+        if (!taskToDelete) return;
+
+        try {
+            setIsDeleting(true);
+            await dailyTasksApi.remove(taskToDelete.id);
+            toast.success('每日任务删除成功');
+            setTaskToDelete(null);
+            await loadTasks();
+        } catch (error) {
+            toast.error(getErrorMessage(error, '每日任务删除失败'));
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <div className={styles.panelStack}>
             <section className={styles.heroCard}>
@@ -414,7 +428,6 @@ const DailyTasksAdminManager: React.FC = () => {
                         <table className={styles.table}>
                             <thead>
                                 <tr>
-                                    <th>ID</th>
                                     <th>任务信息</th>
                                     <th>类型</th>
                                     <th>目标</th>
@@ -430,7 +443,6 @@ const DailyTasksAdminManager: React.FC = () => {
                             <tbody>
                                 {tasks.map((task) => (
                                     <tr key={task.id}>
-                                        <td>{task.id}</td>
                                         <td>
                                             <div className={styles.taskTitle}>
                                                 <div className={styles.taskTitleMain}>{task.title}</div>
@@ -461,12 +473,10 @@ const DailyTasksAdminManager: React.FC = () => {
                                                 className={`${styles.statusTag} ${
                                                     task.status === 'published'
                                                         ? styles.statusPublished
-                                                        : task.status === 'draft'
-                                                            ? styles.statusDraft
-                                                            : styles.statusOffline
+                                                        : styles.statusDraft
                                                 }`}
                                             >
-                                                {statusLabelMap[task.status]}
+                                                {statusLabelMap[task.status] ?? task.status}
                                             </span>
                                         </td>
                                         <td>{task.sortOrder ?? '-'}</td>
@@ -494,15 +504,13 @@ const DailyTasksAdminManager: React.FC = () => {
                                                         设为草稿
                                                     </button>
                                                 )}
-                                                {task.status !== 'offline' && (
-                                                    <button
-                                                        type="button"
-                                                        className={styles.dangerButton}
-                                                        onClick={() => void handleQuickStatusChange(task, 'offline')}
-                                                    >
-                                                        下线
-                                                    </button>
-                                                )}
+                                                <button
+                                                    type="button"
+                                                    className={styles.dangerButton}
+                                                    onClick={() => setTaskToDelete(task)}
+                                                >
+                                                    删除
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -536,7 +544,6 @@ const DailyTasksAdminManager: React.FC = () => {
                                 >
                                     <option value="draft">草稿</option>
                                     <option value="published">已发布</option>
-                                    <option value="offline">已下线</option>
                                 </select>
                             </label>
 
@@ -637,38 +644,44 @@ const DailyTasksAdminManager: React.FC = () => {
                                                 ×
                                             </button>
                                         </div>
-                                    ) : null}
-                                    <div className={styles.gameSearchInputRow}>
-                                        <input
-                                            className={styles.textInput}
-                                            value={showGameDropdown ? gameSearchKeyword : (form.gameFileId ? getSelectedGameTitle() : '')}
-                                            onChange={(event) => {
-                                                setGameSearchKeyword(event.target.value);
-                                                setShowGameDropdown(true);
-                                            }}
-                                            onFocus={handleGameSearchFocus}
-                                            placeholder="输入作品标题搜索并选择..."
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    {showGameDropdown && (
-                                        <div className={styles.gameSearchDropdown} ref={gameDropdownRef}>
-                                            {isSearchingGames ? (
-                                                <div className={styles.gameSearchItem}>搜索中...</div>
-                                            ) : gameSearchResults.length === 0 ? (
-                                                <div className={styles.gameSearchItem}>未找到匹配的作品</div>
-                                            ) : (
-                                                gameSearchResults.map((game) => (
-                                                    <div
-                                                        key={game.file_id}
-                                                        className={`${styles.gameSearchItem} ${game.file_id === form.gameFileId ? styles.gameSearchItemSelected : ''}`}
-                                                        onClick={() => handleSelectGame(game)}
-                                                    >
-                                                        <span className={styles.gameSearchItemTitle}>{game.title || game.file_id}</span>
-                                                    </div>
-                                                ))
+                                    ) : (
+                                        <>
+                                            <div className={styles.gameSearchInputRow}>
+                                                <input
+                                                    className={styles.textInput}
+                                                    value={gameSearchKeyword}
+                                                    onChange={(event) => {
+                                                        setGameSearchKeyword(event.target.value);
+                                                        setShowGameDropdown(true);
+                                                    }}
+                                                    onFocus={() => setShowGameDropdown(true)}
+                                                    placeholder="输入作品标题搜索并选择..."
+                                                    autoComplete="off"
+                                                />
+                                            </div>
+                                            {showGameDropdown && (
+                                                <div className={styles.gameSearchDropdown} ref={gameDropdownRef}>
+                                                    {isSearchingGames ? (
+                                                        <div className={styles.gameSearchItem}>搜索中...</div>
+                                                    ) : gameSearchResults.length === 0 ? (
+                                                        <div className={styles.gameSearchItem}>未找到匹配的作品</div>
+                                                    ) : (
+                                                        gameSearchResults.map((game) => (
+                                                            <div
+                                                                key={game.file_id}
+                                                                className={`${styles.gameSearchItem} ${game.file_id === form.gameFileId ? styles.gameSearchItemSelected : ''}`}
+                                                                onMouseDown={(event) => {
+                                                                    event.preventDefault();
+                                                                    handleSelectGame(game);
+                                                                }}
+                                                            >
+                                                                <span className={styles.gameSearchItemTitle}>{game.title || game.file_id}</span>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
                                             )}
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                                 <span className={styles.fieldHint}>搜索并选择作品后，作品的 fileId 将自动填入</span>
@@ -708,6 +721,21 @@ const DailyTasksAdminManager: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={Boolean(taskToDelete)}
+                onConfirm={() => {
+                    void handleDeleteTask();
+                }}
+                onCancel={() => {
+                    if (isDeleting) return;
+                    setTaskToDelete(null);
+                }}
+                title="删除每日任务"
+                message={taskToDelete ? `确定要删除任务“${taskToDelete.title || '未命名任务'}”吗？删除后不可恢复。` : '确定要删除这条每日任务吗？删除后不可恢复。'}
+                confirmButtonText={isDeleting ? '删除中...' : '确认删除'}
+                cancelButtonText="取消"
+            />
         </div>
     );
 };

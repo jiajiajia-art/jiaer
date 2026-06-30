@@ -1,7 +1,7 @@
 import type { ApiResponse } from '../api.types';
 import { api } from '../base';
 
-export type AdminDailyTaskStatus = 'draft' | 'published' | 'offline';
+export type AdminDailyTaskStatus = 'draft' | 'published';
 export type AdminDailyTaskKind = 'play_specific_game' | 'play_specific_game_duration';
 
 export interface AdminDailyTaskConfig {
@@ -45,6 +45,8 @@ const dailyTasksApi = {
         api.post<ApiResponse<AdminDailyTaskConfig>>('/admin/daily-tasks/configs', payload),
     update: (id: number, payload: AdminDailyTaskPayload) =>
         api.put<ApiResponse<AdminDailyTaskConfig>>(`/admin/daily-tasks/configs/${id}`, payload),
+    remove: (id: number) =>
+        api.delete<ApiResponse<null>>(`/admin/daily-tasks/configs/${id}`),
 };
 
 export default dailyTasksApi;
