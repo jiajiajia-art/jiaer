@@ -22,7 +22,7 @@ export function useExternalLinkCopyModal() {
             title="打开外部链接"
             message="小程序内无法直接打开外部链接，请复制后在浏览器中打开"
             linkUrl={state.url}
-            copyButtonText="复制链接"
+            copyButtonText="复制"
             icon="🔗"
         />
     );
