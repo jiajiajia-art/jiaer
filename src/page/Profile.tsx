@@ -1132,7 +1132,6 @@ const Profile: React.FC = () => {
                             {dailyTasks.map((task) => {
                                 const isFixedDurationTask = isDurationTaskCode(task.code);
                                 const isDynamicDurationTask = isDynamicDurationDailyTask(task);
-                                const isDurationTask = isFixedDurationTask || isDynamicDurationTask;
                                 const isDynamicTask = isDynamicDailyTask(task);
                                 const isTaskActionLoading = Boolean(taskActionLoadingMap[task.key]);
                                 const canClaimNow = Boolean(task.claimRequest) && task.claimable && !task.claimed;

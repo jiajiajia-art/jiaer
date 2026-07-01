@@ -116,7 +116,7 @@ const hasSummaryInPayload = (payload: DailyTaskPayload): boolean => {
 };
 
 const isActiveDynamicTask = (task: DailyTaskItem): boolean =>
-    !!task.isDynamic && !task.claimed && (task.progress > 0 || !!task.accepted);
+    !!task.isDynamic;
 
 const mergeTasksByUpdatedKeys = (
     prevTasks: DailyTaskItem[],
