@@ -601,7 +601,7 @@ const GameDetail: React.FC = () => {
         // 备用方案：复制链接到剪贴板
         try {
             await navigator.clipboard.writeText(window.location.href);
-            toast.success(t('linkCopied'));
+            toast.success(t('gameDetail.linkCopied'));
         } catch (error) {
             // 如果 clipboard API 也不可用，使用传统方法
             const textArea = document.createElement('textarea');
@@ -612,7 +612,7 @@ const GameDetail: React.FC = () => {
             textArea.select();
             try {
                 document.execCommand('copy');
-                toast.success(t('linkCopied'));
+                toast.success(t('gameDetail.linkCopied'));
             } catch (err) {
                 toast.error(t('copyFailed'));
             }
