@@ -1,96 +1,51 @@
-import React, { useRef, useCallback } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
-import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
+import { HOST_ADDRESS } from '../../config';
 import styles from './QRCodeModal.module.css';
+
+// 二维码 API 地址
+const QR_CODE_API_URL = `${HOST_ADDRESS}/api/qrcode`;
 
 interface QRCodeModalProps {
     isOpen: boolean;
     onClose: () => void;
     url: string;
-    title?: string;
 }
 
 const QRCodeModal: React.FC<QRCodeModalProps> = ({
     isOpen,
     onClose,
     url,
-    title,
 }) => {
     const { t } = useTranslation();
-    const qrCodeRef = useRef<HTMLDivElement>(null);
-
-    const handleDownload = useCallback(() => {
-        const svg = document.getElementById('qr-code-svg');
-        if (!svg) return;
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const svgData = new XMLSerializer().serializeToString(svg);
-        const img = new Image();
-
-        canvas.width = 400;
-        canvas.height = 400;
-
-        img.onload = () => {
-            if (ctx) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            }
-
-            const pngUrl = canvas.toDataURL('image/png');
-            const downloadLink = document.createElement('a');
-            downloadLink.href = pngUrl;
-            downloadLink.download = `qrcode-${Date.now()}.png`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-        };
-
-        img.onerror = () => {
-            console.error('Failed to load SVG for QR code');
-        };
-
-        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-    }, []);
 
     if (!isOpen) return null;
 
-    const displayTitle = title || t('createGame.game');
+    // 生成后端二维码 API 的 URL
+    const qrCodeUrl = `${QR_CODE_API_URL}?url=${encodeURIComponent(url)}`;
 
     const modalContent = (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalWrapper} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modal}>
-                    <div className={styles.header}>
-                        <h2 className={styles.title}>{displayTitle}</h2>
-                        <button className={styles.closeButton} onClick={onClose}>
-                            <img
-                                src={`${import.meta.env.BASE_URL}data/assets/gameDetail/关闭.png`}
-                                alt={t('common.close')}
-                            />
-                        </button>
-                    </div>
+                    <button className={styles.closeButton} onClick={onClose}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
 
                     <div className={styles.body}>
-                        <div className={styles.qrContainer} ref={qrCodeRef}>
-                            <QRCodeSVG
-                                id="qr-code-svg"
-                                value={url}
-                                size={240}
-                                level="H"
-                                includeMargin={true}
-                                bgColor="#ffffff"
-                                fgColor="#000000"
+                        <div className={styles.qrContainer}>
+                            <img
+                                src={qrCodeUrl}
+                                alt="QR Code"
+                                className={styles.qrImage}
                             />
                         </div>
 
-                        <p className={styles.tip}>{t('gameDetail.scanToOpen')}</p>
-
-                        <button className={styles.downloadButton} onClick={handleDownload}>
-                            {t('gameDetail.downloadQRCode')}
-                        </button>
+                        <p className={styles.longPressTip}>{t('gameDetail.longPressToSave')}</p>
                     </div>
                 </div>
             </div>

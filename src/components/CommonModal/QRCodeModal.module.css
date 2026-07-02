@@ -47,44 +47,33 @@
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.header {
-    background: linear-gradient(135deg, #FB4655 0%, #e63946 100%);
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #ffffff;
-    margin: 0;
+    position: relative;
 }
 
 .closeButton {
-    width: 36px;
-    height: 36px;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     background: transparent;
     border: none;
     padding: 0;
+    color: #999;
+    z-index: 10;
 }
 
-.closeButton img {
-    width: 36px;
-    height: 36px;
-    filter: brightness(0) invert(1);
+.closeButton:hover {
+    color: #333;
 }
 
 .closeButton:active {
-    transform: scale(0.95);
+    transform: scale(0.9);
 }
 
 .body {
@@ -102,10 +91,17 @@
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.tip {
+.qrImage {
+    display: block;
+    width: 240px;
+    height: 240px;
+}
+
+.longPressTip {
     font-size: 14px;
-    color: #666666;
+    color: #999999;
     margin: 0;
+    text-align: center;
 }
 
 .downloadButton {
@@ -135,14 +131,6 @@
     .modal {
         width: 90vw;
         max-width: 320px;
-    }
-
-    .header {
-        padding: 14px 16px;
-    }
-
-    .title {
-        font-size: 18px;
     }
 
     .body {

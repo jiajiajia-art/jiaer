@@ -23,6 +23,8 @@ import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
 import ReplayList from '../components/Galgame/ReplayList';
+import ShareModal from '../components/CommonModal/ShareModal';
+import QRCodeModal from '../components/CommonModal/QRCodeModal';
 import type { ReplayVisibility } from '../api/galgame/replay';
 import type { SaveSummaryItem } from '../api/galgame/saves';
 import { useTrackingStore } from '../store/trackingStore';
@@ -124,6 +126,8 @@ const GameDetail: React.FC = () => {
     const [activeReplayVisibility, setActiveReplayVisibility] = useState<ReplayVisibility>('public');
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -656,8 +660,6 @@ const GameDetail: React.FC = () => {
         };
     }, [game?.cover_url]);
 
-    const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-
     const normalizeNewlines = useCallback((text: string) => {
         return (text ?? '').replaceAll('\\n', '\n').replaceAll('/n', '\n');
     }, []);
@@ -670,32 +672,15 @@ const GameDetail: React.FC = () => {
         }
     };
 
-    const handleShare = async () => {
-        // 优先使用原生分享 API
-        if (canNativeShare) {
-            try {
-                await navigator.share({
-                    title: game?.title || t('createGame.game'),
-                    text: game?.description || '',
-                    url: window.location.href,
-                });
-                return;
-            } catch (error) {
-                // 用户取消分享或其他错误，继续执行备用方案
-                if ((error as any)?.name !== 'AbortError') {
-                    // 使用备用方案
-                } else {
-                    return; // 用户取消，不执行备用方案
-                }
-            }
-        }
+    const handleShare = () => {
+        setIsShareModalOpen(true);
+    };
 
-        // 备用方案：复制链接到剪贴板
+    const handleCopyLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
             toast.success(t('gameDetail.linkCopied'));
         } catch (error) {
-            // 如果 clipboard API 也不可用，使用传统方法
             const textArea = document.createElement('textarea');
             textArea.value = window.location.href;
             textArea.style.position = 'fixed';
@@ -710,6 +695,11 @@ const GameDetail: React.FC = () => {
             }
             document.body.removeChild(textArea);
         }
+    };
+
+    const handleShowQRCode = () => {
+        setIsShareModalOpen(false);
+        setIsQRCodeModalOpen(true);
     };
 
     // ===== 存档读取（列表 → 预览 → 加载） =====
@@ -1008,6 +998,17 @@ const GameDetail: React.FC = () => {
                 item={previewItem}
                 onLoad={handleLoadSave}
                 loadButtonText={t('gameDetail.startExperience')}
+            />
+            <ShareModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                onCopyLink={handleCopyLink}
+                onShowQRCode={handleShowQRCode}
+            />
+            <QRCodeModal
+                isOpen={isQRCodeModalOpen}
+                onClose={() => setIsQRCodeModalOpen(false)}
+                url={window.location.href}
             />
             {isReplayDrawerOpen && (
                 <div className={`${styles.startOptionsOverlay} ${styles.replayDrawerOverlay}`} onClick={closeReplayDrawer}>
