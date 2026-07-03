@@ -2,7 +2,8 @@ import type { ApiResponse } from '../api.types';
 import { api } from '../base';
 
 export type AdminDailyTaskStatus = 'draft' | 'published';
-export type AdminDailyTaskKind = 'play_specific_game' | 'play_specific_game_duration';
+export type AdminDailyTaskKind = 'play_specific_game' | 'play_specific_game_duration' | 'game_promotion';
+// game_promotion：用户领取任务后获得专属 promo code，分享链接拉新/回流，进度由后端 visits 统计
 
 export interface AdminDailyTaskConfig {
     id: number;

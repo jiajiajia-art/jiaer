@@ -5,6 +5,8 @@ import { FcGoogle } from 'react-icons/fc';
 import { useTranslation } from 'react-i18next';
 import styles from './AuthModal.module.css';
 import { auth } from '../api/account/authApi';
+import gamePromotionApi from '../api/promotion/gamePromotionApi';
+import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { useAuthStore } from '../store/useAuthStore';
 import { useGoogleAuth } from '../hooks/useGoogleAuth';
 import { LANGUAGE } from '../config';
@@ -337,6 +339,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
 
                 if (response.data?.data) {
                     login(response.data.data);
+                    // 登录前若点过推广链，session 里可能有 pending click，交给后端一次性归因
+                    void gamePromotionApi.consumePending(getOrCreatePromoAnonId()).catch(() => {});
                     if (onLogin) {
                         onLogin(phone, password);
                     }
@@ -351,6 +355,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onRegis
                     password: password,
                     avatarUrl: '',
                     nickname: '',
+                    // 注册时携带 anonId，后端将匿名点击与新建账号关联（game_promotion invitee）
+                    promoAnonId: getOrCreatePromoAnonId(),
                 });
 
                 if (response.data?.data) {

@@ -37,10 +37,12 @@ import { useDailyTaskStore } from '../store/dailyTaskStore';
 import {
     isDynamicDailyTask,
     isDynamicDurationDailyTask,
+    isDynamicPromotionDailyTask,
     isDurationTaskCode,
 } from '../api/statistics/dailyTask.type';
 import { getCreatorProfile, saveCreatorProfile } from '../api/incentive/creatorProfileApi';
 import type { CreatorProfileData } from '../components/CreatorProfile.tsx';
+import { buildGamePromotionLink } from '../utils/gamePromotionLink';
 import { getApiErrorMessage } from '../utils/error';
 
 const formatDuration = (totalSeconds: number): string => {
@@ -53,21 +55,35 @@ const formatDuration = (totalSeconds: number): string => {
 const getTaskActionText = (
     task: {
         code: string;
+        taskKind?: string;
         gameTitle?: string;
         gameFileId?: string;
     },
     t: (key: string, options?: Record<string, unknown>) => string,
 ): string => {
+    if (isDynamicPromotionDailyTask(task)) return '复制推广链接'; // 推广任务不走「去游玩」
     if (task.code === 'like_once') return t('profile.taskGoLike');
     if (task.code === 'play_3_unique' || task.code === 'play_three_games') return t('profile.taskGoPlay');
     if (task.gameTitle) return t('profile.taskGoPlaySpecific', { gameTitle: task.gameTitle });
     return t('profile.taskInProgress');
 };
 
-const isTaskPlayable = (task: { code: string; gameFileId?: string }): boolean => {
+const isTaskPlayable = (task: { code: string; taskKind?: string; gameFileId?: string }): boolean => {
+    if (isDynamicPromotionDailyTask(task)) return false; // 推广任务用复制链接，不跳转游玩
     if (task.gameFileId) return true;
     if (task.code === 'play_3_unique' || task.code === 'play_three_games') return true;
     return false;
+};
+
+/** 用户领取 game_promotion 任务后，复制带 ?promo= 的分享链接 */
+const copyPromotionLink = async (link: string) => {
+    try {
+        await navigator.clipboard.writeText(link);
+        toast.success('推广链接已复制');
+    } catch (error) {
+        console.error('copy promotion link failed:', error);
+        toast.error('复制失败，请手动复制链接');
+    }
 };
 const isWebViewEnv = (): boolean => {
     const win = window as unknown as Record<string, unknown>;
@@ -1132,7 +1148,13 @@ const Profile: React.FC = () => {
                             {dailyTasks.map((task) => {
                                 const isFixedDurationTask = isDurationTaskCode(task.code);
                                 const isDynamicDurationTask = isDynamicDurationDailyTask(task);
+                                const isDynamicPromotionTask = isDynamicPromotionDailyTask(task);
                                 const isDynamicTask = isDynamicDailyTask(task);
+                                // accept 后才有 promotionCode；复制链路由 buildGamePromotionLink 生成
+                                const canCopyPromotionLink = isDynamicPromotionTask
+                                    && task.accepted
+                                    && Boolean(task.promotionCode)
+                                    && Boolean(task.gameFileId);
                                 const isTaskActionLoading = Boolean(taskActionLoadingMap[task.key]);
                                 const canClaimNow = Boolean(task.claimRequest) && task.claimable && !task.claimed;
                                 const canAcceptNow = isDynamicTask && task.acceptRequired && !task.accepted && !task.claimed;
@@ -1188,6 +1210,19 @@ const Profile: React.FC = () => {
                                             <span className={`${styles.dailyTaskStatus} ${task.completed ? styles.dailyTaskStatusDone : ''}`}>
                                                 {statusText}
                                             </span>
+                                            {canCopyPromotionLink && task.promotionCode && task.gameFileId && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.dailyTaskClaimBtn}
+                                                    onClick={() => {
+                                                        void copyPromotionLink(
+                                                            buildGamePromotionLink(task.gameFileId!, task.promotionCode!),
+                                                        );
+                                                    }}
+                                                >
+                                                    复制推广链接
+                                                </button>
+                                            )}
                                             {canAcceptNow && (
                                                 <button
                                                     type="button"
@@ -1220,7 +1255,8 @@ const Profile: React.FC = () => {
                                                     {isTaskActionLoading ? t('profile.claiming') : t('profile.taskClaimReward')}
                                                 </button>
                                             )}
-                                            {!canAcceptNow && !canClaimNow && !task.claimed && (
+                                            {!canAcceptNow && !canClaimNow && !task.claimed && !canCopyPromotionLink && (
+                                                // 推广任务已展示「复制链接」，不再显示「去游玩」
                                                 isTaskPlayable(task) ? (
                                                     <button
                                                         type="button"

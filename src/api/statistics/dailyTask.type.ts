@@ -33,6 +33,10 @@ export interface DailyTaskItem {
     acceptedAt?: string | null;
     gameFileId?: string;
     gameTitle?: string;
+    /** 动态推广任务：accept 后后端下发的专属码 */
+    promotionCode?: string;
+    /** 可选；Profile 侧用 buildGamePromotionLink 拼装，与 vite base 一致 */
+    promotionLink?: string;
     isDynamic?: boolean;
 }
 
@@ -169,6 +173,11 @@ export const isDurationTaskCode = (code: string): boolean => code === 'online_10
 export const isDynamicDurationDailyTask = (
     task: Pick<DailyTaskItem, 'taskKind' | 'taskSource' | 'taskId'>,
 ): boolean => Boolean(isDynamicDailyTask(task) && task.taskKind === 'play_specific_game_duration');
+
+/** 配置型每日任务：game_promotion（推广 N 人有效访问绑定游戏） */
+export const isDynamicPromotionDailyTask = (
+    task: Pick<DailyTaskItem, 'taskKind' | 'taskSource' | 'taskId'>,
+): boolean => Boolean(isDynamicDailyTask(task) && task.taskKind === 'game_promotion');
 
 export const isDynamicDailyTask = (
     task: Pick<DailyTaskItem, 'isDynamic' | 'taskSource' | 'taskId'>,
@@ -584,6 +593,9 @@ export const normalizeDailyTaskPayload = (payload: DailyTaskPayload | null | und
                 acceptedAt: state.acceptedAt,
                 gameFileId: String(record.gameFileId ?? '').trim() || undefined,
                 gameTitle: String(record.gameTitle ?? '').trim() || undefined,
+                // 来自 daily-status 动态任务块；game_promotion 在 accept 后由后端写入
+                promotionCode: String(record.promotionCode ?? '').trim() || undefined,
+                promotionLink: String(record.promotionLink ?? '').trim() || undefined,
                 isDynamic: true,
             });
             if (!dynamicTaskOrder.includes(key)) {

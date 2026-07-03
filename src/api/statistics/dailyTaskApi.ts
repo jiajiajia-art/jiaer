@@ -6,7 +6,14 @@ const dailyTaskApi = {
     getDailyTasks: () =>
         api.get<ApiResponse<DailyTaskPayload>>('/auth/tasks/daily-status'),
     acceptDailyTask: (taskId: number) =>
-        api.post<ApiResponse<{ taskId: number; acceptedAt: string; dayKey: string }>>('/auth/tasks/daily/accept', {
+        // game_promotion 首次 accept 时后端会返回 promotionCode / promotionLink
+        api.post<ApiResponse<{
+            taskId: number;
+            acceptedAt: string;
+            dayKey: string;
+            promotionCode?: string | null;
+            promotionLink?: string | null;
+        }>>('/auth/tasks/daily/accept', {
             taskId,
         }),
     claimDailyTask: (payload: DailyTaskClaimRequest) =>

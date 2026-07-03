@@ -63,6 +63,8 @@ export interface SignupRequest {
   // email: string;
   avatarUrl: string;
   nickname: string;
+  /** 未登录点击推广链时的匿名 ID，注册时带给后端以归因 invitee（见 promoAnonId.ts / GameDetail） */
+  promoAnonId?: string;
   // code: string;
 }
 

@@ -29,6 +29,8 @@ import type { ReplayVisibility } from '../api/galgame/replay';
 import type { SaveSummaryItem } from '../api/galgame/saves';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
+import gamePromotionApi from '../api/promotion/gamePromotionApi';
+import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { useTranslation } from 'react-i18next';
 
@@ -51,6 +53,40 @@ const DEFAULT_PLAY_STATUS = {
 const REPLAY_VISIBILITY_TABS_PUBLIC = 'public';
 const REPLAY_VISIBILITY_TABS_UNLISTED = 'unlisted';
 const REPLAY_VISIBILITY_TABS_PRIVATE = 'private';
+
+/** sessionStorage：未登录用户从 ?promo= 进详情页时暂存 code，登录后 consumePending 提交 */
+const PENDING_PROMO_STORAGE_KEY = 'pending_game_promotion_code';
+
+/** 支持 ?promo= 与 ?promotionCode= 两种 query（分享链与旧链接兼容） */
+const readPromoCodeFromLocation = (search: string): string => {
+    const params = new URLSearchParams(search);
+    return String(params.get('promo') || params.get('promotionCode') || '').trim();
+};
+
+const rememberPendingPromoCode = (promotionCode: string) => {
+    if (!promotionCode) return;
+    try {
+        sessionStorage.setItem(PENDING_PROMO_STORAGE_KEY, promotionCode);
+    } catch {
+        // ignore storage errors
+    }
+};
+
+const readPendingPromoCode = (): string => {
+    try {
+        return String(sessionStorage.getItem(PENDING_PROMO_STORAGE_KEY) || '').trim();
+    } catch {
+        return '';
+    }
+};
+
+const clearPendingPromoCode = () => {
+    try {
+        sessionStorage.removeItem(PENDING_PROMO_STORAGE_KEY);
+    } catch {
+        // ignore storage errors
+    }
+};
 
 // 判断是否点赞的辅助函数
 const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
@@ -192,6 +228,46 @@ const GameDetail: React.FC = () => {
                 }
             });
     }, [fileIdParam, enterSource, location.key]);
+
+    // 推广链落地：记录点击；已登录则立即 attribute，未登录则等 AuthModal/本页 consumePending
+    useEffect(() => {
+        const promotionCode = readPromoCodeFromLocation(location.search);
+        if (!promotionCode) return;
+
+        rememberPendingPromoCode(promotionCode);
+        const anonId = getOrCreatePromoAnonId();
+        const clickedAt = new Date().toISOString();
+
+        void gamePromotionApi.recordClick({
+            promotionCode,
+            anonId,
+            clickedAt,
+        }).catch((error) => {
+            console.warn('[GameDetail] record promotion click failed:', error);
+        });
+
+        if (userId) {
+            void gamePromotionApi.attribute({
+                promotionCode,
+                anonId,
+                clickedAt,
+                isNewUser: false,
+            }).then(() => {
+                clearPendingPromoCode();
+            }).catch((error) => {
+                console.warn('[GameDetail] attribute promotion failed:', error);
+            });
+        }
+    }, [location.search, userId]);
+
+    // 任意路径登录后进入详情页时，补消费 pending 推广点击（与 AuthModal 登录分支双保险）
+    useEffect(() => {
+        if (!userId) return;
+        const anonId = getOrCreatePromoAnonId();
+        void gamePromotionApi.consumePending(anonId).catch((error) => {
+            console.warn('[GameDetail] consume pending promotion failed:', error);
+        });
+    }, [userId]);
 
     // 用户进入游戏，用户来源
     const mapSourceForSession = useCallback((source: 'link' | 'main_page' | 'search' | 'other'): 'link' | 'game_detail' | 'history' | 'other' => {

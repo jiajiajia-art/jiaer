@@ -52,6 +52,7 @@ const statusLabelMap: Record<AdminDailyTaskStatus, string> = {
 const taskKindLabelMap: Record<AdminDailyTaskKind, string> = {
     play_specific_game: '游玩次数任务',
     play_specific_game_duration: '游玩时长任务',
+    game_promotion: '游戏推广任务', // targetCount = 需完成推广的有效访问人数
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -269,10 +270,11 @@ const DailyTasksAdminManager: React.FC = () => {
             setFormError('请先搜索并选择要绑定的作品');
             return null;
         }
-        if (form.taskKind === 'play_specific_game') {
+        // 游玩次数与推广任务共用 targetCount；时长任务用 targetSeconds
+        if (form.taskKind === 'play_specific_game' || form.taskKind === 'game_promotion') {
             const targetCount = Number(form.targetCount);
             if (!Number.isInteger(targetCount) || targetCount <= 0) {
-                setFormError('目标次数必须是大于 0 的整数');
+                setFormError(form.taskKind === 'game_promotion' ? '推广次数必须是大于 0 的整数' : '目标次数必须是大于 0 的整数');
                 return null;
             }
         }
@@ -317,7 +319,8 @@ const DailyTasksAdminManager: React.FC = () => {
             sortOrder: form.sortOrder.trim() ? sortOrder : undefined,
         };
 
-        if (form.taskKind === 'play_specific_game') {
+        // 游玩次数与推广任务共用 targetCount；时长任务用 targetSeconds
+        if (form.taskKind === 'play_specific_game' || form.taskKind === 'game_promotion') {
             payload.targetCount = Number(form.targetCount);
         } else {
             payload.targetSeconds = Number(form.targetSeconds);
@@ -453,9 +456,11 @@ const DailyTasksAdminManager: React.FC = () => {
                                         <td>
                                             {task.taskKind === 'play_specific_game'
                                                 ? `${task.targetCount ?? '-'} 次`
-                                                : task.targetSeconds
-                                                  ? `${task.targetSeconds} 秒`
-                                                  : '-'}
+                                                : task.taskKind === 'game_promotion'
+                                                  ? `${task.targetCount ?? '-'} 人` // 推广有效访问人数目标
+                                                  : task.targetSeconds
+                                                    ? `${task.targetSeconds} 秒`
+                                                    : '-'}
                                         </td>
                                         <td>
                                             <div className={styles.gameCell}>
@@ -582,9 +587,9 @@ const DailyTasksAdminManager: React.FC = () => {
                                 />
                             </label>
 
-                            {form.taskKind === 'play_specific_game' ? (
+                            {form.taskKind === 'play_specific_game' || form.taskKind === 'game_promotion' ? (
                                 <label className={styles.fieldLabel}>
-                                    目标次数
+                                    {form.taskKind === 'game_promotion' ? '推广次数' : '目标次数'}
                                     <input
                                         className={styles.textInput}
                                         type="number"
