@@ -25,6 +25,13 @@ import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { isMiniProgramEnv } from '../utils/miniProgram';
+import MorePromptFormPanel, { type MorePromptFormPanelRef } from '../components/GameSettingEditor/MorePromptForms/MorePromptFormPanel';
+import { useMorePromptForms } from '../hooks/editor/useMorePromptForms';
+import {
+    buildMorePromptPanelId,
+    isMorePromptPanel,
+} from '../utils/morePromptForms';
+import type { MorePromptForm } from '../api/galgame/EditorData.type';
 
 const SCREENWRITER_SEED_KEY = 'funloom_screenwriter_seed';
 const SCREENWRITER_API_BASE_URL = 'http://localhost:3000/api';
@@ -76,6 +83,25 @@ const GameSettingsEditor = () => {
     const { createGalgameSession, handlePublishGame } = useEditorSession({
         fileId,
         mode,
+    });
+
+    const refreshEditorData = useCallback(async () => {
+        if (fileId) {
+            await fetchEditorData(fileId);
+        }
+    }, [fileId, fetchEditorData]);
+
+    // Visual 侧栏 morePromptForms：持久化到 world.json，叙事 LLM 每轮注入
+    const {
+        forms: morePromptForms,
+        isSaving: isSavingMorePrompt,
+        canAddMore: canAddMorePrompt,
+        saveForms,
+        deleteForm,
+    } = useMorePromptForms({
+        fileId,
+        initialForms: (gameData?.worldSetting as { morePromptForms?: MorePromptForm[] } | undefined)?.morePromptForms,
+        onDataRefresh: refreshEditorData,
     });
 
     // 创建空游戏
@@ -166,6 +192,7 @@ const GameSettingsEditor = () => {
     const attributeGrowthPanelRef = useRef<AttributeGrowthPanelRef | null>(null);
     const worldPanelRef = useRef<WorldPanelRef | null>(null);
     const mapPanelRef = useRef<MapPanelRef | null>(null);
+    const morePromptFormPanelRef = useRef<MorePromptFormPanelRef | null>(null);
     
     // 使用回调 ref 来确保能捕获到 ref 的变化
     const setFunctionalNPCsPanelRef = useCallback((node: FunctionalNPCsPanelRef | null) => {
@@ -197,12 +224,53 @@ const GameSettingsEditor = () => {
         mapPanelRef.current = node;
     }, []);
 
+    const setMorePromptFormPanelRef = useCallback((node: MorePromptFormPanelRef | null) => {
+        morePromptFormPanelRef.current = node;
+    }, []);
+
+    const handleMorePromptSave = useCallback(async (
+        form: MorePromptForm,
+        allForms: MorePromptForm[],
+    ): Promise<boolean> => {
+        const ok = await saveForms(allForms);
+        if (ok) {
+            setActivePanel(buildMorePromptPanelId(form.id));
+        }
+        return ok;
+    }, [saveForms, setActivePanel]);
+
+    const handleMorePromptCancel = useCallback(() => {
+        setActivePanel('world');
+    }, [setActivePanel]);
+
+    const handleMorePromptDelete = useCallback(async (id: string) => {
+        const ok = await deleteForm(id);
+        if (ok && activePanel === buildMorePromptPanelId(id)) {
+            setActivePanel('world');
+        }
+    }, [activePanel, deleteForm, setActivePanel]);
+
     const handlePanelChange = useCallback(async (panelId: string) => {
         if (isParsing && panelId !== 'documents') {
             return;
         }
         if (!isParsed && panelId !== 'documents') {
             return;
+        }
+
+        // Visual only：worldInteraction 不打开 morePrompt 面板
+        if (isMorePromptPanel(panelId) && mode === 'worldInteraction') {
+            return;
+        }
+
+        // 离开 morePrompt 表单时检查未保存修改
+        if (isMorePromptPanel(activePanel) && panelId !== activePanel && morePromptFormPanelRef.current) {
+            const canLeave = morePromptFormPanelRef.current.checkBeforeLeave(() => {
+                void handlePanelChange(panelId);
+            });
+            if (!canLeave) {
+                return;
+            }
         }
 
         // 从功能性NPC面板切换出去时，检查是否有未保存的修改
@@ -310,6 +378,9 @@ const GameSettingsEditor = () => {
         if (activePanel === 'mapEdit' && mapPanelRef.current) {
             return await Promise.resolve(mapPanelRef.current.checkBeforeLeave());
         }
+        if (isMorePromptPanel(activePanel) && morePromptFormPanelRef.current) {
+            return morePromptFormPanelRef.current.checkBeforeLeave(action);
+        }
         return true;
     }, [activePanel]);
 
@@ -379,6 +450,9 @@ const GameSettingsEditor = () => {
                     isParsing={isParsing}
                     isParsed={isParsed}
                     mode={mode ?? undefined}
+                    morePromptForms={mode !== 'worldInteraction' ? morePromptForms : undefined}
+                    canAddMorePrompt={canAddMorePrompt}
+                    onMorePromptDelete={(id) => { void handleMorePromptDelete(id); }}
                 />
                 <main className={`${styles.main} ${isMiniProgramTxtMode ? styles.miniProgramMain : ''}`}>
                 <header className={`${styles.topBar} ${isMiniProgramTxtMode ? styles.miniProgramTopBar : ''}`}>
@@ -506,6 +580,22 @@ const GameSettingsEditor = () => {
                         mode={mode || 'visual'}
                     />
                 </section>
+
+                {mode !== 'worldInteraction' && (
+                    <section
+                        className={`${styles.panel} ${isMorePromptPanel(activePanel) ? styles.active : ''}`}
+                        id="morePromptForms"
+                    >
+                        <MorePromptFormPanel
+                            ref={setMorePromptFormPanelRef}
+                            activePanel={activePanel}
+                            forms={morePromptForms}
+                            isSaving={isSavingMorePrompt}
+                            onSave={handleMorePromptSave}
+                            onCancel={handleMorePromptCancel}
+                        />
+                    </section>
+                )}
 
                 {mode === 'worldInteraction' && (
                     <section className={`${styles.panel} ${activePanel === 'mapEdit' ? styles.active : ''}`} id="mapEdit">

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './Sidebar.module.css';
+import MorePromptNavSection from './MorePromptForms/MorePromptNavSection';
+import type { MorePromptForm } from '../../api/galgame/EditorData.type';
 
 interface SidebarProps {
     activePanel: string;
@@ -8,6 +10,10 @@ interface SidebarProps {
     isParsing: boolean;
     isParsed: boolean;
     mode?: string;
+    /** Visual only：侧栏动态提示词 morePromptForms */
+    morePromptForms?: MorePromptForm[];
+    canAddMorePrompt?: boolean;
+    onMorePromptDelete?: (id: string) => void;
 }
 
 interface NavItem {
@@ -35,7 +41,16 @@ const modeConfigs: Record<string, NavItem[]> = {
     ],
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing, isParsed, mode = 'visual' }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+    activePanel,
+    onPanelChange,
+    isParsing,
+    isParsed,
+    mode = 'visual',
+    morePromptForms = [],
+    canAddMorePrompt = true,
+    onMorePromptDelete,
+}) => {
     const { t } = useTranslation();
     const navItems = modeConfigs[mode] || modeConfigs.visual;
     const navRef = useRef<HTMLElement | null>(null);
@@ -70,6 +85,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
     const progressLabel = `${currentIndex + 1} / ${navItems.length}`;
     const progressStateLabel = isParsing ? t('createGame.sidebar.parsing') : currentStatus === 'done' ? t('createGame.sidebar.completed') : t('createGame.sidebar.inProgress');
     const mobileSummaryText = `${t('createGame.sidebar.step')} ${progressLabel} · ${t(`createGame.sidebar.${currentItem?.i18nKey}Short` as const)}：${t(`createGame.sidebar.${currentItem?.i18nKey}Subtitle` as const)}`;
+
+    // Visual 模式才展示 morePromptForms 侧栏区块（首期不做 worldInteraction）
+    const showMorePromptNav = mode !== 'worldInteraction';
+    const morePromptDisabled = isParsing || !isParsed;
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia('(max-width: 768px)').matches) {
@@ -112,32 +131,45 @@ const Sidebar: React.FC<SidebarProps> = ({ activePanel, onPanelChange, isParsing
                 <span className={styles.mobileProgressStatus}>{progressStateLabel}</span>
             </div>
 
-            <nav ref={navRef} className={styles.nav}>
-                {navItems.map((item, index) => {
-                    const status = getItemStatus(item.id);
-                    const disabled = isItemDisabled(item.id);
+            <div className={styles.navColumn}>
+                <nav ref={navRef} className={styles.nav}>
+                    {navItems.map((item, index) => {
+                        const status = getItemStatus(item.id);
+                        const disabled = isItemDisabled(item.id);
 
-                    return (
-                        <button
-                            key={item.id}
-                            ref={(node) => {
-                                navButtonRefs.current[item.id] = node;
-                            }}
-                            className={`${styles.navBtn} ${status === 'active' ? styles.active : ''} ${status === 'disabled' ? styles.disabled : ''} ${status === 'done' ? styles.done : ''}`}
-                            onClick={() => !disabled && onPanelChange(item.id)}
-                            disabled={disabled}
-                            aria-current={status === 'active' ? 'step' : undefined}
-                        >
-                            <span className={styles.navBadge}>{index + 1}</span>
-                            <span className={styles.navText}>
-                                <span className={styles.navTitleDesktop}>{index + 1} · {t(`createGame.sidebar.${item.i18nKey}` as const)}</span>
-                                <span className={styles.navTitleMobile}>{t(`createGame.sidebar.${item.i18nKey}Short` as const)}</span>
-                                <small>{t(`createGame.sidebar.${item.i18nKey}Subtitle` as const)}</small>
-                            </span>
-                        </button>
-                    );
-                })}
-            </nav>
+                        return (
+                            <button
+                                key={item.id}
+                                ref={(node) => {
+                                    navButtonRefs.current[item.id] = node;
+                                }}
+                                className={`${styles.navBtn} ${status === 'active' ? styles.active : ''} ${status === 'disabled' ? styles.disabled : ''} ${status === 'done' ? styles.done : ''}`}
+                                onClick={() => !disabled && onPanelChange(item.id)}
+                                disabled={disabled}
+                                aria-current={status === 'active' ? 'step' : undefined}
+                            >
+                                <span className={styles.navBadge}>{index + 1}</span>
+                                <span className={styles.navText}>
+                                    <span className={styles.navTitleDesktop}>{index + 1} · {t(`createGame.sidebar.${item.i18nKey}` as const)}</span>
+                                    <span className={styles.navTitleMobile}>{t(`createGame.sidebar.${item.i18nKey}Short` as const)}</span>
+                                    <small>{t(`createGame.sidebar.${item.i18nKey}Subtitle` as const)}</small>
+                                </span>
+                            </button>
+                        );
+                    })}
+                    {showMorePromptNav && (
+                        <MorePromptNavSection
+                            numberOffset={navItems.length + 1}
+                            forms={morePromptForms}
+                            activePanel={activePanel}
+                            disabled={morePromptDisabled}
+                            canAddMore={canAddMorePrompt}
+                            onPanelChange={onPanelChange}
+                            onDelete={(id) => onMorePromptDelete?.(id)}
+                        />
+                    )}
+                </nav>
+            </div>
         </aside>
     );
 };

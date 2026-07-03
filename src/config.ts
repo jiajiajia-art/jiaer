@@ -1,13 +1,14 @@
 export const ON_SERVER: boolean = import.meta.env.PROD;
-// export const HOST_ADDRESS = import.meta.env.VITE_API_BASE_URL ||
-//   (ON_SERVER ? 'https://api.kurangames.com' : 'http://localhost:3000');
+// 开发环境留空 → 走 Vite 同源 /api、/public 代理，局域网同事可访问
+// 若后端不在本机，可设 VITE_API_BASE_URL=http://<后端IP>:3000
+export const HOST_ADDRESS = import.meta.env.VITE_API_BASE_URL ||
+  (ON_SERVER ? 'https://api.kurangames.com' : '');
 // 测试环境
 // export const HOST_ADDRESS = 'https://api-test.kurangames.com';
 // 生产环境
 //export const HOST_ADDRESS = 'https://api.kurangames.com';
 //国外生产
 //export const HOST_ADDRESS = 'https://api-overseas.kurangames.com';
- export const HOST_ADDRESS = 'http://localhost:3000';
 export const RECORD_CONVERSION = import.meta.env.PROD
   ? true
   : import.meta.env.VITE_RECORD_CONVERSION === 'true';

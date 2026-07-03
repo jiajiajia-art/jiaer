@@ -123,6 +123,17 @@ order: number;
 enabled: boolean;
 }
 
+/** Visual 侧栏动态提示词（morePromptForms），写入 world.json */
+export interface MorePromptForm {
+  id: string;
+  title: string;
+  description: string;
+  content: string;
+  order: number;
+  enabled?: boolean;
+  updatedAt?: string;
+}
+
 // 世界设定类型（visual 模式）
 export interface WorldSetting {
   title: string;
@@ -138,6 +149,8 @@ export interface WorldSetting {
   };
   player: Player;
   dynamicEntries?: DynamicEntry[];
+  /** Visual 编辑器侧栏动态提示词，叙事 LLM 每轮注入 */
+  morePromptForms?: MorePromptForm[];
   llmConfig?: {
       targetOutputLength?: number;
       outputLengthMode?: "characters" | "words";

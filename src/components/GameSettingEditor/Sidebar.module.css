@@ -54,6 +54,14 @@
     display: none;
 }
 
+.navColumn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 8px;
+}
+
 .nav {
     display: flex;
     flex-direction: column;
