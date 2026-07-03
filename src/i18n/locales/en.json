@@ -1279,7 +1279,32 @@
     "downloadQRCode": "Download QR Code",
     "longPressToSave": "Long press to save QR code",
     "getPlayStatusFailed": "Failed to get play status",
-    "ratingUnit": "point"
+    "ratingUnit": "point",
+    "sections": "Sections",
+    "playerReviews": "Player Reviews"
+  },
+  "gameRating": {
+    "reviews": "Reviews",
+    "totalReviews": "{{count}} reviews",
+    "writeReview": "Write a Review",
+    "yourRating": "Your Rating",
+    "rateThisGame": "Rate this game",
+    "commentPlaceholder": "Share your experience... (optional)",
+    "replyPlaceholder": "Write your reply...",
+    "submit": "Submit Rating",
+    "submitting": "Submitting...",
+    "reply": "Reply",
+    "replyTo": "Reply to @{{name}}",
+    "replySuccess": "Reply submitted successfully",
+    "replyFailed": "Failed to submit reply, please try again later",
+    "submitSuccess": "Review submitted successfully",
+    "submitFailed": "Failed to submit review, please try again later",
+    "pleaseSelectRating": "Please select a rating first",
+    "noReviews": "No reviews yet. Be the first to review!",
+    "loadMore": "Load More",
+    "owner": "Author",
+    "anonymousUser": "Anonymous User",
+    "likeFailed": "Operation failed, please try again later"
   },
   "favorites": {
     "title": "Favorites",

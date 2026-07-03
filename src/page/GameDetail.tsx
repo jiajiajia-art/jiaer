@@ -31,6 +31,7 @@ import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
 import gamePromotionApi from '../api/promotion/gamePromotionApi';
 import { getOrCreatePromoAnonId } from '../utils/promoAnonId';
+import GameRating from '../components/GameRating/GameRating';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { useTranslation } from 'react-i18next';
 
@@ -69,14 +70,6 @@ const rememberPendingPromoCode = (promotionCode: string) => {
         sessionStorage.setItem(PENDING_PROMO_STORAGE_KEY, promotionCode);
     } catch {
         // ignore storage errors
-    }
-};
-
-const readPendingPromoCode = (): string => {
-    try {
-        return String(sessionStorage.getItem(PENDING_PROMO_STORAGE_KEY) || '').trim();
-    } catch {
-        return '';
     }
 };
 
@@ -164,6 +157,7 @@ const GameDetail: React.FC = () => {
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isQRCodeModalOpen, setIsQRCodeModalOpen] = useState(false);
+    const [activeSection, setActiveSection] = useState<'introduction' | 'reviews'>('introduction');
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -991,19 +985,57 @@ const GameDetail: React.FC = () => {
                     </div>
 
 
-                    <h3 className={styles.detailSectionTitle}>{t('gameDetail.gameIntroduction')}</h3>
-                    <div className={styles.descriptionSection}>
-                        <p>{normalizeNewlines(game.description || t('gameDetail.noDescription'))}</p>
+                    <div className={styles.sectionTabs} role="tablist" aria-label={t('gameDetail.sections')}>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeSection === 'introduction'}
+                            className={`${styles.sectionTab} ${activeSection === 'introduction' ? styles.sectionTabActive : ''}`}
+                            onClick={() => setActiveSection('introduction')}
+                        >
+                            {t('gameDetail.gameIntroduction')}
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={activeSection === 'reviews'}
+                            className={`${styles.sectionTab} ${activeSection === 'reviews' ? styles.sectionTabActive : ''}`}
+                            onClick={() => setActiveSection('reviews')}
+                        >
+                            {t('gameDetail.playerReviews')}
+                        </button>
                     </div>
 
-                    {game.version_notes?.trim() ? (
+                    {activeSection === 'introduction' && (
                         <>
-                            <h3 className={styles.detailSectionTitle}>{t('gameDetail.versionNotes')}</h3>
+                            {/* <h3 className={styles.detailSectionTitle}>{t('gameDetail.gameIntroduction')}</h3> */}
                             <div className={styles.descriptionSection}>
-                                <p>{normalizeNewlines(game.version_notes)}</p>
+                                <p>{normalizeNewlines(game.description || t('gameDetail.noDescription'))}</p>
                             </div>
+
+                            {game.version_notes?.trim() ? (
+                                <>
+                                    <h3 className={styles.detailSectionTitle}>{t('gameDetail.versionNotes')}</h3>
+                                    <div className={styles.descriptionSection}>
+                                        <p>{normalizeNewlines(game.version_notes)}</p>
+                                    </div>
+                                </>
+                            ) : null}
                         </>
-                    ) : null}
+                    )}
+
+                    {activeSection === 'reviews' && (
+                        <>
+                            {fileId && (
+                                <GameRating
+                                    fileId={fileId}
+                                    onRatingChange={(_summary) => {
+                                        // 可选：同步更新游戏详情中的评分数据
+                                    }}
+                                />
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
 

@@ -1282,7 +1282,31 @@
     "downloadQRCode": "下载二维码",
     "longPressToSave": "长按保存二维码",
     "getPlayStatusFailed": "获取游玩状态失败",
-    "ratingUnit": "分"
+    "ratingUnit": "分",
+    "sections": "内容栏目",
+    "playerReviews": "玩家评价"
+  },
+  "gameRating": {
+    "reviews": "玩家评价",
+    "totalReviews": "{{count}} 条评价",
+    "writeReview": "撰写评价",
+    "yourRating": "你的评分",
+    "rateThisGame": "给游戏评分",
+    "commentPlaceholder": "分享你的游戏体验...（选填）",
+    "replyPlaceholder": "写下你的回复...",
+    "submit": "提交评分",
+    "submitting": "提交中...",
+    "reply": "回复",
+    "replyTo": "回复 @{{name}}",
+    "replySuccess": "回复成功",
+    "replyFailed": "回复失败，请稍后重试",
+    "submitSuccess": "评价提交成功",
+    "submitFailed": "评价提交失败，请稍后重试",
+    "pleaseSelectRating": "请先选择评分",
+    "noReviews": "还没有人评价，来成为第一个吧",
+    "loadMore": "加载更多",
+    "owner": "作者",
+    "likeFailed": "操作失败，请稍后重试"
   },
   "favorites": {
     "title": "收藏夹",
