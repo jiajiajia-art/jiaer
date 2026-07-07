@@ -162,7 +162,10 @@ const MorePromptFormPanel = forwardRef<MorePromptFormPanelRef, MorePromptFormPan
 
       <div className={styles.form}>
         <label className={styles.field}>
-          <span>{t('createGame.morePrompt.title')}</span>
+          <span>
+            {t('createGame.morePrompt.title')}
+            <span className={styles.required}>*</span>
+          </span>
           <input
             type="text"
             value={draft.title}
@@ -173,7 +176,10 @@ const MorePromptFormPanel = forwardRef<MorePromptFormPanelRef, MorePromptFormPan
         </label>
 
         <label className={styles.field}>
-          <span>{t('createGame.morePrompt.content')}</span>
+          <span>
+            {t('createGame.morePrompt.content')}
+            <span className={styles.required}>*</span>
+          </span>
           <MarkdownContentField
             value={draft.content}
             onChange={(content) => setDraft((prev) => ({ ...prev, content }))}
@@ -182,7 +188,10 @@ const MorePromptFormPanel = forwardRef<MorePromptFormPanelRef, MorePromptFormPan
         </label>
 
         <label className={styles.field}>
-          <span>{t('createGame.morePrompt.description')}</span>
+          <span>
+            {t('createGame.morePrompt.description')}
+            <span className={styles.required}>*</span>
+          </span>
           <input
             type="text"
             value={draft.description}

@@ -36,6 +36,11 @@
   color: #1a1a1a;
 }
 
+.required {
+  color: var(--primary);
+  margin-left: 4px;
+}
+
 .field input[type='text'] {
   border-radius: 12px;
   border: 1px solid rgba(224, 61, 75, 0.28);
