@@ -1,0 +1,51 @@
+.root {
+  display: grid;
+  gap: 20px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.input,
+.select {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.searchButton {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: var(--admin-accent, #c9733f);
+  color: #fff;
+  cursor: pointer;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: left;
+}
+
+.emptyState {
+  padding: 24px;
+  text-align: center;
+  color: #777;
+}

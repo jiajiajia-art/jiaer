@@ -27,7 +27,9 @@ import {
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import JoinGroupModal from '../components/JoinGroupModal';
+import UserAvatar from '../components/UserAvatar';
 import { getImageUrl } from '../utils/constants';
+import { isVerifiedCreatorRole } from '../utils/userRoles';
 import type { SubscriptionRedeemResult, User } from '../api/account/auth.type';
 import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKeysApi.type';
 import type { PayOrderRequest } from '../api/pay/pay.type';
@@ -300,6 +302,7 @@ const Profile: React.FC = () => {
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || t('profile.userNameDefault');
     const userCode = user?.user?.userCode;
+    const showVerifiedBadge = isVerifiedCreatorRole(user?.user?.role);
     const inviteDisplayCode = user?.user?.inviteCode || inviteCode || '002436';
 
     const handleCopyUserCode = async () => {
@@ -587,13 +590,15 @@ const Profile: React.FC = () => {
                                     onChange={handleAvatarChangeForCrop}
                                     style={{ display: 'none' }}
                                 />
-                                <img
-                                    className={styles.userAvatar}
-                                    src={userAvatar}
-                                    alt={'avatar'}
-                                    onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
-                                    style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
-                                />
+                                <UserAvatar verified={showVerifiedBadge} badgeSize="lg">
+                                    <img
+                                        className={styles.userAvatar}
+                                        src={userAvatar}
+                                        alt={'avatar'}
+                                        onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
+                                        style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
+                                    />
+                                </UserAvatar>
                                 <div className={styles.userNameWrapper}>
                                     <div className={styles.userName}>{userName}</div>
                                     <MdEdit className={styles.editNameIcon} onClick={handleStartEditName} />

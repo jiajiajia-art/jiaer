@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IoEye, IoStatsChartSharp } from 'react-icons/io5';
+import { IoEye, IoStatsChartSharp, IoShareSocial, IoTime, IoChatbubbleEllipses } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import { HiOutlineLightBulb } from 'react-icons/hi';
 import { MdContentCopy } from 'react-icons/md';
@@ -22,6 +22,7 @@ import { useGameStore } from '../store/gameStore';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import statisticsApi from '../api/statistics/statisticsApi';
+import creatorStatsApi, { type StatsOverview } from '../api/stats/creatorStatsApi';
 import payApi from '../api/pay/payApi';
 import type { PayOrderRequest } from '../api/pay/pay.type';
 import { auth } from '../api/account/authApi';
@@ -38,6 +39,14 @@ import {
 import { getApiErrorMessage } from '../utils/error';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
+
+const formatPlayDuration = (seconds: number) => {
+    const safe = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+};
 
 const Create: React.FC = () => {
     const { t } = useTranslation();
@@ -60,6 +69,7 @@ const Create: React.FC = () => {
         invitePendingIncome: 0,
         incentiveType: 'none' as CreatorStatsIncentiveType,
     });
+    const [creatorStats, setCreatorStats] = useState<StatsOverview | null>(null);
     const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
     const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
     const [isMobileTipModalOpen, setIsMobileTipModalOpen] = useState(false);
@@ -153,6 +163,21 @@ const Create: React.FC = () => {
         }
     };
 
+    const getCreatorOverviewStats = async () => {
+        if (!user?.user?.id) {
+            return;
+        }
+
+        try {
+            const response = await creatorStatsApi.getOverview();
+            if (response.data.success) {
+                setCreatorStats(response.data.data);
+            }
+        } catch (error) {
+            console.error('获取创作者统计错误:', error);
+        }
+    };
+
     const getUserInfo = async () => {
         try {
             const response = await auth.getUserInfo();
@@ -167,6 +192,7 @@ const Create: React.FC = () => {
     useEffect(() => {
         loadMyGames();
         getGameTotalStats();
+        getCreatorOverviewStats();
         getUserInfo();
     }, [user?.user?.id]);
 
@@ -333,6 +359,7 @@ const Create: React.FC = () => {
 
                 toast.success(successMsg);
                 await getGameTotalStats();
+                await getCreatorOverviewStats();
                 await getUserInfo();
                 setIsSettleModalOpen(false);
             } else {
@@ -578,6 +605,48 @@ const Create: React.FC = () => {
                                     <span>{t('create.totalVisitors')}</span>
                                 </div>
                                 <div className={styles.statValue}>{stats.totalClicks}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <TbHandClick />
+                                    <span>{t('creatorStats.totalLikes')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.likeCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoStatsChartSharp />
+                                    <span>{t('creatorStats.playCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.playCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoTime />
+                                    <span>{t('creatorStats.playDuration')}</span>
+                                </div>
+                                <div className={styles.statValue}>{formatPlayDuration(creatorStats?.playDurationSeconds ?? 0)}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoShareSocial />
+                                    <span>{t('creatorStats.shareCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.shareCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <IoChatbubbleEllipses />
+                                    <span>{t('creatorStats.commentCount')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.commentCount ?? 0}</div>
+                            </div>
+                            <div className={styles.statBox}>
+                                <div className={styles.statLabel}>
+                                    <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                    <span>{t('creatorStats.spendPoints')}</span>
+                                </div>
+                                <div className={styles.statValue}>{creatorStats?.spendPoints ?? 0}</div>
                             </div>
                             <div className={`${styles.statBox} ${stats.totalAmount > 0 ? styles.statBoxWithAction : ''}`}>
                                 <div className={styles.statLabel}>

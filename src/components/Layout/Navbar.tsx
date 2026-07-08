@@ -10,6 +10,8 @@ import { useMessageRealtime } from '../../hooks/useMessageRealtime';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
+import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
+import UserAvatar from '../UserAvatar';
 
 const isWebViewEnv = (): boolean => {
     const win = window as { __wxjs_environment?: string };
@@ -351,10 +353,17 @@ const Navbar: React.FC<NavbarProps> = ({
                                         setShowUserMenu((prev) => !prev);
                                     }}
                                 >
-                                    <img
-                                        src={getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
-                                        alt=""
-                                    />
+                                    <UserAvatar
+                                        fill
+                                        verified={isVerifiedCreatorRole(user?.user?.role)}
+                                        badgeSize="sm"
+                                        className={styles.avatarInner}
+                                    >
+                                        <img
+                                            src={getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
+                                            alt=""
+                                        />
+                                    </UserAvatar>
                                 </div>
 
                                 {showUserMenu && !isWebViewEnv() && (
@@ -381,7 +390,20 @@ const Navbar: React.FC<NavbarProps> = ({
                                         >
                                             {t('nav.favorites')}
                                         </button>
-                                        {user?.user?.role === 'admin' && isDesktopLayout && (
+                                        {isOperatorRole(user?.user?.role) && isDesktopLayout && (
+                                            <button
+                                                className={styles.menuBtn}
+                                                onClick={() => {
+                                                    runLeaveAction(() => {
+                                                        navigate('/operator');
+                                                        setShowUserMenu(false);
+                                                    });
+                                                }}
+                                            >
+                                                {t('nav.operatorPanel')}
+                                            </button>
+                                        )}
+                                        {isAdminRole(user?.user?.role) && isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
                                                 onClick={() => {

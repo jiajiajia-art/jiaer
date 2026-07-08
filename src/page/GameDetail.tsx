@@ -742,6 +742,19 @@ const GameDetail: React.FC = () => {
         }
     };
 
+    const reportShareEvent = useCallback(async (shareChannel: 'copy_link' | 'native_share') => {
+        if (!fileId) return;
+        try {
+            await trackingApi.reportGameShare({
+                gameFileId: fileId,
+                shareChannel,
+                source: 'game_detail',
+            });
+        } catch (error) {
+            console.error('[GameDetail] reportGameShare failed', error);
+        }
+    }, [fileId]);
+
     const handleShare = () => {
         setIsShareModalOpen(true);
     };
@@ -749,6 +762,7 @@ const GameDetail: React.FC = () => {
     const handleCopyLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
+            await reportShareEvent('copy_link');
             toast.success(t('gameDetail.linkCopied'));
         } catch (error) {
             const textArea = document.createElement('textarea');
@@ -759,6 +773,7 @@ const GameDetail: React.FC = () => {
             textArea.select();
             try {
                 document.execCommand('copy');
+                await reportShareEvent('copy_link');
                 toast.success(t('gameDetail.linkCopied'));
             } catch (err) {
                 toast.error(t('copyFailed'));

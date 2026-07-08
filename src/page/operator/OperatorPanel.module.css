@@ -1,0 +1,103 @@
+.panelSection {
+  margin-top: 24px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: left;
+  font-size: 14px;
+}
+
+.table th {
+  color: #666;
+  font-weight: 600;
+}
+
+.metricCol {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sortableHeader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.sortableHeader:hover {
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.sortableHeaderActive {
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.sortIconMuted {
+  color: #bbb;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sortIconActive {
+  color: var(--admin-accent-strong, #aa5a2d);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.linkLikeButton {
+  border: none;
+  background: transparent;
+  color: var(--admin-accent, #c9733f);
+  cursor: pointer;
+  padding: 0;
+}
+
+.metricValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--admin-accent-strong, #aa5a2d);
+}
+
+.taskList {
+  display: grid;
+  gap: 12px;
+}
+
+.taskMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  color: #777;
+  font-size: 13px;
+}
+
+.emptyState {
+  padding: 24px;
+  text-align: center;
+  color: #777;
+}

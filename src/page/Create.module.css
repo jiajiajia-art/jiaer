@@ -469,8 +469,8 @@
 
 .statsGrid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
 }
 
 .statBox {
@@ -493,18 +493,18 @@
 }
 
 .statValue {
-    font-size: 30px;
+    font-size: 26px;
     font-weight: 700;
     color: #FB4655;
 }
 
 .statLabel {
-    font-size: 20px;
+    font-size: 16px;
     color: #999999;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .statLabel img {

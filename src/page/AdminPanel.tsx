@@ -29,6 +29,7 @@ import SpecialThemeTagManager from '../components/SpecialThemeTagManager';
 import SubscriptionAdminManager from '../components/SubscriptionAdminManager';
 import CreatorIncentiveAdminManager from '../components/CreatorIncentiveAdminManager';
 import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
+import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
@@ -51,7 +52,7 @@ import styles from './AdminPanel.module.css';
 import { useMessageStore } from '../store/useMessageStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -75,6 +76,7 @@ const THEME_PAGE_SIZE = 10;
 
 const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/documents')) return 'documents';
+    if (pathname.startsWith('/admin/users')) return 'users';
     if (pathname.startsWith('/admin/promotions')) return 'promotions';
     if (pathname.startsWith('/admin/points')) return 'points';
     if (pathname.startsWith('/admin/creator-incentives')) return 'creatorIncentives';
@@ -992,6 +994,10 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/daily-tasks');
             return;
         }
+        if (tab === 'users') {
+            navigate('/admin/users');
+            return;
+        }
 
         const nextSearch = tab === 'announcements' ? '' : `?tab=${tab}`;
         const nextUrl = `/admin${nextSearch}`;
@@ -1490,6 +1496,13 @@ const AdminPanel: React.FC = () => {
                         >
                             <span className={styles.navTitle}>分成比例</span>
                         </button>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'users' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('users')}
+                        >
+                            <span className={styles.navTitle}>用户角色</span>
+                        </button>
                     </aside>
 
                     <div className={styles.contentArea}>
@@ -1851,6 +1864,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'creatorIncentives' && <CreatorIncentiveAdminManager />}
 
                         {activeTab === 'shareRatio' && <ShareRatioAdminManager />}
+
+                        {activeTab === 'users' && <AdminUsersManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
 
