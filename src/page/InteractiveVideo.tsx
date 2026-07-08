@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { IoArrowBack, IoClose, IoGitBranchOutline, IoMoonOutline, IoPlayCircleOutline, IoRefresh, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
+import { IoArrowBack, IoClose, IoGitBranchOutline, IoMoonOutline, IoPause, IoPlay, IoPlayCircleOutline, IoPlaySkipForward, IoRefresh, IoSpeedometerOutline, IoStatsChartOutline, IoSunnyOutline } from 'react-icons/io5';
 import {
     Background,
     BaseEdge,
@@ -32,6 +32,16 @@ import {
     type InteractiveVideoRuntimeFrame,
     type InteractiveVideoVariableValue,
 } from '../api/interactiveVideo';
+import {
+    buildVideoPreloadPlan,
+    VideoPreloadManager,
+    type VideoPreloadStatus as ManagedVideoPreloadStatus,
+} from '../utils/interactiveVideoPreload';
+import {
+    canShowSkipControl,
+    getNextPlaybackRate,
+    type InteractiveVideoPlaybackRate,
+} from '../utils/interactiveVideoControls';
 import styles from './InteractiveVideo.module.css';
 
 type StoryVariableValue = InteractiveVideoVariableValue;
@@ -181,12 +191,27 @@ type StoryManifest = {
     mediaBaseUrl?: string;
     media?: Record<string, StoryManifestMedia>;
     minigames?: Record<string, StoryManifestMinigame>;
+    playback?: {
+        version?: number;
+        totalVideoBytes?: number;
+        hasUnknownVideoSizes?: boolean;
+        completeCacheThresholdBytes?: number;
+        entry?: {
+            nodeId?: string | null;
+            videoUrls?: string[];
+        };
+        priorityHints?: {
+            entry?: string[];
+            entrySequence?: string[];
+            entryBranches?: string[];
+        };
+    };
 };
 
 type PlaybackMode = 'fresh' | 'replay';
-type MobileToolsTab = 'variables' | 'tree' | 'history';
+type MobileToolsTab = 'tree' | 'history';
 type VideoAspect = 'unknown' | 'portrait' | 'landscape';
-type VideoPreloadStatus = 'loading' | 'ready' | 'error';
+type VideoPreloadStatus = ManagedVideoPreloadStatus;
 type InteractiveVideoTheme = 'light' | 'dark';
 type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
 type PortalPostureMode = 'desktop' | 'mobilePortraitVideo' | 'mobileLandscapeVideo';
@@ -229,6 +254,23 @@ type BranchVideoPreload = {
     optionId: string;
     nodeId: string;
     url: string;
+    nextLayerUrls?: string[];
+};
+
+type PlaybackMetrics = {
+    initialPrepareStartedAt: number | null;
+    initialPrepareMs: number | null;
+    stallCount: number;
+    stallTotalMs: number;
+    branchWaitCount: number;
+    branchWaitTotalMs: number;
+    preloadHits: number;
+    preloadMisses: number;
+    backgroundCancelCount: number;
+};
+
+type WindowWithIvgPlaybackMetrics = Window & {
+    __funloomIvgPlaybackMetrics?: PlaybackMetrics;
 };
 
 type InteractiveVideoTreeBranchLayout = {
@@ -436,6 +478,21 @@ const getVideoAspect = (width: number, height: number): VideoAspect => {
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 'unknown';
     return width > height ? 'landscape' : 'portrait';
 };
+
+const nowMs = () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
+
+const getBufferedAheadSeconds = (video: HTMLVideoElement): number => {
+    const currentTime = video.currentTime || 0;
+    for (let index = 0; index < video.buffered.length; index += 1) {
+        const start = video.buffered.start(index);
+        const end = video.buffered.end(index);
+        if (start <= currentTime && end >= currentTime) return Math.max(0, end - currentTime);
+    }
+    return 0;
+};
+
+const hasStablePlaybackBuffer = (video: HTMLVideoElement, minimumBufferedSeconds = 1.2): boolean =>
+    video.readyState >= 3 || getBufferedAheadSeconds(video) >= minimumBufferedSeconds;
 
 const resolveRuntimeAssetUrl = (path?: string | null): string => {
     const value = String(path || '').trim();
@@ -1803,10 +1860,14 @@ const InteractiveVideo: React.FC = () => {
     const [sessionId, setSessionId] = useState('');
     const [sessionState, setSessionState] = useState<InteractiveVideoSessionState | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isInitialVideoPreparing, setIsInitialVideoPreparing] = useState(false);
     const [, setIsSyncing] = useState(false);
     const [loadError, setLoadError] = useState('');
     const [videoGate, setVideoGate] = useState(false);
     const [videoError, setVideoError] = useState('');
+    const [isVideoPaused, setIsVideoPaused] = useState(false);
+    const [isVideoHudVisible, setIsVideoHudVisible] = useState(true);
+    const [playbackRate, setPlaybackRate] = useState<InteractiveVideoPlaybackRate>(1);
     const [endingModalOpen, setEndingModalOpen] = useState(false);
     const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
     const [versionMismatch, setVersionMismatch] = useState<InteractiveVideoSessionResponse | null>(null);
@@ -1814,6 +1875,7 @@ const InteractiveVideo: React.FC = () => {
     const [showManualPlay, setShowManualPlay] = useState(false);
     const [isTreeOpen, setIsTreeOpen] = useState(false);
     const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
+    const [isVariableBoardOpen, setIsVariableBoardOpen] = useState(false);
     const [mobileToolsTab, setMobileToolsTab] = useState<MobileToolsTab>('tree');
     const [videoAspect, setVideoAspect] = useState<VideoAspect>('unknown');
     const [stageAspect, setStageAspect] = useState<VideoAspect>('unknown');
@@ -1824,6 +1886,22 @@ const InteractiveVideo: React.FC = () => {
     const [ivgTheme, setIvgTheme] = useState<InteractiveVideoTheme>('light');
     const [currentSequenceVideoIndex, setCurrentSequenceVideoIndex] = useState(0);
     const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
+    const preloadManagerRef = useRef<VideoPreloadManager | null>(null);
+    const preloadContainerRef = useRef<HTMLDivElement | null>(null);
+    const bufferingNoticeTimerRef = useRef<number | null>(null);
+    const hudHideTimerRef = useRef<number | null>(null);
+    const activeStallStartedAtRef = useRef<number | null>(null);
+    const playbackMetricsRef = useRef<PlaybackMetrics>({
+        initialPrepareStartedAt: null,
+        initialPrepareMs: null,
+        stallCount: 0,
+        stallTotalMs: 0,
+        branchWaitCount: 0,
+        branchWaitTotalMs: 0,
+        preloadHits: 0,
+        preloadMisses: 0,
+        backgroundCancelCount: 0,
+    });
     const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const minigameIframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -1846,7 +1924,7 @@ const InteractiveVideo: React.FC = () => {
         return runtimeScripts.find((script) => script.scriptId === sessionState.currentScriptId) ||
             runtimeScripts.find((script) => script.nodes.some((node) => node.id === sessionState.currentNodeId)) ||
             null;
-    }, [runtimeScripts, sessionState?.currentNodeId, sessionState?.currentScriptId, story]);
+    }, [runtimeScripts, sessionState, story]);
     const variableMap = useMemo(() => new Map((story?.variables || []).map((variable) => [variable.id, variable])), [story?.variables]);
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
@@ -1868,6 +1946,47 @@ const InteractiveVideo: React.FC = () => {
         if (preloadedVideoAspectRef.current[url] === aspect) return;
         preloadedVideoAspectRef.current = { ...preloadedVideoAspectRef.current, [url]: aspect };
     }, []);
+
+    const publishPlaybackMetrics = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        (window as WindowWithIvgPlaybackMetrics).__funloomIvgPlaybackMetrics = playbackMetricsRef.current;
+        if (import.meta.env.DEV) {
+            console.debug('[Funloom IVG playback metrics]', playbackMetricsRef.current);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const manager = new VideoPreloadManager({
+            container: preloadContainerRef.current,
+            maxBackgroundJobs: 2,
+            onStatusChange: markPreloadedVideoStatus,
+            onMetadata: (url, video) => markPreloadedVideoAspect(url, getVideoAspect(video.videoWidth, video.videoHeight)),
+            onBackgroundCancel: () => {
+                playbackMetricsRef.current.backgroundCancelCount += 1;
+                publishPlaybackMetrics();
+            },
+        });
+        preloadManagerRef.current = manager;
+        publishPlaybackMetrics();
+
+        return () => {
+            manager.destroy();
+            preloadManagerRef.current = null;
+            if (bufferingNoticeTimerRef.current != null) {
+                window.clearTimeout(bufferingNoticeTimerRef.current);
+                bufferingNoticeTimerRef.current = null;
+            }
+            if (hudHideTimerRef.current != null) {
+                window.clearTimeout(hudHideTimerRef.current);
+                hudHideTimerRef.current = null;
+            }
+        };
+    }, [markPreloadedVideoAspect, markPreloadedVideoStatus, publishPlaybackMetrics]);
+
+    useEffect(() => {
+        preloadManagerRef.current?.setContainer(preloadContainerRef.current);
+    });
 
     const returnToGameDetail = useCallback(() => {
         if (launchedFromGameDetail && typeof window !== 'undefined' && window.history.length > 1) {
@@ -1906,12 +2025,29 @@ const InteractiveVideo: React.FC = () => {
         setShowManualPlay(false);
         setIsTreeOpen(false);
         setIsMobileToolsOpen(false);
+        setIsVariableBoardOpen(false);
+        setIsInitialVideoPreparing(false);
         setVideoAspect('unknown');
         setStageAspect('unknown');
         setIsBranchTransitioning(false);
         setIsVideoBuffering(false);
+        setIsVideoPaused(false);
+        setIsVideoHudVisible(true);
+        setPlaybackRate(1);
         setPreloadedVideoStatus({});
         preloadedVideoAspectRef.current = {};
+        playbackMetricsRef.current = {
+            initialPrepareStartedAt: null,
+            initialPrepareMs: null,
+            stallCount: 0,
+            stallTotalMs: 0,
+            branchWaitCount: 0,
+            branchWaitTotalMs: 0,
+            preloadHits: 0,
+            preloadMisses: 0,
+            backgroundCancelCount: 0,
+        };
+        publishPlaybackMetrics();
         try {
             const response = await createInteractiveVideoSession({
                 fileId,
@@ -1936,22 +2072,34 @@ const InteractiveVideo: React.FC = () => {
             const loadedCurrentNode = initialState.currentNodeId
                 ? loadedNodeMap.get(initialState.currentNodeId)
                 : null;
+            const initialVideoUrls = getNodeVideoUrls(loadedCurrentNode, loadedManifest);
             setCurrentSequenceVideoIndex(0);
-            setVideoGate(getNodeVideoUrls(loadedCurrentNode, loadedManifest).length > 0);
+            setVideoGate(initialVideoUrls.length > 0);
+            if (initialVideoUrls.length > 0) {
+                playbackMetricsRef.current.initialPrepareStartedAt = nowMs();
+                setIsInitialVideoPreparing(true);
+            }
             setSessionState(initialState);
-        } catch (error: any) {
-            const responseData = error?.response?.data as InteractiveVideoSessionResponse | undefined;
-            if (error?.response?.status === 409 && responseData?.code === 'VERSION_MISMATCH') {
+        } catch (error: unknown) {
+            const loadErrorResponse = error as {
+                response?: {
+                    status?: number;
+                    data?: InteractiveVideoSessionResponse;
+                };
+                message?: string;
+            };
+            const responseData = loadErrorResponse.response?.data;
+            if (loadErrorResponse.response?.status === 409 && responseData?.code === 'VERSION_MISMATCH') {
                 setVersionMismatch(responseData);
                 setLoadError('');
             } else {
                 console.error('Load IVG failed:', error);
-                setLoadError(responseData?.message || error?.message || '加载失败');
+                setLoadError(responseData?.message || loadErrorResponse.message || '加载失败');
             }
         } finally {
             setIsLoading(false);
         }
-    }, [fileId]);
+    }, [fileId, publishPlaybackMetrics]);
 
     useEffect(() => {
         void loadSession(false);
@@ -2007,20 +2155,6 @@ const InteractiveVideo: React.FC = () => {
     }, [currentNode?.id, currentVideoUrl, videoAspect]);
 
     useEffect(() => {
-        const video = videoRef.current;
-        return () => {
-            if (!video) return;
-            try {
-                video.pause();
-                video.removeAttribute('src');
-                video.load();
-            } catch {
-                // Ignore browser cleanup errors while switching IVG nodes.
-            }
-        };
-    }, [currentNode?.id, currentVideoUrl]);
-
-    useEffect(() => {
         if (!currentVideoUrl) {
             tryUnlockScreenOrientation();
             return undefined;
@@ -2043,7 +2177,7 @@ const InteractiveVideo: React.FC = () => {
         setEndingModalOpen(false);
         setVideoError('');
         setShowManualPlay(false);
-        setIsVideoBuffering(Boolean(currentVideoUrl));
+        setIsVideoBuffering(false);
         if (currentVideoUrl) {
             setVideoGate(true);
             return;
@@ -2109,24 +2243,67 @@ const InteractiveVideo: React.FC = () => {
                 return items;
             }
 
+            const targetScript = runtimeScripts.find((script) => script.scriptId === resolvedTarget?.scriptId) || currentScript;
+            const nextLayerUrls: string[] = [];
+            getNodeOptions(targetNode)
+                .filter((nextOption) => optionIsAvailable(nextOption, resolvedTarget?.variables || {}, variableMap))
+                .forEach((nextOption) => {
+                    const nextEdge = getChoiceOutgoingEdge(targetScript, targetNode.id, nextOption.id);
+                    if (!nextEdge) return;
+                    const nextVariables = applyMutations(resolvedTarget?.variables || {}, nextOption.mutations || [], variableMap);
+                    const nextResolvedTarget = resolveRuntimeNode({
+                        story,
+                        scriptId: targetScript.scriptId,
+                        nodeId: nextEdge.target,
+                        callStack: resolvedTarget?.callStack || [],
+                        variables: nextVariables,
+                        variableMap,
+                    });
+                    const nextUrl = getNodeVideoUrls(nextResolvedTarget.node, manifest)[0] || '';
+                    if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
+                        nextLayerUrls.push(nextUrl);
+                    }
+                });
+
             usedUrls.add(url);
             items.push({
                 optionId: option.id,
                 nodeId: targetNode.id,
                 url,
+                nextLayerUrls,
             });
             return items;
         }, []);
-    }, [currentNode, currentNodeOptions, currentScript, currentVideoUrl, manifest, sessionState, story, variableMap]);
+    }, [currentNode, currentNodeOptions, currentScript, currentVideoUrl, manifest, runtimeScripts, sessionState, story, variableMap]);
+
+    const preloadPlan = useMemo(() => {
+        const branchUrls = branchVideoPreloads.map((item) => item.url);
+        const nextLayerBranchUrls = branchVideoPreloads.flatMap((item) => item.nextLayerUrls || []);
+        const replayUrls = (sessionState?.unlocked?.nodeIds || [])
+            .map((nodeId) => nodeMap.get(nodeId))
+            .flatMap((node) => getNodeVideoUrls(node, manifest))
+            .filter((url) => url && url !== currentVideoUrl)
+            .slice(0, 12);
+
+        return buildVideoPreloadPlan({
+            currentUrl: currentVideoUrl,
+            sequenceUrls: currentVideoUrls,
+            sequenceIndex: currentSequenceVideoIndex,
+            branchUrls,
+            nextLayerBranchUrls,
+            replayUrls,
+        });
+    }, [branchVideoPreloads, currentSequenceVideoIndex, currentVideoUrl, currentVideoUrls, manifest, nodeMap, sessionState?.unlocked?.nodeIds]);
 
     useEffect(() => {
-        const activeUrls = new Set(branchVideoPreloads.map((item) => item.url));
+        preloadManagerRef.current?.requestPreloads(preloadPlan);
+        const activeUrls = new Set(preloadPlan.map((item) => item.url));
         setPreloadedVideoStatus((current) => {
             let changed = false;
             const next: Record<string, VideoPreloadStatus> = {};
 
             activeUrls.forEach((url) => {
-                next[url] = current[url] || 'loading';
+                next[url] = current[url] || preloadManagerRef.current?.getStatus(url) || 'idle';
                 if (!current[url]) changed = true;
             });
 
@@ -2136,23 +2313,155 @@ const InteractiveVideo: React.FC = () => {
 
             return changed ? next : current;
         });
-    }, [branchVideoPreloads]);
+    }, [preloadPlan]);
+
+    useEffect(() => {
+        preloadManagerRef.current?.setPlaybackAtRisk(Boolean(videoGate && isVideoBuffering));
+    }, [isVideoBuffering, videoGate]);
+
+    useEffect(() => {
+        if (!isInitialVideoPreparing || !currentVideoUrl) return undefined;
+        let cancelled = false;
+        preloadManagerRef.current?.waitUntilReady(currentVideoUrl, 8000).then(() => {
+            if (cancelled) return;
+            const startedAt = playbackMetricsRef.current.initialPrepareStartedAt;
+            if (startedAt != null) {
+                playbackMetricsRef.current.initialPrepareMs = Math.round(nowMs() - startedAt);
+                playbackMetricsRef.current.initialPrepareStartedAt = null;
+                publishPlaybackMetrics();
+            }
+            setIsInitialVideoPreparing(false);
+            setIsVideoBuffering(false);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [currentVideoUrl, isInitialVideoPreparing, publishPlaybackMetrics]);
 
     const availableOptions = useMemo(() => {
-        if (videoGate) return [];
+        if (videoGate || isBranchTransitioning) return [];
         return currentNodeOptions;
-    }, [currentNodeOptions, videoGate]);
+    }, [currentNodeOptions, isBranchTransitioning, videoGate]);
+
+    const clearVideoHudTimer = useCallback(() => {
+        if (typeof window === 'undefined' || hudHideTimerRef.current == null) return;
+        window.clearTimeout(hudHideTimerRef.current);
+        hudHideTimerRef.current = null;
+    }, []);
+
+    const revealVideoHud = useCallback((pin = false) => {
+        if (typeof window === 'undefined') return;
+        clearVideoHudTimer();
+        setIsVideoHudVisible(true);
+        const shouldAutoHide =
+            !pin &&
+            Boolean(currentVideoUrl) &&
+            videoGate &&
+            !isVideoPaused &&
+            !showManualPlay &&
+            !isVideoBuffering &&
+            !isBranchTransitioning;
+        if (shouldAutoHide) {
+            hudHideTimerRef.current = window.setTimeout(() => {
+                setIsVideoHudVisible(false);
+                hudHideTimerRef.current = null;
+            }, 3000);
+        }
+    }, [clearVideoHudTimer, currentVideoUrl, isBranchTransitioning, isVideoBuffering, isVideoPaused, showManualPlay, videoGate]);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (video) video.playbackRate = playbackRate;
+    }, [currentVideoUrl, playbackRate]);
+
+    useEffect(() => {
+        if (!currentVideoUrl || !videoGate) {
+            clearVideoHudTimer();
+            setIsVideoHudVisible(true);
+            return;
+        }
+        revealVideoHud(isVideoPaused || showManualPlay || isVideoBuffering || isBranchTransitioning);
+    }, [clearVideoHudTimer, currentVideoUrl, isBranchTransitioning, isVideoBuffering, isVideoPaused, revealVideoHud, showManualPlay, videoGate]);
+
+    const markPlaybackHealthy = useCallback(() => {
+        if (typeof window !== 'undefined' && bufferingNoticeTimerRef.current != null) {
+            window.clearTimeout(bufferingNoticeTimerRef.current);
+            bufferingNoticeTimerRef.current = null;
+        }
+        if (activeStallStartedAtRef.current != null) {
+            playbackMetricsRef.current.stallTotalMs += Math.round(nowMs() - activeStallStartedAtRef.current);
+            activeStallStartedAtRef.current = null;
+            publishPlaybackMetrics();
+        }
+        preloadManagerRef.current?.setPlaybackAtRisk(false);
+        setIsBranchTransitioning(false);
+        setIsVideoBuffering(false);
+    }, [publishPlaybackMetrics]);
+
+    const scheduleBufferingNotice = useCallback(() => {
+        if (typeof window === 'undefined' || !currentVideoUrl) return;
+        preloadManagerRef.current?.setPlaybackAtRisk(true);
+        const video = videoRef.current;
+        const minimumBufferedSeconds = video ? Math.max(1.2, Number(video.playbackRate || 1) * 1.6) : 1.2;
+        if (!video || hasStablePlaybackBuffer(video, minimumBufferedSeconds)) return;
+        if (bufferingNoticeTimerRef.current != null) return;
+
+        bufferingNoticeTimerRef.current = window.setTimeout(() => {
+            bufferingNoticeTimerRef.current = null;
+            const activeVideo = videoRef.current;
+            const requiredBufferedSeconds = activeVideo ? Math.max(1.2, Number(activeVideo.playbackRate || 1) * 1.6) : 1.2;
+            if (!activeVideo || activeVideo.ended || hasStablePlaybackBuffer(activeVideo, requiredBufferedSeconds)) return;
+            setIsVideoBuffering(true);
+            if (activeStallStartedAtRef.current == null) {
+                playbackMetricsRef.current.stallCount += 1;
+                activeStallStartedAtRef.current = nowMs();
+                publishPlaybackMetrics();
+            }
+        }, 700);
+    }, [currentVideoUrl, publishPlaybackMetrics]);
+
+    const prepareTargetVideo = useCallback(async (targetVideoUrl: string) => {
+        if (!targetVideoUrl) return;
+        const manager = preloadManagerRef.current;
+        const start = nowMs();
+        const status = manager?.getStatus(targetVideoUrl) || preloadedVideoStatus[targetVideoUrl] || 'idle';
+        if (status === 'ready') {
+            playbackMetricsRef.current.preloadHits += 1;
+            publishPlaybackMetrics();
+            return;
+        }
+
+        playbackMetricsRef.current.preloadMisses += 1;
+        setIsBranchTransitioning(true);
+        publishPlaybackMetrics();
+        const finalStatus = await manager?.waitUntilReady(targetVideoUrl, 6500);
+        playbackMetricsRef.current.branchWaitCount += 1;
+        playbackMetricsRef.current.branchWaitTotalMs += Math.round(nowMs() - start);
+        publishPlaybackMetrics();
+        if (finalStatus === 'ready') {
+            setIsBranchTransitioning(false);
+        }
+    }, [preloadedVideoStatus, publishPlaybackMetrics]);
 
     const handleVideoComplete = () => {
         if (currentSequenceVideoIndex < currentVideoUrls.length - 1) {
             const nextIndex = currentSequenceVideoIndex + 1;
             const nextUrl = currentVideoUrls[nextIndex] || '';
-            setCurrentSequenceVideoIndex(nextIndex);
-            setShowManualPlay(false);
-            setIsBranchTransitioning(false);
-            setIsVideoBuffering(Boolean(nextUrl));
-            setVideoAspect(nextUrl ? preloadedVideoAspectRef.current[nextUrl] || 'unknown' : 'unknown');
-            setVideoGate(Boolean(nextUrl));
+            const switchToNextVideo = () => {
+                setCurrentSequenceVideoIndex(nextIndex);
+                setShowManualPlay(false);
+                setIsBranchTransitioning(false);
+                setIsVideoBuffering(false);
+                setIsVideoPaused(false);
+                setVideoAspect(nextUrl ? preloadedVideoAspectRef.current[nextUrl] || 'unknown' : 'unknown');
+                setVideoGate(Boolean(nextUrl));
+            };
+            if (nextUrl && preloadManagerRef.current?.getStatus(nextUrl) !== 'ready') {
+                setIsBranchTransitioning(true);
+                void prepareTargetVideo(nextUrl).then(switchToNextVideo);
+                return;
+            }
+            switchToNextVideo();
             return;
         }
 
@@ -2160,6 +2469,7 @@ const InteractiveVideo: React.FC = () => {
         setShowManualPlay(false);
         setIsBranchTransitioning(false);
         setIsVideoBuffering(false);
+        setIsVideoPaused(false);
         if (isEndingNode) {
             setEndingModalOpen(true);
         }
@@ -2168,9 +2478,57 @@ const InteractiveVideo: React.FC = () => {
     const handleManualPlay = () => {
         const video = videoRef.current;
         if (!video) return;
+        video.playbackRate = playbackRate;
         video.play()
-            .then(() => setShowManualPlay(false))
+            .then(() => {
+                setShowManualPlay(false);
+                setIsVideoPaused(false);
+                revealVideoHud();
+            })
             .catch(() => toast.error('无法播放视频'));
+    };
+
+    const handleToggleVideoPlayback = () => {
+        const video = videoRef.current;
+        if (!video) return;
+        revealVideoHud(true);
+        if (video.paused) {
+            video.playbackRate = playbackRate;
+            video.play()
+                .then(() => {
+                    setShowManualPlay(false);
+                    setIsVideoPaused(false);
+                    revealVideoHud();
+                })
+                .catch(() => {
+                    setShowManualPlay(true);
+                    toast.error('无法播放视频');
+                });
+            return;
+        }
+        video.pause();
+        setIsVideoPaused(true);
+        setIsVideoHudVisible(true);
+    };
+
+    const handleCyclePlaybackRate = () => {
+        const nextRate = getNextPlaybackRate(playbackRate);
+        setPlaybackRate(nextRate);
+        const video = videoRef.current;
+        if (video) {
+            video.playbackRate = nextRate;
+            if (nextRate > 1 && getBufferedAheadSeconds(video) < nextRate * 3) {
+                preloadManagerRef.current?.setPlaybackAtRisk(true);
+            }
+        }
+        revealVideoHud();
+    };
+
+    const handleSkipCurrentVideo = () => {
+        if (!canShowSkipControl(playbackMode) || !currentVideoUrl || !videoGate) return;
+        revealVideoHud(true);
+        markPlaybackHealthy();
+        handleVideoComplete();
     };
 
     const handleChooseOption = async (option: StoryChoiceOption) => {
@@ -2204,14 +2562,15 @@ const InteractiveVideo: React.FC = () => {
             (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
         const targetNodeKind = getNodeKind(targetNode);
         const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
+        await prepareTargetVideo(targetVideoUrl);
 
         setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
         setCurrentSequenceVideoIndex(0);
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
-        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadedVideoStatus[targetVideoUrl] !== 'ready');
-        setIsVideoBuffering(Boolean(targetVideoUrl));
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
+        setIsVideoBuffering(false);
         setVideoGate(Boolean(targetVideoUrl));
         const sourceSnapshots = ensureSnapshot(
             sessionState,
@@ -2297,14 +2656,15 @@ const InteractiveVideo: React.FC = () => {
             (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
         const targetNodeKind = getNodeKind(targetNode);
         const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
+        await prepareTargetVideo(targetVideoUrl);
 
         setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
         setCurrentSequenceVideoIndex(0);
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
-        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadedVideoStatus[targetVideoUrl] !== 'ready');
-        setIsVideoBuffering(Boolean(targetVideoUrl));
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
+        setIsVideoBuffering(false);
         setVideoGate(Boolean(targetVideoUrl));
 
         const sourceSnapshots = ensureSnapshot(
@@ -2354,7 +2714,7 @@ const InteractiveVideo: React.FC = () => {
             updatedAt: now,
         };
         await syncState(nextState);
-    }, [currentNode, currentScript, manifest, preloadedVideoStatus, sessionState, story, syncState, variableMap]);
+    }, [currentNode, currentScript, manifest, prepareTargetVideo, sessionState, story, syncState, variableMap]);
 
     useEffect(() => {
         if (!isMinigameNode || !currentMinigameUrl || typeof window === 'undefined') return undefined;
@@ -2395,8 +2755,8 @@ const InteractiveVideo: React.FC = () => {
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
-        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadedVideoStatus[targetVideoUrl] !== 'ready');
-        setIsVideoBuffering(Boolean(targetVideoUrl));
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
+        setIsVideoBuffering(false);
         setVideoGate(Boolean(targetVideoUrl));
         const nextState: InteractiveVideoSessionState = {
             ...sessionState,
@@ -2449,12 +2809,21 @@ const InteractiveVideo: React.FC = () => {
     const handleTreeRollback = (nodeId: string) => {
         setIsTreeOpen(false);
         setIsMobileToolsOpen(false);
+        setIsVariableBoardOpen(false);
         void handleRollback(nodeId);
     };
 
     const handleOpenTree = () => {
         setIsMobileToolsOpen(false);
+        setIsVariableBoardOpen(false);
         setIsTreeOpen(true);
+        revealVideoHud(true);
+    };
+
+    const handleOpenVariableBoard = () => {
+        setIsMobileToolsOpen(false);
+        setIsVariableBoardOpen(true);
+        revealVideoHud(true);
     };
 
     const handleOpenTreeFromEnding = () => {
@@ -2481,7 +2850,7 @@ const InteractiveVideo: React.FC = () => {
         : `${routeExploreProgress.exploredCount}/${routeExploreProgress.totalCount} | ${routeExploreProgress.percent}%`;
     const history = sessionState?.history || [];
 
-    if (isLoading) {
+    if (isLoading || isInitialVideoPreparing) {
         return (
             <div className={styles.pageRoot}>
                 <div className={styles.loadingPanel}>
@@ -2532,7 +2901,7 @@ const InteractiveVideo: React.FC = () => {
         <section className={styles.panelSection}>
             <div className={styles.sectionTitle}>
                 <IoStatsChartOutline />
-                {'\u53d8\u91cf'}
+                {'\u53d8\u91cf\u677f'}
             </div>
             <div className={styles.variableList}>
                 {(story.variables || []).length > 0 ? (
@@ -2592,13 +2961,11 @@ const InteractiveVideo: React.FC = () => {
     );
 
     const mobileToolTabs: Array<{ id: MobileToolsTab; label: string }> = [
-        { id: 'variables', label: '\u53d8\u91cf' },
         { id: 'tree', label: '\u5267\u60c5\u6811' },
         { id: 'history', label: '\u5386\u53f2' },
     ];
 
     const renderMobileToolsPanel = () => {
-        if (mobileToolsTab === 'variables') return renderVariablesPanel();
         if (mobileToolsTab === 'history') return renderHistoryPanel();
         return renderTreePanel();
     };
@@ -2612,6 +2979,7 @@ const InteractiveVideo: React.FC = () => {
     const pageClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
+        currentVideoUrl ? styles.cinematicVideoPage : '',
         currentVideoUrl && videoAspect === 'landscape' ? styles.landscapeVideoPage : '',
         currentVideoUrl && videoAspect === 'portrait' ? styles.portraitVideoPage : '',
     ].filter(Boolean).join(' ');
@@ -2624,9 +2992,17 @@ const InteractiveVideo: React.FC = () => {
         availableOptions.length === 3 ? styles.choiceDockThree : '',
         availableOptions.length >= 4 ? styles.choiceDockFour : '',
     ].filter(Boolean).join(' ');
+    const shouldShowSkipControl = canShowSkipControl(playbackMode) && Boolean(currentVideoUrl) && videoGate;
+    const playbackRateLabel = playbackRate === 1 ? '1.0x' : `${playbackRate}x`;
+    const videoHudClassName = [
+        styles.videoHud,
+        isVideoHudVisible || isVideoPaused || showManualPlay || isBranchTransitioning || isVideoBuffering ? '' : styles.videoHudHidden,
+        shouldShowSkipControl ? styles.videoHudWithSkip : styles.videoHudCompact,
+    ].filter(Boolean).join(' ');
+    const playToggleLabel = isVideoPaused ? '\u64ad\u653e' : '\u6682\u505c';
 
     const portalPostureMode = getPortalPostureMode(viewportMode, Boolean(currentVideoUrl), videoAspect);
-    const isLandscapePortalRotated = portalPostureMode === 'mobileLandscapeVideo' && viewportMode === 'mobilePortrait';
+    const isLandscapePortalRotated = false;
     const portalRootClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
@@ -2693,6 +3069,36 @@ const InteractiveVideo: React.FC = () => {
                         ))}
                     </div>
                     <div className={styles.mobileToolsContent}>{renderMobileToolsPanel()}</div>
+                </section>
+            </div>,
+        )
+        : null;
+
+    const variableBoardPortal = isVariableBoardOpen
+        ? renderIvgPortal(
+            <div className={styles.variableBoardOverlay} onClick={() => setIsVariableBoardOpen(false)}>
+                <section
+                    className={styles.variableBoardModal}
+                    onClick={(event) => event.stopPropagation()}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="ivgVariableBoardTitle"
+                >
+                    <header className={styles.variableBoardHeader}>
+                        <div className={styles.variableBoardTitle}>
+                            <IoStatsChartOutline />
+                            <h2 id="ivgVariableBoardTitle">{'\u53d8\u91cf\u677f'}</h2>
+                        </div>
+                        <button
+                            type="button"
+                            className={styles.variableBoardClose}
+                            onClick={() => setIsVariableBoardOpen(false)}
+                            aria-label={'\u5173\u95ed\u53d8\u91cf\u677f'}
+                        >
+                            <IoClose />
+                        </button>
+                    </header>
+                    <div className={styles.variableBoardContent}>{renderVariablesPanel()}</div>
                 </section>
             </div>,
         )
@@ -2804,7 +3210,12 @@ const InteractiveVideo: React.FC = () => {
 
             <main className={styles.playerGrid}>
                 <section className={styles.stage}>
-                    <div className={styles.monitor} ref={monitorRef}>
+                    <div
+                        className={styles.monitor}
+                        ref={monitorRef}
+                        onMouseMove={() => revealVideoHud()}
+                        onPointerDown={() => revealVideoHud(true)}
+                    >
                         {isMinigameNode ? (
                             currentMinigameUrl ? (
                                 <iframe
@@ -2826,36 +3237,38 @@ const InteractiveVideo: React.FC = () => {
                         ) : currentVideoUrl ? (
                             <video
                                 ref={videoRef}
-                                key={`${currentNode.id}:${currentVideoUrl}:${playbackMode}`}
                                 className={styles.video}
                                 src={currentVideoUrl}
-                                controls={videoGate}
+                                controls={false}
+                                controlsList="nodownload nofullscreen noremoteplayback"
+                                disablePictureInPicture
                                 autoPlay
                                 preload="auto"
                                 playsInline
-                                onLoadStart={() => setIsVideoBuffering(true)}
+                                onLoadStart={scheduleBufferingNotice}
                                 onLoadedMetadata={handleVideoMetadata}
                                 onLoadedData={() => {
-                                    setIsBranchTransitioning(false);
-                                    setIsVideoBuffering(false);
+                                    markPlaybackHealthy();
                                 }}
-                                onCanPlay={() => setIsVideoBuffering(false)}
+                                onCanPlay={markPlaybackHealthy}
                                 onCanPlayThrough={() => {
-                                    setIsBranchTransitioning(false);
-                                    setIsVideoBuffering(false);
+                                    markPlaybackHealthy();
                                 }}
                                 onPlay={() => {
                                     setShowManualPlay(false);
-                                    setIsBranchTransitioning(false);
-                                    setIsVideoBuffering(false);
+                                    setIsVideoPaused(false);
+                                    markPlaybackHealthy();
                                 }}
-                                onPlaying={() => setIsVideoBuffering(false)}
-                                onWaiting={() => setIsVideoBuffering(true)}
-                                onStalled={() => setIsVideoBuffering(true)}
+                                onPlaying={() => {
+                                    setIsVideoPaused(false);
+                                    markPlaybackHealthy();
+                                }}
+                                onPause={() => setIsVideoPaused(true)}
+                                onWaiting={scheduleBufferingNotice}
+                                onStalled={scheduleBufferingNotice}
                                 onEnded={handleVideoComplete}
                                 onError={() => {
-                                    setIsBranchTransitioning(false);
-                                    setIsVideoBuffering(false);
+                                    markPlaybackHealthy();
                                     setVideoError('视频加载失败');
                                     handleVideoComplete();
                                 }}
@@ -2868,6 +3281,38 @@ const InteractiveVideo: React.FC = () => {
                             </div>
                         )}
 
+                        {currentVideoUrl && videoGate && (
+                            <div className={videoHudClassName}>
+                                <div className={styles.videoSceneTitle}>
+                                    <strong>{getNodeTitle(currentNode) || projectTitle}</strong>
+                                </div>
+                                <div className={styles.videoControlDock} aria-label="播放控制">
+                                    <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
+                                        <IoGitBranchOutline />
+                                        <span>{'\u5267\u60c5\u6811'}</span>
+                                    </button>
+                                    <button type="button" className={styles.videoControlButton} onClick={handleOpenVariableBoard}>
+                                        <IoStatsChartOutline />
+                                        <span>{'\u53d8\u91cf\u677f'}</span>
+                                    </button>
+                                    <button type="button" className={styles.videoControlButton} onClick={handleToggleVideoPlayback} aria-label={playToggleLabel}>
+                                        {isVideoPaused ? <IoPlay /> : <IoPause />}
+                                        <span>{playToggleLabel}</span>
+                                    </button>
+                                    <button type="button" className={styles.videoControlButton} onClick={handleCyclePlaybackRate} aria-label="切换倍速">
+                                        <IoSpeedometerOutline />
+                                        <span>{playbackRateLabel}</span>
+                                    </button>
+                                    {shouldShowSkipControl && (
+                                        <button type="button" className={styles.videoControlButton} onClick={handleSkipCurrentVideo}>
+                                            <IoPlaySkipForward />
+                                            <span>{'\u8df3\u8fc7'}</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {currentVideoUrl && videoGate && showManualPlay && playbackMode === 'fresh' && (
                             <button type="button" className={styles.playOverlayButton} onClick={handleManualPlay}>
                                 <IoPlayCircleOutline />
@@ -2875,7 +3320,7 @@ const InteractiveVideo: React.FC = () => {
                             </button>
                         )}
 
-                        {currentVideoUrl && videoGate && !showManualPlay && (isBranchTransitioning || isVideoBuffering) && (
+                        {currentVideoUrl && !showManualPlay && (isBranchTransitioning || (videoGate && isVideoBuffering)) && (
                             <div className={styles.videoTransitionOverlay} aria-live="polite">
                                 <div className={styles.videoTransitionLoader} aria-hidden="true">
                                     <span />
@@ -2887,7 +3332,7 @@ const InteractiveVideo: React.FC = () => {
 
                         {videoError && <div className={styles.videoNotice}>{videoError}</div>}
 
-                        {!isEndingNode && !isMinigameNode && !videoGate && (
+                        {!isEndingNode && !isMinigameNode && !videoGate && !isBranchTransitioning && (
                             <div className={choiceDockClassName}>
                                 {availableOptions.length > 0 ? (
                                     availableOptions.map((option) => (
@@ -2906,27 +3351,7 @@ const InteractiveVideo: React.FC = () => {
                             </div>
                         )}
 
-                        {branchVideoPreloads.length > 0 && (
-                            <div className={styles.preloadPool} aria-hidden="true">
-                                {branchVideoPreloads.map((item) => (
-                                    <video
-                                        key={`${item.optionId}:${item.nodeId}:${item.url}`}
-                                        src={item.url}
-                                        preload="auto"
-                                        muted
-                                        playsInline
-                                        onLoadStart={() => markPreloadedVideoStatus(item.url, 'loading')}
-                                        onLoadedMetadata={(event) => {
-                                            const video = event.currentTarget;
-                                            markPreloadedVideoAspect(item.url, getVideoAspect(video.videoWidth, video.videoHeight));
-                                        }}
-                                        onLoadedData={() => markPreloadedVideoStatus(item.url, 'ready')}
-                                        onCanPlayThrough={() => markPreloadedVideoStatus(item.url, 'ready')}
-                                        onError={() => markPreloadedVideoStatus(item.url, 'error')}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                        <div ref={preloadContainerRef} className={styles.preloadPool} aria-hidden="true" />
                     </div>
                 </section>
 
@@ -2972,6 +3397,7 @@ const InteractiveVideo: React.FC = () => {
 
         </div>
         {mobileToolsPortal}
+        {variableBoardPortal}
         {treePortal}
         {restartConfirmPortal}
         {endingPortal}
