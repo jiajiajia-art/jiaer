@@ -81,6 +81,13 @@
     z-index: 2;
 }
 
+.profileAvatarWrap {
+    --verified-overlay-size: 32px;
+    --verified-overlay-right: 4px;
+    --verified-overlay-bottom: 4px;
+    margin-top: 80px;
+}
+
 .userAvatar {
     width: 120px;
     height: 120px;
@@ -88,7 +95,6 @@
     object-fit: cover;
     border: 3px solid #fff;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    margin-top: 80px;
 }
 
 .userName {
@@ -840,8 +846,14 @@
         height: 300px;
     }
 
-    .userAvatar {
+    .profileAvatarWrap {
         margin-top: 80px;
+        --verified-overlay-size: 26px;
+        --verified-overlay-right: 3px;
+        --verified-overlay-bottom: 3px;
+    }
+
+    .userAvatar {
         width: 80px;
         height: 80px;
         border-width: 2px;
@@ -884,8 +896,14 @@
         height: 250px;
     }
 
-    .userAvatar {
+    .profileAvatarWrap {
         margin-top: 80px;
+        --verified-overlay-size: 22px;
+        --verified-overlay-right: 2px;
+        --verified-overlay-bottom: 2px;
+    }
+
+    .userAvatar {
         width: 60px;
         height: 60px;
         border-width: 2px;

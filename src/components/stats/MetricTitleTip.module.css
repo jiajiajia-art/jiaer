@@ -35,11 +35,12 @@
   transform: translate(-50%, 0);
 }
 
+/* 向下展开，避免页面顶部卡片 tooltip 被 Navbar 或 overflow 裁切 */
 .tipBubble {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 10px);
-  z-index: 20;
+  top: calc(100% + 10px);
+  z-index: 1300;
   width: max-content;
   max-width: min(320px, 70vw);
   padding: 10px 12px;
@@ -56,7 +57,7 @@
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transform: translate(-50%, 4px);
+  transform: translate(-50%, -4px);
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
 }
 
@@ -64,8 +65,8 @@
   content: '';
   position: absolute;
   left: 50%;
-  top: 100%;
+  bottom: 100%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: rgba(18, 18, 22, 0.96);
+  border-bottom-color: rgba(18, 18, 22, 0.96);
 }

@@ -590,7 +590,11 @@ const Profile: React.FC = () => {
                                     onChange={handleAvatarChangeForCrop}
                                     style={{ display: 'none' }}
                                 />
-                                <UserAvatar verified={showVerifiedBadge} badgeSize="lg">
+                                <UserAvatar
+                                    verified={showVerifiedBadge}
+                                    badgeSize="xl"
+                                    className={styles.profileAvatarWrap}
+                                >
                                     <img
                                         className={styles.userAvatar}
                                         src={userAvatar}

@@ -1762,9 +1762,44 @@
     "taskTargetSeconds": "Target Seconds",
     "tabs": {
       "stats": "Site Stats",
+      "reports": "Reports",
       "promotions": "Promotions",
       "recruitment": "Recruitment",
       "dailyTasks": "Daily Task Management"
+    },
+    "reports": {
+      "title": "Reports",
+      "desc": "Activity, registration and points consumption trends for public works",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "startDate": "Start",
+      "endDate": "End",
+      "granularity": "Granularity",
+      "granularityDay": "Day",
+      "granularityWeek": "Week",
+      "granularityMonth": "Month",
+      "latestDau": "Latest login DAU",
+      "averageDau": "Average DAU",
+      "peakDau": "Peak DAU",
+      "dauTip": "DAU (Daily Active Users): distinct users who logged in at least once on a given day. This report buckets logins by Asia/Shanghai calendar days.",
+      "averageDauTip": "Arithmetic mean of daily DAU across the selected range. DAU counts distinct users who logged in at least once per day.",
+      "peakDauTip": "Highest single-day DAU in the selected range. DAU counts distinct users who logged in at least once per day.",
+      "consumptionTotal": "Points spent in range",
+      "activityTitle": "Platform activity",
+      "activityHint": "Submissions / PV / comments / shares (counts)",
+      "registrationTitle": "Registration growth",
+      "registrationHint": "New registrations by selected granularity",
+      "registrationLabel": "Registrations",
+      "consumptionTitle": "Points consumption",
+      "consumptionHint": "Negative points only (excludes rewards/sign-in)",
+      "consumptionLabel": "Points spent",
+      "latestMomGrowth": "Latest MoM: {{value}}",
+      "metrics": {
+        "submission": "Submissions",
+        "pv": "Page views",
+        "comment": "Comments",
+        "share": "Shares"
+      }
     },
     "table": {
       "title": "Work"
@@ -1781,6 +1816,12 @@
       "phone": "Phone",
       "inviteCount": "Invites",
       "noUsers": "No recruitment data"
+    },
+    "pagination": {
+      "pageSizeLabel": "Rows per page",
+      "paginationSummary": "Page {{page}} of {{totalPages}}, {{total}} total",
+      "paginationTotalOnly": "{{total}} total",
+      "paginationHiddenHint": "Pagination appears when there are more than 20 rows"
     }
   },
   "adminUsers": {
@@ -1797,6 +1838,10 @@
     "loadFailed": "Failed to load users",
     "updateSuccess": "Role updated",
     "updateFailed": "Failed to update role",
+    "pageSizeLabel": "Rows per page",
+    "paginationSummary": "Page {{page}} of {{totalPages}}, {{total}} total",
+    "paginationTotalOnly": "{{total}} total",
+    "paginationHiddenHint": "Pagination appears when there are more than 20 users",
     "roles": {
       "creator": "Creator",
       "creator_verified": "Verified Creator",

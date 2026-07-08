@@ -1760,9 +1760,44 @@
     "taskTargetSeconds": "目标秒数",
     "tabs": {
       "stats": "全站统计",
+      "reports": "数据报表",
       "promotions": "推广管理",
       "recruitment": "拉新总览",
       "dailyTasks": "每日任务管理"
+    },
+    "reports": {
+      "title": "数据报表",
+      "desc": "平台活跃、用户增长与积分消费趋势（公开作品口径）",
+      "last7Days": "近 7 天",
+      "last30Days": "近 30 天",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "granularity": "粒度",
+      "granularityDay": "日",
+      "granularityWeek": "周",
+      "granularityMonth": "月",
+      "latestDau": "最新 DAU（登录）",
+      "averageDau": "平均 DAU",
+      "peakDau": "峰值 DAU",
+      "dauTip": "DAU（Daily Active Users，日活跃用户数）：统计日内至少登录一次的去重用户数。本报表以登录记录为准，按 Asia/Shanghai 自然日分桶。",
+      "averageDauTip": "所选时间范围内，各自然日 DAU 的算术平均值。DAU 指统计日内至少登录一次的去重用户数。",
+      "peakDauTip": "所选时间范围内，单日 DAU 的最大值。DAU 指统计日内至少登录一次的去重用户数。",
+      "consumptionTotal": "区间积分消费",
+      "activityTitle": "平台活跃趋势",
+      "activityHint": "投稿 / 浏览量(PV) / 评论 / 分享（次数）",
+      "registrationTitle": "注册用户增长",
+      "registrationHint": "按选定粒度统计的新增注册用户数",
+      "registrationLabel": "注册用户数",
+      "consumptionTitle": "积分消费趋势",
+      "consumptionHint": "仅统计负向积分流水（不含签到/奖励）",
+      "consumptionLabel": "积分消费",
+      "latestMomGrowth": "最近月环比：{{value}}",
+      "metrics": {
+        "submission": "投稿数",
+        "pv": "浏览量",
+        "comment": "评论数",
+        "share": "分享数"
+      }
     },
     "table": {
       "title": "作品"
@@ -1779,6 +1814,12 @@
       "phone": "手机号",
       "inviteCount": "邀请人数",
       "noUsers": "暂无拉新数据"
+    },
+    "pagination": {
+      "pageSizeLabel": "每页条数",
+      "paginationSummary": "第 {{page}} 页，共 {{totalPages}} 页，共 {{total}} 条",
+      "paginationTotalOnly": "共 {{total}} 条",
+      "paginationHiddenHint": "超过 20 条后显示翻页"
     }
   },
   "adminUsers": {
@@ -1795,6 +1836,10 @@
     "loadFailed": "加载用户失败",
     "updateSuccess": "角色已更新",
     "updateFailed": "角色更新失败",
+    "pageSizeLabel": "每页条数",
+    "paginationSummary": "第 {{page}} 页，共 {{totalPages}} 页，共 {{total}} 条",
+    "paginationTotalOnly": "共 {{total}} 条",
+    "paginationHiddenHint": "超过 20 条后显示翻页",
     "roles": {
       "creator": "创作者（普通）",
       "creator_verified": "创作者激励（官方认证）",

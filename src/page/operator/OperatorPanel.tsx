@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '../../components/Layout/Navbar';
@@ -6,19 +6,30 @@ import PromotionAdminManager from '../../components/PromotionAdminManager';
 import DailyTasksAdminManager from '../../components/DailyTasksAdminManager';
 import StatsOverviewSection from '../../components/stats/StatsOverviewSection';
 import MetricTitleTip from '../../components/stats/MetricTitleTip';
+import metricStyles from '../../components/admin/MetricSummary.module.css';
+import ListPaginationBar, { buildListPagination, type ListPaginationState } from '../../components/ListPaginationBar';
 import operatorStatsApi, {
   type RecruitmentOverview,
   type RecruitmentUserItem,
 } from '../../api/stats/operatorStatsApi';
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
+import OperatorReports from './OperatorReports';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
-type OperatorTab = 'stats' | 'promotions' | 'recruitment' | 'dailyTasks';
+type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
+const emptyPagination: ListPaginationState = {
+  page: 1,
+  pageSize: 20,
+  total: 0,
+  totalPages: 1,
+};
+
 const resolveOperatorTab = (pathname: string): OperatorTab => {
+  if (pathname.startsWith('/operator/reports')) return 'reports';
   if (pathname.startsWith('/operator/promotion')) return 'promotions';
   if (pathname.startsWith('/operator/recruitment')) return 'recruitment';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
@@ -33,14 +44,21 @@ const OperatorPanel: React.FC = () => {
 
   const [overview, setOverview] = useState<StatsOverview | null>(null);
   const [works, setWorks] = useState<CreatorWorkItem[]>([]);
+  const [worksPage, setWorksPage] = useState(1);
+  const [worksPageSize, setWorksPageSize] = useState(20);
+  const [worksPagination, setWorksPagination] = useState<ListPaginationState>(emptyPagination);
   const [recruitmentOverview, setRecruitmentOverview] = useState<RecruitmentOverview | null>(null);
   const [recruitmentUsers, setRecruitmentUsers] = useState<RecruitmentUserItem[]>([]);
+  const [recruitmentPage, setRecruitmentPage] = useState(1);
+  const [recruitmentPageSize, setRecruitmentPageSize] = useState(20);
+  const [recruitmentPagination, setRecruitmentPagination] = useState<ListPaginationState>(emptyPagination);
   const [isLoading, setIsLoading] = useState(false);
   const [worksSortField, setWorksSortField] = useState<WorksSortField | null>(null);
   const [worksSortDir, setWorksSortDir] = useState<SortDirection>('desc');
 
   const tabs: Array<{ id: OperatorTab; label: string; path: string }> = useMemo(() => ([
     { id: 'stats', label: t('operator.tabs.stats'), path: '/operator' },
+    { id: 'reports', label: t('operator.tabs.reports'), path: '/operator/reports' },
     { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
@@ -77,33 +95,91 @@ const OperatorPanel: React.FC = () => {
     );
   };
 
+  const loadWorks = useCallback(async () => {
+    const offset = (worksPage - 1) * worksPageSize;
+    const worksResp = await operatorStatsApi.getWorks({ limit: worksPageSize, offset });
+    if (worksResp.data.success && worksResp.data.data) {
+      const payload = worksResp.data.data;
+      setWorks(payload.items || []);
+      setWorksPagination(buildListPagination(worksPage, worksPageSize, payload.total ?? 0));
+    }
+  }, [worksPage, worksPageSize]);
+
+  const loadRecruitmentUsers = useCallback(async () => {
+    const offset = (recruitmentPage - 1) * recruitmentPageSize;
+    const usersResp = await operatorStatsApi.getRecruitmentUsers({ limit: recruitmentPageSize, offset });
+    if (usersResp.data.success && usersResp.data.data) {
+      const payload = usersResp.data.data;
+      setRecruitmentUsers(payload.users || []);
+      setRecruitmentPagination(buildListPagination(recruitmentPage, recruitmentPageSize, payload.total ?? 0));
+    }
+  }, [recruitmentPage, recruitmentPageSize]);
+
   useEffect(() => {
+    if (activeTab !== 'stats') return;
+    const loadOverview = async () => {
+      try {
+        const overviewResp = await operatorStatsApi.getOverview();
+        if (overviewResp.data.success) setOverview(overviewResp.data.data);
+      } catch (error) {
+        console.error('[OperatorPanel] overview load failed', error);
+      }
+    };
+    void loadOverview();
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'recruitment') return;
+    const loadOverview = async () => {
+      try {
+        const overviewResp = await operatorStatsApi.getRecruitmentOverview();
+        if (overviewResp.data.success) setRecruitmentOverview(overviewResp.data.data);
+      } catch (error) {
+        console.error('[OperatorPanel] recruitment overview load failed', error);
+      }
+    };
+    void loadOverview();
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'stats') return;
     const load = async () => {
       setIsLoading(true);
       try {
-        if (activeTab === 'stats') {
-          const [overviewResp, worksResp] = await Promise.all([
-            operatorStatsApi.getOverview(),
-            operatorStatsApi.getWorks({ limit: 50, offset: 0 }),
-          ]);
-          if (overviewResp.data.success) setOverview(overviewResp.data.data);
-          if (worksResp.data.success && worksResp.data.data) setWorks(worksResp.data.data.items || []);
-        } else if (activeTab === 'recruitment') {
-          const [overviewResp, usersResp] = await Promise.all([
-            operatorStatsApi.getRecruitmentOverview(),
-            operatorStatsApi.getRecruitmentUsers({ limit: 100, offset: 0 }),
-          ]);
-          if (overviewResp.data.success) setRecruitmentOverview(overviewResp.data.data);
-          if (usersResp.data.success && usersResp.data.data) setRecruitmentUsers(usersResp.data.data.users || []);
-        }
+        await loadWorks();
       } catch (error) {
-        console.error('[OperatorPanel] load failed', error);
+        console.error('[OperatorPanel] works load failed', error);
       } finally {
         setIsLoading(false);
       }
     };
     void load();
-  }, [activeTab]);
+  }, [activeTab, loadWorks]);
+
+  useEffect(() => {
+    if (activeTab !== 'recruitment') return;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        await loadRecruitmentUsers();
+      } catch (error) {
+        console.error('[OperatorPanel] recruitment users load failed', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void load();
+  }, [activeTab, loadRecruitmentUsers]);
+
+  const handleWorksPageSizeChange = (nextPageSize: number) => {
+    setWorksPageSize(nextPageSize);
+    setWorksPage(1);
+  };
+
+  const handleRecruitmentPageSizeChange = (nextPageSize: number) => {
+    setRecruitmentPageSize(nextPageSize);
+    setRecruitmentPage(1);
+  };
 
   const renderStats = () => (
     <>
@@ -168,40 +244,47 @@ const OperatorPanel: React.FC = () => {
           </table>
           {works.length === 0 ? <div className={styles.emptyState}>{t('operator.noPublicWorks')}</div> : null}
         </div>
+        <ListPaginationBar
+          pagination={worksPagination}
+          onPageChange={setWorksPage}
+          onPageSizeChange={handleWorksPageSizeChange}
+          disabled={isLoading}
+          i18nPrefix="operator.pagination"
+        />
       </section>
     </>
   );
 
   const renderRecruitment = () => (
     <>
-      <div className={adminStyles.panelGrid}>
-        <div className={adminStyles.card}>
+      <div className={`${metricStyles.grid} ${metricStyles.gridThree}`}>
+        <div className={metricStyles.card}>
           <MetricTitleTip
-            className={adminStyles.cardTitle}
+            className={metricStyles.title}
             title={t('operator.recruitment.totalInvites')}
             tip={t('operator.recruitment.totalInvitesTip')}
           />
-          <div className={styles.metricValue}>{recruitmentOverview?.totalInvites ?? 0}</div>
+          <div className={metricStyles.value}>{recruitmentOverview?.totalInvites ?? 0}</div>
         </div>
-        <div className={adminStyles.card}>
+        <div className={metricStyles.card}>
           <MetricTitleTip
-            className={adminStyles.cardTitle}
+            className={metricStyles.title}
             title={t('operator.recruitment.submissions')}
             tip={t('operator.recruitment.submissionsTip')}
           />
-          <div className={styles.metricValue}>{recruitmentOverview?.promotionSubmissions ?? 0}</div>
+          <div className={metricStyles.value}>{recruitmentOverview?.promotionSubmissions ?? 0}</div>
         </div>
-        <div className={adminStyles.card}>
+        <div className={metricStyles.card}>
           <MetricTitleTip
-            className={adminStyles.cardTitle}
+            className={metricStyles.title}
             title={t('operator.recruitment.activeEntryUsers')}
             tip={t('operator.recruitment.activeEntryUsersTip')}
           />
-          <div className={styles.metricValue}>{recruitmentOverview?.activeEntryUsers ?? 0}</div>
+          <div className={metricStyles.value}>{recruitmentOverview?.activeEntryUsers ?? 0}</div>
         </div>
       </div>
       <section className={styles.panelSection}>
-        <h2 className={adminStyles.cardTitle}>{t('operator.recruitment.usersTitle')}</h2>
+        <h2 className={metricStyles.sectionTitle}>{t('operator.recruitment.usersTitle')}</h2>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -223,6 +306,13 @@ const OperatorPanel: React.FC = () => {
           </table>
           {recruitmentUsers.length === 0 ? <div className={styles.emptyState}>{t('operator.recruitment.noUsers')}</div> : null}
         </div>
+        <ListPaginationBar
+          pagination={recruitmentPagination}
+          onPageChange={setRecruitmentPage}
+          onPageSizeChange={handleRecruitmentPageSizeChange}
+          disabled={isLoading}
+          i18nPrefix="operator.pagination"
+        />
       </section>
     </>
   );
@@ -253,6 +343,7 @@ const OperatorPanel: React.FC = () => {
           <section className={adminStyles.contentArea}>
             {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {!isLoading && activeTab === 'stats' ? renderStats() : null}
+            {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}
             {!isLoading && activeTab === 'promotions' ? (
               <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
             ) : null}

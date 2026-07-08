@@ -34,7 +34,7 @@ const operatorStatsApi = {
   getRecruitmentOverview: (params?: { startDate?: string; endDate?: string }) =>
     api.get<ApiResponse<RecruitmentOverview>>('/operator/recruitment/overview', { params }),
   getRecruitmentUsers: (params?: { startDate?: string; endDate?: string; limit?: number; offset?: number }) =>
-    api.get<ApiResponse<{ users: RecruitmentUserItem[] }>>('/operator/recruitment/users', { params }),
+    api.get<ApiResponse<{ users: RecruitmentUserItem[]; total: number; limit: number; offset: number }>>('/operator/recruitment/users', { params }),
   getRecruitmentTrend: (params?: { startDate?: string; endDate?: string }) =>
     api.get<ApiResponse<{ trend: Array<{ day: string; inviteCount: number }> }>>('/operator/recruitment/trend', { params }),
   getDailyTasksConfig: () =>

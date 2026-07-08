@@ -4,7 +4,7 @@ import styles from './UserAvatar.module.css';
 
 interface UserAvatarProps {
   verified?: boolean;
-  badgeSize?: 'sm' | 'md' | 'lg';
+  badgeSize?: 'sm' | 'md' | 'lg' | 'xl';
   /** 导航栏等小头像容器内铺满；个人中心大头像勿开 */
   fill?: boolean;
   className?: string;

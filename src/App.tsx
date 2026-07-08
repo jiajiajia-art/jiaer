@@ -86,6 +86,7 @@ function App() {
           <Route path="/creator" element={<Navigate to="/create" replace />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
           <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/promotion" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/promotion/:promotionView" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
           <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />

@@ -4,7 +4,7 @@ import styles from './VerifiedBadge.module.css';
 interface VerifiedBadgeProps {
   className?: string;
   variant?: 'inline' | 'overlay';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 function VerifiedMark({ gradientId }: { gradientId: string }) {

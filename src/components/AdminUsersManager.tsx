@@ -1,10 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import adminUsersApi, { type AdminUserItem } from '../api/admin/adminUsersApi';
 import { normalizeUserRole } from '../utils/userRoles';
-import adminStyles from '../page/AdminPanel.module.css';
+import Pagination from './Pagination';
+import PageSectionHeader from './admin/PageSectionHeader';
+import workbenchStyles from './admin/MetricSummary.module.css';
 import styles from './AdminUsersManager.module.css';
+
+const PAGE_SIZE_OPTIONS = [20, 30, 40, 50] as const;
+
+const emptyPagination = {
+  page: 1,
+  pageSize: 20,
+  total: 0,
+  totalPages: 1,
+};
 
 const AdminUsersManager: React.FC = () => {
   const { t } = useTranslation();
@@ -12,6 +23,9 @@ const AdminUsersManager: React.FC = () => {
   const [assignableRoles, setAssignableRoles] = useState<string[]>([]);
   const [keyword, setKeyword] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [pagination, setPagination] = useState(emptyPagination);
   const [isLoading, setIsLoading] = useState(false);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
@@ -20,18 +34,23 @@ const AdminUsersManager: React.FC = () => {
     return t(`adminUsers.roles.${normalized}`, { defaultValue: normalized });
   };
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await adminUsersApi.listUsers({
-        page: 1,
-        pageSize: 50,
+        page,
+        pageSize,
         keyword: keyword.trim() || undefined,
         role: roleFilter || undefined,
       });
       if (response.data.success && response.data.data) {
         setUsers(response.data.data.users || []);
         setAssignableRoles(response.data.data.assignableRoles || []);
+        const nextPagination = response.data.data.pagination || emptyPagination;
+        setPagination(nextPagination);
+        if (nextPagination.page !== page) {
+          setPage(nextPagination.page);
+        }
       }
     } catch (error) {
       console.error('[AdminUsersManager] load failed', error);
@@ -39,11 +58,24 @@ const AdminUsersManager: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [keyword, page, pageSize, roleFilter, t]);
 
   useEffect(() => {
     void loadUsers();
-  }, []);
+  }, [loadUsers]);
+
+  const handleSearch = () => {
+    if (page === 1) {
+      void loadUsers();
+      return;
+    }
+    setPage(1);
+  };
+
+  const handlePageSizeChange = (nextPageSize: number) => {
+    setPageSize(nextPageSize);
+    setPage(1);
+  };
 
   const handleRoleChange = async (userId: string, role: string) => {
     setUpdatingUserId(userId);
@@ -63,19 +95,27 @@ const AdminUsersManager: React.FC = () => {
     }
   };
 
+  const showPaginationBar = pagination.total > 0;
+  const showFullPagination = pagination.total > 20;
+
   return (
     <section className={styles.root}>
-      <div className={adminStyles.heroCard}>
-        <div className={adminStyles.heroTitle}>{t('adminUsers.title')}</div>
-        <p className={adminStyles.heroDesc}>{t('adminUsers.desc')}</p>
-      </div>
+      <PageSectionHeader
+        title={t('adminUsers.title')}
+        description={t('adminUsers.desc')}
+      />
 
-      <div className={styles.filters}>
+      <div className={workbenchStyles.toolbar}>
         <input
           className={styles.input}
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
           placeholder={t('adminUsers.searchPlaceholder')}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              handleSearch();
+            }
+          }}
         />
         <select
           className={styles.select}
@@ -87,7 +127,7 @@ const AdminUsersManager: React.FC = () => {
             <option key={role} value={role}>{getRoleLabel(role)}</option>
           ))}
         </select>
-        <button type="button" className={styles.searchButton} onClick={() => void loadUsers()}>
+        <button type="button" className={styles.searchButton} onClick={handleSearch}>
           {t('adminUsers.search')}
         </button>
       </div>
@@ -128,6 +168,59 @@ const AdminUsersManager: React.FC = () => {
         </table>
         {!isLoading && users.length === 0 ? <div className={styles.emptyState}>{t('adminUsers.noUsers')}</div> : null}
       </div>
+
+      {showPaginationBar ? (
+        <div className={styles.paginationBar}>
+          {showFullPagination ? (
+            <label className={styles.pageSizeField}>
+              <span>{t('adminUsers.pageSizeLabel')}</span>
+              <select
+                className={styles.select}
+                value={String(pageSize)}
+                disabled={isLoading || updatingUserId !== null}
+                onChange={(event) => handlePageSizeChange(Number(event.target.value) || 20)}
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <div className={styles.paginationHint}>{t('adminUsers.paginationHiddenHint')}</div>
+          )}
+
+          {showFullPagination ? (
+            <Pagination
+              className={styles.paginationWrap}
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              onPageChange={setPage}
+              disabled={isLoading || updatingUserId !== null}
+              summary={t('adminUsers.paginationSummary', {
+                page: pagination.page,
+                totalPages: pagination.totalPages,
+                total: pagination.total,
+              })}
+            />
+          ) : null}
+
+          {showFullPagination && pagination.totalPages <= 1 ? (
+            <div className={styles.paginationSummaryOnly}>
+              {t('adminUsers.paginationSummary', {
+                page: pagination.page,
+                totalPages: pagination.totalPages,
+                total: pagination.total,
+              })}
+            </div>
+          ) : null}
+
+          {!showFullPagination ? (
+            <div className={styles.paginationSummaryOnly}>
+              {t('adminUsers.paginationTotalOnly', { total: pagination.total })}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 };

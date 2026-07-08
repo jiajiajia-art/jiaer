@@ -26,13 +26,15 @@
   font-weight: 600;
 }
 
-.metricCol {
+/* 需高于 .table th/td 的 text-align:left，否则表头居中、数据左对齐会错位 */
+.table th.metricCol,
+.table td.metricCol {
   text-align: center;
   white-space: nowrap;
 }
 
 .sortableHeader {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -57,13 +59,13 @@
 
 .sortIconMuted {
   color: #bbb;
-  font-size: 12px;
+  font-size: 18px;
   line-height: 1;
 }
 
 .sortIconActive {
   color: var(--admin-accent-strong, #aa5a2d);
-  font-size: 12px;
+  font-size: 18px;
   line-height: 1;
   font-weight: 700;
 }
@@ -74,12 +76,6 @@
   color: var(--admin-accent, #c9733f);
   cursor: pointer;
   padding: 0;
-}
-
-.metricValue {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--admin-accent-strong, #aa5a2d);
 }
 
 .taskList {
