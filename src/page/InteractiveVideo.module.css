@@ -1230,6 +1230,13 @@
         var(--ivg-surface);
 }
 
+.treePlotMinigame {
+    border-color: var(--ivg-border-strong);
+    background:
+        linear-gradient(135deg, rgba(72, 183, 148, 0.18), rgba(229, 179, 95, 0.1)),
+        var(--ivg-surface);
+}
+
 .treePlotDisabled {
     opacity: 0.72;
 }
@@ -1238,6 +1245,12 @@
     border-color: var(--ivg-border-strong);
     background:
         linear-gradient(135deg, var(--ivg-accent-soft), transparent 58%),
+        var(--ivg-surface-muted);
+}
+
+.treeResultCard {
+    background:
+        linear-gradient(135deg, rgba(72, 183, 148, 0.16), rgba(229, 179, 95, 0.1)),
         var(--ivg-surface-muted);
 }
 

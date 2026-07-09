@@ -24,6 +24,7 @@ export type InteractiveVideoSnapshot = {
 export type InteractiveVideoHistoryItem = {
     nodeId: string;
     optionId?: string;
+    resultId?: string;
     edgeId?: string;
     title?: string;
     enteredAt?: string;

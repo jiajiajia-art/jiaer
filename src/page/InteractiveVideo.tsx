@@ -47,7 +47,7 @@ import styles from './InteractiveVideo.module.css';
 type StoryVariableValue = InteractiveVideoVariableValue;
 type StoryNodeKind = 'plot' | 'ending' | 'minigame' | 'start' | 'runScript' | 'scriptEnd';
 type StoryContentNodeKind = 'plot' | 'ending' | 'minigame';
-type MinigameResult = 'success' | 'failure';
+type MinigameResult = string;
 
 type StoryVariable = {
     id: string;
@@ -103,6 +103,12 @@ type StoryChoiceOption = {
     mutations?: StoryMutation[];
 };
 
+type StoryMinigameResultPort = {
+    id?: string;
+    label?: string;
+    builtIn?: boolean;
+};
+
 type StoryNode = {
     id: string;
     type?: string;
@@ -114,6 +120,8 @@ type StoryNode = {
     mutations?: StoryMutation[];
     options?: StoryChoiceOption[];
     minigameAssetId?: string;
+    minigameResults?: StoryMinigameResultPort[];
+    minigameResultMutations?: Record<string, StoryMutation[]>;
     successMutations?: StoryMutation[];
     failureMutations?: StoryMutation[];
     scriptId?: string;
@@ -127,6 +135,8 @@ type StoryNode = {
         mutations?: StoryMutation[];
         options?: StoryChoiceOption[];
         minigameAssetId?: string;
+        minigameResults?: StoryMinigameResultPort[];
+        minigameResultMutations?: Record<string, StoryMutation[]>;
         successMutations?: StoryMutation[];
         failureMutations?: StoryMutation[];
         scriptId?: string;
@@ -220,7 +230,7 @@ type InteractiveVideoRouteState = {
 } | null;
 
 type InteractiveVideoTreeNodeData = {
-    kind: 'plot' | 'ending' | 'choice';
+    kind: 'plot' | 'ending' | 'minigame' | 'choice' | 'result';
     id: string;
     title: string;
     isCurrent?: boolean;
@@ -274,16 +284,17 @@ type WindowWithIvgPlaybackMetrics = Window & {
 };
 
 type InteractiveVideoTreeBranchLayout = {
-    choiceId: string;
-    choiceTitle: string;
-    choiceToNodeEdge?: StoryEdge;
+    branchId: string;
+    branchTitle: string;
+    branchKind: 'choice' | 'result';
+    branchToNodeEdge?: StoryEdge;
     nextNodeId: string | null;
     terminalNodeId?: string;
-    child?: InteractiveVideoTreePlotLayout;
+    child?: InteractiveVideoTreeContentLayout;
 };
 
-type InteractiveVideoTreePlotLayout = {
-    plotId: string;
+type InteractiveVideoTreeContentLayout = {
+    nodeId: string;
     depth: number;
     branches: InteractiveVideoTreeBranchLayout[];
 };
@@ -307,7 +318,12 @@ const TREE_MOBILE_LANDSCAPE_FIT_PADDING = 0.12;
 const TREE_DEFAULT_MIN_ZOOM = 0.32;
 const TREE_MOBILE_MIN_ZOOM = 0.18;
 const MINIGAME_MESSAGE_TYPE = 'funloom:minigame:complete';
-const MINIGAME_RESULTS: MinigameResult[] = ['success', 'failure'];
+const BUILT_IN_MINIGAME_RESULTS: Array<Required<StoryMinigameResultPort>> = [
+    { id: 'success', label: '成功', builtIn: true },
+    { id: 'failure', label: '失败', builtIn: true },
+];
+const MINIGAME_RESULT_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+const MINIGAME_RESULT_HOLD_MS = 3500;
 
 const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState => ({
     currentNodeId: entryNodeId,
@@ -329,8 +345,11 @@ const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState =>
 
 const normalizeRawType = (value?: string | null) => String(value || '').trim().toLowerCase();
 
-const isMinigameResult = (value: unknown): value is MinigameResult =>
-    MINIGAME_RESULTS.includes(value as MinigameResult);
+const normalizeMinigameResultId = (value: unknown): MinigameResult | null => {
+    if (typeof value !== 'string') return null;
+    const resultId = value.trim();
+    return MINIGAME_RESULT_ID_PATTERN.test(resultId) ? resultId : null;
+};
 
 const getNodeKind = (node?: StoryNode | null): StoryNodeKind => {
     const kind = normalizeRawType(node?.data?.kind || node?.type || node?.kind);
@@ -369,13 +388,44 @@ const getNodeScriptId = (node?: StoryNode | null): string =>
     String(node?.data?.scriptId || node?.scriptId || '').trim();
 const getNodeEndId = (node?: StoryNode | null): string =>
     String(node?.data?.endId || node?.endId || node?.id || '').trim();
-const getMinigameResultMutations = (node: StoryNode | null | undefined, result: MinigameResult): StoryMutation[] =>
-    result === 'success'
-        ? node?.data?.successMutations || node?.successMutations || []
-        : node?.data?.failureMutations || node?.failureMutations || [];
+const normalizeDeclaredMinigameResults = (results?: StoryMinigameResultPort[]) => {
+    const normalized: Array<Required<StoryMinigameResultPort>> = [];
+    const knownIds = new Set<string>();
+    (results || []).forEach((result) => {
+        const resultId = normalizeMinigameResultId(result?.id);
+        if (!resultId || knownIds.has(resultId)) return;
+        normalized.push({
+            id: resultId,
+            label: String(result?.label || resultId).trim() || resultId,
+            builtIn: Boolean(result?.builtIn),
+        });
+        knownIds.add(resultId);
+    });
+    return normalized;
+};
+const isBasicMinigameResultList = (results: Array<Required<StoryMinigameResultPort>>) =>
+    results.length === BUILT_IN_MINIGAME_RESULTS.length &&
+    BUILT_IN_MINIGAME_RESULTS.every((builtIn) =>
+        results.some((result) => result.id === builtIn.id && result.builtIn === true),
+    );
+const getNodeMinigameResults = (node?: StoryNode | null) => {
+    const rawResults = node?.data?.minigameResults || node?.minigameResults;
+    const declared = normalizeDeclaredMinigameResults(rawResults);
+    return Array.isArray(rawResults) && !isBasicMinigameResultList(declared)
+        ? declared.map((result) => ({ ...result, builtIn: false }))
+        : BUILT_IN_MINIGAME_RESULTS.map((result) => ({ ...result }));
+};
+const getMinigameResultLabel = (node: StoryNode | null | undefined, result: MinigameResult) =>
+    getNodeMinigameResults(node).find((item) => item.id === result)?.label || result;
+const getMinigameResultMutations = (node: StoryNode | null | undefined, result: MinigameResult): StoryMutation[] => {
+    const mappedMutations = node?.data?.minigameResultMutations?.[result] || node?.minigameResultMutations?.[result];
+    if (Array.isArray(mappedMutations)) return mappedMutations;
+    if (result === 'success') return node?.data?.successMutations || node?.successMutations || [];
+    if (result === 'failure') return node?.data?.failureMutations || node?.failureMutations || [];
+    return [];
+};
 const getMinigameResultFromEdge = (edge?: StoryEdge | null): MinigameResult | null => {
-    const result = normalizeRawType(edge?.sourceEndId);
-    return isMinigameResult(result) ? result : null;
+    return normalizeMinigameResultId(edge?.sourceEndId);
 };
 
 const getEdgeRuntimeId = (edge: StoryEdge): string => edge.id || `${edge.source}:${edge.sourceOptionId || edge.sourceEndId || ''}`;
@@ -818,12 +868,12 @@ const buildReachableRouteEdges = (
         }
 
         if (nodeKind === 'minigame') {
-            MINIGAME_RESULTS.forEach((result) => {
-                const edge = getMinigameOutgoingEdge(script, current.nodeId || '', result);
+            getNodeMinigameResults(current.node).forEach((result) => {
+                const edge = getMinigameOutgoingEdge(script, current.nodeId || '', result.id);
                 if (!edge) return;
                 const resultVariables = applyMutations(
                     current.variables,
-                    getMinigameResultMutations(current.node, result),
+                    getMinigameResultMutations(current.node, result.id),
                     variableMap,
                 );
                 routeEdgesById.set(getEdgeRuntimeId(edge), edge);
@@ -1073,7 +1123,7 @@ const applyHistoryStepVariables = (
     }
     if (previousNode && getNodeKind(previousNode) === 'minigame') {
         const edge = findHistoryTransitionEdge(story, previousItem, item);
-        const result = getMinigameResultFromEdge(edge);
+        const result = normalizeMinigameResultId(item.resultId) || getMinigameResultFromEdge(edge);
         if (result) {
             nextVariables = applyMutations(nextVariables, getMinigameResultMutations(previousNode, result), storyVariableMap);
         }
@@ -1229,11 +1279,12 @@ const hydrateSessionState = (
 };
 
 function InteractiveVideoTreeNode({ data }: NodeProps<InteractiveVideoTreeNodeData>) {
-    if (data.kind === 'choice') {
+    if (data.kind === 'choice' || data.kind === 'result') {
+        const isResult = data.kind === 'result';
         return (
-            <div className={`${styles.treeChoiceCard} ${data.isVisited ? styles.treeChoiceVisited : ''}`}>
+            <div className={`${styles.treeChoiceCard} ${isResult ? styles.treeResultCard : ''} ${data.isVisited ? styles.treeChoiceVisited : ''}`}>
                 <Handle type="target" position={Position.Left} className={styles.treeHandle} isConnectable={false} />
-                <span>选项</span>
+                <span>{isResult ? '小游戏结果' : '选项'}</span>
                 <strong>{data.title}</strong>
                 <Handle type="source" position={Position.Right} className={styles.treeHandle} isConnectable={false} />
             </div>
@@ -1245,6 +1296,7 @@ function InteractiveVideoTreeNode({ data }: NodeProps<InteractiveVideoTreeNodeDa
         data.isCurrent ? styles.treePlotCurrent : '',
         data.isVisited ? styles.treePlotVisited : '',
         data.isEnding ? styles.treePlotEnding : '',
+        data.kind === 'minigame' ? styles.treePlotMinigame : '',
         data.canRollback ? '' : styles.treePlotDisabled,
         'nodrag',
         'nopan',
@@ -1263,7 +1315,7 @@ function InteractiveVideoTreeNode({ data }: NodeProps<InteractiveVideoTreeNodeDa
             }}
         >
             <Handle type="target" position={Position.Left} className={styles.treeHandle} isConnectable={false} />
-            <span>{data.isEnding ? '结局' : '剧情'}</span>
+            <span>{data.isEnding ? '结局' : data.kind === 'minigame' ? '小游戏' : '剧情'}</span>
             <strong>{data.title}</strong>
             {data.isCurrent && <em>当前</em>}
             {!data.isEnding && (
@@ -1369,7 +1421,8 @@ const interactiveVideoTreeEdgeTypes: EdgeTypes = {
     interactiveVideoTreeEdge: InteractiveVideoTreeEdge,
 };
 
-const getTreeChoiceNodeId = (sourceNodeId: string, optionId: string) => `choice:${sourceNodeId}:${optionId}`;
+const getTreeBranchNodeId = (sourceNodeId: string, branchId: string) => `branch:${sourceNodeId}:${branchId}`;
+const getMinigameResultBranchId = (sourceNodeId: string, resultId: MinigameResult) => `__minigame_${sourceNodeId}_${resultId}`;
 
 const buildInteractiveVideoTreeFlow = (
     story: StoryProject,
@@ -1401,17 +1454,23 @@ const buildInteractiveVideoTreeFlow = (
     const visitedOptionIds = new Set((sessionState.history || []).map((item) => item.optionId).filter(Boolean) as string[]);
     const visitedEdgeIds = new Set((sessionState.history || []).map((item) => item.edgeId).filter(Boolean) as string[]);
     const edgeBySourceOption = new Map<string, StoryEdge>();
+    const edgeBySourceResult = new Map<string, StoryEdge>();
 
     getRuntimeEdges(story).forEach((edge) => {
-        if (!edge.sourceOptionId) return;
-        edgeBySourceOption.set(`${edge.source}:${edge.sourceOptionId}`, edge);
+        if (edge.sourceOptionId) {
+            edgeBySourceOption.set(`${edge.source}:${edge.sourceOptionId}`, edge);
+        }
+        const sourceEndId = normalizeMinigameResultId(edge.sourceEndId);
+        if (sourceEndId) {
+            edgeBySourceResult.set(`${edge.source}:${sourceEndId}`, edge);
+        }
     });
 
     const nodes: FlowNode<InteractiveVideoTreeNodeData>[] = [];
     const edges: FlowEdge[] = [];
     const flowNodeIds = new Set<string>();
     const flowEdgeIds = new Set<string>();
-    const expandedPlotIds = new Set<string>();
+    const expandedContentNodeIds = new Set<string>();
     let rowCursor = 0;
 
     const isEdgeUnlocked = (edge?: StoryEdge) => {
@@ -1441,7 +1500,8 @@ const buildInteractiveVideoTreeFlow = (
         if (flowNodeIds.has(nodeId)) return;
         const node = storyNodeMap.get(nodeId);
         if (!node) return;
-        const isEnding = getNodeKind(node) === 'ending';
+        const nodeKind = getNodeKind(node);
+        const isEnding = nodeKind === 'ending';
         const position = {
             x: TREE_PADDING_X + depth * TREE_COLUMN_WIDTH,
             y: centerY,
@@ -1452,7 +1512,7 @@ const buildInteractiveVideoTreeFlow = (
             type: 'interactiveVideoTree',
             position,
             data: {
-                kind: isEnding ? 'ending' : 'plot',
+                kind: isEnding ? 'ending' : nodeKind === 'minigame' ? 'minigame' : 'plot',
                 id: nodeId,
                 title: getNodeTitle(node),
                 isCurrent: nodeId === currentNodeId,
@@ -1464,26 +1524,28 @@ const buildInteractiveVideoTreeFlow = (
         });
     };
 
-    const addChoiceNode = (sourceNodeId: string, branch: InteractiveVideoTreeBranchLayout, depth: number, centerY: number) => {
-        const choiceNodeId = getTreeChoiceNodeId(sourceNodeId, branch.choiceId);
-        if (flowNodeIds.has(choiceNodeId)) return choiceNodeId;
+    const addBranchNode = (sourceNodeId: string, branch: InteractiveVideoTreeBranchLayout, depth: number, centerY: number) => {
+        const branchNodeId = getTreeBranchNodeId(sourceNodeId, branch.branchId);
+        if (flowNodeIds.has(branchNodeId)) return branchNodeId;
         const position = {
             x: TREE_PADDING_X + depth * TREE_COLUMN_WIDTH,
             y: centerY,
         };
-        flowNodeIds.add(choiceNodeId);
+        flowNodeIds.add(branchNodeId);
         nodes.push({
-            id: choiceNodeId,
+            id: branchNodeId,
             type: 'interactiveVideoTree',
             position,
             data: {
-                kind: 'choice',
-                id: branch.choiceId,
-                title: branch.choiceTitle,
-                isVisited: unlockedOptionIds.has(branch.choiceId) || visitedOptionIds.has(branch.choiceId),
+                kind: branch.branchKind,
+                id: branch.branchId,
+                title: branch.branchTitle,
+                isVisited: branch.branchKind === 'result'
+                    ? Boolean(branch.branchToNodeEdge && isEdgeActive(branch.branchToNodeEdge))
+                    : unlockedOptionIds.has(branch.branchId) || visitedOptionIds.has(branch.branchId),
             },
         });
-        return choiceNodeId;
+        return branchNodeId;
     };
 
     const addFlowEdge = (id: string, source: string, target: string, active: boolean) => {
@@ -1509,38 +1571,63 @@ const buildInteractiveVideoTreeFlow = (
         });
     };
 
-    const getUnlockedBranches = (node: StoryNode) =>
-        getNodeOptions(node)
-            .map((option) => ({
-                option,
-                edge: edgeBySourceOption.get(`${node.id}:${option.id}`),
-            }))
-            .filter(({ option, edge }) => {
-                if (!unlockedOptionIds.has(option.id)) return false;
-                if (!edge) return true;
-                return isEdgeUnlocked(edge);
-            });
+    const getUnlockedBranches = (node: StoryNode) => {
+        const nodeKind = getNodeKind(node);
+        if (nodeKind === 'plot') {
+            return getNodeOptions(node)
+                .map((option) => ({
+                    branchId: option.id,
+                    branchTitle: getOptionLabel(option),
+                    branchKind: 'choice' as const,
+                    mutations: option.mutations || [],
+                    edge: edgeBySourceOption.get(`${node.id}:${option.id}`),
+                }))
+                .filter(({ branchId, edge }) => {
+                    if (!unlockedOptionIds.has(branchId)) return false;
+                    if (!edge) return true;
+                    return isEdgeUnlocked(edge);
+                });
+        }
 
-    const buildPlotLayout = (
-        plotId: string,
+        if (nodeKind === 'minigame') {
+            return getNodeMinigameResults(node)
+                .map((result) => {
+                    const edge = edgeBySourceResult.get(`${node.id}:${result.id}`);
+                    return {
+                        branchId: getMinigameResultBranchId(node.id, result.id),
+                        branchTitle: result.label,
+                        branchKind: 'result' as const,
+                        mutations: getMinigameResultMutations(node, result.id),
+                        edge,
+                    };
+                })
+                .filter(({ edge }) => Boolean(edge && isEdgeUnlocked(edge)));
+        }
+
+        return [];
+    };
+
+    const buildContentLayout = (
+        nodeId: string,
         depth: number,
         trail: Set<string>,
-    ): InteractiveVideoTreePlotLayout | null => {
-        const plotNode = storyNodeMap.get(plotId);
+    ): InteractiveVideoTreeContentLayout | null => {
+        const contentNode = storyNodeMap.get(nodeId);
+        const contentNodeKind = getNodeKind(contentNode);
 
-        if (!plotNode || getNodeKind(plotNode) !== 'plot' || !unlockedNodeIds.has(plotNode.id)) {
+        if (!contentNode || (contentNodeKind !== 'plot' && contentNodeKind !== 'minigame') || !unlockedNodeIds.has(contentNode.id)) {
             return null;
         }
 
-        expandedPlotIds.add(plotId);
+        expandedContentNodeIds.add(nodeId);
 
         const nextTrail = new Set(trail);
-        nextTrail.add(plotId);
-        const branches = getUnlockedBranches(plotNode).map(({ edge, option }) => {
-            const runtimeContext = getNodeRuntimeContext(plotNode.id);
-            const optionVariables = applyMutations(
+        nextTrail.add(nodeId);
+        const branches = getUnlockedBranches(contentNode).map(({ edge, branchId, branchTitle, branchKind, mutations }) => {
+            const runtimeContext = getNodeRuntimeContext(contentNode.id);
+            const branchVariables = applyMutations(
                 sessionState.variables || getStoryInitialVariables(story.variables || []),
-                option.mutations || [],
+                mutations,
                 variableMap,
             );
             const resolvedTarget = edge && runtimeContext.script
@@ -1549,78 +1636,83 @@ const buildInteractiveVideoTreeFlow = (
                     scriptId: runtimeContext.script.scriptId,
                     nodeId: edge.target,
                     callStack: runtimeContext.callStack,
-                    variables: optionVariables,
+                    variables: branchVariables,
                     variableMap,
                 })
                 : null;
             const nextNode = resolvedTarget?.node || null;
             const nextNodeKind = getNodeKind(nextNode);
             const nextNodeUnlocked = Boolean(nextNode && unlockedNodeIds.has(nextNode.id));
-            const nextPlotId = nextNode && nextNodeKind === 'plot' ? nextNode.id : null;
+            const nextContentNodeId = nextNode && (nextNodeKind === 'plot' || nextNodeKind === 'minigame') ? nextNode.id : null;
             const nextNodeId = nextNodeUnlocked && nextNode && isContentNodeKind(nextNodeKind) ? nextNode.id : null;
             const terminalNodeId = nextNodeUnlocked && nextNode && nextNodeKind === 'ending' ? nextNode.id : undefined;
-            const canExpandNextPlot =
-                Boolean(nextPlotId) &&
-                Boolean(nextPlotId && unlockedNodeIds.has(nextPlotId)) &&
-                Boolean(nextPlotId && !nextTrail.has(nextPlotId)) &&
-                Boolean(nextPlotId && !expandedPlotIds.has(nextPlotId));
+            const canExpandNextContent =
+                Boolean(nextContentNodeId) &&
+                Boolean(nextContentNodeId && unlockedNodeIds.has(nextContentNodeId)) &&
+                Boolean(nextContentNodeId && !nextTrail.has(nextContentNodeId)) &&
+                Boolean(nextContentNodeId && !expandedContentNodeIds.has(nextContentNodeId));
 
             return {
-                choiceId: option.id,
-                choiceTitle: getOptionLabel(option),
-                choiceToNodeEdge: nextNodeId && edge ? edge : undefined,
+                branchId,
+                branchTitle,
+                branchKind,
+                branchToNodeEdge: nextNodeId && edge ? edge : undefined,
                 nextNodeId,
                 terminalNodeId,
                 child:
-                    canExpandNextPlot && nextPlotId
-                        ? buildPlotLayout(nextPlotId, depth + 2, nextTrail) ?? undefined
+                    canExpandNextContent && nextContentNodeId
+                        ? buildContentLayout(nextContentNodeId, depth + 2, nextTrail) ?? undefined
                         : undefined,
             };
         });
 
         return {
-            plotId,
+            nodeId,
             depth,
             branches,
         };
     };
 
-    const addChoiceToNodeEdge = (sourceNodeId: string, branch: InteractiveVideoTreeBranchLayout) => {
-        const edge = branch.choiceToNodeEdge;
-        if (!edge || !edge.sourceOptionId || !isEdgeUnlocked(edge)) return;
+    const addBranchToNodeEdge = (sourceNodeId: string, branch: InteractiveVideoTreeBranchLayout) => {
+        const edge = branch.branchToNodeEdge;
+        if (!edge || !isEdgeUnlocked(edge)) return;
         const edgeRuntimeId = getEdgeRuntimeId(edge);
-        const edgeId = `choice:${edgeRuntimeId}:${edge.target}`;
-        addFlowEdge(edgeId, getTreeChoiceNodeId(sourceNodeId, branch.choiceId), edge.target, isEdgeActive(edge));
+        const edgeId = `branch:${edgeRuntimeId}:${edge.target}`;
+        addFlowEdge(edgeId, getTreeBranchNodeId(sourceNodeId, branch.branchId), edge.target, isEdgeActive(edge));
     };
 
-    const addPlotToChoiceEdge = (plotId: string, branch: InteractiveVideoTreeBranchLayout) => {
-        const edgeId = `plot:${plotId}:${branch.choiceId}`;
-        const edgeIsActive = visitedOptionIds.has(branch.choiceId) || isEdgeActive(branch.choiceToNodeEdge);
-        addFlowEdge(edgeId, plotId, getTreeChoiceNodeId(plotId, branch.choiceId), edgeIsActive);
+    const addContentToBranchEdge = (nodeId: string, branch: InteractiveVideoTreeBranchLayout) => {
+        const edgeId = `content:${nodeId}:${branch.branchId}`;
+        const edgeIsActive =
+            branch.branchKind === 'choice'
+                ? visitedOptionIds.has(branch.branchId) || isEdgeActive(branch.branchToNodeEdge)
+                : isEdgeActive(branch.branchToNodeEdge);
+        addFlowEdge(edgeId, nodeId, getTreeBranchNodeId(nodeId, branch.branchId), edgeIsActive);
     };
 
-    const assignPlotLayout = (layout: InteractiveVideoTreePlotLayout): number => {
-        const plotNode = storyNodeMap.get(layout.plotId);
+    const assignContentLayout = (layout: InteractiveVideoTreeContentLayout): number => {
+        const contentNode = storyNodeMap.get(layout.nodeId);
+        const contentNodeKind = getNodeKind(contentNode);
 
-        if (!plotNode || getNodeKind(plotNode) !== 'plot') {
+        if (!contentNode || (contentNodeKind !== 'plot' && contentNodeKind !== 'minigame')) {
             return rowCursor;
         }
 
         const branchCenters = layout.branches.map((branch) => {
-            const childCenterY = branch.child ? assignPlotLayout(branch.child) : TREE_PADDING_Y + rowCursor * TREE_ROW_HEIGHT;
+            const childCenterY = branch.child ? assignContentLayout(branch.child) : TREE_PADDING_Y + rowCursor * TREE_ROW_HEIGHT;
 
             if (!branch.child) {
                 rowCursor += 1;
             }
 
-            addChoiceNode(layout.plotId, branch, layout.depth + 1, childCenterY);
-            addPlotToChoiceEdge(layout.plotId, branch);
+            addBranchNode(layout.nodeId, branch, layout.depth + 1, childCenterY);
+            addContentToBranchEdge(layout.nodeId, branch);
 
             if (branch.terminalNodeId) {
                 addStoryNode(branch.terminalNodeId, layout.depth + 2, childCenterY);
             }
 
-            addChoiceToNodeEdge(layout.plotId, branch);
+            addBranchToNodeEdge(layout.nodeId, branch);
 
             return childCenterY;
         });
@@ -1633,7 +1725,7 @@ const buildInteractiveVideoTreeFlow = (
             rowCursor += 1;
         }
 
-        addStoryNode(plotNode.id, layout.depth, centerY);
+        addStoryNode(contentNode.id, layout.depth, centerY);
         return centerY;
     };
 
@@ -1642,10 +1734,10 @@ const buildInteractiveVideoTreeFlow = (
 
     if (rootNode && getNodeKind(rootNode) === 'ending') {
         addStoryNode(rootNode.id, 0, TREE_PADDING_Y + rowCursor * TREE_ROW_HEIGHT);
-    } else if (rootNode && getNodeKind(rootNode) === 'plot') {
-        const rootLayout = buildPlotLayout(rootNode.id, 0, new Set<string>());
+    } else if (rootNode && (getNodeKind(rootNode) === 'plot' || getNodeKind(rootNode) === 'minigame')) {
+        const rootLayout = buildContentLayout(rootNode.id, 0, new Set<string>());
         if (rootLayout) {
-            assignPlotLayout(rootLayout);
+            assignContentLayout(rootLayout);
         }
     }
 
@@ -1837,7 +1929,7 @@ function InteractiveVideoTreeCanvas({
                 edgesFocusable={false}
                 elementsSelectable={false}
                 onNodeClick={(event, node) => {
-                    if ((node.data.kind === 'plot' || node.data.kind === 'ending') && node.data.canRollback) {
+                    if ((node.data.kind === 'plot' || node.data.kind === 'ending' || node.data.kind === 'minigame') && node.data.canRollback) {
                         event.stopPropagation();
                         node.data.onRollback?.(node.id);
                     }
@@ -1905,6 +1997,7 @@ const InteractiveVideo: React.FC = () => {
     const monitorRef = useRef<HTMLDivElement | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const minigameIframeRef = useRef<HTMLIFrameElement | null>(null);
+    const minigameCompletionTimerRef = useRef<number | null>(null);
 
     const fileId = String(fileIdParam || '').trim();
     const launchedFromGameDetail = Boolean((location.state as InteractiveVideoRouteState)?.fromGameDetail);
@@ -1980,6 +2073,10 @@ const InteractiveVideo: React.FC = () => {
             if (hudHideTimerRef.current != null) {
                 window.clearTimeout(hudHideTimerRef.current);
                 hudHideTimerRef.current = null;
+            }
+            if (minigameCompletionTimerRef.current != null) {
+                window.clearTimeout(minigameCompletionTimerRef.current);
+                minigameCompletionTimerRef.current = null;
             }
         };
     }, [markPreloadedVideoAspect, markPreloadedVideoStatus, publishPlaybackMetrics]);
@@ -2622,98 +2719,114 @@ const InteractiveVideo: React.FC = () => {
         await syncState(nextState);
     };
 
-    const handleMinigameComplete = useCallback(async (result: MinigameResult) => {
+    const handleMinigameComplete = useCallback((rawResult: unknown) => {
         if (!story || !currentNode || !currentScript || !sessionState || getNodeKind(currentNode) !== 'minigame') return;
+        if (minigameCompletionTimerRef.current != null) return;
 
+        const result = normalizeMinigameResultId(rawResult);
+        const declaredResult = result
+            ? getNodeMinigameResults(currentNode).find((item) => item.id === result)
+            : null;
+        if (!result || !declaredResult) {
+            toast.error(`未知小游戏结果：${String(rawResult)}`);
+            return;
+        }
         const edge = getMinigameOutgoingEdge(currentScript, currentNode.id, result);
         if (!edge) {
-            toast.error(`小游戏${result === 'success' ? '成功' : '失败'}分支未连接`);
-            return;
-        }
-        const resultVariables = applyMutations(
-            sessionState.variables,
-            getMinigameResultMutations(currentNode, result),
-            variableMap,
-        );
-        const resolvedTarget = resolveRuntimeNode({
-            story,
-            scriptId: currentScript.scriptId,
-            nodeId: edge.target,
-            callStack: sessionState.callStack || [],
-            variables: resultVariables,
-            variableMap,
-        });
-        const targetNode = resolvedTarget.node;
-        if (!targetNode) {
-            toast.error('小游戏目标节点不存在');
+            toast.error(`小游戏${getMinigameResultLabel(currentNode, result)}分支未连接`);
             return;
         }
 
-        const edgeRuntimeId = getEdgeRuntimeId(edge);
-        const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
-        const routeWasUnlocked =
-            targetWasUnlocked ||
-            (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
-        const targetNodeKind = getNodeKind(targetNode);
-        const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
-        await prepareTargetVideo(targetVideoUrl);
+        minigameCompletionTimerRef.current = window.setTimeout(() => {
+            minigameCompletionTimerRef.current = null;
+            void (async () => {
+                const resultVariables = applyMutations(
+                    sessionState.variables,
+                    getMinigameResultMutations(currentNode, result),
+                    variableMap,
+                );
+                const resolvedTarget = resolveRuntimeNode({
+                    story,
+                    scriptId: currentScript.scriptId,
+                    nodeId: edge.target,
+                    callStack: sessionState.callStack || [],
+                    variables: resultVariables,
+                    variableMap,
+                });
+                const targetNode = resolvedTarget.node;
+                if (!targetNode) {
+                    toast.error('小游戏目标节点不存在');
+                    return;
+                }
 
-        setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
-        setCurrentSequenceVideoIndex(0);
-        setShowManualPlay(false);
-        setEndingModalOpen(false);
-        setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
-        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
-        setIsVideoBuffering(false);
-        setVideoGate(Boolean(targetVideoUrl));
+                const edgeRuntimeId = getEdgeRuntimeId(edge);
+                const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
+                const routeWasUnlocked =
+                    targetWasUnlocked ||
+                    (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
+                const targetNodeKind = getNodeKind(targetNode);
+                const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
+                await prepareTargetVideo(targetVideoUrl);
 
-        const sourceSnapshots = ensureSnapshot(
-            sessionState,
-            currentNode.id,
-            sessionState.variables,
-            sessionState.history || [],
-            sessionState.currentScriptId || currentScript.scriptId,
-            sessionState.callStack || [],
-        );
-        const variables = resolvedTarget.variables;
-        const now = new Date().toISOString();
-        const history = [
-            ...(sessionState.history || []),
-            {
-                nodeId: targetNode.id,
-                edgeId: edgeRuntimeId,
-                title: getNodeTitle(targetNode),
-                enteredAt: now,
-            },
-        ];
-        const targetIsEnding = targetNodeKind === 'ending';
-        const nextState: InteractiveVideoSessionState = {
-            ...sessionState,
-            currentNodeId: targetNode.id,
-            currentScriptId: resolvedTarget.scriptId,
-            callStack: cloneCallStack(resolvedTarget.callStack),
-            variables,
-            history,
-            unlocked: {
-                nodeIds: uniquePush(sessionState.unlocked?.nodeIds || [], targetNode.id),
-                optionIds: sessionState.unlocked?.optionIds || [],
-                edgeIds: uniquePush(sessionState.unlocked?.edgeIds || [], edgeRuntimeId),
-            },
-            snapshots: ensureSnapshot(
-                { ...sessionState, snapshots: sourceSnapshots },
-                targetNode.id,
-                variables,
-                history,
-                resolvedTarget.scriptId,
-                resolvedTarget.callStack,
-            ),
-            ending: {
-                reached: targetIsEnding,
-                nodeId: targetIsEnding ? targetNode.id : null,
-            },
-            updatedAt: now,
-        };
-        await syncState(nextState);
+                setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
+                setCurrentSequenceVideoIndex(0);
+                setShowManualPlay(false);
+                setEndingModalOpen(false);
+                setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
+                setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
+                setIsVideoBuffering(false);
+                setVideoGate(Boolean(targetVideoUrl));
+
+                const sourceSnapshots = ensureSnapshot(
+                    sessionState,
+                    currentNode.id,
+                    sessionState.variables,
+                    sessionState.history || [],
+                    sessionState.currentScriptId || currentScript.scriptId,
+                    sessionState.callStack || [],
+                );
+                const variables = resolvedTarget.variables;
+                const now = new Date().toISOString();
+                const history = [
+                    ...(sessionState.history || []),
+                    {
+                        nodeId: targetNode.id,
+                        resultId: result,
+                        edgeId: edgeRuntimeId,
+                        title: getNodeTitle(targetNode),
+                        enteredAt: now,
+                    },
+                ];
+                const targetIsEnding = targetNodeKind === 'ending';
+                const nextState: InteractiveVideoSessionState = {
+                    ...sessionState,
+                    currentNodeId: targetNode.id,
+                    currentScriptId: resolvedTarget.scriptId,
+                    callStack: cloneCallStack(resolvedTarget.callStack),
+                    variables,
+                    history,
+                    unlocked: {
+                        nodeIds: uniquePush(sessionState.unlocked?.nodeIds || [], targetNode.id),
+                        optionIds: sessionState.unlocked?.optionIds || [],
+                        edgeIds: uniquePush(sessionState.unlocked?.edgeIds || [], edgeRuntimeId),
+                    },
+                    snapshots: ensureSnapshot(
+                        { ...sessionState, snapshots: sourceSnapshots },
+                        targetNode.id,
+                        variables,
+                        history,
+                        resolvedTarget.scriptId,
+                        resolvedTarget.callStack,
+                    ),
+                    ending: {
+                        reached: targetIsEnding,
+                        nodeId: targetIsEnding ? targetNode.id : null,
+                    },
+                    updatedAt: now,
+                };
+                await syncState(nextState);
+            })();
+        }, MINIGAME_RESULT_HOLD_MS);
     }, [currentNode, currentScript, manifest, prepareTargetVideo, sessionState, story, syncState, variableMap]);
 
     useEffect(() => {
@@ -2724,8 +2837,8 @@ const InteractiveVideo: React.FC = () => {
             const data = event.data;
             if (!data || typeof data !== 'object') return;
             const message = data as { type?: unknown; result?: unknown };
-            if (message.type !== MINIGAME_MESSAGE_TYPE || !isMinigameResult(message.result)) return;
-            void handleMinigameComplete(message.result);
+            if (message.type !== MINIGAME_MESSAGE_TYPE) return;
+            handleMinigameComplete(message.result);
         };
 
         window.addEventListener('message', handleMessage);
@@ -2734,6 +2847,10 @@ const InteractiveVideo: React.FC = () => {
 
     const handleRollback = async (nodeId: string) => {
         if (!story || !sessionState) return;
+        if (minigameCompletionTimerRef.current != null) {
+            window.clearTimeout(minigameCompletionTimerRef.current);
+            minigameCompletionTimerRef.current = null;
+        }
         const snapshot = sessionState.snapshots?.[nodeId];
         const targetNode = nodeMap.get(nodeId);
         const isUnlocked = (sessionState.unlocked?.nodeIds || []).includes(nodeId);
