@@ -109,6 +109,7 @@ const GameDetail: React.FC = () => {
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
+    const [isInteractiveVideoRestartConfirmOpen, setIsInteractiveVideoRestartConfirmOpen] = useState(false);
     const [isReplayDrawerOpen, setIsReplayDrawerOpen] = useState(false);
     const [activeReplayVisibility, setActiveReplayVisibility] = useState<ReplayVisibility>('public');
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
@@ -135,6 +136,7 @@ const GameDetail: React.FC = () => {
         [game?.engine, game?.game_tags],
     );
     const isGalgame = normalizedGameMode === 'TXT';
+    const isInteractiveVideo = normalizedGameMode === 'interactive-video';
 
     // 解析进入详情页的来源
     const enterSource = useMemo(() => {
@@ -327,6 +329,21 @@ const GameDetail: React.FC = () => {
     };
 
     // 实际开始游戏的逻辑
+    const startInteractiveVideo = async (restart = false) => {
+        if (!fileId) {
+            toast.error(t('gameDetail.gameIdInvalid'));
+            return;
+        }
+
+        useGameStore.getState().clearAll();
+        navigate(`/interactive-video/${fileId}`, {
+            state: {
+                fromGameDetail: true,
+                ...(restart ? { restart: true } : {}),
+            },
+        });
+    };
+
     const startGameInternal = async () => {
         if (!fileId || !game) {
             toast.error(t('gameDetail.gameInfoError'));
@@ -359,8 +376,7 @@ const GameDetail: React.FC = () => {
         }
 
         if (normalized === 'interactive-video') {
-            useGameStore.getState().clearAll();
-            navigate(`/interactive-video/${fileId}`, { state: { fromGameDetail: true } });
+            await startInteractiveVideo(false);
             return;
         }
 
@@ -445,8 +461,8 @@ const GameDetail: React.FC = () => {
             return;
         }
 
-        // CUSTOM/ST/IVG 模式：直接开始，不需要弹窗
-        if (normalizedGameMode === 'customif' || normalizedGameMode === 'st' || normalizedGameMode === 'interactive-video') {
+        // CUSTOM/ST 模式：直接开始，不需要弹窗
+        if (normalizedGameMode === 'customif' || normalizedGameMode === 'st') {
             await startGameInternal();
             return;
         }
@@ -454,6 +470,15 @@ const GameDetail: React.FC = () => {
         setIsPlayStatusLoading(true);
         try {
             const status = await fetchPlayStatus();
+            if (isInteractiveVideo) {
+                if (status.hasContinueState) {
+                    setPlayStatus(status);
+                    setIsStartOptionsOpen(true);
+                    return;
+                }
+                await startInteractiveVideo(true);
+                return;
+            }
             setPlayStatus(status);
             setIsStartOptionsOpen(true);
         } finally {
@@ -486,7 +511,7 @@ const GameDetail: React.FC = () => {
         }
 
         if (normalizedGameMode === 'interactive-video') {
-            navigate(`/interactive-video/${fileId}`, { state: { fromGameDetail: true } });
+            await startInteractiveVideo(true);
             return;
         }
 
@@ -507,6 +532,21 @@ const GameDetail: React.FC = () => {
     };
 
     // 处理点赞
+    const handleContinueInteractiveVideo = async () => {
+        closeStartOptions();
+        await startInteractiveVideo(false);
+    };
+
+    const handleRequestInteractiveVideoRestart = () => {
+        closeStartOptions();
+        setIsInteractiveVideoRestartConfirmOpen(true);
+    };
+
+    const handleConfirmInteractiveVideoRestart = async () => {
+        setIsInteractiveVideoRestartConfirmOpen(false);
+        await startInteractiveVideo(true);
+    };
+
     const handleLike = () => {
         if (!checkAuth() || isLikeLoading) return;
 
@@ -865,6 +905,15 @@ const GameDetail: React.FC = () => {
                 confirmButtonText={t('gameDetail.continueGame')}
                 cancelButtonText={t('common.cancel')}
             />
+            <ConfirmModal
+                isOpen={isInteractiveVideoRestartConfirmOpen}
+                onConfirm={handleConfirmInteractiveVideoRestart}
+                onCancel={() => setIsInteractiveVideoRestartConfirmOpen(false)}
+                title={t('gameDetail.ivgRestartConfirmTitle')}
+                message={t('gameDetail.ivgRestartConfirmMessage')}
+                confirmButtonText={t('gameDetail.ivgRestartPlay')}
+                cancelButtonText={t('common.cancel')}
+            />
             {/* 登录弹窗（当前详情页也挂一份，确保能在本页触发显示，微信小程序环境不显示） */}
             {!isWebViewEnv() && (
                 <AuthModal
@@ -982,23 +1031,31 @@ const GameDetail: React.FC = () => {
                                 <button
                                     className={styles.startOptionsPrimary}
                                     onClick={async () => {
+                                        if (isInteractiveVideo) {
+                                            await handleContinueInteractiveVideo();
+                                            return;
+                                        }
                                         closeStartOptions();
                                         await handleStartNewGame();
                                     }}
                                 >
-                                    {t('gameDetail.newStart')}
+                                    {isInteractiveVideo ? t('gameDetail.ivgContinuePlay') : t('gameDetail.newStart')}
                                 </button>
                                 <button
                                     className={styles.startOptionsSecondary}
-                                    disabled={!playStatus.hasContinueState}
+                                    disabled={isInteractiveVideo ? false : !playStatus.hasContinueState}
                                     onClick={async () => {
+                                        if (isInteractiveVideo) {
+                                            handleRequestInteractiveVideoRestart();
+                                            return;
+                                        }
                                         closeStartOptions();
                                         await handleStartGame();
                                     }}
                                 >
-                                    {t('gameDetail.continueExperience')}
+                                    {isInteractiveVideo ? t('gameDetail.ivgRestartPlay') : t('gameDetail.continueExperience')}
                                 </button>
-                                {isGalgame && (
+                                {isInteractiveVideo ? null : isGalgame && (
                                     <button
                                         className={styles.startOptionsGhost}
                                         disabled={!playStatus.hasSave}
@@ -1010,7 +1067,7 @@ const GameDetail: React.FC = () => {
                                         {t('gameDetail.loadSave')}
                                     </button>
                                 )}
-                                {isGalgame && (
+                                {isInteractiveVideo ? null : isGalgame && (
                                     <button
                                         className={styles.startOptionsGhost}
                                         onClick={openReplayDrawer}

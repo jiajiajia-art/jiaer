@@ -19,9 +19,16 @@ export type VideoPreloadPlanInput = {
 type VideoPreloadManagerOptions = {
   container?: HTMLElement | null;
   maxBackgroundJobs?: number;
+  disabledPriorities?: Iterable<VideoPreloadPriority>;
   onStatusChange?: (url: string, status: VideoPreloadStatus) => void;
   onMetadata?: (url: string, video: HTMLVideoElement) => void;
   onBackgroundCancel?: (url: string) => void;
+};
+
+type SelectRunnablePreloadOptions = {
+  playbackAtRisk?: boolean;
+  maxBackgroundJobs?: number;
+  disabledPriorities?: Iterable<VideoPreloadPriority>;
 };
 
 const PRIORITY_RANK: Record<VideoPreloadPriority, number> = {
@@ -66,13 +73,15 @@ export function buildVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloa
 
 export function selectRunnablePreloads(
   tasks: VideoPreloadTask[],
-  options: { playbackAtRisk?: boolean; maxBackgroundJobs?: number } = {},
+  options: SelectRunnablePreloadOptions = {},
 ): VideoPreloadTask[] {
-  const currentTasks = tasks.filter((task) => task.priority === 'current');
+  const disabledPriorities = new Set(options.disabledPriorities || []);
+  const availableTasks = tasks.filter((task) => !disabledPriorities.has(task.priority));
+  const currentTasks = availableTasks.filter((task) => task.priority === 'current');
   if (options.playbackAtRisk) return currentTasks.slice(0, 1);
 
   const maxBackgroundJobs = Math.max(0, Math.floor(Number(options.maxBackgroundJobs ?? 2)));
-  const backgroundTasks = tasks
+  const backgroundTasks = availableTasks
     .filter((task) => task.priority !== 'current')
     .sort((left, right) => left.rank - right.rank)
     .slice(0, maxBackgroundJobs);
@@ -86,6 +95,7 @@ export class VideoPreloadManager {
   private onStatusChange?: (url: string, status: VideoPreloadStatus) => void;
   private onMetadata?: (url: string, video: HTMLVideoElement) => void;
   private onBackgroundCancel?: (url: string) => void;
+  private disabledPriorities: Set<VideoPreloadPriority>;
   private tasks: VideoPreloadTask[] = [];
   private playbackAtRisk = false;
   private elements = new Map<string, HTMLVideoElement>();
@@ -98,6 +108,7 @@ export class VideoPreloadManager {
     this.onStatusChange = options.onStatusChange;
     this.onMetadata = options.onMetadata;
     this.onBackgroundCancel = options.onBackgroundCancel;
+    this.disabledPriorities = new Set(options.disabledPriorities || []);
   }
 
   setContainer(container: HTMLElement | null) {
@@ -167,6 +178,7 @@ export class VideoPreloadManager {
     const runnable = selectRunnablePreloads(this.tasks, {
       playbackAtRisk: this.playbackAtRisk,
       maxBackgroundJobs: this.maxBackgroundJobs,
+      disabledPriorities: this.disabledPriorities,
     });
     const runnableUrls = new Set(runnable.map((task) => task.url));
 

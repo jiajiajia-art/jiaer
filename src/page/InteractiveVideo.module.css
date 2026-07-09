@@ -85,6 +85,10 @@
     --ivg-portrait-frame: 1;
 }
 
+.miniProgramPlayerPage {
+    --ivg-mini-program-runtime: 1;
+}
+
 .portalRoot {
     min-height: 0;
     display: contents;
@@ -126,6 +130,10 @@
 
 .portalRootLandscapeRotated {
     --ivg-portal-rotation: landscape-rotated;
+}
+
+.portalRootMiniProgram {
+    --ivg-mini-program-runtime: 1;
 }
 
 .header {
@@ -262,10 +270,47 @@
     height: 100dvh;
     min-height: 0;
     border-radius: 0;
+    background: #000;
     box-shadow: none;
 }
 
 .cinematicVideoPage .sidePanel {
+    display: none;
+}
+
+.cinematicVideoPage .textScene {
+    align-items: center;
+    overflow: auto;
+    text-align: center;
+    padding:
+        calc(env(safe-area-inset-top, 0px) + clamp(72px, 12vh, 124px))
+        clamp(28px, 8vw, 104px)
+        calc(env(safe-area-inset-bottom, 0px) + clamp(128px, 18vh, 196px));
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.78)),
+        linear-gradient(135deg, #08090a 0%, #161918 52%, #050606 100%);
+}
+
+.cinematicVideoPage .textScene span {
+    color: rgba(251, 91, 103, 0.94);
+}
+
+.cinematicVideoPage .textScene h1 {
+    max-width: min(860px, 100%);
+    color: #fff;
+    font-size: clamp(30px, 5vw, 64px);
+    text-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+}
+
+.cinematicVideoPage .textScene p {
+    max-width: min(720px, 100%);
+    color: rgba(255, 255, 255, 0.72);
+    text-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.minigamePlayerPage .header,
+.minigamePlayerPage .mobileToolsButton,
+.minigamePlayerPage .videoHud {
     display: none;
 }
 
@@ -280,6 +325,10 @@
 
 .videoHudHidden {
     opacity: 0;
+}
+
+.miniProgramPlayerPage .videoHud {
+    transition: opacity 80ms linear;
 }
 
 .videoSceneTitle {
@@ -319,6 +368,17 @@
 
 .videoHudWithSkip .videoControlDock {
     grid-template-columns: repeat(5, minmax(78px, 1fr));
+}
+
+.nonVideoControlDock {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+}
+
+.nonVideoControlDock .videoControlDock {
+    grid-template-columns: repeat(3, minmax(82px, 1fr));
 }
 
 .videoControlButton {
@@ -550,6 +610,25 @@
 .choiceDockPortrait,
 .choiceDockLandscape {
     grid-template-columns: minmax(0, 1fr);
+}
+
+.miniProgramPlayerPage .videoControlDock,
+.miniProgramPlayerPage .playOverlayButton,
+.miniProgramPlayerPage .videoTransitionOverlay,
+.miniProgramPlayerPage .choiceButton,
+.miniProgramPlayerPage .noChoices,
+.miniProgramPlayerPage .videoNotice,
+.portalRootMiniProgram .mobileToolsSheet,
+.portalRootMiniProgram .treeDialogTitle,
+.portalRootMiniProgram .treeProgress {
+    backdrop-filter: none;
+}
+
+.miniProgramPlayerPage .choiceButton {
+    transition:
+        border-color 80ms linear,
+        background 80ms linear,
+        color 80ms linear;
 }
 
 .choiceDockOne .choiceButton {
@@ -1263,16 +1342,14 @@
 
 .endingOverlay {
     position: fixed;
-    top: 88px;
-    right: calc(360px + 24px);
-    bottom: 24px;
-    left: 24px;
+    inset: 0;
     z-index: 40;
     display: grid;
     place-items: center;
     padding: 24px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--ivg-bg) 28%, rgba(0, 0, 0, 0.68));
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.72)),
+        rgba(0, 0, 0, 0.58);
 }
 
 .restartConfirmOverlay {
@@ -1319,8 +1396,31 @@
     box-shadow: var(--ivg-shadow);
 }
 
+.endingModal {
+    width: min(540px, calc(100vw - 32px));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(20, 22, 24, 0.94), rgba(8, 9, 10, 0.94));
+    color: #fff;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
+    backdrop-filter: blur(14px);
+}
+
+.endingModal span {
+    color: rgba(251, 91, 103, 0.94);
+}
+
+.endingModal h1 {
+    color: #fff;
+}
+
 .endingModal p {
-    color: var(--ivg-text-soft);
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.endingModal .endingCloseButton {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.84);
 }
 
 .endingCloseButton,
@@ -1530,6 +1630,11 @@
     .videoHudWithSkip .videoControlDock {
         width: min(620px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
         grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .nonVideoControlDock .videoControlDock {
+        width: min(420px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .videoControlButton {
@@ -2051,13 +2156,13 @@
 @media (max-width: 980px) and (orientation: portrait) {
     .landscapeVideoPage {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100dvh;
+        top: 50%;
+        left: 50%;
+        width: 100dvh;
+        height: 100vw;
         min-height: 0;
         overflow: hidden;
-        transform: none;
+        transform: translate(-50%, -50%) rotate(90deg);
         transform-origin: center;
     }
 
@@ -2220,6 +2325,14 @@
     height: 100dvh;
     transform: none;
     transform-origin: center;
+}
+
+.portalRootLandscapeRotated.portalRootMobileLandscapeVideo.portalRootViewportPortrait .portalViewportFrame {
+    top: 50%;
+    left: 50%;
+    width: 100dvh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .portalRootMobilePortraitVideo .mobileToolsOverlay,

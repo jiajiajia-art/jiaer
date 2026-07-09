@@ -38,10 +38,17 @@ import {
     type VideoPreloadStatus as ManagedVideoPreloadStatus,
 } from '../utils/interactiveVideoPreload';
 import {
+    getVideoAspectFromDimensions,
+    normalizeVideoAspect,
+    shouldRotateMobileLandscapeVideo,
+    type InteractiveVideoAspect,
+} from '../utils/interactiveVideoLayout';
+import {
     canShowSkipControl,
     getNextPlaybackRate,
     type InteractiveVideoPlaybackRate,
 } from '../utils/interactiveVideoControls';
+import { isMiniProgramEnv } from '../utils/miniProgram';
 import styles from './InteractiveVideo.module.css';
 
 type StoryVariableValue = InteractiveVideoVariableValue;
@@ -64,6 +71,10 @@ type StoryVideo = {
     path?: string;
     name?: string;
     mimeType?: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    aspect?: 'portrait' | 'landscape';
     url?: string;
 };
 
@@ -182,9 +193,24 @@ type StoryProject = {
 };
 
 type StoryManifestMedia = {
+    mediaId?: string;
     filename?: string;
     url?: string;
     contentType?: string;
+    size?: number;
+    width?: number;
+    height?: number;
+    duration?: number;
+    aspect?: 'portrait' | 'landscape';
+};
+
+type StoryManifestPlaybackVideo = {
+    mediaId?: string;
+    url?: string;
+    width?: number;
+    height?: number;
+    duration?: number;
+    aspect?: 'portrait' | 'landscape';
 };
 
 type StoryManifestMinigame = {
@@ -215,18 +241,20 @@ type StoryManifest = {
             entrySequence?: string[];
             entryBranches?: string[];
         };
+        videos?: StoryManifestPlaybackVideo[];
     };
 };
 
 type PlaybackMode = 'fresh' | 'replay';
 type MobileToolsTab = 'tree' | 'history';
-type VideoAspect = 'unknown' | 'portrait' | 'landscape';
+type VideoAspect = InteractiveVideoAspect;
 type VideoPreloadStatus = ManagedVideoPreloadStatus;
 type InteractiveVideoTheme = 'light' | 'dark';
 type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
 type PortalPostureMode = 'desktop' | 'mobilePortraitVideo' | 'mobileLandscapeVideo';
 type InteractiveVideoRouteState = {
     fromGameDetail?: boolean;
+    restart?: boolean;
 } | null;
 
 type InteractiveVideoTreeNodeData = {
@@ -283,6 +311,18 @@ type WindowWithIvgPlaybackMetrics = Window & {
     __funloomIvgPlaybackMetrics?: PlaybackMetrics;
 };
 
+type MiniProgramBridge = {
+    miniProgram?: {
+        getEnv?: (callback: (result: { miniprogram?: boolean }) => void) => void;
+    };
+};
+
+type WindowWithMiniProgramBridge = WindowWithIvgPlaybackMetrics & {
+    __wxjs_environment?: string;
+    wx?: MiniProgramBridge;
+    jWeixin?: MiniProgramBridge;
+};
+
 type InteractiveVideoTreeBranchLayout = {
     branchId: string;
     branchTitle: string;
@@ -324,6 +364,10 @@ const BUILT_IN_MINIGAME_RESULTS: Array<Required<StoryMinigameResultPort>> = [
 ];
 const MINIGAME_RESULT_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
 const MINIGAME_RESULT_HOLD_MS = 3500;
+const MINI_PROGRAM_BRANCH_WAIT_MS = 1800;
+const MINI_PROGRAM_PLAYBACK_WATCHDOG_MS = 2600;
+const DEFAULT_BRANCH_WAIT_MS = 6500;
+const MINI_PROGRAM_DISABLED_PRELOAD_PRIORITIES = ['next-layer', 'replay'] as const;
 
 const emptyState = (entryNodeId: string | null): InteractiveVideoSessionState => ({
     currentNodeId: entryNodeId,
@@ -525,8 +569,19 @@ const getVideoExtension = (video: StoryVideo): string => {
 };
 
 const getVideoAspect = (width: number, height: number): VideoAspect => {
-    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 'unknown';
-    return width > height ? 'landscape' : 'portrait';
+    return getVideoAspectFromDimensions(width, height);
+};
+
+type VideoMetadataLike = {
+    width?: number;
+    height?: number;
+    aspect?: unknown;
+};
+
+const getAspectFromMetadata = (metadata?: VideoMetadataLike | null): VideoAspect => {
+    const declaredAspect = normalizeVideoAspect(metadata?.aspect);
+    if (declaredAspect !== 'unknown') return declaredAspect;
+    return getVideoAspect(Number(metadata?.width), Number(metadata?.height));
 };
 
 const nowMs = () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
@@ -564,6 +619,50 @@ const resolveVideoUrl = (video: StoryVideo | undefined, manifest: StoryManifest 
     if (!mediaId || !manifest?.mediaBaseUrl) return '';
     const base = manifest.mediaBaseUrl.endsWith('/') ? manifest.mediaBaseUrl : `${manifest.mediaBaseUrl}/`;
     return toBackendAssetUrl(`${base}${mediaId}.${getVideoExtension(video)}`);
+};
+
+const getComparableVideoUrl = (url?: string | null): string => {
+    const runtimeUrl = resolveRuntimeAssetUrl(url);
+    return runtimeUrl || String(url || '').trim();
+};
+
+const videoUrlsMatch = (left?: string | null, right?: string | null): boolean => {
+    const normalizedLeft = getComparableVideoUrl(left);
+    const normalizedRight = getComparableVideoUrl(right);
+    return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
+};
+
+const getNodeVideoRefs = (node: StoryNode | null | undefined): StoryVideo[] => {
+    const sequence = getNodeVideoSequence(node);
+    const sequenceVideos = Array.isArray(sequence?.segments)
+        ? sequence.segments
+            .slice()
+            .sort((left, right) => Number(left.index ?? 0) - Number(right.index ?? 0))
+            .map((segment) => segment.video)
+            .filter((video): video is StoryVideo => Boolean(video))
+        : [];
+
+    if (sequenceVideos.length > 0) return sequenceVideos;
+    const singleVideo = getNodeVideo(node);
+    return singleVideo ? [singleVideo] : [];
+};
+
+const resolveVideoAspect = (
+    video: StoryVideo | undefined,
+    manifest: StoryManifest | null,
+    resolvedUrl: string,
+): VideoAspect => {
+    const mediaId = String(video?.mediaId || video?.id || '').trim();
+    const mediaAspect = getAspectFromMetadata(mediaId ? manifest?.media?.[mediaId] : undefined);
+    if (mediaAspect !== 'unknown') return mediaAspect;
+
+    const playbackVideo = manifest?.playback?.videos?.find((item) => (
+        (mediaId && item.mediaId === mediaId) || videoUrlsMatch(item.url, resolvedUrl)
+    ));
+    const playbackAspect = getAspectFromMetadata(playbackVideo);
+    if (playbackAspect !== 'unknown') return playbackAspect;
+
+    return getAspectFromMetadata(video);
 };
 
 const resolveMinigameUrl = (node: StoryNode | null | undefined, manifest: StoryManifest | null): string => {
@@ -1976,12 +2075,15 @@ const InteractiveVideo: React.FC = () => {
     const [isVideoBuffering, setIsVideoBuffering] = useState(false);
     const [preloadedVideoStatus, setPreloadedVideoStatus] = useState<Record<string, VideoPreloadStatus>>({});
     const [ivgTheme, setIvgTheme] = useState<InteractiveVideoTheme>('light');
+    const [isMiniProgramRuntime, setIsMiniProgramRuntime] = useState(() => isMiniProgramEnv());
     const [currentSequenceVideoIndex, setCurrentSequenceVideoIndex] = useState(0);
+    const isMiniProgramRuntimeRef = useRef(isMiniProgramRuntime);
     const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
     const preloadManagerRef = useRef<VideoPreloadManager | null>(null);
     const preloadContainerRef = useRef<HTMLDivElement | null>(null);
     const bufferingNoticeTimerRef = useRef<number | null>(null);
     const hudHideTimerRef = useRef<number | null>(null);
+    const miniProgramPlaybackWatchdogTimerRef = useRef<number | null>(null);
     const activeStallStartedAtRef = useRef<number | null>(null);
     const playbackMetricsRef = useRef<PlaybackMetrics>({
         initialPrepareStartedAt: null,
@@ -2000,7 +2102,9 @@ const InteractiveVideo: React.FC = () => {
     const minigameCompletionTimerRef = useRef<number | null>(null);
 
     const fileId = String(fileIdParam || '').trim();
-    const launchedFromGameDetail = Boolean((location.state as InteractiveVideoRouteState)?.fromGameDetail);
+    const routeState = location.state as InteractiveVideoRouteState;
+    const launchedFromGameDetail = Boolean(routeState?.fromGameDetail);
+    const initialRestartRef = useRef(Boolean(routeState?.restart));
 
     const runtimeScripts = useMemo(() => story ? getRuntimeScripts(story) : [], [story]);
     const nodeMap = useMemo(() => {
@@ -2022,9 +2126,15 @@ const InteractiveVideo: React.FC = () => {
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
     const isMinigameNode = getNodeKind(currentNode) === 'minigame';
+    const currentVideoRefs = useMemo(() => getNodeVideoRefs(currentNode), [currentNode]);
     const currentVideoUrls = useMemo(() => getNodeVideoUrls(currentNode, manifest), [currentNode, manifest]);
     const currentVideoUrlsKey = currentVideoUrls.join('|');
     const currentVideoUrl = currentVideoUrls[currentSequenceVideoIndex] || currentVideoUrls[0] || '';
+    const currentVideoRef = currentVideoRefs[currentSequenceVideoIndex] || currentVideoRefs[0];
+    const currentManifestVideoAspect = useMemo(
+        () => resolveVideoAspect(currentVideoRef, manifest, currentVideoUrl),
+        [currentVideoRef, currentVideoUrl, manifest],
+    );
     const currentMinigameUrl = useMemo(() => resolveMinigameUrl(currentNode, manifest), [currentNode, manifest]);
     const projectTitle = manifest?.title || story?.outline?.projectTitle || story?.title || '互动影游';
 
@@ -2040,6 +2150,14 @@ const InteractiveVideo: React.FC = () => {
         preloadedVideoAspectRef.current = { ...preloadedVideoAspectRef.current, [url]: aspect };
     }, []);
 
+    const getKnownVideoAspect = useCallback((url: string, node: StoryNode | null | undefined, sequenceIndex = 0): VideoAspect => {
+        if (!url) return 'unknown';
+        const preloadedAspect = preloadedVideoAspectRef.current[url];
+        if (preloadedAspect) return preloadedAspect;
+        const videoRefs = getNodeVideoRefs(node);
+        return resolveVideoAspect(videoRefs[sequenceIndex] || videoRefs[0], manifest, url);
+    }, [manifest]);
+
     const publishPlaybackMetrics = useCallback(() => {
         if (typeof window === 'undefined') return;
         (window as WindowWithIvgPlaybackMetrics).__funloomIvgPlaybackMetrics = playbackMetricsRef.current;
@@ -2049,10 +2167,48 @@ const InteractiveVideo: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        isMiniProgramRuntimeRef.current = isMiniProgramRuntime;
+    }, [isMiniProgramRuntime]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        let cancelled = false;
+
+        const confirmMiniProgramRuntime = (value: boolean) => {
+            if (cancelled || !value) return;
+            isMiniProgramRuntimeRef.current = true;
+            setIsMiniProgramRuntime(true);
+        };
+
+        const refreshMiniProgramRuntime = () => {
+            confirmMiniProgramRuntime(isMiniProgramEnv());
+            const win = window as WindowWithMiniProgramBridge;
+            const bridge = win.wx || win.jWeixin;
+            const getEnv = bridge?.miniProgram?.getEnv;
+            if (typeof getEnv !== 'function') return;
+            try {
+                getEnv((result) => confirmMiniProgramRuntime(Boolean(result?.miniprogram)));
+            } catch {
+                confirmMiniProgramRuntime(isMiniProgramEnv());
+            }
+        };
+
+        refreshMiniProgramRuntime();
+        window.addEventListener('WeixinJSBridgeReady', refreshMiniProgramRuntime);
+        document.addEventListener('WeixinJSBridgeReady', refreshMiniProgramRuntime);
+        return () => {
+            cancelled = true;
+            window.removeEventListener('WeixinJSBridgeReady', refreshMiniProgramRuntime);
+            document.removeEventListener('WeixinJSBridgeReady', refreshMiniProgramRuntime);
+        };
+    }, []);
+
+    useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const manager = new VideoPreloadManager({
             container: preloadContainerRef.current,
-            maxBackgroundJobs: 2,
+            maxBackgroundJobs: isMiniProgramRuntime ? 1 : 2,
+            disabledPriorities: isMiniProgramRuntime ? MINI_PROGRAM_DISABLED_PRELOAD_PRIORITIES : undefined,
             onStatusChange: markPreloadedVideoStatus,
             onMetadata: (url, video) => markPreloadedVideoAspect(url, getVideoAspect(video.videoWidth, video.videoHeight)),
             onBackgroundCancel: () => {
@@ -2079,7 +2235,7 @@ const InteractiveVideo: React.FC = () => {
                 minigameCompletionTimerRef.current = null;
             }
         };
-    }, [markPreloadedVideoAspect, markPreloadedVideoStatus, publishPlaybackMetrics]);
+    }, [isMiniProgramRuntime, markPreloadedVideoAspect, markPreloadedVideoStatus, publishPlaybackMetrics]);
 
     useEffect(() => {
         preloadManagerRef.current?.setContainer(preloadContainerRef.current);
@@ -2172,9 +2328,11 @@ const InteractiveVideo: React.FC = () => {
             const initialVideoUrls = getNodeVideoUrls(loadedCurrentNode, loadedManifest);
             setCurrentSequenceVideoIndex(0);
             setVideoGate(initialVideoUrls.length > 0);
-            if (initialVideoUrls.length > 0) {
+            if (initialVideoUrls.length > 0 && !isMiniProgramRuntimeRef.current) {
                 playbackMetricsRef.current.initialPrepareStartedAt = nowMs();
                 setIsInitialVideoPreparing(true);
+            } else {
+                setIsInitialVideoPreparing(false);
             }
             setSessionState(initialState);
         } catch (error: unknown) {
@@ -2199,13 +2357,25 @@ const InteractiveVideo: React.FC = () => {
     }, [fileId, publishPlaybackMetrics]);
 
     useEffect(() => {
-        void loadSession(false);
+        const shouldRestart = initialRestartRef.current;
+        initialRestartRef.current = false;
+        if (shouldRestart && typeof window !== 'undefined') {
+            const historyState = window.history.state;
+            const userState = historyState && typeof historyState === 'object' && historyState.usr && typeof historyState.usr === 'object'
+                ? { ...historyState.usr }
+                : null;
+            if (userState && 'restart' in userState) {
+                delete userState.restart;
+                window.history.replaceState({ ...historyState, usr: userState }, document.title);
+            }
+        }
+        void loadSession(shouldRestart);
     }, [loadSession]);
 
     useEffect(() => {
         const preloadedAspect = currentVideoUrl ? preloadedVideoAspectRef.current[currentVideoUrl] : undefined;
-        setVideoAspect(preloadedAspect || 'unknown');
-    }, [currentNode?.id, currentVideoUrl]);
+        setVideoAspect(preloadedAspect || currentManifestVideoAspect);
+    }, [currentManifestVideoAspect, currentNode?.id, currentVideoUrl]);
 
     useEffect(() => {
         setCurrentSequenceVideoIndex(0);
@@ -2392,9 +2562,13 @@ const InteractiveVideo: React.FC = () => {
         });
     }, [branchVideoPreloads, currentSequenceVideoIndex, currentVideoUrl, currentVideoUrls, manifest, nodeMap, sessionState?.unlocked?.nodeIds]);
 
+    const effectivePreloadPlan = useMemo(() => (
+        isMiniProgramRuntime ? [] : preloadPlan
+    ), [isMiniProgramRuntime, preloadPlan]);
+
     useEffect(() => {
-        preloadManagerRef.current?.requestPreloads(preloadPlan);
-        const activeUrls = new Set(preloadPlan.map((item) => item.url));
+        preloadManagerRef.current?.requestPreloads(effectivePreloadPlan);
+        const activeUrls = new Set(effectivePreloadPlan.map((item) => item.url));
         setPreloadedVideoStatus((current) => {
             let changed = false;
             const next: Record<string, VideoPreloadStatus> = {};
@@ -2410,7 +2584,7 @@ const InteractiveVideo: React.FC = () => {
 
             return changed ? next : current;
         });
-    }, [preloadPlan]);
+    }, [effectivePreloadPlan]);
 
     useEffect(() => {
         preloadManagerRef.current?.setPlaybackAtRisk(Boolean(videoGate && isVideoBuffering));
@@ -2418,6 +2592,11 @@ const InteractiveVideo: React.FC = () => {
 
     useEffect(() => {
         if (!isInitialVideoPreparing || !currentVideoUrl) return undefined;
+        if (isMiniProgramRuntime) {
+            setIsInitialVideoPreparing(false);
+            setIsVideoBuffering(false);
+            return undefined;
+        }
         let cancelled = false;
         preloadManagerRef.current?.waitUntilReady(currentVideoUrl, 8000).then(() => {
             if (cancelled) return;
@@ -2433,7 +2612,7 @@ const InteractiveVideo: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [currentVideoUrl, isInitialVideoPreparing, publishPlaybackMetrics]);
+    }, [currentVideoUrl, isInitialVideoPreparing, isMiniProgramRuntime, publishPlaybackMetrics]);
 
     const availableOptions = useMemo(() => {
         if (videoGate || isBranchTransitioning) return [];
@@ -2517,8 +2696,39 @@ const InteractiveVideo: React.FC = () => {
         }, 700);
     }, [currentVideoUrl, publishPlaybackMetrics]);
 
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        if (miniProgramPlaybackWatchdogTimerRef.current != null) {
+            window.clearTimeout(miniProgramPlaybackWatchdogTimerRef.current);
+            miniProgramPlaybackWatchdogTimerRef.current = null;
+        }
+        if (!isMiniProgramRuntime || !currentVideoUrl || !videoGate) return undefined;
+
+        miniProgramPlaybackWatchdogTimerRef.current = window.setTimeout(() => {
+            miniProgramPlaybackWatchdogTimerRef.current = null;
+            const activeVideo = videoRef.current;
+            if (!activeVideo || activeVideo.ended) return;
+            const hasCurrentFrame = activeVideo.readyState >= activeVideo.HAVE_CURRENT_DATA;
+            const hasStartedPlayback = activeVideo.currentTime > 0.05 && !activeVideo.paused;
+            if (hasCurrentFrame && hasStartedPlayback) return;
+            preloadManagerRef.current?.setPlaybackAtRisk(false);
+            setIsInitialVideoPreparing(false);
+            setIsBranchTransitioning(false);
+            setIsVideoBuffering(false);
+            setShowManualPlay(true);
+        }, MINI_PROGRAM_PLAYBACK_WATCHDOG_MS);
+
+        return () => {
+            if (miniProgramPlaybackWatchdogTimerRef.current != null) {
+                window.clearTimeout(miniProgramPlaybackWatchdogTimerRef.current);
+                miniProgramPlaybackWatchdogTimerRef.current = null;
+            }
+        };
+    }, [currentVideoUrl, isMiniProgramRuntime, videoGate]);
+
     const prepareTargetVideo = useCallback(async (targetVideoUrl: string) => {
         if (!targetVideoUrl) return;
+        if (isMiniProgramRuntime) return;
         const manager = preloadManagerRef.current;
         const start = nowMs();
         const status = manager?.getStatus(targetVideoUrl) || preloadedVideoStatus[targetVideoUrl] || 'idle';
@@ -2531,14 +2741,15 @@ const InteractiveVideo: React.FC = () => {
         playbackMetricsRef.current.preloadMisses += 1;
         setIsBranchTransitioning(true);
         publishPlaybackMetrics();
-        const finalStatus = await manager?.waitUntilReady(targetVideoUrl, 6500);
+        const waitTimeoutMs = isMiniProgramRuntime ? MINI_PROGRAM_BRANCH_WAIT_MS : DEFAULT_BRANCH_WAIT_MS;
+        const finalStatus = await manager?.waitUntilReady(targetVideoUrl, waitTimeoutMs);
         playbackMetricsRef.current.branchWaitCount += 1;
         playbackMetricsRef.current.branchWaitTotalMs += Math.round(nowMs() - start);
         publishPlaybackMetrics();
         if (finalStatus === 'ready') {
             setIsBranchTransitioning(false);
         }
-    }, [preloadedVideoStatus, publishPlaybackMetrics]);
+    }, [isMiniProgramRuntime, preloadedVideoStatus, publishPlaybackMetrics]);
 
     const handleVideoComplete = () => {
         if (currentSequenceVideoIndex < currentVideoUrls.length - 1) {
@@ -2550,7 +2761,7 @@ const InteractiveVideo: React.FC = () => {
                 setIsBranchTransitioning(false);
                 setIsVideoBuffering(false);
                 setIsVideoPaused(false);
-                setVideoAspect(nextUrl ? preloadedVideoAspectRef.current[nextUrl] || 'unknown' : 'unknown');
+                setVideoAspect(getKnownVideoAspect(nextUrl, currentNode, nextIndex));
                 setVideoGate(Boolean(nextUrl));
             };
             if (nextUrl && preloadManagerRef.current?.getStatus(nextUrl) !== 'ready') {
@@ -2665,7 +2876,7 @@ const InteractiveVideo: React.FC = () => {
         setCurrentSequenceVideoIndex(0);
         setShowManualPlay(false);
         setEndingModalOpen(false);
-        setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
+        setVideoAspect(getKnownVideoAspect(targetVideoUrl, targetNode));
         setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
         setIsVideoBuffering(false);
         setVideoGate(Boolean(targetVideoUrl));
@@ -2772,7 +2983,7 @@ const InteractiveVideo: React.FC = () => {
                 setCurrentSequenceVideoIndex(0);
                 setShowManualPlay(false);
                 setEndingModalOpen(false);
-                setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
+                setVideoAspect(getKnownVideoAspect(targetVideoUrl, targetNode));
                 setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
                 setIsVideoBuffering(false);
                 setVideoGate(Boolean(targetVideoUrl));
@@ -2827,7 +3038,7 @@ const InteractiveVideo: React.FC = () => {
                 await syncState(nextState);
             })();
         }, MINIGAME_RESULT_HOLD_MS);
-    }, [currentNode, currentScript, manifest, prepareTargetVideo, sessionState, story, syncState, variableMap]);
+    }, [currentNode, currentScript, getKnownVideoAspect, manifest, prepareTargetVideo, sessionState, story, syncState, variableMap]);
 
     useEffect(() => {
         if (!isMinigameNode || !currentMinigameUrl || typeof window === 'undefined') return undefined;
@@ -2871,7 +3082,7 @@ const InteractiveVideo: React.FC = () => {
         setCurrentSequenceVideoIndex(0);
         setShowManualPlay(false);
         setEndingModalOpen(false);
-        setVideoAspect(targetVideoUrl ? preloadedVideoAspectRef.current[targetVideoUrl] || 'unknown' : 'unknown');
+        setVideoAspect(getKnownVideoAspect(targetVideoUrl, targetNode));
         setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
         setIsVideoBuffering(false);
         setVideoGate(Boolean(targetVideoUrl));
@@ -3092,11 +3303,15 @@ const InteractiveVideo: React.FC = () => {
         setVideoAspect(getVideoAspect(video.videoWidth, video.videoHeight));
     };
     const shouldUseLandscapeChoiceLayout = videoAspect === 'landscape' || stageAspect === 'landscape';
+    const isImmersiveStage = Boolean(currentNode);
+    const hasImmersiveMedia = Boolean(currentVideoUrl) || isMinigameNode;
 
     const pageClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
-        currentVideoUrl ? styles.cinematicVideoPage : '',
+        isMiniProgramRuntime ? styles.miniProgramPlayerPage : '',
+        isImmersiveStage ? styles.cinematicVideoPage : '',
+        isMinigameNode ? styles.minigamePlayerPage : '',
         currentVideoUrl && videoAspect === 'landscape' ? styles.landscapeVideoPage : '',
         currentVideoUrl && videoAspect === 'portrait' ? styles.portraitVideoPage : '',
     ].filter(Boolean).join(' ');
@@ -3117,12 +3332,18 @@ const InteractiveVideo: React.FC = () => {
         shouldShowSkipControl ? styles.videoHudWithSkip : styles.videoHudCompact,
     ].filter(Boolean).join(' ');
     const playToggleLabel = isVideoPaused ? '\u64ad\u653e' : '\u6682\u505c';
+    const shouldShowNonVideoControls = !isMinigameNode && !currentVideoUrl && !endingModalOpen;
 
-    const portalPostureMode = getPortalPostureMode(viewportMode, Boolean(currentVideoUrl), videoAspect);
-    const isLandscapePortalRotated = false;
+    const portalPostureMode = getPortalPostureMode(viewportMode, hasImmersiveMedia, videoAspect);
+    const isLandscapePortalRotated = shouldRotateMobileLandscapeVideo({
+        viewportMode,
+        videoAspect,
+        hasVideo: Boolean(currentVideoUrl),
+    });
     const portalRootClassName = [
         styles.pageRoot,
         ivgTheme === 'dark' ? styles.pageRootDark : '',
+        isMiniProgramRuntime ? styles.portalRootMiniProgram : '',
         styles.portalRoot,
         viewportMode === 'desktop' ? styles.portalRootViewportDesktop : '',
         viewportMode === 'mobilePortrait' ? styles.portalRootViewportPortrait : '',
@@ -3132,6 +3353,12 @@ const InteractiveVideo: React.FC = () => {
         portalPostureMode === 'mobileLandscapeVideo' ? styles.portalRootMobileLandscapeVideo : '',
         isLandscapePortalRotated ? styles.portalRootLandscapeRotated : '',
     ].filter(Boolean).join(' ');
+    const miniProgramVideoAttributes = isMiniProgramRuntime ? ({
+        'webkit-playsinline': 'true',
+        'x5-playsinline': 'true',
+        'x5-video-player-type': 'h5-page',
+        'x5-video-player-fullscreen': 'false',
+    } as React.VideoHTMLAttributes<HTMLVideoElement> & Record<string, string>) : {};
     const renderIvgPortal = (content: React.ReactNode) =>
         typeof document !== 'undefined'
             ? createPortal(
@@ -3319,11 +3546,13 @@ const InteractiveVideo: React.FC = () => {
     return (
         <>
         <div className={pageClassName}>
-            <header className={styles.header}>
-                <button type="button" className={styles.iconButton} onClick={returnToGameDetail} aria-label="返回">
-                    <IoArrowBack />
-                </button>
-            </header>
+            {!isMinigameNode && (
+                <header className={styles.header}>
+                    <button type="button" className={styles.iconButton} onClick={returnToGameDetail} aria-label="返回">
+                        <IoArrowBack />
+                    </button>
+                </header>
+            )}
 
             <main className={styles.playerGrid}>
                 <section className={styles.stage}>
@@ -3362,6 +3591,7 @@ const InteractiveVideo: React.FC = () => {
                                 autoPlay
                                 preload="auto"
                                 playsInline
+                                {...miniProgramVideoAttributes}
                                 onLoadStart={scheduleBufferingNotice}
                                 onLoadedMetadata={handleVideoMetadata}
                                 onLoadedData={() => {
@@ -3386,6 +3616,12 @@ const InteractiveVideo: React.FC = () => {
                                 onEnded={handleVideoComplete}
                                 onError={() => {
                                     markPlaybackHealthy();
+                                    if (isMiniProgramRuntime) {
+                                        setShowManualPlay(true);
+                                        setIsVideoBuffering(false);
+                                        setIsBranchTransitioning(false);
+                                        return;
+                                    }
                                     setVideoError('视频加载失败');
                                     handleVideoComplete();
                                 }}
@@ -3426,6 +3662,25 @@ const InteractiveVideo: React.FC = () => {
                                             <span>{'\u8df3\u8fc7'}</span>
                                         </button>
                                     )}
+                                </div>
+                            </div>
+                        )}
+
+                        {shouldShowNonVideoControls && (
+                            <div className={styles.nonVideoControlDock} aria-label="播放工具">
+                                <div className={styles.videoControlDock}>
+                                    <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
+                                        <IoGitBranchOutline />
+                                        <span>{'\u5267\u60c5\u6811'}</span>
+                                    </button>
+                                    <button type="button" className={styles.videoControlButton} onClick={handleOpenVariableBoard}>
+                                        <IoStatsChartOutline />
+                                        <span>{'\u53d8\u91cf\u677f'}</span>
+                                    </button>
+                                    <button type="button" className={styles.videoControlButton} onClick={openRestartConfirm}>
+                                        <IoRefresh />
+                                        <span>{'\u91cd\u5f00'}</span>
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -3502,15 +3757,17 @@ const InteractiveVideo: React.FC = () => {
                 </aside>
             </main>
 
-            <button
-                type="button"
-                className={styles.mobileToolsButton}
-                onClick={() => setIsMobileToolsOpen(true)}
-                aria-label="打开播放工具"
-            >
-                <IoGitBranchOutline />
-                <span>{routeExploreProgress.percent}%</span>
-            </button>
+            {!isMinigameNode && (
+                <button
+                    type="button"
+                    className={styles.mobileToolsButton}
+                    onClick={() => setIsMobileToolsOpen(true)}
+                    aria-label="打开播放工具"
+                >
+                    <IoGitBranchOutline />
+                    <span>{routeExploreProgress.percent}%</span>
+                </button>
+            )}
 
         </div>
         {mobileToolsPortal}
