@@ -465,9 +465,9 @@
     "kuranIdLabel": "Kuran ID: {{code}}",
     "copyKuranId": "Copy Kuran ID",
     "functionListTitle": "Function List",
-    "inviteCampaignTitle": "Invite friends to register, both get 30 points!",
+    "inviteCampaignTitle": "Invite friends to register, both get 66 points!",
     "copyInviteCode": "Copy Invite Code",
-    "inviteStatsText": "Invited {{count}} friends, earned {{count}} * 30 points",
+    "inviteStatsText": "Invited {{count}} friends, earned {{count}} * 66 points",
     "subscribeMembership": "Subscribe Membership",
     "subscribeMembershipDesc": "Monthly/Seasonal/Yearly plans, get membership benefits now",
     "subscribe": "Subscribe",
@@ -477,7 +477,7 @@
     "incentiveSettled": "Incentive Settled",
     "currentPoints": "Current Points: {{points}}",
     "currentDiamonds": "Current Diamonds: {{diamonds}}",
-    "inviteCodeOneTimeUse": "One-time use, both get +30 points after friend uses it",
+    "inviteCodeOneTimeUse": "One-time use, both get +66 points after friend uses it",
     "boundPhoneDesc": "Bound phone: {{phone}}, can login on browser",
     "setupPhoneDesc": "Set up phone and password to login on browser",
     "boundPhoneStatus": "Bound phone: {{phone}}",
@@ -1303,13 +1303,16 @@
     "replySuccess": "Reply submitted successfully",
     "replyFailed": "Failed to submit reply, please try again later",
     "submitSuccess": "Review submitted successfully",
+    "submitSuccessPending": "Review submitted successfully, will be displayed after review",
     "submitFailed": "Failed to submit review, please try again later",
+    "submitFailedRisky": "Comment contains prohibited content, please modify and try again",
     "pleaseSelectRating": "Please select a rating first",
     "noReviews": "No reviews yet. Be the first to review!",
     "loadMore": "Load More",
     "owner": "Author",
     "anonymousUser": "Anonymous User",
-    "likeFailed": "Operation failed, please try again later"
+    "likeFailed": "Operation failed, please try again later",
+    "pendingReview": "Pending Review"
   },
   "favorites": {
     "title": "Favorites",
@@ -1340,7 +1343,10 @@
     "signInNow": "Check in now",
     "success": "Checked in! You earned {{points}} points",
     "failed": "Check-in failed",
-    "requestFailed": "Check-in request failed"
+    "requestFailed": "Check-in request failed",
+    "legendCompleted": "Completed",
+    "legendToday": "Today",
+    "legendFuture": "Upcoming"
   },
   "stGameCreate": {
     "pageTitle": "Create AVG Mode",

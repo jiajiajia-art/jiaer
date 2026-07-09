@@ -31,7 +31,13 @@ export interface RatingItem {
   created_at: string;
   /** 被回复者昵称（根评论无此字段，一级回复为 null） */
   parent_nickname?: string | null;
+  /** 被回复的评论ID */
+  parent_rating_id?: string | null;
   replies?: RatingItem[];
+  /** 审核状态: pending=待审核, approved=已通过, rejected=已拒绝 */
+  review_status?: 'pending' | 'approved' | 'rejected';
+  /** 微信检测结果 JSON 字符串 */
+  wx_check_result?: string;
 }
 
 /** 评分汇总 */
@@ -66,6 +72,8 @@ export interface SubmitRatingRootResponse {
     rating_value: number;
     comment_content: string;
     created_at: string;
+    /** 审核状态 */
+    review_status?: 'pending' | 'approved' | 'rejected';
   };
   summary: RatingSummary;
 }
@@ -79,6 +87,8 @@ export interface SubmitRatingReplyResponse {
     parent_rating_id: string;
     comment_content: string;
     created_at: string;
+    /** 审核状态 */
+    review_status?: 'pending' | 'approved' | 'rejected';
   };
 }
 

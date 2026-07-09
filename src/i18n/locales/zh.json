@@ -464,9 +464,9 @@
     "kuranIdLabel": "Kuran号：{{code}}",
     "copyKuranId": "复制 Kuran 号",
     "functionListTitle": "功能列表",
-    "inviteCampaignTitle": "邀请好友注册，双方各得 30 积分！",
+    "inviteCampaignTitle": "邀请好友注册，双方各得 66 积分！",
     "copyInviteCode": "复制邀请码",
-    "inviteStatsText": "已邀请 {{count}} 人，获取 {{count}} * 30 积分",
+    "inviteStatsText": "已邀请 {{count}} 人，获取 {{count}} * 66 积分",
     "subscribeMembership": "开通会员",
     "subscribeMembershipDesc": "月卡/季卡/年卡，立即开通会员权益",
     "subscribe": "开通",
@@ -476,7 +476,7 @@
     "incentiveSettled": "激励已结算",
     "currentPoints": "当前积分：{{points}}",
     "currentDiamonds": "当前钻石：{{diamonds}}",
-    "inviteCodeOneTimeUse": "仅限一次，朋友使用后双方+30积分",
+    "inviteCodeOneTimeUse": "仅限一次，朋友使用后双方+66积分",
     "boundPhoneDesc": "已绑定手机号：{{phone}}，可在浏览器登录",
     "setupPhoneDesc": "设置手机号和密码，用于在浏览器中登录同一账号",
     "boundPhoneStatus": "已绑定手机号：{{phone}}",
@@ -1302,12 +1302,15 @@
     "replySuccess": "回复成功",
     "replyFailed": "回复失败，请稍后重试",
     "submitSuccess": "评价提交成功",
+    "submitSuccessPending": "评价提交成功，待审核后显示",
     "submitFailed": "评价提交失败，请稍后重试",
+    "submitFailedRisky": "评论内容包含违规信息，请修改后重试",
     "pleaseSelectRating": "请先选择评分",
     "noReviews": "还没有人评价，来成为第一个吧",
     "loadMore": "加载更多",
     "owner": "作者",
-    "likeFailed": "操作失败，请稍后重试"
+    "likeFailed": "操作失败，请稍后重试",
+    "pendingReview": "待审核"
   },
   "favorites": {
     "title": "收藏夹",
@@ -1338,7 +1341,10 @@
     "signInNow": "立即签到",
     "success": "签到成功，获得{{points}}积分",
     "failed": "签到失败",
-    "requestFailed": "签到请求失败"
+    "requestFailed": "签到请求失败",
+    "legendCompleted": "已完成",
+    "legendToday": "今日",
+    "legendFuture": "未完成"
   },
   "stGameCreate": {
     "pageTitle": "创建AVG模式",

@@ -110,6 +110,7 @@ function App() {
           <Route path="/admin/share-ratio" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/comments" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

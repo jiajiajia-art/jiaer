@@ -64,6 +64,16 @@ const formatDate = (dateString: string, language: string): string => {
 const getDisplayName = (nickname: string | null | undefined, fallbackName: string): string =>
   nickname?.trim() || fallbackName;
 
+const isRiskyContentError = (error: unknown): { isRisky: boolean; message?: string } => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { data?: { code?: string; message?: string } } }).response;
+    if (response?.data?.code === 'CONTENT_RISKY') {
+      return { isRisky: true, message: response.data.message };
+    }
+  }
+  return { isRisky: false };
+};
+
 const StarRating: React.FC<{
   value: number;
   onChange?: (value: number) => void;
@@ -141,6 +151,9 @@ const CommentCard: React.FC<{
               <div className={styles.commentUserInfo}>
                 <span className={styles.commentNickname}>{displayName}</span>
                 {comment.is_owner === 1 && <span className={styles.ownerBadge}>{t('gameRating.owner')}</span>}
+                {comment.review_status === 'pending' && (
+                  <span className={styles.pendingBadge}>{t('gameRating.pendingReview')}</span>
+                )}
               </div>
               {comment.rating_value !== null && (
                 <div className={styles.commentRatingBadge}>
@@ -184,14 +197,16 @@ const CommentCard: React.FC<{
                   />
                   <div className={styles.replyBody}>
                     <div className={styles.replyUserInfo}>
-                      <span className={styles.replyNickname}>{replyDisplayName}</span>
-                      {reply.parent_nickname && (
-                        <span className={styles.replyToInfo}>
+                      <span className={`${styles.replyNickname} ${reply.parent_nickname && !reply.parent_rating_id?.startsWith('rating') ? styles.replyNicknameLimited : ''}`} title={displayName}>{replyDisplayName}</span>
+                      {reply.parent_nickname && !reply.parent_rating_id?.startsWith('rating') && (
+                        <>
                           <svg className={styles.replyArrowIcon} viewBox="0 0 1024 1024" width="16" height="16">
                             <path d="M384 768l256-256-256-256v512z" fill="rgba(0,0,0,0.42)" />
                           </svg>
-                          {reply.parent_nickname}
-                        </span>
+                          <span className={styles.replyToInfo} title={reply.parent_nickname}>
+                            {reply.parent_nickname}
+                          </span>
+                        </>
                       )}
                       {reply.is_owner === 1 && <span className={styles.ownerBadge}>{t('gameRating.owner')}</span>}
                     </div>
@@ -364,14 +379,23 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
         comment: replyText.trim(),
       });
       if (response.data.success) {
-        toast.success(t('gameRating.replySuccess'));
+        const replyData = response.data.data && 'reply' in response.data.data 
+          ? (response.data.data as { reply: { review_status?: string } }).reply
+          : null;
+        const isPending = replyData?.review_status === 'pending';
+        toast.success(isPending ? t('gameRating.submitSuccessPending') : t('gameRating.replySuccess'));
         setReplyTo(null);
         setReplyText('');
         fetchRatings(1, false);
       }
     } catch (error) {
       console.error('Failed to submit reply:', error);
-      toast.error(t('gameRating.replyFailed'));
+      const riskyResult = isRiskyContentError(error);
+      if (riskyResult.isRisky) {
+        toast.error(t('gameRating.submitFailedRisky'));
+      } else {
+        toast.error(t('gameRating.replyFailed'));
+      }
     } finally {
       setIsSubmittingReply(false);
     }
@@ -392,9 +416,11 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
       });
       if (response.data.success) {
         const ratingData = response.data.data && 'rating' in response.data.data 
-          ? (response.data.data as { rating: { rating_id: string; rating_value: number; comment_content: string; created_at: string } }).rating
+          ? (response.data.data as { rating: { rating_id: string; rating_value: number; comment_content: string; created_at: string; review_status?: string } }).rating
           : null;
-        toast.success(t('gameRating.submitSuccess'));
+        
+        const isPending = ratingData?.review_status === 'pending';
+        toast.success(isPending ? t('gameRating.submitSuccessPending') : t('gameRating.submitSuccess'));
         setShowInput(false);
         setRatingValue(0);
         setCommentText('');
@@ -405,7 +431,12 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
       }
     } catch (error) {
       console.error('Failed to submit rating:', error);
-      toast.error(t('gameRating.submitFailed'));
+      const riskyResult = isRiskyContentError(error);
+      if (riskyResult.isRisky) {
+        toast.error(t('gameRating.submitFailedRisky'));
+      } else {
+        toast.error(t('gameRating.submitFailed'));
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -420,6 +420,16 @@
   letter-spacing: 0.03em;
 }
 
+.pendingBadge {
+  padding: 0.125rem 0.5rem;
+  background: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
 .commentTime {
   font-size: 0.75rem;
   color: rgba(0, 0, 0, 0.4);
@@ -558,26 +568,39 @@
 .replyUserInfo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.375rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .replyNickname {
-  font-size: 0.8125rem;
+  font-size: 0.7rem;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.55);
 }
 
+.replyNicknameLimited {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+
 .replyToInfo {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.8125rem;
+  display: inline-block;
+  max-width: 80px;
+  font-size: 0.7rem;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .replyArrowIcon {
   flex-shrink: 0;
+  width: 16px;
   margin: 0 2px;
 }
 
@@ -585,6 +608,7 @@
   display: flex;
   align-items: center;
   gap: 0.125rem;
+  min-width: 0;
 }
 
 .replyTime {
