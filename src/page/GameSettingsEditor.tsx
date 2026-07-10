@@ -25,13 +25,32 @@ import EditorApi from '../api/galgame/EditorData';
 import worldEditor from '../api/worldInteraction/worldEditor';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { isMiniProgramEnv } from '../utils/miniProgram';
-import MorePromptFormPanel, { type MorePromptFormPanelRef } from '../components/GameSettingEditor/MorePromptForms/MorePromptFormPanel';
+import type { MorePromptFormPanelRef } from '../components/GameSettingEditor/MorePromptForms/MorePromptFormPanel';
+import WorldBookPanel from '../components/GameSettingEditor/WorldBook/WorldBookPanel';
+import DatabasePanel from '../components/GameSettingEditor/Database/DatabasePanel';
 import { useMorePromptForms } from '../hooks/editor/useMorePromptForms';
+import { useDataPromptForms } from '../hooks/editor/useDataPromptForms';
 import {
     buildMorePromptPanelId,
     isMorePromptPanel,
 } from '../utils/morePromptForms';
-import type { MorePromptForm } from '../api/galgame/EditorData.type';
+import {
+    buildDataPromptPanelId,
+    isDataPromptPanel,
+} from '../utils/dataPromptForms';
+import {
+    isWorldBookActive,
+    resolveWorldBookPanelAfterDelete,
+    resolveWorldBookTargetPanel,
+    WORLD_BOOK_PANEL,
+} from '../utils/worldBookPanel';
+import {
+    GAME_DATABASE_PANEL,
+    isGameDatabaseActive,
+    resolveGameDatabasePanelAfterDelete,
+    resolveGameDatabaseTargetPanel,
+} from '../utils/dataPromptPanel';
+import type { DataPromptForm, MorePromptForm } from '../api/galgame/EditorData.type';
 
 const SCREENWRITER_SEED_KEY = 'funloom_screenwriter_seed';
 const SCREENWRITER_API_BASE_URL = 'http://localhost:3000/api';
@@ -101,6 +120,18 @@ const GameSettingsEditor = () => {
     } = useMorePromptForms({
         fileId,
         initialForms: (gameData?.worldSetting as { morePromptForms?: MorePromptForm[] } | undefined)?.morePromptForms,
+        onDataRefresh: refreshEditorData,
+    });
+
+    const {
+        forms: dataPromptForms,
+        isSaving: isSavingDataPrompt,
+        canAddMore: canAddMoreDataPrompt,
+        saveForms: saveDataPromptForms,
+        deleteForm: deleteDataPromptForm,
+    } = useDataPromptForms({
+        fileId,
+        initialForms: (gameData?.worldSetting as { dataPromptForms?: DataPromptForm[] } | undefined)?.dataPromptForms,
         onDataRefresh: refreshEditorData,
     });
 
@@ -193,6 +224,7 @@ const GameSettingsEditor = () => {
     const worldPanelRef = useRef<WorldPanelRef | null>(null);
     const mapPanelRef = useRef<MapPanelRef | null>(null);
     const morePromptFormPanelRef = useRef<MorePromptFormPanelRef | null>(null);
+    const dataPromptFormPanelRef = useRef<MorePromptFormPanelRef | null>(null);
     
     // 使用回调 ref 来确保能捕获到 ref 的变化
     const setFunctionalNPCsPanelRef = useCallback((node: FunctionalNPCsPanelRef | null) => {
@@ -228,6 +260,10 @@ const GameSettingsEditor = () => {
         morePromptFormPanelRef.current = node;
     }, []);
 
+    const setDataPromptFormPanelRef = useCallback((node: MorePromptFormPanelRef | null) => {
+        dataPromptFormPanelRef.current = node;
+    }, []);
+
     const handleMorePromptSave = useCallback(async (
         form: MorePromptForm,
         allForms: MorePromptForm[],
@@ -240,15 +276,39 @@ const GameSettingsEditor = () => {
     }, [saveForms, setActivePanel]);
 
     const handleMorePromptCancel = useCallback(() => {
-        setActivePanel('world');
-    }, [setActivePanel]);
+        setActivePanel(resolveWorldBookTargetPanel(morePromptForms));
+    }, [morePromptForms, setActivePanel]);
 
     const handleMorePromptDelete = useCallback(async (id: string) => {
         const ok = await deleteForm(id);
         if (ok && activePanel === buildMorePromptPanelId(id)) {
-            setActivePanel('world');
+            const remaining = morePromptForms.filter((form) => form.id !== id);
+            setActivePanel(resolveWorldBookPanelAfterDelete(remaining));
         }
-    }, [activePanel, deleteForm, setActivePanel]);
+    }, [activePanel, deleteForm, morePromptForms, setActivePanel]);
+
+    const handleDataPromptSave = useCallback(async (
+        form: DataPromptForm,
+        allForms: DataPromptForm[],
+    ): Promise<boolean> => {
+        const ok = await saveDataPromptForms(allForms);
+        if (ok) {
+            setActivePanel(buildDataPromptPanelId(form.id));
+        }
+        return ok;
+    }, [saveDataPromptForms, setActivePanel]);
+
+    const handleDataPromptCancel = useCallback(() => {
+        setActivePanel(resolveGameDatabaseTargetPanel(dataPromptForms));
+    }, [dataPromptForms, setActivePanel]);
+
+    const handleDataPromptDelete = useCallback(async (id: string) => {
+        const ok = await deleteDataPromptForm(id);
+        if (ok && activePanel === buildDataPromptPanelId(id)) {
+            const remaining = dataPromptForms.filter((form) => form.id !== id);
+            setActivePanel(resolveGameDatabasePanelAfterDelete(remaining));
+        }
+    }, [activePanel, deleteDataPromptForm, dataPromptForms, setActivePanel]);
 
     const handlePanelChange = useCallback(async (panelId: string) => {
         if (isParsing && panelId !== 'documents') {
@@ -258,14 +318,34 @@ const GameSettingsEditor = () => {
             return;
         }
 
-        // Visual only：worldInteraction 不打开 morePrompt 面板
-        if (isMorePromptPanel(panelId) && mode === 'worldInteraction') {
+        // Visual only：worldInteraction 不打开游戏系统 / 数据库面板
+        if ((panelId === WORLD_BOOK_PANEL || isMorePromptPanel(panelId)) && mode === 'worldInteraction') {
+            return;
+        }
+        if ((panelId === GAME_DATABASE_PANEL || isDataPromptPanel(panelId)) && mode === 'worldInteraction') {
             return;
         }
 
+        let resolvedPanelId = panelId;
+        if (panelId === WORLD_BOOK_PANEL) {
+            resolvedPanelId = resolveWorldBookTargetPanel(morePromptForms, panelId);
+        } else if (panelId === GAME_DATABASE_PANEL) {
+            resolvedPanelId = resolveGameDatabaseTargetPanel(dataPromptForms, panelId);
+        }
+
         // 离开 morePrompt 表单时检查未保存修改
-        if (isMorePromptPanel(activePanel) && panelId !== activePanel && morePromptFormPanelRef.current) {
+        if (isMorePromptPanel(activePanel) && resolvedPanelId !== activePanel && morePromptFormPanelRef.current) {
             const canLeave = morePromptFormPanelRef.current.checkBeforeLeave(() => {
+                void handlePanelChange(panelId);
+            });
+            if (!canLeave) {
+                return;
+            }
+        }
+
+        // 离开 dataPrompt 表单时检查未保存修改
+        if (isDataPromptPanel(activePanel) && resolvedPanelId !== activePanel && dataPromptFormPanelRef.current) {
+            const canLeave = dataPromptFormPanelRef.current.checkBeforeLeave(() => {
                 void handlePanelChange(panelId);
             });
             if (!canLeave) {
@@ -347,8 +427,8 @@ const GameSettingsEditor = () => {
             fetchEditorData(fileId, 'worldInteraction');
         }
 
-        setActivePanel(panelId);
-    }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel]);
+        setActivePanel(resolvedPanelId);
+    }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel, morePromptForms, dataPromptForms]);
 
     const onPublishGame = useCallback(async (description?: string) => {
         await handlePublishGame(description);
@@ -380,6 +460,9 @@ const GameSettingsEditor = () => {
         }
         if (isMorePromptPanel(activePanel) && morePromptFormPanelRef.current) {
             return morePromptFormPanelRef.current.checkBeforeLeave(action);
+        }
+        if (isDataPromptPanel(activePanel) && dataPromptFormPanelRef.current) {
+            return dataPromptFormPanelRef.current.checkBeforeLeave(action);
         }
         return true;
     }, [activePanel]);
@@ -450,13 +533,10 @@ const GameSettingsEditor = () => {
                     isParsing={isParsing}
                     isParsed={isParsed}
                     mode={mode ?? undefined}
-                    morePromptForms={mode !== 'worldInteraction' ? morePromptForms : undefined}
-                    canAddMorePrompt={canAddMorePrompt}
-                    onMorePromptDelete={(id) => { void handleMorePromptDelete(id); }}
                 />
                 <main className={`${styles.main} ${isMiniProgramTxtMode ? styles.miniProgramMain : ''}`}>
                 <header className={`${styles.topBar} ${isMiniProgramTxtMode ? styles.miniProgramTopBar : ''}`}>
-                    <div>
+                    <div className={styles.topBarLead}>
                         <p className={styles.eyebrow}>{t('createGame.eyebrow')}</p>
                         <h1>{t('createGame.title')}</h1>
                         <p className={styles.subtitle}>
@@ -583,16 +663,40 @@ const GameSettingsEditor = () => {
 
                 {mode !== 'worldInteraction' && (
                     <section
-                        className={`${styles.panel} ${isMorePromptPanel(activePanel) ? styles.active : ''}`}
-                        id="morePromptForms"
+                        className={`${styles.panel} ${isWorldBookActive(activePanel) ? styles.active : ''}`}
+                        id="worldBook"
                     >
-                        <MorePromptFormPanel
-                            ref={setMorePromptFormPanelRef}
+                        <WorldBookPanel
                             activePanel={activePanel}
                             forms={morePromptForms}
+                            disabled={isParsing || !isParsed}
+                            canAddMore={canAddMorePrompt}
                             isSaving={isSavingMorePrompt}
+                            onPanelChange={handlePanelChange}
+                            onDelete={(id) => { void handleMorePromptDelete(id); }}
                             onSave={handleMorePromptSave}
                             onCancel={handleMorePromptCancel}
+                            formPanelRef={setMorePromptFormPanelRef}
+                        />
+                    </section>
+                )}
+
+                {mode !== 'worldInteraction' && (
+                    <section
+                        className={`${styles.panel} ${isGameDatabaseActive(activePanel) ? styles.active : ''}`}
+                        id="gameDatabase"
+                    >
+                        <DatabasePanel
+                            activePanel={activePanel}
+                            forms={dataPromptForms}
+                            disabled={isParsing || !isParsed}
+                            canAddMore={canAddMoreDataPrompt}
+                            isSaving={isSavingDataPrompt}
+                            onPanelChange={handlePanelChange}
+                            onDelete={(id) => { void handleDataPromptDelete(id); }}
+                            onSave={handleDataPromptSave}
+                            onCancel={handleDataPromptCancel}
+                            formPanelRef={setDataPromptFormPanelRef}
                         />
                     </section>
                 )}

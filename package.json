@@ -8,7 +8,11 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:morePromptForms": "node --experimental-strip-types --test scripts/morePromptForms.check.mjs"
+    "test:morePromptForms": "node --experimental-strip-types --test scripts/morePromptForms.check.mjs",
+    "test:ideaJobStage": "node --experimental-strip-types --test scripts/ideaJobStage.check.mjs",
+    "test:worldBookPanel": "node --experimental-strip-types --test scripts/worldBookPanel.check.mjs",
+    "test:dataPromptForms": "node --experimental-strip-types --test scripts/dataPromptForms.check.mjs",
+    "test:dataPromptPanel": "node --experimental-strip-types --test scripts/dataPromptPanel.check.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -6,13 +6,18 @@ import navStyles from '../Sidebar.module.css';
 import styles from './MorePromptNavSection.module.css';
 import type { MorePromptForm } from '../../../api/galgame/EditorData.type';
 import {
-  buildMorePromptPanelId,
-  MORE_PROMPT_NEW_PANEL,
-} from '../../../utils/morePromptForms';
+  getPromptFormVariantConfig,
+  type PromptFormVariant,
+} from '../../../utils/promptFormVariant';
 
 interface MorePromptNavSectionProps {
-  /** 动态条目起始序号（Visual 固定四步后为 5） */
+  variant?: PromptFormVariant;
+  /** 动态条目起始序号（世界书内可不展示徽章） */
   numberOffset: number;
+  /** 主侧栏横向滚动 vs 世界书内纵向列表 */
+  layout?: 'sidebar' | 'worldBook';
+  /** 是否展示左侧序号徽章 */
+  showNavBadge?: boolean;
   forms: MorePromptForm[];
   activePanel: string;
   disabled: boolean;
@@ -25,7 +30,10 @@ interface MorePromptNavSectionProps {
  * Visual 侧栏：morePromptForms 有序号列表 + 「+ 补充提示词」
  */
 const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
+  variant = 'morePrompt',
   numberOffset,
+  layout = 'sidebar',
+  showNavBadge = true,
   forms,
   activePanel,
   disabled,
@@ -34,6 +42,8 @@ const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation();
+  const config = getPromptFormVariantConfig(variant);
+  const i18n = (key: string) => t(`${config.i18nPrefix}.${key}`);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -59,11 +69,13 @@ const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
 
   return (
     <>
-      <div className={styles.section}>
+      <div className={`${styles.section} ${layout === 'worldBook' ? styles.sectionWorldBook : ''}`}>
         {forms.map((form, index) => {
-          const panelId = buildMorePromptPanelId(form.id);
+          const panelId = config.buildPanelId(form.id);
           const isActive = activePanel === panelId;
           const itemNumber = numberOffset + index;
+
+          const displayTitle = form.title || form.description;
 
           return (
             <div
@@ -77,12 +89,12 @@ const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
                 disabled={disabled}
                 aria-current={isActive ? 'step' : undefined}
               >
-                <span className={navStyles.navBadge}>{itemNumber}</span>
+                {showNavBadge && <span className={navStyles.navBadge}>{itemNumber}</span>}
                 <span className={navStyles.navText}>
                   <span className={navStyles.navTitleDesktop}>
-                    {itemNumber} · {form.title}
+                    {showNavBadge ? `${itemNumber} · ` : ''}{displayTitle}
                   </span>
-                  <span className={navStyles.navTitleMobile}>{form.title}</span>
+                  <span className={navStyles.navTitleMobile}>{displayTitle}</span>
                   <small>{form.description}</small>
                 </span>
               </button>
@@ -91,7 +103,7 @@ const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
                   <button
                     type="button"
                     className={styles.iconBtn}
-                    aria-label={t('createGame.morePrompt.delete')}
+                    aria-label={i18n('delete')}
                     onClick={(event) => handleDeleteClick(event, form.id)}
                   >
                     <FiTrash2 />
@@ -104,13 +116,13 @@ const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
 
         <button
           type="button"
-          className={`${styles.addBtn} ${!canAddMore || disabled ? styles.addBtnDisabled : ''} ${activePanel === MORE_PROMPT_NEW_PANEL ? styles.addBtnActive : ''}`}
-          onClick={() => !disabled && canAddMore && onPanelChange(MORE_PROMPT_NEW_PANEL)}
+          className={`${styles.addBtn} ${!canAddMore || disabled ? styles.addBtnDisabled : ''} ${activePanel === config.newPanel ? styles.addBtnActive : ''}`}
+          onClick={() => !disabled && canAddMore && onPanelChange(config.newPanel)}
           disabled={disabled || !canAddMore}
-          title={!canAddMore ? t('createGame.morePrompt.maxReached') : t('createGame.morePrompt.navLabel')}
+          title={!canAddMore ? i18n('maxReached') : i18n('navLabel')}
         >
           <span className={styles.addIcon}>+</span>
-          <span>{t('createGame.morePrompt.navLabel')}</span>
+          <span>{i18n('navLabel')}</span>
         </button>
       </div>
 
@@ -118,8 +130,8 @@ const MorePromptNavSection: React.FC<MorePromptNavSectionProps> = ({
         isOpen={deleteModalOpen}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
-        title={t('createGame.morePrompt.delete')}
-        message={t('createGame.morePrompt.deleteConfirm')}
+        title={i18n('delete')}
+        message={i18n('deleteConfirm')}
         confirmButtonText={t('common.confirm')}
         cancelButtonText={t('common.thinkLater')}
       />

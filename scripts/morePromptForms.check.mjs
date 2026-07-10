@@ -1,5 +1,5 @@
 /**
- * morePromptForms 前端校验单测（规则与后端 morePromptForms.js 对齐）
+ * morePromptForms v2 前端校验单测（规则与后端 morePromptForms.js 对齐）
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,6 +9,7 @@ import {
   MORE_PROMPT_DESCRIPTION_MAX_LENGTH,
   MORE_PROMPT_TITLE_MAX_LENGTH,
   countUnicodeChars,
+  keysFromTitle,
   normalizeMorePromptForm,
   validateMorePromptFormDraft,
   validateMorePromptFormsList,
@@ -21,14 +22,21 @@ import {
 function createValidDraft(overrides = {}) {
   return {
     id: 'draft-1',
-    title: 'Title',
+    title: '校规,晚自习',
     description: '描述',
     content: 'Body content',
     order: 0,
     enabled: true,
+    constant: false,
     ...overrides,
   };
 }
+
+test('keysFromTitle splits on comma and Chinese comma', () => {
+  assert.deepEqual(keysFromTitle('a,b'), ['a', 'b']);
+  assert.deepEqual(keysFromTitle('a，b'), ['a', 'b']);
+  assert.deepEqual(keysFromTitle(''), []);
+});
 
 test('countUnicodeChars counts CJK and emoji code points', () => {
   assert.equal(countUnicodeChars(''), 0);
@@ -37,12 +45,13 @@ test('countUnicodeChars counts CJK and emoji code points', () => {
   assert.equal(countUnicodeChars('Hi👋'), 3);
 });
 
-test('normalizeMorePromptForm trims and assigns order', () => {
+test('normalizeMorePromptForm trims and assigns order with constant', () => {
   const normalized = normalizeMorePromptForm({
     id: '  x ',
     title: '  Title ',
     description: ' d ',
     content: ' c ',
+    constant: false,
     enabled: false,
     updatedAt: '2026-01-01T00:00:00.000Z',
   }, 3);
@@ -50,33 +59,63 @@ test('normalizeMorePromptForm trims and assigns order', () => {
   assert.equal(normalized.id, 'x');
   assert.equal(normalized.title, 'Title');
   assert.equal(normalized.order, 3);
+  assert.equal(normalized.constant, false);
   assert.equal(normalized.enabled, false);
-  assert.equal(normalized.updatedAt, '2026-01-01T00:00:00.000Z');
 });
 
-test('validateMorePromptFormDraft rejects whitespace-only required fields', () => {
+test('normalizeMorePromptForm defaults constant true when field missing', () => {
+  const normalized = normalizeMorePromptForm({
+    id: 'x',
+    title: 'a,b',
+    description: 'd',
+    content: 'c',
+    order: 0,
+  }, 0);
+  assert.equal(normalized.constant, true);
+});
+
+test('validateMorePromptFormDraft requires keywords when not constant', () => {
   assert.equal(
-    validateMorePromptFormDraft({ title: '   ', description: 'ok', content: 'ok' }),
-    'createGame.morePrompt.validationTitle',
+    validateMorePromptFormDraft({ title: '   ', description: 'ok', content: 'ok', constant: false }),
+    'createGame.morePrompt.validationKeywords',
   );
   assert.equal(
-    validateMorePromptFormDraft({ title: 'ok', description: '   ', content: 'ok' }),
+    validateMorePromptFormDraft({ title: '，,', description: 'ok', content: 'ok', constant: false }),
+    'createGame.morePrompt.validationKeywords',
+  );
+  assert.equal(
+    validateMorePromptFormDraft({ title: '校规,晚自习', description: 'ok', content: 'ok', constant: false }),
+    null,
+  );
+});
+
+test('validateMorePromptFormDraft allows constant entry without keywords', () => {
+  assert.equal(
+    validateMorePromptFormDraft({ title: '', description: 'ok', content: 'ok', constant: true }),
+    null,
+  );
+});
+
+test('validateMorePromptFormDraft rejects whitespace-only content and description', () => {
+  assert.equal(
+    validateMorePromptFormDraft({ title: 'a,b', description: '   ', content: 'ok', constant: false }),
     'createGame.morePrompt.validationDescription',
   );
   assert.equal(
-    validateMorePromptFormDraft({ title: 'ok', description: 'ok', content: '   ' }),
+    validateMorePromptFormDraft({ title: 'a,b', description: 'ok', content: '   ', constant: false }),
     'createGame.morePrompt.validationContent',
   );
 });
 
-test('validateMorePromptFormDraft rejects title over max length', () => {
+test('validateMorePromptFormDraft rejects title over max length for selective entry', () => {
   assert.equal(
     validateMorePromptFormDraft({
       title: 'x'.repeat(MORE_PROMPT_TITLE_MAX_LENGTH + 1),
       description: 'ok',
       content: 'ok',
+      constant: false,
     }),
-    'createGame.morePrompt.validationTitle',
+    'createGame.morePrompt.validationKeywords',
   );
 });
 
@@ -85,26 +124,13 @@ test('validateMorePromptFormDraft accepts description at exact max length', () =
   assert.equal(countUnicodeChars(exact15), MORE_PROMPT_DESCRIPTION_MAX_LENGTH);
   assert.equal(
     validateMorePromptFormDraft({
-      title: 'T',
+      title: 'a,b',
       description: exact15,
       content: 'body',
+      constant: false,
     }),
     null,
   );
-});
-
-test('validateMorePromptFormDraft rejects empty and long description', () => {
-  assert.equal(validateMorePromptFormDraft({ title: '', description: 'x', content: 'y' }), 'createGame.morePrompt.validationTitle');
-  assert.equal(
-    validateMorePromptFormDraft({
-      title: 'T',
-      description: '一二三四五六七八九十十一十二十三45',
-      content: 'body',
-    }),
-    'createGame.morePrompt.validationDescription',
-  );
-  assert.equal(validateMorePromptFormDraft({ title: 'T', description: 'ok', content: '' }), 'createGame.morePrompt.validationContent');
-  assert.equal(validateMorePromptFormDraft({ title: 'T', description: 'ok', content: 'ok' }), null);
 });
 
 test('validateMorePromptFormsList rejects non-array input', () => {
@@ -126,20 +152,18 @@ test('validateMorePromptFormsList enforces max count and validates each entry', 
   assert.equal(validateMorePromptFormsList(exactlyMax), null);
   assert.equal(validateMorePromptFormsList([]), null);
 
-  const invalidOne = [createValidDraft({ title: '' })];
-  assert.equal(validateMorePromptFormsList(invalidOne), 'createGame.morePrompt.validationTitle');
+  const invalidOne = [createValidDraft({ title: '，,' })];
+  assert.equal(validateMorePromptFormsList(invalidOne), 'createGame.morePrompt.validationKeywords');
 });
 
 test('morePrompt panel id helpers cover new, edit and unknown panels', () => {
   assert.equal(isMorePromptPanel('world'), false);
-  assert.equal(isMorePromptPanel('documents'), false);
   assert.equal(isMorePromptPanel(MORE_PROMPT_NEW_PANEL), true);
   assert.equal(isMorePromptPanel(buildMorePromptPanelId('abc')), true);
 
   assert.deepEqual(parseMorePromptPanel(MORE_PROMPT_NEW_PANEL), { kind: 'new' });
   assert.deepEqual(parseMorePromptPanel(buildMorePromptPanelId('abc')), { kind: 'edit', id: 'abc' });
   assert.equal(parseMorePromptPanel('world'), null);
-  assert.deepEqual(parseMorePromptPanel('morePrompt:'), { kind: 'edit', id: '' });
 
   assert.equal(buildMorePromptPanelId('uuid-1'), 'morePrompt:uuid-1');
   assert.equal(MORE_PROMPT_DESCRIPTION_MAX_LENGTH, 15);

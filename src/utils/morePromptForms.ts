@@ -10,6 +10,14 @@ export const MORE_PROMPT_DESCRIPTION_MAX_LENGTH = 15;
 export const MORE_PROMPT_TITLE_MAX_LENGTH = 80;
 export const MORE_PROMPT_NEW_PANEL = 'morePrompt:new';
 
+/** title 即 keywords，与后端 keysFromTitle 一致 */
+export function keysFromTitle(title: string): string[] {
+  return String(title || '')
+    .split(/[,，]/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
 /** 生成条目 id；HTTP 局域网等非 secure context 下 crypto.randomUUID 不可用 */
 export function createMorePromptFormId(): string {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -24,11 +32,13 @@ export function countUnicodeChars(value: string): number {
 }
 
 export function normalizeMorePromptForm(form: MorePromptForm, order: number): MorePromptForm {
+  const hasConstant = Object.prototype.hasOwnProperty.call(form, 'constant');
   return {
     id: String(form.id || '').trim(),
     title: String(form.title || '').trim(),
     description: String(form.description || '').trim(),
     content: String(form.content || '').trim(),
+    constant: hasConstant ? form.constant === true : true,
     order: Number.isFinite(Number(order)) ? Number(order) : 0,
     enabled: form.enabled !== false,
     updatedAt: form.updatedAt || new Date().toISOString(),
@@ -40,14 +50,24 @@ export function validateMorePromptFormDraft(form: Partial<MorePromptForm>): stri
   const title = String(form.title || '').trim();
   const description = String(form.description || '').trim();
   const content = String(form.content || '').trim();
+  const isConstant = form.constant === true;
 
-  if (!title) return 'createGame.morePrompt.validationTitle';
-  if (title.length > MORE_PROMPT_TITLE_MAX_LENGTH) return 'createGame.morePrompt.validationTitle';
   if (!description) return 'createGame.morePrompt.validationDescription';
   if (countUnicodeChars(description) > MORE_PROMPT_DESCRIPTION_MAX_LENGTH) {
     return 'createGame.morePrompt.validationDescription';
   }
   if (!content) return 'createGame.morePrompt.validationContent';
+
+  if (isConstant) {
+    if (title.length > MORE_PROMPT_TITLE_MAX_LENGTH) {
+      return 'createGame.morePrompt.validationTitle';
+    }
+    return null;
+  }
+
+  if (!title) return 'createGame.morePrompt.validationKeywords';
+  if (title.length > MORE_PROMPT_TITLE_MAX_LENGTH) return 'createGame.morePrompt.validationKeywords';
+  if (keysFromTitle(title).length === 0) return 'createGame.morePrompt.validationKeywords';
   return null;
 }
 

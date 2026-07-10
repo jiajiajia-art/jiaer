@@ -6,6 +6,7 @@ import worldEditor from '../../api/worldInteraction/worldEditor';
 import { useGameStore } from '../../store/gameStore';
 import { useUploadStore } from '../../store/uploadStore';
 import { useEditorStore } from '../../store/editorStore';
+import { formatIdeaJobStage } from '../../utils/ideaJobStage';
 
 type JobStage =
     | 'uploaded'
@@ -17,6 +18,7 @@ type JobStage =
     | 'generating_world'
     | 'generating_npcs'
     | 'generating_scenes'
+    | 'generating_more_prompts'
     | 'generating_functional_npcs'
     | 'generating_attributes'
     | string;
@@ -153,7 +155,9 @@ export const useFileUpload = ({ mode, onUploadComplete }: UseFileUploadOptions):
                         fileId: runningData.fileId || null,
                         status: isQueuedOrPending ? 'uploading' : 'processing',
                         progress: runningData.progress || 0,
-                        stage: runningData.stage || (isQueuedOrPending ? t('createGame.inQueue') : t('createGame.statusProcessing')),
+                        stage: isQueuedOrPending && !runningData.stage
+                            ? t('createGame.inQueue')
+                            : formatIdeaJobStage(runningData.stage, t),
                         error: null,
                         elapsedSeconds: runningData.elapsedSeconds ?? null,
                         estimatedRemainingSeconds: runningData.estimatedRemainingSeconds ?? null,

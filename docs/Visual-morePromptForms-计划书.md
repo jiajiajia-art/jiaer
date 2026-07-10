@@ -1,8 +1,9 @@
 # Visual 动态提示词（morePromptForms）实现计划书
 
 > **版本**：v1.1（2026-07-03）  
-> **状态**：已实现  
-> **范围**：Visual 四步编辑器 only（不含 worldInteraction 创作端 UI）
+> **状态**：已实现（全量注入）  
+> **范围**：Visual 四步编辑器 only（不含 worldInteraction 创作端 UI）  
+> **后续**：v2 选择性注入（title 作 keywords、constant 常驻）见 [`TXT-morePromptForms-选择性注入计划书.md`](./TXT-morePromptForms-选择性注入计划书.md)
 
 ---
 

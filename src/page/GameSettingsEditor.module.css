@@ -50,12 +50,19 @@
     line-height: 1.2;
 }
 
+.topBarLead {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
 .subtitle {
     margin: 10px 0 0;
     color: var(--text-secondary);
     font-size: 0.95rem;
     line-height: 1.6;
-    max-width: 680px;
+    width: 100%;
+    max-width: none;
 }
 
 .eyebrow {

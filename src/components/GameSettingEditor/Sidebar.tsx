@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './Sidebar.module.css';
-import MorePromptNavSection from './MorePromptForms/MorePromptNavSection';
-import type { MorePromptForm } from '../../api/galgame/EditorData.type';
+import { isWorldBookActive } from '../../utils/worldBookPanel';
+import { isGameDatabaseActive } from '../../utils/dataPromptPanel';
 
 interface SidebarProps {
     activePanel: string;
@@ -10,10 +10,6 @@ interface SidebarProps {
     isParsing: boolean;
     isParsed: boolean;
     mode?: string;
-    /** Visual only：侧栏动态提示词 morePromptForms */
-    morePromptForms?: MorePromptForm[];
-    canAddMorePrompt?: boolean;
-    onMorePromptDelete?: (id: string) => void;
 }
 
 interface NavItem {
@@ -29,6 +25,8 @@ const modeConfigs: Record<string, NavItem[]> = {
         { id: 'world', i18nKey: 'world' },
         { id: 'characters', i18nKey: 'characters' },
         { id: 'scenes', i18nKey: 'scenes' },
+        { id: 'worldBook', i18nKey: 'worldBook' },
+        { id: 'gameDatabase', i18nKey: 'gameDatabase' },
     ],
     worldInteraction: [
         { id: 'documents', i18nKey: 'documents' },
@@ -47,9 +45,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     isParsing,
     isParsed,
     mode = 'visual',
-    morePromptForms = [],
-    canAddMorePrompt = true,
-    onMorePromptDelete,
 }) => {
     const { t } = useTranslation();
     const navItems = modeConfigs[mode] || modeConfigs.visual;
@@ -69,6 +64,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             if (isParsed) return 'done';
             return '';
         }
+        if (itemId === 'worldBook' && isWorldBookActive(activePanel)) {
+            return 'active';
+        }
+        if (itemId === 'gameDatabase' && isGameDatabaseActive(activePanel)) {
+            return 'active';
+        }
         if (isParsed) {
             return activePanel === itemId ? 'active' : '';
         }
@@ -76,6 +77,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
 
     const currentIndex = useMemo(() => {
+        if (isGameDatabaseActive(activePanel)) {
+            const gameDatabaseIndex = navItems.findIndex((item) => item.id === 'gameDatabase');
+            return gameDatabaseIndex >= 0 ? gameDatabaseIndex : 0;
+        }
+        if (isWorldBookActive(activePanel)) {
+            const worldBookIndex = navItems.findIndex((item) => item.id === 'worldBook');
+            return worldBookIndex >= 0 ? worldBookIndex : 0;
+        }
         const matchedIndex = navItems.findIndex((item) => item.id === activePanel);
         return matchedIndex >= 0 ? matchedIndex : 0;
     }, [activePanel, navItems]);
@@ -85,10 +94,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     const progressLabel = `${currentIndex + 1} / ${navItems.length}`;
     const progressStateLabel = isParsing ? t('createGame.sidebar.parsing') : currentStatus === 'done' ? t('createGame.sidebar.completed') : t('createGame.sidebar.inProgress');
     const mobileSummaryText = `${t('createGame.sidebar.step')} ${progressLabel} · ${t(`createGame.sidebar.${currentItem?.i18nKey}Short` as const)}：${t(`createGame.sidebar.${currentItem?.i18nKey}Subtitle` as const)}`;
-
-    // Visual 模式才展示 morePromptForms 侧栏区块（首期不做 worldInteraction）
-    const showMorePromptNav = mode !== 'worldInteraction';
-    const morePromptDisabled = isParsing || !isParsed;
 
     useEffect(() => {
         if (typeof window === 'undefined' || !window.matchMedia('(max-width: 768px)').matches) {
@@ -157,17 +162,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                             </button>
                         );
                     })}
-                    {showMorePromptNav && (
-                        <MorePromptNavSection
-                            numberOffset={navItems.length + 1}
-                            forms={morePromptForms}
-                            activePanel={activePanel}
-                            disabled={morePromptDisabled}
-                            canAddMore={canAddMorePrompt}
-                            onPanelChange={onPanelChange}
-                            onDelete={(id) => onMorePromptDelete?.(id)}
-                        />
-                    )}
                 </nav>
             </div>
         </aside>

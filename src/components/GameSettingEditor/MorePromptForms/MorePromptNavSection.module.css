@@ -4,6 +4,11 @@
   gap: 8px;
 }
 
+.sectionWorldBook {
+  flex: 1;
+  min-height: 0;
+}
+
 .itemRow {
   position: relative;
   width: 100%;
@@ -113,16 +118,16 @@
 }
 
 @media (max-width: 1080px) {
-  .section {
+  .section:not(.sectionWorldBook) {
     display: contents;
   }
 
-  .itemRow {
+  .section:not(.sectionWorldBook) .itemRow {
     flex: 0 0 auto;
     min-width: 140px;
   }
 
-  .addBtn {
+  .section:not(.sectionWorldBook) .addBtn {
     flex: 0 0 auto;
     min-width: 92px;
     margin-top: 0;
