@@ -180,6 +180,7 @@ type StoryProjectFlow = {
 type StoryProject = {
     version: string;
     title?: string;
+    playbackOrientation?: PlaybackOrientation;
     outline?: {
         projectTitle?: string;
     };
@@ -223,6 +224,7 @@ type StoryManifest = {
     fileId: string;
     title?: string;
     version?: string;
+    playbackOrientation?: PlaybackOrientation;
     storyUrl: string;
     mediaBaseUrl?: string;
     media?: Record<string, StoryManifestMedia>;
@@ -248,6 +250,7 @@ type StoryManifest = {
 type PlaybackMode = 'fresh' | 'replay';
 type MobileToolsTab = 'tree' | 'history';
 type VideoAspect = InteractiveVideoAspect;
+type PlaybackOrientation = 'landscape' | 'portrait';
 type VideoPreloadStatus = ManagedVideoPreloadStatus;
 type InteractiveVideoTheme = 'light' | 'dark';
 type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
@@ -583,6 +586,19 @@ const getAspectFromMetadata = (metadata?: VideoMetadataLike | null): VideoAspect
     if (declaredAspect !== 'unknown') return declaredAspect;
     return getVideoAspect(Number(metadata?.width), Number(metadata?.height));
 };
+
+const normalizePlaybackOrientation = (value: unknown): PlaybackOrientation | null => {
+    const aspect = normalizeVideoAspect(value);
+    return aspect === 'landscape' || aspect === 'portrait' ? aspect : null;
+};
+
+const getProjectPlaybackOrientation = (
+    story: StoryProject | null,
+    manifest: StoryManifest | null,
+): PlaybackOrientation =>
+    normalizePlaybackOrientation(story?.playbackOrientation) ||
+    normalizePlaybackOrientation(manifest?.playbackOrientation) ||
+    'landscape';
 
 const nowMs = () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
 
@@ -2058,6 +2074,7 @@ const InteractiveVideo: React.FC = () => {
     const [videoError, setVideoError] = useState('');
     const [isVideoPaused, setIsVideoPaused] = useState(false);
     const [isVideoHudVisible, setIsVideoHudVisible] = useState(true);
+    const [isNonVideoToolsVisible, setIsNonVideoToolsVisible] = useState(true);
     const [playbackRate, setPlaybackRate] = useState<InteractiveVideoPlaybackRate>(1);
     const [endingModalOpen, setEndingModalOpen] = useState(false);
     const [restartConfirmOpen, setRestartConfirmOpen] = useState(false);
@@ -2083,6 +2100,7 @@ const InteractiveVideo: React.FC = () => {
     const preloadContainerRef = useRef<HTMLDivElement | null>(null);
     const bufferingNoticeTimerRef = useRef<number | null>(null);
     const hudHideTimerRef = useRef<number | null>(null);
+    const nonVideoToolsHideTimerRef = useRef<number | null>(null);
     const miniProgramPlaybackWatchdogTimerRef = useRef<number | null>(null);
     const activeStallStartedAtRef = useRef<number | null>(null);
     const playbackMetricsRef = useRef<PlaybackMetrics>({
@@ -2126,6 +2144,10 @@ const InteractiveVideo: React.FC = () => {
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
     const isMinigameNode = getNodeKind(currentNode) === 'minigame';
+    const projectPlaybackOrientation = useMemo(
+        () => getProjectPlaybackOrientation(story, manifest),
+        [manifest?.playbackOrientation, story?.playbackOrientation],
+    );
     const currentVideoRefs = useMemo(() => getNodeVideoRefs(currentNode), [currentNode]);
     const currentVideoUrls = useMemo(() => getNodeVideoUrls(currentNode, manifest), [currentNode, manifest]);
     const currentVideoUrlsKey = currentVideoUrls.join('|');
@@ -2136,6 +2158,10 @@ const InteractiveVideo: React.FC = () => {
         [currentVideoRef, currentVideoUrl, manifest],
     );
     const currentMinigameUrl = useMemo(() => resolveMinigameUrl(currentNode, manifest), [currentNode, manifest]);
+    const currentImmersiveAspect: VideoAspect = isMinigameNode
+        ? projectPlaybackOrientation
+        : videoAspect;
+    const hasOrientableImmersiveMedia = Boolean(currentVideoUrl) || isMinigameNode;
     const projectTitle = manifest?.title || story?.outline?.projectTitle || story?.title || '互动影游';
 
     const markPreloadedVideoStatus = useCallback((url: string, status: VideoPreloadStatus) => {
@@ -2229,6 +2255,10 @@ const InteractiveVideo: React.FC = () => {
             if (hudHideTimerRef.current != null) {
                 window.clearTimeout(hudHideTimerRef.current);
                 hudHideTimerRef.current = null;
+            }
+            if (nonVideoToolsHideTimerRef.current != null) {
+                window.clearTimeout(nonVideoToolsHideTimerRef.current);
+                nonVideoToolsHideTimerRef.current = null;
             }
             if (minigameCompletionTimerRef.current != null) {
                 window.clearTimeout(minigameCompletionTimerRef.current);
@@ -2422,23 +2452,23 @@ const InteractiveVideo: React.FC = () => {
     }, [currentNode?.id, currentVideoUrl, videoAspect]);
 
     useEffect(() => {
-        if (!currentVideoUrl) {
+        if (!hasOrientableImmersiveMedia) {
             tryUnlockScreenOrientation();
             return undefined;
         }
 
-        if (videoAspect === 'landscape') {
+        if (currentImmersiveAspect === 'landscape') {
             tryLockScreenOrientation('landscape');
             return tryUnlockScreenOrientation;
         }
 
-        if (videoAspect === 'portrait') {
+        if (currentImmersiveAspect === 'portrait') {
             tryLockScreenOrientation('portrait');
             return tryUnlockScreenOrientation;
         }
 
         return undefined;
-    }, [currentVideoUrl, videoAspect]);
+    }, [currentImmersiveAspect, hasOrientableImmersiveMedia]);
 
     useEffect(() => {
         setEndingModalOpen(false);
@@ -2645,6 +2675,40 @@ const InteractiveVideo: React.FC = () => {
         }
     }, [clearVideoHudTimer, currentVideoUrl, isBranchTransitioning, isVideoBuffering, isVideoPaused, showManualPlay, videoGate]);
 
+    const clearNonVideoToolsTimer = useCallback(() => {
+        if (typeof window === 'undefined' || nonVideoToolsHideTimerRef.current == null) return;
+        window.clearTimeout(nonVideoToolsHideTimerRef.current);
+        nonVideoToolsHideTimerRef.current = null;
+    }, []);
+
+    const revealNonVideoTools = useCallback((pin = false) => {
+        if (typeof window === 'undefined') return;
+        clearNonVideoToolsTimer();
+        setIsNonVideoToolsVisible(true);
+        const shouldAutoHide =
+            !pin &&
+            viewportMode !== 'desktop' &&
+            !isMinigameNode &&
+            !currentVideoUrl &&
+            !endingModalOpen &&
+            !isBranchTransitioning;
+        if (shouldAutoHide) {
+            nonVideoToolsHideTimerRef.current = window.setTimeout(() => {
+                setIsNonVideoToolsVisible(false);
+                nonVideoToolsHideTimerRef.current = null;
+            }, 2600);
+        }
+    }, [clearNonVideoToolsTimer, currentVideoUrl, endingModalOpen, isBranchTransitioning, isMinigameNode, viewportMode]);
+
+    const handleMonitorMouseMove = useCallback(() => {
+        revealVideoHud();
+    }, [revealVideoHud]);
+
+    const handleMonitorPointerDown = useCallback(() => {
+        revealVideoHud(true);
+        revealNonVideoTools();
+    }, [revealNonVideoTools, revealVideoHud]);
+
     useEffect(() => {
         const video = videoRef.current;
         if (video) video.playbackRate = playbackRate;
@@ -2658,6 +2722,21 @@ const InteractiveVideo: React.FC = () => {
         }
         revealVideoHud(isVideoPaused || showManualPlay || isVideoBuffering || isBranchTransitioning);
     }, [clearVideoHudTimer, currentVideoUrl, isBranchTransitioning, isVideoBuffering, isVideoPaused, revealVideoHud, showManualPlay, videoGate]);
+
+    useEffect(() => {
+        const hasNonVideoControls = !isMinigameNode && !currentVideoUrl && !endingModalOpen;
+        if (!hasNonVideoControls) {
+            clearNonVideoToolsTimer();
+            setIsNonVideoToolsVisible(false);
+            return;
+        }
+        if (viewportMode === 'desktop') {
+            clearNonVideoToolsTimer();
+            setIsNonVideoToolsVisible(true);
+            return;
+        }
+        revealNonVideoTools();
+    }, [clearNonVideoToolsTimer, currentNode?.id, currentVideoUrl, endingModalOpen, isMinigameNode, revealNonVideoTools, viewportMode]);
 
     const markPlaybackHealthy = useCallback(() => {
         if (typeof window !== 'undefined' && bufferingNoticeTimerRef.current != null) {
@@ -3302,9 +3381,13 @@ const InteractiveVideo: React.FC = () => {
         const video = event.currentTarget;
         setVideoAspect(getVideoAspect(video.videoWidth, video.videoHeight));
     };
-    const shouldUseLandscapeChoiceLayout = videoAspect === 'landscape' || stageAspect === 'landscape';
+    const shouldUseLandscapeChoiceLayout = currentImmersiveAspect === 'landscape' || stageAspect === 'landscape';
     const isImmersiveStage = Boolean(currentNode);
-    const hasImmersiveMedia = Boolean(currentVideoUrl) || isMinigameNode;
+    const hasImmersiveMedia = hasOrientableImmersiveMedia;
+    const minigameFrameClassName = [
+        styles.minigameFrame,
+        projectPlaybackOrientation === 'portrait' ? styles.minigameFramePortrait : styles.minigameFrameLandscape,
+    ].filter(Boolean).join(' ');
 
     const pageClassName = [
         styles.pageRoot,
@@ -3314,6 +3397,8 @@ const InteractiveVideo: React.FC = () => {
         isMinigameNode ? styles.minigamePlayerPage : '',
         currentVideoUrl && videoAspect === 'landscape' ? styles.landscapeVideoPage : '',
         currentVideoUrl && videoAspect === 'portrait' ? styles.portraitVideoPage : '',
+        isMinigameNode && projectPlaybackOrientation === 'landscape' ? styles.landscapeVideoPage : '',
+        isMinigameNode && projectPlaybackOrientation === 'portrait' ? styles.portraitVideoPage : '',
     ].filter(Boolean).join(' ');
 
     const choiceDockClassName = [
@@ -3333,12 +3418,16 @@ const InteractiveVideo: React.FC = () => {
     ].filter(Boolean).join(' ');
     const playToggleLabel = isVideoPaused ? '\u64ad\u653e' : '\u6682\u505c';
     const shouldShowNonVideoControls = !isMinigameNode && !currentVideoUrl && !endingModalOpen;
+    const nonVideoToolsClassName = [
+        styles.nonVideoControlDock,
+        isNonVideoToolsVisible ? styles.nonVideoControlDockVisible : styles.nonVideoControlDockHidden,
+    ].filter(Boolean).join(' ');
 
-    const portalPostureMode = getPortalPostureMode(viewportMode, hasImmersiveMedia, videoAspect);
+    const portalPostureMode = getPortalPostureMode(viewportMode, hasImmersiveMedia, currentImmersiveAspect);
     const isLandscapePortalRotated = shouldRotateMobileLandscapeVideo({
         viewportMode,
-        videoAspect,
-        hasVideo: Boolean(currentVideoUrl),
+        videoAspect: currentImmersiveAspect,
+        hasVideo: hasImmersiveMedia,
     });
     const portalRootClassName = [
         styles.pageRoot,
@@ -3559,15 +3648,15 @@ const InteractiveVideo: React.FC = () => {
                     <div
                         className={styles.monitor}
                         ref={monitorRef}
-                        onMouseMove={() => revealVideoHud()}
-                        onPointerDown={() => revealVideoHud(true)}
+                        onMouseMove={handleMonitorMouseMove}
+                        onPointerDown={handleMonitorPointerDown}
                     >
                         {isMinigameNode ? (
                             currentMinigameUrl ? (
                                 <iframe
                                     ref={minigameIframeRef}
                                     key={`${currentNode.id}:${currentMinigameUrl}`}
-                                    className={styles.minigameFrame}
+                                    className={minigameFrameClassName}
                                     src={currentMinigameUrl}
                                     title={getNodeTitle(currentNode)}
                                     sandbox="allow-scripts allow-pointer-lock allow-forms"
@@ -3667,7 +3756,7 @@ const InteractiveVideo: React.FC = () => {
                         )}
 
                         {shouldShowNonVideoControls && (
-                            <div className={styles.nonVideoControlDock} aria-label="播放工具">
+                            <div className={nonVideoToolsClassName} aria-label="播放工具">
                                 <div className={styles.videoControlDock}>
                                     <button type="button" className={styles.videoControlButton} onClick={handleOpenTree}>
                                         <IoGitBranchOutline />

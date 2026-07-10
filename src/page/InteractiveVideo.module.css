@@ -314,6 +314,11 @@
     display: none;
 }
 
+.minigamePlayerPage .monitor {
+    display: grid;
+    place-items: center;
+}
+
 .videoHud {
     position: absolute;
     inset: 0;
@@ -375,6 +380,20 @@
     inset: 0;
     z-index: 12;
     pointer-events: none;
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+
+.nonVideoControlDockHidden {
+    opacity: 0;
+}
+
+.nonVideoControlDockHidden .videoControlDock {
+    pointer-events: none;
+}
+
+.nonVideoControlDockVisible {
+    opacity: 1;
 }
 
 .nonVideoControlDock .videoControlDock {
@@ -431,6 +450,19 @@
     height: 100%;
     border: 0;
     background: #000;
+}
+
+.minigameFrameLandscape {
+    width: 100%;
+    height: 100%;
+}
+
+.minigameFramePortrait {
+    width: min(100%, calc(100vh * 9 / 16));
+    height: min(100%, calc(100vw * 16 / 9));
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 9 / 16;
 }
 
 .textScene {
@@ -1986,6 +2018,19 @@
 }
 
 @media (max-width: 980px) and (orientation: portrait) {
+    .nonVideoControlDock .videoControlDock {
+        top: calc(env(safe-area-inset-top, 0px) + 14px);
+        bottom: auto;
+        width: min(360px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 96px));
+        min-height: 54px;
+    }
+
+    .nonVideoControlDock .videoControlButton {
+        min-height: 52px;
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
     .landscapeVideoPage .stage {
         display: flex;
         align-items: flex-start;
