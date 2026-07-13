@@ -1,5 +1,6 @@
 export type InteractiveVideoAspect = 'unknown' | 'portrait' | 'landscape';
 export type InteractiveVideoViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
+export type InteractiveVideoPlaybackOrientation = Exclude<InteractiveVideoAspect, 'unknown'>;
 
 export function getVideoAspectFromDimensions(width: number, height: number): InteractiveVideoAspect {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 'unknown';
@@ -21,4 +22,17 @@ export function shouldRotateMobileLandscapeVideo({
   hasVideo: boolean;
 }): boolean {
   return hasVideo && viewportMode === 'mobilePortrait' && videoAspect === 'landscape';
+}
+
+export function resolveInteractiveVideoImmersiveAspect({
+  mediaAspect,
+  playbackOrientation,
+  hasImmersiveMedia,
+}: {
+  mediaAspect: InteractiveVideoAspect;
+  playbackOrientation: InteractiveVideoPlaybackOrientation;
+  hasImmersiveMedia: boolean;
+}): InteractiveVideoAspect {
+  if (!hasImmersiveMedia) return 'unknown';
+  return mediaAspect === 'unknown' ? playbackOrientation : mediaAspect;
 }

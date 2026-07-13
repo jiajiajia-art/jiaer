@@ -86,6 +86,11 @@ const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => 
     return '';
 };
 
+const normalizePlaybackOrientation = (value?: string | null) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'landscape' || normalized === 'portrait' ? normalized : null;
+};
+
 const GameDetail: React.FC = () => {
     const { t } = useTranslation();
     const { fileId: fileIdParam } = useParams<{ fileId: string }>();
@@ -335,10 +340,12 @@ const GameDetail: React.FC = () => {
             return;
         }
 
+        const playbackOrientation = normalizePlaybackOrientation(game?.playbackOrientation);
         useGameStore.getState().clearAll();
         navigate(`/interactive-video/${fileId}`, {
             state: {
                 fromGameDetail: true,
+                ...(playbackOrientation ? { playbackOrientation } : {}),
                 ...(restart ? { restart: true } : {}),
             },
         });

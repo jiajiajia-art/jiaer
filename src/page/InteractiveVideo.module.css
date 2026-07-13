@@ -89,6 +89,11 @@
     --ivg-mini-program-runtime: 1;
 }
 
+.loadingPlaybackPage {
+    min-height: 100dvh;
+    background: #000;
+}
+
 .portalRoot {
     min-height: 0;
     display: contents;

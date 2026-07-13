@@ -29,6 +29,7 @@ export interface UserGameData {
     // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）
     // RPG -> story, TXT -> galgame, AVG -> world, CUSTOM -> customif, IVG -> interactive-video
     engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG';
+    playbackOrientation?: 'landscape' | 'portrait';
     customAppId?: string;
     needDeleted: boolean;
     display_cover_url: string;

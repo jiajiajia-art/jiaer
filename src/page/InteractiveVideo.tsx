@@ -40,8 +40,10 @@ import {
 import {
     getVideoAspectFromDimensions,
     normalizeVideoAspect,
+    resolveInteractiveVideoImmersiveAspect,
     shouldRotateMobileLandscapeVideo,
     type InteractiveVideoAspect,
+    type InteractiveVideoPlaybackOrientation,
 } from '../utils/interactiveVideoLayout';
 import {
     canShowSkipControl,
@@ -250,7 +252,7 @@ type StoryManifest = {
 type PlaybackMode = 'fresh' | 'replay';
 type MobileToolsTab = 'tree' | 'history';
 type VideoAspect = InteractiveVideoAspect;
-type PlaybackOrientation = 'landscape' | 'portrait';
+type PlaybackOrientation = InteractiveVideoPlaybackOrientation;
 type VideoPreloadStatus = ManagedVideoPreloadStatus;
 type InteractiveVideoTheme = 'light' | 'dark';
 type ViewportMode = 'desktop' | 'mobilePortrait' | 'mobileLandscape';
@@ -258,6 +260,7 @@ type PortalPostureMode = 'desktop' | 'mobilePortraitVideo' | 'mobileLandscapeVid
 type InteractiveVideoRouteState = {
     fromGameDetail?: boolean;
     restart?: boolean;
+    playbackOrientation?: PlaybackOrientation;
 } | null;
 
 type InteractiveVideoTreeNodeData = {
@@ -595,9 +598,11 @@ const normalizePlaybackOrientation = (value: unknown): PlaybackOrientation | nul
 const getProjectPlaybackOrientation = (
     story: StoryProject | null,
     manifest: StoryManifest | null,
+    fallback?: PlaybackOrientation | null,
 ): PlaybackOrientation =>
     normalizePlaybackOrientation(story?.playbackOrientation) ||
     normalizePlaybackOrientation(manifest?.playbackOrientation) ||
+    fallback ||
     'landscape';
 
 const nowMs = () => (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
@@ -2123,6 +2128,7 @@ const InteractiveVideo: React.FC = () => {
     const routeState = location.state as InteractiveVideoRouteState;
     const launchedFromGameDetail = Boolean(routeState?.fromGameDetail);
     const initialRestartRef = useRef(Boolean(routeState?.restart));
+    const initialPlaybackOrientationRef = useRef(normalizePlaybackOrientation(routeState?.playbackOrientation));
 
     const runtimeScripts = useMemo(() => story ? getRuntimeScripts(story) : [], [story]);
     const nodeMap = useMemo(() => {
@@ -2145,7 +2151,7 @@ const InteractiveVideo: React.FC = () => {
     const isEndingNode = getNodeKind(currentNode) === 'ending';
     const isMinigameNode = getNodeKind(currentNode) === 'minigame';
     const projectPlaybackOrientation = useMemo(
-        () => getProjectPlaybackOrientation(story, manifest),
+        () => getProjectPlaybackOrientation(story, manifest, initialPlaybackOrientationRef.current),
         [manifest?.playbackOrientation, story?.playbackOrientation],
     );
     const currentVideoRefs = useMemo(() => getNodeVideoRefs(currentNode), [currentNode]);
@@ -2158,9 +2164,14 @@ const InteractiveVideo: React.FC = () => {
         [currentVideoRef, currentVideoUrl, manifest],
     );
     const currentMinigameUrl = useMemo(() => resolveMinigameUrl(currentNode, manifest), [currentNode, manifest]);
+    const currentVideoPlaybackAspect = resolveInteractiveVideoImmersiveAspect({
+        mediaAspect: videoAspect,
+        playbackOrientation: projectPlaybackOrientation,
+        hasImmersiveMedia: Boolean(currentVideoUrl),
+    });
     const currentImmersiveAspect: VideoAspect = isMinigameNode
         ? projectPlaybackOrientation
-        : videoAspect;
+        : currentVideoPlaybackAspect;
     const hasOrientableImmersiveMedia = Boolean(currentVideoUrl) || isMinigameNode;
     const projectTitle = manifest?.title || story?.outline?.projectTitle || story?.title || '互动影游';
 
@@ -2501,6 +2512,11 @@ const InteractiveVideo: React.FC = () => {
         const playPromise = video.play();
         if (playPromise && typeof playPromise.catch === 'function') {
             playPromise.catch(() => {
+                if (cancelled) return;
+                if (isMiniProgramRuntimeRef.current) {
+                    setIsVideoBuffering(true);
+                    return;
+                }
                 if (!cancelled && playbackMode === 'fresh') {
                     setShowManualPlay(true);
                 }
@@ -2775,6 +2791,42 @@ const InteractiveVideo: React.FC = () => {
         }, 700);
     }, [currentVideoUrl, publishPlaybackMetrics]);
 
+    const attemptMiniProgramPlayback = useCallback(() => {
+        if (!isMiniProgramRuntimeRef.current || !currentVideoUrl || !videoGate) return;
+        const video = videoRef.current;
+        if (!video || video.ended) return;
+
+        video.playbackRate = playbackRate;
+        const playPromise = video.play();
+        if (!playPromise || typeof playPromise.then !== 'function') {
+            markPlaybackHealthy();
+            return;
+        }
+
+        playPromise
+            .then(() => {
+                setShowManualPlay(false);
+                setIsVideoPaused(false);
+                markPlaybackHealthy();
+            })
+            .catch(() => {
+                setShowManualPlay(false);
+                setIsVideoBuffering(true);
+            });
+    }, [currentVideoUrl, markPlaybackHealthy, playbackRate, videoGate]);
+
+    useEffect(() => {
+        if (!isMiniProgramRuntime || !currentVideoUrl || !videoGate || typeof window === 'undefined') return undefined;
+
+        attemptMiniProgramPlayback();
+        window.addEventListener('WeixinJSBridgeReady', attemptMiniProgramPlayback);
+        document.addEventListener('WeixinJSBridgeReady', attemptMiniProgramPlayback);
+        return () => {
+            window.removeEventListener('WeixinJSBridgeReady', attemptMiniProgramPlayback);
+            document.removeEventListener('WeixinJSBridgeReady', attemptMiniProgramPlayback);
+        };
+    }, [attemptMiniProgramPlayback, currentVideoUrl, isMiniProgramRuntime, videoGate]);
+
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         if (miniProgramPlaybackWatchdogTimerRef.current != null) {
@@ -2793,8 +2845,9 @@ const InteractiveVideo: React.FC = () => {
             preloadManagerRef.current?.setPlaybackAtRisk(false);
             setIsInitialVideoPreparing(false);
             setIsBranchTransitioning(false);
-            setIsVideoBuffering(false);
-            setShowManualPlay(true);
+            setIsVideoBuffering(true);
+            setShowManualPlay(false);
+            attemptMiniProgramPlayback();
         }, MINI_PROGRAM_PLAYBACK_WATCHDOG_MS);
 
         return () => {
@@ -2803,7 +2856,7 @@ const InteractiveVideo: React.FC = () => {
                 miniProgramPlaybackWatchdogTimerRef.current = null;
             }
         };
-    }, [currentVideoUrl, isMiniProgramRuntime, videoGate]);
+    }, [attemptMiniProgramPlayback, currentVideoUrl, isMiniProgramRuntime, videoGate]);
 
     const prepareTargetVideo = useCallback(async (targetVideoUrl: string) => {
         if (!targetVideoUrl) return;
@@ -3256,10 +3309,16 @@ const InteractiveVideo: React.FC = () => {
         ? '\u7ebf\u6027\u5267\u60c5'
         : `${routeExploreProgress.exploredCount}/${routeExploreProgress.totalCount} | ${routeExploreProgress.percent}%`;
     const history = sessionState?.history || [];
+    const loadingPageClassName = [
+        styles.pageRoot,
+        ivgTheme === 'dark' ? styles.pageRootDark : '',
+        styles.loadingPlaybackPage,
+        projectPlaybackOrientation === 'portrait' ? styles.portraitVideoPage : styles.landscapeVideoPage,
+    ].filter(Boolean).join(' ');
 
     if (isLoading || isInitialVideoPreparing) {
         return (
-            <div className={styles.pageRoot}>
+            <div className={loadingPageClassName}>
                 <div className={styles.loadingPanel}>
                     <div className={styles.loadingOrb} aria-hidden="true">
                         <div className={styles.loadingOrbit} />
@@ -3395,8 +3454,8 @@ const InteractiveVideo: React.FC = () => {
         isMiniProgramRuntime ? styles.miniProgramPlayerPage : '',
         isImmersiveStage ? styles.cinematicVideoPage : '',
         isMinigameNode ? styles.minigamePlayerPage : '',
-        currentVideoUrl && videoAspect === 'landscape' ? styles.landscapeVideoPage : '',
-        currentVideoUrl && videoAspect === 'portrait' ? styles.portraitVideoPage : '',
+        currentVideoUrl && currentVideoPlaybackAspect === 'landscape' ? styles.landscapeVideoPage : '',
+        currentVideoUrl && currentVideoPlaybackAspect === 'portrait' ? styles.portraitVideoPage : '',
         isMinigameNode && projectPlaybackOrientation === 'landscape' ? styles.landscapeVideoPage : '',
         isMinigameNode && projectPlaybackOrientation === 'portrait' ? styles.portraitVideoPage : '',
     ].filter(Boolean).join(' ');
@@ -3685,10 +3744,15 @@ const InteractiveVideo: React.FC = () => {
                                 onLoadedMetadata={handleVideoMetadata}
                                 onLoadedData={() => {
                                     markPlaybackHealthy();
+                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
                                 }}
-                                onCanPlay={markPlaybackHealthy}
+                                onCanPlay={() => {
+                                    markPlaybackHealthy();
+                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
+                                }}
                                 onCanPlayThrough={() => {
                                     markPlaybackHealthy();
+                                    if (isMiniProgramRuntime) attemptMiniProgramPlayback();
                                 }}
                                 onPlay={() => {
                                     setShowManualPlay(false);
@@ -3699,14 +3763,21 @@ const InteractiveVideo: React.FC = () => {
                                     setIsVideoPaused(false);
                                     markPlaybackHealthy();
                                 }}
-                                onPause={() => setIsVideoPaused(true)}
+                                onPause={(event) => {
+                                    if (isMiniProgramRuntime && event.currentTarget.currentTime <= 0.05 && videoGate) {
+                                        setIsVideoPaused(false);
+                                        setIsVideoBuffering(true);
+                                        return;
+                                    }
+                                    setIsVideoPaused(true);
+                                }}
                                 onWaiting={scheduleBufferingNotice}
                                 onStalled={scheduleBufferingNotice}
                                 onEnded={handleVideoComplete}
                                 onError={() => {
                                     markPlaybackHealthy();
                                     if (isMiniProgramRuntime) {
-                                        setShowManualPlay(true);
+                                        setShowManualPlay(false);
                                         setIsVideoBuffering(false);
                                         setIsBranchTransitioning(false);
                                         return;
@@ -3774,7 +3845,7 @@ const InteractiveVideo: React.FC = () => {
                             </div>
                         )}
 
-                        {currentVideoUrl && videoGate && showManualPlay && playbackMode === 'fresh' && (
+                        {currentVideoUrl && videoGate && showManualPlay && playbackMode === 'fresh' && !isMiniProgramRuntime && (
                             <button type="button" className={styles.playOverlayButton} onClick={handleManualPlay}>
                                 <IoPlayCircleOutline />
                                 播放
