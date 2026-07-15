@@ -7,14 +7,24 @@ export type InteractiveVideoUnlockedState = {
     edgeIds: string[];
 };
 
+export type InteractiveVideoVariableValue = number | boolean | string;
+
+export type InteractiveVideoRuntimeFrame = {
+    scriptId: string;
+    runNodeId: string;
+};
+
 export type InteractiveVideoSnapshot = {
-    variables: Record<string, number | boolean>;
+    variables: Record<string, InteractiveVideoVariableValue>;
     history: InteractiveVideoHistoryItem[];
+    currentScriptId?: string | null;
+    callStack?: InteractiveVideoRuntimeFrame[];
 };
 
 export type InteractiveVideoHistoryItem = {
     nodeId: string;
     optionId?: string;
+    resultId?: string;
     edgeId?: string;
     title?: string;
     enteredAt?: string;
@@ -26,7 +36,9 @@ export type InteractiveVideoSessionState = {
     userId?: string | number | null;
     gameVersion?: string;
     currentNodeId: string | null;
-    variables: Record<string, number | boolean>;
+    currentScriptId?: string | null;
+    callStack?: InteractiveVideoRuntimeFrame[];
+    variables: Record<string, InteractiveVideoVariableValue>;
     history: InteractiveVideoHistoryItem[];
     unlocked: InteractiveVideoUnlockedState;
     snapshots: Record<string, InteractiveVideoSnapshot>;

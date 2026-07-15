@@ -85,6 +85,15 @@
     --ivg-portrait-frame: 1;
 }
 
+.miniProgramPlayerPage {
+    --ivg-mini-program-runtime: 1;
+}
+
+.loadingPlaybackPage {
+    min-height: 100dvh;
+    background: #000;
+}
+
 .portalRoot {
     min-height: 0;
     display: contents;
@@ -126,6 +135,10 @@
 
 .portalRootLandscapeRotated {
     --ivg-portal-rotation: landscape-rotated;
+}
+
+.portalRootMiniProgram {
+    --ivg-mini-program-runtime: 1;
 }
 
 .header {
@@ -246,6 +259,215 @@
     height: 100%;
     object-fit: contain;
     background: #000;
+}
+
+.cinematicVideoPage .playerGrid {
+    grid-template-columns: minmax(0, 1fr);
+    background: #000;
+}
+
+.cinematicVideoPage .stage {
+    padding: 0;
+    background: #000;
+}
+
+.cinematicVideoPage .monitor {
+    height: 100dvh;
+    min-height: 0;
+    border-radius: 0;
+    background: #000;
+    box-shadow: none;
+}
+
+.cinematicVideoPage .sidePanel {
+    display: none;
+}
+
+.cinematicVideoPage .textScene {
+    align-items: center;
+    overflow: auto;
+    text-align: center;
+    padding:
+        calc(env(safe-area-inset-top, 0px) + clamp(72px, 12vh, 124px))
+        clamp(28px, 8vw, 104px)
+        calc(env(safe-area-inset-bottom, 0px) + clamp(128px, 18vh, 196px));
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.78)),
+        linear-gradient(135deg, #08090a 0%, #161918 52%, #050606 100%);
+}
+
+.cinematicVideoPage .textScene span {
+    color: rgba(251, 91, 103, 0.94);
+}
+
+.cinematicVideoPage .textScene h1 {
+    max-width: min(860px, 100%);
+    color: #fff;
+    font-size: clamp(30px, 5vw, 64px);
+    text-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
+}
+
+.cinematicVideoPage .textScene p {
+    max-width: min(720px, 100%);
+    color: rgba(255, 255, 255, 0.72);
+    text-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.minigamePlayerPage .header,
+.minigamePlayerPage .mobileToolsButton,
+.minigamePlayerPage .videoHud {
+    display: none;
+}
+
+.minigamePlayerPage .monitor {
+    display: grid;
+    place-items: center;
+}
+
+.videoHud {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+
+.videoHudHidden {
+    opacity: 0;
+}
+
+.miniProgramPlayerPage .videoHud {
+    transition: opacity 80ms linear;
+}
+
+.videoSceneTitle {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 22px);
+    left: calc(env(safe-area-inset-left, 0px) + 78px);
+    max-width: min(580px, calc(100% - 180px));
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+    pointer-events: none;
+}
+
+.videoSceneTitle strong {
+    display: block;
+    overflow: hidden;
+    font-size: clamp(20px, 2.4vw, 34px);
+    font-weight: 900;
+    line-height: 1.16;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.videoControlDock {
+    position: absolute;
+    right: calc(env(safe-area-inset-right, 0px) + 28px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(82px, 1fr));
+    min-height: 74px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: linear-gradient(90deg, rgba(12, 14, 16, 0.28), rgba(12, 14, 16, 0.58));
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+}
+
+.videoHudWithSkip .videoControlDock {
+    grid-template-columns: repeat(5, minmax(78px, 1fr));
+}
+
+.nonVideoControlDock {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+
+.nonVideoControlDockHidden {
+    opacity: 0;
+}
+
+.nonVideoControlDockHidden .videoControlDock {
+    pointer-events: none;
+}
+
+.nonVideoControlDockVisible {
+    opacity: 1;
+}
+
+.nonVideoControlDock .videoControlDock {
+    grid-template-columns: repeat(3, minmax(82px, 1fr));
+}
+
+.videoControlButton {
+    position: relative;
+    min-width: 0;
+    min-height: 72px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 6px;
+    border: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 800;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition:
+        background 140ms ease,
+        color 140ms ease;
+}
+
+.videoControlButton:first-child {
+    border-left: 0;
+}
+
+.videoControlButton:hover,
+.videoControlButton:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.videoControlButton svg {
+    display: block;
+    font-size: 20px;
+}
+
+.videoControlButton span {
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.minigameFrame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
+}
+
+.minigameFrameLandscape {
+    width: 100%;
+    height: 100%;
+}
+
+.minigameFramePortrait {
+    width: min(100%, calc(100vh * 9 / 16));
+    height: min(100%, calc(100vw * 16 / 9));
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 9 / 16;
 }
 
 .textScene {
@@ -425,6 +647,25 @@
 .choiceDockPortrait,
 .choiceDockLandscape {
     grid-template-columns: minmax(0, 1fr);
+}
+
+.miniProgramPlayerPage .videoControlDock,
+.miniProgramPlayerPage .playOverlayButton,
+.miniProgramPlayerPage .videoTransitionOverlay,
+.miniProgramPlayerPage .choiceButton,
+.miniProgramPlayerPage .noChoices,
+.miniProgramPlayerPage .videoNotice,
+.portalRootMiniProgram .mobileToolsSheet,
+.portalRootMiniProgram .treeDialogTitle,
+.portalRootMiniProgram .treeProgress {
+    backdrop-filter: none;
+}
+
+.miniProgramPlayerPage .choiceButton {
+    transition:
+        border-color 80ms linear,
+        background 80ms linear,
+        color 80ms linear;
 }
 
 .choiceDockOne .choiceButton {
@@ -695,8 +936,197 @@
     background: var(--ivg-on-accent);
 }
 
-.mobileToolsButton,
+.mobileToolsButton {
+    display: none;
+}
+
 .mobileToolsOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 34;
+    display: block;
+    background: var(--ivg-scrim);
+}
+
+.mobileToolsSheet {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(420px, 100vw);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid var(--ivg-border);
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-shadow);
+}
+
+.mobileToolsHeader {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--ivg-border);
+}
+
+.mobileToolsHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mobileToolsHeader strong {
+    color: var(--ivg-text);
+    font-size: 15px;
+}
+
+.mobileRestartButton {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid var(--ivg-border-strong);
+    border-radius: 8px;
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-text);
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.mobileToolsClose {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.mobileToolsTabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 12px 14px 0;
+}
+
+.mobileToolsTabs button {
+    min-height: 36px;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-muted);
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.mobileToolsTabs .mobileToolsTabActive {
+    border-color: var(--ivg-border-strong);
+    background: var(--ivg-accent-soft);
+    color: var(--ivg-text);
+}
+
+.mobileToolsContent {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 2px 16px 18px;
+}
+
+.variableBoardOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 36;
+    display: grid;
+    place-items: center;
+    padding:
+        calc(env(safe-area-inset-top, 0px) + 20px)
+        calc(env(safe-area-inset-right, 0px) + 16px)
+        calc(env(safe-area-inset-bottom, 0px) + 20px)
+        calc(env(safe-area-inset-left, 0px) + 16px);
+    background: color-mix(in srgb, var(--ivg-bg) 28%, rgba(0, 0, 0, 0.72));
+}
+
+.variableBoardModal {
+    width: min(460px, calc(100vw - 32px));
+    max-height: min(78dvh, 580px);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--ivg-border);
+    border-radius: 12px;
+    background: var(--ivg-surface);
+    box-shadow: var(--ivg-shadow);
+}
+
+.variableBoardHeader {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--ivg-border);
+}
+
+.variableBoardTitle {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ivg-text);
+}
+
+.variableBoardTitle svg {
+    flex: 0 0 auto;
+    font-size: 18px;
+}
+
+.variableBoardTitle h2 {
+    margin: 0;
+    overflow: hidden;
+    font-size: 16px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.variableBoardClose {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--ivg-border);
+    border-radius: 8px;
+    background: var(--ivg-control-bg);
+    color: var(--ivg-control-text);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.variableBoardContent {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 16px 18px;
+}
+
+.variableBoardContent .panelSection {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.variableBoardContent .sectionTitle {
     display: none;
 }
 
@@ -916,6 +1346,13 @@
         var(--ivg-surface);
 }
 
+.treePlotMinigame {
+    border-color: var(--ivg-border-strong);
+    background:
+        linear-gradient(135deg, rgba(72, 183, 148, 0.18), rgba(229, 179, 95, 0.1)),
+        var(--ivg-surface);
+}
+
 .treePlotDisabled {
     opacity: 0.72;
 }
@@ -924,6 +1361,12 @@
     border-color: var(--ivg-border-strong);
     background:
         linear-gradient(135deg, var(--ivg-accent-soft), transparent 58%),
+        var(--ivg-surface-muted);
+}
+
+.treeResultCard {
+    background:
+        linear-gradient(135deg, rgba(72, 183, 148, 0.16), rgba(229, 179, 95, 0.1)),
         var(--ivg-surface-muted);
 }
 
@@ -936,16 +1379,14 @@
 
 .endingOverlay {
     position: fixed;
-    top: 88px;
-    right: calc(360px + 24px);
-    bottom: 24px;
-    left: 24px;
+    inset: 0;
     z-index: 40;
     display: grid;
     place-items: center;
     padding: 24px;
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--ivg-bg) 28%, rgba(0, 0, 0, 0.68));
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.72)),
+        rgba(0, 0, 0, 0.58);
 }
 
 .restartConfirmOverlay {
@@ -992,8 +1433,31 @@
     box-shadow: var(--ivg-shadow);
 }
 
+.endingModal {
+    width: min(540px, calc(100vw - 32px));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: linear-gradient(180deg, rgba(20, 22, 24, 0.94), rgba(8, 9, 10, 0.94));
+    color: #fff;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
+    backdrop-filter: blur(14px);
+}
+
+.endingModal span {
+    color: rgba(251, 91, 103, 0.94);
+}
+
+.endingModal h1 {
+    color: #fff;
+}
+
 .endingModal p {
-    color: var(--ivg-text-soft);
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.endingModal .endingCloseButton {
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.84);
 }
 
 .endingCloseButton,
@@ -1171,6 +1635,57 @@
     50% {
         opacity: 0.58;
         transform: translate(-50%, -50%) scale(1.22);
+    }
+}
+
+@media (max-width: 980px), (max-height: 720px) and (max-width: 1280px) and (orientation: landscape) {
+    .cinematicVideoPage .videoSceneTitle {
+        display: none;
+    }
+
+    .videoSceneTitle {
+        top: calc(env(safe-area-inset-top, 0px) + 18px);
+        left: calc(env(safe-area-inset-left, 0px) + 64px);
+        max-width: calc(100% - 128px);
+    }
+
+    .videoSceneTitle strong {
+        font-size: clamp(18px, 5vw, 26px);
+    }
+
+    .videoControlDock {
+        right: auto;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        left: 50%;
+        width: min(520px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
+        transform: translateX(-50%);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        min-height: 62px;
+        border-radius: 8px;
+    }
+
+    .videoHudWithSkip .videoControlDock {
+        width: min(620px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .nonVideoControlDock .videoControlDock {
+        width: min(420px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .videoControlButton {
+        min-height: 60px;
+        padding: 7px 6px;
+        font-size: 12px;
+    }
+
+    .videoControlButton svg {
+        font-size: 19px;
+    }
+
+    .cinematicVideoPage .mobileToolsButton {
+        display: none;
     }
 }
 
@@ -1353,7 +1868,7 @@
 
     .mobileToolsTabs {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
         padding: 12px 14px 0;
     }
@@ -1508,6 +2023,19 @@
 }
 
 @media (max-width: 980px) and (orientation: portrait) {
+    .nonVideoControlDock .videoControlDock {
+        top: calc(env(safe-area-inset-top, 0px) + 14px);
+        bottom: auto;
+        width: min(360px, calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 96px));
+        min-height: 54px;
+    }
+
+    .nonVideoControlDock .videoControlButton {
+        min-height: 52px;
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+
     .landscapeVideoPage .stage {
         display: flex;
         align-items: flex-start;
@@ -1678,14 +2206,14 @@
 @media (max-width: 980px) and (orientation: portrait) {
     .landscapeVideoPage {
         position: fixed;
-        top: 0;
-        left: 100vw;
+        top: 50%;
+        left: 50%;
         width: 100dvh;
         height: 100vw;
         min-height: 0;
         overflow: hidden;
-        transform: rotate(90deg);
-        transform-origin: top left;
+        transform: translate(-50%, -50%) rotate(90deg);
+        transform-origin: center;
     }
 
     .landscapeVideoPage .playerGrid,
@@ -1697,7 +2225,9 @@
     }
 
     .landscapeVideoPage .stage {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         padding: 0;
     }
 
@@ -1840,11 +2370,19 @@
     top: 0;
     right: auto;
     bottom: auto;
-    left: 100vw;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    transform: none;
+    transform-origin: center;
+}
+
+.portalRootLandscapeRotated.portalRootMobileLandscapeVideo.portalRootViewportPortrait .portalViewportFrame {
+    top: 50%;
+    left: 50%;
     width: 100dvh;
     height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: top left;
+    transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .portalRootMobilePortraitVideo .mobileToolsOverlay,
@@ -1860,6 +2398,8 @@
 
 .portalRootMobilePortraitVideo .treeOverlay,
 .portalRootMobileLandscapeVideo .treeOverlay,
+.portalRootMobilePortraitVideo .variableBoardOverlay,
+.portalRootMobileLandscapeVideo .variableBoardOverlay,
 .portalRootMobilePortraitVideo .endingOverlay,
 .portalRootMobileLandscapeVideo .endingOverlay,
 .portalRootMobilePortraitVideo .restartConfirmOverlay,
@@ -1868,6 +2408,16 @@
     inset: 0;
     width: 100%;
     height: 100%;
+}
+
+.portalRootMobilePortraitVideo .variableBoardModal {
+    width: min(420px, calc(100% - 28px));
+    max-height: min(78%, 560px);
+}
+
+.portalRootMobileLandscapeVideo .variableBoardModal {
+    width: min(520px, calc(100% - 40px));
+    max-height: min(82%, 420px);
 }
 
 .portalRootMobilePortraitVideo .mobileToolsSheet,

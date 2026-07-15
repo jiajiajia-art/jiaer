@@ -121,6 +121,22 @@ export const pickBaseImage = (images?: Record<string, string>, fallback?: string
     return first || (isValidUrl(fallback) ? fallback : undefined);
 };
 
+const extractExplicitIdentity = (source: any): string => {
+    const candidates = [
+        source?.identity,
+        source?.currentIdentity,
+        source?.current_identity,
+    ];
+
+    for (const value of candidates) {
+        if (typeof value === 'string' && value.trim()) {
+            return value.trim();
+        }
+    }
+
+    return '';
+};
+
 // 统一处理 player 的图片字段（支持多种格式）
 const extractPlayerImages = (player: unknown): {
     imagesObject?: Record<string, string>;
@@ -159,6 +175,7 @@ const extractPlayerImages = (player: unknown): {
 export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Character => {
     const npcJob = 'job' in npc ? npc.job : undefined;
     const npcRace = 'race' in npc ? npc.race : undefined;
+    const npcIdentity = extractExplicitIdentity(npc);
     const npcRelationship = 'relationship' in npc ? npc.relationship : undefined;
 
     const images = (npc.images || undefined) as Record<string, string> | undefined;
@@ -174,7 +191,7 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
         callName: extractCallName(npc, npc.name || ''),
         gender: npc.gender || '',
         role: npcJob || 'NPC',
-        identity: npcRace ? `${npcRace} · ${npcJob || ''}` : (npcJob || ''),
+        identity: npcIdentity || (npcRace ? `${npcRace} · ${npcJob || ''}` : (npcJob || '')),
         personality: normalizePersonalityTags(npc.personality),
         speech: npc.tone || '',
         appearance: npc.appearance || '',
@@ -194,13 +211,13 @@ export const npcToCharacter = (npc: NPC | WorldNPC, indexFallback: number): Char
 
 // Player转换为Character
 const extractPlayerIdentity = (player: any): string => {
+    const explicitIdentity = extractExplicitIdentity(player);
+    if (explicitIdentity) return explicitIdentity;
+
     // 统一读取主角“身份/当前身份”，优先标准 race，兼容历史字段
     const candidates = [
         player?.race,
         player?.job,
-        player?.identity,
-        player?.currentIdentity,
-        player?.current_identity,
     ];
 
     for (const value of candidates) {

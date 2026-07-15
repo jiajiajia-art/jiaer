@@ -32,7 +32,11 @@ export const isMiniProgramEnv = (): boolean => {
     }
 
     const win = window as MiniProgramWindow;
-    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+    const wxEnvironment = String(win.__wxjs_environment || '').toLowerCase();
+    if (wxEnvironment === 'miniprogram') return true;
+
+    const userAgent = String(window.navigator?.userAgent || '').toLowerCase();
+    return userAgent.includes('miniprogram');
 };
 
 export const isCreatorRoutePath = (pathname: string): boolean => {

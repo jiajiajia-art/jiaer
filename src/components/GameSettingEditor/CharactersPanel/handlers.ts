@@ -405,6 +405,7 @@ export const createHandlers = (ctx: HandlersContext) => {
                 name: characterToSave.name || '',
                 callName: characterToSave.callName || '',
                 gender: characterToSave.gender || '',
+                identity: characterToSave.identity || undefined,
                 race: characterToSave.identity || undefined,
                 appearance: characterToSave.appearance || '',
                 personality: stringifyPersonalityTags(characterToSave.personality) || undefined,
@@ -459,11 +460,12 @@ export const createHandlers = (ctx: HandlersContext) => {
             r => r.name === '玩家' || r.name.toLowerCase().includes('player'),
         );
 
-        const npcData: NPC & { callName?: string; variationDescriptions?: Record<string, string> } = {
+        const npcData: NPC & { callName?: string; identity?: string; variationDescriptions?: Record<string, string> } = {
             id: characterToSave.id.startsWith('temp-') ? `npc_${Date.now()}` : characterToSave.id,
             name: characterToSave.name || '',
             callName: characterToSave.callName || '',
             gender: characterToSave.gender || '',
+            identity: characterToSave.identity || undefined,
             job: job || undefined,
             race: race || undefined,
             description: characterToSave.background || ' ',
@@ -594,11 +596,12 @@ export const createHandlers = (ctx: HandlersContext) => {
 
         const playerRelationship = newCharacterData.relationships.find(r => r.name === '玩家' || r.name.toLowerCase().includes('player'));
 
-        const newNpc: NPC & { callName?: string; variationDescriptions?: Record<string, string> } = {
+        const newNpc: NPC & { callName?: string; identity?: string; variationDescriptions?: Record<string, string> } = {
             id: targetCharacterId,
             name: newCharacterData.name || '未命名角色',
             callName: newCharacterData.callName || '',
             gender: newCharacterData.gender || '',
+            identity: newCharacterData.identity || undefined,
             job: job || undefined,
             race: race || undefined,
             description: newCharacterData.background || '暂无描述',
