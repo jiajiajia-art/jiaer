@@ -1489,6 +1489,7 @@
     "submitActivity": "Submit to \"{{title}}\"",
     "fileId": "File ID",
     "addLink": "Add Link",
+    "remove": "Remove",
     "importFromMyGames": "Import from My Games",
     "selectPublishedGame": "Select Published Game",
     "importLink": "Import Link",

@@ -1487,6 +1487,7 @@
     "submitActivity": "投稿到\"{{title}}\"",
     "fileId": "文件ID",
     "addLink": "新增链接",
+    "remove": "删除",
     "importFromMyGames": "从我的作品中导入",
     "selectPublishedGame": "选择已发布作品",
     "importLink": "导入链接",
