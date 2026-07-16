@@ -35,6 +35,13 @@ import {
     MINI_PROGRAM_CREATOR_PC_URL,
     type CreatorGameType,
 } from '../utils/miniProgram';
+import { partitionCreatorGames } from '../utils/novelGame';
+import {
+    DRAFT_BOX_FILTER_ORDER,
+    filterDraftGamesByType,
+    getDraftBoxFilterLabelKey,
+    type DraftBoxFilterKey,
+} from '../utils/draftBoxFilter';
 
 type CreatorStatsIncentiveType = 'none' | 'incentive' | 'game_incentive' | 'code_incentive' | 'all_incentive';
 
@@ -69,6 +76,7 @@ const Create: React.FC = () => {
     const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
     const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
+    const [draftFilterKey, setDraftFilterKey] = useState<DraftBoxFilterKey>('all');
 
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
@@ -77,27 +85,20 @@ const Create: React.FC = () => {
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
-    const { publishedGames, draftGames } = useMemo(() => {
-        const published: UserGameData[] = [];
-        const drafts: UserGameData[] = [];
+    const { publishedGames, draftGames } = useMemo(
+        () => partitionCreatorGames(fileMetas),
+        [fileMetas],
+    );
 
-        fileMetas.forEach((game) => {
-            if (game.is_public === 1) {
-                published.push(game);
-            } else {
-                drafts.push(game);
-            }
-        });
-
-        return {
-            publishedGames: published,
-            draftGames: drafts,
-        };
-    }, [fileMetas]);
+    const filteredDraftGames = useMemo(
+        () => filterDraftGamesByType(draftGames, draftFilterKey),
+        [draftGames, draftFilterKey],
+    );
 
     const getGameManageId = (game: UserGameData) => String(game.file_id || game.id || '');
     const selectedDraftCount = selectedDraftIds.length;
-    const isAllDraftsSelected = draftGames.length > 0 && selectedDraftCount === draftGames.length;
+    const isAllDraftsSelected = filteredDraftGames.length > 0
+        && filteredDraftGames.every((game) => selectedDraftIds.includes(getGameManageId(game)));
 
     const loadMyGames = async () => {
         if (!user?.user?.id) {
@@ -245,7 +246,12 @@ const Create: React.FC = () => {
             return;
         }
 
-        setSelectedDraftIds(draftGames.map((game) => getGameManageId(game)).filter(Boolean));
+        setSelectedDraftIds(filteredDraftGames.map((game) => getGameManageId(game)).filter(Boolean));
+    };
+
+    const handleDraftFilterChange = (nextFilter: DraftBoxFilterKey) => {
+        setDraftFilterKey(nextFilter);
+        setSelectedDraftIds([]);
     };
 
     const handleDraftCardClick = (game: UserGameData) => {
@@ -682,20 +688,38 @@ const Create: React.FC = () => {
                             </div>
                         ) : (
                             <div className={styles.draftSectionBody}>
+                                <div className={styles.draftFilterRow}>
+                                    {DRAFT_BOX_FILTER_ORDER.map((filterKey) => (
+                                        <button
+                                            key={filterKey}
+                                            type="button"
+                                            className={`${styles.draftFilterChip} ${draftFilterKey === filterKey ? styles.draftFilterChipActive : ''}`}
+                                            onClick={() => handleDraftFilterChange(filterKey)}
+                                        >
+                                            {t(getDraftBoxFilterLabelKey(filterKey))}
+                                        </button>
+                                    ))}
+                                </div>
                                 {isDraftManageMode && (
                                     <div className={styles.draftManageTip}>
                                         {/* 适配移动端操作栏 */}
                                         {t('create.draftsSelected', { count: selectedDraftCount })}
                                     </div>
                                 )}
-                                <GameGrid
-                                    games={draftGames}
-                                    onGameClick={handleDraftCardClick}
-                                    selectable={true}
-                                    selectedIds={selectedDraftIds}
-                                    onToggleSelect={handleToggleDraftSelect}
-                                    isSelectionMode={isDraftManageMode}
-                                />
+                                {filteredDraftGames.length === 0 ? (
+                                    <div className={styles.draftFilterEmpty}>
+                                        {t('create.noDraftsForFilter')}
+                                    </div>
+                                ) : (
+                                    <GameGrid
+                                        games={filteredDraftGames}
+                                        onGameClick={handleDraftCardClick}
+                                        selectable={true}
+                                        selectedIds={selectedDraftIds}
+                                        onToggleSelect={handleToggleDraftSelect}
+                                        isSelectionMode={isDraftManageMode}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>

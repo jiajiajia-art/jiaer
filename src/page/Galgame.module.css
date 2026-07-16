@@ -1025,6 +1025,44 @@
     display: none;
 }
 
+/* 历史记录打开时：底栏仅展示导出 / 返回 */
+.historyActionBar {
+    padding-right: 1rem;
+    gap: 0.75rem;
+    overflow-x: hidden;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.historyExportButton {
+    flex: 1;
+    min-height: 3rem;
+    border: none;
+    border-radius: 0.75rem;
+    background: #e8455a;
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.historyExportButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.historyBackButton {
+    min-width: 5.5rem;
+    min-height: 3rem;
+    border-radius: 0.75rem;
+    border: 0.09375rem solid rgba(120, 90, 180, 0.55);
+    background: #fff;
+    color: #5b3f8c;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 .replayControlBar {
     position: absolute;
     left: 1rem;
@@ -1198,6 +1236,35 @@
     text-align: center;
     line-height: 1.2;
     white-space: nowrap;
+}
+
+/* 顶栏任务追踪 */
+.questTracker {
+    position: absolute;
+    top: 4.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(22rem, calc(100% - 1.5rem));
+    z-index: 90;
+    pointer-events: none;
+}
+
+.questTrackerLabel {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: #7ee7bb;
+    margin-bottom: 0.25rem;
+}
+
+.questTrackerBody {
+    background: rgba(15, 18, 28, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.45rem;
+    padding: 0.55rem 0.7rem;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.8125rem;
+    line-height: 1.4;
 }
 
 /* 顶部右侧按钮容器（与底部按钮同样风格的按钮） */
@@ -1516,6 +1583,10 @@
         padding-right: 5.625rem; /* 90px */
         gap: 1rem; /* 16px */
         margin-bottom: 0.625rem; /* 10px */
+    }
+
+    .historyActionBar {
+        padding-right: 1.125rem;
     }
 
     .replayControlBar {

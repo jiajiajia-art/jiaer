@@ -12,7 +12,19 @@
     "test:ideaJobStage": "node --experimental-strip-types --test scripts/ideaJobStage.check.mjs",
     "test:worldBookPanel": "node --experimental-strip-types --test scripts/worldBookPanel.check.mjs",
     "test:dataPromptForms": "node --experimental-strip-types --test scripts/dataPromptForms.check.mjs",
-    "test:dataPromptPanel": "node --experimental-strip-types --test scripts/dataPromptPanel.check.mjs"
+    "test:dataPromptPanel": "node --experimental-strip-types --test scripts/dataPromptPanel.check.mjs",
+    "test:novelGame": "node --experimental-strip-types --test scripts/novelGame.check.mjs",
+    "test:draftBoxFilter": "node --experimental-strip-types --test scripts/draftBoxFilter.check.mjs",
+    "test:novelEdit": "node --experimental-strip-types --test scripts/novelEdit.check.mjs",
+    "test:gameBrowseFilters": "node --experimental-strip-types --test scripts/gameBrowseFilters.check.mjs",
+    "test:homeFilterNovelTheme": "node --experimental-strip-types --test scripts/homeFilterNovelTheme.check.mjs",
+    "test:exportVisualNovel": "node --experimental-strip-types --test scripts/exportVisualNovel.check.mjs",
+    "test:novelChapters": "node --experimental-strip-types --test scripts/novelChapters.check.mjs",
+    "test:creatorContinuePlay": "node --experimental-strip-types --test scripts/creatorContinuePlay.check.mjs",
+    "test:galgamePlayPanels": "node --experimental-strip-types --test scripts/galgamePlayPanels.check.mjs",
+    "test:attributePanelsStream": "node --experimental-strip-types --test scripts/attributePanelsStream.check.mjs",
+    "test:sanitizeVisualStepText": "node --experimental-strip-types --test scripts/sanitizeVisualStepText.check.mjs",
+    "test:novelContentWindow": "node --experimental-strip-types --test scripts/novelContentWindow.check.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

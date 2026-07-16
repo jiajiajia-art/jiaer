@@ -182,8 +182,35 @@
     font-weight: 700;
 }
 
+.quickFilter {
+    min-height: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    background: transparent;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.quickFilter:hover {
+    background: rgba(224, 61, 75, 0.06);
+}
+
+.quickFilterActive {
+    color: var(--primary-dark);
+    background: rgba(224, 61, 75, 0.08);
+}
+
 .trigger:focus-visible,
-.menuItem:focus-visible {
+.menuItem:focus-visible,
+.quickFilter:focus-visible {
     outline: 2px solid rgba(224, 61, 75, 0.38);
     outline-offset: 2px;
 }
@@ -194,8 +221,7 @@
         padding: 6px 10px;
         border-radius: 18px;
         border: 1px solid rgba(15, 23, 42, 0.08);
-        flex-wrap: wrap;
-        row-gap: 6px;
+        flex-wrap: nowrap;
         background: #ffffff;
         box-shadow:
             0 12px 28px rgba(15, 23, 42, 0.12),
@@ -203,14 +229,31 @@
         overflow: visible;
     }
 
+    .group {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .group:last-child {
+        flex: 0 0 auto;
+    }
+
+    .groupWide {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
     .divider {
         height: 20px;
+        margin: 0 4px;
+        flex: 0 0 auto;
         background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.14) 18%, rgba(15, 23, 42, 0.14) 82%, transparent 100%);
     }
 
     .trigger {
         min-height: 38px;
-        padding: 0 10px;
+        max-width: 100%;
+        padding: 0 8px;
         color: #111827;
         font-size: 14px;
         background: transparent;
@@ -242,7 +285,14 @@
     }
 
     .groupWide .trigger {
-        max-width: min(156px, 42vw);
+        max-width: min(108px, 28vw);
+    }
+
+    .quickFilter {
+        flex-shrink: 0;
+        min-height: 38px;
+        padding: 0 8px;
+        font-size: 14px;
     }
 
     .menuItem {
@@ -264,7 +314,8 @@
     }
 
     .trigger:focus-visible,
-    .menuItem:focus-visible {
+    .menuItem:focus-visible,
+    .quickFilter:focus-visible {
         outline: 2px solid rgba(224, 61, 75, 0.38);
     }
 }

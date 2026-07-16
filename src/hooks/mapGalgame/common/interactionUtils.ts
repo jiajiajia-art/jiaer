@@ -140,7 +140,7 @@ export const convertStepToMessage = (
     return null;
 };
 
-/** 转换步骤为文本模式格式 */
+/** 转换步骤为文本模式格式（与回放文本模式同源） */
 export const convertStepsToTextModalFormat = (
     steps: any[],
     worldSetting: any | null
@@ -156,26 +156,40 @@ export const convertStepsToTextModalFormat = (
             };
 
             if (step.type === 'dialogue') {
-                const isPlayer = step.npcId === worldSetting?.player?.name;
+                const isPlayer = step.isPlayer || step.npcId === worldSetting?.player?.name;
                 return {
                     ...baseStep,
                     speakerName: step.speakerName || step.npcId || step.speakerId,
                     characterName: step.speakerName || step.npcId || step.speakerId || '未知角色',
-                    isPlayer: isPlayer,
+                    isPlayer: Boolean(isPlayer),
                 };
             }
 
             if (step.type === 'choice') {
-                const options = step.options?.map((opt: any, idx: number) => {
-                    if (typeof opt === 'string') {
-                        return { id: idx + 1, text: opt };
-                    }
-                    return {
-                        id: idx + 1,
-                        text: opt.text || opt,
-                        optionId: opt.optionId ? String(opt.optionId) : undefined,
-                    };
-                }) || [];
+                const rawMainOptions = Array.isArray(step.mainOptions)
+                    ? step.mainOptions
+                    : (step.mainOption ? [step.mainOption] : []);
+
+                const mainOptions = rawMainOptions.map((opt: any, idx: number) => ({
+                    id: idx + 1,
+                    text: sanitizeVisualStepText(String(typeof opt === 'string' ? opt : (opt.text || opt))),
+                    isMain: true as const,
+                }));
+
+                const startId = mainOptions.length + 1;
+                const options = [
+                    ...mainOptions,
+                    ...(step.options?.map((opt: any, idx: number) => {
+                        if (typeof opt === 'string') {
+                            return { id: startId + idx, text: sanitizeVisualStepText(opt) };
+                        }
+                        return {
+                            id: startId + idx,
+                            text: sanitizeVisualStepText(opt.text || opt),
+                            optionId: opt.optionId ? String(opt.optionId) : undefined,
+                        };
+                    }) || []),
+                ];
 
                 return {
                     ...baseStep,

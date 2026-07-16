@@ -16,34 +16,12 @@ import LoadSaveListModal from './LoadSaveListModal';
 import SavePreviewModal from './SavePreviewModal';
 import type { SaveSummaryItem } from '../../api/galgame/saves';
 import { isMiniProgramEnv } from '../../utils/miniProgram';
+import {
+    buildCreatorPlaySessionRequest,
+    normalizeCreatorPlayMode,
+    parseOpticalPlaySessionId,
+} from '../../utils/creatorContinuePlay';
 import { useTranslation } from 'react-i18next';
-
-const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => {
-    const normalizeRaw = (value?: string | null) => {
-        if (!value) return '';
-        return String(value)
-            .trim()
-            .replace(/^\[\s*/, '')
-            .replace(/\s*\]$/, '')
-            .split(',')[0]
-            .replace(/^["']|["']$/g, '')
-            .trim()
-            .toUpperCase();
-    };
-
-    const normalizedEngine = normalizeRaw(engine);
-    if (normalizedEngine === 'CUSTOM') return 'customif' as const;
-    if (normalizedEngine === 'ST') return 'st' as const;
-    if (normalizedEngine === 'IVG') return 'interactive-video' as const;
-    if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
-
-    const normalizedTags = normalizeRaw(gameTags);
-    if (normalizedTags === 'CUSTOM') return 'customif' as const;
-    if (normalizedTags === 'IVG') return 'interactive-video' as const;
-    if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
-
-    return '';
-};
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -53,6 +31,10 @@ interface GameStatsViewProps {
     isDeleting: boolean;
     onPublish: () => void;
     onUnpublish: (fileId: string) => void;
+    isNovel?: boolean;
+    sourceFileId?: string;
+    /** 编辑修改续玩中：禁用按钮防重复点击 */
+    isEditContinuing?: boolean;
 }
 
 const GameStatsView: React.FC<GameStatsViewProps> = ({
@@ -63,6 +45,9 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     isDeleting,
     onPublish,
     onUnpublish,
+    isNovel = false,
+    sourceFileId = '',
+    isEditContinuing = false,
 }) => {
     const { t } = useTranslation();
     const { user } = useAuthStore();
@@ -75,6 +60,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
     /**
      * 创建会话（按引擎类型分发）。
+     * TXT / NOVEL「开始测试」走 optical + restart，与「编辑修改」续玩共用会话表，才能接着玩。
      * customif：不在此处创建会话，直接跳转到 /customif/:appId，由宿主页创建。
      */
     const createSession = async (fileId: string): Promise<{ sessionId: string | null; redirectUrl: string }> => {
@@ -90,7 +76,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
         setIsLoading(true);
         try {
-            const normalized = normalizeGameMode(gameDetail?.engine, gameDetail?.game_tags);
+            const normalized = normalizeCreatorPlayMode(gameDetail?.engine, gameDetail?.game_tags);
             if (!normalized) {
                 alert(t('createGame.unknownGameType'));
                 return { sessionId: null, redirectUrl: '' };
@@ -102,7 +88,6 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     alert(t('createGame.missingCustomAppIdStart'));
                     return { sessionId: null, redirectUrl: '' };
                 }
-                // 不创建 session，直接跳转宿主页
                 return { sessionId: null, redirectUrl: `/customif/${appId}` };
             }
 
@@ -115,9 +100,37 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             }
 
             if (normalized === 'TXT') {
-                const response = await createGalgameSessionApi.createGalgameEditSession({ fileId });
+                const payload = buildCreatorPlaySessionRequest({
+                    intent: 'start-test',
+                    fileId,
+                    source: 'other',
+                });
+                const response = await createGalgameSessionApi.createGalgamePlaySession(payload);
                 if (response.data.success) {
-                    const sessionId = response.data.data.session;
+                    const sessionId = parseOpticalPlaySessionId(response.data.data);
+                    return { sessionId, redirectUrl: '/galgame' };
+                }
+                alert(response.data.message || t('createGame.createGameFailed'));
+                return { sessionId: null, redirectUrl: '' };
+            }
+
+            if (normalized === 'NOVEL') {
+                const targetFileId = sourceFileId || gameDetail?.source_file_id || '';
+                if (!targetFileId) {
+                    alert(t('createGame.sourceGameMissing'));
+                    return { sessionId: null, redirectUrl: '' };
+                }
+                const payload = buildCreatorPlaySessionRequest({
+                    intent: 'start-test',
+                    fileId: targetFileId,
+                    source: 'other',
+                });
+                const response = await createGalgameSessionApi.createGalgamePlaySession(payload);
+                if (response.data.success) {
+                    const sessionId = parseOpticalPlaySessionId(response.data.data);
+                    setFileId(targetFileId);
+                    if (sessionId) setSessionId(sessionId);
+                    setIsPreset(false);
                     return { sessionId, redirectUrl: '/galgame' };
                 }
                 alert(response.data.message || t('createGame.createGameFailed'));
@@ -252,14 +265,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                                         onClick={onPublish}
                                         disabled={isLoading}
                                     >
-                                        {t('createGame.publish')}
+                                        {isNovel ? t('createGame.listOnShelf') : t('createGame.publish')}
                                     </button>
                                     : <button
                                         className={`${styles.primaryActionBtn} ${styles.publishGameBtn}`}
                                         onClick={() => onUnpublish(gameDetail.file_id)}
                                         disabled={isLoading}
                                     >
-                                        {t('createGame.unpublish')}
+                                        {isNovel ? t('createGame.unlistFromShelf') : t('createGame.unpublish')}
                                     </button>
                             }
 
@@ -319,8 +332,13 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     <button
                         className={styles.editGameBtn}
                         onClick={onEdit}
+                        disabled={isLoading || isEditContinuing || isDeleting}
                     >
-                        {t('createGame.editGame')}
+                        {isEditContinuing
+                            ? t('createGame.loading')
+                            : isNovel
+                              ? t('createGame.editNovel')
+                              : t('createGame.editGame')}
                     </button>
 
                     <button

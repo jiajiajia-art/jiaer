@@ -159,6 +159,10 @@ export const useMusicPlayer = ({
     );
 
     const handleMusicToggle = useCallback(async () => {
+        if (!currentScene?.soundtrack) {
+            setIsMusicPlaying(false);
+            return;
+        }
         if (isMusicPlaying) {
             if (audioRef.current) {
                 audioRef.current.pause();

@@ -132,16 +132,22 @@
     top: 8px;
     right: 8px;
     max-width: 68%;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    border: 1px solid transparent;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.35);
+    /* 具体底色由 resolveGameTypeToneStyle 内联写入，避免被本类 background 盖住 */
     color: #fff;
     padding: 4px 8px;
     font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
     z-index: 3;
 }
 

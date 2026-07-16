@@ -77,5 +77,5 @@ export const getCreatorEngineLabel = (engine?: string | null): string => {
 // 小程序端仅开放 TXT 创作，其余模式统一引导至 PC 端操作。
 export const getMiniProgramCreatorBlockedMessage = (engineOrType?: string | null): string => {
     const label = getCreatorEngineLabel(engineOrType);
-    return `小程序端当前仅支持 TXT 模式创作，${label} 请前往 PC 端操作。PC 端地址：${MINI_PROGRAM_CREATOR_PC_URL}，请在电脑浏览器打开。`;
+    return `小程序端当前仅支持 AI文游 模式创作，${label} 请前往 PC 端操作。PC 端地址：${MINI_PROGRAM_CREATOR_PC_URL}，请在电脑浏览器打开。`;
 };

@@ -263,12 +263,17 @@
 
 .gameType {
     padding: 0.375rem 0.875rem;
-    background: rgba(224, 61, 75, 0.1);
-    color: var(--primary);
+    /* 底色由 resolveGameTypeToneStyle 内联写入 */
+    color: #fff;
+    border: 1px solid transparent;
     border-radius: 0.75rem;
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.4;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .ratingSection {
@@ -323,6 +328,17 @@
     font-size: 0.875rem;
     color: rgba(0, 0, 0, 0.65);
     font-weight: 500;
+}
+
+.sourceAuthorLink {
+    margin-left: 12px;
+    border: none;
+    background: rgba(251, 70, 85, 0.08);
+    color: #d63a49;
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8125rem;
+    cursor: pointer;
 }
 
 .groupNoTag {
@@ -471,6 +487,84 @@
     max-height: 270px;
     overflow-y: auto;
     white-space: pre-line;
+}
+
+.derivedNovelsSection {
+    margin-bottom: 1.6rem;
+}
+
+.derivedNovelsTitle {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.82);
+}
+
+.derivedNovelsLoading {
+    font-size: 0.875rem;
+    color: rgba(0, 0, 0, 0.45);
+    padding: 0.75rem 0.25rem;
+}
+
+.derivedNovelsEmpty {
+    font-size: 0.875rem;
+    color: rgba(0, 0, 0, 0.45);
+    padding: 1.25rem 0.25rem;
+    text-align: center;
+}
+
+.derivedNovelsList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.derivedNovelCard {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid rgba(224, 61, 75, 0.14);
+    border-radius: 0.9rem;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(251, 246, 247, 0.9));
+    cursor: pointer;
+    text-align: left;
+}
+
+.derivedNovelCover {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 0.55rem;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.derivedNovelMeta {
+    min-width: 0;
+    flex: 1;
+}
+
+.derivedNovelName {
+    font-size: 0.95rem;
+    font-weight: 650;
+    color: #1a1a1a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.derivedNovelAuthor {
+    margin-top: 0.2rem;
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .replayEntrySection {

@@ -20,13 +20,15 @@ import { IoChevronBack } from 'react-icons/io5';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
-import ReplayList from '../components/Galgame/ReplayList';
-import type { ReplayVisibility } from '../api/galgame/replay';
 import type { SaveSummaryItem } from '../api/galgame/saves';
+import novelApi, { type DerivedNovelSummary } from '../api/galgame/novel';
 import { useTrackingStore } from '../store/trackingStore';
 import { trackingApi } from '../api/statistics/trackingApi';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { useTranslation } from 'react-i18next';
+import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
+import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
+import { buildNovelReadPath, buildSourceGameDetailPath } from '../utils/novelGame';
 
 // 检测是否在微信小程序环境
 const isWebViewEnv = (): boolean => {
@@ -42,11 +44,6 @@ const DEFAULT_PLAY_STATUS = {
     hasContinueState: true,
     hasSave: true,
 };
-
-const REPLAY_VISIBILITY_TABS_PUBLIC = 'public';
-const REPLAY_VISIBILITY_TABS_UNLISTED = 'unlisted';
-const REPLAY_VISIBILITY_TABS_PRIVATE = 'private';
-
 // 判断是否点赞的辅助函数
 const checkIsLiked = (reaction: string | number | null | undefined): boolean => {
     if (reaction === null || reaction === undefined) return false;
@@ -76,11 +73,13 @@ const normalizeGameMode = (engine?: string | null, gameTags?: string | null) => 
     if (normalizedEngine === 'CUSTOM') return 'customif' as const;
     if (normalizedEngine === 'ST') return 'st' as const;
     if (normalizedEngine === 'IVG') return 'interactive-video' as const;
+    if (normalizedEngine === 'NOVEL') return 'NOVEL' as const;
     if (normalizedEngine === 'TXT' || normalizedEngine === 'AVG' || normalizedEngine === 'RPG') return normalizedEngine;
 
     const normalizedTags = normalizeRaw(gameTags);
     if (normalizedTags === 'CUSTOM') return 'customif' as const;
     if (normalizedTags === 'IVG') return 'interactive-video' as const;
+    if (normalizedTags === 'NOVEL') return 'NOVEL' as const;
     if (normalizedTags === 'TXT' || normalizedTags === 'AVG' || normalizedTags === 'RPG') return normalizedTags;
 
     return '';
@@ -109,10 +108,11 @@ const GameDetail: React.FC = () => {
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
-    const [isReplayDrawerOpen, setIsReplayDrawerOpen] = useState(false);
-    const [activeReplayVisibility, setActiveReplayVisibility] = useState<ReplayVisibility>('public');
+    const [isDerivedNovelDrawerOpen, setIsDerivedNovelDrawerOpen] = useState(false);
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
+    const [derivedNovels, setDerivedNovels] = useState<DerivedNovelSummary[]>([]);
+    const [derivedNovelsLoading, setDerivedNovelsLoading] = useState(false);
 
     // Refs
     const likeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,19 +122,24 @@ const GameDetail: React.FC = () => {
 
     // 计算值
     const userId = useMemo(() => user?.user?.id, [user?.user?.id]);
-    const creatorUserId = useMemo(() => user?.user?.userId, [user?.user?.userId]);
     const fileId = useMemo(() => fileIdParam || game?.file_id || game?.id, [fileIdParam, game]);
     const isStartButtonLoading = isLoading || isPlayStatusLoading;
-    const replayManagerUserId = useMemo(() => {
-        if (!creatorUserId) return '';
-        return String(creatorUserId);
-    }, [creatorUserId]);
-    const canManageReplayTabs = Boolean(replayManagerUserId);
     const normalizedGameMode = useMemo(
         () => normalizeGameMode(game?.engine, game?.game_tags),
         [game?.engine, game?.game_tags],
     );
     const isGalgame = normalizedGameMode === 'TXT';
+    const isNovel = normalizedGameMode === 'NOVEL';
+    const gameTypeLabel = useMemo(
+        () => (game ? getGameTypeLabelFromMeta(game) : ''),
+        [game],
+    );
+    const gameTypeToneStyle = useMemo(
+        () => (game ? resolveGameTypeToneStyle(getGameTypeToneFromMeta(game)) : undefined),
+        [game],
+    );
+    const sourceAuthorName = game?.source_author_name || '';
+    const sourceFileId = game?.source_file_id || '';
 
     // 解析进入详情页的来源
     const enterSource = useMemo(() => {
@@ -247,6 +252,34 @@ const GameDetail: React.FC = () => {
             fetchGameDetail();
         }
     }, [fileIdParam, fetchGameDetail]);
+
+    // 原作详情：仅拉取已上架衍生视觉小说（草稿对原作者也不可见）
+    useEffect(() => {
+        if (!fileId || !isGalgame || isNovel) {
+            setDerivedNovels([]);
+            return;
+        }
+
+        let cancelled = false;
+        setDerivedNovelsLoading(true);
+        novelApi
+            .listBySource(String(fileId), 20)
+            .then((resp) => {
+                if (cancelled) return;
+                setDerivedNovels(Array.isArray(resp.data?.items) ? resp.data.items : []);
+            })
+            .catch((error) => {
+                console.error('加载衍生视觉小说失败:', error);
+                if (!cancelled) setDerivedNovels([]);
+            })
+            .finally(() => {
+                if (!cancelled) setDerivedNovelsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [fileId, isGalgame, isNovel]);
 
     // 创建 Galgame 会话
     const createGalgameSession = async (presetId: string, restart?: boolean): Promise<string | null> => {
@@ -445,6 +478,11 @@ const GameDetail: React.FC = () => {
             return;
         }
 
+        if (isNovel) {
+            navigate(buildNovelReadPath(fileId));
+            return;
+        }
+
         // CUSTOM/ST/IVG 模式：直接开始，不需要弹窗
         if (normalizedGameMode === 'customif' || normalizedGameMode === 'st' || normalizedGameMode === 'interactive-video') {
             await startGameInternal();
@@ -630,22 +668,22 @@ const GameDetail: React.FC = () => {
         setIsStartOptionsOpen(false);
     };
 
-    const openReplayDrawer = useCallback(() => {
+    const openDerivedNovelDrawer = useCallback(() => {
         setIsStartOptionsOpen(false);
-        setIsReplayDrawerOpen(true);
+        setIsDerivedNovelDrawerOpen(true);
     }, []);
 
-    const closeReplayDrawer = useCallback(() => {
-        setIsReplayDrawerOpen(false);
+    const closeDerivedNovelDrawer = useCallback(() => {
+        setIsDerivedNovelDrawerOpen(false);
     }, []);
 
     useEffect(() => {
-        if (!isReplayDrawerOpen) return;
+        if (!isDerivedNovelDrawerOpen) return;
 
         const previousOverflow = document.body.style.overflow;
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
-                closeReplayDrawer();
+                closeDerivedNovelDrawer();
             }
         };
 
@@ -656,7 +694,7 @@ const GameDetail: React.FC = () => {
             document.body.style.overflow = previousOverflow;
             window.removeEventListener('keydown', handleEscape);
         };
-    }, [closeReplayDrawer, isReplayDrawerOpen]);
+    }, [closeDerivedNovelDrawer, isDerivedNovelDrawerOpen]);
 
     const handlePreviewSave = async (item: SaveSummaryItem) => {
         // 加载详情并展示在 TEXT 区域
@@ -771,7 +809,12 @@ const GameDetail: React.FC = () => {
                                 </div>
                                 <div className={styles.gameMeta}>
                                     <div className={styles.metaLeft}>
-                                        <span className={styles.gameType}>{game.game_tags}</span>
+                                        <span
+                                            className={styles.gameType}
+                                            style={gameTypeToneStyle}
+                                        >
+                                            {gameTypeLabel || game.game_tags}
+                                        </span>
                                         <div className={styles.ratingSection}>
                                             <span className={styles.rating}>
                                                 {game.rating_avg ?? DEFAULT_RATING}
@@ -779,13 +822,13 @@ const GameDetail: React.FC = () => {
                                             </span>
                                         </div>
                                     </div>
-                                    {isGalgame && (
+                                    {isGalgame && !isNovel && (
                                         <button
                                             type="button"
                                             className={styles.replayMetaButton}
-                                            onClick={openReplayDrawer}
+                                            onClick={openDerivedNovelDrawer}
                                         >
-                                            <span className={styles.replayEntryLabel}>{t('gameDetail.replayHighlights')}</span>
+                                            <span className={styles.replayEntryLabel}>{t('gameDetail.visualNovels')}</span>
                                             <span className={styles.replayEntryArrow} aria-hidden="true">&gt;</span>
                                         </button>
                                     )}
@@ -802,6 +845,15 @@ const GameDetail: React.FC = () => {
                                             {game.author_name || t('gameDetail.unknownAuthor')}
                                         </span>
                                     </div>
+                                    {isNovel && sourceFileId && sourceAuthorName && (
+                                        <button
+                                            type="button"
+                                            className={styles.sourceAuthorLink}
+                                            onClick={() => navigate(buildSourceGameDetailPath(sourceFileId))}
+                                        >
+                                            {t('gameDetail.originalAuthor')}: {sourceAuthorName}
+                                        </button>
+                                    )}
                                     {game.groupNo && (
                                         <span className={styles.groupNoTag}>
                                             {t('createGame.qqGroup')}: {game.groupNo}
@@ -845,7 +897,7 @@ const GameDetail: React.FC = () => {
                                     <span className={styles.loadingDot}></span>
                                 </div>
                             ) : (
-                                t('gameDetail.startExperience')
+                                isNovel ? t('gameDetail.startReading') : t('gameDetail.startExperience')
                             )}
                         </button>
                     </div>
@@ -888,74 +940,60 @@ const GameDetail: React.FC = () => {
                 onLoad={handleLoadSave}
                 loadButtonText={t('gameDetail.startExperience')}
             />
-            {isReplayDrawerOpen && (
-                <div className={`${styles.startOptionsOverlay} ${styles.replayDrawerOverlay}`} onClick={closeReplayDrawer}>
+            {isDerivedNovelDrawerOpen && (
+                <div className={`${styles.startOptionsOverlay} ${styles.replayDrawerOverlay}`} onClick={closeDerivedNovelDrawer}>
                     <aside
                         className={styles.replayDrawer}
                         onClick={(e) => e.stopPropagation()}
                         role="dialog"
                         aria-modal="true"
-                        aria-label={t('gameDetail.replayHighlights')}
+                        aria-label={t('gameDetail.visualNovels')}
                     >
                         <div className={styles.startOptionsHeader}>
                             <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.replayHighlights')}</h2>
+                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.visualNovels')}</h2>
                             </div>
                             <button
                                 className={`${styles.startOptionsClose} ${styles.replayDrawerClose}`}
-                                onClick={closeReplayDrawer}
-                                aria-label={t('gameDetail.closeReplayHighlights')}
+                                onClick={closeDerivedNovelDrawer}
+                                aria-label={t('gameDetail.closeVisualNovels')}
                             >
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
-                        {canManageReplayTabs && (
-                            <div className={styles.replayDrawerTabs} role="tablist" aria-label={t('createGame.replayVisibilityFilter')}>
-                                <button
-                                    key={REPLAY_VISIBILITY_TABS_PUBLIC}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC}
-                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC ? 0 : -1}
-                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC ? styles.replayDrawerTabActive : ''}`}
-                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_PUBLIC)}
-                                >
-                                    {t('gameDetail.replayVisibility.public')}
-                                </button>
-                                <button
-                                    key={REPLAY_VISIBILITY_TABS_UNLISTED}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED}
-                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED ? 0 : -1}
-                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED ? styles.replayDrawerTabActive : ''}`}
-                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_UNLISTED)}
-                                >
-                                    {t('gameDetail.replayVisibility.unlisted')}
-                                </button>
-                                <button
-                                    key={REPLAY_VISIBILITY_TABS_PRIVATE}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE}
-                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE ? 0 : -1}
-                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE ? styles.replayDrawerTabActive : ''}`}
-                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_PRIVATE)}
-                                >
-                                    {t('gameDetail.replayVisibility.private')}
-                                </button>
-                            </div>
-                        )}
                         <div className={styles.replayDrawerBody}>
-                            {fileId ? (
-                                <ReplayList
-                                    fileId={fileId}
-                                    includeUnlisted={canManageReplayTabs && activeReplayVisibility === 'unlisted'}
-                                    showVisibility={canManageReplayTabs}
-                                    visibility={canManageReplayTabs ? activeReplayVisibility : 'public'}
-                                    currentUserId={replayManagerUserId || undefined}
-                                />
-                            ) : null}
+                            {derivedNovelsLoading ? (
+                                <div className={styles.derivedNovelsLoading}>{t('common.loading')}</div>
+                            ) : derivedNovels.length === 0 ? (
+                                <div className={styles.derivedNovelsEmpty}>{t('gameDetail.derivedNovelsEmpty')}</div>
+                            ) : (
+                                <ul className={styles.derivedNovelsList}>
+                                    {derivedNovels.map((item) => (
+                                        <li key={item.fileId}>
+                                            <button
+                                                type="button"
+                                                className={styles.derivedNovelCard}
+                                                onClick={() => {
+                                                    closeDerivedNovelDrawer();
+                                                    navigate(`/game/${encodeURIComponent(item.fileId)}`);
+                                                }}
+                                            >
+                                                <img
+                                                    className={styles.derivedNovelCover}
+                                                    src={getImageUrl(item.coverUrl) || `${import.meta.env.BASE_URL}${DEFAULT_AVATAR_PATH}`}
+                                                    alt=""
+                                                />
+                                                <div className={styles.derivedNovelMeta}>
+                                                    <div className={styles.derivedNovelName}>{item.title}</div>
+                                                    <div className={styles.derivedNovelAuthor}>
+                                                        {item.authorName || t('gameDetail.unknownAuthor')}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
                     </aside>
                 </div>
@@ -998,7 +1036,7 @@ const GameDetail: React.FC = () => {
                                 >
                                     {t('gameDetail.continueExperience')}
                                 </button>
-                                {isGalgame && (
+                                {isGalgame && !isNovel && (
                                     <button
                                         className={styles.startOptionsGhost}
                                         disabled={!playStatus.hasSave}
@@ -1008,14 +1046,6 @@ const GameDetail: React.FC = () => {
                                         }}
                                     >
                                         {t('gameDetail.loadSave')}
-                                    </button>
-                                )}
-                                {isGalgame && (
-                                    <button
-                                        className={styles.startOptionsGhost}
-                                        onClick={openReplayDrawer}
-                                    >
-                                        {t('gameDetail.replay')}
                                     </button>
                                 )}
                         </div>

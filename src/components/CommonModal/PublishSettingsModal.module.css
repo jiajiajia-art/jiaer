@@ -291,6 +291,37 @@
     width: 100%;
 }
 
+.descriptionLabelRow {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.aiGenerateBtn {
+    flex-shrink: 0;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.aiGenerateBtn:hover:not(:disabled) {
+    border-color: var(--primary, #E03D4B);
+    color: var(--primary, #E03D4B);
+}
+
+.aiGenerateBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .descriptionInput {
     width: 100%;
     min-height: 120px;
@@ -324,6 +355,97 @@
 .descriptionCount {
     font-size: 0.85rem;
     color: rgba(0, 0, 0, 0.5);
+}
+
+.textFormGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+}
+
+.titleInput {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    font-size: 16px;
+    background: #fafafa;
+    color: #333;
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.titleInput:focus {
+    border-color: #B69B74;
+    background: #fff;
+}
+
+.themeTagsPanel {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.themeTagsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.themeTagsLabel {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.requiredMark {
+    color: #fb5b67;
+    margin-left: 4px;
+}
+
+.themeTagsHint {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.themeTagsWrap {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.themeTagChip {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(17, 24, 39, 0.14);
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.themeTagChipActive {
+    border-color: #fb5b67;
+    background: rgba(251, 91, 103, 0.08);
+    color: #fb5b67;
+}
+
+.themeTagError {
+    margin-top: 10px;
+    color: #b91c1c;
+    font-size: 13px;
 }
 
 /* 移动端适配 (768px以下) */

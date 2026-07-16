@@ -322,7 +322,11 @@ export const authFetch = async (url: string | URL, init?: RequestInit): Promise<
 
     return response;
   } catch (error) {
-    // 如果是网络错误或其他错误，直接抛出
+    // Abort 是面板关闭 / 重开请求时的预期取消，不当作失败刷屏
+    const name = error && typeof error === 'object' ? String((error as { name?: string }).name || '') : '';
+    if (name === 'AbortError' || init?.signal?.aborted) {
+      throw error;
+    }
     console.error('[Fetch] Request failed:', error);
     throw error;
   }

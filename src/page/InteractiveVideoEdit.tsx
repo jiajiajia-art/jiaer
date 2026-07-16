@@ -297,14 +297,14 @@ const InteractiveVideoEdit: React.FC = () => {
         setShowPublishModal(true);
     };
 
-    const handlePublishGame = async (description: string) => {
+    const handlePublishGame = async (payload: { description: string }) => {
         if (!normalizedFileId || isPublishing) return;
         setIsPublishing(true);
         try {
             const response = await GameAction.publishGame({
                 fileId: normalizedFileId,
                 priceAmount: 0,
-                description,
+                description: payload.description,
             });
             if (!response.data?.success) {
                 throw new Error(response.data?.message || '发布失败');

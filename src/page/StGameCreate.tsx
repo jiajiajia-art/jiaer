@@ -682,7 +682,7 @@ const StGameCreate: React.FC = () => {
     setShowPublishModal(false);
   };
 
-  const handlePublishGame = async (description: string) => {
+  const handlePublishGame = async (payload: { description: string }) => {
     if (publishing) return;
 
     const fileId = String(publishTargetGameId || appIdFromQuery || appId || '').trim();
@@ -696,7 +696,7 @@ const StGameCreate: React.FC = () => {
       const response = await GameAction.publishGame({
         fileId,
         priceAmount: 0,
-        description,
+        description: payload.description,
       });
 
       if (!response.data.success) {

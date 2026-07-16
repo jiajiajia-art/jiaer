@@ -1,0 +1,229 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  /* 须高于 Galgame 底栏 (.buttonContainer z-index: 3100)，否则「返回」点不到 */
+  z-index: 3200;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: rgba(6, 8, 14, 0.92);
+}
+
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  padding: 1.25rem 1rem 1rem;
+  box-sizing: border-box;
+}
+
+.header {
+  flex-shrink: 0;
+  margin-bottom: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  position: relative;
+  z-index: 1;
+}
+
+.backButton {
+  min-width: 4.5rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.card {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.85rem 0.9rem;
+}
+
+.cardActive {
+  border-color: rgba(126, 231, 187, 0.55);
+  box-shadow: 0 0 0 1px rgba(126, 231, 187, 0.2);
+}
+
+.cardTitle {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.cardMeta {
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cardBody {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.empty {
+  margin: 2rem auto;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.attrCard {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.85rem 0.9rem;
+  min-height: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.attrValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #7ee7bb;
+}
+
+.tabRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.tab {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.tabActive {
+  border-color: rgba(126, 231, 187, 0.55);
+  color: #7ee7bb;
+  background: rgba(126, 231, 187, 0.12);
+}
+
+.contentText {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.85rem 0.9rem;
+}
+
+.charRow {
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.charCardButton {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.charText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.avatar {
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 0.35rem;
+  object-fit: cover;
+  /* 立绘多为全身：顶对齐裁切，露出头部作为「头像」 */
+  object-position: top center;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin: 0;
+  display: block;
+}
+
+.detailIdentity {
+  color: #9ec9ff;
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.sectionBox {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.45rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.sectionLabel {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 0.35rem;
+}

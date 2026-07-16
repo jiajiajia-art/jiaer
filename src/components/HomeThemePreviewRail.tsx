@@ -6,7 +6,8 @@ import { IoGameControllerOutline } from 'react-icons/io5';
 import styles from './HomeThemePreviewRail.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
-import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
+import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
+import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 
 interface HomeThemePreviewRailProps {
     games: UserGameData[];
@@ -273,6 +274,7 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
             ) : (
                 visibleGames.map((game, index) => {
                     const typeLabel = getTypeLabel(game);
+                    const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(game));
                     const themeLabels = getThemeLabels(game);
                     const coverUrl = game.display_cover_url || game.cover_url;
 
@@ -307,7 +309,11 @@ const HomeThemePreviewRail: React.FC<HomeThemePreviewRailProps> = ({
                                                 ))}
                                             </div>
                                             {typeLabel ? (
-                                                <div className={styles.typeTag} title={typeLabel}>
+                                                <div
+                                                    className={styles.typeTag}
+                                                    style={typeToneStyle}
+                                                    title={typeLabel}
+                                                >
                                                     {typeLabel}
                                                 </div>
                                             ) : null}

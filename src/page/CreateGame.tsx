@@ -8,7 +8,7 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import GameAction from '../api/rpgGame/gameAction';
-import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
+import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import GameStatsView from '../components/CreateGame/GameStatsView';
 import FooterArea from '../components/Layout/FooterArea';
@@ -22,6 +22,15 @@ import {
     MINI_PROGRAM_CREATOR_PC_URL,
     resolveCreatorEngine,
 } from '../utils/miniProgram';
+import { isNovelEngine, getNovelSourceFileId, resolvePublishModalMode } from '../utils/novelGame';
+import {
+    buildCreatorPlaySessionRequest,
+    buildGalgameContinueNavigate,
+    parseOpticalPlaySessionId,
+    resolveContinuePlayFileId,
+    shouldContinuePlayOnEdit,
+} from '../utils/creatorContinuePlay';
+import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import { useTranslation } from 'react-i18next';
 
 const CreateGame: React.FC = () => {
@@ -39,6 +48,7 @@ const CreateGame: React.FC = () => {
     const [detailError, setDetailError] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
+    const [publishModalMode, setPublishModalMode] = useState<'publish' | 'novel-edit'>('publish');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showPriceModal, setShowPriceModal] = useState(false);
     const [showMiniProgramTip, setShowMiniProgramTip] = useState(false);
@@ -48,9 +58,10 @@ const CreateGame: React.FC = () => {
     const heroBackground = gameDetail?.cover_url ? getImageUrl(gameDetail.cover_url) : defaultHeroCover;
     const isPublished = Number(gameDetail?.is_public) === 1;
 
-    const { setFileId, setIsPreset } = useGameStore();
+    const { setFileId, setSessionId, setIsPreset } = useGameStore();
     const { user } = useAuthStore();
     const navigate = useNavigate();
+    const [isContinueLoading, setIsContinueLoading] = useState(false);
 
     const handleOpenBindPhoneGuide = () => {
         // 实现跳转到“我的”页并拉起浏览器登录账号设置
@@ -161,13 +172,13 @@ const CreateGame: React.FC = () => {
     };
 
     // 发布游戏：当前不设置积分/价格，统一按免费处理（priceAmount 固定为 0）
-    const handlePublishGame = async (description?: string) => {
+    const handlePublishGame = async (payload: PublishSubmitPayload) => {
         if (!gameId) return;
         try {
             const response = await GameAction.publishGame({
                 fileId: gameId,
                 priceAmount: 0,
-                description: description ?? '',
+                description: payload.description ?? '',
             });
 
             if (response.data.success) {
@@ -199,9 +210,73 @@ const CreateGame: React.FC = () => {
         }
     };
 
-    const editGame = () => {
-        const normalizedEngine = resolveCreatorEngine(gameDetail?.engine, gameDetail?.game_tags);
-        if (!normalizedEngine || !gameDetail) {
+    /**
+     * TXT / 小说「编辑修改」：optical 续玩进 /galgame，载入历史接着玩（不弹历史面板）。
+     */
+    const continueCreatorPlaytest = async () => {
+        if (!gameDetail) return;
+
+        if (!user?.user?.userId || !user?.user?.id) {
+            toast.error(t('createGame.userInfoError'));
+            return;
+        }
+
+        const playFileId = resolveContinuePlayFileId({
+            engine: gameDetail.engine,
+            gameTags: gameDetail.game_tags,
+            fileId: gameDetail.file_id || gameDetail.id,
+            id: gameDetail.id,
+            sourceFileId: getNovelSourceFileId(gameDetail) || undefined,
+        });
+        if (!playFileId) {
+            toast.error(
+                isNovelEngine(gameDetail.engine, gameDetail.game_tags)
+                    ? t('createGame.sourceGameMissing')
+                    : t('createGame.gameInfoError'),
+            );
+            return;
+        }
+
+        setIsContinueLoading(true);
+        try {
+            useGameStore.getState().clearAll();
+            setFileId(playFileId);
+            setIsPreset(gameDetail.is_preset == 1);
+
+            const payload = buildCreatorPlaySessionRequest({
+                intent: 'edit-continue',
+                fileId: playFileId,
+                source: 'other',
+            });
+            const response = await createGalgameSessionApi.createGalgamePlaySession(payload);
+            if (!response.data?.success) {
+                toast.error(response.data?.message || t('createGame.createGameFailed'));
+                return;
+            }
+            const sessionId = parseOpticalPlaySessionId(response.data.data);
+            if (!sessionId) {
+                toast.error(t('createGame.createGameFailed'));
+                return;
+            }
+            setSessionId(sessionId);
+            const nav = buildGalgameContinueNavigate();
+            navigate(nav.path, { state: nav.state });
+        } catch (error) {
+            console.error('创作台续玩失败:', error);
+            toast.error(t('createGame.createGameFailedRetry'));
+        } finally {
+            setIsContinueLoading(false);
+        }
+    };
+
+    /** 非 TXT/小说：仍进各引擎编辑页（设定/宿主/影片等）。 */
+    const editGameSettingsOrHost = () => {
+        if (!gameDetail) {
+            return;
+        }
+
+        const normalizedEngine = resolveCreatorEngine(gameDetail.engine, gameDetail.game_tags);
+        if (!normalizedEngine) {
             return;
         }
 
@@ -218,12 +293,10 @@ const CreateGame: React.FC = () => {
                 alert(t('createGame.missingCustomAppId'));
                 return;
             }
-            // 方案A：跳转到自定义游戏“创建/管理”页面（编辑模式）
             navigate(`/customif/create?appId=${encodeURIComponent(appId)}`);
             return;
         }
 
-        // ST/AVG（自由模式引擎）：跳转到 ST 管理页（编辑模式）
         if (normalizedEngine === 'ST' || normalizedEngine === 'AVG') {
             const appId = (gameDetail as any)?.customAppId || gameDetail?.file_id;
             if (!appId) {
@@ -242,15 +315,18 @@ const CreateGame: React.FC = () => {
             return;
         }
 
-        // 其他类型按原编辑器处理
         setFileId(gameId);
         setIsPreset(gameDetail?.is_preset == 1);
         navigate(`/gameSettingsEditor`);
-    }
+    };
 
     const handleEditGame = () => {
-        if (!gameDetail) return;
-        editGame();
+        if (!gameDetail || isContinueLoading) return;
+        if (shouldContinuePlayOnEdit(gameDetail.engine, gameDetail.game_tags)) {
+            void continueCreatorPlaytest();
+            return;
+        }
+        editGameSettingsOrHost();
     };
 
     const handlePriceAdjust = async (price: number | null, specialPrice: number | null) => {
@@ -299,10 +375,17 @@ const CreateGame: React.FC = () => {
                                 isDeleting={isDeleting}
                                 onPublish={() => {
                                     if (!isPublished) {
+                                        setPublishModalMode(resolvePublishModalMode({
+                                            isNovel: isNovelEngine(gameDetail.engine, gameDetail.game_tags),
+                                            intent: 'publish',
+                                        }));
                                         setShowPublishModal(true);
                                     }
                                 }}
                                 onUnpublish={handleUnpublishGame}
+                                isNovel={isNovelEngine(gameDetail.engine, gameDetail.game_tags)}
+                                sourceFileId={getNovelSourceFileId(gameDetail)}
+                                isEditContinuing={isContinueLoading}
                             />
                         ) : (
                             <div className={styles.detailError}>{t('createGame.gameNotFound')}</div>
@@ -319,7 +402,10 @@ const CreateGame: React.FC = () => {
                     onPublish={handlePublishGame}
                     fileId={gameId || undefined}
                     coverUrl={gameDetail?.cover_url}
+                    mode={publishModalMode}
+                    isNovel={isNovelEngine(gameDetail.engine, gameDetail.game_tags)}
                     onCoverUploaded={refreshGameDetail}
+                    onSaved={refreshGameDetail}
                 />
             )}
 

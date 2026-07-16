@@ -7,7 +7,8 @@ import { RiMoneyCnyCircleLine } from 'react-icons/ri';
 import styles from './GameGrid.module.css';
 import type { UserGameData } from '../api/home/getGameData.type';
 import { addImageTimestamp } from '../utils/imageCache';
-import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
+import { getGameTypeLabelFromMeta, getGameTypeToneFromMeta } from '../utils/gameTypeLabel';
+import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 
 type GameGridLayoutVariant = 'default' | 'homeWide';
 
@@ -63,14 +64,14 @@ const GameGrid: React.FC<GameGridProps> = ({
             normalizedRaw === '\u6587\u5b57\u4e92\u52a8'
             || normalizedRaw.toUpperCase() === 'ROLE-PLAYING'
         ) {
-            return 'Role-Playing';
+            return 'AI文游';
         }
         const raw = normalizedRaw.toUpperCase();
         switch (raw) {
             case 'TXT':
-                return 'Role-Playing';
+                return 'AI文游';
             case 'AVG':
-                return 'World';
+                return '酒馆卡';
             case 'RPG':
                 return 'Story';
             case 'CUSTOM':
@@ -167,6 +168,7 @@ const GameGrid: React.FC<GameGridProps> = ({
                     : (primaryStat === 'uv' ? (meta.total_uv_count ?? 0) : (meta.total_pv_count ?? 0));
                 const PrimaryIcon = showIncentive ? RiMoneyCnyCircleLine : IoGameControllerOutline;
                 const typeLabel = getTypeLabel(meta);
+                const typeToneStyle = resolveGameTypeToneStyle(getGameTypeToneFromMeta(meta));
                 const themeLabel = getThemeLabel(meta);
                 const selectableId = getSelectableId(meta);
                 const isSelected = selectableId ? selectedIds.includes(selectableId) : false;
@@ -214,7 +216,11 @@ const GameGrid: React.FC<GameGridProps> = ({
                             )}
 
                             {typeLabel && (
-                                <div className={styles.goodsTypeTag} title={typeLabel}>
+                                <div
+                                    className={styles.goodsTypeTag}
+                                    style={typeToneStyle}
+                                    title={typeLabel}
+                                >
                                     {typeLabel}
                                 </div>
                             )}

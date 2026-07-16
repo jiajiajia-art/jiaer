@@ -8,7 +8,11 @@ export type ScriptButtonType =
     | 'history_edit'
     | 'history_regenerate'
     | 'settings_toggle_bgm'
-    | 'music_toggle_mute';
+    | 'music_toggle_mute'
+    | 'export_visual_novel'
+    | 'export_visual_novel_create'
+    | 'export_visual_novel_overwrite'
+    | 'history_back';
 
 export interface ScriptButtonEventPayload {
     buttonType: ScriptButtonType;

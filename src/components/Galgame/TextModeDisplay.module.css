@@ -465,3 +465,113 @@
         font-size: 0.875rem; /* 14px */
     }
 }
+
+/* 小说阅读器等浅色背景场景 */
+.textModeContainerLight .emptyState {
+    color: #666;
+}
+
+.textModeContainerLight .messagesContainer {
+    scroll-padding-top: 12px;
+}
+
+.textModeContainerLight .messagesContainer::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.textModeContainerLight .messagesContainer::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.textModeContainerLight .messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.28);
+}
+
+.textModeContainerLight .narrationBubble {
+    background: #f5f5f5;
+    border-left-color: #b69b74;
+    border-left-width: 3px;
+    border-left-style: solid;
+}
+
+.textModeContainerLight .narrationLabel {
+    color: #888;
+}
+
+.textModeContainerLight .narrationContent > div,
+.textModeContainerLight .dialogueContent > div,
+.textModeContainerLight .choiceDescription > div {
+    color: #333;
+}
+
+.textModeContainerLight .dialogueBubble {
+    background: #f8f8f8;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.textModeContainerLight .playerDialogueBubble {
+    background: #fff5f5;
+    border-color: rgba(251, 91, 103, 0.2);
+}
+
+.textModeContainerLight .npcDialogueBubble {
+    background: #f5f8ff;
+    border-color: rgba(59, 130, 246, 0.15);
+}
+
+.textModeContainerLight .speakerName {
+    color: #555;
+}
+
+.textModeContainerLight .choiceBubble {
+    background: #fafafa;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.textModeContainerLight .choiceTitle {
+    color: #222;
+}
+
+.textModeContainerLight .choiceDescription {
+    color: #444;
+}
+
+.textModeContainerLight .optionItem {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.textModeContainerLight .optionItem:hover {
+    background: #fafafa;
+    border-color: rgba(0, 0, 0, 0.16);
+}
+
+.textModeContainerLight .optionText {
+    color: #333;
+}
+
+.textModeContainerLight .optionTextMain {
+    color: #c2410c;
+}
+
+.textModeContainerLight .pointsCost,
+.textModeContainerLight .pointsCostHint {
+    color: #888;
+}
+
+.textModeContainerLight .statusText {
+    color: #444;
+}
+
+.textModeContainerLight .orbit {
+    border-color: rgba(0, 0, 0, 0.12);
+    border-top-color: rgba(0, 0, 0, 0.45);
+}
+
+.textModeContainerLight .orbitInner {
+    border-top-color: rgba(0, 0, 0, 0.3);
+}
+
+.textModeContainerLight .core {
+    background: rgba(251, 91, 103, 0.85);
+}

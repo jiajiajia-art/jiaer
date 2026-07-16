@@ -137,6 +137,9 @@ interface ParsedGameTag {
 const GAME_TAG_NAME_REGEX = /^[A-Z_]+$/;
 const VISUAL_STEP_MARKER_REGEX = /\[(?:NARRATION|DIALOGUE|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION|END_CHOICE)(?::|\])/i;
 const VISUAL_STEP_MARKER_PREFIX_REGEX = /\[\s*(?:NARRATION|SCENE_CHANGE|CHARACTER_IMAGE|TRANSITION|CHOICE|MAIN_OPTION|OPTION|END_CHOICE)\s*:?\s*/gi;
+/** 功能注释：历史误把 SCENE_CHANGE 渲成「场景切换：scene_id」后写进旁白，阅读侧需剥掉。 */
+const LEAKED_SCENE_CHANGE_LABEL_REGEX =
+  /(^|\n)\s*(?:场景切换|Scene Change)\s*[:：]\s*[A-Za-z0-9_][A-Za-z0-9_\-./]*\s*(?=\n|$)/gi;
 const ALLOWED_INLINE_TAG_REGEX = /<\/?(?:red|yellow|green|blue|purple|jump|vibration|injury)\b[^>]*>/gi;
 const CHINESE_DISPLAY_TEXT_REGEX = /[\u3400-\u9fff]/;
 const ORPHAN_LOWERCASE_ENGLISH_TOKEN_REGEX = /(^|[^A-Za-z0-9_])([a-z]{3,})(?=$|[^A-Za-z0-9_])/g;
@@ -436,8 +439,7 @@ const processGameTagText = (content: string, context: ProcessTagContext, optionS
                 break;
 
             case 'SCENE_CHANGE': {
-                const sceneLabel = context.translate?.('common.sceneChangePrefix') || '场景切换：';
-                result += tag.payload.trim() ? `${sceneLabel}${tag.payload.trim()}` : '';
+                // 功能注释：场景切换是引擎控制指令（payload 多为 sceneId），读者侧应静默丢弃，勿拼「场景切换：xxx」。
                 cursor = tag.end + 1;
                 break;
             }
@@ -538,6 +540,8 @@ export const processGameTags = (content: string, translate?: (key: string, optio
 export const sanitizeVisualStepText = (text: string): string => {
     if (!text) return '';
     text = sanitizeVisualDisplayText(text);
+    // 功能注释：去掉已泄漏到正文的「场景切换：scene_id」行（控制指令，非读者文案）。
+    text = text.replace(LEAKED_SCENE_CHANGE_LABEL_REGEX, '$1').replace(/^\s+/, '');
     if (!VISUAL_STEP_MARKER_REGEX.test(text)) return text;
 
     let cleaned = processGameTags(text);
@@ -560,7 +564,7 @@ export const sanitizeVisualStepText = (text: string): string => {
             .trim();
     }
 
-    return cleaned;
+    return cleaned.replace(LEAKED_SCENE_CHANGE_LABEL_REGEX, '$1').replace(/^\s+/, '').trim();
 };
 
 export const extractPlainText = (text: string): string => {

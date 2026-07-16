@@ -28,10 +28,15 @@ export interface UserGameData {
     is_preset: number;
     // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）
     // RPG -> story, TXT -> galgame, AVG -> world, CUSTOM -> customif, IVG -> interactive-video
-    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG';
+    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG' | 'NOVEL';
     customAppId?: string;
     needDeleted: boolean;
     display_cover_url: string;
+    source_file_id?: string | null;
+    source_replay_id?: string | null;
+    source_author_name?: string | null;
+    source_author_user_id?: string | null;
+    novel_content_version?: string | null;
     theme_tag_ids?: number[];
     theme_tag_names?: string[];
     /** 以下为激励计划相关的可选字段（由服务端逐步补充，前端做兼容） */

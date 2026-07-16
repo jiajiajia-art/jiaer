@@ -7,6 +7,8 @@ interface GameConfirmModalProps {
   message?: string;
   confirmText?: string;
   cancelText?: string;
+  /** 叠在更高弹窗（如导出框 z=3400）之上时传入 */
+  overlayZIndex?: number;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -22,13 +24,18 @@ const GameConfirmModal: React.FC<GameConfirmModalProps> = ({
   message = '请确认是否继续此操作？',
   confirmText = '确认',
   cancelText = '取消',
+  overlayZIndex,
   onConfirm,
   onCancel,
 }) => {
   if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={onCancel}>
+    <div
+      className={styles.overlay}
+      style={overlayZIndex ? { zIndex: overlayZIndex } : undefined}
+      onClick={onCancel}
+    >
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h3 className={styles.title}>{title}</h3>

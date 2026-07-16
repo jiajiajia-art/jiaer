@@ -675,7 +675,6 @@ export const useGalgameController = () => {
                 const steps: ReplayStep[] = Array.isArray(resp.data?.steps)
                     ? resp.data.steps
                     : [];
-                // 回放模式：始终隐藏玩家台词（用户侧输入）
                 const filteredSteps = steps;
                 if (filteredSteps.length === 0) {
                     setReplaySteps([]);

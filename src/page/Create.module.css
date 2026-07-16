@@ -575,6 +575,15 @@
     object-fit: contain;
 }
 
+.sectionTitleText {
+    display: inline-flex;
+    align-items: center;
+    height: 64px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #222;
+}
+
 .more {
     width: auto;
     height: 20px;
@@ -747,6 +756,42 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
+}
+
+.draftFilterRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.draftFilterChip {
+    border: 1px solid rgba(201, 115, 63, 0.18);
+    background: rgba(255, 252, 248, 0.96);
+    color: #6f5a49;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.draftFilterChip:hover {
+    border-color: rgba(201, 115, 63, 0.36);
+    color: #aa5a2d;
+}
+
+.draftFilterChipActive {
+    background: linear-gradient(135deg, rgba(201, 115, 63, 0.96) 0%, rgba(224, 138, 79, 0.94) 100%);
+    border-color: transparent;
+    color: #fff;
+}
+
+.draftFilterEmpty {
+    text-align: center;
+    color: #999;
+    min-height: 100px;
+    line-height: 100px;
 }
 
 .draftManageTip {

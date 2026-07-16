@@ -101,7 +101,7 @@ const CreateGameModals: React.FC<CreateGameModalsProps> = ({
                                 className={styles.createTypeOption}
                                 onClick={() => onSelectGameType('txt')}
                             >
-                                <span>TXT</span>
+                                <span>{t('createGame.txtMode')}</span>
                                 <span className={styles.createTypeOptionRecommend}>{t('createGame.recommend')}</span>
                             </button>
                             <button

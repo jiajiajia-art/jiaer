@@ -12,11 +12,22 @@ export interface CreateReplayRequest {
   description?: string;
   visibility: 'public' | 'unlisted' | 'private';
   range?: { fromStepId?: string; toStepId?: string };
+  createAsNovel?: boolean;
+  /** 覆盖本人同名草稿/回放（二次确认后传入；不影响其他账号） */
+  overwrite?: boolean;
+  /** 导出小说时用户确认后的章节目录（含可改标题） */
+  chapters?: Array<{
+    id?: string;
+    title: string;
+    startStepIndex: number;
+    endStepIndex: number;
+  }>;
 }
 
 export interface CreateReplayResponse {
   success: boolean;
   replayId: string;
+  novelFileId?: string;
 }
 
 export interface ReplaySummary {
@@ -98,6 +109,50 @@ export const buildReplayShareUrl = (replayId: string) => {
 const replayApi = {
   createFromSession: (data: CreateReplayRequest) =>
     api.post<CreateReplayResponse>('/visual/replay/create-from-session', data),
+
+  /** 导出前：用标题 + 会话历史生成可编辑简介 */
+  generateNovelDescriptionFromSession: (data: {
+    sessionId: string;
+    fileId: string;
+    title: string;
+  }) =>
+    api.post<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        sessionId: string;
+        fileId: string;
+        title: string;
+        description: string;
+        maxLength: number;
+      };
+    }>('/visual/session/generate-novel-description', data),
+
+  /** 导出前：AI 生成可编辑章节目录 */
+  generateNovelChaptersFromSession: (data: {
+    sessionId: string;
+    fileId: string;
+    title: string;
+  }) =>
+    api.post<{
+      success: boolean;
+      message?: string;
+      code?: string;
+      data?: {
+        sessionId: string;
+        fileId: string;
+        title: string;
+        stepCount: number;
+        chapters: Array<{
+          id: string;
+          title: string;
+          startStepIndex: number;
+          endStepIndex: number;
+        }>;
+        usedFallback?: boolean;
+      };
+    }>('/visual/session/generate-novel-chapters', data),
 
   listByFileId: (params: {
     fileId: string;

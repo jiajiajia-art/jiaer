@@ -20,6 +20,7 @@ import {
     type HomeListMode,
     type HomeListSort,
 } from '../utils/gameBrowseFilters';
+import { resolveHomeFiltersForNovelThemeConflict } from '../utils/homeFilterNovelTheme';
 import styles from './Categories.module.css';
 
 const PAGE_SIZE = 12;
@@ -30,6 +31,7 @@ const MODE_LABEL_KEYS = {
     world: 'categories.modes.world',
     custom: 'categories.modes.custom',
     'interactive-video': 'categories.modes.interactiveVideo',
+    novel: 'categories.modes.novel',
 } as const satisfies Record<HomeListMode, string>;
 
 const SORT_LABEL_KEYS = {
@@ -372,16 +374,19 @@ const Categories: React.FC = () => {
         sort: HomeListSort;
         tagId: number | null;
     }>) => {
-        const nextMode = next.mode ?? selectedMode;
-        const nextSort = next.sort ?? selectedSort;
-        const nextTagId = Object.prototype.hasOwnProperty.call(next, 'tagId')
-            ? next.tagId ?? null
-            : selectedTagId;
+        const resolved = resolveHomeFiltersForNovelThemeConflict(
+            {
+                mode: selectedMode,
+                sort: selectedSort,
+                tagId: selectedTagId,
+            },
+            next,
+        );
 
         const nextParams = new URLSearchParams();
-        nextParams.set('mode', nextMode);
-        nextParams.set('sort', nextSort);
-        nextParams.set('tagId', nextTagId ? String(nextTagId) : 'all');
+        nextParams.set('mode', resolved.mode);
+        nextParams.set('sort', resolved.sort);
+        nextParams.set('tagId', resolved.tagId ? String(resolved.tagId) : 'all');
         setSearchParams(nextParams);
     }, [selectedMode, selectedSort, selectedTagId, setSearchParams]);
 

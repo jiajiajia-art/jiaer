@@ -19,6 +19,7 @@ import CustomIFCreate from './page/CustomIFCreate';
 import InteractiveVideo from './page/InteractiveVideo';
 import InteractiveVideoEdit from './page/InteractiveVideoEdit';
 import GameDetail from './page/GameDetail';
+import NovelReader from './page/NovelReader';
 import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
@@ -70,6 +71,7 @@ function App() {
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />
+        <Route path="/novel/:fileId/read" element={<NovelReader />} />
         <Route path="/replay/:replayId" element={<Galgame />} />
         <Route path="/document" element={<Document />} />
         <Route element={<ProtectedRoute />}>

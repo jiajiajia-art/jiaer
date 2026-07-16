@@ -171,7 +171,13 @@
 .typeTag {
     max-width: 40%;
     margin-left: auto;
-    background: rgba(12, 15, 21, 0.46);
+    /* 底色由 resolveGameTypeToneStyle 内联覆盖 */
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .coverBottomRow {
@@ -339,8 +345,7 @@
         opacity: 0.78;
     }
 
-    .themeBadge,
-    .typeTag {
+    .themeBadge {
         border-color: rgba(255, 255, 255, 0.72);
         color: #5b2430;
         background: rgba(255, 255, 255, 0.84);
@@ -348,7 +353,12 @@
     }
 
     .typeTag {
-        background: rgba(255, 244, 245, 0.9);
+        /* 玩法角标保留彩色底 + 白字，色值由内联 style 写入 */
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.45);
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.28),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
 
     .subtitle {
