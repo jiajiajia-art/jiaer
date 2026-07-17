@@ -13,8 +13,10 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid var(--admin-text-soft, rgba(255, 255, 255, 0.35));
-  color: var(--admin-text-soft, rgba(255, 255, 255, 0.65));
+  /* 浅色管理页用文字色派生边框，避免白边在浅底上几乎看不见 */
+  border: 1px solid color-mix(in srgb, var(--admin-text-soft, #6f5a49) 45%, transparent);
+  background: color-mix(in srgb, var(--admin-text-soft, #6f5a49) 8%, transparent);
+  color: var(--admin-text-soft, #6f5a49);
   font-size: 12px;
   font-weight: 600;
   line-height: 1;

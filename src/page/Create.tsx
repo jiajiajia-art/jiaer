@@ -16,6 +16,7 @@ import CreateGameModals from '../components/CreateGame/CreateGameModals';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import PDFTemplateModal from '../components/GameSettingEditor/PDFTemplateModal';
 import GameGridSkeleton from '../components/Skeleton/GameGridSkeleton';
+import WithdrawFlowModal from '../components/Create/WithdrawFlowModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
@@ -78,6 +79,7 @@ const Create: React.FC = () => {
     const [isSettleDiamondsModalOpen, setIsSettleDiamondsModalOpen] = useState(false);
     const [isSettling, setIsSettling] = useState(false);
     const [isPDFModalOpen, setIsPDFModalOpen] = useState(false);
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isDraftManageMode, setIsDraftManageMode] = useState(false);
     const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
     const [isBatchDeletingDrafts, setIsBatchDeletingDrafts] = useState(false);
@@ -90,7 +92,7 @@ const Create: React.FC = () => {
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
 
     const handleWithdrawClick = () => {
-        toast.error(t('create.withdrawDeveloping'));
+        setIsWithdrawModalOpen(true);
     };
     const isCodeIncentive = stats.incentiveType === 'code_incentive' || stats.incentiveType === 'all_incentive';
 
@@ -879,6 +881,10 @@ const Create: React.FC = () => {
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
                 isFirstCharge={user?.user?.firstCharge}
+            />
+            <WithdrawFlowModal
+                open={isWithdrawModalOpen}
+                onClose={() => setIsWithdrawModalOpen(false)}
             />
 
             <ConfirmModal

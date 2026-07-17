@@ -14,10 +14,11 @@ import operatorStatsApi, {
 } from '../../api/stats/operatorStatsApi';
 import type { CreatorWorkItem, StatsOverview } from '../../api/stats/creatorStatsApi';
 import OperatorReports from './OperatorReports';
+import WithdrawAdminManager from '../../components/WithdrawAdminManager';
 import adminStyles from '../AdminPanel.module.css';
 import styles from './OperatorPanel.module.css';
 
-type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks';
+type OperatorTab = 'stats' | 'reports' | 'promotions' | 'recruitment' | 'dailyTasks' | 'withdraw';
 type WorksSortField = 'playCount' | 'pv' | 'shareCount';
 type SortDirection = 'asc' | 'desc';
 
@@ -33,6 +34,7 @@ const resolveOperatorTab = (pathname: string): OperatorTab => {
   if (pathname.startsWith('/operator/promotion')) return 'promotions';
   if (pathname.startsWith('/operator/recruitment')) return 'recruitment';
   if (pathname.startsWith('/operator/daily-tasks')) return 'dailyTasks';
+  if (pathname.startsWith('/operator/withdraw')) return 'withdraw';
   return 'stats';
 };
 
@@ -62,6 +64,7 @@ const OperatorPanel: React.FC = () => {
     { id: 'promotions', label: t('operator.tabs.promotions'), path: '/operator/promotion' },
     { id: 'recruitment', label: t('operator.tabs.recruitment'), path: '/operator/recruitment' },
     { id: 'dailyTasks', label: t('operator.tabs.dailyTasks'), path: '/operator/daily-tasks' },
+    { id: 'withdraw', label: t('operator.tabs.withdraw'), path: '/operator/withdraw' },
   ]), [t]);
 
   const sortedWorks = useMemo(() => {
@@ -344,6 +347,7 @@ const OperatorPanel: React.FC = () => {
             {isLoading ? <div className={styles.emptyState}>{t('creatorStats.loading')}</div> : null}
             {!isLoading && activeTab === 'stats' ? renderStats() : null}
             {!isLoading && activeTab === 'reports' ? <OperatorReports /> : null}
+            {activeTab === 'withdraw' ? <WithdrawAdminManager /> : null}
             {!isLoading && activeTab === 'promotions' ? (
               <PromotionAdminManager pendingReviewCount={0} onRefreshCounts={async () => {}} />
             ) : null}

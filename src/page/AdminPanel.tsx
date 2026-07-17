@@ -32,6 +32,7 @@ import ShareRatioAdminManager from '../components/ShareRatioAdminManager';
 import AdminUsersManager from '../components/AdminUsersManager';
 import DailyTasksAdminManager from '../components/DailyTasksAdminManager';
 import CommentAdminManager from '../components/Admin/CommentAdminManager';
+import WithdrawAdminManager from '../components/WithdrawAdminManager';
 import announcementApi from '../api/announcement/announcementApi';
 import documentApi from '../api/document/documentApi';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
@@ -53,7 +54,7 @@ import styles from './AdminPanel.module.css';
 import { useMessageStore } from '../store/useMessageStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
-type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments';
+type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw';
 type SortModalMode = 'featured' | 'all' | null;
 
 interface SortDraftItem {
@@ -85,6 +86,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/share-ratio')) return 'shareRatio';
     if (pathname.startsWith('/admin/daily-tasks')) return 'dailyTasks';
     if (pathname.startsWith('/admin/comments')) return 'comments';
+    if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
     const tabParam = new URLSearchParams(search).get('tab');
     if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes') return tabParam;
     return 'announcements';
@@ -1004,6 +1006,10 @@ const AdminPanel: React.FC = () => {
             navigate('/admin/comments');
             return;
         }
+        if (tab === 'withdraw') {
+            navigate('/admin/withdraw');
+            return;
+        }
 
         const nextSearch = tab === 'announcements' ? '' : `?tab=${tab}`;
         const nextUrl = `/admin${nextSearch}`;
@@ -1516,6 +1522,13 @@ const AdminPanel: React.FC = () => {
                         >
                             <span className={styles.navTitle}>用户角色</span>
                         </button>
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'withdraw' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('withdraw')}
+                        >
+                            <span className={styles.navTitle}>提现管理</span>
+                        </button>
                     </aside>
 
                     <div className={styles.contentArea}>
@@ -1879,6 +1892,8 @@ const AdminPanel: React.FC = () => {
                         {activeTab === 'shareRatio' && <ShareRatioAdminManager />}
 
                         {activeTab === 'users' && <AdminUsersManager />}
+
+                        {activeTab === 'withdraw' && <WithdrawAdminManager />}
 
                         {activeTab === 'subscriptions' && <SubscriptionAdminManager />}
 
