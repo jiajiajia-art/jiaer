@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import commentsApi, { type PendingCommentItem, type CommentReviewStatus } from '../../api/admin/commentsApi';
 import ConfirmModal from '../CommonModal/ConfirmModal';
+import { getApiErrorMessage } from '../../utils/error';
 import styles from './CommentAdminManager.module.css';
 
 const PAGE_SIZE = 20;
@@ -10,15 +11,6 @@ const statusLabelMap: Record<CommentReviewStatus, string> = {
     pending: '待审核',
     approved: '已通过',
     rejected: '已拒绝',
-};
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const formatTime = (value: string | null | undefined): string => {
@@ -59,7 +51,7 @@ const CommentAdminManager: React.FC = () => {
                 setTotal(data.total || 0);
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, '评论列表加载失败'));
+            toast.error(getApiErrorMessage(error, '评论列表加载失败'));
         } finally {
             setIsLoading(false);
         }
@@ -90,7 +82,7 @@ const CommentAdminManager: React.FC = () => {
                 setPage(1);
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, reviewAction === 'approve' ? '审核失败' : '拒绝失败'));
+            toast.error(getApiErrorMessage(error, reviewAction === 'approve' ? '审核失败' : '拒绝失败'));
         } finally {
             setIsReviewing(false);
         }

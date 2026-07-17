@@ -1,10 +1,13 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import styles from './RechargeModal.module.css';
 import payApi from '../../api/pay/payApi';
 import toast from 'react-hot-toast';
+import { auth } from '../../api/account/authApi';
 import type { PayOrderRequest, PlanId, DiamondsPlanId } from '../../api/pay/pay.type';
+import { getApiErrorMessage } from '../../utils/error';
+import { useAuthStore } from '../../store/useAuthStore';
 
 type RechargeTabType = 'diamonds' | 'membership';
 
@@ -21,6 +24,14 @@ interface DiamondPlan {
     firstChargeDiamonds: number;
     noFirstChargeBonus?: boolean;
 }
+
+// 会员钻石充值折扣（日卡9折、月卡8折、季卡7折、年卡6折）
+const MEMBER_DISCOUNTS: Record<string, number> = {
+    creator_day: 0.9,
+    creator_month: 0.8,
+    creator_season: 0.7,
+    creator_year: 0.6,
+};
 
 const FIRST_CHARGE_PLANS: DiamondPlan[] = [
     { planId: 'dr_1', amount: 1, firstChargeDiamonds: 19 },
@@ -64,20 +75,10 @@ const isMiniProgramEnv = (): boolean => {
 
 const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstCharge, fixedTab }) => {
     const { t } = useTranslation();
-
-    const closeAndReload = useCallback(() => {
-        onClose();
-        window.location.reload();
-    }, [onClose]);
-
-    const inFlightRef = useRef(false);
-    const isComposingRef = useRef(false);
-    const amountInputRef = useRef<HTMLInputElement | null>(null);
-
-    const [amountText, setAmountText] = useState<string>('');
+    const { user, updateUser } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
     const [inputError, setInputError] = useState<string>('');
-    const [qrCodeUrl,  setQrCodeUrl] = useState<string | null>(null);
+    const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
     const [orderId, setOrderId] = useState<string | null>(null);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'polling' | 'success' | 'failed'>('idle');
     const [pollingError, setPollingError] = useState<string>('');
@@ -86,27 +87,61 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [rechargeTab, setRechargeTab] = useState<RechargeTabType>(fixedTab ?? 'diamonds');
     const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(-1);
     const [selectedFirstChargePlanId, setSelectedFirstChargePlanId] = useState<DiamondsPlanId | null>(null);
+    // 选中的固定档位的原始金额（用于下单），不受会员折扣影响
+    const [selectedFixedPlanAmount, setSelectedFixedPlanAmount] = useState<number | null>(null);
+    // 用户实际看到的（可能是折扣后的）金额文本
+    const [amountText, setAmountText] = useState<string>('');
 
-    const MEMBERSHIP_PLANS: MembershipPlan[] = [
+    const inFlightRef = useRef(false);
+    const isComposingRef = useRef(false);
+    const amountInputRef = useRef<HTMLInputElement | null>(null);
+
+    const handleClose = useCallback(() => {
+        onClose();
+    }, [onClose]);
+
+    const refreshUserInfo = useCallback(async () => {
+        try {
+            const userRes = await auth.getUserInfo();
+            if (userRes.data.success && userRes.data.data) {
+                updateUser(userRes.data.data);
+            }
+        } catch (error) {
+            console.error('刷新用户信息失败:', error);
+        }
+    }, [updateUser]);
+
+    const handleCloseWithRefresh = useCallback(async () => {
+        await refreshUserInfo();
+        onClose();
+    }, [onClose, refreshUserInfo]);
+
+    const MEMBERSHIP_PLANS = useMemo<MembershipPlan[]>(() => [
         {
-            planId: 'month',
+            planId: 'creator_day',
+            name: t('profile.dailyMember'),
+            shortName: t('profile.dailyMemberShort'),
+            price: 1,
+        },
+        {
+            planId: 'creator_month',
             name: t('profile.monthlyMember'),
             shortName: t('profile.monthlyMemberShort'),
-            price: 28,
+            price: 30,
         },
         {
-            planId: 'season',
+            planId: 'creator_season',
             name: t('profile.seasonalMember'),
             shortName: t('profile.seasonalMemberShort'),
-            price: 78,
+            price: 90,
         },
         {
-            planId: 'year',
+            planId: 'creator_year',
             name: t('profile.yearlyMember'),
             shortName: t('profile.yearlyMemberShort'),
-            price: 248,
+            price: 365,
         },
-    ];
+    ], [t]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -121,6 +156,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setRechargeTab(fixedTab ?? 'diamonds');
             setSelectedPlanIndex(-1);
             setSelectedFirstChargePlanId(null);
+            setSelectedFixedPlanAmount(null);
         }
     }, [isOpen, fixedTab]);
 
@@ -131,8 +167,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     }, [isOpen, fixedTab, rechargeTab]);
 
     const handleFixedAmountClick = (plan: DiamondPlan) => {
-        setAmountText(String(plan.amount));
+        const discount = getMemberDiscount();
+        const displayAmount = discount < 1 ? (plan.amount * discount).toFixed(1) : String(plan.amount);
+        setAmountText(displayAmount);
         setSelectedFirstChargePlanId(plan.planId);
+        setSelectedFixedPlanAmount(plan.amount);
         setInputError('');
     };
 
@@ -167,10 +206,14 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setSelectedFirstChargePlanId(null);
         }
 
+        setSelectedFixedPlanAmount(null);
         setAmountText(value);
     };
 
     const getCurrentAmount = (): number | null => {
+        if (selectedFixedPlanAmount !== null) {
+            return selectedFixedPlanAmount;
+        }
         if (amountText) {
             const amount = parseFloat(amountText);
             return !isNaN(amount) && amount >= MIN_AMOUNT ? amount : null;
@@ -180,6 +223,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     const calculateDiamonds = (amount: number): number => {
         return Math.floor(amount * POINTS_PER_YUAN);
+    };
+
+    const getMemberDiscount = (): number => {
+        const plan = user?.user?.memberPlan;
+        return plan ? (MEMBER_DISCOUNTS[plan] ?? 1) : 1;
     };
 
     const normalizeQrCodeUrl = (raw: string | null): string | null => {
@@ -194,19 +242,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return `data:image/png;base64,${cleaned}`;
         }
         return cleaned;
-    };
-
-    const getErrorMessage = (error: unknown, fallback: string): string => {
-        const maybeError = error as {
-            message?: string;
-            response?: {
-                data?: {
-                    message?: string;
-                    error?: string;
-                };
-            };
-        };
-        return maybeError?.response?.data?.message || maybeError?.response?.data?.error || maybeError?.message || fallback;
     };
 
     const handleRestart = useCallback(() => {
@@ -276,7 +311,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 }
             } catch (error) {
                 console.error('充值失败:', error);
-                const errorMessage = getErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
+                const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
                 setPaymentStatus('failed');
                 setPollingError(errorMessage);
                 toast.error(errorMessage);
@@ -355,7 +390,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
         } catch (error) {
             console.error('充值失败:', error);
-            const errorMessage = getErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
+            const errorMessage = getApiErrorMessage(error, t('rechargeModal.paymentRequestFailed'));
             setPaymentStatus('failed');
             setPollingError(errorMessage);
             toast.error(errorMessage);
@@ -434,7 +469,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     useEffect(() => {
         const handleEscKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen) {
-                closeAndReload();
+                if (paymentStatus === 'success') {
+                    void handleCloseWithRefresh();
+                    return;
+                }
+                handleClose();
             }
         };
 
@@ -442,7 +481,59 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         return () => {
             document.removeEventListener('keydown', handleEscKey);
         };
-    }, [isOpen, closeAndReload]);
+    }, [isOpen, paymentStatus, handleClose, handleCloseWithRefresh]);
+
+    // 会员特权项（所有套餐共用）
+    const MEMBERSHIP_BENEFITS = [
+        // { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
+        // { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
+        //{ name: t('rechargeModal.creatorDiscount'), values: ['-', '50%', '50%', '50%'] },
+        { name: "钻石充值折扣", values: ['-', '9折', '8折', '7折', '6折'] },
+    ];
+
+    // 会员特权对比数据（普通用户 + 日卡 + 月卡 + 季卡 + 年卡）
+    const allPlanBenefits = useMemo(() => [
+        {
+            planId: 'free',
+            name: t('rechargeModal.free'),
+            shortName: t('rechargeModal.free'),
+            price: 0,
+            color: '#999',
+            tagBg: '#999',
+        },
+        {
+            planId: 'creator_day',
+            name: t('profile.dailyMember'),
+            shortName: t('profile.dailyMemberShort'),
+            price: 1,
+            color: '#64b5f6',
+            tagBg: '#64b5f6',
+        },
+        {
+            planId: 'creator_month',
+            name: t('profile.monthlyMember'),
+            shortName: t('profile.monthlyMemberShort'),
+            price: 28,
+            color: '#228b22',
+            tagBg: '#228b22',
+        },
+        {
+            planId: 'creator_season',
+            name: t('profile.seasonalMember'),
+            shortName: t('profile.seasonalMemberShort'),
+            price: 78,
+            color: '#e57373',
+            tagBg: '#e57373',
+        },
+        {
+            planId: 'creator_year',
+            name: t('profile.yearlyMember'),
+            shortName: t('profile.yearlyMemberShort'),
+            price: 248,
+            color: '#d4a84b',
+            tagBg: '#d4a84b',
+        },
+    ].map((plan) => ({ ...plan, perks: MEMBERSHIP_BENEFITS })), [t, MEMBERSHIP_BENEFITS]);
 
     if (!isOpen) return null;
 
@@ -453,6 +544,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const displayDiamonds = selectedFirstChargePlan?.noFirstChargeBonus
         ? currentDiamonds
         : (firstChargeAvailable ? (currentDiamonds + (selectedFirstChargePlan?.firstChargeDiamonds ?? 0)) : currentDiamonds);
+    const summaryDisplayAmount = currentAmount ? currentAmount * getMemberDiscount() : 0;
 
     const diamondsTabContent = (
         <>
@@ -464,6 +556,10 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         const isFirstYuan = plan.planId === 'dr_1';
                         const isSixYuan = plan.planId === 'dr_6';
                         const tagText = isFirstYuan ? t('rechargeModal.firstChargeBonus') : t('rechargeModal.firstChargeDouble');
+                        const discount = getMemberDiscount();
+                        const isDiscounted = discount < 1;
+                        const displayAmount = isDiscounted ? plan.amount * discount : plan.amount;
+                        const displayDiamonds = calculateDiamonds(plan.amount);
                         return (
                             <button
                                 key={plan.planId}
@@ -477,8 +573,21 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                     isSixYuan && <div className={styles.noBonusTag}>{t('rechargeModal.noFirstChargeBonus')}</div>
                                 )}
                                 <div className={styles.amountTopSection}>
-                                    <div className={styles.amountMainPoints}>{calculateDiamonds(plan.amount)}{t('rechargeModal.diamonds')}</div>
-                                    <div className={styles.amountPriceMeta}>{t('rechargeModal.amount', { amount: plan.amount })}</div>
+                                    <div className={styles.amountMainPoints}>{displayDiamonds}{t('rechargeModal.diamonds')}</div>
+                                    <div className={styles.amountPriceMeta}>
+                                        {isDiscounted ? (
+                                            <>
+                                                <span className={styles.amountPriceOriginal}>
+                                                    {t('rechargeModal.currencySymbol')}{plan.amount.toFixed(1)}{t('rechargeModal.amountUnit')}
+                                                </span>
+                                                <span className={styles.amountPriceMetaDiscounted}>
+                                                    {' '}{t('rechargeModal.currencySymbol')}{displayAmount.toFixed(1)}{t('rechargeModal.amountUnit')}
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>{t('rechargeModal.amountLabel')}{t('rechargeModal.currencySymbol')}{displayAmount.toFixed(1)}{t('rechargeModal.amountUnit')}</>
+                                        )}
+                                    </div>
                                 </div>
                                 {hasBonus ? (
                                     <div className={styles.amountFirstChargePoints}>{t('rechargeModal.firstChargeGive', { points: plan.firstChargeDiamonds })}</div>
@@ -522,7 +631,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                 <div className={styles.rechargeSummary}>
                     <div className={styles.summaryRow}>
                         <span className={styles.summaryLabel}>{t('rechargeModal.rechargeAmount')}</span>
-                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{currentAmount.toFixed(2)}</span>
+                        <span className={styles.summaryValue}>{t('rechargeModal.currencySymbol')}{summaryDisplayAmount.toFixed(2)}</span>
                     </div>
                     <div className={styles.summaryRow}>
                         <span className={styles.summaryLabel}>{t('rechargeModal.receiveDiamonds')}</span>
@@ -539,7 +648,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             >
                 {isLoading
                     ? t('rechargeModal.processing')
-                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${currentAmount ? currentAmount.toFixed(2) : '0.00'}`}
+                    : `${t('rechargeModal.confirmRecharge')} ${t('rechargeModal.currencySymbol')}${summaryDisplayAmount.toFixed(2)}`}
             </button>
             {/* <button type="button" className={styles.submitBtn} disabled>
                 临时维护
@@ -547,58 +656,6 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
              </button> */}
         </>
     );
-
-    // 会员特权对比数据（普通用户 + 月卡 + 季卡 + 年卡）
-    const allPlanBenefits = [
-        {
-            planId: 'free',
-            name: t('rechargeModal.free'),
-            shortName: t('rechargeModal.free'),
-            price: 0,
-            color: '#999',
-            tagBg: '#999',
-            perks: [
-                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
-                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
-            ],
-        },
-        {
-            planId: 'month',
-            name: t('profile.monthlyMember'),
-            shortName: t('profile.monthlyMemberShort'),
-            price: 28,
-            color: '#228b22',
-            tagBg: '#228b22',
-            perks: [
-                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
-                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
-            ],
-        },
-        {
-            planId: 'season',
-            name: t('profile.seasonalMember'),
-            shortName: t('profile.seasonalMemberShort'),
-            price: 78,
-            color: '#e57373',
-            tagBg: '#e57373',
-            perks: [
-                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
-                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
-            ],
-        },
-        {
-            planId: 'year',
-            name: t('profile.yearlyMember'),
-            shortName: t('profile.yearlyMemberShort'),
-            price: 248,
-            color: '#d4a84b',
-            tagBg: '#d4a84b',
-            perks: [
-                { name: t('rechargeModal.noAdFreeRounds'), values: ['30', '100', '100', '100'] },
-                { name: t('rechargeModal.dailyCheckInBonus'), values: ['0%', '0%', '+100%', '+210%'] },
-            ],
-        },
-    ];
 
     const membershipTabContent = (
         <>
@@ -676,9 +733,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     );
 
     const formContent = (
-        <div className={styles.modalOverlay} onClick={closeAndReload}>
+        <div className={styles.modalOverlay} onClick={handleClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={closeAndReload}>
+                <button type="button" className={styles.closeBtn} onClick={handleClose}>
                     ×
                 </button>
 
@@ -711,9 +768,16 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     );
 
     const qrContent = (
-        <div className={styles.modalOverlay} onClick={closeAndReload}>
+        <div
+            className={styles.modalOverlay}
+            onClick={paymentStatus === 'success' ? () => void handleCloseWithRefresh() : handleClose}
+        >
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                <button type="button" className={styles.closeBtn} onClick={closeAndReload}>
+                <button
+                    type="button"
+                    className={styles.closeBtn}
+                    onClick={paymentStatus === 'success' ? () => void handleCloseWithRefresh() : handleClose}
+                >
                     ×
                 </button>
                 <div className={styles.qrSection}>
@@ -733,7 +797,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                     )}
                     <div className={styles.qrActions}>
                         {paymentStatus === 'success' && (
-                            <button type="button" className={styles.qrActionBtn} onClick={closeAndReload}>
+                            <button type="button" className={styles.qrActionBtn} onClick={() => void handleCloseWithRefresh()}>
                                 {t('rechargeModal.done')}
                             </button>
                         )}

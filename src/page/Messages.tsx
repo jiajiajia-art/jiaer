@@ -7,6 +7,7 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import AnnouncementModal from '../components/AnnouncementModal';
 import FavoriteGameUpdateModal from '../components/FavoriteGameUpdateModal';
 import messageApi from '../api/message/messageApi';
+import { getApiErrorMessage } from '../utils/error';
 import type {
     MessageAnnouncement,
     MessageCenterData,
@@ -33,19 +34,6 @@ const formatTime = (value?: string | null, fallbackText?: string) => {
     if (!value) return fallbackText || '暂无时间';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
-};
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-
-    return fallback;
 };
 
 const getAnnouncementSortTime = (item: Pick<MessageAnnouncement, 'publishedAt' | 'updatedAt' | 'createdAt'>) =>
@@ -119,7 +107,7 @@ const Messages: React.FC = () => {
             setMessageCenter(nextData);
             setUnreadCount(nextData?.unreadCount || 0);
         } catch (error) {
-            toast.error(getErrorMessage(error, t('messages.loadFailed')));
+            toast.error(getApiErrorMessage(error, t('messages.loadFailed')));
         } finally {
             setIsLoading(false);
         }
@@ -233,7 +221,7 @@ const Messages: React.FC = () => {
             applyReadState(messageType, sourceId, nextUnreadCount);
             setUnreadCount(nextUnreadCount);
         } catch (error) {
-            toast.error(getErrorMessage(error, t('messages.readStatusFailed')));
+            toast.error(getApiErrorMessage(error, t('messages.readStatusFailed')));
         }
     }, [applyReadState, setUnreadCount, unreadCount, t]);
 
@@ -249,7 +237,7 @@ const Messages: React.FC = () => {
             applyAllReadState(nextUnreadCount);
             setUnreadCount(nextUnreadCount);
         } catch (error) {
-            toast.error(getErrorMessage(error, t('messages.batchReadFailed')));
+            toast.error(getApiErrorMessage(error, t('messages.batchReadFailed')));
         } finally {
             setIsMarkingAllRead(false);
         }

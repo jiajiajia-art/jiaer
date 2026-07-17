@@ -29,7 +29,7 @@ const getSearchResultMeta = (game: UserGameData): string => {
     return String(game.file_id || '').trim();
 };
 
-type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | '';
+type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | 'rank' | '';
 type NavbarProps = {
     mobileVariant?: 'default' | 'home-overlay';
     mobileOverlayScrolled?: boolean;
@@ -166,6 +166,7 @@ const Navbar: React.FC<NavbarProps> = ({
         if (path.startsWith('/categories')) return 'categories';
         if (path.startsWith('/create')) return 'create';
         if (path.startsWith('/warehouse')) return 'warehouse';
+        if (path.startsWith('/rank')) return 'rank';
         return '';
     };
 
@@ -274,6 +275,12 @@ const Navbar: React.FC<NavbarProps> = ({
                         }}
                     >
                         {t('nav.warehouse')}
+                    </div>
+                    <div
+                        className={`${styles.navLink} ${activeNav === 'rank' ? styles.navLinkActive : ''}`}
+                        onClick={() => runLeaveAction(() => navigate('/rank'))}
+                    >
+                        {t('nav.rank')}
                     </div>
                 </div>
 

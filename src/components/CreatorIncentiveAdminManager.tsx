@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MdTrendingUp } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import incentiveApi from '../api/incentive/incentiveApi';
+import { getApiErrorMessage } from '../utils/error';
 import type {
     AdminIncentiveAuthorInfo,
     AdminIncentiveGameRecord,
@@ -56,15 +57,6 @@ const formatDateOnly = (value?: string | null): string => {
     if (!value) return '-';
     const normalized = normalizeDateOnlyValue(value);
     return normalized || value;
-};
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const getAuthorDisplayName = (author: AdminIncentiveAuthorInfo): string => author.nickname || author.userCode || author.phoneNumber || author.userId;
@@ -292,7 +284,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                 });
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, '作者列表加载失败'));
+            toast.error(getApiErrorMessage(error, '作者列表加载失败'));
             setAuthors([]);
             setAuthorPagination(emptyPagination);
             if (!isSearchView) {
@@ -341,7 +333,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
                 setAuthors((prev) => prev.map((author) => (author.userId === payload.author.userId ? payload.author : author)));
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, '作者作品列表加载失败'));
+            toast.error(getApiErrorMessage(error, '作者作品列表加载失败'));
             setGames([]);
             setGamePagination(emptyPagination);
             setIncentiveSummary(null);
@@ -397,7 +389,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
             toast.success('作者查找成功');
         } catch (error) {
             setSearchedAuthor(null);
-            toast.error(getErrorMessage(error, '作者查找失败'));
+            toast.error(getApiErrorMessage(error, '作者查找失败'));
         } finally {
             setIsSearchingAuthor(false);
         }
@@ -452,7 +444,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
             };
             toast.success(`作者已切换为${segmentLabels[newSegment]}`);
         } catch (error) {
-            toast.error(getErrorMessage(error, '作者分段更新失败'));
+            toast.error(getApiErrorMessage(error, '作者分段更新失败'));
         } finally {
             setIsUpdatingAuthor(false);
         }
@@ -520,7 +512,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
             toast.success('邀请激励配置已更新');
             await loadGames(selectedAuthor.userId, gamePage, gameKeyword);
         } catch (error) {
-            toast.error(getErrorMessage(error, '邀请激励配置更新失败'));
+            toast.error(getApiErrorMessage(error, '邀请激励配置更新失败'));
         } finally {
             setIsUpdatingGame(false);
         }
@@ -599,7 +591,7 @@ const CreatorIncentiveAdminManager: React.FC = () => {
             handleCloseGameModal();
             await loadGames(selectedAuthor.userId, gamePage, gameKeyword);
         } catch (error) {
-            toast.error(getErrorMessage(error, '作品激励配置更新失败'));
+            toast.error(getApiErrorMessage(error, '作品激励配置更新失败'));
         } finally {
             setIsUpdatingGame(false);
         }

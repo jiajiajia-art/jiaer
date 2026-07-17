@@ -12,6 +12,7 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import CheckInModal from '../components/CheckInModal';
 import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
 import InviteRewardModal from '../components/InviteRewardModal';
+import { planLabelMap } from '../utils/planLabels';
 import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CreatorProfile, { type CreatorProfileFormData } from '../components/CreatorProfile.tsx';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
@@ -611,9 +612,9 @@ const Profile: React.FC = () => {
                                     {user?.user?.isMember && user?.user?.memberEndAt ? (
                                         <div className={styles.memberInfo}>
                                             <span className={styles.memberBadge}>
-                                                {user?.user?.memberPlan === 'month' ? t('profile.monthlyMember') :
-                                                user?.user?.memberPlan === 'season' ? t('profile.seasonalMember') :
-                                                user?.user?.memberPlan === 'year' ? t('profile.yearlyMember') : t('profile.vip')}
+                                                {user.user.memberPlan && user.user.memberPlan in planLabelMap
+                                                    ? planLabelMap[user.user.memberPlan as keyof typeof planLabelMap]
+                                                    : t('profile.vip')}
                                             </span>
                                             <span className={styles.memberExpire}>{t('profile.memberExpireDate', { date: formatDate(user.user.memberEndAt) })}</span>
                                         </div>
@@ -1113,7 +1114,7 @@ const Profile: React.FC = () => {
             <MembershipRedeemResultModal
                 isOpen={redeemSuccessPlanId !== null}
                 onClose={() => setRedeemSuccessPlanId(null)}
-                planId={redeemSuccessPlanId ?? 'month'}
+                planId={redeemSuccessPlanId ?? 'creator_month'}
             />
 
             <ExchangeModal

@@ -98,6 +98,11 @@ export interface ToggleLikeResponse {
   likeCount: number;
 }
 
+/** 删除评论响应 */
+export interface DeleteRatingResponse {
+  message: string;
+}
+
 // ============ API ============
 
 const gameRatingApi = {
@@ -124,6 +129,13 @@ const gameRatingApi = {
    */
   toggleLike: (ratingId: string) =>
     api.post<ApiResponse<ToggleLikeResponse>>(`/auth/games/rating/${ratingId}/reaction`),
+
+  /**
+   * 删除评论
+   * @param ratingId 评论ID
+   */
+  deleteRating: (ratingId: string) =>
+    api.delete<ApiResponse<DeleteRatingResponse>>(`/auth/games/rating/${ratingId}`),
 };
 
 export default gameRatingApi;

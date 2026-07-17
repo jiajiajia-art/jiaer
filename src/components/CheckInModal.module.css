@@ -106,14 +106,39 @@
     overflow: hidden;
 }
 
+/* 周标题行 */
+.weekdayRow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    padding: 0 4px 8px;
+    border-bottom: 1px dashed #eee;
+    margin-bottom: 8px;
+}
+
+.weekdayLabel {
+    text-align: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #b8a89c;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* 7 列月历网格 */
 .monthlyGrid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 6px;
     padding: 4px;
 }
 
-/* Day Cell Base - 普通格子: 纯白 + 极浅灰细框 */
+/* 月初占位（不可点击的空白格）*/
+.emptyCell {
+    aspect-ratio: 1;
+}
+
+/* Day Cell Base - 普通格子: 纯白 + 极浅细框 */
 .dayCell {
     position: relative;
     aspect-ratio: 1;
@@ -125,9 +150,10 @@
     border-radius: 10px;
     background: #ffffff;
     padding: 6px 4px;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     cursor: default;
-    border: 1px solid #eeeeee;
+    border: 1px solid #f0eae3;
+    overflow: hidden;
 }
 
 .dayCell:hover {
@@ -139,94 +165,201 @@
 .dayCellNumber {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #d1d5db;
+    color: #c8c0b8;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+.dayCellMissedNum {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c8c0b8;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Points - 普通格文字: 浅灰 */
 .dayCellPoints {
     font-size: 0.6rem;
     font-weight: 600;
-    color: #d1d5db;
+    color: #c8c0b8;
+    font-variant-numeric: tabular-nums;
 }
 
-/* Today (第1格, 待签到) - 浅红底 */
-.dayCellToday {
-    background: #fde8ea;
-    border-color: #fda4af;
-    transform: scale(1.05);
-    z-index: 2;
-}
-
-.dayCellToday .dayCellNumber {
-    color: #be123c;
-}
-
-.dayCellToday .dayCellPoints {
-    color: #e63946;
-    font-weight: 700;
-}
-
-.dayCellToday:hover {
-    transform: scale(1.08);
-    box-shadow: 0 4px 12px rgba(230, 57, 70, 0.15);
-}
-
-/* 已签到格子 */
+/* ===== 状态 1: 历史已签到 (实心我红渐变 + 白色对勾) ===== */
 .dayCellCompleted {
-    background: #fde8ea;
-    border-color: #fda4af;
+    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
+    border-color: #e11d48;
+    color: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 2px 6px rgba(225, 29, 72, 0.22);
 }
 
 .dayCellCompleted .dayCellNumber {
-    color: #9ca3af;
+    color: rgba(255, 255, 255, 0.92);
 }
 
 .dayCellCompleted .dayCellPoints {
-    color: #e63946;
+    color: #fff5f7;
+    font-weight: 700;
 }
 
 .dayCellCompleted:hover {
     transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(230, 57, 70, 0.12);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 4px 12px rgba(225, 29, 72, 0.32);
 }
 
-/* 未来格子 */
+.dayCellCompleted .checkIcon {
+    color: #ffffff;
+    width: 16px;
+    height: 16px;
+}
+
+/* ===== 状态 2: 今天待签到 (浅粉底 + 我红描边 + 我红光晕) ===== */
+.dayCellToday {
+    background: #fff0f3;
+    border: 2px solid #fb4655;
+    color: #fb4655;
+    transform: scale(1.08);
+    z-index: 3;
+    box-shadow:
+        0 0 0 4px rgba(251, 70, 85, 0.18),
+        0 8px 20px rgba(251, 70, 85, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    animation: todayPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 4px rgba(251, 70, 85, 0.18),
+            0 8px 20px rgba(251, 70, 85, 0.32),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+    50% {
+        box-shadow:
+            0 0 0 10px rgba(251, 70, 85, 0.06),
+            0 12px 28px rgba(251, 70, 85, 0.48),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+}
+
+.dayCellToday .dayCellNumber {
+    color: #000000;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dayCellToday .dayCellPoints {
+    color: #e11d48;
+    font-weight: 800;
+}
+
+.dayCellToday:hover {
+    transform: scale(1.12);
+    background: #ffe4ea;
+}
+
+/* ===== 状态 3: 今天已签到 (实心我红 + 对勾, 与历史同色) ===== */
+.dayCellTodayCompleted {
+    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
+    border-color: #e11d48;
+    transform: scale(1.08);
+    z-index: 3;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        0 4px 14px rgba(225, 29, 72, 0.35);
+}
+
+.dayCellTodayCompleted .dayCellNumber {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.dayCellTodayCompleted .dayCellPoints {
+    color: #fff5f7;
+    font-weight: 700;
+}
+
+.dayCellTodayCompleted .checkIcon {
+    color: #ffffff;
+    width: 16px;
+    height: 16px;
+}
+
+.dayCellTodayCompleted:hover {
+    transform: scale(1.12);
+}
+
+/* ===== 状态 4: 预测可签到 (极浅粉 + 我红虚线) ===== */
+.dayCellForecast {
+    background: #fff5f7;
+    border: 1px dashed #fda4af;
+}
+
+.dayCellForecast .dayCellNumber {
+    color: #000000;
+    font-weight: 600;
+}
+
+.dayCellForecast .dayCellPoints {
+    color: #fb4655;
+    font-weight: 700;
+}
+
+.dayCellForecast:hover {
+    background: #ffe4ea;
+    transform: translateY(-1px);
+}
+
+/* ===== 状态 5: 不可签到 - 中间断签 (浅灰) ===== */
 .dayCellFuture {
-    background: #fafafa;
-    border-color: #eeeeee;
-    opacity: 0.85;
+    background: #fafaf7;
+    border-color: #efe9e0;
+    opacity: 0.55;
 }
 
 .dayCellFuture .dayCellNumber {
-    color: #d1d5db;
+    color: #d8d2ca;
 }
 
 .dayCellFuture .dayCellPoints {
-    color: #d1d5db;
+    color: #d8d2ca;
 }
 
-/* Bonus Day - 所有 >9 的格子统一样式 */
+/* ===== 状态 6: 大奖格子 (>9 积分) ===== */
 .dayCellBonus {
-    background: #fff5f5;
-    border-color: #fda4af;
+    position: relative;
 }
 
 .dayCellBonus .dayCellPoints {
     font-size: 0.7rem;
     font-weight: 800;
-    color: #E63946;
 }
 
-.dayCellBonus .dayCellNumber {
-    color: #be123c;
+.dayCellBonus.dayCellToday .dayCellPoints {
+    color: #e11d48;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-.dayCellBonus:hover {
-    box-shadow: 0 2px 10px rgba(230, 57, 70, 0.14);
+.dayCellBonus.dayCellCompleted .dayCellPoints,
+.dayCellBonus.dayCellTodayCompleted .dayCellPoints {
+    color: #fff5f7;
+    font-weight: 800;
+}
+
+.dayCellBonus.dayCellForecast .dayCellPoints {
+    color: #f43f5e;
+    font-weight: 800;
 }
 
 /* Check Icon */
@@ -239,7 +372,7 @@
 
 @keyframes checkPop {
     0% { transform: scale(0); }
-    50% { transform: scale(1.2); }
+    50% { transform: scale(1.25); }
     100% { transform: scale(1); }
 }
 

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { AiFillStar, AiOutlineStar } from 'react-icons/ai';
-import { FaRegThumbsUp, FaThumbsUp, FaRegCommentDots } from 'react-icons/fa';
+import { FaRegThumbsUp, FaThumbsUp, FaRegCommentDots, FaEllipsisH } from 'react-icons/fa';
 import { FaChevronUp, FaChevronDown } from 'react-icons/fa6';
 import gameRatingApi from '../../api/gameRating';
 import i18n from '../../i18n';
@@ -107,13 +107,18 @@ const CommentCard: React.FC<{
   comment: RatingItem;
   onReply: (comment: RatingItem) => void;
   onLike: (comment: RatingItem) => void;
+  onDelete: (comment: RatingItem) => void;
+  onCopy: (comment: RatingItem) => void;
   isLiking: boolean;
-}> = ({ comment, onReply, onLike, isLiking }) => {
+  isOwner: boolean;
+}> = ({ comment, onReply, onLike, onDelete, onCopy, isLiking, isOwner }) => {
   const { t } = useTranslation();
   const currentLanguage = i18n.language;
   const displayName = getDisplayName(comment.nickname, getAnonymousUserLabel(currentLanguage));
   const replyCount = comment.replies?.length ?? 0;
   const [visibleReplyCount, setVisibleReplyCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const visibleReplies = comment.replies?.slice(0, visibleReplyCount) ?? [];
   const isRepliesExpanded = visibleReplyCount > 0;
   const shouldShowExpandMore = isRepliesExpanded && visibleReplyCount < replyCount;
@@ -121,6 +126,32 @@ const CommentCard: React.FC<{
   useEffect(() => {
     setVisibleReplyCount(0);
   }, [comment.rating_id, replyCount]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [menuOpen]);
 
   const handleExpandReplies = () => {
     if (replyCount <= 0) return;
@@ -161,15 +192,55 @@ const CommentCard: React.FC<{
                 </div>
               )}
             </div>
-            <button
-              type="button"
-              className={`${styles.actionBtn} ${styles.headerActionBtn} ${comment.user_liked ? styles.liked : ''}`}
-              onClick={() => onLike(comment)}
-              disabled={isLiking}
-            >
-              {comment.user_liked ? <FaThumbsUp /> : <FaRegThumbsUp />}
-              <span>{comment.like_count_real > 0 ? comment.like_count_real : ''}</span>
-            </button>
+            <div className={styles.headerActions}>
+              <div className={styles.menuWrapper} ref={menuRef}>
+                <button
+                  type="button"
+                  className={`${styles.actionBtn} ${styles.menuBtn}`}
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  aria-label={t('gameRating.copyComment')}
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                >
+                  <FaEllipsisH />
+                </button>
+                {menuOpen && (
+                  <div className={styles.menuDropdown} role="menu">
+                    <button
+                      type="button"
+                      className={styles.menuItem}
+                      onClick={() => {
+                        onCopy(comment);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      {t('gameRating.copyComment')}
+                    </button>
+                    {isOwner && (
+                      <button
+                        type="button"
+                        className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                        onClick={() => {
+                          onDelete(comment);
+                          setMenuOpen(false);
+                        }}
+                      >
+                        {t('gameRating.deleteComment')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                className={`${styles.actionBtn} ${styles.headerActionBtn} ${comment.user_liked ? styles.liked : ''}`}
+                onClick={() => onLike(comment)}
+                disabled={isLiking}
+              >
+                {comment.user_liked ? <FaThumbsUp /> : <FaRegThumbsUp />}
+                <span>{comment.like_count_real > 0 ? comment.like_count_real : ''}</span>
+              </button>
+            </div>
           </div>
           <div className={styles.commentContent}>{comment.comment_content}</div>
           <div className={styles.commentFooter}>
@@ -369,6 +440,31 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
     setReplyText('');
   }, [checkAuth]);
 
+  const handleDelete = useCallback(async (comment: RatingItem) => {
+    if (!checkAuth()) return;
+    try {
+      const response = await gameRatingApi.deleteRating(comment.rating_id);
+      if (response.data.success) {
+        toast.success(response.data.message || t('gameRating.deleteSuccess'));
+        fetchRatings(1, false);
+      } else {
+        toast.error(response.data.message || t('gameRating.deleteFailed'));
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
+      toast.error(t('gameRating.deleteFailed'));
+    }
+  }, [checkAuth, fetchRatings, t]);
+
+  const handleCopy = useCallback(async (comment: RatingItem) => {
+    try {
+      await navigator.clipboard.writeText(comment.comment_content);
+      toast.success(t('gameRating.commentCopied'));
+    } catch {
+      toast.error(t('gameRating.copyFailed'));
+    }
+  }, [t]);
+
   const submitReply = async () => {
     if (!replyText.trim()) return;
 
@@ -556,7 +652,10 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
                 comment={comment}
                 onReply={handleReply}
                 onLike={handleLike}
+                onDelete={handleDelete}
+                onCopy={handleCopy}
                 isLiking={likingIds.has(comment.rating_id)}
+                isOwner={String(user?.user?.userId) === comment.user_id}
               />
             ))}
             {hasMore && (

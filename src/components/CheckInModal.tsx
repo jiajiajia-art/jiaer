@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { auth } from '../api/account/authApi';
@@ -43,18 +43,27 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         }
     };
 
-    const streakDay = signInStatus?.streakDay ?? 0;
-    const schedule = signInStatus?.displaySchedule ?? [];
-    const signedInToday = signInStatus?.signedInToday ?? false;
+    // 核心数据
+    const streakDay = signInStatus?.streakDay ?? 1; // 今天该签第几天
+    const schedule = signInStatus?.displaySchedule ?? []; // 奖励表
+    const signedInToday = signInStatus?.signedInToday ?? false; // 今天是否已签
+    const todayPoints = signInStatus?.totalPointsToday ?? 0; // 今天可得积分
+    const signedDaysThisMonth = signInStatus?.signedDaysThisMonth ?? []; // 本月已签到天数
 
-    const todaySchedulePoints = useMemo(() => {
-        if (!schedule.length) return 0;
-        if (streakDay <= 0) return schedule[0] ?? 0;
-        return schedule[streakDay - 1] ?? 0;
-    }, [schedule, streakDay]);
-
-    const todayPoints = signInStatus?.totalPointsToday ?? todaySchedulePoints;
     const isStatusReady = Boolean(signInStatus);
+
+    // 当月天数
+    const now = new Date();
+    const todayDate = now.getDate(); // 今天是这个月的几号
+    const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    // 当月 1 号是星期几 (0 = 周日, 用于月初占位)
+    const firstDayWeekday = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+
+    // 补齐 schedule 不足当月天数的情况
+    const lastReward = schedule.length > 0 ? schedule[schedule.length - 1] : 0;
+    const paddedSchedule = schedule.length >= daysInCurrentMonth
+        ? schedule.slice(0, daysInCurrentMonth)
+        : [...schedule, ...Array(daysInCurrentMonth - schedule.length).fill(lastReward)];
 
     if (!isOpen) return null;
 
@@ -77,6 +86,19 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // 构建当月每一天的显示数据
+    // 核心逻辑：按连续签到段计算，每段内 dayNum - startDay = scheduleIndex
+    const monthDays = Array.from({ length: daysInCurrentMonth }, (_, index) => {
+        const dayNum = index + 1;
+        const isSigned = signedDaysThisMonth.includes(dayNum);
+        return { dayNum, isSigned };
+    });
+
+    // 当月每一天的奖励值：固定对应 displaySchedule[dayNum - 1]
+    const getDayDisplay = (dayNum: number) => {
+        return paddedSchedule[dayNum - 1] ?? lastReward;
     };
 
     return (
@@ -109,40 +131,83 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                             </h3>
                             <p className={styles.subtitle}>
                                 {signedInToday
-                                    ? t('checkIn.subtitleTomorrow')
+                                    ? t('checkIn.subtitleTomorrow', { streakDay: streakDay + 1 })
                                     : t('checkIn.subtitlePoints', { points: todayPoints })}
                             </p>
                         </div>
 
-                        {schedule.length > 0 && (
+                        {paddedSchedule.length > 0 && (
                             <div className={styles.calendarWrapper}>
+                                <div className={styles.weekdayRow}>
+                                    {['日', '一', '二', '三', '四', '五', '六'].map((label, idx) => (
+                                        <span
+                                            key={`${label}-${idx}`}
+                                            className={styles.weekdayLabel}
+                                        >
+                                            {label}
+                                        </span>
+                                    ))}
+                                </div>
                                 <div className={styles.monthlyGrid}>
-                                    {schedule.map((points, index) => {
-                                        const dayNum = index + 1;
-                                        const isToday = dayNum === streakDay && !signedInToday;
-                                        const isCompleted = dayNum < streakDay || (dayNum === streakDay && signedInToday);
-                                        const isFuture = dayNum > streakDay;
-                                        const isBonus = points > 9;
+                                    {/* 月初占位 */}
+                                    {Array.from({ length: firstDayWeekday }).map((_, idx) => (
+                                        <div
+                                            key={`empty-${idx}`}
+                                            className={styles.emptyCell}
+                                            aria-hidden="true"
+                                        />
+                                    ))}
+                                    {monthDays.map(({ dayNum, isSigned }) => {
+                                        // 今天的签到格（按日历今天几号）
+                                        const isTodayCell = dayNum === todayDate;
+                                        // 今天已签到：今天 + 已签到
+                                        const isClaimed = isTodayCell && isSigned;
+                                        // 历史已签到天（除今天外）
+                                        const isHistoricalSigned = isSigned && !isTodayCell;
+                                        // 今天待签到：今天 + 未签到
+                                        const isStreakActive = isTodayCell && !signedInToday;
+                                        // 预测可签到：今天之后 + 未签到
+                                        const isForecast = !isSigned && dayNum > todayDate;
+                                        // 不可签到（历史断签）：今天之前 + 未签到
+                                        const isUnreachable = !isSigned && dayNum < todayDate;
+                                        // 当前天应显示的奖励值
+                                        const points = getDayDisplay(dayNum);
+                                        // 是否展示对勾（已签到）
+                                        const showCheck = isClaimed || isHistoricalSigned;
 
                                         return (
                                             <div
-                                                key={`${dayNum}-${points}`}
+                                                key={dayNum}
                                                 className={`
                                                     ${styles.dayCell}
-                                                    ${isToday ? styles.dayCellToday : ''}
-                                                    ${isCompleted ? styles.dayCellCompleted : ''}
-                                                    ${isFuture ? styles.dayCellFuture : ''}
-                                                    ${isBonus ? styles.dayCellBonus : ''}
+                                                    ${isClaimed ? styles.dayCellTodayCompleted : ''}
+                                                    ${isStreakActive ? styles.dayCellToday : ''}
+                                                    ${isHistoricalSigned ? styles.dayCellCompleted : ''}
+                                                    ${isForecast ? styles.dayCellForecast : ''}
+                                                    ${isUnreachable ? styles.dayCellFuture : ''}
+                                                    ${points > 9 ? styles.dayCellBonus : ''}
                                                 `}
                                             >
                                                 <span className={styles.dayCellNumber}>
-                                                    {isCompleted && !isToday ? (
-                                                        <svg className={styles.checkIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                                            <polyline points="20 6 9 17 4 12"/>
+                                                    {showCheck ? (
+                                                        <svg
+                                                            className={styles.checkIcon}
+                                                            width="16"
+                                                            height="16"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="3"
+                                                        >
+                                                            <polyline points="20 6 9 17 4 12" />
                                                         </svg>
-                                                    ) : dayNum}
+                                                    ) : (
+                                                        dayNum
+                                                    )}
                                                 </span>
-                                                <span className={styles.dayCellPoints}>+{points}</span>
+                                                <span className={styles.dayCellPoints}>
+                                                    {`+${points}`}
+                                                </span>
                                             </div>
                                         );
                                     })}

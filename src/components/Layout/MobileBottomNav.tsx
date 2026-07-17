@@ -5,7 +5,7 @@ import styles from './MobileBottomNav.module.css';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { isCreatorRoutePath, isMiniProgramEnv } from '../../utils/miniProgram';
 
-type BottomNavKey = 'home' | 'create' | 'profile';
+type BottomNavKey = 'home' | 'create' | 'rankings' | 'profile';
 
 const normalize = (path: string) => {
     const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -40,6 +40,12 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
             iconActive: 'data/assets/切图/创作01.png',
         },
         {
+            key: 'rankings',
+            labelKey: 'common.nav.rankings',
+            iconInactive: 'data/assets/排行榜.svg',
+            iconActive: 'data/assets/排行榜.svg',
+        },
+        {
             key: 'profile',
             labelKey: 'common.nav.profile',
             iconInactive: 'data/assets/切图/我的02.png',
@@ -57,6 +63,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
         if (currentPath.startsWith('/create')) return 'create';
         if (currentPath.startsWith('/home')) return 'home';
         if (isCreatorRoutePath(currentPath)) return 'create';
+        if (currentPath.startsWith('/rank')) return 'rankings';
         if (currentPath.startsWith('/profile')) return 'profile';
         return 'home';
     }, [currentPath]);
@@ -80,6 +87,9 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
             case 'create':
                 if (!ensureAuthenticated()) return;
                 navigate('/create');
+                break;
+            case 'rankings':
+                navigate('/rank');
                 break;
             case 'profile':
                 if (!ensureAuthenticated()) return;

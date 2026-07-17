@@ -175,8 +175,9 @@ export class CustomIFHostBridge {
       } else {
         this.post({ type: 'log:ack', payload: { ok: true } });
       }
-    } catch (err: any) {
-      this.post({ type: 'log:ack', payload: { ok: false, code: 'NETWORK_ERROR', message: String(err?.message || err) } });
+    } catch (err: unknown) {
+      const e = err as { message?: unknown };
+      this.post({ type: 'log:ack', payload: { ok: false, code: 'NETWORK_ERROR', message: String(e?.message ?? err) } });
     }
   }
 
@@ -225,7 +226,8 @@ export class CustomIFHostBridge {
           kv: { scope: retScope, namespace: ns, values },
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { message?: unknown };
       this.post({
         type: 'kv:result',
         payload: {
@@ -233,7 +235,7 @@ export class CustomIFHostBridge {
           success: false,
           op: 'get',
           code: 'NETWORK_ERROR',
-          message: String(err?.message || err),
+          message: String(e?.message ?? err),
         },
       });
     }
@@ -283,7 +285,8 @@ export class CustomIFHostBridge {
           kv: { scope: retScope, namespace: ns, values },
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { message?: unknown };
       this.post({
         type: 'kv:result',
         payload: {
@@ -291,7 +294,7 @@ export class CustomIFHostBridge {
           success: false,
           op: 'set',
           code: 'NETWORK_ERROR',
-          message: String(err?.message || err),
+          message: String(e?.message ?? err),
         },
       });
     }
@@ -335,7 +338,8 @@ export class CustomIFHostBridge {
           op: 'delete',
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { message?: unknown };
       this.post({
         type: 'kv:result',
         payload: {
@@ -343,7 +347,7 @@ export class CustomIFHostBridge {
           success: false,
           op: 'delete',
           code: 'NETWORK_ERROR',
-          message: String(err?.message || err),
+          message: String(e?.message ?? err),
         },
       });
     }
@@ -391,14 +395,15 @@ export class CustomIFHostBridge {
           txnId: json?.txnId,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const e = err as { message?: unknown };
       this.post({
         type: 'points:result',
         payload: {
           requestId,
           success: false,
           code: 'NETWORK_ERROR',
-          message: String(err?.message || err),
+          message: String(e?.message ?? err),
         },
       });
     }

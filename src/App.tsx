@@ -32,6 +32,7 @@ import OperatorPanel from './page/operator/OperatorPanel';
 import { CreatorRoute } from './components/CreatorRoute';
 import { OperatorRoute } from './components/OperatorRoute';
 import Categories from './page/Categories';
+import Rankings from './page/Rankings';
 import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
 import AssetDetails from './page/AssetDetails';
@@ -74,6 +75,7 @@ function App() {
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
         <Route path="/categories" element={<Categories />} />
+        <Route path="/rank" element={<Rankings />} />
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />

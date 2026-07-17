@@ -4,6 +4,7 @@ import adminShareRatioApi, {
     type AdminShareRatioGame,
     type AdminShareRatioUser,
 } from '../api/admin/shareRatioApi';
+import { getApiErrorMessage } from '../utils/error';
 import type { Currency } from '../api/common/currency';
 import styles from './PointsAdminManager.module.css';
 
@@ -16,15 +17,6 @@ const formatTime = (value: string | null): string => {
     if (!value) return '-';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
-};
-
-const getErrorMessage = (error: unknown, fallback: string): string => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
@@ -56,7 +48,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                 toast.error(response.data.message || '查询失败');
             }
         } catch (error) {
-            const msg = getErrorMessage(error, '查询失败');
+            const msg = getApiErrorMessage(error, '查询失败');
             if (msg.includes('未找到')) {
                 toast.error('未找到该用户');
             } else {
@@ -114,7 +106,7 @@ const ShareRatioAdminManager: React.FC<ShareRatioAdminManagerProps> = () => {
                 toast.error(response.data.message || '设置失败');
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, '设置失败'));
+            toast.error(getApiErrorMessage(error, '设置失败'));
         } finally {
             setIsSaving(false);
         }

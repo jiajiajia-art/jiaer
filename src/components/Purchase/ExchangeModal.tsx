@@ -6,7 +6,7 @@ import { auth } from '../../api/account/authApi';
 import { useAuthStore } from '../../store/useAuthStore';
 import styles from './ExchangeModal.module.css';
 
-const POINTS_PER_DIAMOND = 10;
+const POINTS_PER_DIAMOND = 1;
 
 interface ExchangeModalProps {
     isOpen: boolean;

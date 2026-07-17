@@ -43,6 +43,10 @@
         color: var(--primary);
     }
 
+    .navItemActive .icon {
+        filter: invert(33%) sepia(96%) saturate(2318%) hue-rotate(331deg) brightness(100%) contrast(101%);
+    }
+
     .icon {
         width: 24px;
         height: 24px;

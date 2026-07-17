@@ -7,6 +7,7 @@ import dailyTasksApi, {
     type AdminDailyTaskStatus,
     type AdminDailyTaskKind,
 } from '../api/admin/dailyTasksApi';
+import { getApiErrorMessage } from '../utils/error';
 import getGameDataApi from '../api/home/getGameData';
 import type { UserGameData } from '../api/home/getGameData.type';
 import styles from './DailyTasksAdminManager.module.css';
@@ -53,15 +54,6 @@ const taskKindLabelMap: Record<AdminDailyTaskKind, string> = {
     play_specific_game: '游玩次数任务',
     play_specific_game_duration: '游玩时长任务',
     game_promotion: '游戏推广任务', // targetCount = 需完成推广的有效访问人数
-};
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const formatTime = (value?: string | null) => {
@@ -133,7 +125,7 @@ const DailyTasksAdminManager: React.FC = () => {
             });
             setTasks(sortedList);
         } catch (error) {
-            toast.error(getErrorMessage(error, '每日任务列表加载失败'));
+            toast.error(getApiErrorMessage(error, '每日任务列表加载失败'));
         } finally {
             setIsLoading(false);
         }
@@ -346,7 +338,7 @@ const DailyTasksAdminManager: React.FC = () => {
             resetModalState();
             await loadTasks();
         } catch (error) {
-            toast.error(getErrorMessage(error, editingTaskId === null ? '每日任务创建失败' : '每日任务更新失败'));
+            toast.error(getApiErrorMessage(error, editingTaskId === null ? '每日任务创建失败' : '每日任务更新失败'));
         } finally {
             setIsSubmitting(false);
         }
@@ -371,7 +363,7 @@ const DailyTasksAdminManager: React.FC = () => {
             toast.success(`任务已切换为${statusLabelMap[status]}`);
             await loadTasks();
         } catch (error) {
-            toast.error(getErrorMessage(error, '任务状态切换失败'));
+            toast.error(getApiErrorMessage(error, '任务状态切换失败'));
         }
     };
 
@@ -385,7 +377,7 @@ const DailyTasksAdminManager: React.FC = () => {
             setTaskToDelete(null);
             await loadTasks();
         } catch (error) {
-            toast.error(getErrorMessage(error, '每日任务删除失败'));
+            toast.error(getApiErrorMessage(error, '每日任务删除失败'));
         } finally {
             setIsDeleting(false);
         }

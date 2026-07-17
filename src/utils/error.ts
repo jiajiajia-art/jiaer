@@ -6,8 +6,12 @@ export const getApiErrorMessage = (
     fallback: string
 ): string => {
     if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string } } };
-        return response.response?.data?.message || fallback;
+        const axiosError = error as { response?: { data?: { message?: string; error?: string } } };
+        return (
+            axiosError.response?.data?.message ||
+            axiosError.response?.data?.error ||
+            fallback
+        );
     }
     if (error instanceof Error && error.message) {
         return error.message;

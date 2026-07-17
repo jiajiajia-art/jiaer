@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Pagination from './Pagination';
 import subscriptionKeysApi from '../api/subscriptionKeys/subscriptionKeysApi';
+import { getApiErrorMessage } from '../utils/error';
+import { planLabelMap } from '../utils/planLabels';
 import type {
     AdminSubscriptionKeyRecord,
     CreateSubscriptionKeysPayload,
@@ -25,12 +27,6 @@ const emptyListResult: SubscriptionKeyListResult = {
     items: [],
 };
 
-const planLabelMap: Record<SubscriptionPlanId, string> = {
-    month: '月卡',
-    season: '季卡',
-    year: '年卡',
-};
-
 const statusLabelMap: Record<SubscriptionKeyStatus, string> = {
     unused: '未使用',
     used: '已使用',
@@ -40,15 +36,6 @@ const statusLabelMap: Record<SubscriptionKeyStatus, string> = {
 const sourceTypeLabelMap: Record<SubscriptionKeySourceType, string> = {
     paid: '付费',
     campaign: '活动',
-};
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const formatTime = (value?: string | null) => {
@@ -113,7 +100,7 @@ const copyText = async (text: string) => {
 
 const SubscriptionAdminManager: React.FC = () => {
     const { t } = useTranslation();
-    const [planId, setPlanId] = useState<SubscriptionPlanId>('month');
+    const [planId, setPlanId] = useState<SubscriptionPlanId>('creator_month');
     const [count, setCount] = useState('1');
     const [expireAt, setExpireAt] = useState('');
     const [channel, setChannel] = useState('');
@@ -154,7 +141,7 @@ const SubscriptionAdminManager: React.FC = () => {
                 setPage(normalizedResult.page);
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, t('admin.loadKeyListFailed')));
+            toast.error(getApiErrorMessage(error, t('admin.loadKeyListFailed')));
         } finally {
             setIsLoadingList(false);
         }
@@ -198,7 +185,7 @@ const SubscriptionAdminManager: React.FC = () => {
                 await loadList();
             }
         } catch (error) {
-            toast.error(getErrorMessage(error, '创建 Key 失败'));
+            toast.error(getApiErrorMessage(error, '创建 Key 失败'));
         } finally {
             setIsCreating(false);
         }
@@ -217,7 +204,7 @@ const SubscriptionAdminManager: React.FC = () => {
             }
             await loadList();
         } catch (error) {
-            toast.error(getErrorMessage(error, '操作失败'));
+            toast.error(getApiErrorMessage(error, '操作失败'));
         } finally {
             setTogglingId(null);
         }
@@ -238,7 +225,7 @@ const SubscriptionAdminManager: React.FC = () => {
                 <div>
                     <div className={styles.sectionBadge}>会员管理</div>
                     <h2 className={styles.heroTitle}>会员订阅 Key 管理</h2>
-                    <p className={styles.heroDesc}>用于管理月卡、季卡、年卡的 Key 发放、查询与冻结/解冻。</p>
+                    <p className={styles.heroDesc}>用于管理日卡、月卡、季卡、年卡的 Key 发放、查询与冻结/解冻。</p>
                 </div>
             </section>
 
@@ -255,9 +242,10 @@ const SubscriptionAdminManager: React.FC = () => {
                         <label className={styles.fieldLabel}>
                             <span className={styles.fieldLabelText}>会员类型</span>
                             <select className={styles.select} value={planId} onChange={(event) => setPlanId(event.target.value as SubscriptionPlanId)}>
-                                <option value="month">月卡</option>
-                                <option value="season">季卡</option>
-                                <option value="year">年卡</option>
+                                <option value="creator_day">日卡</option>
+                                <option value="creator_month">月卡</option>
+                                <option value="creator_season">季卡</option>
+                                <option value="creator_year">年卡</option>
                             </select>
                         </label>
                         <label className={styles.fieldLabel}>
@@ -319,9 +307,10 @@ const SubscriptionAdminManager: React.FC = () => {
                             }}
                         >
                             <option value="all">全部</option>
-                            <option value="month">月卡</option>
-                            <option value="season">季卡</option>
-                            <option value="year">年卡</option>
+                            <option value="creator_day">日卡</option>
+                            <option value="creator_month">月卡</option>
+                            <option value="creator_season">季卡</option>
+                            <option value="creator_year">年卡</option>
                         </select>
                     </label>
                     <label className={styles.fieldLabel}>
