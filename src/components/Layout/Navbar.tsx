@@ -397,6 +397,23 @@ const Navbar: React.FC<NavbarProps> = ({
                                         >
                                             {t('nav.favorites')}
                                         </button>
+                                        {user?.user?.role === 'admin' && user?.user?.userId === '96e89940badf1f67' && (
+                                            <button
+                                                className={styles.menuBtn}
+                                                onClick={() => {
+                                                    setShowUserMenu(false);
+                                                    if (isWebViewEnv()) {
+                                                        window.location.href = '/admin?tab=comments';
+                                                    } else {
+                                                        runLeaveAction(() => {
+                                                            navigate('/admin?tab=comments');
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                {t('nav.commentManagement')}
+                                            </button>
+                                        )}
                                         {isOperatorRole(user?.user?.role) && isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}

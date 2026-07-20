@@ -17,16 +17,16 @@ type RankingTab = 'all' | 'hot' | 'new' | 'rising' | 'sales' | 'romance';
  *  - 人气榜 -> overall（总榜，按点赞数降序）
  *  - 新作榜 -> new
  *  - 飙升榜 -> hot（近7天增量）
- *  - 畅销榜 -> interaction（互动榜；接口中按分享+评论综合降序，作为「畅销」的代理）
- *  - 互动榜 -> rating（当前前端沿用 rating 接口作为第五个榜单的数据来源）
+ *  - 畅销榜 -> rating
+ *  - 互动榜 -> interaction
  * 全部 tab 走聚合接口 /api/auth/games/rankings/all。
  */
 const TAB_TO_API_TYPE: Record<Exclude<RankingTab, 'all'>, RankingsApiType> = {
     hot: 'overall',
     new: 'new',
     rising: 'hot',
-    sales: 'interaction',
-    romance: 'rating',
+    sales: 'rating',
+    romance: 'interaction',
 };
 
 const RANKING_PAGE_SIZE = 20;
@@ -83,7 +83,7 @@ const TAB_CONFIG: { key: RankingTab; label: string; labelZh: string }[] = [
     { key: 'hot', label: 'Hot', labelZh: '人气榜' },
     { key: 'new', label: 'New', labelZh: '新作榜' },
     { key: 'rising', label: 'Rising', labelZh: '飙升榜' },
-    { key: 'sales', label: 'Sales', labelZh: '畅销榜' },
+    { key: 'sales', label: 'Sales', labelZh: '高分榜' },
     { key: 'romance', label: 'Interaction', labelZh: '互动榜' },
 ];
 
@@ -96,8 +96,8 @@ const ALL_TAB_SECTION_CONFIG: Array<{
     { key: 'overall',    label: 'Hot',     labelZh: '人气榜' },
     { key: 'new',        label: 'New',     labelZh: '新作榜' },
     { key: 'hot',        label: 'Rising',  labelZh: '飙升榜' },
-    { key: 'interaction',label: 'Sales',  labelZh: '畅销榜' },
-    { key: 'rating',     label: 'Interaction', labelZh: '互动榜' },
+    { key: 'interaction',label: 'Interaction',  labelZh: '互动榜' },
+    { key: 'rating',     label: 'Sales',      labelZh: '高分榜' },
 ];
 
 const RANK_BADGE_ASSETS: Record<number, string> = {
@@ -310,6 +310,21 @@ const Rankings: React.FC = () => {
         [activeTab, allMergedList, apiTabCurrent]
     );
 
+    const filteredTabs = useMemo(() => {
+        if (!allTabState.loaded) return TAB_CONFIG;
+        return TAB_CONFIG.filter(tab => {
+            if (tab.key === 'all') return true;
+            const apiType = TAB_TO_API_TYPE[tab.key as Exclude<RankingTab, 'all'>];
+            return (allTabState.data[apiType] ?? []).length > 0;
+        });
+    }, [allTabState.loaded, allTabState.data]);
+
+    useEffect(() => {
+        if (filteredTabs.length > 0 && !filteredTabs.find(t => t.key === activeTab)) {
+            setActiveTab(filteredTabs[0].key);
+        }
+    }, [filteredTabs, activeTab]);
+
     const renderApiContent = () => {
         if (!apiTabCurrent) return null;
         if (apiTabCurrent.loading && !apiTabCurrent.loaded) {
@@ -400,7 +415,7 @@ const Rankings: React.FC = () => {
                 <div className={styles.pageInner}>
                 {/* Tab Bar */}
                 <div className={styles.tabBar}>
-                    {TAB_CONFIG.map((tab) => (
+                    {filteredTabs.map((tab) => (
                         <button
                             key={tab.key}
                             className={`${styles.tabBtn} ${activeTab === tab.key ? styles.tabBtnActive : ''}`}
@@ -455,7 +470,7 @@ const Rankings: React.FC = () => {
                         ) : (
                             ALL_TAB_SECTION_CONFIG.map((section) => {
                                 const games = (allTabState.data[section.key] ?? []).slice(0, 5);
-                                const isEmpty = games.length === 0;
+                                if (games.length === 0) return null;
                                 return (
                                     <div key={section.key} className={styles.categoryBox}>
                                         <div className={styles.categoryBoxHeader}>
@@ -466,43 +481,35 @@ const Rankings: React.FC = () => {
                                             <CategoryBoxMeteorIcon className={styles.categoryBoxIconRight} />
                                         </div>
                                         <div className={styles.categoryBoxList}>
-                                            {isEmpty ? (
-                                                <div className={styles.stateWrap} style={{ justifyContent: 'center' }}>
-                                                    <span className={styles.stateText}>{isZh ? '暂无数据' : 'No data yet'}</span>
-                                                </div>
-                                            ) : (
-                                                games.map((game, index) => (
-                                                    <div
-                                                        key={game.id}
-                                                        className={styles.categoryBoxItem}
-                                                        onClick={() => handleGameClick(game.id)}
-                                                    >
-                                                        <span className={styles.categoryBoxRank} data-rank={index + 1}>{index + 1}</span>
-                                                        <div className={styles.categoryBoxCoverWrap}>
-                                                            <img src={game.coverUrl} alt={game.title} className={styles.categoryBoxCover} />
-                                                            {(game.gameTags[0] || game.tags[0]) && (
-                                                                <span className={styles.categoryBoxTag}>{game.gameTags[0] || game.tags[0]}</span>
-                                                            )}
-                                                        </div>
-                                                        <div className={styles.categoryBoxInfo}>
-                                                            <div className={styles.categoryBoxTitle2}>{game.title}</div>
-                                                            <div className={styles.categoryBoxAuthor}>{formatAuthorMeta(game)}</div>
-                                                            {formatThemeMeta(game) && (
-                                                                <div className={styles.categoryBoxMeta}>{formatThemeMeta(game)}</div>
-                                                            )}
-                                                        </div>
+                                            {games.map((game, index) => (
+                                                <div
+                                                    key={game.id}
+                                                    className={styles.categoryBoxItem}
+                                                    onClick={() => handleGameClick(game.id)}
+                                                >
+                                                    <span className={styles.categoryBoxRank} data-rank={index + 1}>{index + 1}</span>
+                                                    <div className={styles.categoryBoxCoverWrap}>
+                                                        <img src={game.coverUrl} alt={game.title} className={styles.categoryBoxCover} />
+                                                        {(game.gameTags[0] || game.tags[0]) && (
+                                                            <span className={styles.categoryBoxTag}>{game.gameTags[0] || game.tags[0]}</span>
+                                                        )}
                                                     </div>
-                                                ))
-                                            )}
+                                                    <div className={styles.categoryBoxInfo}>
+                                                        <div className={styles.categoryBoxTitle2}>{game.title}</div>
+                                                        <div className={styles.categoryBoxAuthor}>{formatAuthorMeta(game)}</div>
+                                                        {formatThemeMeta(game) && (
+                                                            <div className={styles.categoryBoxMeta}>{formatThemeMeta(game)}</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        {!isEmpty && (
-                                            <button
-                                                className={styles.categoryBoxMore}
-                                                onClick={() => setActiveTab(section.key as RankingTab)}
-                                            >
-                                                {isZh ? '更多' : 'More'} <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
-                                            </button>
-                                        )}
+                                        <button
+                                            className={styles.categoryBoxMore}
+                                            onClick={() => setActiveTab(section.key as RankingTab)}
+                                        >
+                                            {isZh ? '更多' : 'More'} <img src={`${import.meta.env.BASE_URL}data/assets/向右箭头.svg`} alt="" className={styles.moreArrow} />
+                                        </button>
                                     </div>
                                 );
                             })

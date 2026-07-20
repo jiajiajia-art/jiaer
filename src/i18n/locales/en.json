@@ -574,6 +574,7 @@
     "messages": "Messages",
     "profile": "Profile",
     "favorites": "Favorites",
+    "commentManagement": "Comment Management",
     "admin": "Admin",
     "logout": "Logout",
     "login": "Login",
@@ -1335,7 +1336,8 @@
     "getPlayStatusFailed": "Failed to get play status",
     "ratingUnit": "point",
     "sections": "Sections",
-    "playerReviews": "Player Reviews"
+    "playerReviews": "Player Reviews",
+    "commentManagement": "Comment Management"
   },
   "gameRating": {
     "reviews": "Reviews",
@@ -1401,7 +1403,8 @@
     "requestFailed": "Check-in request failed",
     "legendCompleted": "Completed",
     "legendToday": "Today",
-    "legendFuture": "Upcoming"
+    "legendFuture": "Upcoming",
+    "membershipBonusHint": "Premium members who check in for a full month earn +{{points}} bonus points"
   },
   "stGameCreate": {
     "pageTitle": "Create AVG Mode",

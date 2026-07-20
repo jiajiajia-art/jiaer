@@ -1010,15 +1010,17 @@ const GameDetail: React.FC = () => {
                         >
                             {t('gameDetail.gameIntroduction')}
                         </button>
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={activeSection === 'reviews'}
-                            className={`${styles.sectionTab} ${activeSection === 'reviews' ? styles.sectionTabActive : ''}`}
-                            onClick={() => setActiveSection('reviews')}
-                        >
-                            {t('gameDetail.playerReviews')}
-                        </button>
+                        {user?.user.role === 'admin' && user?.user.userId === '96e89940badf1f67' && (
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activeSection === 'reviews'}
+                                className={`${styles.sectionTab} ${activeSection === 'reviews' ? styles.sectionTabActive : ''}`}
+                                onClick={() => setActiveSection('reviews')}
+                            >
+                                {t('gameDetail.playerReviews')}
+                            </button>
+                        )}
                     </div>
 
                     {activeSection === 'introduction' && (
@@ -1039,18 +1041,10 @@ const GameDetail: React.FC = () => {
                         </>
                     )}
 
-                    {activeSection === 'reviews' && (
-                        <>
-                            {fileId && (
-                                <GameRating
-                                    fileId={fileId}
-                                    onRatingChange={(_summary) => {
-                                        // 可选：同步更新游戏详情中的评分数据
-                                    }}
-                                />
-                            )}
-                        </>
+                    {activeSection === 'reviews' && fileId && (
+                        <GameRating fileId={fileId} onRatingChange={() => {}} />
                     )}
+
                 </div>
             </div>
 

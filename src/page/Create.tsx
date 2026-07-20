@@ -525,13 +525,15 @@ const Create: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className={styles.creatorAssetActionsBox}>
-                                            <button
-                                                type="button"
-                                                className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
-                                                onClick={handleWithdrawClick}
-                                            >
-                                                {t('create.withdraw')}
-                                            </button>
+                                            {user?.user?.userSegment !== 'normal' && (
+                                                <button
+                                                    type="button"
+                                                    className={`${styles.creatorAssetActionButton} ${styles.creatorWithdrawButton}`}
+                                                    onClick={handleWithdrawClick}
+                                                >
+                                                    {t('create.withdraw')}
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 className={`${styles.creatorAssetActionButton} ${styles.creatorRechargeButton}`}

@@ -268,6 +268,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 </button>
                 <h2 className={styles.modalTitle}>{t('common.publishSettings.title')}</h2>
 
+                <div className={styles.formScroll}>
                 <div className={styles.formContent}>
                     <div className={styles.coverFormGroup}>
                         <label className={styles.label}>{t('common.publishSettings.coverImage')}</label>
@@ -375,6 +376,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             {t('common.publishSettings.publish')}
                         </button>
                     </div>
+                </div>
                 </div>
             </div>
             {pendingCropFile ? (

@@ -24,7 +24,11 @@ const truncate = (value: string | null | undefined, max = 56): string => {
     return value.length > max ? `${value.slice(0, max)}…` : value;
 };
 
-const CommentAdminManager: React.FC = () => {
+interface CommentAdminManagerProps {
+    fileId?: string;
+}
+
+const CommentAdminManager: React.FC<CommentAdminManagerProps> = ({ fileId }) => {
     const [comments, setComments] = useState<PendingCommentItem[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -44,7 +48,7 @@ const CommentAdminManager: React.FC = () => {
     const loadComments = useCallback(async () => {
         try {
             setIsLoading(true);
-            const response = await commentsApi.listPending(page, pageSize, 'pending');
+            const response = await commentsApi.listPending(page, pageSize, 'pending', fileId);
             const data = response.data.data;
             if (data) {
                 setComments(data.list || []);
@@ -55,7 +59,7 @@ const CommentAdminManager: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [page, pageSize]);
+    }, [page, pageSize, fileId]);
 
     useEffect(() => {
         void loadComments();

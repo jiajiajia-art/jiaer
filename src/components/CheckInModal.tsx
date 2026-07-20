@@ -215,6 +215,10 @@ const CheckInModal: React.FC<CheckInModalProps> = ({
                             </div>
                         )}
 
+                        <p className={styles.membershipHint}>
+                            {t('checkIn.membershipBonusHint', { points: 300 })}
+                        </p>
+
                         {!signedInToday && (
                             <div className={styles.buttonContainer}>
                                 <button

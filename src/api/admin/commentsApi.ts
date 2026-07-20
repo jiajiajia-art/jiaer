@@ -25,9 +25,9 @@ export interface ReviewAction {
 }
 
 const commentsApi = {
-    listPending: (page: number, pageSize: number, status: CommentReviewStatus = 'pending') =>
+    listPending: (page: number, pageSize: number, status: CommentReviewStatus = 'pending', fileId?: string) =>
         api.get<ApiResponse<PendingCommentsResponse>>('/admin/comments/pending', {
-            params: { page, pageSize, status },
+            params: { page, pageSize, status, ...(fileId ? { fileId } : {}) },
         }),
     review: (ratingId: string, action: ReviewAction) =>
         api.post<ApiResponse<{ message: string }>>(`/admin/comments/${ratingId}/review`, action),

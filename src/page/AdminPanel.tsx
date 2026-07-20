@@ -52,6 +52,7 @@ import {
 } from '../utils/announcementLinkInsert';
 import styles from './AdminPanel.module.css';
 import { useMessageStore } from '../store/useMessageStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 type EditorMode = 'new' | 'draft' | 'published';
 type AdminTab = 'announcements' | 'banners' | 'themes' | 'promotions' | 'points' | 'creatorIncentives' | 'subscriptions' | 'documents' | 'shareRatio' | 'dailyTasks' | 'users' | 'comments' | 'withdraw';
@@ -88,7 +89,7 @@ const resolveAdminTab = (pathname: string, search: string): AdminTab => {
     if (pathname.startsWith('/admin/comments')) return 'comments';
     if (pathname.startsWith('/admin/withdraw')) return 'withdraw';
     const tabParam = new URLSearchParams(search).get('tab');
-    if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes') return tabParam;
+    if (tabParam === 'announcements' || tabParam === 'banners' || tabParam === 'themes' || tabParam === 'comments') return tabParam;
     return 'announcements';
 };
 
@@ -253,6 +254,8 @@ const AdminPanel: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const refreshUnreadCount = useMessageStore((state) => state.refreshUnreadCount);
+    const userRole = useAuthStore((state) => state.user?.user?.role);
+    const userId = useAuthStore((state) => state.user?.user?.userId);
     const activeTab = useMemo<AdminTab>(
         () => resolveAdminTab(location.pathname, location.search),
         [location.pathname, location.search],
@@ -1432,75 +1435,101 @@ const AdminPanel: React.FC = () => {
                             <div className={styles.sidebarTitle}>管理面板</div>
                             <div className={styles.sidebarDivider} />
                         </div>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'announcements' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('announcements')}
-                        >
-                            <span className={styles.navTitle}>公告系统</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'banners' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('banners')}
-                        >
-                            <span className={styles.navTitle}>轮播图管理</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'themes' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('themes')}
-                        >
-                            <span className={styles.navTitle}>题材管理</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'promotions' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('promotions')}
-                        >
-                            {pendingPromotionReviewCount > 0 ? (
-                                <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionReviewCount)}</span>
-                            ) : null}
-                            <span className={styles.navTitle}>推广管理</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('points')}
-                        >
-                            {pendingPromotionRewardCount > 0 ? (
-                                <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionRewardCount)}</span>
-                            ) : null}
-                            <span className={styles.navTitle}>积分管理</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'creatorIncentives' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('creatorIncentives')}
-                        >
-                            <span className={styles.navTitle}>创作者激励</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'subscriptions' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('subscriptions')}
-                        >
-                            <span className={styles.navTitle}>会员管理</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'documents' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('documents')}
-                        >
-                            <span className={styles.navTitle}>文档管理</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'dailyTasks' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('dailyTasks')}
-                        >
-                            <span className={styles.navTitle}>每日任务管理</span>
-                        </button>
+                    {userRole === 'admin' && userId === '96e89940badf1f67' && (
+                        <>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'announcements' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('announcements')}
+                            >
+                                <span className={styles.navTitle}>公告系统</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'banners' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('banners')}
+                            >
+                                <span className={styles.navTitle}>轮播图管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'themes' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('themes')}
+                            >
+                                <span className={styles.navTitle}>题材管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'promotions' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('promotions')}
+                            >
+                                {pendingPromotionReviewCount > 0 ? (
+                                    <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionReviewCount)}</span>
+                                ) : null}
+                                <span className={styles.navTitle}>推广管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'points' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('points')}
+                            >
+                                {pendingPromotionRewardCount > 0 ? (
+                                    <span className={styles.navCounter}>{formatBadgeCount(pendingPromotionRewardCount)}</span>
+                                ) : null}
+                                <span className={styles.navTitle}>积分管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'creatorIncentives' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('creatorIncentives')}
+                            >
+                                <span className={styles.navTitle}>创作者激励</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'subscriptions' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('subscriptions')}
+                            >
+                                <span className={styles.navTitle}>会员管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'documents' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('documents')}
+                            >
+                                <span className={styles.navTitle}>文档管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'dailyTasks' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('dailyTasks')}
+                            >
+                                <span className={styles.navTitle}>每日任务管理</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'shareRatio' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('shareRatio')}
+                            >
+                                <span className={styles.navTitle}>分成比例</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'users' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('users')}
+                            >
+                                <span className={styles.navTitle}>用户角色</span>
+                            </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'withdraw' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('withdraw')}
+                            >
+                                <span className={styles.navTitle}>提现管理</span>
+                            </button>
+                        </>
+                    )}
+                    {userRole === 'admin' && userId === '96e89940badf1f67' && (
                         <button
                             type="button"
                             className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
@@ -1508,27 +1537,7 @@ const AdminPanel: React.FC = () => {
                         >
                             <span className={styles.navTitle}>评论管理</span>
                         </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'shareRatio' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('shareRatio')}
-                        >
-                            <span className={styles.navTitle}>分成比例</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'users' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('users')}
-                        >
-                            <span className={styles.navTitle}>用户角色</span>
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'withdraw' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('withdraw')}
-                        >
-                            <span className={styles.navTitle}>提现管理</span>
-                        </button>
+                    )}
                     </aside>
 
                     <div className={styles.contentArea}>

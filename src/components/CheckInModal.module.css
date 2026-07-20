@@ -91,6 +91,13 @@
     font-weight: 500;
 }
 
+.membershipHint {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    margin: -10px 0 16px;
+    text-align: center;
+}
+
 .loadingText {
     margin: 40px 0;
     text-align: center;

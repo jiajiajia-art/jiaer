@@ -32,6 +32,8 @@
     padding: 2px;
     width: 860px;
     min-height: 374px;
+    max-height: 90vh;
+    overflow-y: auto;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -76,6 +78,11 @@
     flex: 1;
     width: 460px;
     margin: 0 auto;
+}
+
+.formScroll {
+    overflow-y: auto;
+    flex: 1;
 }
 
 .formGroup {

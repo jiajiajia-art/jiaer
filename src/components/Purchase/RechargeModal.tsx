@@ -513,7 +513,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             planId: 'creator_month',
             name: t('profile.monthlyMember'),
             shortName: t('profile.monthlyMemberShort'),
-            price: 28,
+            price: 30,
             color: '#228b22',
             tagBg: '#228b22',
         },
@@ -521,7 +521,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             planId: 'creator_season',
             name: t('profile.seasonalMember'),
             shortName: t('profile.seasonalMemberShort'),
-            price: 78,
+            price: 90,
             color: '#e57373',
             tagBg: '#e57373',
         },
@@ -529,7 +529,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             planId: 'creator_year',
             name: t('profile.yearlyMember'),
             shortName: t('profile.yearlyMemberShort'),
-            price: 248,
+            price: 365,
             color: '#d4a84b',
             tagBg: '#d4a84b',
         },
@@ -687,7 +687,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 style={{ color: plan.color }}
                             >
                                 <span className={styles.planTag} style={{ background: plan.tagBg }}>
-                                    {plan.shortName}
+                                    {plan.shortName.replace(/会员$/, '')}
                                 </span>
                                 <span className={styles.planPriceSmall}>
                                     {plan.price > 0 ? `${t('rechargeModal.currencySymbol')}${plan.price}` : t('rechargeModal.free')}

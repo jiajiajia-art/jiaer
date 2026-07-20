@@ -573,6 +573,7 @@
     "messages": "消息中心",
     "profile": "个人中心",
     "favorites": "收藏夹",
+    "commentManagement": "评论管理",
     "admin": "管理面板",
     "logout": "退出登录",
     "login": "登录",
@@ -1334,7 +1335,8 @@
     "getPlayStatusFailed": "获取游玩状态失败",
     "ratingUnit": "分",
     "sections": "内容栏目",
-    "playerReviews": "玩家评价"
+    "playerReviews": "玩家评价",
+    "commentManagement": "评论管理"
   },
   "gameRating": {
     "reviews": "玩家评价",
@@ -1399,7 +1401,8 @@
     "requestFailed": "签到请求失败",
     "legendCompleted": "已完成",
     "legendToday": "今日",
-    "legendFuture": "未完成"
+    "legendFuture": "未完成",
+    "membershipBonusHint": "本月签到满一个月可额外获得 {{points}} 积分"
   },
   "stGameCreate": {
     "pageTitle": "创建AVG模式",
