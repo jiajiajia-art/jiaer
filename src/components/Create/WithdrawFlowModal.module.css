@@ -80,6 +80,13 @@
   color: #4b5563;
 }
 
+/* 可提上限数字加粗，方便用户一眼看到能提多少 */
+.maxHighlight {
+  font-weight: 800;
+  color: #111827;
+  margin-left: 2px;
+}
+
 .meta {
   margin: 0;
   font-size: 13px;
@@ -93,6 +100,22 @@
   font-size: 13px;
   font-weight: 600;
   color: #111827;
+}
+
+/* 标题与最低提现 tip 同一行：tip 靠右 */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.amountHint {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-align: right;
 }
 
 .input,
@@ -129,10 +152,29 @@
   padding-top: 14px;
 }
 
+.recordsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 .recordsTitle {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 14px;
   font-weight: 700;
+}
+
+.viewAllButton {
+  border: none;
+  background: transparent;
+  color: #c2410c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
 }
 
 .recordList {
@@ -156,6 +198,42 @@
 
 .recordTime {
   color: #9ca3af;
+}
+
+.statusText {
+  font-weight: 700;
+}
+
+.statusPending {
+  color: #c9782a;
+}
+
+.statusApproved {
+  color: #2d8c58;
+}
+
+.statusRejected {
+  color: #b73a3a;
+}
+
+/* 列表内驳回说明独占一行；备注文字紧跟「备注：」左对齐 */
+.recordRejectRemark {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b73a3a;
+  text-align: left;
+}
+
+.recordRejectLabel {
+  flex-shrink: 0;
+  color: #9ca3af;
+  font-weight: 600;
 }
 
 @media (max-width: 560px) {

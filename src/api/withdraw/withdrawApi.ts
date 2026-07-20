@@ -60,7 +60,10 @@ const withdrawApi = {
     }>>('/auth/withdraw/create', { amount, currency: 'diamonds' }),
 
   list: (params?: { page?: number; pageSize?: number }) =>
-    api.get<ApiResponse<{ list: WithdrawRecord[]; pagination: { page: number; pageSize: number; total: number } }>>(
+    api.get<ApiResponse<{
+      list: WithdrawRecord[];
+      pagination: { page: number; pageSize: number; total: number; totalPages?: number };
+    }>>(
       '/auth/withdraw/list',
       { params },
     ),

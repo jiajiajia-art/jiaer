@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Home from './page/Home';
 import Create from './page/Create';
+import WithdrawRecords from './page/WithdrawRecords';
 import WareHouse from './page/WareHouse';
 import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -84,6 +85,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
+          <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
           <Route path="/asset/details" element={<AssetDetails />} />
           <Route path="/creator" element={<Navigate to="/create" replace />} />
           <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />

@@ -10,7 +10,10 @@ import withdrawApi, {
 import {
   diamondsToCny,
   isValidWithdrawAmount,
+  shouldShowWithdrawRecordsViewAll,
   WITHDRAW_DIAMOND_UNIT,
+  WITHDRAW_MIN_DIAMONDS,
+  WITHDRAW_MODAL_RECORD_LIMIT,
   WITHDRAW_PENDING_MESSAGE,
 } from '../../utils/withdrawRules';
 import { getApiErrorMessage } from '../../utils/error';
@@ -32,7 +35,8 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
   const [eligibility, setEligibility] = useState<WithdrawEligibility | null>(null);
   const [verifyStatus, setVerifyStatus] = useState<CreatorVerifyStatus | null>(null);
   const [records, setRecords] = useState<WithdrawRecord[]>([]);
-  const [amount, setAmount] = useState(10);
+  const [recordsTotal, setRecordsTotal] = useState(0);
+  const [amount, setAmount] = useState(WITHDRAW_MIN_DIAMONDS);
   const [applyRemark, setApplyRemark] = useState('');
 
   const load = async () => {
@@ -41,11 +45,14 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
       const [eligResp, verifyResp, listResp] = await Promise.all([
         withdrawApi.getEligibility(),
         withdrawApi.getVerifyStatus(),
-        withdrawApi.list({ page: 1, pageSize: 10 }),
+        withdrawApi.list({ page: 1, pageSize: WITHDRAW_MODAL_RECORD_LIMIT }),
       ]);
       if (eligResp.data.success) setEligibility(eligResp.data.data || null);
       if (verifyResp.data.success) setVerifyStatus(verifyResp.data.data || null);
-      if (listResp.data.success) setRecords(listResp.data.data?.list || []);
+      if (listResp.data.success) {
+        setRecords(listResp.data.data?.list || []);
+        setRecordsTotal(Number(listResp.data.data?.pagination?.total || 0));
+      }
     } catch (error) {
       toast.error(getApiErrorMessage(error, t('create.withdrawLoadFailed')));
     } finally {
@@ -92,7 +99,11 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
   const handleCreateWithdraw = async () => {
     if (!eligibility) return;
     if (!isValidWithdrawAmount(amount) || amount > eligibility.maxWithdrawable) {
-      toast.error(t('create.withdrawAmountInvalid', { unit: WITHDRAW_DIAMOND_UNIT, max: eligibility.maxWithdrawable }));
+      toast.error(t('create.withdrawAmountInvalid', {
+        min: WITHDRAW_MIN_DIAMONDS,
+        unit: WITHDRAW_DIAMOND_UNIT,
+        max: eligibility.maxWithdrawable,
+      }));
       return;
     }
     setSubmitting(true);
@@ -116,6 +127,19 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
     if (status === 'approved') return t('create.withdrawStatusApproved');
     if (status === 'rejected') return t('create.withdrawStatusRejected');
     return status;
+  };
+
+  /** 提现记录状态着色：待审橙、通过绿、驳回红 */
+  const statusClassName = (status: string) => {
+    if (status === 'pending') return styles.statusPending;
+    if (status === 'approved') return styles.statusApproved;
+    if (status === 'rejected') return styles.statusRejected;
+    return '';
+  };
+
+  const goViewAllRecords = () => {
+    onClose();
+    navigate('/create/withdraw-records');
   };
 
   const renderBody = () => {
@@ -202,15 +226,27 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
       <div className={styles.body}>
         <div className={styles.metaRow}>
           <span>{t('create.withdrawBalance', { balance: eligibility.balance })}</span>
-          <span>{t('create.withdrawMax', { max: eligibility.maxWithdrawable })}</span>
+          <span>
+            {t('create.withdrawMaxPrefix')}
+            <strong className={styles.maxHighlight}>{eligibility.maxWithdrawable}</strong>
+          </span>
           <span>{eligibility.rateLabel}</span>
         </div>
         <label className={styles.label}>
-          {t('create.withdrawAmount')}
+          <span className={styles.labelRow}>
+            <span>{t('create.withdrawAmount')}</span>
+            <span className={styles.amountHint}>
+              {t('create.withdrawAmountHint', {
+                min: WITHDRAW_MIN_DIAMONDS,
+                unit: WITHDRAW_DIAMOND_UNIT,
+                cny: diamondsToCny(WITHDRAW_MIN_DIAMONDS),
+              })}
+            </span>
+          </span>
           <input
             className={styles.input}
             type="number"
-            min={WITHDRAW_DIAMOND_UNIT}
+            min={WITHDRAW_MIN_DIAMONDS}
             step={WITHDRAW_DIAMOND_UNIT}
             max={eligibility.maxWithdrawable}
             value={amount}
@@ -223,7 +259,7 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
         <button
           type="button"
           className={styles.primaryButton}
-          disabled={submitting || eligibility.maxWithdrawable < WITHDRAW_DIAMOND_UNIT}
+          disabled={submitting || eligibility.maxWithdrawable < WITHDRAW_MIN_DIAMONDS}
           onClick={() => void handleCreateWithdraw()}
         >
           {submitting ? t('create.submitting') : t('create.confirmWithdraw')}
@@ -244,16 +280,28 @@ const WithdrawFlowModal: React.FC<WithdrawFlowModalProps> = ({ open, onClose }) 
         {renderBody()}
         {records.length > 0 ? (
           <div className={styles.records}>
-            <h3 className={styles.recordsTitle}>{t('create.myWithdrawRecords')}</h3>
+            <div className={styles.recordsHeader}>
+              <h3 className={styles.recordsTitle}>{t('create.myWithdrawRecords')}</h3>
+              {shouldShowWithdrawRecordsViewAll(recordsTotal) ? (
+                <button type="button" className={styles.viewAllButton} onClick={goViewAllRecords}>
+                  {t('create.withdrawRecordsViewAll')}
+                </button>
+              ) : null}
+            </div>
             <ul className={styles.recordList}>
               {records.map((item) => (
                 <li key={item.id} className={styles.recordItem}>
+                  <span className={styles.recordTime}>{item.createdAt?.slice(0, 10)}</span>
                   <span>{item.amount}{t('create.diamondUnit')}</span>
                   <span>¥{item.amountCny}</span>
-                  <span>{statusLabel(item.status)}</span>
-                  <span className={styles.recordTime}>{item.createdAt?.slice(0, 10)}</span>
+                  <span className={`${styles.statusText} ${statusClassName(item.status)}`}>
+                    {statusLabel(item.status)}
+                  </span>
                   {item.status === 'rejected' && item.remark ? (
-                    <span className={styles.rejectRemark}>{item.remark}</span>
+                    <span className={styles.recordRejectRemark}>
+                      <span className={styles.recordRejectLabel}>{t('create.withdrawRecordsColRemark')}：</span>
+                      <span>{item.remark}</span>
+                    </span>
                   ) : null}
                 </li>
               ))}
