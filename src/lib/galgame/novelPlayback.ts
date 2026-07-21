@@ -132,12 +132,35 @@ export function findSceneBackdropAtIndex(
   return null;
 }
 
-/** preset scene → 图片路径（与回放 getSceneImagePath 一致） */
+/** 从 scene.image / scene.images 取可用路径（兼容 string 与 {base,active,...}） */
+export function pickFirstImageUrl(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const clean = value.trim();
+    return clean || null;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  for (const preferredKey of ['active', 'base', 'default', 'cover']) {
+    const candidate = record[preferredKey];
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  for (const candidate of Object.values(record)) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+/** preset scene → 图片路径（与回放 / 后端 resolveSceneImage 一致） */
 export function resolveSceneImagePathFromPreset(scene: unknown): string | undefined {
   if (!scene || typeof scene !== 'object') return undefined;
   const record = scene as Record<string, unknown>;
-  const imagePath = record.image ?? record.images;
-  return typeof imagePath === 'string' && imagePath.trim() ? imagePath : undefined;
+  return pickFirstImageUrl(record.image) || pickFirstImageUrl(record.images) || undefined;
 }
 
 export function resolveBackdropImagePath(
@@ -150,6 +173,26 @@ export function resolveBackdropImagePath(
     if (fromPreset) return fromPreset;
   }
   return hint.sceneImage;
+}
+
+/**
+ * 功能注释：无 scene_change 回溯时，用原作场景表兜底（与 AI 文游一致），禁止用宣传封面冒充场景底图。
+ */
+export function resolveFallbackSceneBackdrop(
+  scenesList: Array<{ id?: string; name?: string; image?: unknown; images?: unknown }> | null | undefined,
+): SceneBackdropHint | null {
+  const list = Array.isArray(scenesList) ? scenesList : [];
+  if (list.length === 0) return null;
+
+  const withImage =
+    list.find((scene) => Boolean(resolveSceneImagePathFromPreset(scene))) || list[0];
+  if (!withImage) return null;
+
+  return {
+    sceneId: withImage.id != null ? String(withImage.id) : null,
+    sceneImage: resolveSceneImagePathFromPreset(withImage) || null,
+    sceneName: typeof withImage.name === 'string' && withImage.name ? withImage.name : null,
+  };
 }
 
 export type AutoAdvanceGateInput = {

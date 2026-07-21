@@ -14,6 +14,7 @@ import {
   canAutoAdvanceWithSteps,
   findSceneBackdropAtIndex,
   resolveBackdropImagePath,
+  resolveFallbackSceneBackdrop,
   seekPlaybackIndex,
   type NovelPlaybackStepLike,
 } from '../../lib/galgame/novelPlayback';
@@ -25,7 +26,7 @@ import {
 
 export type NovelPlaybackPreset = {
   world?: unknown;
-  scenes?: { scenes?: Array<{ id?: string; name?: string; image?: string; images?: string }> } | null;
+  scenes?: { scenes?: Array<{ id?: string; name?: string; image?: unknown; images?: unknown }> } | null;
   npcs?: unknown;
 };
 
@@ -34,6 +35,7 @@ type UseNovelNormalPlaybackArgs = {
   preset: NovelPlaybackPreset | null;
   enabled: boolean;
   isWaitingForData?: boolean;
+  /** @deprecated 宣传封面不得作为场景背景；保留参数以免破坏调用方，已忽略 */
   coverFallbackUrl?: string | null;
   onNeedPrefetch?: (playbackIndex: number) => void;
 };
@@ -50,7 +52,6 @@ export function useNovelNormalPlayback({
   preset,
   enabled,
   isWaitingForData = false,
-  coverFallbackUrl = null,
   onNeedPrefetch,
 }: UseNovelNormalPlaybackArgs) {
   const [index, setIndex] = useState(0);
@@ -59,13 +60,18 @@ export function useNovelNormalPlayback({
   const [backgroundImage, setBackgroundImage] = useState('');
   const [sceneName, setSceneName] = useState('');
 
+  const scenesList = useMemo(
+    () => (Array.isArray(preset?.scenes?.scenes) ? preset.scenes.scenes : []),
+    [preset?.scenes],
+  );
+
   const scenesById = useMemo(() => {
     const map = new Map<string, unknown>();
-    (preset?.scenes?.scenes || []).forEach((scene) => {
+    scenesList.forEach((scene) => {
       if (scene?.id) map.set(String(scene.id), scene);
     });
     return map;
-  }, [preset?.scenes]);
+  }, [scenesList]);
 
   const messagePreset: StepToMessagePreset = useMemo(() => {
     const world = (preset?.world ?? null) as { player?: StepToMessagePreset['player'] } | null;
@@ -83,18 +89,22 @@ export function useNovelNormalPlayback({
 
   const syncBackdrop = useCallback(
     (stepList: NovelPlaybackStepLike[], at: number) => {
-      const hint = findSceneBackdropAtIndex(stepList, at);
+      // 功能注释：优先回溯 scene_change；缺失时用原作场景表，绝不回退到游戏封面。
+      const hint =
+        findSceneBackdropAtIndex(stepList, at) || resolveFallbackSceneBackdrop(scenesList);
       const path = resolveBackdropImagePath(hint, scenesById);
-      const url = toDisplayUrl(path) || toDisplayUrl(coverFallbackUrl) || '';
-      if (url) setBackgroundImage(url);
+      const url = toDisplayUrl(path) || '';
+      setBackgroundImage(url);
       if (hint?.sceneName) {
         setSceneName(hint.sceneName);
       } else if (hint?.sceneId && scenesById.has(hint.sceneId)) {
         const scene = scenesById.get(hint.sceneId) as { name?: string };
         setSceneName(String(scene?.name || ''));
+      } else {
+        setSceneName('');
       }
     },
-    [coverFallbackUrl, scenesById],
+    [scenesById, scenesList],
   );
 
   // 步骤列表变化时重置到首个可展示帧

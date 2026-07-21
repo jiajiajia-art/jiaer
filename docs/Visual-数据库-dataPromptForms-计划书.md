@@ -151,7 +151,7 @@ interface DataPromptForm {
 | `services/visual/dataPromptForms.js` | 校验 + 选择性注入 |
 | `interface/handlers/visual/editRoutes.js` | PUT 校验 |
 | `services/visual/gameLogic.js` | 注入 + `worldRequiredKeys` |
-| `cf/migrations/2026-07-09-data-prompt-forms-schema-registry.sql` | D1 registry |
+| `cf/migrations/2026-07-08-more-prompt-forms-v2-selective.sql` | D1 registry（含 dataPromptForms） |
 | `cf/d1-schema.sql` | seed 同步 |
 
 ### 6.3 测试

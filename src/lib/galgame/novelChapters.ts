@@ -95,23 +95,6 @@ export function resolveNovelSynopsisText(
   return String(description || '').trim();
 }
 
-/** 功能注释：导出弹窗内仅改章节标题。 */
-export function applyEditedChapterTitles(
-  chapters: NovelChapterIndexItem[],
-  titles: string[],
-): NovelChapterIndexItem[] {
-  return chapters.map((chapter, index) => {
-    const raw = titles[index];
-    if (typeof raw !== 'string') return { ...chapter };
-    let title = raw.trim().replace(/\s+/g, ' ');
-    if (!title) title = chapter.title;
-    if (title.length > NOVEL_CHAPTER_TITLE_MAX_LENGTH) {
-      title = title.slice(0, NOVEL_CHAPTER_TITLE_MAX_LENGTH).trim();
-    }
-    return { ...chapter, title };
-  });
-}
-
 /** 功能注释：从章节起点附近 steps 抽取可读标题（场景名优先）。 */
 export function pickChapterTitleFromSteps(
   steps: Array<Record<string, unknown> | null | undefined>,

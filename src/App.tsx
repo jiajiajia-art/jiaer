@@ -1,6 +1,7 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import './styles/funloomToast.css';
 import Home from './page/Home';
 import Create from './page/Create';
 import WareHouse from './page/WareHouse';
@@ -47,20 +48,45 @@ function App() {
       <RouteReporter />
       <Toaster
         position="top-center"
+        gutter={12}
         containerStyle={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          top: 24,
+          zIndex: 4000,
         }}
         toastOptions={{
-          duration: 3000,
-          success: { duration: 2500 },
-          error: { duration: 8000 },
+          className: 'funloom-toast',
+          duration: 3200,
+          success: {
+            duration: 2600,
+            className: 'funloom-toast funloom-toast-success',
+            iconTheme: {
+              primary: '#2f9d6a',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            duration: 6500,
+            className: 'funloom-toast funloom-toast-error',
+            iconTheme: {
+              primary: '#fb4655',
+              secondary: '#fff5f5',
+            },
+          },
+          blank: {
+            className: 'funloom-toast funloom-toast-blank',
+          },
+          loading: {
+            className: 'funloom-toast funloom-toast-loading',
+            iconTheme: {
+              primary: '#c9a27a',
+              secondary: '#fff8f0',
+            },
+          },
           style: {
-            minWidth: '250px',
-            textAlign: 'center',
-            borderRadius: '8px',
+            boxShadow: 'none',
+            background: 'transparent',
+            color: 'inherit',
+            padding: 0,
           },
         }}
       />

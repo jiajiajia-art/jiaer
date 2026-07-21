@@ -50,6 +50,7 @@ const CreateGame: React.FC = () => {
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [publishModalMode, setPublishModalMode] = useState<'publish' | 'novel-edit'>('publish');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
     const [showPriceModal, setShowPriceModal] = useState(false);
     const [showMiniProgramTip, setShowMiniProgramTip] = useState(false);
     const [miniProgramTipMessage, setMiniProgramTipMessage] = useState('');
@@ -165,7 +166,7 @@ const CreateGame: React.FC = () => {
             navigate('/create');
         } catch (error) {
             console.error('删除游戏失败:', error);
-            alert(t('createGame.deleteFailed'));
+            toast.error(t('createGame.deleteFailed'));
         } finally {
             setIsDeleting(false);
         }
@@ -187,12 +188,12 @@ const CreateGame: React.FC = () => {
             } else {
                 console.error('发布游戏失败:', response.data);
                 const errorMessage = response.data.message || t('createGame.publishFailed');
-                alert(errorMessage);
+                setNoticeMessage(errorMessage);
             }
         } catch (error: any) {
             console.error('发布游戏失败:', error);
             const errorMessage = error.response?.data?.message || error.message || t('createGame.publishFailed');
-            alert(errorMessage);
+            setNoticeMessage(errorMessage);
         }
     };
     // 下架游戏
@@ -206,7 +207,7 @@ const CreateGame: React.FC = () => {
                 toast.error(response.data.message || t('createGame.unpublishFailed'));
             }
         } catch (error) {
-            alert(t('createGame.unpublishFailed'));
+            toast.error(t('createGame.unpublishFailed'));
         }
     };
 
@@ -290,7 +291,7 @@ const CreateGame: React.FC = () => {
         if (normalizedEngine === 'CUSTOM') {
             const appId = gameDetail?.customAppId || gameDetail?.file_id;
             if (!appId) {
-                alert(t('createGame.missingCustomAppId'));
+                toast.error(t('createGame.missingCustomAppId'));
                 return;
             }
             navigate(`/customif/create?appId=${encodeURIComponent(appId)}`);
@@ -300,7 +301,7 @@ const CreateGame: React.FC = () => {
         if (normalizedEngine === 'ST' || normalizedEngine === 'AVG') {
             const appId = (gameDetail as any)?.customAppId || gameDetail?.file_id;
             if (!appId) {
-                alert(t('createGame.missingAppId'));
+                toast.error(t('createGame.missingAppId'));
                 return;
             }
             navigate(`/st/create?appId=${encodeURIComponent(appId)}`);
@@ -413,6 +414,16 @@ const CreateGame: React.FC = () => {
                 isOpen={showDeleteModal}
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setShowDeleteModal(false)}
+            />
+
+            <ConfirmModal
+                variant="alert"
+                isOpen={Boolean(noticeMessage)}
+                title={t('common.noticeTitle')}
+                message={noticeMessage || ''}
+                confirmButtonText={t('common.gotIt')}
+                onConfirm={() => setNoticeMessage(null)}
+                onCancel={() => setNoticeMessage(null)}
             />
 
             {gameDetail && (

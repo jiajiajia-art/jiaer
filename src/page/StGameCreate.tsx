@@ -480,7 +480,7 @@ const StGameCreate: React.FC = () => {
     if (field === 'themeTags') {
       showThemeTagRequiredToast(message);
     } else {
-      window.alert(message);
+      toast.error(message);
     }
     navigateToStep(DEFAULT_STEP_KEY, { replace: true });
     setHighlightField(field);

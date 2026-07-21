@@ -9,7 +9,6 @@ import {
   chapterIndexFromLegacyChapters,
   resolveReadableStepIndex,
   resolveNovelSynopsisText,
-  applyEditedChapterTitles,
   isGenericChapterTitle,
   enrichChapterTitlesFromSteps,
   formatChapterTocDisplay,
@@ -58,19 +57,6 @@ test('resolveReadableStepIndex_应跳过scene_change', () => {
 test('resolveNovelSynopsisText_应裁剪空白', () => {
   assert.equal(resolveNovelSynopsisText('  简介  '), '简介');
   assert.equal(resolveNovelSynopsisText(null), '');
-});
-
-test('applyEditedChapterTitles_应按序改名', () => {
-  const base = normalizeNovelChapterIndex(
-    [
-      { title: 'A', startStepIndex: 0, endStepIndex: 1 },
-      { title: 'B', startStepIndex: 2, endStepIndex: 3 },
-    ],
-    4,
-  );
-  const next = applyEditedChapterTitles(base, ['城门', '  ']);
-  assert.equal(next[0].title, '城门');
-  assert.equal(next[1].title, 'B');
 });
 
 test('enrichChapterTitlesFromSteps_占位章名应用场景名补标题', () => {

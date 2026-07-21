@@ -14,6 +14,7 @@ import {
   findSceneBackdropAtIndex,
   resolveSceneImagePathFromPreset,
   resolveBackdropImagePath,
+  resolveFallbackSceneBackdrop,
   canAutoAdvanceWithSteps,
   contiguousLoadedStepsFromBuffer,
   shouldPrefetchPlaybackWindow,
@@ -117,7 +118,19 @@ test('resolveBackdropImagePath_preset优先于step内嵌图', () => {
     'only.jpg',
   );
   assert.equal(resolveSceneImagePathFromPreset({ images: 'x.png' }), 'x.png');
+  assert.equal(resolveSceneImagePathFromPreset({ image: { base: 'obj.png', active: 'a.png' } }), 'a.png');
   assert.equal(resolveSceneImagePathFromPreset({}), undefined);
+});
+
+test('resolveFallbackSceneBackdrop_应用场景图不用封面', () => {
+  const hint = resolveFallbackSceneBackdrop([
+    { id: 'empty', name: '空' },
+    { id: 'study', name: '书房', image: { base: 'study.jpg' } },
+  ]);
+  assert.equal(hint?.sceneId, 'study');
+  assert.equal(hint?.sceneImage, 'study.jpg');
+  assert.equal(hint?.sceneName, '书房');
+  assert.equal(resolveFallbackSceneBackdrop([]), null);
 });
 
 test('canAutoAdvanceWithSteps_门禁', () => {

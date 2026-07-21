@@ -12,6 +12,7 @@ import MapPanel, { type MapPanelRef } from '../components/GameSettingEditor/MapP
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
 import { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
 import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
+import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
 import { useEditorData } from '../hooks/editor/useEditorData';
@@ -68,6 +69,7 @@ const GameSettingsEditor = () => {
     
     const [isParsing, setIsParsing] = useState<boolean>(false);
     const [showPublishModal, setShowPublishModal] = useState<boolean>(false);
+    const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
     const hasLoadedMapRef = useRef<boolean>(false);
     const parsingSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -431,9 +433,13 @@ const GameSettingsEditor = () => {
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel, morePromptForms, dataPromptForms]);
 
     const onPublishGame = useCallback(async (payload: { description: string }) => {
-        await handlePublishGame(payload.description);
-        setShowPublishModal(false);
-    }, [handlePublishGame]);
+        try {
+            await handlePublishGame(payload.description);
+            setShowPublishModal(false);
+        } catch (error: any) {
+            setNoticeMessage(error?.message || t('createGame.publishFailed'));
+        }
+    }, [handlePublishGame, t]);
 
     const checkActivePanelBeforeAction = useCallback(async (action?: () => void): Promise<boolean> => {
         // 实现操作前统一复用当前面板未保存检查
@@ -799,6 +805,15 @@ const GameSettingsEditor = () => {
                         fileId={fileId || undefined}
                     />
                 )}
+                <ConfirmModal
+                    variant="alert"
+                    isOpen={Boolean(noticeMessage)}
+                    title={t('common.noticeTitle')}
+                    message={noticeMessage || ''}
+                    confirmButtonText={t('common.gotIt')}
+                    onConfirm={() => setNoticeMessage(null)}
+                    onCancel={() => setNoticeMessage(null)}
+                />
             </div>
             {isMiniProgramTxtMode && <MobileBottomNav />}
         </>

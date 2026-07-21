@@ -38,6 +38,24 @@ export function resolveReplayModalTitle(title: string, createAsNovel: boolean, r
   return stripReplayMarkerFromTitle(trimmed);
 }
 
+const NOVEL_TITLE_SUFFIX = '小说';
+const EXPORT_NOVEL_TITLE_MAX = 20;
+
+/**
+ * 导出视觉小说默认标题：去掉回放标记后，若尚未以「小说」结尾则追加，并截断到 20 字。
+ */
+export function buildExportVisualNovelDefaultTitle(
+  title: string,
+  fallback = '',
+  maxLength = EXPORT_NOVEL_TITLE_MAX,
+): string {
+  const base = stripReplayMarkerFromTitle(title) || String(fallback || '').trim();
+  if (!base) return NOVEL_TITLE_SUFFIX.slice(0, maxLength);
+  if (/小说\s*$/u.test(base)) return base.slice(0, maxLength);
+  const room = Math.max(0, maxLength - NOVEL_TITLE_SUFFIX.length);
+  return `${base.slice(0, room)}${NOVEL_TITLE_SUFFIX}`.slice(0, maxLength);
+}
+
 const normalizeRawGameType = (value?: string | null): string => {
   if (!value) return '';
   return String(value)

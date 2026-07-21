@@ -2,15 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import styles from './ShareReplayModal.module.css';
-import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
+import { buildExportVisualNovelDefaultTitle, stripReplayMarkerFromTitle } from '../../utils/novelGame';
 import replayApi from '../../api/galgame/replay';
 import type { AxiosError } from 'axios';
-import {
-  applyEditedChapterTitles,
-  normalizeNovelChapterIndex,
-  NOVEL_CHAPTER_TITLE_MAX_LENGTH,
-  type NovelChapterIndexItem,
-} from '../../lib/galgame/novelChapters';
 
 interface Props {
   isOpen: boolean;
@@ -20,7 +14,6 @@ interface Props {
   onSubmit: (payload: {
     title: string;
     description?: string;
-    chapters?: NovelChapterIndexItem[];
   }) => Promise<void> | void;
   onClose: () => void;
 }
@@ -30,7 +23,7 @@ const MAX_DESCRIPTION_LENGTH = 300;
 
 const clampTitle = (value: string) => value.slice(0, MAX_TITLE_LENGTH);
 
-/** 历史导出视觉小说弹窗：标题 + 简介 + AI 章节名（可改），创建后进草稿箱 */
+/** 历史导出视觉小说弹窗：标题 + 简介，创建后进草稿箱（章节由服务端自动生成） */
 const ExportVisualNovelModal: React.FC<Props> = ({
   isOpen,
   defaultTitle,
@@ -42,86 +35,29 @@ const ExportVisualNovelModal: React.FC<Props> = ({
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [chapters, setChapters] = useState<NovelChapterIndexItem[]>([]);
-  const [chapterTitles, setChapterTitles] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
-  const [generatingChapters, setGeneratingChapters] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    const initialTitle = stripReplayMarkerFromTitle(defaultTitle || '') || t('galgame.exportVisualNovelDefaultTitle');
+    const initialTitle = buildExportVisualNovelDefaultTitle(
+      defaultTitle || '',
+      t('galgame.exportVisualNovelDefaultTitle'),
+      MAX_TITLE_LENGTH,
+    );
     setTitle(clampTitle(initialTitle));
     setDescription('');
-    setChapters([]);
-    setChapterTitles([]);
     setGeneratingDescription(false);
-    setGeneratingChapters(false);
   }, [defaultTitle, isOpen, t]);
 
-  // 打开弹窗后自动生成章节目录（可改名）
-  useEffect(() => {
-    if (!isOpen || !sessionId || !fileId) return;
-    let cancelled = false;
-    const requestTitle =
-      stripReplayMarkerFromTitle(defaultTitle || '') || t('galgame.exportVisualNovelDefaultTitle');
-
-    const run = async () => {
-      try {
-        setGeneratingChapters(true);
-        const response = await replayApi.generateNovelChaptersFromSession({
-          sessionId,
-          fileId,
-          title: requestTitle,
-        });
-        if (cancelled) return;
-        const next = normalizeNovelChapterIndex(
-          response.data?.data?.chapters,
-          Number(response.data?.data?.stepCount) || 0,
-        );
-        if (!response.data?.success || next.length === 0) {
-          toast.error(response.data?.message || t('galgame.exportVisualNovelChaptersFailed'));
-          return;
-        }
-        setChapters(next);
-        setChapterTitles(next.map((item) => item.title));
-        if (response.data?.data?.usedFallback) {
-          toast(t('galgame.exportVisualNovelChaptersFallback'));
-        }
-      } catch (error) {
-        if (cancelled) return;
-        const axiosError = error as AxiosError<{ message?: string }>;
-        console.error('导出弹窗 AI 生成章节失败:', error);
-        toast.error(axiosError.response?.data?.message || t('galgame.exportVisualNovelChaptersFailed'));
-      } finally {
-        if (!cancelled) setGeneratingChapters(false);
-      }
-    };
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, sessionId, fileId, defaultTitle, t]);
-
   const canSubmit = useMemo(
-    () =>
-      title.trim().length > 0
-      && chapters.length > 0
-      && !submitting
-      && !generatingDescription
-      && !generatingChapters,
-    [title, chapters.length, submitting, generatingDescription, generatingChapters],
+    () => title.trim().length > 0 && !submitting && !generatingDescription,
+    [title, submitting, generatingDescription],
   );
 
   const canGenerateDescription = useMemo(
-    () => Boolean(sessionId && fileId && title.trim() && !generatingDescription && !submitting && !generatingChapters),
-    [sessionId, fileId, title, generatingDescription, submitting, generatingChapters],
-  );
-
-  const canRegenerateChapters = useMemo(
-    () => Boolean(sessionId && fileId && title.trim() && !generatingChapters && !submitting && !generatingDescription),
-    [sessionId, fileId, title, generatingChapters, submitting, generatingDescription],
+    () => Boolean(sessionId && fileId && title.trim() && !generatingDescription && !submitting),
+    [sessionId, fileId, title, generatingDescription, submitting],
   );
 
   if (!isOpen) return null;
@@ -156,51 +92,20 @@ const ExportVisualNovelModal: React.FC<Props> = ({
     }
   };
 
-  const handleRegenerateChapters = async () => {
-    if (!canRegenerateChapters || !sessionId || !fileId) return;
-    try {
-      setGeneratingChapters(true);
-      const response = await replayApi.generateNovelChaptersFromSession({
-        sessionId,
-        fileId,
-        title: stripReplayMarkerFromTitle(title.trim()) || title.trim(),
-      });
-      const next = normalizeNovelChapterIndex(
-        response.data?.data?.chapters,
-        Number(response.data?.data?.stepCount) || 0,
-      );
-      if (!response.data?.success || next.length === 0) {
-        toast.error(response.data?.message || t('galgame.exportVisualNovelChaptersFailed'));
-        return;
-      }
-      setChapters(next);
-      setChapterTitles(next.map((item) => item.title));
-      toast.success(t('galgame.exportVisualNovelChaptersReady'));
-    } catch (error) {
-      const axiosError = error as AxiosError<{ message?: string }>;
-      console.error('导出弹窗重新生成章节失败:', error);
-      toast.error(axiosError.response?.data?.message || t('galgame.exportVisualNovelChaptersFailed'));
-    } finally {
-      setGeneratingChapters(false);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!canSubmit) return;
     try {
       setSubmitting(true);
-      const finalChapters = applyEditedChapterTitles(chapters, chapterTitles);
       await onSubmit({
         title: stripReplayMarkerFromTitle(title.trim()) || title.trim(),
         description: description.trim() || undefined,
-        chapters: finalChapters,
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const busy = generatingDescription || generatingChapters || submitting;
+  const busy = generatingDescription || submitting;
 
   return (
     <div className={styles.overlay} style={{ zIndex: 3400 }} onClick={onClose}>
@@ -264,48 +169,6 @@ const ExportVisualNovelModal: React.FC<Props> = ({
             <div className={styles.helperText}>
               {description.length}/{MAX_DESCRIPTION_LENGTH}
             </div>
-          </div>
-
-          <div className={styles.field}>
-            <div className={styles.labelRow}>
-              <label className={styles.labelInline}>{t('galgame.exportVisualNovelChapters')}</label>
-              <button
-                type="button"
-                className={styles.aiGenerateBtn}
-                onClick={handleRegenerateChapters}
-                disabled={!canRegenerateChapters}
-              >
-                {generatingChapters
-                  ? t('common.publishSettings.aiGenerating')
-                  : t('galgame.exportVisualNovelChaptersRegen')}
-              </button>
-            </div>
-            {generatingChapters && chapters.length === 0 ? (
-              <div className={styles.helperText} style={{ textAlign: 'left' }}>
-                {t('galgame.exportVisualNovelChaptersLoading')}
-              </div>
-            ) : null}
-            {chapters.map((chapter, index) => (
-              <div key={chapter.id} style={{ marginBottom: 8 }}>
-                <input
-                  className={styles.input}
-                  value={chapterTitles[index] ?? chapter.title}
-                  maxLength={NOVEL_CHAPTER_TITLE_MAX_LENGTH}
-                  onChange={(event) => {
-                    const next = [...chapterTitles];
-                    next[index] = event.target.value.slice(0, NOVEL_CHAPTER_TITLE_MAX_LENGTH);
-                    setChapterTitles(next);
-                  }}
-                  placeholder={t('galgame.exportVisualNovelChapterTitlePlaceholder')}
-                  disabled={busy}
-                />
-              </div>
-            ))}
-            {chapters.length === 0 && !generatingChapters ? (
-              <div className={styles.helperText} style={{ textAlign: 'left' }}>
-                {t('galgame.exportVisualNovelChaptersRequired')}
-              </div>
-            ) : null}
           </div>
 
           <div className={styles.helperText} style={{ textAlign: 'left' }}>

@@ -209,7 +209,6 @@ const NovelReader: React.FC = () => {
         preset: playbackPreset,
         enabled: playModeEnabled,
         isWaitingForData: isFetchingWindow,
-        coverFallbackUrl: meta?.coverUrl || null,
         onNeedPrefetch: handlePlaybackPrefetch,
     });
 

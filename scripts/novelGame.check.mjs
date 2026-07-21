@@ -53,10 +53,13 @@ test('DEFAULT_CREATE_AS_NOVEL is true', () => {
 });
 
 test('stripReplayMarkerFromTitle removes replay suffix', async () => {
-  const { stripReplayMarkerFromTitle, resolveReplayModalTitle } = await import('../src/utils/novelGame.ts');
+  const { stripReplayMarkerFromTitle, resolveReplayModalTitle, buildExportVisualNovelDefaultTitle } = await import('../src/utils/novelGame.ts');
   assert.equal(stripReplayMarkerFromTitle('隋末风云 · 回放'), '隋末风云');
   assert.equal(resolveReplayModalTitle('隋末风云 · 回放', true, '回放'), '隋末风云');
   assert.equal(resolveReplayModalTitle('隋末风云', false, '回放'), '隋末风云 · 回放');
+  assert.equal(buildExportVisualNovelDefaultTitle('跨洋之刃：华盛顿时代的远东征伐'), '跨洋之刃：华盛顿时代的远东征伐小说'.slice(0, 20));
+  assert.equal(buildExportVisualNovelDefaultTitle('我的视觉小说'), '我的视觉小说');
+  assert.equal(buildExportVisualNovelDefaultTitle('', '我的视觉小说'), '我的视觉小说');
 });
 
 test('resolveCreateAsNovelFlag only false when explicitly false', () => {

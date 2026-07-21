@@ -391,6 +391,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                 </button>
                 <h2 className={styles.modalTitle}>{modalTitle}</h2>
 
+                <div className={styles.formScroll}>
                 <div className={styles.formContent}>
                     {showTitleField ? (
                         <div className={styles.textFormGroup}>
@@ -516,17 +517,26 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
                         </div>
                     ) : null}
+                </div>
+                </div>
 
-                    <div className={styles.buttonGroup}>
-                        <button
-                            type="button"
-                            className={styles.publishBtn}
-                            onClick={handleSubmit}
-                            disabled={publishing || saving || coverUploading || generatingDescription}
-                        >
-                            {submitLabel}
-                        </button>
-                    </div>
+                <div className={styles.footerBar}>
+                    <button
+                        type="button"
+                        className={styles.cancelBtn}
+                        onClick={onClose}
+                        disabled={publishing || saving || coverUploading}
+                    >
+                        {t('common.cancel')}
+                    </button>
+                    <button
+                        type="button"
+                        className={styles.publishBtn}
+                        onClick={handleSubmit}
+                        disabled={publishing || saving || coverUploading || generatingDescription}
+                    >
+                        {submitLabel}
+                    </button>
                 </div>
             </div>
             {pendingCropFile ? (

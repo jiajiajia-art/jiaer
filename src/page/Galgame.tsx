@@ -98,12 +98,6 @@ const Galgame = () => {
     const [overwriteDraftConfirm, setOverwriteDraftConfirm] = useState<{
         title: string;
         description?: string;
-        chapters?: Array<{
-            id?: string;
-            title: string;
-            startStepIndex: number;
-            endStepIndex: number;
-        }>;
     } | null>(null);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const buttonBarDragStateRef = useRef<HorizontalDragState>(createInitialHorizontalDragState());
@@ -663,17 +657,10 @@ const Galgame = () => {
     const handleExportVisualNovel = async ({
         title,
         description,
-        chapters,
         overwrite = false,
     }: {
         title: string;
         description?: string;
-        chapters?: Array<{
-            id?: string;
-            title: string;
-            startStepIndex: number;
-            endStepIndex: number;
-        }>;
         overwrite?: boolean;
     }) => {
         logVisualButtonClick(overwrite ? 'export_visual_novel_overwrite' : 'export_visual_novel_create');
@@ -687,7 +674,6 @@ const Galgame = () => {
                 fileId,
                 title,
                 description,
-                chapters,
                 visibility: 'private',
                 createAsNovel: true,
                 overwrite,
@@ -706,7 +692,7 @@ const Galgame = () => {
 
             if (errorCode === 'REPLAY_TITLE_CONFLICT' && !overwrite) {
                 // 本人同名草稿：二次确认后再带 overwrite 重试（不影响其他账号）
-                setOverwriteDraftConfirm({ title, description, chapters });
+                setOverwriteDraftConfirm({ title, description });
                 return;
             }
 

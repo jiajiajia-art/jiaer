@@ -36,12 +36,12 @@ test('overwrite confirmation only applies to own draft conflict path', () => {
   assert.equal(shouldAskOverwrite('FORBIDDEN', false), false);
 });
 
-test('export requires chapters before submit', () => {
-  const canSubmit = ({ title, chaptersLength, busy }) =>
-    String(title || '').trim().length > 0 && chaptersLength > 0 && !busy;
-  assert.equal(canSubmit({ title: '围城', chaptersLength: 2, busy: false }), true);
-  assert.equal(canSubmit({ title: '围城', chaptersLength: 0, busy: false }), false);
-  assert.equal(canSubmit({ title: '', chaptersLength: 2, busy: false }), false);
+test('export can submit with title only (chapters generated server-side)', () => {
+  const canSubmit = ({ title, busy }) =>
+    String(title || '').trim().length > 0 && !busy;
+  assert.equal(canSubmit({ title: '围城', busy: false }), true);
+  assert.equal(canSubmit({ title: '', busy: false }), false);
+  assert.equal(canSubmit({ title: '围城', busy: true }), false);
 });
 
 test('game detail visual novel entry uses novel list not replay tabs', () => {
