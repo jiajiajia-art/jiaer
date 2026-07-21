@@ -3,34 +3,34 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { FaRegShareFromSquare } from 'react-icons/fa6';
-import { IoChevronBack, IoListOutline, IoClose } from 'react-icons/io5';
+import { IoChevronBack } from 'react-icons/io5';
 import TextModeDisplay from '../components/Galgame/TextModeDisplay';
 import NovelTextVirtualList from '../components/NovelReader/NovelTextVirtualList';
+import NovelPlaybackShell from '../components/NovelReader/NovelPlaybackShell';
 import novelApi, { type NovelChapter, type NovelContent, type NovelMeta } from '../api/galgame/novel';
+import getGalgamePresetApi from '../api/galgame/getGalgamePreset';
 import { convertStepsToTextModalFormat } from '../hooks/mapGalgame/common/interactionUtils';
+import { useNovelNormalPlayback, type NovelPlaybackPreset } from '../hooks/galgame/useNovelNormalPlayback';
 import { getImageUrl } from '../utils/constants';
 import { countVisibleNovelTextSteps } from '../utils/novelGame';
 import { getGameTypeLabelFromMeta } from '../utils/gameTypeLabel';
 import {
-  buildFallbackChapterIndexFromSteps,
-  chapterIndexFromLegacyChapters,
-  enrichChapterTitlesFromSteps,
-  formatChapterTocDisplay,
   normalizeNovelChapterIndex,
   resolveNovelSynopsisText,
-  resolveReadableStepIndex,
-  type NovelChapterIndexItem,
 } from '../lib/galgame/novelChapters';
 import {
   applyNovelWindowToBuffer,
   bufferFromFullSteps,
-  computeChapterFetchWindow,
   createEmptyNovelStepBuffer,
   NOVEL_WINDOW_DEFAULT_LIMIT,
   shouldUseNovelVirtualList,
   shouldUseNovelWindowMode,
   type NovelStepBuffer,
 } from '../lib/galgame/novelContentWindow';
+import {
+  contiguousLoadedStepsFromBuffer,
+  shouldPrefetchPlaybackWindow,
+} from '../lib/galgame/novelPlayback';
 import styles from './NovelReader.module.css';
 
 /** 复制文本到剪贴板：优先 Clipboard API，移动端/非 HTTPS 时回退 execCommand */
@@ -82,11 +82,13 @@ const NovelReader: React.FC = () => {
     const [content, setContent] = useState<NovelContent | null>(null);
     const [meta, setMeta] = useState<NovelMeta | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isTocOpen, setIsTocOpen] = useState(false);
     const [windowMode, setWindowMode] = useState(false);
     const [stepBuffer, setStepBuffer] = useState<NovelStepBuffer>(() => createEmptyNovelStepBuffer());
     const [isFetchingWindow, setIsFetchingWindow] = useState(false);
     const [loadError, setLoadError] = useState(false);
+    const [playbackPreset, setPlaybackPreset] = useState<NovelPlaybackPreset | null>(null);
+    /** 文本模式：对齐经典回放底栏「文本」开关 */
+    const [isPlaybackTextMode, setIsPlaybackTextMode] = useState(false);
     const fetchLockRef = useRef(false);
     const loadStartedAtRef = useRef(0);
 
@@ -155,27 +157,6 @@ const NovelReader: React.FC = () => {
         return content.chapters;
     }, [content]);
 
-    const chapterIndex = useMemo((): NovelChapterIndexItem[] => {
-        if (windowMode && stepBuffer.chapterIndex.length > 0) {
-            const stepsForEnrich = [...stepBuffer.stepsByIndex.entries()]
-                .sort((a, b) => a[0] - b[0])
-                .map(([, step]) => step as Record<string, unknown>);
-            // 功能注释：窗口模式 TOC 以首包 chapterIndex 为准，标题尽量用已加载 steps 补全
-            return enrichChapterTitlesFromSteps(stepBuffer.chapterIndex, stepsForEnrich);
-        }
-        if (hasReplayStepsContent(content)) {
-            const fromContent = normalizeNovelChapterIndex(content.chapterIndex, content.steps.length);
-            const base =
-                fromContent.length > 0
-                    ? fromContent
-                    : buildFallbackChapterIndexFromSteps(content.steps);
-            return enrichChapterTitlesFromSteps(base, content.steps);
-        }
-        if (hasLegacyChaptersContent(content)) {
-            return chapterIndexFromLegacyChapters(content.chapters);
-        }
-        return [];
-    }, [content, stepBuffer.chapterIndex, stepBuffer.stepsByIndex, windowMode]);
 
     const synopsisText = useMemo(
         () => resolveNovelSynopsisText(meta?.description),
@@ -196,6 +177,74 @@ const NovelReader: React.FC = () => {
     );
 
     const useVirtualList = windowMode && shouldUseNovelVirtualList(stepBuffer.totalStepCount);
+
+    /** 回放式阅读用已加载连续 steps；全量模式直接用 content.steps */
+    const playbackSteps = useMemo(() => {
+        if (windowMode) {
+            return contiguousLoadedStepsFromBuffer(
+                stepBuffer.stepsByIndex,
+                stepBuffer.totalStepCount || meta?.stepCount || 0,
+            );
+        }
+        if (hasReplayStepsContent(content)) return content.steps;
+        return [];
+    }, [content, meta?.stepCount, stepBuffer.stepsByIndex, stepBuffer.totalStepCount, windowMode]);
+
+    const hasPlaybackSteps = playbackSteps.length > 0;
+    const playModeEnabled = hasPlaybackSteps && !isLoading && !loadError;
+
+    const handlePlaybackPrefetch = useCallback(
+        (playbackIndex: number) => {
+            if (!windowMode || !fileId) return;
+            const loaded = playbackSteps.length;
+            const total = stepBuffer.totalStepCount || meta?.stepCount || 0;
+            if (!shouldPrefetchPlaybackWindow(loaded, playbackIndex, total, 20)) return;
+            void fetchWindow(loaded, NOVEL_WINDOW_DEFAULT_LIMIT);
+        },
+        [fetchWindow, fileId, meta?.stepCount, playbackSteps.length, stepBuffer.totalStepCount, windowMode],
+    );
+
+    const playback = useNovelNormalPlayback({
+        steps: playbackSteps,
+        preset: playbackPreset,
+        enabled: playModeEnabled,
+        isWaitingForData: isFetchingWindow,
+        coverFallbackUrl: meta?.coverUrl || null,
+        onNeedPrefetch: handlePlaybackPrefetch,
+    });
+
+
+    // 功能注释：用原作 fileId 拉场景/NPC，供回放式背景与立绘（与 /replay 一致）
+    useEffect(() => {
+        const sourceFileId = meta?.sourceFileId;
+        if (!sourceFileId) {
+            setPlaybackPreset(null);
+            return;
+        }
+        let mounted = true;
+        void (async () => {
+            try {
+                const response = await getGalgamePresetApi.getGalgameFileId(sourceFileId);
+                if (!mounted) return;
+                const payload = response.data?.data;
+                if (!payload) {
+                    setPlaybackPreset(null);
+                    return;
+                }
+                setPlaybackPreset({
+                    world: payload.world ?? null,
+                    scenes: payload.scenes ?? null,
+                    npcs: payload.npcs ?? null,
+                });
+            } catch (error) {
+                console.warn('[NovelReader] load playback preset failed:', error);
+                if (mounted) setPlaybackPreset(null);
+            }
+        })();
+        return () => {
+            mounted = false;
+        };
+    }, [meta?.sourceFileId]);
 
     const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
@@ -238,79 +287,6 @@ const NovelReader: React.FC = () => {
         }
     }, [canNativeShare, meta?.description, meta?.title, t]);
 
-    const handleJumpToChapter = useCallback(async (chapter: NovelChapterIndexItem) => {
-        setIsTocOpen(false);
-
-        if (windowMode) {
-            const total = stepBuffer.totalStepCount || Number(meta?.stepCount) || 0;
-            const win = computeChapterFetchWindow(chapter, total);
-            try {
-                if (!fileId) return;
-                const response = await novelApi.getContent(fileId, {
-                    from: win.from,
-                    limit: win.limit,
-                });
-                const data = response.data;
-                if (data?.success) {
-                    const steps = Array.isArray(data.steps)
-                        ? data.steps
-                        : Array.isArray(data.content?.steps)
-                            ? data.content.steps
-                            : [];
-                    const from = Number(data.from ?? win.from) || win.from;
-                    const localSteps = steps as Array<{ type?: string }>;
-                    const relative = Math.max(0, chapter.startStepIndex - from);
-                    const readableOffset = resolveReadableStepIndex(localSteps, relative);
-                    const readableIndex = from + readableOffset;
-                    setStepBuffer((prev) =>
-                        applyNovelWindowToBuffer(prev, from, steps, {
-                            totalStepCount: Number(data.totalStepCount ?? total),
-                            chapterIndex: normalizeNovelChapterIndex(
-                                data.chapterIndex ?? data.content?.chapterIndex ?? prev.chapterIndex,
-                                Math.max(Number(data.totalStepCount ?? total), 1),
-                            ),
-                        }),
-                    );
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            const target = document.querySelector(
-                                `[data-novel-step-index="${readableIndex}"]`,
-                            );
-                            if (target && 'scrollIntoView' in target) {
-                                (target as HTMLElement).scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'start',
-                                });
-                            }
-                        });
-                    });
-                }
-            } catch (error) {
-                console.error('目录跳转加载失败:', error);
-                toast.error(t('novelReader.loadFailed'));
-            }
-            return;
-        }
-
-        if (hasReplayStepsContent(content)) {
-            const readableIndex = resolveReadableStepIndex(content.steps, chapter.startStepIndex);
-            requestAnimationFrame(() => {
-                const target = document.querySelector(
-                    `[data-novel-step-index="${readableIndex}"]`,
-                );
-                if (target && 'scrollIntoView' in target) {
-                    (target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    return;
-                }
-                const legacy = document.getElementById(`novel-chapter-${chapter.id}`);
-                legacy?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-            return;
-        }
-
-        const legacy = document.getElementById(`novel-chapter-${chapter.id}`);
-        legacy?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, [content, fileId, meta?.stepCount, stepBuffer.totalStepCount, t, windowMode]);
 
     const handleRetry = useCallback(() => {
         setLoadError(false);
@@ -482,6 +458,40 @@ const NovelReader: React.FC = () => {
             );
         }
 
+        // 功能注释：默认回放式呈现（方案 A）；文本气泡保留为次要模式
+        if (playModeEnabled) {
+            return (
+                <NovelPlaybackShell
+                    backgroundImage={playback.backgroundImage}
+                    sceneName={playback.sceneName}
+                    currentMessage={playback.currentMessage}
+                    finalDisplayText={playback.finalDisplayText}
+                    finalIsTyping={playback.finalIsTyping}
+                    isAutoPlay={playback.isAutoPlay}
+                    isTextMode={isPlaybackTextMode}
+                    playbackIndex={playback.index}
+                    stepsCount={playback.stepsCount}
+                    playbackSpeed={playback.playbackSpeed}
+                    playbackSpeedOptions={playback.playbackSpeedOptions}
+                    textModalSteps={textModalSteps}
+                    stepHandlers={playback.stepHandlers}
+                    onNextMessage={playback.handleNext}
+                    onChoiceClick={playback.handleChoiceClick}
+                    onToggleAutoPlay={() => playback.setIsAutoPlay((v) => !v)}
+                    onToggleTextMode={() => {
+                        setIsPlaybackTextMode((prev) => {
+                            const next = !prev;
+                            if (next) playback.setIsAutoPlay(false);
+                            return next;
+                        });
+                    }}
+                    onSeek={playback.seekTo}
+                    onSpeedChange={playback.setPlaybackSpeed}
+                    onExit={handleBack}
+                />
+            );
+        }
+
         if (useVirtualList) {
             return (
                 <div className={styles.replayTextModeWrapper}>
@@ -597,122 +607,60 @@ const NovelReader: React.FC = () => {
     };
 
     return (
-        <div className={styles.pageContainer}>
-            <div className={styles.topBar}>
-                <div className={styles.topBarContent}>
-                    <button
-                        type="button"
-                        className={styles.backIconButton}
-                        onClick={handleBack}
-                        aria-label={t('gameDetail.back')}
-                    >
-                        <IoChevronBack />
-                    </button>
-                    <div className={styles.topActions}>
-                        {chapterIndex.length > 0 ? (
+        <div className={`${styles.pageContainer} ${playModeEnabled ? styles.pageContainerPlay : ''}`}>
+            {!playModeEnabled ? (
+                <div className={styles.topBar}>
+                    <div className={styles.topBarContent}>
+                        <button
+                            type="button"
+                            className={styles.backIconButton}
+                            onClick={handleBack}
+                            aria-label={t('gameDetail.back')}
+                        >
+                            <IoChevronBack />
+                        </button>
+                        <div className={styles.topActions}>
                             <button
                                 type="button"
                                 className={styles.topIconButton}
-                                onClick={() => setIsTocOpen(true)}
-                                aria-label={t('novelReader.tocLabel')}
+                                onClick={handleShare}
+                                aria-label={t('gameDetail.share')}
                             >
-                                <IoListOutline />
+                                <FaRegShareFromSquare />
                             </button>
-                        ) : null}
-                        <button
-                            type="button"
-                            className={styles.topIconButton}
-                            onClick={handleShare}
-                            aria-label={t('gameDetail.share')}
-                        >
-                            <FaRegShareFromSquare />
-                        </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            ) : null}
 
-            <div className={styles.heroSection} style={heroStyle} />
+            {!playModeEnabled ? (
+                <div className={styles.heroSection} style={heroStyle} />
+            ) : null}
 
-            <main className={styles.contentSection}>
-                <div className={styles.contentWrapper}>
-                    <header className={styles.headerSection}>
-                        <h1 className={styles.novelTitle}>
-                            {meta?.title || t('gameDetail.unnamedGame')}
-                        </h1>
-                        {/* 功能注释：类型标签旁再放目录入口，与顶栏图标形成多处可点。 */}
-                        <div className={styles.metaTagsRow}>
-                            <span className={styles.novelType}>{novelTypeLabel}</span>
-                            {chapterIndex.length > 0 ? (
-                                <button
-                                    type="button"
-                                    className={styles.tocInMeta}
-                                    onClick={() => setIsTocOpen(true)}
-                                >
-                                    {t('novelReader.tocLabel')}
-                                </button>
+            <main className={`${styles.contentSection} ${playModeEnabled ? styles.contentSectionPlay : ''}`}>
+                <div className={`${styles.contentWrapper} ${playModeEnabled ? styles.contentWrapperPlay : ''}`}>
+                    {!playModeEnabled ? (
+                        <header className={styles.headerSection}>
+                            <h1 className={styles.novelTitle}>
+                                {meta?.title || t('gameDetail.unnamedGame')}
+                            </h1>
+                            <div className={styles.metaTagsRow}>
+                                <span className={styles.novelType}>{novelTypeLabel}</span>
+                            </div>
+                            {meta?.authorName ? (
+                                <div className={styles.authorName}>{meta.authorName}</div>
                             ) : null}
-                        </div>
-                        {meta?.authorName ? (
-                            <div className={styles.authorName}>{meta.authorName}</div>
-                        ) : null}
-                        <p className={styles.synopsis}>
-                            {synopsisText || t('novelReader.noDescription')}
-                        </p>
-                    </header>
+                            <p className={styles.synopsis}>
+                                {synopsisText || t('novelReader.noDescription')}
+                            </p>
+                        </header>
+                    ) : null}
 
-                    <div className={styles.readerBody}>
+                    <div className={`${styles.readerBody} ${playModeEnabled ? styles.readerBodyPlay : ''}`}>
                         {renderBody()}
                     </div>
                 </div>
             </main>
-
-            {isTocOpen ? (
-                <div className={styles.tocOverlay} onClick={() => setIsTocOpen(false)}>
-                    <div
-                        className={styles.tocPanel}
-                        onClick={(event) => event.stopPropagation()}
-                        role="dialog"
-                        aria-label={t('novelReader.tocLabel')}
-                    >
-                        <div className={styles.tocHeader}>
-                            <h2 className={styles.tocTitle}>{t('novelReader.tocLabel')}</h2>
-                            <button
-                                type="button"
-                                className={styles.tocClose}
-                                onClick={() => setIsTocOpen(false)}
-                                aria-label={t('createGame.close')}
-                            >
-                                <IoClose />
-                            </button>
-                        </div>
-                        {chapterIndex.length === 0 ? (
-                            <div className={styles.tocEmpty}>{t('novelReader.tocEmpty')}</div>
-                        ) : (
-                            <ul className={styles.tocList}>
-                                {chapterIndex.map((chapter, index) => {
-                                    const display = formatChapterTocDisplay(chapter, index);
-                                    return (
-                                        <li key={chapter.id}>
-                                            <button
-                                                type="button"
-                                                className={styles.tocItem}
-                                                onClick={() => {
-                                                    void handleJumpToChapter(chapter);
-                                                }}
-                                            >
-                                                <span className={styles.tocOrdinal}>{display.ordinal}</span>
-                                                <span className={styles.tocName}>
-                                                    {display.title || t('novelReader.tocUntitled')}
-                                                </span>
-                                            </button>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </div>
-                </div>
-            ) : null}
         </div>
     );
 };

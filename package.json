@@ -24,7 +24,8 @@
     "test:galgamePlayPanels": "node --experimental-strip-types --test scripts/galgamePlayPanels.check.mjs",
     "test:attributePanelsStream": "node --experimental-strip-types --test scripts/attributePanelsStream.check.mjs",
     "test:sanitizeVisualStepText": "node --experimental-strip-types --test scripts/sanitizeVisualStepText.check.mjs",
-    "test:novelContentWindow": "node --experimental-strip-types --test scripts/novelContentWindow.check.mjs"
+    "test:novelContentWindow": "node --experimental-strip-types --test scripts/novelContentWindow.check.mjs",
+    "test:novelPlayback": "node --experimental-strip-types --test scripts/novelPlayback.check.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

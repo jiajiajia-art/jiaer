@@ -339,14 +339,14 @@
     "overwriteDraftMessage": "你的账号下已有同名草稿，覆盖后将替换旧草稿，是否继续？",
     "overwriteDraftConfirm": "确认覆盖",
     "novelPublishedConflict": "已有同名已上架小说，请先改名或下架后再导出",
-    "pointsReadonly": "当前账户积分（只读）",
+    "pointsReadonly": "当前账户积分",
     "musicUnavailable": "当前场景未配置背景音乐",
     "settingsActionOpen": "点击打开",
     "settingsTextToggle": "切换文本模式",
     "settingsAutoToggle": "自动播放开关",
     "debugMemory": "记忆调试",
     "debugCompression": "压测",
-    "debugCompressionDesc": "自动跑到压缩（原逻辑）",
+    "debugCompressionDesc": "自动跑到压缩",
     "tabCharacter": "角色",
     "tabAttrs": "属性",
     "tabQuests": "任务",
@@ -1808,6 +1808,11 @@
     "loadingLong": "正文较长，正在加载首屏…",
     "loadingMore": "正在加载更多…",
     "loadMore": "加载更多",
-    "retry": "重试"
+    "retry": "重试",
+    "autoPlay": "自动",
+    "pauseAuto": "暂停",
+    "playbackFinished": "已到结尾",
+    "textMode": "文本",
+    "playMode": "阅读"
   }
 }

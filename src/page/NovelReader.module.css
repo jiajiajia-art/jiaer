@@ -13,6 +13,16 @@
   padding-top: var(--hero-height);
 }
 
+/* 回放式阅读：去掉封面占位，全屏沉浸（覆盖文档页白底圆角卡片样式） */
+.pageContainerPlay {
+  padding-top: 0;
+  background: #000;
+  max-width: none;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
 .topBar {
   position: fixed;
   top: 0;
@@ -69,6 +79,35 @@
 .topIconButton svg {
   width: 1.2rem;
   height: 1.2rem;
+}
+
+.contentSectionPlay {
+  flex: 1;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  box-shadow: none !important;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.contentWrapperPlay {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: relative;
+}
+
+.readerBodyPlay {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  min-height: 0;
 }
 
 .heroSection {
@@ -396,9 +435,20 @@
     margin-top: -1.5rem;
   }
 
+  .contentSectionPlay {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    background: #000 !important;
+  }
+
   .contentWrapper {
     width: 100%;
     padding: 0 16px;
+  }
+
+  .contentWrapperPlay {
+    padding: 0 !important;
   }
 
   .readerArticle {

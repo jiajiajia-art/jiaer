@@ -339,14 +339,14 @@
     "overwriteDraftMessage": "A draft with the same title already exists on your account. Overwriting will replace it. Continue?",
     "overwriteDraftConfirm": "Overwrite",
     "novelPublishedConflict": "A published novel with this title already exists. Rename it or unpublish first.",
-    "pointsReadonly": "Current account points (read-only)",
+    "pointsReadonly": "Current account points",
     "musicUnavailable": "No background music for this scene",
     "settingsActionOpen": "Open",
     "settingsTextToggle": "Toggle text mode",
     "settingsAutoToggle": "Auto-play toggle",
     "debugMemory": "Memory debug",
     "debugCompression": "Compression stress",
-    "debugCompressionDesc": "Auto-run until compression (unchanged logic)",
+    "debugCompressionDesc": "Auto-run until compression",
     "tabCharacter": "Character",
     "tabAttrs": "Attrs",
     "tabQuests": "Quests",
@@ -1804,6 +1804,11 @@
     "loadingLong": "Long novel — loading first screen…",
     "loadingMore": "Loading more…",
     "loadMore": "Load more",
-    "retry": "Retry"
+    "retry": "Retry",
+    "autoPlay": "Auto",
+    "pauseAuto": "Pause",
+    "playbackFinished": "End of story",
+    "textMode": "Text",
+    "playMode": "Play"
   }
 }
