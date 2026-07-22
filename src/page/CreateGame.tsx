@@ -214,7 +214,7 @@ const CreateGame: React.FC = () => {
     };
 
     /**
-     * TXT / 小说「编辑修改」：optical 续玩进 /galgame，载入历史接着玩（不弹历史面板）。
+     * 视觉小说「编辑修改」：optical 续玩进 /galgame，载入历史接着玩（不弹历史面板）。
      */
     const continueCreatorPlaytest = async () => {
         if (!gameDetail) return;
@@ -272,7 +272,7 @@ const CreateGame: React.FC = () => {
         }
     };
 
-    /** 非 TXT/小说：仍进各引擎编辑页（设定/宿主/影片等）。 */
+    /** AI文游 / 非小说：进各引擎编辑页（设定/宿主/影片等）。 */
     const editGameSettingsOrHost = () => {
         if (!gameDetail) {
             return;

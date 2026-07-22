@@ -1,7 +1,8 @@
 /**
  * 创作台「开始测试 / 编辑修改」进游玩页的会话策略。
  * - 开始测试：optical 新建（restart=true），清空旧进度
- * - 编辑修改（TXT/小说）：optical 续玩（restart=false），载入历史接着玩
+ * - 编辑修改（仅视觉小说 NOVEL）：optical 续玩（restart=false），载入历史接着玩
+ * - AI文游 TXT 编辑仍进 /gameSettingsEditor，不走续玩
  * - 不自动弹出历史面板
  */
 
@@ -53,13 +54,12 @@ export function normalizeCreatorPlayMode(
   return '';
 }
 
-/** 「编辑修改」对 TXT / 小说改为续玩进 /galgame，其它类型仍走各自编辑页。 */
+/** 「编辑修改」仅视觉小说续玩进 /galgame；AI文游走设定编辑页，其它类型走各自编辑页。 */
 export function shouldContinuePlayOnEdit(
   engine?: string | null,
   gameTags?: string | null,
 ): boolean {
-  const mode = normalizeCreatorPlayMode(engine, gameTags);
-  return mode === 'TXT' || mode === 'NOVEL';
+  return normalizeCreatorPlayMode(engine, gameTags) === 'NOVEL';
 }
 
 /**

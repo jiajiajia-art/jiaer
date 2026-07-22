@@ -80,5 +80,5 @@ test('resolvePublishModalMode keeps novel-edit for intent=edit (legacy helper)',
 test('创作台「编辑修改」不再打开元信息弹窗，改为续玩（见 creatorContinuePlay）', async () => {
   const { shouldContinuePlayOnEdit } = await import('../src/utils/creatorContinuePlay.ts');
   assert.equal(shouldContinuePlayOnEdit('NOVEL', 'NOVEL'), true);
-  assert.equal(shouldContinuePlayOnEdit('TXT', 'TXT'), true);
+  assert.equal(shouldContinuePlayOnEdit('TXT', 'TXT'), false);
 });

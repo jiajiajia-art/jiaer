@@ -27,8 +27,8 @@ test('normalizeCreatorPlayMode maps TXT / NOVEL / AVG / custom', () => {
   assert.equal(normalizeCreatorPlayMode('', ''), '');
 });
 
-test('shouldContinuePlayOnEdit only for TXT and NOVEL', () => {
-  assert.equal(shouldContinuePlayOnEdit('TXT', 'TXT'), true);
+test('shouldContinuePlayOnEdit only for NOVEL (AI文游 TXT goes to settings editor)', () => {
+  assert.equal(shouldContinuePlayOnEdit('TXT', 'TXT'), false);
   assert.equal(shouldContinuePlayOnEdit('NOVEL', 'NOVEL'), true);
   assert.equal(shouldContinuePlayOnEdit('AVG', 'AVG'), false);
   assert.equal(shouldContinuePlayOnEdit('CUSTOM', null), false);
