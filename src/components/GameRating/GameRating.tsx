@@ -37,7 +37,7 @@ const getAnonymousUserLabel = (language: string): string =>
   isChineseLanguage(language) ? '匿名用户' : 'Anonymous User';
 
 const getRepliesSummaryLabel = (count: number, language: string): string =>
-  isChineseLanguage(language) ? `共${count}条回复 >` : `${count} replies >`;
+  isChineseLanguage(language) ? `�?{count}条回�?>` : `${count} replies >`;
 
 const getExpandMoreRepliesLabel = (language: string): string =>
   isChineseLanguage(language) ? '展开更多' : 'Show more';
@@ -565,7 +565,7 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
 
   return (
     <div className={styles.container}>
-      {/* 闂傚倸鍊峰ù鍥х暦閸偅鍙忛柡澶嬪殮濞差亜围闁搞儻绲芥禍鐐叏濡厧甯跺褍顕埀顒冾潐濞叉繈锝炴径鎰畾闁哄啫鐗嗛悡锟犳煕閳╁厾顏呯閹绢喗鈷掑ù锝勮閻掗箖鏌￠崼顐㈠闁瑰箍鍨归濂稿椽娴ｅ搫濮?*/}
+      {/* 闂傚倸鍊峰ù鍥х暦閸偅鍙忛柡澶嬪殮濞差亜围闁搞儻绲芥禍鐐叏濡厧甯跺褍顕埀顒冾潐濞叉繈锝炴径鎰畾闁哄啫鐗嗛悡锟犳煕閳╁厾顏呯閹绢喗鈷掑ù锝勮閻掗箖鏌￠崼顐㈠闁瑰箍鍨归濂稿椽娴ｅ搫�?*/}
       <div className={styles.summarySection}>
         <div className={styles.summaryLeft}>
           <div className={styles.averageScore}>{summary.average > 0 ? summary.average.toFixed(1) : '0.0'}</div>
@@ -580,12 +580,12 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
         )}
       </div>
 
-      {/* 闂傚倸鍊搁崐椋庣矆娴ｉ潻鑰块梺顒€绉寸壕濠氭煙閻愵剙澧柣鏂挎閹便劌顪冪拠韫闁诲氦顫夊ú锕傚垂閸洜宓佹慨妞诲亾闁硅櫕绮撳Λ鍐ㄢ槈濮橆剟鍙￠梻鍌氬€风粈渚€骞夐垾瓒佹椽鏁冮崒姘舵７濡炪倖娲嶉崑鎾垛偓?*/}
+      {/* 闂傚倸鍊搁崐椋庣矆娴ｉ潻鑰块梺顒€绉寸壕濠氭煙閻愵剙澧柣鏂挎閹便劌顪冪拠韫闁诲氦顫夊ú锕傚垂閸洜宓佹慨妞诲亾闁硅櫕绮撳Λ鍐ㄢ槈濮橆剟鍙￠梻鍌氬€风粈渚€骞夐垾瓒佹椽鏁冮崒姘舵７濡炪倖娲嶉崑鎾垛�?*/}
       {showInput && (
         <div className={styles.writeSection}>
+          <button type="button" className={styles.closeBtn} onClick={() => setShowInput(false)}>x</button>
           <div className={styles.writeHeader}>
             <span>{t('gameRating.rateThisGame')}</span>
-            <button type="button" className={styles.closeBtn} onClick={() => setShowInput(false)}>x</button>
           </div>
           <StarRating value={ratingValue} onChange={setRatingValue} size="large" />
           <textarea
@@ -606,12 +606,12 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
         </div>
       )}
 
-      {/* 闂傚倸鍊搁崐鐑芥倿閿曞倸绠栭柛顐ｆ礀绾惧潡鏌熼幆鐗堫棄缁惧墽绮换娑㈠箣閺冣偓閸ゅ秹鏌涢妷顔煎闁活厽顨呴…璺ㄦ崉娓氼垰鍓崇紓浣割槸閻栫厧顫忛搹瑙勫枂闁告洦鍋勬慨銏ゆ⒑閸濄儱鏋庨柣蹇旂箞椤?*/}
+      {/* 回复输入区域*/}
       {replyTo && (
         <div className={styles.replyInputSection}>
+          <button type="button" className={styles.closeBtn} onClick={() => setReplyTo(null)}>x</button>
           <div className={styles.replyHeader}>
             <span>{t('gameRating.replyTo', { name: getDisplayName(replyTo.nickname, anonymousUserName) })}</span>
-            <button type="button" className={styles.closeBtn} onClick={() => setReplyTo(null)}>x</button>
           </div>
           <textarea
             className={styles.replyInput}
@@ -632,7 +632,7 @@ const GameRating: React.FC<Props> = ({ fileId, onRatingChange }) => {
         </div>
       )}
 
-      {/* 闂傚倸鍊峰ù鍥х暦閸偅鍙忛柡澶嬪殮濞差亜围闁搞儻绲芥禍鐐叏濡厧甯堕柣蹇ラ檮閵囧嫰濮€閿涘嫭鍣板Δ鐘靛仜椤戝寮崘顔肩劦妞ゆ帒鍊婚惌鍡涙煕閳╁厾鑲╂崲閸℃稒鐓忛柛顐ｇ箖閸ｈ銇勮箛瀣姦闁?*/}
+      {/* 评论列表*/}
       <div className={styles.commentsSection}>
         <div className={styles.commentsHeader}>
           <h3>{t('gameRating.reviews')}</h3>

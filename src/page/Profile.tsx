@@ -110,7 +110,7 @@ const formatDate = (value?: string | null): string => {
 
 const Profile: React.FC = () => {
     const { t } = useTranslation();
-    const { user, logout, updateUser } = useAuthStore();
+    const { user, logout, updateUser, login } = useAuthStore();
     const navigate = useNavigate();
     const [inviteCode, setInviteCode] = useState('');
     const [inputInviteCode, setInputInviteCode] = useState('');
@@ -421,10 +421,19 @@ const Profile: React.FC = () => {
             });
 
             if (response.data.success && response.data.data) {
-                updateUser(response.data.data);
                 toast.success(t('profile.browserAccountBound'));
                 setIsBindAccountModalOpen(false);
                 clearBindAccountDraft();
+
+                logout();
+                try {
+                    const loginResp = await auth.login({ phoneNumber: phone, password: bindPassword });
+                    if (loginResp.data.success && loginResp.data.data) {
+                        login(loginResp.data.data);
+                    }
+                } catch (error) {
+                    console.error('Re-login failed after bind:', error);
+                }
             } else {
                 toast.error(response.data.message || t('profile.operationFailed'));
             }

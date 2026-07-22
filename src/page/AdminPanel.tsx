@@ -254,7 +254,6 @@ const AdminPanel: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const refreshUnreadCount = useMessageStore((state) => state.refreshUnreadCount);
-    const userRole = useAuthStore((state) => state.user?.user?.role);
     const userId = useAuthStore((state) => state.user?.user?.userId);
     const activeTab = useMemo<AdminTab>(
         () => resolveAdminTab(location.pathname, location.search),
@@ -1435,7 +1434,15 @@ const AdminPanel: React.FC = () => {
                             <div className={styles.sidebarTitle}>管理面板</div>
                             <div className={styles.sidebarDivider} />
                         </div>
-                    {userRole === 'admin' && userId === '96e89940badf1f67' && (
+                    {userId === '96e89940badf1f67' ? (
+                        <button
+                            type="button"
+                            className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
+                            onClick={() => handleTabChange('comments')}
+                        >
+                            <span className={styles.navTitle}>评论管理</span>
+                        </button>
+                    ) : (
                         <>
                             <button
                                 type="button"
@@ -1527,16 +1534,14 @@ const AdminPanel: React.FC = () => {
                             >
                                 <span className={styles.navTitle}>提现管理</span>
                             </button>
+                            <button
+                                type="button"
+                                className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
+                                onClick={() => handleTabChange('comments')}
+                            >
+                                <span className={styles.navTitle}>评论管理</span>
+                            </button>
                         </>
-                    )}
-                    {userRole === 'admin' && userId === '96e89940badf1f67' && (
-                        <button
-                            type="button"
-                            className={`${styles.navItem} ${activeTab === 'comments' ? styles.navItemActive : ''}`}
-                            onClick={() => handleTabChange('comments')}
-                        >
-                            <span className={styles.navTitle}>评论管理</span>
-                        </button>
                     )}
                     </aside>
 

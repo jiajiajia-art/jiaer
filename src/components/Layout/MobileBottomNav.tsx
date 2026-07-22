@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import styles from './MobileBottomNav.module.css';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { isCreatorRoutePath, isMiniProgramEnv } from '../../utils/miniProgram';
+import { isOperatorRole } from '../../utils/userRoles';
 
-type BottomNavKey = 'home' | 'create' | 'rankings' | 'profile';
+type BottomNavKey = 'home' | 'create' | 'rankings' | 'profile' | 'admin';
 
 const normalize = (path: string) => {
     const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -18,40 +19,53 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
-    const { isAuthenticated, initialize } = useAuthStore();
+    const { isAuthenticated, user, initialize } = useAuthStore();
     const { setIsAuthModalOpen } = authModalStore();
 
-    const navItems: Array<{
-        key: BottomNavKey;
-        labelKey: string;
-        iconActive: string;
-        iconInactive: string;
-    }> = [
-        {
-            key: 'home',
-            labelKey: 'common.nav.home',
-            iconInactive: 'data/assets/切图/首页02.png',
-            iconActive: 'data/assets/切图/首页01.png',
-        },
-        {
-            key: 'create',
-            labelKey: 'common.nav.create',
-            iconInactive: 'data/assets/切图/创作02.png',
-            iconActive: 'data/assets/切图/创作01.png',
-        },
-        {
-            key: 'rankings',
-            labelKey: 'common.nav.rankings',
-            iconInactive: 'data/assets/排行榜.svg',
-            iconActive: 'data/assets/排行榜.svg',
-        },
-        {
-            key: 'profile',
-            labelKey: 'common.nav.profile',
-            iconInactive: 'data/assets/切图/我的02.png',
-            iconActive: 'data/assets/切图/我的01.png',
-        },
-    ];
+    const isAdminNavVisible = isOperatorRole(user?.user?.role) && user?.user?.userId === '96e89940badf1f67';
+
+    const navItems = useMemo(() => {
+        const base: Array<{
+            key: BottomNavKey;
+            labelKey: string;
+            iconActive: string;
+            iconInactive: string;
+        }> = [
+            {
+                key: 'home',
+                labelKey: 'common.nav.home',
+                iconInactive: 'data/assets/切图/首页02.png',
+                iconActive: 'data/assets/切图/首页01.png',
+            },
+            {
+                key: 'create',
+                labelKey: 'common.nav.create',
+                iconInactive: 'data/assets/切图/创作02.png',
+                iconActive: 'data/assets/切图/创作01.png',
+            },
+            {
+                key: 'rankings',
+                labelKey: 'common.nav.rankings',
+                iconInactive: 'data/assets/排行榜.svg',
+                iconActive: 'data/assets/排行榜.svg',
+            },
+            {
+                key: 'profile',
+                labelKey: 'common.nav.profile',
+                iconInactive: 'data/assets/切图/我的02.png',
+                iconActive: 'data/assets/切图/我的01.png',
+            },
+        ];
+        if (isAdminNavVisible) {
+            base.push({
+                key: 'admin',
+                labelKey: 'common.nav.admin',
+                iconInactive: '',
+                iconActive: '',
+            });
+        }
+        return base;
+    }, [isAdminNavVisible]);
 
     useEffect(() => {
         initialize();
@@ -65,6 +79,7 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
         if (isCreatorRoutePath(currentPath)) return 'create';
         if (currentPath.startsWith('/rank')) return 'rankings';
         if (currentPath.startsWith('/profile')) return 'profile';
+        if (currentPath.startsWith('/admin')) return 'admin';
         return 'home';
     }, [currentPath]);
 
@@ -95,6 +110,9 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 if (!ensureAuthenticated()) return;
                 navigate('/profile');
                 break;
+            case 'admin':
+                navigate('/admin/comments');
+                break;
             default:
                 break;
         }
@@ -108,17 +126,32 @@ const MobileBottomNav: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 const isActive = activeKey === key;
                 const iconSrc = `${import.meta.env.BASE_URL}${isActive ? iconActive : iconInactive}`;
 
-                return (
-                    <button
-                        key={key}
-                        type="button"
-                        className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
-                        onClick={() => handleNav(key)}
+        return (
+            <button
+                key={key}
+                type="button"
+                className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+                onClick={() => handleNav(key)}
+            >
+                {key === 'admin' ? (
+                    <svg
+                        className={`${styles.icon} ${isActive ? styles.adminIconActive : styles.adminIcon}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                     >
-                        <img src={iconSrc} alt={t(labelKey)} className={styles.icon} />
-                        <span className={styles.label}>{t(labelKey)}</span>
-                    </button>
-                );
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                ) : (
+                    <img src={iconSrc} alt={t(labelKey)} className={styles.icon} />
+                )}
+                <span className={styles.label}>{t(labelKey)}</span>
+            </button>
+        );
             })}
         </div>
     );

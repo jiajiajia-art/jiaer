@@ -27,6 +27,7 @@ import RouteReporter from './components/RouteReporter';
 import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
 import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
+import CommentAdminPage from './page/CommentAdminPage';
 import OperatorWorkStats from './page/operator/OperatorWorkStats';
 import CreatorWorkStats from './page/creator/CreatorWorkStats';
 import OperatorPanel from './page/operator/OperatorPanel';
@@ -116,7 +117,7 @@ function App() {
           <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
-          <Route path="/admin/comments" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

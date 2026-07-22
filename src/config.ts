@@ -4,12 +4,14 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
 
 // 测试
 // export const HOST_ADDRESS = 'https://api-test.kurangames.com';
+// 测试2
+//export const HOST_ADDRESS = 'https://api-test2.kurangames.com';
 // 国内正式生产
-export const HOST_ADDRESS = 'https://api.kurangames.com';
+//export const HOST_ADDRESS = 'https://api.kurangames.com';
 // 海外正式生产
 //export const HOST_ADDRESS = 'https://api-overseas.kurangames.com';
 // 本地
-// export const HOST_ADDRESS = 'http://localhost:3000';
+export const HOST_ADDRESS = 'http://localhost:3000';
 
 export const RECORD_CONVERSION = import.meta.env.PROD
   ? true
