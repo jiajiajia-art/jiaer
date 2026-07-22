@@ -184,7 +184,7 @@ const Galgame = () => {
         const images =
             typeof raw.images === 'string' && raw.images.trim()
                 ? { base: raw.images.trim() }
-                : (raw.images as PlayerProfileLike['images']);
+                : (raw.images as unknown as PlayerProfileLike['images']);
         return {
             name: String(raw.name || '').trim(),
             job: String((raw as { job?: string }).job || (raw as { race?: string }).race || '').trim(),

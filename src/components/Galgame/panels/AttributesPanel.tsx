@@ -104,7 +104,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 
   /** 功能注释：叙事回合后由父组件触发；允许 LLM 增量更新并写回 session。 */
   const regenerateFromLlm = useCallback(
-    async (reason: 'auto') => {
+    async (_reason: 'auto') => {
       if (!sessionId) {
         setError(t('galgame.panelAttrsNoSession'));
         return;
