@@ -1,0 +1,86 @@
+.pageRoot {
+  width: 100%;
+  min-height: 100vh;
+  max-width: 1920px;
+  margin: 0 auto;
+}
+
+.mainContent {
+  color: black;
+  display: flex;
+  margin: 0;
+  padding: 0;
+  margin-bottom: 200px;
+  min-height: 100vh;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  width: min(var(--app-desktop-shell-max), calc(100% - 2 * var(--app-desktop-gutter)));
+  max-width: none;
+  margin: var(--app-desktop-navbar-height) auto 0;
+  overflow: visible;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: #1a1a1a;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.backButton:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.emptyState {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 0.95rem;
+}
+
+.loadingMore {
+  padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .pageRoot {
+    padding-bottom: 90px;
+  }
+
+  .mainContent {
+    margin-bottom: 0;
+  }
+
+  .main {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 60px;
+    padding: 10px;
+  }
+}

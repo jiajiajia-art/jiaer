@@ -28,7 +28,7 @@ export type StConfig = {
 export const stApi = {
   getConfig: (appId: string) => api.get<{ success: boolean; config: StConfig }>(`/st/apps/${appId}/config`),
   setConfig: (appId: string, cfg: StConfig) => api.post<{ success: boolean }>(`/st/apps/${appId}/config`, cfg),
-  createSession: (appId: string, body: { autoStart?: boolean; globals?: any; prompt?: string }) =>
+  createSession: (appId: string, body: { autoStart?: boolean; globals?: any; prompt?: string; source?: 'link' | 'game_detail' | 'history' | 'other' }) =>
     api.post(`/st/apps/${appId}/session/create`, body, { timeout: 45000 }),
   getSession: (appId: string, sessionId: string) => api.get(`/st/apps/${appId}/session/${sessionId}`),
   act: (appId: string, sessionId: string, body: { input: string; globals?: any }) =>

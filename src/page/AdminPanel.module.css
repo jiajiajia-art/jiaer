@@ -107,8 +107,8 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 92px;
-    padding: 18px;
+    min-height: 74px; /* 原 92，缩小约 20% */
+    padding: 14px; /* 原 18，缩小约 20% */
     border: 1px solid rgba(205, 157, 120, 0.28);
     border-radius: 16px;
     background: var(--admin-surface-strong);

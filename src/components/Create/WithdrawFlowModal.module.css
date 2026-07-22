@@ -1,0 +1,243 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.modal {
+  width: min(520px, 100%);
+  max-height: min(86vh, 720px);
+  overflow: auto;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+  padding: 20px 22px 22px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.close {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.state,
+.hint {
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.pendingBox,
+.rejectBox {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.rejectRemark {
+  margin-top: 6px;
+  color: #7c2d12;
+  font-size: 13px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+/* 可提上限数字加粗，方便用户一眼看到能提多少 */
+.maxHighlight {
+  font-weight: 800;
+  color: #111827;
+  margin-left: 2px;
+}
+
+.meta {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* 标题与最低提现 tip 同一行：tip 靠右 */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.amountHint {
+  font-size: 12px;
+  font-weight: 400;
+  color: #9ca3af;
+  text-align: right;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.primaryButton {
+  border: none;
+  border-radius: 999px;
+  min-height: 42px;
+  padding: 0 18px;
+  background: #fb4655;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.records {
+  margin-top: 18px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 14px;
+}
+
+.recordsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.recordsTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.viewAllButton {
+  border: none;
+  background: transparent;
+  color: #c2410c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.recordList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.recordItem {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  font-size: 12px;
+  color: #374151;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.recordTime {
+  color: #9ca3af;
+}
+
+.statusText {
+  font-weight: 700;
+}
+
+.statusPending {
+  color: #c9782a;
+}
+
+.statusApproved {
+  color: #2d8c58;
+}
+
+.statusRejected {
+  color: #b73a3a;
+}
+
+/* 列表内驳回说明独占一行；备注文字紧跟「备注：」左对齐 */
+.recordRejectRemark {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b73a3a;
+  text-align: left;
+}
+
+.recordRejectLabel {
+  flex-shrink: 0;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .recordItem {
+    grid-template-columns: 1fr 1fr;
+  }
+}

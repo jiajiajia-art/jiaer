@@ -10,7 +10,7 @@ import type { UserGameData } from '../api/home/getGameData.type';
 import gameTagsApi from '../api/gameTags/gameTagsApi';
 import GameAction from '../api/rpgGame/gameAction';
 import { downloadInteractiveVideoPackage, updateInteractiveVideoTitle } from '../api/interactiveVideo';
-import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
+import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import { useAuthStore } from '../store/useAuthStore';
 import { resolveCreatorEngine } from '../utils/miniProgram';
 import { flattenThemeTags, type FlatThemeTag } from '../utils/themeTags';
@@ -52,7 +52,7 @@ const triggerBlobDownload = (blob: Blob, fileName: string) => {
     URL.revokeObjectURL(url);
 };
 
-const getErrorMessage = async (error: unknown, fallback: string) => {
+const getVideoEditErrorMessage = async (error: unknown, fallback: string) => {
     const maybeError = error as {
         message?: string;
         response?: { data?: unknown; status?: number };
@@ -148,7 +148,7 @@ const InteractiveVideoEdit: React.FC = () => {
             setSavedThemeTagIds(themeTagIds);
         } catch (error) {
             console.error('加载互动影游编辑信息失败:', error);
-            setPageError(await getErrorMessage(error, '加载互动影游编辑信息失败，请稍后重试。'));
+            setPageError(await getVideoEditErrorMessage(error, '加载互动影游编辑信息失败，请稍后重试。'));
         } finally {
             setIsLoading(false);
         }
@@ -194,7 +194,7 @@ const InteractiveVideoEdit: React.FC = () => {
         } catch (error) {
             console.error('保存互动影游题材失败:', error);
             setSelectedThemeTagIds(savedThemeTagIds);
-            const message = await getErrorMessage(error, '作品题材保存失败，请稍后重试。');
+            const message = await getVideoEditErrorMessage(error, '作品题材保存失败，请稍后重试。');
             setThemeTagError(message);
             toast.error(message);
             return false;
@@ -273,7 +273,7 @@ const InteractiveVideoEdit: React.FC = () => {
             toast.success('作品名称已保存');
         } catch (error) {
             console.error('保存互动影游名称失败:', error);
-            const message = await getErrorMessage(error, '作品名称保存失败，请稍后重试。');
+            const message = await getVideoEditErrorMessage(error, '作品名称保存失败，请稍后重试。');
             setTitleError(message);
             toast.error(message);
         } finally {
@@ -297,7 +297,7 @@ const InteractiveVideoEdit: React.FC = () => {
         setShowPublishModal(true);
     };
 
-    const handlePublishGame = async (payload: { description: string }) => {
+    const handlePublishGame = async (payload: PublishSubmitPayload) => {
         if (!normalizedFileId || isPublishing) return;
         setIsPublishing(true);
         try {
@@ -305,6 +305,9 @@ const InteractiveVideoEdit: React.FC = () => {
                 fileId: normalizedFileId,
                 priceAmount: 0,
                 description: payload.description,
+                shareType: payload.shareType,
+                versionNotes: payload.versionNotes,
+                notifyFavoritedUsers: payload.notifyFavoritedUsers,
             });
             if (!response.data?.success) {
                 throw new Error(response.data?.message || '发布失败');
@@ -315,6 +318,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     ...current,
                     is_public: Number(published.is_public),
                     description: published.description ?? current.description,
+                    version_notes: published.version_notes ?? current.version_notes,
                     cover_url: published.cover_url ?? current.cover_url,
                     price_amount: published.price_amount ?? current.price_amount,
                     special_price_amount: published.special_price_amount ?? current.special_price_amount,
@@ -326,7 +330,7 @@ const InteractiveVideoEdit: React.FC = () => {
             toast.success('互动影游已发布');
         } catch (error) {
             console.error('发布互动影游失败:', error);
-            toast.error(await getErrorMessage(error, '发布失败，请稍后重试。'));
+            toast.error(await getVideoEditErrorMessage(error, '发布失败，请稍后重试。'));
         } finally {
             setIsPublishing(false);
         }
@@ -354,7 +358,7 @@ const InteractiveVideoEdit: React.FC = () => {
             toast.success('互动影游已下架');
         } catch (error) {
             console.error('下架互动影游失败:', error);
-            toast.error(await getErrorMessage(error, '下架失败，请稍后重试。'));
+            toast.error(await getVideoEditErrorMessage(error, '下架失败，请稍后重试。'));
         } finally {
             setIsUnpublishing(false);
         }
@@ -373,7 +377,7 @@ const InteractiveVideoEdit: React.FC = () => {
             toast.success('云端项目包已开始下载');
         } catch (error) {
             console.error('下载互动影游项目包失败:', error);
-            toast.error(await getErrorMessage(error, '下载项目包失败，请稍后重试。'));
+            toast.error(await getVideoEditErrorMessage(error, '下载项目包失败，请稍后重试。'));
         } finally {
             setIsDownloading(false);
         }
@@ -637,6 +641,7 @@ const InteractiveVideoEdit: React.FC = () => {
                     coverUrl={gameDetail.cover_url}
                     onCoverUploaded={loadEditData}
                     publishing={isPublishing}
+                    engine="INTERACTIVE-VIDEO"
                 />
             ) : null}
             <MobileBottomNav />

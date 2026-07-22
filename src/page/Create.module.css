@@ -1,3 +1,18 @@
+/* ============================================
+   Create Page - 创作工作室
+   ============================================ */
+
+/* --- CSS Variables --- */
+:local {
+    --creator-radius: 16px;
+    --creator-gap: 18px;
+    --creator-padding: 26px;
+    --creator-label: #9ca3af;
+    --creator-value: #111827;
+    --creator-title: #fb4655;
+}
+
+/* --- Page Layout --- */
 .pageRoot {
     width: 100%;
     min-height: 100vh;
@@ -25,7 +40,7 @@
     position: relative;
 }
 
-/* 用户信息展示区域 */
+/* --- User Profile Section --- */
 .userProfileSection {
     width: 100vw;
     max-width: 1920px;
@@ -97,228 +112,7 @@
     transition: transform 0.3s ease;
 }
 
-.userCode {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    font-weight: 500;
-    color: #4b5563;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.78);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.userCodeText {
-    white-space: nowrap;
-}
-
-.debugToken {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #4b5563;
-    padding: 10px 14px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    max-width: min(560px, 72vw);
-}
-
-.debugTokenText {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.userCodeCopyButton {
-    background: transparent;
-    border-radius: 4px;
-    border: none;
-    color: #4b5563;
-    min-width: auto;
-    min-height: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    padding: 0;
-    outline: none;
-    transition: color 0.2s ease, transform 0.1s ease;
-}
-
-.userCodeCopyButton:hover {
-    color: var(--primary);
-    transform: translateY(-1px);
-}
-
-.userCodeCopyButton svg {
-    font-size: 16px;
-}
-
-.userName {
-    font-size: 30px;
-    font-weight: 600;
-    color: #fff;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-/* 修改用户名弹窗 */
-.userNameRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #fff;
-}
-
-.editNameButton {
-    background: transparent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    padding: 4px;
-    border-radius: 999px;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.editNameButton:hover {
-    background-color: rgba(255, 255, 255, 0.16);
-    transform: translateY(-1px);
-}
-
-.userNameInput {
-    width: auto;
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    background-color: rgba(0, 0, 0, 0.35);
-    color: #ffffff;
-    font-size: 16px;
-    outline: none;
-}
-
-.userNameInput::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.userNameActionButton {
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: none;
-    background-color: #FB4655;
-    color: #ffffff;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.userNameActionButton:hover {
-    background-color: #e03645;
-    transform: translateY(-1px);
-}
-
-.userNameActionButton:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-/* 修改昵称弹窗 */
-.editNameModalOverlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.45);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1100;
-    padding: 16px;
-}
-
-.editNameModal {
-    background-color: #ffffff;
-    border-radius: 16px;
-    padding: 20px 22px 16px;
-    min-width: 280px;
-    max-width: 360px;
-    width: 100%;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
-}
-
-.editNameModalHeader {
-    margin-bottom: 8px;
-}
-
-.editNameModalTitle {
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-}
-
-.editNameModalBody {
-    margin-top: 8px;
-}
-
-.editNameInput {
-    width: 100%;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid #E5E7EB;
-    font-size: 14px;
-    outline: none;
-}
-
-.editNameInput:focus {
-    border-color: #FB4655;
-    box-shadow: 0 0 0 1px rgba(251, 70, 85, 0.2);
-}
-
-.editNameTips {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #6B7280;
-}
-
-.editNameModalActions {
-    margin-top: 14px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-.editNameCancelButton {
-    padding: 6px 14px;
-    border-radius: 999px;
-    border: 1px solid #E5E7EB;
-    background-color: #ffffff;
-    color: #4B5563;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.editNameConfirmButton {
-    padding: 6px 16px;
-    border-radius: 999px;
-    border: none;
-    background-color: #FB4655;
-    color: #ffffff;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.editNameCancelButton:disabled,
-.editNameConfirmButton:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-
+/* --- Creator Hero Card --- */
 .creatorHeroSection {
     width: 100%;
     margin: 108px 0 38px;
@@ -327,25 +121,34 @@
 .creatorHeroCard {
     position: relative;
     overflow: hidden;
-    border-radius: 24px;
-    padding: 32px 36px;
-    background: linear-gradient(180deg, #fffdfb 0%, #fff8f7 100%);
+    border-radius: 16px;
+    padding: 30px 28px 16px;
+    background: #ffffff;
     border: 1px solid rgba(17, 24, 39, 0.06);
     box-shadow: 0 18px 44px rgba(17, 24, 39, 0.06);
-}
-
-.creatorHeroMain {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: flex-start;
     gap: 32px;
 }
 
-.creatorHeroMeta {
+.creatorHeroLeft {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: var(--creator-gap);
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 620px;
+}
+
+.creatorHeroActions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    align-self: center;
+    flex-shrink: 0;
 }
 
 .creatorHeroEyebrow {
@@ -353,184 +156,243 @@
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(251, 70, 85, 0.78);
+    color: #fb4655c7;
+    margin-bottom: 4px;
 }
 
 .creatorHeroName {
-    font-size: 36px;
-    line-height: 1.1;
+    font-size: 30px;
+    line-height: 1.2;
     font-weight: 700;
-    color: #121826;
+    color: var(--creator-value);
     word-break: break-word;
 }
 
-.creatorHeroInfoRow {
+/* --- Account Info Card --- */
+.creatorAccountCard {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px 18px;
+    align-items: stretch;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid rgba(17, 24, 39, 0.06);
+    padding: 16px;
+    gap: 12px;
 }
 
-.creatorIdentityStack {
+.creatorAccountHalf {
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
 }
 
-.creatorHeroActions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+.creatorAccountDivider {
+    width: 1px;
+    background: rgba(17, 24, 39, 0.08);
+}
+
+.creatorAccountLabel {
+    font-size: 11px;
+    color: var(--creator-label);
+    font-weight: 500;
     flex-shrink: 0;
 }
 
-.createGameButton {
+.creatorAccountValue {
+    font-size: 12px;
+    color: var(--creator-value);
+    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.creatorAccountCopyButton {
+    background: transparent;
+    border-radius: 999px;
+    border: none;
+    color: #4b5563;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 4px;
+    outline: none;
+    transition: color 0.2s ease, transform 0.1s ease;
+    flex-shrink: 0;
+}
+
+.creatorAccountCopyButton:hover {
+    color: var(--creator-title);
+    transform: translateY(-1px);
+}
+
+.creatorAccountCopyButton svg {
+    font-size: 16px;
+}
+
+/* --- Asset Cards --- */
+.creatorAssets {
     display: flex;
-    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.creatorAssetCard {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
     align-items: flex-start;
+    gap: 8px;
+    border-radius: var(--creator-radius);
+    background: #ffffff;
+    padding: 16px;
+}
+
+.creatorAssetHeader {
+    display: flex;
+    align-items: center;
+    gap: -4px;
+}
+
+.creatorAssetIcon,
+.creatorAssetIconDiamond {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.creatorAssetLabel {
+    font-size: 12px;
+    color: var(--creator-label);
+    font-weight: 500;
+}
+
+.creatorAssetValue {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--creator-value);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    margin-left: 24px;
+}
+
+.creatorAssetBody {
+    display: flex;
+    align-items: flex-start;
+}
+
+.creatorAssetRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
 }
 
-.createGameButtonItem {
-    min-width: 188px;
-    height: 56px;
-    background: linear-gradient(135deg, #fb4655 0%, #ff7b57 100%);
-    border-radius: 14px;
+.creatorAssetActionsBox {
     display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.creatorAssetActionButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(251, 70, 85, 0.28);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.creatorWithdrawButton {
+    background: #ffffff;
+    color: #fb4655;
+}
+
+.creatorWithdrawButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(251, 70, 85, 0.18);
+    background: #fff5f6;
+}
+
+.creatorRechargeButton {
+    background: #fb4655;
+    color: #ffffff;
+    border-color: transparent;
+}
+
+.creatorRechargeButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(251, 70, 85, 0.24);
+}
+
+/* --- Action Buttons --- */
+.creatorPrimaryButton {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    min-height: 46px;
+    width: 70%;
+    border-radius: 999px;
     border: none;
-    cursor: pointer;
-    font-size: 18px;
-    font-weight: 600;
+    background: linear-gradient(135deg, #fb4655 0%, #ff7b57 100%);
     color: #ffffff;
-    transition: all 0.3s ease;
-    padding: 0 22px;
-    box-shadow: 0 18px 32px rgba(251, 70, 85, 0.24);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 14px 28px rgba(251, 70, 85, 0.22);
 }
 
-.createGameButtonItem:hover {
+.creatorPrimaryButton:hover {
     transform: translateY(-2px);
-    box-shadow: 0 20px 36px rgba(251, 70, 85, 0.3);
+    box-shadow: 0 18px 32px rgba(251, 70, 85, 0.28);
 }
 
-.createGameButtonItem svg {
-    font-size: 24px;
+.creatorPrimaryButton svg {
+    font-size: 18px;
 }
 
-.createGameButtonRow {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-wrap: nowrap;
-}
-
-.helpButton {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
+.creatorHelpButton {
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
     border: 1px solid rgba(251, 70, 85, 0.16);
     background: rgba(255, 255, 255, 0.92);
-    color: var(--primary);
+    color: var(--creator-title);
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.25s ease;
-    font-size: 1.2rem;
-    font-weight: 600;
-    flex-shrink: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
 }
 
-.helpButton:hover {
+.creatorHelpButton:hover {
     transform: translateY(-2px);
 }
 
-.helpButton:active {
-    transform: scale(0.95);
-}
-
-.helpIcon {
+.creatorHelpIcon {
     line-height: 1;
     user-select: none;
+    font-weight: 700;
+    font-size: 1.1rem;
 }
 
-.userCredit {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: #111827;
-    flex-wrap: nowrap;
-}
-
-.userPointsButton {
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-}
-
-.desktopPayButton {
-    display: inline-flex;
-}
-
-.mobilePayButton {
-    display: none;
-}
-
-.priceIcon{
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    display: inline-block;
-}
-
-.userPoints {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    white-space: nowrap;
-}
-
-.userPointsButton:hover .userPoints {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(17, 24, 39, 0.08);
-}
-
-.userPoints svg {
-    font-size: 22px;
-    vertical-align: middle;
-}
-
-.payButton {
-    background-color: #FB4655;
-    border-radius: 999px;
-    padding: 10px 18px;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.payButton:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 我的数据模块 */
+/* --- Stats Section --- */
 .statsSection {
     width: 100%;
     margin: 0 auto;
@@ -616,8 +478,8 @@
 
 .statsGrid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
 }
 
 .statBox {
@@ -640,18 +502,18 @@
 }
 
 .statValue {
-    font-size: 30px;
+    font-size: 26px;
     font-weight: 700;
     color: #FB4655;
 }
 
 .statLabel {
-    font-size: 20px;
+    font-size: 16px;
     color: #999999;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .statLabel img {
@@ -662,7 +524,6 @@
 }
 
 .statBoxWithAction {
-    /* 实现结算按钮与积分同行布局 */
     height: auto;
     min-height: 100px;
 }
@@ -676,7 +537,6 @@
 }
 
 .settleButton {
-    /* 实现待结算奖励积分按钮样式 */
     min-height: 34px;
     padding: 0 14px;
     background-color: #FB4655;
@@ -697,11 +557,15 @@
     box-shadow: 0 8px 18px rgba(251, 70, 85, 0.24);
 }
 
-/* 发布作品模块 */
+/* --- Shop/Draft Section --- */
 .shopSection {
     width: 100%;
     margin: 0 auto;
     margin-top: 38px;
+}
+
+.draftSectionHeader {
+    position: relative;
 }
 
 .draftManageActions {
@@ -711,10 +575,6 @@
     gap: 10px;
     flex-shrink: 0;
     flex-wrap: wrap;
-}
-
-.draftSectionHeader {
-    position: relative;
 }
 
 .draftManageActionsExpanded {
@@ -803,45 +663,90 @@
     font-weight: 600;
 }
 
-/* 在 1920px 以下时，用户信息区域占据 100% 宽度 */
-@media (max-width: 1920px) {
-    .userProfileSection {
-        max-width: 100vw;
-    }
+/* ============================================
+   Responsive Breakpoints
+   ============================================ */
 
-    .userProfileBackground {
-        max-width: 100%;
+/* Large Desktop: > 1080px */
+@media (min-width: 1081px) {
+    .creatorHeroActions {
+        width: 330px;
     }
 }
 
-/* 在 1080px 以下时，开始响应式调整 */
+/* Tablet & Mobile: <= 1080px */
 @media (max-width: 1080px) {
+    .pageRoot {
+        padding-bottom: 20px;
+    }
+
     .main {
         max-width: 100%;
         padding: 0 20px;
+        width: 100%;
     }
 
     .creatorHeroSection {
-        margin-top: 92px;
+        margin: 76px 0 28px;
     }
 
     .creatorHeroCard {
-        padding: 28px;
-        border-radius: 22px;
-    }
-
-    .creatorHeroMain {
+        padding: 16px;
+        border-radius: 16px;
         flex-direction: column;
-        align-items: stretch;
-        gap: 24px;
+        gap: 12px;
+        max-width: 100%;
     }
 
-    .creatorHeroName {
-        font-size: 30px;
+    .creatorHeroLeft {
+        flex: none;
+        width: 100%;
+        gap: 12px;
     }
 
     .creatorHeroActions {
-        justify-content: flex-start;
+        flex: none;
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .creatorHeroName {
+        font-size: 22px;
+    }
+
+    .creatorAccountCard,
+    .creatorAssetCard {
+        padding: 14px;
+        border-radius: 12px;
+        gap: 8px;
+    }
+
+    .creatorAccountValue {
+        font-size: 13px;
+    }
+
+    .creatorAssetValue {
+        font-size: 18px;
+    }
+
+    .creatorPrimaryButton {
+        min-height: 42px;
+        width: 80%;
+        font-size: 14px;
+        border-radius: 12px;
+    }
+
+    .creatorPrimaryButton svg {
+        font-size: 16px;
+    }
+
+    .creatorHelpButton {
+        width: 42px;
+        height: 42px;
+        border-radius: 30px;
     }
 
     .statsSection,
@@ -852,201 +757,13 @@
     }
 
     .statsGrid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-    }
-
-    .statBox {
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .statBoxWithAction {
-        min-height: 112px;
-    }
-
-    .sectionHeader {
-        margin-bottom: 10px;
-        gap: 8px;
-        width: 100%;
-    }
-
-    .sectionDividerDesktop {
-        flex: 1;
-        min-width: 0;
-        max-width: none;
-        height: auto;
-        display: block;
-    }
-
-    .sectionDividerMobile {
-        display: none;
-    }
-
-    .sectionTitle {
-        width: 120px;
-        height: 50px;
-    }
-
-    .more {
-        height: 36px;
-        font-size: 18px;
-    }
-
-    .draftManageActions {
-        gap: 8px;
-    }
-
-    .draftManageActionsExpanded {
-        width: auto;
-    }
-
-    .draftManageButton {
-        min-height: 36px;
-        padding: 0 14px;
-    }
-}
-
-@media (max-width: 768px) {
-    .pageRoot{
-        padding-bottom: 20px;
-    }
-
-    .main {
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .creatorHeroSection {
-        margin: 76px 0 28px;
-    }
-
-    .creatorHeroCard {
-        padding: 22px 18px;
-        border-radius: 20px;
-    }
-
-    .creatorHeroMain {
-        gap: 18px;
-    }
-
-    .creatorHeroMeta {
-        gap: 12px;
-    }
-
-    .creatorHeroName {
-        font-size: 24px;
-    }
-
-    .creatorHeroInfoRow {
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 10px;
-    }
-
-    .creatorIdentityStack {
-        min-width: 0;
-        gap: 6px;
-        flex-shrink: 1;
-    }
-
-    .createGameButtonRow {
-        width: 100%;
-        justify-content: flex-start;
-        gap: 8px;
-    }
-
-    .createGameButtonItem {
-        flex: 1 1 auto;
-        min-width: 120px;
-        height: 48px;
-        font-size: 15px;
-        gap: 6px;
-        padding: 0 16px;
-        border-radius: 14px;
-    }
-
-    .createGameButtonItem svg {
-        font-size: 20px;
-    }
-
-    .helpButton {
-        width: 44px;
-        height: 44px;
-        font-size: 1rem;
-        flex-shrink: 0;
-    }
-
-    .userCode {
-        width: auto;
-        box-sizing: border-box;
-        justify-content: flex-start;
-        gap: 6px;
-        font-size: 14px;
-        padding: 8px 12px;
-        flex-shrink: 0;
-    }
-
-    .debugToken {
-        width: min(100%, 320px);
-        box-sizing: border-box;
-        justify-content: flex-start;
-        gap: 6px;
-        font-size: 13px;
-        padding: 8px 12px;
-        flex-shrink: 1;
-    }
-
-    .debugTokenText {
-        max-width: 240px;
-    }
-
-    .userPoints {
-        width: auto;
-        box-sizing: border-box;
-        justify-content: flex-start;
-        gap: 6px;
-        font-size: 14px;
-        padding: 8px 12px;
-        flex-shrink: 0;
-    }
-
-    .userCredit {
-        width: auto;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 0;
-        flex-wrap: nowrap;
-        flex-shrink: 0;
-    }
-
-    .desktopPayButton {
-        display: none;
-    }
-
-    .mobilePayButton {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .payButton {
-        width: auto;
-        flex-shrink: 0;
-        min-height: 44px;
-        padding: 0 16px;
-        white-space: nowrap;
-    }
-
-    .statsGrid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
     }
 
     .statBox {
+        width: 100%;
+        max-width: 100%;
         height: 90px;
     }
 
@@ -1064,7 +781,6 @@
     }
 
     .statActionRow {
-        /* 实现移动端积分与结算按钮同一水平线 */
         align-items: center;
         gap: 8px;
     }

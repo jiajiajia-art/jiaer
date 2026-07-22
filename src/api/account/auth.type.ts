@@ -1,4 +1,8 @@
-export type MembershipPlanId = 'month' | 'season' | 'year';
+export type MembershipPlanId = 'creator_day' | 'creator_month' | 'creator_season' | 'creator_year';
+// 'month' | 'season' | 'year' // 旧版会员 planId，已废弃
+
+export type Currency = import('../common/currency').Currency;
+export type CurrencyWithAll = import('../common/currency').CurrencyWithAll;
 
 export interface MembershipSignInStatus {
   signedInToday: boolean;
@@ -13,6 +17,7 @@ export interface MembershipSignInStatus {
   baseSchedule: number[];
   bonusSchedule: number[];
   displaySchedule: number[];
+  signedDaysThisMonth: number[];
 }
 
 export interface CheckInResponse {
@@ -44,6 +49,7 @@ export interface User {
   nickname: string;
   avatarUrl: string;
   points: number;
+  diamonds?: number;
   inviteCode: string;
   hasSignedIn: boolean;
   firstCharge?: boolean;
@@ -59,6 +65,8 @@ export interface SignupRequest {
   // email: string;
   avatarUrl: string;
   nickname: string;
+  /** 未登录点击推广链时的匿名 ID，注册时带给后端以归因 invitee（见 promoAnonId.ts / GameDetail） */
+  promoAnonId?: string;
   // code: string;
 }
 
@@ -98,10 +106,10 @@ export interface ResetPasswordRequest {
 // 结算奖励
 export interface SettlePointsResponse {
   userId: string;
-  settlementAmount: number;
+  pointsSettled: number;
+  diamondsSettled?: number;
+  totalFileCount?: number;
   settlementTime: string;
-  lastSettlementTime: string | null;
-  gameCount: number;
 }
 
 export interface SubscriptionRedeemResult {
@@ -134,35 +142,42 @@ export interface InviteClaimResult {
 
 // 积分活动查询
 export type PointsActivityDirection = 'all' | 'income' | 'expense';
+export type PointsActivityCurrency = CurrencyWithAll;
 
 export interface GetPointsActivitiesParams {
+  currency?: PointsActivityCurrency;
   direction?: PointsActivityDirection;
-  month?: number;
   year?: number;
+  month?: number;
   page?: number;
   pageSize?: number;
 }
 
 export interface PointsActivityItem {
-  id: number;
+  currency: Currency;
   activityType: string;
+  amount: number;
   direction: 'income' | 'expense';
-  title: string;
-  subtitle?: string;
-  type: string;
-  points: number;
-  description: string;
   occurredAt: string;
-  createdAt: string;
+  id: number;
+  title: string;
+  subtitle: string;
 }
 
 export interface PointsActivitiesResponse {
-  currentPoints: number;
+  points: number;
+  diamonds: number;
   items: PointsActivityItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+}
+
+// 钻石兑换积分
+export interface ExchangeDiamondsRequest {
+  diamonds: number;
+}
+
+export interface ExchangeDiamondsResponse {
+  diamondsSpent: number;
+  pointsEarned: number;
+  remainingDiamonds: number;
+  remainingPoints: number;
 }

@@ -32,7 +32,6 @@ import {
 } from '../utils/creatorContinuePlay';
 import createGalgameSessionApi from '../api/galgame/createGalgameSession';
 import { useTranslation } from 'react-i18next';
-
 const CreateGame: React.FC = () => {
     const { t } = useTranslation();
     const [searchParams] = useSearchParams();
@@ -180,6 +179,9 @@ const CreateGame: React.FC = () => {
                 fileId: gameId,
                 priceAmount: 0,
                 description: payload.description ?? '',
+                shareType: payload.shareType,
+                versionNotes: payload.versionNotes,
+                notifyFavoritedUsers: payload.notifyFavoritedUsers,
             });
 
             if (response.data.success) {
@@ -407,6 +409,8 @@ const CreateGame: React.FC = () => {
                     isNovel={isNovelEngine(gameDetail.engine, gameDetail.game_tags)}
                     onCoverUploaded={refreshGameDetail}
                     onSaved={refreshGameDetail}
+                    gameTags={gameDetail?.game_tags}
+                    engine={gameDetail?.engine}
                 />
             )}
 

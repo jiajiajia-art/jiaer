@@ -1,6 +1,12 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IoEye } from 'react-icons/io5';
+import {
+    IoChatbubbleEllipses,
+    IoEye,
+    IoShareSocial,
+    IoStatsChartSharp,
+    IoTime,
+} from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
@@ -9,6 +15,8 @@ import { useGameStore } from '../../store/gameStore';
 import createGalgameSessionApi from '../../api/galgame/createGalgameSession';
 import GameAction from '../../api/rpgGame/gameAction';
 import type { GameStatsResponse } from '../../api/rpgGame/gameAction.Api';
+import creatorStatsApi, { type CreatorWorkDetail } from '../../api/stats/creatorStatsApi';
+import CreatorWorkDetailSections from '../stats/CreatorWorkDetailSections';
 import createWorldSessionApi from '../../api/worldInteraction/createWorldSession';
 import { getImageUrl } from '../../utils/constants';
 import { addImageTimestamp } from '../../utils/imageCache';
@@ -22,6 +30,14 @@ import {
     parseOpticalPlaySessionId,
 } from '../../utils/creatorContinuePlay';
 import { useTranslation } from 'react-i18next';
+
+const formatPlayDuration = (seconds: number) => {
+    const safe = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+};
 
 interface GameStatsViewProps {
     gameDetail: UserGameData;
@@ -55,6 +71,8 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [gameStats, setGameStats] = useState<GameStatsResponse>();
+    const [workDetail, setWorkDetail] = useState<CreatorWorkDetail | null>(null);
+    const [isStatsLoading, setIsStatsLoading] = useState(true);
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
 
@@ -221,16 +239,32 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         }
     };
 
-    const getGameStats = async () => {
-        const response = await GameAction.getGameStats(gameDetail.file_id);
-        if (response.data.success) {
-            setGameStats(response.data.data ?? undefined);
+    const loadWorkStats = async () => {
+        const fileId = gameDetail.file_id || gameDetail.id;
+        if (!fileId) return;
+
+        setIsStatsLoading(true);
+        try {
+            const [legacyResp, detailResp] = await Promise.all([
+                GameAction.getGameStats(fileId),
+                creatorStatsApi.getWorkDetail(fileId, { commentLimit: 30 }),
+            ]);
+            if (legacyResp.data.success) {
+                setGameStats(legacyResp.data.data ?? undefined);
+            }
+            if (detailResp.data.success) {
+                setWorkDetail(detailResp.data.data);
+            }
+        } catch (error) {
+            console.error('[GameStatsView] load stats failed', error);
+        } finally {
+            setIsStatsLoading(false);
         }
     };
 
     useEffect(() => {
-        getGameStats();
-    }, [gameDetail.file_id]);
+        void loadWorkStats();
+    }, [gameDetail.file_id, gameDetail.id]);
 
     return (
         <div className={styles.statsModeWrapper}>
@@ -303,29 +337,80 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                             <img src={`${import.meta.env.BASE_URL}data/assets/home/箭头.png`} alt={t('createGame.arrow')} />
                         </button>
                     </div>
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statBox}>
-                            <div className={styles.statLabel}>
-                                <IoEye />
-                                <span>{t('createGame.views')}</span>
+                    {isStatsLoading ? (
+                        <div className={styles.statsLoading}>{t('creatorStats.loading')}</div>
+                    ) : (
+                        <>
+                            <div className={styles.statsGrid}>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <IoEye />
+                                        <span>{t('creatorStats.totalViews')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.pv ?? gameStats?.pv ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <TbHandClick />
+                                        <span>{t('creatorStats.totalVisitors')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.uv ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <TbHandClick />
+                                        <span>{t('creatorStats.totalLikes')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.likeCount ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <IoStatsChartSharp />
+                                        <span>{t('creatorStats.playCount')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.playCount ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <IoTime />
+                                        <span>{t('creatorStats.playDuration')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>
+                                        {formatPlayDuration(workDetail?.playDurationSeconds ?? 0)}
+                                    </div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <IoShareSocial />
+                                        <span>{t('creatorStats.shareCount')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.shareCount ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <IoChatbubbleEllipses />
+                                        <span>{t('creatorStats.commentCount')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.commentCount ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                        <span>{t('creatorStats.spendPoints')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{workDetail?.spendPoints ?? 0}</div>
+                                </div>
+                                <div className={styles.statBox}>
+                                    <div className={styles.statLabel}>
+                                        <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
+                                        <span>{t('createGame.earnings')}</span>
+                                    </div>
+                                    <div className={styles.statValue}>{gameStats?.count ?? 0}</div>
+                                </div>
                             </div>
-                            <div className={styles.statValue}>{gameStats?.pv || 0}</div>
-                        </div>
-                        <div className={styles.statBox}>
-                            <div className={styles.statLabel}>
-                                <TbHandClick />
-                                <span>{t('createGame.clicks')}</span>
-                            </div>
-                            <div className={styles.statValue}>{gameStats?.pv || 0}</div>
-                        </div>
-                        <div className={styles.statBox}>
-                            <div className={styles.statLabel}>
-                                <img src={`${import.meta.env.BASE_URL}data/assets/金币1.png`} alt="" />
-                                <span>{t('createGame.earnings')}</span>
-                            </div>
-                            <div className={styles.statValue}>{gameStats?.count || 0}</div>
-                        </div>
-                    </div>
+                            {workDetail ? <CreatorWorkDetailSections detail={workDetail} /> : null}
+                        </>
+                    )}
                 </div>
 
                 <div className={styles.heroActionGroup}>

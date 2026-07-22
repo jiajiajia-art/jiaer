@@ -93,6 +93,11 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const api = createApiHelpers(mode);
     const userPoints = user?.user?.points ?? 0;
     
+    // 计算会员折扣后的生成价格（暂时不打折）
+    const discountedCost = CHARACTER_GENERATION_COST; // TODO: 恢复折扣时改为 `isMember ? Math.ceil(CHARACTER_GENERATION_COST * MEMBER_CREATION_DISCOUNT) : CHARACTER_GENERATION_COST`，并取消下方的 isMember 注释
+    // const isMember = user?.user?.isMember ?? false;
+    // const showDiscount = isMember && MEMBER_CREATION_DISCOUNT < 1; // TODO: 恢复折扣UI时取消注释
+    
     const [activeCharacterId, setActiveCharacterId] = useState<string>('');
     const [characterData, setCharacterData] = useState<Character[]>([]);
     const [isBackgroundExpanded, setIsBackgroundExpanded] = useState<boolean>(false);
@@ -1623,7 +1628,21 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <span className={styles.buttonMainText}>
                                 {isGeneratingNpcImages ? t('createGame.generating') : t('createGame.generateAllCharacterPortraits')}
                             </span>
-                            <span className={styles.buttonSubText}>{CHARACTER_GENERATION_COST}{t('createGame.pointsPerImage')}</span>
+                            <span className={styles.buttonSubText}>
+                                {/* TODO: 恢复会员折扣UI时，取消下方注释
+                                {showDiscount ? (
+                                    <>
+                                        <span className={styles.discountPrice}>
+                                            {discountedCost}
+                                            <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
+                                        </span>
+                                        {t('createGame.pointsPerImage')}
+                                    </>
+                                ) : (
+                                    <>{discountedCost}{t('createGame.pointsPerImage')}</>
+                                )} */}
+                                {discountedCost}{t('createGame.pointsPerImage')}
+                            </span>
                         </div>
                     </button>
                 </GenerationActionBar>
@@ -1884,7 +1903,16 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                             alt=""
                                             className={styles.priceIcon}
                                         />
-                                        <span>{CHARACTER_GENERATION_COST} {t('createGame.aiGenerate')}</span>
+                                        {/* TODO: 恢复会员折扣UI时，取消下方注释
+                                        {showDiscount ? (
+                                            <>
+                                                <span className={styles.discountPrice}>{discountedCost}</span>
+                                                <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
+                                                <span>{t('createGame.aiGenerate')}</span>
+                                            </>
+                                        ) : ( */}
+                                            <span>{discountedCost} {t('createGame.aiGenerate')}</span>
+                                        {/* )} */}
                                     </button>
                                 )}
                             </div>
@@ -2159,7 +2187,19 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                                                                 alt=""
                                                                 className={styles.priceIcon}
                                                             />
-                                                            <span>{isGeneratingVariation && generatingVariationId === variation.id ? t('createGame.generating') : `${CHARACTER_GENERATION_COST} ${t('createGame.aiGenerate')}`}</span>
+                                                            {isGeneratingVariation && generatingVariationId === variation.id ? (
+                                                                <span>{t('createGame.generating')}</span>
+                                                            /* TODO: 恢复会员折扣UI时，取消下方注释
+                                                            ) : showDiscount ? (
+                                                                <>
+                                                                    <span className={styles.discountPrice}>{discountedCost}</span>
+                                                                    <span className={styles.originalPrice}>{CHARACTER_GENERATION_COST}</span>
+                                                                    <span>{t('createGame.aiGenerate')}</span>
+                                                                </>
+                                                            ) : ( */
+                                                            ) : (
+                                                                <span>{discountedCost} {t('createGame.aiGenerate')}</span>
+                                                            )}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -2314,7 +2354,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 onConfirm={confirmSingleNpcGenerate}
                 onCancel={cancelSingleNpcGenerate}
                 title={t('createGame.characterPortraitGenerationConfirm')}
-                message={t('createGame.singleCharacterGenerationConfirm', { cost: CHARACTER_GENERATION_COST })}
+                message={t('createGame.singleCharacterGenerationConfirm', { cost: discountedCost })}
                 confirmButtonText={t('common.confirmGenerate')}
                 cancelButtonText={t('common.cancel')}
             />
@@ -2336,7 +2376,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                 onConfirm={confirmVariationGenerate}
                 onCancel={cancelVariationGenerate}
                 title={t('common.pointsDeductionConfirm')}
-                message={t('createGame.variationGenerationConfirm', { cost: CHARACTER_GENERATION_COST })}
+                message={t('createGame.variationGenerationConfirm', { cost: discountedCost })}
                 confirmButtonText={t('common.confirmGenerate')}
                 cancelButtonText={t('common.cancel')}
             />

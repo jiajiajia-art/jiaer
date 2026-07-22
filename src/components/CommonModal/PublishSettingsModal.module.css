@@ -145,6 +145,26 @@
     outline: none;
 }
 
+.notifyCheckboxRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.78);
+    cursor: pointer;
+    user-select: none;
+}
+
+.notifyCheckbox {
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary, #e03d4b);
+}
+
 .footerBar {
     flex-shrink: 0;
     display: flex;
@@ -488,6 +508,94 @@
     margin-top: 10px;
     color: #b91c1c;
     font-size: 13px;
+}
+
+/* 结算货币类型选择 */
+.shareTypeFormGroup {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* 自定义下拉框 */
+.customSelectWrapper {
+    position: relative;
+}
+
+.customSelectTrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid rgba(224, 61, 75, 0.16);
+    border-radius: 999px;
+    font-size: 14px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.customSelectTrigger:hover {
+    border-color: var(--primary, #e03d4b);
+}
+
+.customSelectTriggerOpen {
+    border-color: var(--primary, #e03d4b);
+    box-shadow: 0 0 0 3px rgba(224, 61, 75, 0.1);
+}
+
+.customSelectArrow {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.2s ease;
+    color: #666;
+}
+
+.customSelectArrowOpen {
+    transform: rotate(180deg);
+}
+
+.customSelectDropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: auto;
+    right: 0;
+    min-width: 100%;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid rgba(224, 61, 75, 0.16);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(45, 18, 24, 0.12);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.customSelectOption {
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.customSelectOption:hover {
+    background: rgba(224, 61, 75, 0.08);
+    color: var(--primary, #e03d4b);
+}
+
+.customSelectOptionSelected {
+    background: rgba(224, 61, 75, 0.12);
+    color: var(--primary, #e03d4b);
+    font-weight: 600;
 }
 
 /* 移动端：全屏表单板，底栏始终可见 */

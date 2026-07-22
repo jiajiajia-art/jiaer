@@ -188,6 +188,11 @@
     color: #9a5b33;
 }
 
+.typeTagFavoriteGame {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+}
+
 .messageTitle {
     color: #341318;
     font-size: 18px;

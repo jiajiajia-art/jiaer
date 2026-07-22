@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import './styles/funloomToast.css';
 import Home from './page/Home';
 import Create from './page/Create';
+import WithdrawRecords from './page/WithdrawRecords';
 import WareHouse from './page/WareHouse';
 import Profile from './page/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -21,15 +22,24 @@ import InteractiveVideo from './page/InteractiveVideo';
 import InteractiveVideoEdit from './page/InteractiveVideoEdit';
 import GameDetail from './page/GameDetail';
 import NovelReader from './page/NovelReader';
+import Favorites from './page/Favorites';
 import ScrollToTop from './components/ScrollToTop';
 import Analytics from './page/Analytics';
 import RouteReporter from './components/RouteReporter';
 import { usePlatformDurationTracking } from './hooks/usePlatformDurationTracking';
 import AdminPanel from './page/AdminPanel';
 import { AdminRoute } from './components/AdminRoute';
+import CommentAdminPage from './page/CommentAdminPage';
+import OperatorWorkStats from './page/operator/OperatorWorkStats';
+import CreatorWorkStats from './page/creator/CreatorWorkStats';
+import OperatorPanel from './page/operator/OperatorPanel';
+import { CreatorRoute } from './components/CreatorRoute';
+import { OperatorRoute } from './components/OperatorRoute';
 import Categories from './page/Categories';
+import Rankings from './page/Rankings';
 import PromotionCenter from './page/PromotionCenter';
 import Messages from './page/Messages';
+import AssetDetails from './page/AssetDetails';
 import PointsDetails from './page/PointsDetails';
 import Document from './page/Document';
 import { useEffect } from 'react';
@@ -94,6 +104,7 @@ function App() {
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<Home />} />
         <Route path="/categories" element={<Categories />} />
+        <Route path="/rank" element={<Rankings />} />
         <Route path="/library" element={<Library />} />
         <Route path="/specials" element={<Library variant="special" />} />
         <Route path="/game/:fileId" element={<GameDetail />} />
@@ -103,9 +114,22 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
+          <Route path="/create/withdraw-records" element={<WithdrawRecords />} />
+          <Route path="/asset/details" element={<AssetDetails />} />
+          <Route path="/creator" element={<Navigate to="/create" replace />} />
+          <Route path="/creator/works/:fileId/stats" element={<CreatorRoute><CreatorWorkStats /></CreatorRoute>} />
+          <Route path="/operator" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/reports" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/promotion" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/promotion/:promotionView" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/recruitment" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/daily-tasks" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/withdraw" element={<OperatorRoute><OperatorPanel /></OperatorRoute>} />
+          <Route path="/operator/works/:fileId/stats" element={<OperatorRoute><OperatorWorkStats /></OperatorRoute>} />
           <Route path="/points/details" element={<PointsDetails />} />
           <Route path="/createGame" element={<CreateGame />} />
           <Route path="/warehouse" element={<WareHouse />} />
+          <Route path="/favorites" element={<Favorites />} />
           <Route path="/gameSettingsEditor" element={<GameSettingsEditor />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/promotions" element={<PromotionCenter />} />
@@ -117,6 +141,11 @@ function App() {
           <Route path="/admin/creator-incentives" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/subscriptions" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/documents" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/share-ratio" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />
           <Route path="/customif/create" element={<CustomIFCreate />} />

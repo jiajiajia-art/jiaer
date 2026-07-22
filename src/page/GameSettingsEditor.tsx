@@ -11,7 +11,7 @@ import Sidebar from '../components/GameSettingEditor/Sidebar';
 import MapPanel, { type MapPanelRef } from '../components/GameSettingEditor/MapPanel/MapPanel';
 import FunctionalNPCsPanel, { type FunctionalNPCsPanelRef } from '../components/GameSettingEditor/FunctionalNPCsPanel/FunctionalNPCsPanel';
 import { type ObjectsPanelRef } from '../components/GameSettingEditor/ObjectsPanel/ObjectsPanel';
-import PublishSettingsModal from '../components/CommonModal/PublishSettingsModal';
+import PublishSettingsModal, { type PublishSubmitPayload } from '../components/CommonModal/PublishSettingsModal';
 import ConfirmModal from '../components/CommonModal/ConfirmModal';
 import { useEditorStore } from '../store/editorStore';
 import { useGameStore } from '../store/gameStore';
@@ -432,9 +432,14 @@ const GameSettingsEditor = () => {
         setActivePanel(resolvedPanelId);
     }, [isParsing, isParsed, mode, fileId, isLoadingData, fetchEditorData, setActivePanel, activePanel, morePromptForms, dataPromptForms]);
 
-    const onPublishGame = useCallback(async (payload: { description: string }) => {
+    const onPublishGame = useCallback(async (payload: PublishSubmitPayload) => {
         try {
-            await handlePublishGame(payload.description);
+            await handlePublishGame(
+                payload.description,
+                payload.shareType,
+                payload.versionNotes,
+                payload.notifyFavoritedUsers,
+            );
             setShowPublishModal(false);
         } catch (error: any) {
             setNoticeMessage(error?.message || t('createGame.publishFailed'));
@@ -803,6 +808,7 @@ const GameSettingsEditor = () => {
                         onClose={() => setShowPublishModal(false)}
                         onPublish={onPublishGame}
                         fileId={fileId || undefined}
+                        engine="AVG"
                     />
                 )}
                 <ConfirmModal

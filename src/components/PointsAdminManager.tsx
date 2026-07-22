@@ -11,6 +11,7 @@ import type {
     PromotionSubmission,
 } from '../api/promotion/promotion.type';
 import { getImageUrl } from '../utils/constants';
+import { getApiErrorMessage } from '../utils/error';
 import Pagination from './Pagination';
 import styles from './PointsAdminManager.module.css';
 
@@ -21,15 +22,6 @@ const formatTime = (value?: string | null) => {
     if (!value) return '未记录';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
-};
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const getRewardTaskStatusLabel = (status: PromotionRewardTask['status']) => {
@@ -80,7 +72,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             setPendingTaskCount(Number(payload?.summary?.pendingCount || 0));
             setPendingRewardPoints(Number(payload?.summary?.pendingRewardPoints || 0));
         } catch (error) {
-            toast.error(getErrorMessage(error, '活动积分任务列表加载失败'));
+            toast.error(getApiErrorMessage(error, '活动积分任务列表加载失败'));
         } finally {
             setIsLoadingRewardTasks(false);
         }
@@ -100,7 +92,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                 onRefreshCounts().catch(() => undefined),
             ]);
         } catch (error) {
-            toast.error(getErrorMessage(error, '活动积分发放失败'));
+            toast.error(getApiErrorMessage(error, '活动积分发放失败'));
         } finally {
             setIssuingTaskId(null);
         }
@@ -119,7 +111,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
                 onRefreshCounts().catch(() => undefined),
             ]);
         } catch (error) {
-            toast.error(getErrorMessage(error, '活动积分批量发放失败'));
+            toast.error(getApiErrorMessage(error, '活动积分批量发放失败'));
         } finally {
             setIsBatchIssuing(false);
         }
@@ -139,7 +131,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             const response = await promotionApi.adminSubmissionDetail(task.submissionId);
             setDetailSubmission(response.data.data || null);
         } catch (error) {
-            toast.error(getErrorMessage(error, '活动积分详情加载失败'));
+            toast.error(getApiErrorMessage(error, '活动积分详情加载失败'));
         } finally {
             setIsDetailLoading(false);
         }
@@ -164,7 +156,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             toast.success('用户查询成功');
         } catch (error) {
             setLookupResult(null);
-            toast.error(getErrorMessage(error, '用户查询失败'));
+            toast.error(getApiErrorMessage(error, '用户查询失败'));
         } finally {
             setIsLookingUp(false);
         }
@@ -198,7 +190,7 @@ const PointsAdminManager: React.FC<PointsAdminManagerProps> = ({ pendingRewardCo
             setRemark('');
             toast.success(changeType === 'increment' ? '特殊积分增加成功' : '特殊积分扣减成功');
         } catch (error) {
-            toast.error(getErrorMessage(error, '特殊积分变更失败'));
+            toast.error(getApiErrorMessage(error, '特殊积分变更失败'));
         } finally {
             setIsSubmittingAdjust(false);
         }

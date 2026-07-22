@@ -5,6 +5,7 @@ export interface UserGameData {
     title: string;
     subtitle: string;
     description: string;
+    version_notes?: string | null;
     cover_url: string;
     doc_url: string;
     files: string;
@@ -28,7 +29,8 @@ export interface UserGameData {
     is_preset: number;
     // 新增：游戏引擎类型（服务端为准）与自定义游戏的 AppId（用于 Custom IF）
     // RPG -> story, TXT -> galgame, AVG -> world, CUSTOM -> customif, IVG -> interactive-video
-    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG' | 'NOVEL';
+    engine?: 'RPG' | 'TXT' | 'AVG' | 'CUSTOM' | 'IVG'| 'NOVEL';
+    playbackOrientation?: 'landscape' | 'portrait';
     customAppId?: string;
     needDeleted: boolean;
     display_cover_url: string;
@@ -59,6 +61,8 @@ export interface UserGameData {
     incentive_settled_amount?: number;
     /** QQ群号，有值则渲染 */
     groupNo?: string;
+    /** 当前用户是否已收藏该游戏 */
+    isFavorited?: boolean;
 }
 
 export interface UserGameResponse {

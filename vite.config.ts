@@ -10,10 +10,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       // 后端 API 代理（局域网同事访问时，请求经本机 Vite 转发到 localhost:3000）
+      // 含 WebSocket 升级
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
         secure: false,
+        ws: true,
       },
       '/public': {
         target: 'http://localhost:3000',
@@ -22,7 +24,7 @@ export default defineConfig({
       },
       // 注意：开发环境使用 signInWithPopup，不需要 Firebase Auth 代理
       // 生产环境部署到 Firebase Hosting，也不需代理
-    }
+    },
   },
   preview: {
     host: true,

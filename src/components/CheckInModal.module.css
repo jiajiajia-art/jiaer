@@ -4,52 +4,52 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(10px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 2000;
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.35s ease-out;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .content {
-    background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+    background: #ffffff;
     border-radius: 20px;
-    width: 90%;
-    max-width: 420px;
-    padding: 32px 28px;
-    position: relative;
-    animation: slideUp 0.3s ease-out;
+    width: 94%;
+    max-width: 380px;
     max-height: 90vh;
+    padding: 24px 20px 20px;
+    position: relative;
+    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    box-shadow:
+        0 32px 64px -12px rgba(0, 0, 0, 0.18),
+        0 8px 24px -4px rgba(0, 0, 0, 0.10),
+        0 0 0 1px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateY(40px) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
 .closeButton {
     position: absolute;
-    top: 14px;
-    right: 14px;
+    top: 12px;
+    right: 12px;
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -57,323 +57,380 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(0, 0, 0, 0.04);
     border: none;
-    color: #999;
+    color: #9ca3af;
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 400;
     transition: all 0.2s ease;
 }
 
 .closeButton:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: #666;
+    background: rgba(0, 0, 0, 0.08);
+    color: #6b7280;
+    transform: rotate(90deg);
 }
 
 .header {
     text-align: center;
-    margin-bottom: 24px;
-}
-
-.iconWrapper {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.iconWrapper img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    margin-bottom: 20px;
 }
 
 .title {
-    color: #111;
-    font-size: 1.5rem;
+    color: #1f2937;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin: 0 0 8px 0;
-    letter-spacing: 1px;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.02em;
 }
 
 .subtitle {
-    color: #666;
+    color: #6b7280;
     font-size: 0.9rem;
     margin: 0;
+    font-weight: 500;
+}
+
+.membershipHint {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    margin: -10px 0 16px;
+    text-align: center;
 }
 
 .loadingText {
-    margin: 20px 0;
+    margin: 40px 0;
     text-align: center;
-    color: #666a73;
+    color: #9ca3af;
     font-size: 0.95rem;
-    line-height: 1.5;
 }
 
-.scheduleContainer {
-    margin: 0 0 24px 0;
-}
-
-.scheduleList {
-    display: flex;
-    gap: 8px;
-    justify-content: space-between;
-}
-
-.scheduleItem {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 14px 6px;
-    background: #f5f5f5;
-    border-radius: 14px;
-    transition: all 0.3s ease;
-    min-height: 100px;
-}
-
-.scheduleItemToday {
-    background: linear-gradient(135deg, #fff0f1 0%, #ffe4e6 100%);
-    box-shadow: 0 4px 16px rgba(251, 70, 85, 0.2);
-    transform: scale(1.05);
-}
-
-.scheduleItemCompleted {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-}
-
-.scheduleItemFuture {
-    background: #f5f5f5;
-    opacity: 0.7;
-}
-
-.dayBadge {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: #e5e5e5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 8px;
-}
-
-.scheduleItemToday .dayBadge {
-    background: #FB4655;
-}
-
-.scheduleItemCompleted .dayBadge {
-    background: #22c55e;
-}
-
-.dayNumber {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #666;
-}
-
-.scheduleItemToday .dayNumber {
-    color: #fff;
-}
-
-.scheduleItemCompleted .dayNumber {
-    color: #fff;
-}
-
-.checkIcon {
-    font-size: 0.95rem;
-    color: #fff;
-}
-
-.scheduleDay {
-    font-size: 0.7rem;
-    color: #888;
-    margin-bottom: 4px;
-}
-
-.scheduleItemToday .scheduleDay {
-    color: #FB4655;
-    font-weight: 600;
-}
-
-.scheduleItemCompleted .scheduleDay {
-    color: #22c55e;
-}
-
-.schedulePoints {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #333;
-}
-
-.scheduleItemToday .schedulePoints {
-    color: #FB4655;
-}
-
-.scheduleItemCompleted .schedulePoints {
-    color: #22c55e;
-}
-
-.progressBar {
-    height: 6px;
-    background: #e5e5e5;
-    border-radius: 3px;
-    margin: 20px 0 10px 0;
+/* Calendar Container */
+.calendarWrapper {
+    border-radius: 16px;
+    padding: 10px;
+    margin-bottom: 20px;
     overflow: hidden;
 }
 
-.progressFill {
-    height: 100%;
-    background: linear-gradient(90deg, #FB4655 0%, #ff6b7a 100%);
-    border-radius: 3px;
-    transition: width 0.5s ease;
+/* 周标题行 */
+.weekdayRow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    padding: 0 4px 8px;
+    border-bottom: 1px dashed #eee;
+    margin-bottom: 8px;
 }
 
-.progressText {
+.weekdayLabel {
     text-align: center;
-    font-size: 0.8rem;
-    color: #666;
-    margin: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #b8a89c;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
+/* 7 列月历网格 */
+.monthlyGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    padding: 4px;
+}
+
+/* 月初占位（不可点击的空白格）*/
+.emptyCell {
+    aspect-ratio: 1;
+}
+
+/* Day Cell Base - 普通格子: 纯白 + 极浅细框 */
+.dayCell {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 6px 4px;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: default;
+    border: 1px solid #f0eae3;
+    overflow: hidden;
+}
+
+.dayCell:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Day Number */
+.dayCellNumber {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c8c0b8;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+.dayCellMissedNum {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c8c0b8;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Points - 普通格文字: 浅灰 */
+.dayCellPoints {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #c8c0b8;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== 状态 1: 历史已签到 (实心我红渐变 + 白色对勾) ===== */
+.dayCellCompleted {
+    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
+    border-color: #e11d48;
+    color: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 2px 6px rgba(225, 29, 72, 0.22);
+}
+
+.dayCellCompleted .dayCellNumber {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.dayCellCompleted .dayCellPoints {
+    color: #fff5f7;
+    font-weight: 700;
+}
+
+.dayCellCompleted:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.22),
+        0 4px 12px rgba(225, 29, 72, 0.32);
+}
+
+.dayCellCompleted .checkIcon {
+    color: #ffffff;
+    width: 16px;
+    height: 16px;
+}
+
+/* ===== 状态 2: 今天待签到 (浅粉底 + 我红描边 + 我红光晕) ===== */
+.dayCellToday {
+    background: #fff0f3;
+    border: 2px solid #fb4655;
+    color: #fb4655;
+    transform: scale(1.08);
+    z-index: 3;
+    box-shadow:
+        0 0 0 4px rgba(251, 70, 85, 0.18),
+        0 8px 20px rgba(251, 70, 85, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    animation: todayPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes todayPulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 4px rgba(251, 70, 85, 0.18),
+            0 8px 20px rgba(251, 70, 85, 0.32),
+            inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    }
+    50% {
+        box-shadow:
+            0 0 0 10px rgba(251, 70, 85, 0.06),
+            0 12px 28px rgba(251, 70, 85, 0.48),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+}
+
+.dayCellToday .dayCellNumber {
+    color: #000000;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dayCellToday .dayCellPoints {
+    color: #e11d48;
+    font-weight: 800;
+}
+
+.dayCellToday:hover {
+    transform: scale(1.12);
+    background: #ffe4ea;
+}
+
+/* ===== 状态 3: 今天已签到 (实心我红 + 对勾, 与历史同色) ===== */
+.dayCellTodayCompleted {
+    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
+    border-color: #e11d48;
+    transform: scale(1.08);
+    z-index: 3;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        0 4px 14px rgba(225, 29, 72, 0.35);
+}
+
+.dayCellTodayCompleted .dayCellNumber {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.dayCellTodayCompleted .dayCellPoints {
+    color: #fff5f7;
+    font-weight: 700;
+}
+
+.dayCellTodayCompleted .checkIcon {
+    color: #ffffff;
+    width: 16px;
+    height: 16px;
+}
+
+.dayCellTodayCompleted:hover {
+    transform: scale(1.12);
+}
+
+/* ===== 状态 4: 预测可签到 (极浅粉 + 我红虚线) ===== */
+.dayCellForecast {
+    background: #fff5f7;
+    border: 1px dashed #fda4af;
+}
+
+.dayCellForecast .dayCellNumber {
+    color: #000000;
+    font-weight: 600;
+}
+
+.dayCellForecast .dayCellPoints {
+    color: #fb4655;
+    font-weight: 700;
+}
+
+.dayCellForecast:hover {
+    background: #ffe4ea;
+    transform: translateY(-1px);
+}
+
+/* ===== 状态 5: 不可签到 - 中间断签 (浅灰) ===== */
+.dayCellFuture {
+    background: #fafaf7;
+    border-color: #efe9e0;
+    opacity: 0.55;
+}
+
+.dayCellFuture .dayCellNumber {
+    color: #d8d2ca;
+}
+
+.dayCellFuture .dayCellPoints {
+    color: #d8d2ca;
+}
+
+/* ===== 状态 6: 大奖格子 (>9 积分) ===== */
+.dayCellBonus {
+    position: relative;
+}
+
+.dayCellBonus .dayCellPoints {
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.dayCellBonus.dayCellToday .dayCellPoints {
+    color: #e11d48;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.dayCellBonus.dayCellCompleted .dayCellPoints,
+.dayCellBonus.dayCellTodayCompleted .dayCellPoints {
+    color: #fff5f7;
+    font-weight: 800;
+}
+
+.dayCellBonus.dayCellForecast .dayCellPoints {
+    color: #f43f5e;
+    font-weight: 800;
+}
+
+/* Check Icon */
+.checkIcon {
+    color: #e63946;
+    width: 14px;
+    height: 14px;
+    animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes checkPop {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+/* Button Styles */
 .buttonContainer {
     display: flex;
     justify-content: center;
 }
 
-.simpleContent {
-    width: min(92vw, 500px);
-    max-width: none;
-    padding: 24px 26px 20px;
-    border-radius: 24px;
-    background: #f5f5f5;
-}
-
-.simpleIconWrapper {
-    width: 42px;
-    height: 42px;
-    margin: 0 auto 8px;
-}
-
-.simpleIconWrapper img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.simpleTitle {
-    margin: 0;
-    text-align: center;
-    font-size: 20px;
-    font-weight: 700;
-    color: #2f3137;
-    letter-spacing: 0.5px;
-}
-
-.simpleDesc {
-    margin: 14px 0 24px;
-    text-align: center;
-    font-size: 14px;
-    color: #666a73;
-    line-height: 1.45;
-}
-
-.simplePoints {
-    color: #fb4655;
-    font-weight: 700;
-}
-
-.simpleButtonContainer {
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    width: 100%;
-}
-
-.simpleLaterButton {
-    min-width: 134px;
-    height: 44px;
-    border: none;
-    border-radius: 14px;
-    background: #ececef;
-    color: #2f3137;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-}
-
-.simpleLaterButton:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(17, 24, 39, 0.12);
-}
-
-.simpleLaterButton:disabled {
-    opacity: 0.72;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.simpleSignInButton {
-    min-width: 134px;
-    height: 44px;
-    border: none;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #fb4655 0%, #ff5d72 100%);
-    color: #fff;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-    box-shadow: 0 8px 20px rgba(251, 70, 85, 0.28);
-    padding: 0 20px;
-}
-
-.simpleSignInButton:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(251, 70, 85, 0.34);
-}
-
-.simpleSignInButton:disabled {
-    opacity: 0.72;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.simpleSignInButton:disabled:hover {
-    transform: none;
-    box-shadow: none;
-}
-
-.simpleLaterButton:active,
-.simpleSignInButton:active {
-    transform: translateY(0);
-}
-
 .signInButton {
     padding: 14px 48px;
-    background: linear-gradient(135deg, #FB4655 0%, #FF5A6A 100%);
+    background: linear-gradient(135deg, #fb4655 0%, #f43f5e 50%, #e11d48 100%);
     color: #fff;
     border: none;
-    border-radius: 25px;
+    border-radius: 50px;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(251, 70, 85, 0.3);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow:
+        0 6px 20px rgba(251, 70, 85, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+}
+
+.signInButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
 }
 
 .signInButton:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(251, 70, 85, 0.4);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow:
+        0 10px 28px rgba(251, 70, 85, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.signInButton:hover::before {
+    left: 100%;
 }
 
 .signInButton:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
 }
 
 .signInButton:disabled {
@@ -381,85 +438,23 @@
     cursor: not-allowed;
     transform: none;
 }
-/* 移动端适配 */
-@media (max-width: 480px) {
-    .content {
-        width: 95%;
-        padding: 28px 20px;
-    }
 
-    .title {
-        font-size: 1.3rem;
-    }
-
-    .iconWrapper {
-        width: 56px;
-        height: 56px;
-    }
-
-    .scheduleList {
-        gap: 5px;
-    }
-
-    .scheduleItem {
-        padding: 12px 3px;
-        min-height: 90px;
-    }
-
-    .dayBadge {
-        width: 28px;
-        height: 28px;
-        margin-bottom: 6px;
-    }
-
-    .dayNumber {
-        font-size: 0.75rem;
-    }
-
-    .scheduleDay {
-        font-size: 0.65rem;
-    }
-
-    .schedulePoints {
-        font-size: 0.8rem;
-    }
-
-    .simpleContent {
-        width: calc(100vw - 24px);
-        max-width: 340px;
-        padding: 18px 14px 14px;
-        border-radius: 16px;
-    }
-
-    .simpleIconWrapper {
-        width: 34px;
-        height: 34px;
-        margin-bottom: 6px;
-    }
-
-    .simpleTitle {
-        font-size: 16px;
-        letter-spacing: 0.2px;
-    }
-
-    .simpleDesc {
-        margin: 10px 0 14px;
-        font-size: 13px;
-        line-height: 1.35;
-    }
-
-    .simpleButtonContainer {
-        gap: 6px;
-    }
-
-    .simpleLaterButton,
-    .simpleSignInButton {
-        flex: 0 0 auto;
-        width: 100px;
-        min-width: 100px;
-        height: 38px;
-        font-size: 13px;
-        border-radius: 10px;
-    }
+.buttonLoading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

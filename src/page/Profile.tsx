@@ -12,6 +12,8 @@ import RechargeModal from '../components/Purchase/RechargeModal';
 import CheckInModal from '../components/CheckInModal';
 import MembershipRedeemResultModal from '../components/MembershipRedeemResultModal';
 import InviteRewardModal from '../components/InviteRewardModal';
+import { planLabelMap } from '../utils/planLabels';
+import ExchangeModal from '../components/Purchase/ExchangeModal';
 import CreatorProfile, { type CreatorProfileFormData } from '../components/CreatorProfile.tsx';
 import { RiCopperCoinLine, RiLogoutCircleRLine } from 'react-icons/ri';
 import {
@@ -26,7 +28,9 @@ import {
 } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import JoinGroupModal from '../components/JoinGroupModal';
+import UserAvatar from '../components/UserAvatar';
 import { getImageUrl } from '../utils/constants';
+import { isVerifiedCreatorRole } from '../utils/userRoles';
 import type { SubscriptionRedeemResult, User } from '../api/account/auth.type';
 import type { SubscriptionPlanId } from '../api/subscriptionKeys/subscriptionKeysApi.type';
 import type { PayOrderRequest } from '../api/pay/pay.type';
@@ -34,11 +38,15 @@ import { useImageCropper } from '../hooks/useImageCropper';
 import ImageCropModal from '../components/CommonModal/ImageCropModal';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import {
+    isDynamicDailyTask,
+    isDynamicDurationDailyTask,
+    isDynamicPromotionDailyTask,
     isDurationTaskCode,
-    type DailyTaskClaimType,
 } from '../api/statistics/dailyTask.type';
 import { getCreatorProfile, saveCreatorProfile } from '../api/incentive/creatorProfileApi';
 import type { CreatorProfileData } from '../components/CreatorProfile.tsx';
+import { buildGamePromotionLink } from '../utils/gamePromotionLink';
+import { getApiErrorMessage } from '../utils/error';
 
 const formatDuration = (totalSeconds: number): string => {
     const safe = Math.max(0, Math.floor(totalSeconds));
@@ -47,22 +55,46 @@ const formatDuration = (totalSeconds: number): string => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 };
 
-const getTaskActionText = (code: string, t: (key: string) => string): string => {
-    if (code === 'like_once') return t('profile.taskGoLike');
-    if (code === 'play_3_unique' || code === 'play_three_games') return t('profile.taskGoPlay');
+const getTaskActionText = (
+    task: {
+        code: string;
+        taskKind?: string;
+        gameTitle?: string;
+        gameFileId?: string;
+    },
+    t: (key: string, options?: Record<string, unknown>) => string,
+): string => {
+    if (isDynamicPromotionDailyTask(task)) return '复制推广链接'; // 推广任务不走「去游玩」
+    if (task.code === 'like_once') return t('profile.taskGoLike');
+    if (task.code === 'play_3_unique' || task.code === 'play_three_games') return t('profile.taskGoPlay');
+    if (task.gameTitle) return t('profile.taskGoPlaySpecific', { gameTitle: task.gameTitle });
     return t('profile.taskInProgress');
 };
+
+const isTaskPlayable = (task: { code: string; taskKind?: string; gameFileId?: string }): boolean => {
+    if (isDynamicPromotionDailyTask(task)) return false; // 推广任务用复制链接，不跳转游玩
+    if (task.gameFileId) return true;
+    if (task.code === 'play_3_unique' || task.code === 'play_three_games') return true;
+    return false;
+};
+
+/** 用户领取 game_promotion 任务后，复制带 ?promo= 的分享链接 */
+const copyPromotionLink = async (link: string) => {
+    try {
+        await navigator.clipboard.writeText(link);
+        toast.success('推广链接已复制');
+    } catch (error) {
+        console.error('copy promotion link failed:', error);
+        toast.error('复制失败，请手动复制链接');
+    }
+};
 const isWebViewEnv = (): boolean => {
-    const win = window as any;
-    return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
+    const win = window as unknown as Record<string, unknown>;
+    return String(win.__wxjs_environment ?? '').toLowerCase() === 'miniprogram';
 };
 
 const maskPhoneNumber = (phone?: string): string => {
-    if (!phone) return '';
-    if (phone.length < 7) return phone;
-    if (phone.length === 11) {
-        return `${phone.slice(0, 3)}****${phone.slice(7)}`;
-    }
+    if (!phone || phone.length < 7) return phone ?? '';
     return `${phone.slice(0, 3)}****${phone.slice(-4)}`;
 };
 
@@ -78,7 +110,7 @@ const formatDate = (value?: string | null): string => {
 
 const Profile: React.FC = () => {
     const { t } = useTranslation();
-    const { user, logout, updateUser } = useAuthStore();
+    const { user, logout, updateUser, login } = useAuthStore();
     const navigate = useNavigate();
     const [inviteCode, setInviteCode] = useState('');
     const [inputInviteCode, setInputInviteCode] = useState('');
@@ -107,6 +139,7 @@ const Profile: React.FC = () => {
     const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
     const [isDailyTaskModalOpen, setIsDailyTaskModalOpen] = useState(false);
     const [isInviteRewardModalOpen, setIsInviteRewardModalOpen] = useState(false);
+    const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false);
     const [inviteStats, setInviteStats] = useState<{ inviteCount: number; claimedPoints: number }>({
         inviteCount: 0,
         claimedPoints: 0,
@@ -165,8 +198,9 @@ const Profile: React.FC = () => {
         isLoadedOnce: isTaskLoadedOnce,
         isLoading: isTaskLoading,
         errorMessage: taskErrorMessage,
-        claimingTaskMap,
+        taskActionLoadingMap,
         refreshDailyTasks,
+        acceptDailyTask,
         claimDailyTask,
         getDisplayTotalSeconds,
     } = useDailyTaskStore(useShallow((state) => ({
@@ -174,8 +208,9 @@ const Profile: React.FC = () => {
         isLoadedOnce: state.isLoadedOnce,
         isLoading: state.isLoading,
         errorMessage: state.errorMessage,
-        claimingTaskMap: state.claimingTaskMap,
+        taskActionLoadingMap: state.taskActionLoadingMap,
         refreshDailyTasks: state.refreshDailyTasks,
+        acceptDailyTask: state.acceptDailyTask,
         claimDailyTask: state.claimDailyTask,
         getDisplayTotalSeconds: state.getDisplayTotalSeconds,
     })));
@@ -268,6 +303,7 @@ const Profile: React.FC = () => {
     const userAvatar = getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/defaultAvatar.png`;
     const userName = user?.user?.nickname || user?.user?.name || t('profile.userNameDefault');
     const userCode = user?.user?.userCode;
+    const showVerifiedBadge = isVerifiedCreatorRole(user?.user?.role);
     const inviteDisplayCode = user?.user?.inviteCode || inviteCode || '002436';
 
     const handleCopyUserCode = async () => {
@@ -308,12 +344,7 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || t('profile.redeemFailed'));
             }
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                toast.error(axiosError.response?.data?.message || t('profile.redeemFailed'));
-            } else {
-                toast.error(t('profile.redeemFailed'));
-            }
+            toast.error(getApiErrorMessage(error, t('profile.redeemFailed')));
         } finally {
             setIsRedeemingMembership(false);
         }
@@ -345,13 +376,7 @@ const Profile: React.FC = () => {
                 toast.error(response.data.message || t('profile.operationFailed'));
             }
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || t('profile.submitInviteCodeFailed');
-                toast.error(errorMessage);
-            } else {
-                toast.error(t('profile.submitInviteCodeFailed'));
-            }
+            toast.error(getApiErrorMessage(error, t('profile.submitInviteCodeFailed')));
         }
     };
 
@@ -396,21 +421,24 @@ const Profile: React.FC = () => {
             });
 
             if (response.data.success && response.data.data) {
-                updateUser(response.data.data);
                 toast.success(t('profile.browserAccountBound'));
                 setIsBindAccountModalOpen(false);
                 clearBindAccountDraft();
+
+                logout();
+                try {
+                    const loginResp = await auth.login({ phoneNumber: phone, password: bindPassword });
+                    if (loginResp.data.success && loginResp.data.data) {
+                        login(loginResp.data.data);
+                    }
+                } catch (error) {
+                    console.error('Re-login failed after bind:', error);
+                }
             } else {
                 toast.error(response.data.message || t('profile.operationFailed'));
             }
         } catch (error: unknown) {
-            if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                const errorMessage = axiosError.response?.data?.message || t('profile.operationFailed');
-                toast.error(errorMessage);
-            } else {
-                toast.error(t('profile.operationFailed'));
-            }
+            toast.error(getApiErrorMessage(error, t('profile.operationFailed')));
         } finally {
             setIsBindingAccount(false);
         }
@@ -496,41 +524,6 @@ const Profile: React.FC = () => {
         }
     };
 
-    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            toast.error(t('profile.selectImageFile'));
-            return;
-        }
-
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            toast.error(t('profile.imageTooLarge'));
-            return;
-        }
-
-        try {
-            setIsUpdatingAvatar(true);
-            const response = await auth.updateUserAvatar(file);
-            if (response.data.success && response.data.data) {
-                await getUserInfo();
-                toast.success(t('profile.avatarUpdateSuccess'));
-            } else {
-                toast.error(response.data.message || t('profile.avatarUpdateFailed'));
-            }
-        } catch (error) {
-            console.error('update avatar failed:', error);
-            toast.error(t('profile.avatarUpdateFailed'));
-        } finally {
-            setIsUpdatingAvatar(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-
     const handleAvatarChangeForCrop = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         e.target.value = '';
@@ -546,7 +539,6 @@ const Profile: React.FC = () => {
             toast.error(t('profile.avatarUpdateFailed'));
         });
     };
-    void handleAvatarChange;
 
     const handleRecharge = async (order: PayOrderRequest) => {
         const response = await payApi.getPayQrCode(order);
@@ -562,8 +554,17 @@ const Profile: React.FC = () => {
         return null;
     };
 
-    const handleClaimTask = async (taskType: DailyTaskClaimType) => {
-        const result = await claimDailyTask(taskType);
+    const handleAcceptTask = async (task: Parameters<typeof acceptDailyTask>[0]) => {
+        const result = await acceptDailyTask(task);
+        if (!result.success) {
+            toast.error(result.message || t('profile.taskAcceptFailed'));
+            return;
+        }
+        toast.success(t('profile.taskAcceptSuccess'));
+    };
+
+    const handleClaimTask = async (task: Parameters<typeof claimDailyTask>[0]) => {
+        const result = await claimDailyTask(task);
         if (!result.success) {
             toast.error(result.message || t('profile.rewardClaimFailed'));
             return;
@@ -599,13 +600,19 @@ const Profile: React.FC = () => {
                                     onChange={handleAvatarChangeForCrop}
                                     style={{ display: 'none' }}
                                 />
-                                <img
-                                    className={styles.userAvatar}
-                                    src={userAvatar}
-                                    alt={'avatar'}
-                                    onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
-                                    style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
-                                />
+                                <UserAvatar
+                                    verified={showVerifiedBadge}
+                                    badgeSize="xl"
+                                    className={styles.profileAvatarWrap}
+                                >
+                                    <img
+                                        className={styles.userAvatar}
+                                        src={userAvatar}
+                                        alt={'avatar'}
+                                        onClick={() => !isUpdatingAvatar && fileInputRef.current?.click()}
+                                        style={{ cursor: !isUpdatingAvatar ? 'pointer' : 'default' }}
+                                    />
+                                </UserAvatar>
                                 <div className={styles.userNameWrapper}>
                                     <div className={styles.userName}>{userName}</div>
                                     <MdEdit className={styles.editNameIcon} onClick={handleStartEditName} />
@@ -614,9 +621,9 @@ const Profile: React.FC = () => {
                                     {user?.user?.isMember && user?.user?.memberEndAt ? (
                                         <div className={styles.memberInfo}>
                                             <span className={styles.memberBadge}>
-                                                {user?.user?.memberPlan === 'month' ? t('profile.monthlyMember') :
-                                                user?.user?.memberPlan === 'season' ? t('profile.seasonalMember') :
-                                                user?.user?.memberPlan === 'year' ? t('profile.yearlyMember') : t('profile.vip')}
+                                                {user.user.memberPlan && user.user.memberPlan in planLabelMap
+                                                    ? planLabelMap[user.user.memberPlan as keyof typeof planLabelMap]
+                                                    : t('profile.vip')}
                                             </span>
                                             <span className={styles.memberExpire}>{t('profile.memberExpireDate', { date: formatDate(user.user.memberEndAt) })}</span>
                                         </div>
@@ -670,7 +677,7 @@ const Profile: React.FC = () => {
                         />
                     ) : (
                     <div className={styles.functionList}>
-                        <div className={styles.functionItem} onClick={() => navigate('/points/details')}>
+                        <div className={styles.functionItem} onClick={() => navigate('/asset/details')}>
                             <div className={styles.functionIcon}>
                                 <RiCopperCoinLine />
                             </div>
@@ -687,6 +694,29 @@ const Profile: React.FC = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {user?.user?.diamonds !== undefined && (
+                            <div className={styles.functionItem} onClick={() => navigate('/asset/details')}>
+                                <div className={styles.functionIcon}>
+                                    <svg className={styles.creatorAssetIconDiamond} viewBox="0 0 1024 1024" width="18" height="18">
+                                        <path d="M296.42524445 392.80526222H50.38421333L216.76942222 148.46179555h246.03875556zM798.02823111 149.81233778H551.98833778l166.38520889 244.34232889h246.03989333zM403.65169778 392.80526222L511.19786667 226.41777778l106.40611555 166.38748444zM617.75075555 487.09859555L511.34350222 1000.40248889 407.21066667 487.09859555zM300.18901333 487.09859555l211.90883556 531.02364445-454.30670222-531.02364445zM719.77642667 487.09859555l-207.35658667 531.02364445 449.75559111-531.02364445z" fill="#ffffff"/>
+                                    </svg>
+                                </div>
+                                <div className={styles.functionText}>
+                                    <div className={styles.functionTitle}>{t('profile.myDiamonds')}</div>
+                                    <div className={styles.functionDesc}>{t('profile.currentDiamonds', { diamonds: user?.user?.diamonds ?? 0 })}</div>
+                                </div>
+                                <button
+                                    className={styles.exchangeButton}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsExchangeModalOpen(true);
+                                    }}
+                                >
+                                    {t('profile.exchange')}
+                                </button>
+                            </div>
+                        )}
 
                         <div className={styles.functionItem}>
                             <div className={styles.functionIcon}>
@@ -1093,7 +1123,15 @@ const Profile: React.FC = () => {
             <MembershipRedeemResultModal
                 isOpen={redeemSuccessPlanId !== null}
                 onClose={() => setRedeemSuccessPlanId(null)}
-                planId={redeemSuccessPlanId ?? 'month'}
+                planId={redeemSuccessPlanId ?? 'creator_month'}
+            />
+
+            <ExchangeModal
+                isOpen={isExchangeModalOpen}
+                onClose={() => setIsExchangeModalOpen(false)}
+                onSuccess={() => {
+                    void getUserInfo();
+                }}
             />
 
             {isDailyTaskModalOpen && (
@@ -1127,17 +1165,28 @@ const Profile: React.FC = () => {
                         )}
                         <div className={styles.dailyTaskList}>
                             {dailyTasks.map((task) => {
-                                const isDurationTask = isDurationTaskCode(task.code);
-                                const claimTaskType = task.taskType;
-                                const isClaimingTask = claimTaskType ? claimingTaskMap[claimTaskType] : false;
-                                const canClaimNow = Boolean(claimTaskType) && task.claimable && !task.claimed;
-                                const effectiveProgress = isDurationTask
+                                const isFixedDurationTask = isDurationTaskCode(task.code);
+                                const isDynamicDurationTask = isDynamicDurationDailyTask(task);
+                                const isDynamicPromotionTask = isDynamicPromotionDailyTask(task);
+                                const isDynamicTask = isDynamicDailyTask(task);
+                                // accept 后才有 promotionCode；复制链路由 buildGamePromotionLink 生成
+                                const canCopyPromotionLink = isDynamicPromotionTask
+                                    && task.accepted
+                                    && Boolean(task.promotionCode)
+                                    && Boolean(task.gameFileId);
+                                const isTaskActionLoading = Boolean(taskActionLoadingMap[task.key]);
+                                const canClaimNow = Boolean(task.claimRequest) && task.claimable && !task.claimed;
+                                const canAcceptNow = isDynamicTask && task.acceptRequired && !task.accepted && !task.claimed;
+                                const isInProgressTask = isDynamicTask && task.accepted && !task.claimable && !task.claimed;
+                                const effectiveProgress = isFixedDurationTask
                                     ? Math.max(task.progress, displayTotalSeconds)
                                     : task.progress;
                                 const progressDenominator = Math.max(task.target, 1);
                                 const progressRatio = Math.min(1, Math.max(0, effectiveProgress / progressDenominator));
                                 const progressPercent = Math.round(progressRatio * 100);
-                                const progressText = isDurationTask
+                                const progressText = isFixedDurationTask
+                                    ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
+                                    : isDynamicDurationTask
                                     ? `${formatDuration(Math.min(effectiveProgress, task.target))} / ${formatDuration(task.target)}`
                                     : `${Math.min(effectiveProgress, task.target)}/${task.target}`;
 
@@ -1145,7 +1194,11 @@ const Profile: React.FC = () => {
                                 if (task.claimed) {
                                     statusText = t('profile.rewardClaimed');
                                 } else if (canClaimNow) {
-                                    statusText = t('profile.claim');
+                                    statusText = t('profile.taskClaimReward');
+                                } else if (canAcceptNow) {
+                                    statusText = t('profile.taskAccept');
+                                } else if (isInProgressTask) {
+                                    statusText = t('profile.taskInProgress');
                                 } else if (task.completed) {
                                     statusText = t('profile.taskCompleted');
                                 } else if (!statusText) {
@@ -1153,13 +1206,16 @@ const Profile: React.FC = () => {
                                 }
 
                                 return (
-                                    <div key={task.code} className={styles.dailyTaskItem}>
+                                    <div key={task.key} className={styles.dailyTaskItem}>
                                         <div className={styles.dailyTaskItemHeader}>
                                             <div className={styles.dailyTaskItemTitle}>
                                                 {task.titleKey ? t(task.titleKey) : task.title}
                                             </div>
                                             <div className={styles.dailyTaskReward}>+{task.rewardPoints}{t('profile.points')}</div>
                                         </div>
+                                        {task.description && (
+                                            <div className={styles.dailyTaskDescription}>{task.description}</div>
+                                        )}
                                         <div className={styles.dailyTaskProgressRow}>
                                             <div className={styles.dailyTaskProgressBar}>
                                                 <div
@@ -1173,20 +1229,67 @@ const Profile: React.FC = () => {
                                             <span className={`${styles.dailyTaskStatus} ${task.completed ? styles.dailyTaskStatusDone : ''}`}>
                                                 {statusText}
                                             </span>
-                                            {canClaimNow && claimTaskType && (
+                                            {canCopyPromotionLink && task.promotionCode && task.gameFileId && (
                                                 <button
                                                     type="button"
                                                     className={styles.dailyTaskClaimBtn}
-                                                    disabled={isClaimingTask}
                                                     onClick={() => {
-                                                        void handleClaimTask(claimTaskType);
+                                                        void copyPromotionLink(
+                                                            buildGamePromotionLink(task.gameFileId!, task.promotionCode!),
+                                                        );
                                                     }}
                                                 >
-                                                    {isClaimingTask ? t('profile.claiming') : t('profile.claim')}
+                                                    复制推广链接
                                                 </button>
                                             )}
-                                            {!canClaimNow && claimTaskType && !task.claimed && (
-                                                <span className={styles.dailyTaskActionText}>{getTaskActionText(task.code, t)}</span>
+                                            {canAcceptNow && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.dailyTaskClaimBtn}
+                                                    disabled={isTaskActionLoading}
+                                                    onClick={() => {
+                                                        if (typeof task.taskId === 'number') {
+                                                            void handleAcceptTask({
+                                                                key: task.key,
+                                                                taskId: task.taskId,
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    {isTaskActionLoading ? t('profile.claiming') : t('profile.taskAccept')}
+                                                </button>
+                                            )}
+                                            {canClaimNow && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.dailyTaskClaimBtn}
+                                                    disabled={isTaskActionLoading}
+                                                    onClick={() => {
+                                                        void handleClaimTask({
+                                                            key: task.key,
+                                                            claimRequest: task.claimRequest,
+                                                        });
+                                                    }}
+                                                >
+                                                    {isTaskActionLoading ? t('profile.claiming') : t('profile.taskClaimReward')}
+                                                </button>
+                                            )}
+                                            {!canAcceptNow && !canClaimNow && !task.claimed && !canCopyPromotionLink && (
+                                                // 推广任务已展示「复制链接」，不再显示「去游玩」
+                                                isTaskPlayable(task) ? (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.dailyTaskGoPlayBtn}
+                                                        onClick={() => {
+                                                            const targetGameFileId = task.gameFileId || task.key.replace(/^(play_specific_game_\d+_|config_\d+_)/, '');
+                                                            navigate(`/game/${targetGameFileId}?source=history`);
+                                                        }}
+                                                    >
+                                                        {getTaskActionText(task, t)}
+                                                    </button>
+                                                ) : (
+                                                    <span className={styles.dailyTaskActionText}>{getTaskActionText(task, t)}</span>
+                                                )
                                             )}
                                         </div>
                                     </div>

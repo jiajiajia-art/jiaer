@@ -634,8 +634,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         }
         return next;
       });
-    } catch (err: any) {
-        setCloudError(String(err?.message || err || t('createGame.loadCloudAssetsFailed')));
+    } catch (err: unknown) {
+        const e = err as { message?: unknown };
+        setCloudError(String(e?.message ?? err ?? t('createGame.loadCloudAssetsFailed')));
     } finally {
       setCloudLoading(false);
       setCloudReady(true);
@@ -687,8 +688,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
         list.push({ path, file: restoredFile, selected: true });
       }
       applyLocalSelection(list, 'zip', true);
-    } catch (err: any) {
-      setError(String(err?.message || err || t('createGame.readZipFailed')));
+    } catch (err: unknown) {
+        const e = err as { message?: unknown };
+        setError(String(e?.message ?? err ?? t('createGame.readZipFailed')));
     }
   }
 
@@ -822,8 +824,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
       toast.success(t('createGame.cloudAssetsDownloaded'));
-    } catch (err: any) {
-      const message = String(err?.message || err || t('createGame.cloudAssetsDownloadFailed'));
+    } catch (err: unknown) {
+        const e = err as { message?: unknown };
+        const message = String(e?.message ?? err ?? t('createGame.cloudAssetsDownloadFailed'));
       setCloudError(message);
       toast.error(message, { duration: 8000 });
     } finally {
@@ -877,8 +880,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       toast.success(t('createGame.cloudAssetsDeleted', { count: deletedCount }));
       setPendingDeletion(null);
       setDeleteStage('review');
-    } catch (err: any) {
-      const message = String(err?.message || err || t('createGame.deleteCloudAssetsFailed'));
+    } catch (err: unknown) {
+        const e = err as { message?: unknown };
+        const message = String(e?.message ?? err ?? t('createGame.deleteCloudAssetsFailed'));
       setCloudError(message);
       toast.error(message, { duration: 8000 });
     } finally {
@@ -957,8 +961,9 @@ const AssetsUpload = React.forwardRef<AssetsUploadHandle, Props>(({
       await loadCloudAssets(nextAppId);
       onUploaded?.(assetPrefix);
       return true;
-    } catch (err: any) {
-      let message = String(err?.message || err || t('createGame.uploadFailed'));
+    } catch (err: unknown) {
+        const e = err as { message?: unknown };
+        let message = String(e?.message ?? err ?? t('createGame.uploadFailed'));
       try {
         const parsed = JSON.parse(message);
         if (parsed?.message) message = parsed.message;

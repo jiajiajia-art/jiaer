@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BsUpload } from 'react-icons/bs';
+import { BsUpload, BsChevronDown } from 'react-icons/bs';
 import { toast } from 'react-hot-toast';
 import styles from './PublishSettingsModal.module.css';
 import EditorApi from '../../api/galgame/EditorData';
@@ -21,12 +21,16 @@ import {
 } from '../../utils/novelEdit';
 import { stripReplayMarkerFromTitle } from '../../utils/novelGame';
 import ImageCropModal from './ImageCropModal';
+import { CURRENCY_OPTIONS, type Currency } from '../../api/common/currency';
 
 export type PublishModalMode = 'publish' | 'novel-edit';
 
 export type PublishSubmitPayload = {
     description: string;
     tagIds: number[];
+    shareType?: Currency;
+    versionNotes?: string;
+    notifyFavoritedUsers?: boolean;
 };
 
 interface PublishSettingsModalProps {
@@ -40,7 +44,61 @@ interface PublishSettingsModalProps {
     publishing?: boolean;
     mode?: PublishModalMode;
     isNovel?: boolean;
+    gameTags?: string;
+    engine?: string;
 }
+
+
+const SHARE_TYPE_OPTIONS = CURRENCY_OPTIONS;
+
+const CustomSelect: React.FC<{
+    value: Currency;
+    onChange: (value: Currency) => void;
+}> = ({ value, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const selectRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const selectedOption = SHARE_TYPE_OPTIONS.find((opt) => opt.value === value);
+
+    return (
+        <div ref={selectRef} className={styles.customSelectWrapper}>
+            <button
+                type="button"
+                className={`${styles.customSelectTrigger} ${isOpen ? styles.customSelectTriggerOpen : ''}`}
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <span>{selectedOption?.label}</span>
+                <BsChevronDown className={`${styles.customSelectArrow} ${isOpen ? styles.customSelectArrowOpen : ''}`} />
+            </button>
+            {isOpen && (
+                <ul className={styles.customSelectDropdown}>
+                    {SHARE_TYPE_OPTIONS.map((option) => (
+                        <li
+                            key={option.value}
+                            className={`${styles.customSelectOption} ${option.value === value ? styles.customSelectOptionSelected : ''}`}
+                            onClick={() => {
+                                onChange(option.value);
+                                setIsOpen(false);
+                            }}
+                        >
+                            {option.label}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+};
 
 const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     isOpen,
@@ -53,11 +111,16 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     publishing = false,
     mode = 'publish',
     isNovel = false,
+    gameTags,
+    engine,
 }) => {
     const { t } = useTranslation();
+    const VERSION_NOTES_MAX_LENGTH = 500;
     const isNovelEditMode = mode === 'novel-edit';
     const showThemeTags = isNovelEditMode || (mode === 'publish' && isNovel);
     const themeTagsRequired = mode === 'publish' && isNovel;
+    const isTxtMode = !gameTags && !engine || gameTags === 'TXT' || engine === 'TXT';
+    const requiresShareType = !isTxtMode;
 
     const coverInputRef = useRef<HTMLInputElement>(null);
     const [coverPreview, setCoverPreview] = useState<string | null>(coverUrl || null);
@@ -70,6 +133,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const [themeTagError, setThemeTagError] = useState<string>('');
     const [saving, setSaving] = useState<boolean>(false);
     const [generatingDescription, setGeneratingDescription] = useState<boolean>(false);
+    const [versionNotes, setVersionNotes] = useState<string>('');
+    const [notifyFavoritedUsers, setNotifyFavoritedUsers] = useState<boolean>(false);
+    const [shareType, setShareType] = useState<Currency>('points');
 
     const {
         cropPreset,
@@ -87,7 +153,10 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     });
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            setNotifyFavoritedUsers(false);
+            return;
+        }
         setCoverPreview(coverUrl || null);
     }, [coverUrl, isOpen]);
 
@@ -106,6 +175,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             : rawTitle,
                     );
                     setDescription(detail.description || '');
+                    setVersionNotes(detail.version_notes || '');
                     setCoverPreview(detail.cover_url || null);
                     const tagIds = Array.isArray(detail.theme_tag_ids)
                         ? detail.theme_tag_ids.filter((id) => Number.isFinite(Number(id)))
@@ -266,6 +336,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return false;
         }
 
+        const trimmedVersionNotes = versionNotes.trim();
+        if (trimmedVersionNotes.length > VERSION_NOTES_MAX_LENGTH) {
+            toast.error(t('common.publishSettings.versionNotesTooLong', { max: VERSION_NOTES_MAX_LENGTH }));
+            return false;
+        }
+
         return true;
     };
 
@@ -330,6 +406,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         await onPublish({
             description: trimmed,
             tagIds: selectedThemeTagIds,
+            shareType: requiresShareType ? shareType : undefined,
+            versionNotes: versionNotes.trim(),
+            notifyFavoritedUsers,
         });
     };
 
@@ -517,6 +596,46 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
                             {themeTagError ? <div className={styles.themeTagError}>{themeTagError}</div> : null}
                         </div>
                     ) : null}
+
+                    {!isNovelEditMode && requiresShareType && (
+                        <div className={styles.shareTypeFormGroup}>
+                            <label className={styles.label}>{t('common.publishSettings.shareType', { defaultValue: '结算货币类型' })}</label>
+                            <CustomSelect
+                                value={shareType}
+                                onChange={setShareType}
+                            />
+                        </div>
+                    )}
+
+                    {!isNovelEditMode && (
+                        <div className={styles.descriptionFormGroup}>
+                            <label className={styles.label}>{t('common.publishSettings.versionNotes')}</label>
+                            <textarea
+                                className={styles.descriptionInput}
+                                placeholder={t('common.publishSettings.versionNotesPlaceholder', { max: VERSION_NOTES_MAX_LENGTH })}
+                                value={versionNotes}
+                                maxLength={VERSION_NOTES_MAX_LENGTH}
+                                onChange={(e) => setVersionNotes(e.target.value)}
+                            />
+                            <div className={styles.descriptionMetaRow}>
+                                <span className={styles.descriptionCount}>
+                                    {versionNotes.length}/{VERSION_NOTES_MAX_LENGTH}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {!isNovelEditMode && (
+                        <label className={styles.notifyCheckboxRow}>
+                            <input
+                                type="checkbox"
+                                className={styles.notifyCheckbox}
+                                checked={notifyFavoritedUsers}
+                                onChange={(event) => setNotifyFavoritedUsers(event.target.checked)}
+                            />
+                            <span>{t('common.publishSettings.notifyFavoritedUsers')}</span>
+                        </label>
+                    )}
                 </div>
                 </div>
 

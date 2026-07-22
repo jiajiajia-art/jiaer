@@ -3,12 +3,17 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
 // 若后端不在本机，可设 VITE_API_BASE_URL=http://<后端IP>:3000
 export const HOST_ADDRESS = import.meta.env.VITE_API_BASE_URL ||
   (ON_SERVER ? 'https://api.kurangames.com' : '');
-// 测试环境（远程 api-test 若未部署 play-ui 会 404，本地开发勿硬编码）
-// export const HOST_ADDRESS = 'https://api-test.kurangames.com';
-// 生产环境
+// 测试
+//export const HOST_ADDRESS = 'https://api-test.kurangames.com';
+// 测试2
+// export const HOST_ADDRESS = 'https://api-test2.kurangames.com';
+// 国内正式生产
 // export const HOST_ADDRESS = 'https://api.kurangames.com';
-// 国外生产
+// 海外正式生产
 // export const HOST_ADDRESS = 'https://api-overseas.kurangames.com';
+// 本地直连
+// export const HOST_ADDRESS = 'http://localhost:3000';
+
 export const RECORD_CONVERSION = import.meta.env.PROD
   ? true
   : import.meta.env.VITE_RECORD_CONVERSION === 'true';

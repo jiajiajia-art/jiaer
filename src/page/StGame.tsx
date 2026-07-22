@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import FooterArea from '../components/Layout/FooterArea';
 import styles from './StGame.module.css';
 import { stApi, type StChatMessage, type StRenderRule } from '../api/stGame';
@@ -8,6 +8,7 @@ import { HOST_ADDRESS } from '../config';
 import { authFetch } from '../api/base';
 import { buildStSceneSrcDoc } from '../utils/stSceneHtml';
 import { useTranslation } from 'react-i18next';
+import type { Currency } from '../api/common/currency';
 
 type CreateResp = {
   success: boolean;
@@ -26,12 +27,21 @@ type ActResp = {
 };
 
 type Msg = { role: 'user'|'assistant'; text: string; streaming?: boolean };
+
+type StPointsPayPayload = {
+  requestId?: string;
+  amount: number;
+  currency?: Currency;
+  dryRun?: boolean;
+};
+
 type SceneMsg =
   | { type: 'st:ready'; payload: { appId: string; sessionId: string; assetBase?: string; protocols?: { actionByMessages: boolean } } }
   | { type: 'st:assistant'; payload: { requestId: string; text: string } }
   | { type: 'st:assistant_delta'; payload: { requestId: string; text: string } }
   | { type: 'st:assistant_done'; payload: { requestId: string } }
   | { type: 'st:kv:result'; payload: { requestId: string; success: boolean; op: 'get' | 'set' | 'delete'; code?: string; message?: string; kv?: { scope: 'user' | 'session'; namespace?: string; values: Record<string, unknown> } } }
+  | { type: 'st:points:result'; payload: { requestId: string; success: boolean; consumed?: number; balance?: number; currency?: Currency; code?: string; message?: string; txnId?: string } }
   | { type: 'st:error'; payload: { requestId: string; message: string } }
   | { type: 'st:debug'; payload: { phase: string; message: string; ts: number } };
 
@@ -46,6 +56,12 @@ type SceneActionByMessagesPayload = {
 const StGame: React.FC = () => {
     const { t } = useTranslation();
     const { appId } = useParams();
+    const [searchParams] = useSearchParams();
+    const sessionSource = useMemo<'link' | 'game_detail' | 'history' | 'other'>(() => {
+        const raw = String(searchParams.get('source') || '').trim().toLowerCase();
+        if (raw === 'link' || raw === 'game_detail' || raw === 'history') return raw;
+        return 'other';
+    }, [searchParams]);
   const [sessionId, setSessionId] = useState<string>('');
   const [rules, setRules] = useState<StRenderRule[]>([]);
   const [input, setInput] = useState('');
@@ -84,7 +100,7 @@ const StGame: React.FC = () => {
       if (!appId) return;
       try {
         setLoading(true);
-        const resp = await stApi.createSession(appId, { autoStart: true });
+        const resp = await stApi.createSession(appId, { autoStart: true, source: sessionSource });
         const data: CreateResp = resp.data;
         if (cancelled) return;
         if (!data?.success) throw new Error(t('stGame.sessionCreateFailed'));
@@ -482,6 +498,70 @@ const StGame: React.FC = () => {
       }
     };
 
+    const handlePointsPay = async (payload: StPointsPayPayload) => {
+      const requestId = String(payload.requestId || crypto.randomUUID());
+      const currency = payload.currency === 'diamonds' ? 'diamonds' : 'points';
+      const body = {
+        amount: payload.amount,
+        idempotencyKey: requestId,
+        ...(payload.currency && { currency: payload.currency }),
+        ...(payload.dryRun && { dryRun: true }),
+      };
+
+      try {
+        const url = `${HOST_ADDRESS}/api/custom/apps/${appId}/points/pay`;
+        const resp = await authFetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const json = await resp.json().catch(() => ({} as Record<string, unknown>));
+        const success = json && typeof json.success === 'boolean' ? json.success : resp.ok;
+
+        if (!success) {
+          postSceneDebug('points', `支付失败 requestId=${requestId}`);
+          postSceneMessage({
+            type: 'st:points:result',
+            payload: {
+              requestId,
+              success: false,
+              consumed: json?.consumed as number | undefined,
+              balance: json?.balance as number | undefined,
+              currency,
+              code: String((json as Record<string, unknown>)?.code || 'HTTP_ERROR'),
+              message: String((json as Record<string, unknown>)?.message || resp.statusText || 'Payment failed'),
+              txnId: json?.txnId as string | undefined,
+            },
+          });
+          return;
+        }
+
+        postSceneMessage({
+          type: 'st:points:result',
+          payload: {
+            requestId,
+            success: true,
+            consumed: json?.consumed as number | undefined,
+            balance: json?.balance as number | undefined,
+            currency,
+            txnId: json?.txnId as string | undefined,
+          },
+        });
+      } catch (err) {
+        postSceneDebug('points', `支付异常 requestId=${requestId}`);
+        postSceneMessage({
+          type: 'st:points:result',
+          payload: {
+            requestId,
+            success: false,
+            currency,
+            code: 'NETWORK_ERROR',
+            message: String((err as Error)?.message || err),
+          },
+        });
+      }
+    };
+
     const handler = (event: MessageEvent) => {
       if (event.source !== sceneIframeRef.current?.contentWindow) return;
       const data = event.data as Record<string, unknown>;
@@ -513,6 +593,11 @@ const StGame: React.FC = () => {
 
       if (type === 'st:kv:get' || type === 'st:kv:set' || type === 'st:kv:delete') {
         void handleSceneKV(type, payload);
+      }
+
+      if (type === 'st:points:pay') {
+        postSceneDebug('bridge', '收到 st:points:pay，转发积分支付');
+        void handlePointsPay(payload as StPointsPayPayload);
       }
     };
 

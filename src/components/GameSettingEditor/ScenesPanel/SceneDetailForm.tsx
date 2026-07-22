@@ -72,6 +72,7 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
     const [isMobilePicker, setIsMobilePicker] = useState(false);
     const [isBgmPickerOpen, setIsBgmPickerOpen] = useState(false);
 
+    // 会员折扣计算（暂时不打折）
     useEffect(() => {
         const updatePickerMode = () => {
             if (typeof window === 'undefined') {
@@ -212,7 +213,16 @@ const SceneDetailForm: React.FC<SceneDetailFormProps> = ({
                             alt=""
                             className={styles.priceIcon}
                         />
-                        <span>{SCENE_GENERATION_COST} {t('createGame.aiGenerate')}</span>
+                        {/* TODO: 恢复会员折扣UI时，取消下方注释
+                        {showSceneDiscount ? (
+                            <>
+                                <span className={styles.originalPrice}>{SCENE_GENERATION_COST}</span>
+                                <span className={`${styles.discountPrice} ${styles.discountPriceBlack}`}>{discountedSceneCost}</span>
+                                <span>{t('createGame.aiGenerate')}</span>
+                            </>
+                        ) : ( */}
+                            <span>{SCENE_GENERATION_COST} {t('createGame.aiGenerate')}</span>
+                        {/* )} */}
                     </button>
                 )}
             </div>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { getApiErrorMessage } from '../utils/error';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -61,15 +62,6 @@ const formatTime = (value?: string | null, t?: TranslateFn) => {
     if (!value) return t ? t('promotion.unrecorded') : '未记录';
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', { hour12: false });
-};
-
-const getErrorMessage = (error: unknown, fallback: string) => {
-    if (error && typeof error === 'object' && 'response' in error) {
-        const response = error as { response?: { data?: { message?: string; error?: string } } };
-        return response.response?.data?.message || response.response?.data?.error || fallback;
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
 };
 
 const buildTimeSummary = (activity: PromotionActivity, t: TranslateFn) => {
@@ -277,7 +269,7 @@ const PromotionCenter: React.FC = () => {
             setActivities(nextActivities);
             setSubmissions(nextSubmissions);
         } catch (error) {
-            toast.error(getErrorMessage(error, t('promotion.publishDataLoadFailed')));
+            toast.error(getApiErrorMessage(error, t('promotion.publishDataLoadFailed')));
         } finally {
             setIsLoading(false);
         }
@@ -436,7 +428,7 @@ const PromotionCenter: React.FC = () => {
             setPublishedGames(gameList.filter((game) => game.is_public === 1 && Boolean(getImportableGameId(game))));
             setHasLoadedPublishedGames(true);
         } catch (error) {
-            toast.error(getErrorMessage(error, t('promotion.myGamesLoadFailed')));
+            toast.error(getApiErrorMessage(error, t('promotion.myGamesLoadFailed')));
             setPublishedGames([]);
         } finally {
             setIsLoadingPublishedGames(false);
@@ -531,7 +523,7 @@ const PromotionCenter: React.FC = () => {
             await loadData();
             setActiveTab('submissions');
         } catch (error) {
-            toast.error(getErrorMessage(error, t('promotion.submissionFailed')));
+            toast.error(getApiErrorMessage(error, t('promotion.submissionFailed')));
         } finally {
             setIsSubmitting(false);
         }

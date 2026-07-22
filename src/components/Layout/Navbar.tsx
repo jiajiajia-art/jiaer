@@ -6,9 +6,12 @@ import styles from './Navbar.module.css';
 import AuthModal from '../AuthModal';
 import { authModalStore, useAuthStore } from '../../store/useAuthStore';
 import { useMessageStore } from '../../store/useMessageStore';
+import { useMessageRealtime } from '../../hooks/useMessageRealtime';
 import getGameDataApi from '../../api/home/getGameData';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import { getImageUrl } from '../../utils/constants';
+import { isAdminRole, isOperatorRole, isVerifiedCreatorRole } from '../../utils/userRoles';
+import UserAvatar from '../UserAvatar';
 
 const isWebViewEnv = (): boolean => {
     const win = window as { __wxjs_environment?: string };
@@ -26,7 +29,7 @@ const getSearchResultMeta = (game: UserGameData): string => {
     return String(game.file_id || '').trim();
 };
 
-type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | '';
+type NavKey = 'home' | 'categories' | 'create' | 'warehouse' | 'rank' | '';
 type NavbarProps = {
     mobileVariant?: 'default' | 'home-overlay';
     mobileOverlayScrolled?: boolean;
@@ -52,6 +55,7 @@ const Navbar: React.FC<NavbarProps> = ({
     const { isAuthenticated, initialize, logout, user } = useAuthStore();
     const { isAuthModalOpen, setIsAuthModalOpen } = authModalStore();
     const { unreadCount, refreshUnreadCount, clearUnreadCount } = useMessageStore();
+    useMessageRealtime();
     const avatarContainerRef = useRef<HTMLDivElement | null>(null);
     const searchBoxRef = useRef<HTMLFormElement | null>(null);
     const searchRequestIdRef = useRef(0);
@@ -162,6 +166,7 @@ const Navbar: React.FC<NavbarProps> = ({
         if (path.startsWith('/categories')) return 'categories';
         if (path.startsWith('/create')) return 'create';
         if (path.startsWith('/warehouse')) return 'warehouse';
+        if (path.startsWith('/rank')) return 'rank';
         return '';
     };
 
@@ -271,6 +276,12 @@ const Navbar: React.FC<NavbarProps> = ({
                     >
                         {t('nav.warehouse')}
                     </div>
+                    <div
+                        className={`${styles.navLink} ${activeNav === 'rank' ? styles.navLinkActive : ''}`}
+                        onClick={() => runLeaveAction(() => navigate('/rank'))}
+                    >
+                        {t('nav.rank')}
+                    </div>
                 </div>
 
                 <div className={styles.navRight}>
@@ -349,10 +360,17 @@ const Navbar: React.FC<NavbarProps> = ({
                                         setShowUserMenu((prev) => !prev);
                                     }}
                                 >
-                                    <img
-                                        src={getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
-                                        alt=""
-                                    />
+                                    <UserAvatar
+                                        fill
+                                        verified={isVerifiedCreatorRole(user?.user?.role)}
+                                        badgeSize="sm"
+                                        className={styles.avatarInner}
+                                    >
+                                        <img
+                                            src={getImageUrl(user?.user?.avatarUrl) || `${import.meta.env.BASE_URL}data/assets/default_avatar.png`}
+                                            alt=""
+                                        />
+                                    </UserAvatar>
                                 </div>
 
                                 {showUserMenu && !isWebViewEnv() && (
@@ -368,7 +386,31 @@ const Navbar: React.FC<NavbarProps> = ({
                                         >
                                             {t('nav.profile')}
                                         </button>
-                                        {user?.user?.role === 'admin' && isDesktopLayout && (
+                                        <button
+                                            className={styles.menuBtn}
+                                            onClick={() => {
+                                                runLeaveAction(() => {
+                                                    navigate('/favorites');
+                                                    setShowUserMenu(false);
+                                                });
+                                            }}
+                                        >
+                                            {t('nav.favorites')}
+                                        </button>
+                                        {isOperatorRole(user?.user?.role) && isDesktopLayout && (
+                                            <button
+                                                className={styles.menuBtn}
+                                                onClick={() => {
+                                                    runLeaveAction(() => {
+                                                        navigate('/operator');
+                                                        setShowUserMenu(false);
+                                                    });
+                                                }}
+                                            >
+                                                {t('nav.operatorPanel')}
+                                            </button>
+                                        )}
+                                        {isAdminRole(user?.user?.role) && isDesktopLayout && (
                                             <button
                                                 className={styles.menuBtn}
                                                 onClick={() => {

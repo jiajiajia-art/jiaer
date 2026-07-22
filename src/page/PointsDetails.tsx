@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { auth } from '../api/account/authApi';
 import type { GetPointsActivitiesParams, PointsActivityDirection, PointsActivityItem } from '../api/account/auth.type';
+import { getApiErrorMessage } from '../utils/error';
+import { useTranslation } from 'react-i18next';
 import styles from './PointsDetails.module.css';
 
 const TABS: Array<{ key: PointsActivityDirection; label: string }> = [
@@ -44,16 +46,12 @@ function formatActivityTime(value: string) {
 
   const parts = formatter.formatToParts(date);
   const partMap = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  const yyyy = partMap.year;
-  const mm = partMap.month;
-  const dd = partMap.day;
-  const hh = partMap.hour;
-  const mi = partMap.minute;
 
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return `${partMap.year}-${partMap.month}-${partMap.day} ${partMap.hour}:${partMap.minute}`;
 }
 
 const PointsDetails: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const now = useMemo(() => new Date(), []);
   const defaultYear = now.getFullYear();
@@ -82,6 +80,7 @@ const PointsDetails: React.FC = () => {
     setIsLoading(true);
     try {
       const params: GetPointsActivitiesParams = {
+        currency: 'points',
         direction,
         page: nextPage,
         pageSize: 20,
@@ -98,18 +97,12 @@ const PointsDetails: React.FC = () => {
       }
 
       const payload = response.data.data;
-      setCurrentPoints(payload.currentPoints ?? 0);
+      setCurrentPoints(payload.points ?? 0);
       setItems((prev) => (append ? [...prev, ...payload.items] : payload.items));
-      setPage(payload.pagination.page);
-      setTotalPages(payload.pagination.totalPages || 1);
+      setTotalPages(1);
+      setPage(nextPage);
     } catch (error: unknown) {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-          : error instanceof Error
-            ? error.message
-            : 'Failed to load points activities.';
-      toast.error(message || 'Failed to load points activities.');
+      toast.error(getApiErrorMessage(error, 'Failed to load points activities.'));
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +139,7 @@ const PointsDetails: React.FC = () => {
   const hasMore = page < totalPages;
   const filterLabel = selectedYear !== null && selectedMonth !== null
     ? `${selectedYear}.${String(selectedMonth).padStart(2, '0')}`
-    : '全部时间';
+    : t('assetDetails.allTime');
 
   const openFilter = () => {
     setDraftYear(selectedYear);
@@ -175,12 +168,12 @@ const PointsDetails: React.FC = () => {
                 <path d="M14.5 5.5L8 12l6.5 6.5" />
               </svg>
             </button>
-            <h1 className={styles.headerTitle}>积分明细</h1>
+            <h1 className={styles.headerTitle}>{t('assetDetails.points')}</h1>
             <div className={styles.headerSpacer} aria-hidden="true" />
           </header>
 
           <section className={styles.summary}>
-            <p className={styles.summaryLabel}>当前积分</p>
+            <p className={styles.summaryLabel}>{t('assetDetails.points')}</p>
             <p className={styles.summaryValue}>{currentPoints}</p>
           </section>
 
@@ -223,10 +216,10 @@ const PointsDetails: React.FC = () => {
                   <button
                     type="button"
                     className={styles.filterBackdrop}
-                    aria-label="关闭筛选"
+                    aria-label={t('assetDetails.closeFilter')}
                     onClick={() => setIsFilterOpen(false)}
                   />
-                  <div className={styles.filterPopup} role="dialog" aria-label="年月筛选">
+                  <div className={styles.filterPopup} role="dialog" aria-label={t('assetDetails.yearMonthFilter')}>
                     <div className={styles.filterColumns}>
                       <div className={styles.filterColumn}>
                         {yearOptions.map((year) => (
@@ -236,7 +229,7 @@ const PointsDetails: React.FC = () => {
                             className={`${styles.filterOption} ${draftYear === year ? styles.filterOptionActive : ''}`}
                             onClick={() => setDraftYear(year)}
                           >
-                            {year}年
+                            {year}{t('assetDetails.year')}
                           </button>
                         ))}
                       </div>
@@ -248,7 +241,7 @@ const PointsDetails: React.FC = () => {
                             className={`${styles.filterOption} ${draftMonth === month ? styles.filterOptionActive : ''}`}
                             onClick={() => setDraftMonth(month)}
                           >
-                            {month}月
+                            {month}{t('assetDetails.month')}
                           </button>
                         ))}
                       </div>
@@ -263,7 +256,7 @@ const PointsDetails: React.FC = () => {
                           setDraftMonth(null);
                         }}
                       >
-                        清除
+                        {t('assetDetails.clear')}
                       </button>
                       <button
                         type="button"
@@ -273,14 +266,14 @@ const PointsDetails: React.FC = () => {
                           setDraftMonth(defaultMonth);
                         }}
                       >
-                        本月
+                        {t('assetDetails.thisMonth')}
                       </button>
                       <button
                         type="button"
                         className={`${styles.filterActionButton} ${styles.filterConfirmButton}`}
                         onClick={confirmFilter}
                       >
-                        确认
+                        {t('assetDetails.confirm')}
                       </button>
                     </div>
                   </div>
@@ -291,28 +284,33 @@ const PointsDetails: React.FC = () => {
 
           <section className={styles.listSection}>
             {isLoading && items.length === 0 ? (
-              <div className={styles.stateBlock}>加载中...</div>
+              <div className={styles.stateBlock}>{t('assetDetails.loading')}</div>
             ) : items.length === 0 ? (
-              <div className={styles.stateBlock}>当前筛选条件下暂无积分明细。</div>
+              <div className={styles.stateBlock}>{t('assetDetails.empty')}</div>
             ) : (
               <div className={styles.list}>
-                {items.map((item) => (
-                  <article key={`${item.activityType}-${item.id}`} className={styles.item}>
-                    <div className={styles.itemMain}>
-                      <h2 className={styles.itemTitle}>{item.title}</h2>
-                      {item.subtitle ? <p className={styles.itemSubtitle}>{item.subtitle}</p> : null}
-                      <p className={styles.itemTime}>{formatActivityTime(item.occurredAt)}</p>
-                    </div>
-                    <div
-                      className={`${styles.itemPoints} ${
-                        item.direction === 'income' ? styles.itemPointsIncome : styles.itemPointsExpense
-                      }`}
-                    >
-                      {item.direction === 'income' ? '+' : '-'}
-                      {item.points}
-                    </div>
-                  </article>
-                ))}
+                {items.map((item) => {
+                  const isIncome = item.direction === 'income';
+                  const displayPoints = item.amount;
+                  const displayTime = item.occurredAt;
+                  return (
+                    <article key={`${item.activityType}-${item.id}`} className={styles.item}>
+                      <div className={styles.itemMain}>
+                        <h2 className={styles.itemTitle}>{item.title}</h2>
+                        {item.subtitle ? <p className={styles.itemSubtitle}>{item.subtitle}</p> : null}
+                        <p className={styles.itemTime}>{formatActivityTime(displayTime)}</p>
+                      </div>
+                      <div
+                        className={`${styles.itemPoints} ${
+                          isIncome ? styles.itemPointsIncome : styles.itemPointsExpense
+                        }`}
+                      >
+                        {isIncome ? '+' : '-'}
+                        {displayPoints}
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
 
@@ -323,7 +321,7 @@ const PointsDetails: React.FC = () => {
                 disabled={isLoading}
                 onClick={() => void loadActivities(page + 1, true)}
               >
-                {isLoading ? '加载中...' : '加载更多'}
+                {isLoading ? t('assetDetails.loadingMore') : t('assetDetails.loadMore')}
               </button>
             ) : null}
           </section>
