@@ -14,7 +14,7 @@ const REFRESH_URL = '/auth/refresh';
 const CREATOR_PROFILE_API_PATH = '/creator/profile';
 
 // 更宽松的超时
-export const UPLOAD_TIMEOUT_MS = 20000;
+export const UPLOAD_TIMEOUT_MS = 120000;
 
 export interface ApiConfig {
   baseURL?: string;
