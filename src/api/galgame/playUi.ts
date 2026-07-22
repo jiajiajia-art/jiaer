@@ -1,6 +1,7 @@
 import { authFetch } from '../base';
 import { HOST_ADDRESS } from '../../config';
 import type { QuestItem } from '../../lib/galgame/quests';
+import { parsePlayUiJson } from '../../lib/galgame/playUiState';
 
 export interface PlayUiStateData {
   encounteredCharacterIds: string[];
@@ -14,7 +15,12 @@ export interface PlayUiStateData {
 export async function fetchPlayUiState(sessionId: string): Promise<PlayUiStateData> {
   const url = `${HOST_ADDRESS}/api/visual/session/${sessionId}/play-ui`;
   const res = await authFetch(url, { method: 'GET' });
-  const json = await res.json();
+  const text = await res.text();
+  const json = parsePlayUiJson(text);
+  if (!json) {
+    const preview = text.trim().slice(0, 80);
+    throw new Error(preview ? `面板缓存接口返回了非 JSON 内容：${preview}` : '面板缓存接口返回了空内容');
+  }
   if (!res.ok || !json?.success) {
     throw new Error(json?.message || `HTTP ${res.status}`);
   }

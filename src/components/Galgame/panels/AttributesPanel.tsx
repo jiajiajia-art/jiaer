@@ -6,8 +6,8 @@ import { useGameStore } from '../../../store/gameStore';
 import { streamAttributePanels } from '../../../api/galgame/attributePanelsStream';
 import { fetchPlayUiState } from '../../../api/galgame/playUi';
 import {
-  hasNonEmptyPanelText,
   isAbortError,
+  normalizeAttributePanels,
   pickAttributeCardsFromPanels,
   shouldSkipAttributeAutoRefresh,
 } from '../../../lib/galgame/attributePanelValues';
@@ -55,19 +55,21 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
 
   useEffect(() => {
     if (cachedPanels && Object.keys(cachedPanels).length > 0) {
-      setPanels(cachedPanels);
-      const keys = Object.keys(cachedPanels);
-      setActiveKey((prev) => (prev && cachedPanels[prev] != null ? prev : keys[0] || null));
+      const normalizedPanels = normalizeAttributePanels(cachedPanels);
+      setPanels(normalizedPanels);
+      const keys = Object.keys(normalizedPanels);
+      setActiveKey((prev) => (prev && normalizedPanels[prev] != null ? prev : keys[0] || null));
       setError(null);
     }
   }, [cachedPanels]);
 
   const applyPanels = useCallback(
     (next: Record<string, string>) => {
-      setPanels(next);
-      onPanelsUpdated?.(next);
-      const keys = Object.keys(next);
-      setActiveKey((prev) => (prev && next[prev] != null ? prev : keys[0] || null));
+      const normalizedPanels = normalizeAttributePanels(next);
+      setPanels(normalizedPanels);
+      onPanelsUpdated?.(normalizedPanels);
+      const keys = Object.keys(normalizedPanels);
+      setActiveKey((prev) => (prev && normalizedPanels[prev] != null ? prev : keys[0] || null));
       setError(null);
     },
     [onPanelsUpdated]
@@ -187,7 +189,7 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   }, [isOpen, sessionId]);
 
   const showCards = cards.length > 0;
-  const showTextFallback = !showCards && hasNonEmptyPanelText(panels);
+  const showTextFallback = false;
   const showEmpty = !loading && !error && !showCards && !showTextFallback;
 
   return (

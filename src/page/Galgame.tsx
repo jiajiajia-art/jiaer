@@ -62,7 +62,7 @@ import {
     normalizeQuests,
     type QuestItem,
 } from "../lib/galgame/quests";
-import { isAbortError, hasNonEmptyPanelText } from "../lib/galgame/attributePanelValues";
+import { isAbortError, hasNonEmptyPanelText, normalizeAttributePanels } from "../lib/galgame/attributePanelValues";
 import { fetchPlayUiState } from "../api/galgame/playUi";
 import { streamQuests } from "../api/galgame/questsStream";
 import { streamAttributePanels } from "../api/galgame/attributePanelsStream";
@@ -218,7 +218,7 @@ const Galgame = () => {
                 setEncounteredIds(mergeEncounteredIds(data.encounteredCharacterIds));
                 setQuests(normalizeQuests(data.quests));
                 if (data.attributePanels && Object.keys(data.attributePanels).length > 0) {
-                    setAttributePanelsCache(data.attributePanels);
+                    setAttributePanelsCache(normalizeAttributePanels(data.attributePanels));
                 }
             } catch {
                 /* 旧局无字段时忽略 */
@@ -260,8 +260,11 @@ const Galgame = () => {
                 controllerAbort.signal
             );
             if (controllerAbort.signal.aborted) return;
-            if (result?.panels && typeof result.panels === 'object' && hasNonEmptyPanelText(result.panels)) {
-                setAttributePanelsCache(result.panels);
+            if (result?.panels && typeof result.panels === 'object') {
+                const normalizedPanels = normalizeAttributePanels(result.panels);
+                if (hasNonEmptyPanelText(normalizedPanels)) {
+                    setAttributePanelsCache(normalizedPanels);
+                }
             }
         } catch (e: unknown) {
             if (isAbortError(e) || (e as Error)?.name === 'AbortError') return;

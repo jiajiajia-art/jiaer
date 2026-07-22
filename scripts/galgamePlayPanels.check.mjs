@@ -27,6 +27,7 @@ import {
 } from '../src/lib/galgame/quests.ts';
 import {
   parseAttributeValueCards,
+  normalizeAttributePanels,
   pickAttributeCardsFromPanels,
   hasNonEmptyPanelText,
   shouldSkipAttributeAutoRefresh,
@@ -262,6 +263,20 @@ test('pickAttributeCardsFromPanels_优先属性tab', () => {
   });
   assert.equal(picked.sourceKey, '属性');
   assert.equal(picked.cards.length, 2);
+});
+
+test('normalizeAttributePanels_属性tab只保留数字行', () => {
+  assert.deepEqual(
+    normalizeAttributePanels({
+      属性: '周念：↑↑↑↑↑\n体力：72\n心情：+5\n咳嗽更轻了',
+      好感: '周念：↑↑↑↑↑',
+    }),
+    {
+      属性: '体力：72',
+      好感: '周念：↑↑↑↑↑',
+    }
+  );
+  assert.deepEqual(normalizeAttributePanels({ 属性: '周念：↑↑↑↑↑' }), {});
 });
 
 test('hasNonEmptyPanelText_自由文本也应视为有数据可展示', () => {

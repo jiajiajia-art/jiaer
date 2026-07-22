@@ -31,6 +31,34 @@ export function parseAttributeValueCards(panelText: string | null | undefined): 
   return cards;
 }
 
+/** 功能注释：属性面板只允许「标签：数字」行；防止好感箭头/叙事文本被当成核心属性展示。 */
+export function normalizeAttributePanels(
+  panels: Record<string, string> | null | undefined
+): Record<string, string> {
+  if (!panels || typeof panels !== 'object') return {};
+  const next: Record<string, string> = {};
+  for (const [key, value] of Object.entries(panels)) {
+    const panelKey = String(key || '').trim();
+    if (!panelKey) continue;
+    const text = String(value || '').trim();
+    if (!text) continue;
+
+    if (/属性|attribute/i.test(panelKey)) {
+      const numericLines = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => parseAttributeValueCards(line).length > 0);
+      if (numericLines.length > 0) {
+        next[panelKey] = numericLines.join('\n');
+      }
+      continue;
+    }
+
+    next[panelKey] = text;
+  }
+  return next;
+}
+
 /**
  * 功能注释：优先取名为「属性」的 tab；否则取首个能解析出数值的 tab。
  */
