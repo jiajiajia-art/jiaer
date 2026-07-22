@@ -14,6 +14,8 @@ import { fileToDataUrl } from '../../utils/uploadImageCrop';
 import { flattenThemeTags, type FlatThemeTag } from '../../utils/themeTags';
 import {
     NOVEL_DESCRIPTION_MAX_LENGTH,
+    THEME_TAG_MAX,
+    THEME_TAG_MIN_PUBLISH,
     toggleThemeTagSelection,
     validateNovelDraftSave,
     validateNovelPublish,
@@ -117,8 +119,9 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
     const { t } = useTranslation();
     const VERSION_NOTES_MAX_LENGTH = 500;
     const isNovelEditMode = mode === 'novel-edit';
-    const showThemeTags = isNovelEditMode || (mode === 'publish' && isNovel);
-    const themeTagsRequired = mode === 'publish' && isNovel;
+    // 后端 publish 对所有作品校验题材；发布弹窗必须可选，不能只给小说展示
+    const showThemeTags = true;
+    const themeTagsRequired = mode === 'publish';
     const isTxtMode = !gameTags && !engine || gameTags === 'TXT' || engine === 'TXT';
     const requiresShareType = !isTxtMode;
 
@@ -336,6 +339,12 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             return false;
         }
 
+        if (selectedThemeTagIds.length < THEME_TAG_MIN_PUBLISH || selectedThemeTagIds.length > THEME_TAG_MAX) {
+            setThemeTagError(t('createGame.themeTagRequired'));
+            toast.error(t('createGame.themeTagRequired'));
+            return false;
+        }
+
         const trimmedVersionNotes = versionNotes.trim();
         if (trimmedVersionNotes.length > VERSION_NOTES_MAX_LENGTH) {
             toast.error(t('common.publishSettings.versionNotesTooLong', { max: VERSION_NOTES_MAX_LENGTH }));
@@ -343,6 +352,16 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         }
 
         return true;
+    };
+
+    const persistThemeTags = async () => {
+        if (!fileId) {
+            throw new Error(t('common.publishSettings.missingFileId'));
+        }
+        await gameTagsApi.setGameTagsForGame({
+            fileId,
+            tagIds: selectedThemeTagIds,
+        });
     };
 
     const persistNovelMetaAndTags = async () => {
@@ -354,10 +373,7 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
             title: title.trim(),
             description: description.trim(),
         });
-        await gameTagsApi.setGameTagsForGame({
-            fileId,
-            tagIds: selectedThemeTagIds,
-        });
+        await persistThemeTags();
     };
 
     const handleSubmit = async (event?: React.MouseEvent<HTMLButtonElement>) => {
@@ -390,18 +406,21 @@ const PublishSettingsModal: React.FC<PublishSettingsModalProps> = ({
         }
 
         const trimmed = description.trim();
-        if (isNovel) {
-            try {
-                setSaving(true);
+        try {
+            setSaving(true);
+            if (isNovel) {
                 await persistNovelMetaAndTags();
-            } catch (error) {
-                console.error('保存小说发布信息失败:', error);
-                toast.error(t('common.publishSettings.saveFailed'));
-                setSaving(false);
-                return;
+            } else {
+                // 非小说：弹窗选题材后先写入，再走发布（后端查 game_tag_map）
+                await persistThemeTags();
             }
+        } catch (error) {
+            console.error('保存发布题材失败:', error);
+            toast.error(t('common.publishSettings.saveFailed'));
             setSaving(false);
+            return;
         }
+        setSaving(false);
 
         await onPublish({
             description: trimmed,

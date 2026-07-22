@@ -22,10 +22,8 @@ import { AiOutlineStar, AiFillStar } from 'react-icons/ai';
 import AuthModal from '../components/AuthModal';
 import LoadSaveListModal from '../components/CreateGame/LoadSaveListModal';
 import SavePreviewModal from '../components/CreateGame/SavePreviewModal';
-import ReplayList from '../components/Galgame/ReplayList';
 import ShareModal from '../components/CommonModal/ShareModal';
 import QRCodeModal from '../components/CommonModal/QRCodeModal';
-import type { ReplayVisibility } from '../api/galgame/replay';
 import type { SaveSummaryItem } from '../api/galgame/saves';
 import novelApi, { type DerivedNovelSummary } from '../api/galgame/novel';
 import { useTrackingStore } from '../store/trackingStore';
@@ -54,10 +52,6 @@ const DEFAULT_PLAY_STATUS = {
     hasContinueState: true,
     hasSave: true,
 };
-
-const REPLAY_VISIBILITY_TABS_PUBLIC = 'public';
-const REPLAY_VISIBILITY_TABS_UNLISTED = 'unlisted';
-const REPLAY_VISIBILITY_TABS_PRIVATE = 'private';
 
 /** sessionStorage：未登录用户从 ?promo= 进详情页时暂存 code，登录后 consumePending 提交 */
 const PENDING_PROMO_STORAGE_KEY = 'pending_game_promotion_code';
@@ -158,8 +152,6 @@ const GameDetail: React.FC = () => {
     const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
     const [isDerivedNovelDrawerOpen, setIsDerivedNovelDrawerOpen] = useState(false);
     const [isInteractiveVideoRestartConfirmOpen, setIsInteractiveVideoRestartConfirmOpen] = useState(false);
-    const [isReplayDrawerOpen, setIsReplayDrawerOpen] = useState(false);
-    const [activeReplayVisibility, setActiveReplayVisibility] = useState<ReplayVisibility>('public');
     const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
     const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
     const [derivedNovels, setDerivedNovels] = useState<DerivedNovelSummary[]>([]);
@@ -871,34 +863,6 @@ const GameDetail: React.FC = () => {
         setIsDerivedNovelDrawerOpen(false);
     }, []);
 
-    const openReplayDrawer = useCallback(() => {
-        setIsStartOptionsOpen(false);
-        setIsReplayDrawerOpen(true);
-    }, []);
-
-    const closeReplayDrawer = useCallback(() => {
-        setIsReplayDrawerOpen(false);
-    }, []);
-
-    useEffect(() => {
-        if (!isReplayDrawerOpen) return;
-
-        const previousOverflow = document.body.style.overflow;
-        const handleEscape = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                closeReplayDrawer();
-            }
-        };
-
-        document.body.style.overflow = 'hidden';
-        window.addEventListener('keydown', handleEscape);
-
-        return () => {
-            document.body.style.overflow = previousOverflow;
-            window.removeEventListener('keydown', handleEscape);
-        };
-    }, [closeReplayDrawer, isReplayDrawerOpen]);
-
     useEffect(() => {
         if (!isDerivedNovelDrawerOpen) return;
 
@@ -1292,78 +1256,6 @@ const GameDetail: React.FC = () => {
                     </aside>
                 </div>
             )}
-            {isReplayDrawerOpen && (
-                <div className={`${styles.startOptionsOverlay} ${styles.replayDrawerOverlay}`} onClick={closeReplayDrawer}>
-                    <aside
-                        className={styles.replayDrawer}
-                        onClick={(e) => e.stopPropagation()}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label={t('gameDetail.replayHighlights')}
-                    >
-                        <div className={styles.startOptionsHeader}>
-                            <div className={styles.startOptionsHeaderMain}>
-                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.replayHighlights')}</h2>
-                            </div>
-                            <button
-                                className={`${styles.startOptionsClose} ${styles.replayDrawerClose}`}
-                                onClick={closeReplayDrawer}
-                                aria-label={t('gameDetail.closeReplayHighlights')}
-                            >
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                        {canManageReplayTabs && (
-                            <div className={styles.replayDrawerTabs} role="tablist" aria-label={t('createGame.replayVisibilityFilter')}>
-                                <button
-                                    key={REPLAY_VISIBILITY_TABS_PUBLIC}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC}
-                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC ? 0 : -1}
-                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_PUBLIC ? styles.replayDrawerTabActive : ''}`}
-                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_PUBLIC)}
-                                >
-                                    {t('gameDetail.replayVisibility.public')}
-                                </button>
-                                <button
-                                    key={REPLAY_VISIBILITY_TABS_UNLISTED}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED}
-                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED ? 0 : -1}
-                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_UNLISTED ? styles.replayDrawerTabActive : ''}`}
-                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_UNLISTED)}
-                                >
-                                    {t('gameDetail.replayVisibility.unlisted')}
-                                </button>
-                                <button
-                                    key={REPLAY_VISIBILITY_TABS_PRIVATE}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE}
-                                    tabIndex={activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE ? 0 : -1}
-                                    className={`${styles.replayDrawerTab} ${activeReplayVisibility === REPLAY_VISIBILITY_TABS_PRIVATE ? styles.replayDrawerTabActive : ''}`}
-                                    onClick={() => setActiveReplayVisibility(REPLAY_VISIBILITY_TABS_PRIVATE)}
-                                >
-                                    {t('gameDetail.replayVisibility.private')}
-                                </button>
-                            </div>
-                        )}
-                        <div className={styles.replayDrawerBody}>
-                            {fileId ? (
-                                <ReplayList
-                                    fileId={fileId}
-                                    includeUnlisted={canManageReplayTabs && activeReplayVisibility === 'unlisted'}
-                                    showVisibility={canManageReplayTabs}
-                                    visibility={canManageReplayTabs ? activeReplayVisibility : 'public'}
-                                    currentUserId={replayManagerUserId || undefined}
-                                />
-                            ) : null}
-                        </div>
-                    </aside>
-                </div>
-            )}
             {isStartOptionsOpen && (
                 <div className={styles.startOptionsOverlay} onClick={closeStartOptions}>
                     <div
@@ -1420,14 +1312,6 @@ const GameDetail: React.FC = () => {
                                         }}
                                     >
                                         {t('gameDetail.loadSave')}
-                                    </button>
-                                )}
-                                {isInteractiveVideo || isNovel ? null : isGalgame && (
-                                    <button
-                                        className={styles.startOptionsGhost}
-                                        onClick={openReplayDrawer}
-                                    >
-                                        {t('gameDetail.replay')}
                                     </button>
                                 )}
                         </div>
