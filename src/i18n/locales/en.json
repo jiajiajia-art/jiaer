@@ -2024,6 +2024,7 @@
     "commentCount": "Comments",
     "spendPoints": "Points Spent",
     "activeHours": "Active Hours",
+    "activeHoursTip": "Timezone: Beijing (UTC+8). Each number is activity reports in that hour: entering a game counts as 1, and playtime is also reported about every 25 seconds (each report counts as 1). Higher means busier hours, not unique players. Refresh the stats page to see the latest data.",
     "recentComments": "Recent Comments",
     "noComments": "No comments yet",
     "ratingsTitle": "Ratings",

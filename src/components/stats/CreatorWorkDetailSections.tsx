@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CreatorWorkDetail } from '../../api/stats/creatorStatsApi';
+import MetricTitleTip from './MetricTitleTip';
 import styles from './CreatorWorkDetailSections.module.css';
 
 interface CreatorWorkDetailSectionsProps {
@@ -30,7 +31,11 @@ const CreatorWorkDetailSections: React.FC<CreatorWorkDetailSectionsProps> = ({ d
       </section>
 
       <section className={styles.detailSection}>
-        <h2 className={styles.sectionTitle}>{t('creatorStats.activeHours')}</h2>
+        <MetricTitleTip
+          className={styles.sectionTitle}
+          title={t('creatorStats.activeHours')}
+          tip={t('creatorStats.activeHoursTip')}
+        />
         <div className={styles.hourGrid}>
           {detail.activeHours.map((bucket) => (
             <div

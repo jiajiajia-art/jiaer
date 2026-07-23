@@ -17,7 +17,7 @@ import ErrorModal from "../components/GalgameMap/Modal/WorldModal";
 import { useGalgameController } from "../hooks/galgame/useGalgameController";
 import toast from "react-hot-toast";
 import FullPageLoading from "../components/Skeleton/FullPageLoading";
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, type CSSProperties } from "react";
 import { useTranslation } from 'react-i18next';
 import GameBackgroundRenderer from "../components/Galgame/GameBackgroundRenderer";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -62,6 +62,8 @@ import {
     normalizeQuests,
     type QuestItem,
 } from "../lib/galgame/quests";
+import { useQuestTrackerTypewriter } from "../hooks/galgame/useQuestTrackerTypewriter";
+import { buildLocationNameTypewriterVars } from "../lib/galgame/locationNameTypewriter";
 import { isAbortError, hasNonEmptyPanelText, normalizeAttributePanels } from "../lib/galgame/attributePanelValues";
 import { fetchPlayUiState } from "../api/galgame/playUi";
 import { streamQuests } from "../api/galgame/questsStream";
@@ -206,6 +208,15 @@ const Galgame = () => {
 
     const trackedQuest = useMemo(() => getTrackedQuest(quests), [quests]);
     const questTrackerText = useMemo(() => getQuestTrackerLabel(trackedQuest), [trackedQuest]);
+    const { displayed: questTrackerDisplayed, isTyping: isQuestTrackerTyping } =
+        useQuestTrackerTypewriter(questTrackerText);
+
+    // 地点切换时用 CSS steps 打字机重播；同名不 remount 则不会重动画
+    const locationName = String(controller.currentScene?.name || '').trim();
+    const locationTypewriterVars = useMemo(
+        () => buildLocationNameTypewriterVars(locationName),
+        [locationName]
+    );
 
     // 读档/进局：拉取已持久化的出场与任务
     useEffect(() => {
@@ -820,8 +831,25 @@ const Galgame = () => {
                             </div>
                         )}
                         <div className={`${styles.topHeader} ${controller.isTextMode ? styles.topHeaderTextMode : ''}`}>
-                            <CiLocationOn />
-                            <span>{controller.currentScene?.name}</span>
+                            <span className={styles.topHeaderLocationIcon} aria-hidden="true">
+                                <CiLocationOn />
+                            </span>
+                            {locationName ? (
+                                <span
+                                    key={locationName}
+                                    className={styles.topHeaderLocationText}
+                                    style={
+                                        locationTypewriterVars
+                                            ? ({
+                                                '--location-type-steps': locationTypewriterVars.steps,
+                                                '--location-type-ms': `${locationTypewriterVars.durationMs}ms`,
+                                            } as CSSProperties)
+                                            : undefined
+                                    }
+                                >
+                                    {locationName}
+                                </span>
+                            ) : null}
                         </div>
                     </div>
                     {/* {!controller.isReplay && controller.gameStarted && (
@@ -901,11 +929,18 @@ const Galgame = () => {
                             />
                         )}
                     </div>
-                    {/* 顶栏任务追踪（与任务面板同源） */}
+                    {/* 顶栏任务追踪（与任务面板同源）；新任务文案变化时打字机出场 */}
                     {!controller.isReplay && controller.gameStarted && questTrackerText ? (
-                        <div className={styles.questTracker}>
+                        <div
+                            key={questTrackerText}
+                            className={`${styles.questTracker} ${styles.questTrackerEnter}`}
+                        >
                             <div className={styles.questTrackerLabel}>{t('galgame.questTracker')}</div>
-                            <div className={styles.questTrackerBody}>{questTrackerText}</div>
+                            <div
+                                className={`${styles.questTrackerBody}${isQuestTrackerTyping ? ` ${styles.questTrackerBodyTyping}` : ''}`}
+                            >
+                                {questTrackerDisplayed}
+                            </div>
                         </div>
                     ) : null}
 

@@ -26,6 +26,15 @@ import {
   getQuestTrackerLabel,
 } from '../src/lib/galgame/quests.ts';
 import {
+  shouldRestartQuestTrackerTypewriter,
+  sliceQuestTrackerTypewriterText,
+  nextQuestTrackerTypewriterCount,
+} from '../src/lib/galgame/questTrackerTypewriter.ts';
+import {
+  buildLocationNameTypewriterVars,
+  countLocationTypewriterSteps,
+} from '../src/lib/galgame/locationNameTypewriter.ts';
+import {
   parseAttributeValueCards,
   normalizeAttributePanels,
   pickAttributeCardsFromPanels,
@@ -245,6 +254,43 @@ test('getTrackedQuest_优先tracked否则主线active', () => {
     { id: 'a', title: '主线', type: 'main', status: 'active', description: 'd', goalText: '', tracked: false },
   ]);
   assert.equal(getQuestTrackerLabel(fallback), 'd');
+});
+
+test('shouldRestartQuestTrackerTypewriter_新文案才重开打字机', () => {
+  assert.equal(shouldRestartQuestTrackerTypewriter('', '新任务'), true);
+  assert.equal(shouldRestartQuestTrackerTypewriter('旧', '新'), true);
+  assert.equal(shouldRestartQuestTrackerTypewriter('同', '同'), false);
+  assert.equal(shouldRestartQuestTrackerTypewriter('有', ''), false);
+});
+
+test('sliceQuestTrackerTypewriterText_与nextCount推进切片', () => {
+  assert.equal(sliceQuestTrackerTypewriterText('任务目标', 0), '');
+  assert.equal(sliceQuestTrackerTypewriterText('任务目标', 2), '任务');
+  assert.equal(sliceQuestTrackerTypewriterText('任务目标', 99), '任务目标');
+  assert.equal(nextQuestTrackerTypewriterCount(0, 4), 1);
+  assert.equal(nextQuestTrackerTypewriterCount(4, 4), 4);
+});
+
+test('countLocationTypewriterSteps_按码点计字', () => {
+  assert.equal(countLocationTypewriterSteps(''), 0);
+  assert.equal(countLocationTypewriterSteps('  '), 0);
+  assert.equal(countLocationTypewriterSteps('檀香山港突袭战'), 7);
+});
+
+test('buildLocationNameTypewriterVars_空名不播_有名按时长封顶', () => {
+  assert.equal(buildLocationNameTypewriterVars(''), null);
+  const short = buildLocationNameTypewriterVars('港');
+  assert.ok(short);
+  assert.equal(short.steps, 1);
+  assert.equal(short.durationMs, 450);
+  const mid = buildLocationNameTypewriterVars('檀香山港突袭战');
+  assert.ok(mid);
+  assert.equal(mid.steps, 7);
+  assert.equal(mid.durationMs, 450);
+  const long = buildLocationNameTypewriterVars('甲'.repeat(60));
+  assert.ok(long);
+  assert.equal(long.steps, 60);
+  assert.equal(long.durationMs, 2000);
 });
 
 test('parseAttributeValueCards_解析冒号数值行并跳过非法行', () => {

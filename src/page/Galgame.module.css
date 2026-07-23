@@ -70,6 +70,64 @@
     font-size: 1.125rem; /* 18px */
 }
 
+/* 地点小标：1 秒内 100% → 120% → 100% → 120% 来回脉冲 */
+.topHeaderLocationIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+    transform-origin: center center;
+    animation: topHeaderLocationPulse 1s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes topHeaderLocationPulse {
+    0% {
+        transform: scale(1);
+    }
+    25% {
+        transform: scale(1.2);
+    }
+    50% {
+        transform: scale(1);
+    }
+    75% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 地点名切换：CSS steps 打字机 + 光标，靠 key remount 重播 */
+.topHeaderLocationText {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    max-width: 0;
+    border-right: 0.12em solid rgba(255, 255, 255, 0.9);
+    animation:
+        topHeaderLocationTypewriter var(--location-type-ms, 0.8s) steps(var(--location-type-steps, 8), end) forwards,
+        topHeaderLocationCaretFade 0.2s ease-out forwards;
+    animation-delay: 0s, var(--location-type-ms, 0.8s);
+}
+
+@keyframes topHeaderLocationTypewriter {
+    from {
+        max-width: 0;
+    }
+    to {
+        max-width: 16rem;
+    }
+}
+
+@keyframes topHeaderLocationCaretFade {
+    to {
+        border-right-color: transparent;
+    }
+}
+
 /* 音乐按钮 - 顶部栏左侧，菱形 */
 .musicButton {
     flex-shrink: 0;
@@ -1306,6 +1364,44 @@
     color: rgba(255, 255, 255, 0.92);
     font-size: 0.8125rem;
     line-height: 1.4;
+}
+
+/* 新任务出场：轻微浮入 + 打字光标 */
+.questTrackerEnter {
+    animation: questTrackerFadeIn 0.35s ease-out;
+}
+
+.questTrackerBodyTyping::after {
+    content: '';
+    display: inline-block;
+    width: 0.1em;
+    height: 0.95em;
+    margin-left: 0.14em;
+    vertical-align: -0.12em;
+    background: rgba(126, 231, 187, 0.95);
+    animation: questTrackerCaretBlink 0.85s steps(1, end) infinite;
+}
+
+@keyframes questTrackerFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes questTrackerCaretBlink {
+    0%,
+    45% {
+        opacity: 1;
+    }
+    55%,
+    100% {
+        opacity: 0;
+    }
 }
 
 /* 顶部右侧按钮容器（与底部按钮同样风格的按钮） */

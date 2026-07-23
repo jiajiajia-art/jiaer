@@ -1,13 +1,15 @@
 /**
  * 创作台「开始测试 / 编辑修改」进游玩页的会话策略。
- * - TXT 开始测试：optical 新建（restart=true），清空旧进度 → /galgame
+ * - TXT 开始测试：弹出与详情页一致的「开始方式」选择（新的开始 / 继续体验 / 读取存档）
+ * - TXT「新的开始」：optical 新建（restart=true）→ /galgame
+ * - TXT「继续体验」：optical 续玩（restart=false）→ /galgame
  * - NOVEL 开始测试：直接进小说阅读页 `/novel/:id/read`（不进原作 AI 文游）
  * - 编辑修改（仅视觉小说 NOVEL）：optical 续玩原作（restart=false），载入历史接着玩
  * - AI文游 TXT 编辑仍进 /gameSettingsEditor，不走续玩
  * - 不自动弹出历史面板
  */
 
-export type CreatorPlayIntent = 'start-test' | 'edit-continue';
+export type CreatorPlayIntent = 'start-test' | 'continue-play' | 'edit-continue';
 
 export type CreatorPlayMode =
   | 'TXT'
@@ -55,6 +57,16 @@ export function normalizeCreatorPlayMode(
   return '';
 }
 
+/**
+ * AI文游（TXT）开始测试需要弹窗选择开始方式；其它模式仍直接进入。
+ */
+export function shouldOpenCreatorStartOptions(
+  engine?: string | null,
+  gameTags?: string | null,
+): boolean {
+  return normalizeCreatorPlayMode(engine, gameTags) === 'TXT';
+}
+
 /** 「编辑修改」仅视觉小说续玩进 /galgame；AI文游走设定编辑页，其它类型走各自编辑页。 */
 export function shouldContinuePlayOnEdit(
   engine?: string | null,
@@ -82,7 +94,7 @@ export function resolveContinuePlayFileId(input: {
   return String(input.fileId || input.id || '').trim();
 }
 
-/** start-test 必须 restart；edit-continue 禁止 restart，才能载入历史。 */
+/** start-test 必须 restart；continue-play / edit-continue 禁止 restart，才能载入历史。 */
 export function shouldRestartPlaySession(intent: CreatorPlayIntent): boolean {
   return intent === 'start-test';
 }

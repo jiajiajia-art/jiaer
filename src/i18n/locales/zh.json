@@ -2022,6 +2022,7 @@
     "commentCount": "评论数",
     "spendPoints": "消费积分",
     "activeHours": "活跃时间段",
+    "activeHoursTip": "按时区：北京时间（UTC+8）。数字是该小时内的活跃上报次数：进入游戏计 1 次，游玩中约每 25 秒上报时长也计 1 次。数字越大表示该时段越活跃，不等于游玩人数。统计页需刷新后才能看到最新数据。",
     "recentComments": "最新评论",
     "noComments": "暂无评论",
     "ratingsTitle": "评价",

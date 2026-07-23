@@ -11,6 +11,7 @@ import {
   parseOpticalPlaySessionId,
   resolveContinuePlayFileId,
   shouldContinuePlayOnEdit,
+  shouldOpenCreatorStartOptions,
   shouldRestartPlaySession,
   shouldReuseExistingPlaySession,
 } from '../src/utils/creatorContinuePlay.ts';
@@ -25,6 +26,14 @@ test('normalizeCreatorPlayMode maps TXT / NOVEL / AVG / custom', () => {
   assert.equal(normalizeCreatorPlayMode('ST', null), 'st');
   assert.equal(normalizeCreatorPlayMode('IVG', null), 'interactive-video');
   assert.equal(normalizeCreatorPlayMode('', ''), '');
+});
+
+test('shouldOpenCreatorStartOptions only for AI文游 TXT', () => {
+  assert.equal(shouldOpenCreatorStartOptions('TXT', 'TXT'), true);
+  assert.equal(shouldOpenCreatorStartOptions('RPG', null), true);
+  assert.equal(shouldOpenCreatorStartOptions('NOVEL', 'NOVEL'), false);
+  assert.equal(shouldOpenCreatorStartOptions('AVG', null), false);
+  assert.equal(shouldOpenCreatorStartOptions('CUSTOM', null), false);
 });
 
 test('shouldContinuePlayOnEdit only for NOVEL (AI文游 TXT goes to settings editor)', () => {
@@ -43,6 +52,21 @@ test('NOVEL start-test should not reuse optical session (reader path is separate
       hasExisting: true,
       restart: shouldRestartPlaySession('start-test'),
     }),
+    false,
+  );
+});
+
+test('continue-play should reuse existing session when present', () => {
+  assert.equal(shouldRestartPlaySession('continue-play'), false);
+  assert.equal(
+    shouldReuseExistingPlaySession({
+      hasExisting: true,
+      restart: shouldRestartPlaySession('continue-play'),
+    }),
+    true,
+  );
+  assert.equal(
+    buildCreatorPlaySessionRequest({ intent: 'continue-play', fileId: 'txt-1' }).restart,
     false,
   );
 });

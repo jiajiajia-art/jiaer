@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 import replayApi from "../../api/galgame/replay";
 import { withCacheBust } from "../../utils/imageCache";
 import { gameResourceManager } from "../../utils/gameResourceManager";
+import { canSubmitChoiceInteraction } from "../../lib/galgame/choiceInteractionGate";
 
 export type { Message } from "./useGalgameMessage";
 
@@ -1297,7 +1298,13 @@ export const useGalgameController = () => {
     }, [isAutoPlay, isTextMode, isReplay, replayIndex, replaySpeed, replaySteps.length, replayTotalSteps, messageUtilsWithTyping.finalIsTyping, messageUtilsWithTyping.currentMessage?.type, stepHandlers.showNextButton, stepHandlers.isWaitingForData, gameStarted, handleNextMessage]);
 
     const handleChoiceClick = useCallback((option: { id: number; text: string }) => {
-        if (stepHandlers.isWaitingForData || stepHandlers.loading) return;
+        if (!canSubmitChoiceInteraction({
+            isWaitingForData: stepHandlers.isWaitingForData,
+            isCompressingContext: stepHandlers.isCompressingContext,
+            streamReady: !stepHandlers.loading,
+        })) {
+            return;
+        }
         if (!messageUtilsWithTyping.currentMessage || messageUtilsWithTyping.currentMessage.type !== 'choice' || !messageUtilsWithTyping.currentMessage.options) {
             return;
         }
@@ -1392,7 +1399,13 @@ export const useGalgameController = () => {
     ]);
 
     const handleCustomInputSubmit = useCallback((value: string) => {
-        if (stepHandlers.isWaitingForData || stepHandlers.loading) return;
+        if (!canSubmitChoiceInteraction({
+            isWaitingForData: stepHandlers.isWaitingForData,
+            isCompressingContext: stepHandlers.isCompressingContext,
+            streamReady: !stepHandlers.loading,
+        })) {
+            return;
+        }
         if (!value.trim()) return;
         const actionText = value.trim();
         const actionId = createGalgameActionId(playableSessionId, actionText);

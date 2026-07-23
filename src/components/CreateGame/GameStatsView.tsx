@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
     IoChatbubbleEllipses,
@@ -29,9 +30,17 @@ import {
     buildCreatorPlaySessionRequest,
     normalizeCreatorPlayMode,
     parseOpticalPlaySessionId,
+    shouldOpenCreatorStartOptions,
+    type CreatorPlayIntent,
 } from '../../utils/creatorContinuePlay';
 import { buildNovelReadPath } from '../../utils/novelGame';
 import { useTranslation } from 'react-i18next';
+import getGameDataApi from '../../api/home/getGameData';
+
+const DEFAULT_PLAY_STATUS = {
+    hasContinueState: false,
+    hasSave: false,
+};
 
 const formatPlayDuration = (seconds: number) => {
     const safe = Math.max(0, Number(seconds) || 0);
@@ -77,14 +86,21 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     const [isStatsLoading, setIsStatsLoading] = useState(true);
     const [isLoadSaveOpen, setIsLoadSaveOpen] = useState(false);
     const [previewItem, setPreviewItem] = useState<SaveSummaryItem | null>(null);
+    const [isStartOptionsOpen, setIsStartOptionsOpen] = useState(false);
+    const [isPlayStatusLoading, setIsPlayStatusLoading] = useState(false);
+    const [playStatus, setPlayStatus] = useState(DEFAULT_PLAY_STATUS);
 
     /**
      * 创建会话（按引擎类型分发）。
-     * - TXT「开始测试」走 optical + restart
+     * - TXT「新的开始」：optical + restart
+     * - TXT「继续体验」：optical 续玩（restart=false）
      * - NOVEL「开始测试」进入小说阅读页（不进原作 AI 文游）
      * - customif：不在此处创建会话，直接跳转到 /customif/:appId，由宿主页创建。
      */
-    const createSession = async (fileId: string): Promise<{ sessionId: string | null; redirectUrl: string }> => {
+    const createSession = async (
+        fileId: string,
+        intent: CreatorPlayIntent = 'start-test',
+    ): Promise<{ sessionId: string | null; redirectUrl: string }> => {
         if (!fileId) {
             console.error('没有 fileId，无法创建 session');
             return { sessionId: null, redirectUrl: '' };
@@ -122,7 +138,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
             if (normalized === 'TXT') {
                 const payload = buildCreatorPlaySessionRequest({
-                    intent: 'start-test',
+                    intent,
                     fileId,
                     source: 'other',
                 });
@@ -161,8 +177,56 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         }
     };
 
+    const enterGameWithIntent = async (intent: CreatorPlayIntent) => {
+        if (!user?.user.userId || !user?.user.id) {
+            if (!isMiniProgramEnv()) {
+                authModalStore.getState().setIsAuthModalOpen(true);
+            }
+            return;
+        }
+
+        const fileId = gameDetail?.file_id || gameDetail?.id;
+        if (!fileId) {
+            toast.error(t('createGame.gameInfoError'));
+            return;
+        }
+
+        useGameStore.getState().clearAll();
+        setFileId(fileId);
+        setIsPreset(gameDetail?.is_preset == 1);
+
+        const { sessionId, redirectUrl } = await createSession(fileId, intent);
+        if (redirectUrl) {
+            if (sessionId) setSessionId(sessionId);
+            navigate(redirectUrl);
+        }
+    };
+
+    const fetchPlayStatus = async () => {
+        const fileId = gameDetail?.file_id || gameDetail?.id;
+        if (!fileId) {
+            return DEFAULT_PLAY_STATUS;
+        }
+
+        try {
+            const response = await getGameDataApi.getPlayStatus(fileId);
+            if (response.data?.success && response.data?.data) {
+                return {
+                    hasContinueState: !!response.data.data.hasContinueState,
+                    hasSave: !!response.data.data.hasSave,
+                };
+            }
+            toast.error(response.data?.message || t('gameDetail.getPlayStatusFailed'));
+        } catch (error) {
+            console.error('获取游玩状态失败:', error);
+            toast.error(t('gameDetail.getPlayStatusFailed'));
+        }
+
+        return DEFAULT_PLAY_STATUS;
+    };
+
     /**
-     * 处理开始游戏按钮点击
+     * AI文游：弹出与详情页一致的开始方式；其它类型仍直接开始测试。
      */
     const handleStartGame = async () => {
         if (!user?.user.userId || !user?.user.id) {
@@ -178,19 +242,36 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             return;
         }
 
-        // 进入游戏前清理旧状态
-        useGameStore.getState().clearAll();
-
-        // 更新 store
-        setFileId(fileId);
-        setIsPreset(gameDetail?.is_preset == 1);
-
-        // 创建会话
-        const { sessionId, redirectUrl } = await createSession(fileId);
-        if (redirectUrl) {
-            if (sessionId) setSessionId(sessionId);
-            navigate(redirectUrl);
+        if (shouldOpenCreatorStartOptions(gameDetail?.engine, gameDetail?.game_tags)) {
+            setIsPlayStatusLoading(true);
+            try {
+                const status = await fetchPlayStatus();
+                setPlayStatus(status);
+                setIsStartOptionsOpen(true);
+            } finally {
+                setIsPlayStatusLoading(false);
+            }
+            return;
         }
+
+        await enterGameWithIntent('start-test');
+    };
+
+    const closeStartOptions = () => setIsStartOptionsOpen(false);
+
+    const handleStartNewFromOptions = async () => {
+        closeStartOptions();
+        await enterGameWithIntent('start-test');
+    };
+
+    const handleContinueFromOptions = async () => {
+        closeStartOptions();
+        await enterGameWithIntent('continue-play');
+    };
+
+    const handleOpenLoadSaveFromOptions = () => {
+        closeStartOptions();
+        setIsLoadSaveOpen(true);
     };
 
     // 读取存档：选择一项后预览
@@ -272,9 +353,9 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                             <button
                                 className={`${styles.primaryActionBtn} ${styles.startGameBtn}`}
                                 onClick={handleStartGame}
-                                disabled={isLoading}
+                                disabled={isLoading || isPlayStatusLoading}
                             >
-                                {isLoading ? t('createGame.loading') : t('createGame.startTesting')}
+                                {isLoading || isPlayStatusLoading ? t('createGame.loading') : t('createGame.startTesting')}
                             </button>
 
                             {
@@ -434,6 +515,59 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 item={previewItem}
                 onLoad={handleLoadSave}
             />
+
+            {isStartOptionsOpen
+                ? createPortal(
+                    <div className={styles.startOptionsOverlay} onClick={closeStartOptions}>
+                        <div
+                            className={styles.startOptionsModal}
+                            onClick={(e) => e.stopPropagation()}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label={t('gameDetail.selectStartMethod')}
+                        >
+                            <div className={styles.startOptionsHeader}>
+                                <h2 className={styles.startOptionsTitle}>{t('gameDetail.selectStartMethod')}</h2>
+                                <button
+                                    type="button"
+                                    className={styles.startOptionsClose}
+                                    onClick={closeStartOptions}
+                                    aria-label={t('common.close')}
+                                >
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div className={styles.startOptionsButtons}>
+                                <button
+                                    type="button"
+                                    className={styles.startOptionsPrimary}
+                                    onClick={() => void handleStartNewFromOptions()}
+                                    disabled={isLoading}
+                                >
+                                    {t('gameDetail.newStart')}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.startOptionsSecondary}
+                                    disabled={isLoading || !playStatus.hasContinueState}
+                                    onClick={() => void handleContinueFromOptions()}
+                                >
+                                    {t('gameDetail.continueExperience')}
+                                </button>
+                                <button
+                                    type="button"
+                                    className={styles.startOptionsGhost}
+                                    disabled={isLoading || !playStatus.hasSave}
+                                    onClick={handleOpenLoadSaveFromOptions}
+                                >
+                                    {t('gameDetail.loadSave')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body,
+                )
+                : null}
         </div>
     );
 };

@@ -638,3 +638,81 @@
     }
 }
 
+/* AI文游开始测试：与详情页一致的开始方式弹窗 */
+.startOptionsOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.startOptionsModal {
+    width: min(26rem, 92vw);
+    background: #fff;
+    border-radius: 1.25rem;
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.25);
+    padding: 1.25rem 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.startOptionsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.startOptionsTitle {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.startOptionsClose {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #888;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+}
+
+.startOptionsButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.startOptionsPrimary,
+.startOptionsSecondary,
+.startOptionsGhost {
+    height: 3rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: #fb4655;
+    color: #fff;
+    box-shadow: 0 0.5rem 1rem rgba(251, 70, 85, 0.25);
+}
+
+.startOptionsPrimary:disabled,
+.startOptionsSecondary:disabled,
+.startOptionsGhost:disabled {
+    background: #d9d9d9;
+    color: rgba(0, 0, 0, 0.45);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+

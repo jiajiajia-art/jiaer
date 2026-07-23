@@ -9,6 +9,13 @@
   color: #222;
 }
 
+/* MetricTitleTip 挂在区块标题上时保持原 h2 视觉层级 */
+.sectionTitle > span:first-child {
+  font-size: 20px;
+  font-weight: 700;
+  color: #222;
+}
+
 .ratingSummary {
   display: flex;
   align-items: baseline;
