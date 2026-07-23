@@ -74,12 +74,13 @@ flowchart TD
 | 期次 | 目标 | 状态 |
 |------|------|------|
 | **一期** | 并发默认 **2**；元数据 **串行落库**；批任务复用 `gameContext`；角色+场景一起改 | ✅ 已落地 |
+| **一期体验补丁（2026-07-23）** | 默认改为串行 **1**（一张完成再下一张）；job ETA 种子；开始态进度；前端避免「剩余 0 秒」 | ✅ 已落地 |
 | **二期** | 长任务改 **Queue / 分片 waitUntil / DO**，降低整批被掐风险；支持中断续跑 | 待排期 |
 | **三期** | 抠图策略、Meitu base64 编码、前端轮询退避、上传超时（存图 60–120s） | 待排期 |
 
 产品拍板（2026-07-23）：
 
-1. Cloudflare 并发默认 **2**（更稳）  
+1. Cloudflare 并发默认 **1**（串行试稳；可用 env 再调高）  
 2. **角色 + 场景一期一起改**  
 3. **所有修改需完整单测**
 
@@ -93,15 +94,18 @@ flowchart TD
 
 | API | 作用 |
 |-----|------|
-| `DEFAULT_BATCH_IMAGE_CONCURRENCY = 2` | 默认并发 |
-| `resolveBatchImageConcurrency(env)` | 读 `BATCH_IMAGE_CONCURRENCY`（或 `BATCH_IMAGE_CONCURRENCY_LIMIT`），钳制在 1～8 |
+| `DEFAULT_BATCH_IMAGE_CONCURRENCY = 1` | 角色/混合批默认串行 |
+| `DEFAULT_BATCH_IMAGE_SCENE_CONCURRENCY = 1` | 纯场景批默认串行 |
+| `resolveBatchImageConcurrency(env, { kind })` | 读 `BATCH_IMAGE_CONCURRENCY` / `BATCH_IMAGE_SCENE_CONCURRENCY`，钳制在 1～8 |
+| `estimateBatchRemainingSeconds(...)` | job 启动 ETA 种子 |
 | `mapWithConcurrency(items, n, mapper)` | 有限并发 map，保持顺序 |
 | `createSerialQueue()` | 串行执行回调，保证 JSON read-modify-write 不互相覆盖 |
 
 `cf/wrangler.toml`：
 
 ```toml
-BATCH_IMAGE_CONCURRENCY = "2"
+BATCH_IMAGE_CONCURRENCY = "1"
+BATCH_IMAGE_SCENE_CONCURRENCY = "1"
 ```
 
 ### 4.2 视觉批量 `generateAllImages`

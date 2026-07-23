@@ -22,6 +22,8 @@ interface UseGalgameStepOptions {
     onStreamComplete?: () => void;
     // Called after error alert is shown
     onErrorAfterAlert?: (error: string) => void;
+    /** 用户行动发出时回调（用于历史面板即时展示用户选择/输入） */
+    onUserAction?: (action: string) => void;
     // Replay mode: avoid showing "AI generating" on queue exhausted
     isReplay?: boolean;
     isTextMode?: boolean;
@@ -38,6 +40,7 @@ export const useGalgameStep = ({
     onCompleteAllSteps,
     onStreamComplete,
     onErrorAfterAlert,
+    onUserAction,
     isReplay = false,
     isTextMode = false,
     onExhausted,
@@ -171,6 +174,9 @@ export const useGalgameStep = ({
                 setLoading(true);
 
                 onMessagesClear?.();
+                if (!isReplay) {
+                    onUserAction?.(action);
+                }
                 options?.onBeforeRequest?.();
 
                 const requestBody: any = {
@@ -264,7 +270,7 @@ export const useGalgameStep = ({
                 options?.onError?.(errorMsg);
             }
         },
-        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay]
+        [sessionId, processStreamResponse, onMessagesClear, onStreamComplete, onErrorAfterAlert, onUserAction, getUserInfo, isTextMode, isReplay, onContextMemoryUpdate, onContextCompressionDone, onStreamActivity, resetStreamRetryDisplay]
     );
 
     // Handle next step in queue

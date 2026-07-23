@@ -1,7 +1,8 @@
 /**
  * 创作台「开始测试 / 编辑修改」进游玩页的会话策略。
- * - 开始测试：optical 新建（restart=true），清空旧进度
- * - 编辑修改（仅视觉小说 NOVEL）：optical 续玩（restart=false），载入历史接着玩
+ * - TXT 开始测试：optical 新建（restart=true），清空旧进度 → /galgame
+ * - NOVEL 开始测试：直接进小说阅读页 `/novel/:id/read`（不进原作 AI 文游）
+ * - 编辑修改（仅视觉小说 NOVEL）：optical 续玩原作（restart=false），载入历史接着玩
  * - AI文游 TXT 编辑仍进 /gameSettingsEditor，不走续玩
  * - 不自动弹出历史面板
  */

@@ -42,8 +42,8 @@ interface BgmItem {
     description: string;
 }
 
-const SINGLE_SCENE_ETA_SECONDS = 80;
-const BATCH_SCENE_BUFFER_SECONDS = 50;
+const SINGLE_SCENE_ETA_SECONDS = 100;
+const BATCH_SCENE_BUFFER_SECONDS = 60;
 
 /**
  * 暂存图片类型 - 用于图片选择/生成后、确认修改前的预览

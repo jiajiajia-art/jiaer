@@ -64,12 +64,18 @@ export const useGenerationEta = ({
             ? Math.max(0, Math.min(safeTotalCount, Math.floor(Number(completedCount))))
             : 0;
         const isTerminalStatus = status === 'completed' || status === 'failed' || status === 'unknown';
+        const labelPrefix = batchLabel ? `${batchLabel}，` : '';
 
         if (hasRealBatchProgress) {
             const currentIndex = normalizedCompletedCount >= safeTotalCount || isTerminalStatus
                 ? safeTotalCount
                 : Math.min(safeTotalCount, normalizedCompletedCount + 1);
-            const labelPrefix = batchLabel ? `${batchLabel}，` : '';
+
+            // 首张未完成或前端预估已耗尽：不要显示「剩余 0 秒」
+            if (!isTerminalStatus && effectiveRemainingSeconds <= 0) {
+                return `${labelPrefix}${t('eta.generatingMoreTime')}，${t('eta.generating')} ${currentIndex}/${safeTotalCount} ${t('eta.item')}`;
+            }
+
             return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(effectiveRemainingSeconds, t)}，${t('eta.generating')} ${currentIndex}/${safeTotalCount} ${t('eta.item')}`;
         }
 
@@ -80,7 +86,6 @@ export const useGenerationEta = ({
         if (totalCount > 1) {
             const perItemSeconds = Math.max(1, Math.ceil(safeTotalSeconds / totalCount));
             const currentIndex = Math.min(totalCount, Math.max(1, Math.floor(elapsedSeconds / perItemSeconds) + 1));
-            const labelPrefix = batchLabel ? `${batchLabel}，` : '';
             return `${labelPrefix}${t('eta.remaining')} ${formatEtaPrecise(remainingSeconds, t)}，${t('eta.generating')} ${currentIndex}/${totalCount} ${t('eta.item')}`;
         }
 

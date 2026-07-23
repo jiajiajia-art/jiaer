@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     IoChatbubbleEllipses,
@@ -8,6 +8,7 @@ import {
     IoTime,
 } from 'react-icons/io5';
 import { TbHandClick } from 'react-icons/tb';
+import toast from 'react-hot-toast';
 import type { UserGameData } from '../../api/home/getGameData.type';
 import styles from './GameStatsView.module.css';
 import { useAuthStore, authModalStore } from '../../store/useAuthStore';
@@ -29,6 +30,7 @@ import {
     normalizeCreatorPlayMode,
     parseOpticalPlaySessionId,
 } from '../../utils/creatorContinuePlay';
+import { buildNovelReadPath } from '../../utils/novelGame';
 import { useTranslation } from 'react-i18next';
 
 const formatPlayDuration = (seconds: number) => {
@@ -62,7 +64,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
     onPublish,
     onUnpublish,
     isNovel = false,
-    sourceFileId = '',
+    sourceFileId: _sourceFileId = '',
     isEditContinuing = false,
 }) => {
     const { t } = useTranslation();
@@ -78,8 +80,9 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
     /**
      * 创建会话（按引擎类型分发）。
-     * TXT / NOVEL「开始测试」走 optical + restart，与「编辑修改」续玩共用会话表，才能接着玩。
-     * customif：不在此处创建会话，直接跳转到 /customif/:appId，由宿主页创建。
+     * - TXT「开始测试」走 optical + restart
+     * - NOVEL「开始测试」进入小说阅读页（不进原作 AI 文游）
+     * - customif：不在此处创建会话，直接跳转到 /customif/:appId，由宿主页创建。
      */
     const createSession = async (fileId: string): Promise<{ sessionId: string | null; redirectUrl: string }> => {
         if (!fileId) {
@@ -88,7 +91,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         }
 
         if (!user?.user?.userId || !user?.user?.id) {
-            alert(t('createGame.userInfoError'));
+            toast.error(t('createGame.userInfoError'));
             return { sessionId: null, redirectUrl: '' };
         }
 
@@ -96,14 +99,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
         try {
             const normalized = normalizeCreatorPlayMode(gameDetail?.engine, gameDetail?.game_tags);
             if (!normalized) {
-                alert(t('createGame.unknownGameType'));
+                toast.error(t('createGame.unknownGameType'));
                 return { sessionId: null, redirectUrl: '' };
             }
 
             if (normalized === 'customif') {
                 const appId = gameDetail?.customAppId || gameDetail?.file_id;
                 if (!appId) {
-                    alert(t('createGame.missingCustomAppIdStart'));
+                    toast.error(t('createGame.missingCustomAppIdStart'));
                     return { sessionId: null, redirectUrl: '' };
                 }
                 return { sessionId: null, redirectUrl: `/customif/${appId}` };
@@ -128,31 +131,13 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     const sessionId = parseOpticalPlaySessionId(response.data.data);
                     return { sessionId, redirectUrl: '/galgame' };
                 }
-                alert(response.data.message || t('createGame.createGameFailed'));
+                toast.error(response.data.message || t('createGame.createGameFailed'));
                 return { sessionId: null, redirectUrl: '' };
             }
 
             if (normalized === 'NOVEL') {
-                const targetFileId = sourceFileId || gameDetail?.source_file_id || '';
-                if (!targetFileId) {
-                    alert(t('createGame.sourceGameMissing'));
-                    return { sessionId: null, redirectUrl: '' };
-                }
-                const payload = buildCreatorPlaySessionRequest({
-                    intent: 'start-test',
-                    fileId: targetFileId,
-                    source: 'other',
-                });
-                const response = await createGalgameSessionApi.createGalgamePlaySession(payload);
-                if (response.data.success) {
-                    const sessionId = parseOpticalPlaySessionId(response.data.data);
-                    setFileId(targetFileId);
-                    if (sessionId) setSessionId(sessionId);
-                    setIsPreset(false);
-                    return { sessionId, redirectUrl: '/galgame' };
-                }
-                alert(response.data.message || t('createGame.createGameFailed'));
-                return { sessionId: null, redirectUrl: '' };
+                // 视觉小说测玩 = 阅读本作品，不再跳转原作 /galgame
+                return { sessionId: null, redirectUrl: buildNovelReadPath(fileId) };
             }
 
             if (normalized === 'AVG') {
@@ -161,15 +146,15 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                     const sessionId = response.data.session.sessionId;
                     return { sessionId, redirectUrl: '/galgameMap' };
                 }
-                alert(response.data.message || t('createGame.createGameFailed'));
+                toast.error(response.data.message || t('createGame.createGameFailed'));
                 return { sessionId: null, redirectUrl: '' };
             }
 
-            alert(t('createGame.unknownGameType'));
+            toast.error(t('createGame.unknownGameType'));
             return { sessionId: null, redirectUrl: '' };
         } catch (error) {
             console.error('❌ Session 创建错误:', error);
-            alert(t('createGame.createGameFailedRetry'));
+            toast.error(t('createGame.createGameFailedRetry'));
             return { sessionId: null, redirectUrl: '' };
         } finally {
             setIsLoading(false);
@@ -189,7 +174,7 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
 
         const fileId = gameDetail?.file_id || gameDetail?.id;
         if (!fileId) {
-            alert(t('createGame.gameInfoError'));
+            toast.error(t('createGame.gameInfoError'));
             return;
         }
 
@@ -228,10 +213,10 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
                 navigate('/galgame', { state: { saveEntry: 'load' } });
                 return;
             }
-            alert(resp.data.message || t('createGame.loadSaveFailed'));
+            toast.error(resp.data.message || t('createGame.loadSaveFailed'));
         } catch (e) {
             console.error('加载存档失败:', e);
-            alert(t('createGame.loadSaveFailedRetry'));
+            toast.error(t('createGame.loadSaveFailedRetry'));
         } finally {
             setIsLoading(false);
             setIsLoadSaveOpen(false);

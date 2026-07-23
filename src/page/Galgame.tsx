@@ -671,8 +671,9 @@ const Galgame = () => {
             toast.error(t('galgame.sessionNotFound'));
             return;
         }
-        try {
-            const resp = await replayApi.createFromSession({
+
+        const runExport = async () =>
+            replayApi.createFromSession({
                 sessionId,
                 fileId,
                 title,
@@ -681,6 +682,22 @@ const Galgame = () => {
                 createAsNovel: true,
                 overwrite,
             });
+
+        try {
+            let resp;
+            try {
+                resp = await runExport();
+            } catch (firstError) {
+                const firstCode = (firstError as AxiosError<{ code?: string }>).response?.data?.code;
+                // 吐字刚结束时后端可能仍持锁/落库：自动重试一次
+                if (firstCode === 'GENERATION_IN_PROGRESS') {
+                    await new Promise((resolve) => setTimeout(resolve, 1600));
+                    resp = await runExport();
+                } else {
+                    throw firstError;
+                }
+            }
+
             if (resp.data?.success && resp.data?.novelFileId) {
                 setOverwriteDraftConfirm(null);
                 setIsExportNovelOpen(false);

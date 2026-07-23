@@ -35,6 +35,18 @@ test('shouldContinuePlayOnEdit only for NOVEL (AI文游 TXT goes to settings edi
   assert.equal(shouldContinuePlayOnEdit('ST', null), false);
 });
 
+test('NOVEL start-test should not reuse optical session (reader path is separate)', () => {
+  // 开始测试仍对 TXT 要求 restart；小说测玩已改为阅读页，不再走本请求体
+  assert.equal(shouldRestartPlaySession('start-test'), true);
+  assert.equal(
+    shouldReuseExistingPlaySession({
+      hasExisting: true,
+      restart: shouldRestartPlaySession('start-test'),
+    }),
+    false,
+  );
+});
+
 test('resolveContinuePlayFileId uses source for novel and self for TXT', () => {
   assert.equal(
     resolveContinuePlayFileId({

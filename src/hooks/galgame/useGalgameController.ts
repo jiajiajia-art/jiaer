@@ -7,7 +7,7 @@ import useGalgameHistory from "./useGalgameHistory";
 import { useStoryTyping } from "../story/useStoryTyping";
 import { useGalgameMessage } from "./useGalgameMessage";
 import getGalgamePresetApi from "../../api/galgame/getGalgamePreset";
-import type { ContextMemoryDebug, ContextMemoryStatus, GetGalgamePresetResponse } from "../../api/galgame/getGalgamePreset.type";
+import type { ContextMemoryDebug, ContextMemoryStatus, GetGalgamePresetResponse, History } from "../../api/galgame/getGalgamePreset.type";
 import { getImageUrl, getPlayerImageUrl, DEFAULT_SCENE_IMAGE } from "../../utils/constants";
 import { extractChoiceFromHistory, extractPlainText, parseHistoryToSteps } from "../../utils/textUtils";
 import statisticsApi from "../../api/statistics/statisticsApi";
@@ -40,6 +40,43 @@ const COMPRESSION_REQUEST_TIMEOUT_MS = 180000;
 function pickMainOption(options?: Array<{ id: number; text: string; isMain?: boolean }>) {
     if (!Array.isArray(options) || options.length === 0) return null;
     return options.find((option) => option?.isMain) || options[0] || null;
+}
+
+/** 将会话历史还原为文本模式 steps，用户回合记为 isPlayer 台词 */
+function buildCompletedStepsFromConversationHistory(
+    messages: History[],
+    playerName: string,
+): any[] {
+    const steps: any[] = [];
+    const speaker = String(playerName || '').trim() || 'Player';
+
+    messages.forEach((message, messageIndex) => {
+        const content = String(message?.content || '').trim();
+        if (!content) return;
+
+        if (message.role === 'user') {
+            steps.push({
+                id: `history-user-${messageIndex}`,
+                type: 'dialogue',
+                isPlayer: true,
+                speakerName: speaker,
+                content,
+            });
+            return;
+        }
+
+        if (message.role !== 'assistant') return;
+
+        const parsed = parseHistoryToSteps(content);
+        parsed.forEach((step: any, stepIndex: number) => {
+            steps.push({
+                ...step,
+                id: step?.id || `history-assistant-${messageIndex}-${stepIndex}`,
+            });
+        });
+    });
+
+    return steps;
 }
 
 export const useGalgameController = () => {
@@ -120,7 +157,8 @@ export const useGalgameController = () => {
         loading: historyLoading,
         editHistory,
         historyTotal,
-        contextMemory: historyContextMemory
+        contextMemory: historyContextMemory,
+        appendLocalUserMessage,
     } = useGalgameHistory({ disabled: isReplay });
 
     // 根据 assistant 消息数量计算当前是第几回合（用于前几回合免费 / UI 提示）
@@ -200,7 +238,7 @@ export const useGalgameController = () => {
         replayStepsRef.current = replaySteps;
     }, [replaySteps]);
 
-    // 资源切换时重置状态
+    // 资源切换时重置状态（含续玩换 session）
     useEffect(() => {
         historyProcessedRef.current = false;
         resetDisplayedSteps();
@@ -225,7 +263,7 @@ export const useGalgameController = () => {
         autoToCompressionCompletedRef.current = false;
         // 强制重置加载标记，确保数据重新加载
         presetDataLoadedRef.current = false;
-    }, [fileId, isReplay, replayId]);
+    }, [fileId, sessionId, isReplay, replayId]);
 
     useEffect(() => {
         if (!isReplay || !replayId) {
@@ -496,6 +534,7 @@ export const useGalgameController = () => {
                 void refreshHistoryAfterTypingRef.current();
             }
         },
+        onUserAction: appendLocalUserMessage,
         isReplay,
         isTextMode,
         onContextMemoryUpdate: setLiveContextMemory,
@@ -872,7 +911,7 @@ export const useGalgameController = () => {
         }
     }, [isReplay, gameStarted, stepHandlers.currentStep, showStoryIntro]);
 
-    // 处理历史记录
+    // 处理历史记录（继续体验：还原此前全部用户回合 + AI 回合）
     const processHistoryRecord = useCallback(() => {
         if (isReplay) return; // 回放模式不处理“历史驱动”的自动重发
         // 如果正在等待新数据，不处理历史记录，避免覆盖新请求的数据
@@ -886,8 +925,18 @@ export const useGalgameController = () => {
         }
         if (!historyLoading && presetData && history.length > 0) {
             const lastMessage = history[history.length - 1];
+            const playerName = String(worldSetting?.player?.name || '').trim() || 'Player';
+            const priorMessages = history.slice(0, -1);
+            const priorSteps = buildCompletedStepsFromConversationHistory(priorMessages, playerName);
 
             if (lastMessage.role === 'user' && lastMessage.content) {
+                // 续玩时先还原此前完整记录（含用户自己的选择/输入）
+                if (priorSteps.length > 0) {
+                    setCompletedSteps(priorSteps);
+                }
+                setShowStoryIntro(false);
+                setGameStarted(true);
+
                 // 防重复：相同内容在短时间内不重复自动重发
                 const now = Date.now();
                 const prev = lastAutoResendRef.current;
@@ -916,6 +965,8 @@ export const useGalgameController = () => {
                             setShowStoryIntro(false);
                             setGameStarted(true);
                             resetDisplayedSteps();
+                            // 本地只存了最近一轮 steps：补上此前用户/AI 记录
+                            setCompletedSteps(priorSteps);
                             setInitialMessages([]);
                             const [first, ...rest] = restoredSteps;
                             stepHandlers.setCurrentStep(first || null);
@@ -935,7 +986,7 @@ export const useGalgameController = () => {
                 );
 
                 if (historySteps.length > 0) {
-                    setCompletedSteps(historySteps);
+                    setCompletedSteps([...priorSteps, ...historySteps]);
 
                     const choiceStep = historySteps.find(s => s.type === 'choice' && s.options && s.options.length > 0);
                     if (choiceStep && (choiceStep as any).options && (choiceStep as any).options.length > 0) {
@@ -959,12 +1010,14 @@ export const useGalgameController = () => {
                                 text: opt
                             }))
                         };
-                        setCompletedSteps([choiceStep]);
+                        setCompletedSteps([...priorSteps, choiceStep]);
 
                         const choiceMessage = createChoiceMessage(choiceData);
                         if (choiceMessage) {
                             setInitialMessages([choiceMessage]);
                         }
+                    } else if (priorSteps.length > 0) {
+                        setCompletedSteps(priorSteps);
                     }
                 }
 

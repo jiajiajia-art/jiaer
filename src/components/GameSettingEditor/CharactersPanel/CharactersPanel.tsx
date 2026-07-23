@@ -42,9 +42,9 @@ const CHARACTER_WORD_LIMITS = {
     background: 800, 
 } as const;
 
-const SINGLE_CHARACTER_ETA_SECONDS = 85;
-const SINGLE_PLAYER_ETA_SECONDS = 75;
-const BATCH_CHARACTER_BUFFER_SECONDS = 45;
+const SINGLE_CHARACTER_ETA_SECONDS = 95;
+const SINGLE_PLAYER_ETA_SECONDS = 85;
+const BATCH_CHARACTER_BUFFER_SECONDS = 60;
 
 interface CharactersPanelProps {
     gameData?: AllGameData | WorldInteractionGameData | null;
