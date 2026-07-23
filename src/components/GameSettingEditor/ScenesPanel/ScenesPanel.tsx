@@ -153,6 +153,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
         scenes: {},
         subscenes: {},
     });
+    const sceneBatchGenerationCancelRef = useRef(false);
 
     const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
     const isBlockingSwitchRef = useRef(isBlockingSwitch);
@@ -546,6 +547,7 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                 onDataChange,
                 markBatchImageRefreshPending,
                 hasPendingBatchImageRefresh,
+                sceneBatchGenerationCancelRef,
             }),
         [
             fileId,
@@ -1622,6 +1624,13 @@ const ScenesPanel = React.forwardRef<ScenesPanelRef, ScenesPanelProps>(({
                             <div className={styles.plusLoadingHint}>{batchSceneProgressText}</div>
                         )}
                         <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
+                        <button
+                            type="button"
+                            className={styles.plusLoadingCancelBtn}
+                            onClick={handlers.cancelGenerateAllSceneImages}
+                        >
+                            {t('common.cancel')}
+                        </button>
                     </div>
                 </div>
             )}

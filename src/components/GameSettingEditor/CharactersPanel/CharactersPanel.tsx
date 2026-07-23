@@ -171,6 +171,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
     const [pendingImages, setPendingImages] = useState<{ [characterId: string]: { [variant: string]: PendingImage } }>({});
     // 暂存图片的 Object URL，需要手动清理
     const pendingImageUrlsRef = useRef<{ [key: string]: string }>({});
+    const npcBatchGenerationCancelRef = useRef(false);
 
     // 清理暂存图片 Object URL
     const clearPendingImageUrl = (key: string) => {
@@ -636,6 +637,7 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
             newCharacterData,
             pendingImages,
             pendingImageUrlsRef,
+            npcBatchGenerationCancelRef,
             onDataChange,
             t,
         });
@@ -2413,6 +2415,13 @@ const CharactersPanel = React.forwardRef<CharactersPanelRef, CharactersPanelProp
                             <div className={styles.plusLoadingHint}>{batchCharacterEtaText}</div>
                         )}
                         <div className={styles.plusLoadingHint}>{t('createGame.generatingDoNotLeave')}</div>
+                        <button
+                            type="button"
+                            className={styles.plusLoadingCancelBtn}
+                            onClick={() => handlers?.cancelGenerateAllNpcImages()}
+                        >
+                            {t('common.cancel')}
+                        </button>
                     </div>
                 </div>
             )}

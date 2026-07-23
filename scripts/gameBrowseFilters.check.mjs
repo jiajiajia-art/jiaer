@@ -10,10 +10,12 @@ import {
   normalizeHomeListMode,
 } from '../src/utils/gameBrowseFilters.ts';
 
-test('HOME_LIST_MODE_OPTIONS keeps novel as standalone quick filter', () => {
+test('HOME_LIST_MODE_OPTIONS includes novel after interactive-video', () => {
   const values = HOME_LIST_MODE_OPTIONS.map((option) => option.value);
-  assert.ok(!values.includes('novel'));
+  assert.deepEqual(values, ['all', 'role-playing', 'world', 'custom', 'interactive-video', 'novel']);
   assert.equal(HOME_NOVEL_QUICK_FILTER_MODE, 'novel');
+  const novel = HOME_LIST_MODE_OPTIONS.find((option) => option.value === 'novel');
+  assert.equal(novel?.label, '视觉小说');
 });
 
 test('HOME_LIST_MODE_OPTIONS role-playing display label is AI文游', () => {

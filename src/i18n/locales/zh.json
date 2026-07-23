@@ -1254,6 +1254,8 @@
     "missingSubSceneIdCannotUpload": "缺少子场景ID，无法上传",
     "generatingScenePortraits": "正在生成场景立绘...",
     "generatingDoNotLeave": "正在生成中，请勿离开当前页面或重复操作",
+    "batchSceneGenerationCancelled": "已取消场景立绘生成，可稍后重新发起",
+    "batchCharacterGenerationCancelled": "已取消角色立绘生成，可稍后重新发起",
     "generationComplete": "生成结果",
     "successGenerated": "成功生成 {{count}} 张图片",
     "thisTimeDeducted": "本次扣除 {{points}} 积分",

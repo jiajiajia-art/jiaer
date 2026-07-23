@@ -1168,6 +1168,25 @@
     text-align: center;
 }
 
+.plusLoadingCancelBtn {
+    margin-top: 8px;
+    min-width: 120px;
+    border-radius: 12px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(224, 61, 75, 0.35);
+    background: #ffffff;
+    color: var(--primary);
+    transition: all 0.2s ease;
+}
+
+.plusLoadingCancelBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(224, 61, 75, 0.12);
+}
+
 /* 差分生成加载效果 */
 .loadingOverlay {
     position: absolute;

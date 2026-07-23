@@ -22,13 +22,14 @@ export const DEFAULT_HOME_LIST_FILTERS: HomeListFilters = {
     tagId: null,
 };
 
-/** 首页模式下拉选项（小说单独入口展示，不在此列表） */
+/** 首页/分类模式下拉与分类页模式 chips（含视觉小说） */
 export const HOME_LIST_MODE_OPTIONS: HomeListOption<HomeListMode>[] = [
     { value: 'all', label: '全部', labelKey: 'gameBrowse.modes.all' },
     { value: 'role-playing', label: 'AI文游', labelKey: 'gameBrowse.modes.rolePlaying' },
     { value: 'world', label: '酒馆卡', labelKey: 'gameBrowse.modes.world' },
     { value: 'custom', label: '自定义', labelKey: 'gameBrowse.modes.custom' },
     { value: 'interactive-video', label: '互动影游', labelKey: 'gameBrowse.modes.interactiveVideo' },
+    { value: 'novel', label: '视觉小说', labelKey: 'gameBrowse.modes.novel' },
 ];
 
 export const HOME_NOVEL_QUICK_FILTER_MODE: HomeListMode = 'novel';

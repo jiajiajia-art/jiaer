@@ -17,6 +17,7 @@
     "test:draftBoxFilter": "node --experimental-strip-types --test scripts/draftBoxFilter.check.mjs",
     "test:novelEdit": "node --experimental-strip-types --test scripts/novelEdit.check.mjs",
     "test:gameBrowseFilters": "node --experimental-strip-types --test scripts/gameBrowseFilters.check.mjs",
+    "test:batchImageJobPoll": "node --experimental-strip-types --test scripts/batchImageJobPoll.check.mjs",
     "test:homeFilterNovelTheme": "node --experimental-strip-types --test scripts/homeFilterNovelTheme.check.mjs",
     "test:exportVisualNovel": "node --experimental-strip-types --test scripts/exportVisualNovel.check.mjs",
     "test:novelChapters": "node --experimental-strip-types --test scripts/novelChapters.check.mjs",

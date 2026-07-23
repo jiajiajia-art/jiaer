@@ -1255,6 +1255,8 @@
     "missingSubSceneIdCannotUpload": "Missing sub-scene ID, cannot upload",
     "generatingScenePortraits": "Generating scene portraits...",
     "generatingDoNotLeave": "Generating, please do not leave the page or repeat operations",
+    "batchSceneGenerationCancelled": "Scene portrait generation cancelled. You can try again later.",
+    "batchCharacterGenerationCancelled": "Character portrait generation cancelled. You can try again later.",
     "generationComplete": "Generation Complete",
     "successGenerated": "Successfully generated {{count}} image(s)",
     "thisTimeDeducted": "Points deducted this time: {{points}}",
