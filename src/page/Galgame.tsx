@@ -714,7 +714,15 @@ const Galgame = () => {
                 return;
             }
 
-            toast.error(t('galgame.exportVisualNovelFailed'));
+            if (errorCode === 'NO_STEPS_AVAILABLE') {
+                toast.error(t('galgame.exportVisualNovelNoSteps', {
+                    defaultValue: '当前会话没有可导出的剧情步骤，请先多玩几轮再导出',
+                }));
+                return;
+            }
+
+            const serverMessage = String(axiosError.response?.data?.message || '').trim();
+            toast.error(serverMessage || t('galgame.exportVisualNovelFailed'));
         }
     };
 
