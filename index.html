@@ -5,10 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/funloom_icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>funloom</title>
-    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- 微信 JSSDK：放 body 底部，避免挡首屏解析；模块脚本 defer，仍会在本脚本之后执行 -->
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
