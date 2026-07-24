@@ -58,7 +58,7 @@ interface RechargeModalProps {
     isOpen: boolean;
     onClose: () => void;
     onRecharge: (order: PayOrderRequest) => Promise<{ qrDataUrl: string; outTradeNo: string } | null>;
-    isFirstCharge?: boolean;
+    isFirstChargePlans?: Record<string, boolean>;
     fixedTab?: RechargeTabType;
 }
 
@@ -73,7 +73,7 @@ const isMiniProgramEnv = (): boolean => {
     return String(win.__wxjs_environment || '').toLowerCase() === 'miniprogram';
 };
 
-const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstCharge, fixedTab }) => {
+const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRecharge, isFirstChargePlans, fixedTab }) => {
     const { t } = useTranslation();
     const { user, updateUser } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +89,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const [selectedFirstChargePlanId, setSelectedFirstChargePlanId] = useState<DiamondsPlanId | null>(null);
     // 选中的固定档位的原始金额（用于下单），不受会员折扣影响
     const [selectedFixedPlanAmount, setSelectedFixedPlanAmount] = useState<number | null>(null);
+    // 自定义充值的原始金额（用于下单），不受会员折扣影响
+    const [customOriginalAmount, setCustomOriginalAmount] = useState<number | null>(null);
     // 用户实际看到的（可能是折扣后的）金额文本
     const [amountText, setAmountText] = useState<string>('');
 
@@ -157,6 +159,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             setSelectedPlanIndex(-1);
             setSelectedFirstChargePlanId(null);
             setSelectedFixedPlanAmount(null);
+            setCustomOriginalAmount(null);
         }
     }, [isOpen, fixedTab]);
 
@@ -172,6 +175,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
         setAmountText(displayAmount);
         setSelectedFirstChargePlanId(plan.planId);
         setSelectedFixedPlanAmount(plan.amount);
+        setCustomOriginalAmount(null);
         setInputError('');
     };
 
@@ -202,8 +206,11 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             }
             const matchedPlan = FIRST_CHARGE_PLANS.find((plan) => plan.amount === numericValue);
             setSelectedFirstChargePlanId(matchedPlan?.planId ?? null);
+            // 自定义金额也保存原始值
+            setCustomOriginalAmount(numericValue >= MIN_AMOUNT ? numericValue : null);
         } else {
             setSelectedFirstChargePlanId(null);
+            setCustomOriginalAmount(null);
         }
 
         setSelectedFixedPlanAmount(null);
@@ -213,6 +220,9 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
     const getCurrentAmount = (): number | null => {
         if (selectedFixedPlanAmount !== null) {
             return selectedFixedPlanAmount;
+        }
+        if (customOriginalAmount !== null) {
+            return customOriginalAmount;
         }
         if (amountText) {
             const amount = parseFloat(amountText);
@@ -328,9 +338,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
-        const raw = (amountInputRef.current?.value ?? amountText ?? '').trim();
-        const parsed = parseFloat(raw || '0');
-        const amount: number | null = !isNaN(parsed) ? parsed : null;
+        // 使用原始金额下单（不受会员折扣影响）
+        const amount: number | null = getCurrentAmount();
 
         if (!amount) {
             if (amountText) {
@@ -344,12 +353,24 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
             return;
         }
 
-        const orderData: PayOrderRequest = {
-            orderType: 'diamonds',
-            amount,
-            ...(firstChargeAvailable && selectedFirstChargePlanId ? { planId: selectedFirstChargePlanId } : {}),
-            description: `钻石充值 ${amount} 元`,
-        };
+        // 根据是否选择了固定档位来决定传参方式
+        // 固定档位：只传 orderType 和 planId，后端自动读取价格
+        // 自定义金额：只传 orderType 和 amount
+        const isFixedPlan = selectedFirstChargePlanId !== null;
+        let orderData: PayOrderRequest;
+
+        if (isFixedPlan) {
+            orderData = {
+                orderType: 'diamonds',
+                planId: selectedFirstChargePlanId,
+            };
+        } else {
+            orderData = {
+                orderType: 'diamonds',
+                amount,
+                description: `钻石充值 ${amount} 元`,
+            };
+        }
 
         inFlightRef.current = true;
         setIsLoading(true);
@@ -537,7 +558,8 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
 
     if (!isOpen) return null;
 
-    const firstChargeAvailable = isFirstCharge !== false;
+    const hasFirstCharge = (planId: string) => isFirstChargePlans?.[planId] === true;
+    const firstChargeAvailable = !hasFirstCharge(selectedFirstChargePlanId || '');
     const currentAmount = getCurrentAmount();
     const currentDiamonds = currentAmount ? calculateDiamonds(currentAmount) : 0;
     const selectedFirstChargePlan = FIRST_CHARGE_PLANS.find((plan) => plan.planId === selectedFirstChargePlanId) || null;
@@ -560,6 +582,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                         const isDiscounted = discount < 1;
                         const displayAmount = isDiscounted ? plan.amount * discount : plan.amount;
                         const displayDiamonds = calculateDiamonds(plan.amount);
+                        const planHasFirstCharged = hasFirstCharge(plan.planId);
                         return (
                             <button
                                 key={plan.planId}
@@ -568,7 +591,7 @@ const RechargeModal: React.FC<RechargeModalProps> = ({ isOpen, onClose, onRechar
                                 onClick={() => handleFixedAmountClick(plan)}
                             >
                                 {hasBonus ? (
-                                    <div className={`${styles.firstChargeTag} ${!firstChargeAvailable ? styles.firstChargeTagInactive : ''}`}>{tagText}</div>
+                                    <div className={`${styles.firstChargeTag} ${planHasFirstCharged ? styles.firstChargeTagInactive : ''}`}>{tagText}</div>
                                 ) : (
                                     isSixYuan && <div className={styles.noBonusTag}>{t('rechargeModal.noFirstChargeBonus')}</div>
                                 )}

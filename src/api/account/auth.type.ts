@@ -52,7 +52,7 @@ export interface User {
   diamonds?: number;
   inviteCode: string;
   hasSignedIn: boolean;
-  firstCharge?: boolean;
+  firstChargePlans?: Record<string, boolean>;
   isMember?: boolean;
   memberPlan?: MembershipPlanId | null;
   memberEndAt?: string | null;

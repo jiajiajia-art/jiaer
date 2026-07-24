@@ -96,6 +96,7 @@ const Create: React.FC = () => {
     const userName = user?.user?.nickname || user?.user?.name || t('create.userNameDefault');
     const userCode = user?.user?.userCode;
     const debugToken = user?.user?.debugToken;
+    const truncatedDebugToken = debugToken ? `${debugToken.slice(0, 8)}...` : null;
     const isMiniProgram = isMiniProgramEnv();
     const isWorkIncentive = stats.incentiveType === 'incentive' || stats.incentiveType === 'game_incentive' || stats.incentiveType === 'all_incentive';
 
@@ -492,7 +493,7 @@ const Create: React.FC = () => {
                                     <div className={styles.creatorAccountDivider} />
                                     <div className={styles.creatorAccountHalf}>
                                         <span className={styles.creatorAccountLabel}>Token:</span>
-                                        <span className={styles.creatorAccountValue}>{debugToken || '--'}</span>
+                                        <span className={styles.creatorAccountValue}>{truncatedDebugToken || '--'}</span>
                                         {debugToken && (
                                             <button
                                                 type="button"
@@ -906,7 +907,7 @@ const Create: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
-                isFirstCharge={user?.user?.firstCharge}
+                isFirstChargePlans={user?.user?.firstChargePlans}
             />
             <WithdrawFlowModal
                 open={isWithdrawModalOpen}

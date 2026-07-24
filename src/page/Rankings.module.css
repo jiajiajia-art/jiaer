@@ -329,7 +329,7 @@
 }
 
 .horizontalCardCover {
-    width: 124px;
+    width: 140px;
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 6px;
@@ -348,13 +348,12 @@
     top: 6px;
     right: 6px;
     max-width: 68%;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    border: 1px solid transparent;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.35);
-    color: #fff;
-    padding: 2px 6px;
+    padding: 1px 6px;
     font-size: 10px;
-    line-height: 1.2;
+    font-weight: 600;
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -615,13 +614,12 @@
     top: 4px;
     right: 4px;
     max-width: 80%;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    border: 1px solid transparent;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.35);
-    color: #fff;
-    padding: 2px 6px;
-    font-size: 10px;
-    line-height: 1.2;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -798,7 +796,7 @@
     }
 
     .horizontalCardCover {
-        width: 118px;
+        width: 132px;
     }
 
     .categoryBoxMore {

@@ -1095,7 +1095,7 @@ const Profile: React.FC = () => {
                 isOpen={isRechargeModalOpen}
                 onClose={() => setIsRechargeModalOpen(false)}
                 onRecharge={handleRecharge}
-                isFirstCharge={user?.user?.firstCharge}
+                isFirstChargePlans={user?.user?.firstChargePlans}
             />
 
             <RechargeModal

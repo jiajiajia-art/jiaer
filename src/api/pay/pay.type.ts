@@ -19,8 +19,8 @@ export interface SubscriptionOrderRequest {
 
 export interface DiamondsOrderRequest {
     orderType: 'diamonds';
-    amount: number;
     planId?: DiamondsPlanId;
+    amount?: number;
     description?: string;
 }
 

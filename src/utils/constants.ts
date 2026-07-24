@@ -1,7 +1,7 @@
 import { HOST_ADDRESS } from "../config";
 
 // ==================== 积分相关常量 ====================
-export const SCENE_GENERATION_COST = 4;      // 场景生成费用
+export const SCENE_GENERATION_COST = 6;      // 场景生成费用
 export const CHARACTER_GENERATION_COST = 6;   // 角色/NPC/差分图生成费用
 export const OPTION_COST = 2;
 export const INPUT_COST = 3;

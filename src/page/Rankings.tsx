@@ -9,6 +9,8 @@ import getRankingsApi from '../api/rankings/getRankings';
 import type { RankingsApiType, RankingsGameItem } from '../api/rankings/getRankings.type';
 import type { RankingsCategoryKey } from '../api/rankings/getRankingsAll.type';
 import { getImageUrl } from '../utils/constants';
+import { getGameTypeLabel, getGameTypeTone, type GameTypeTone } from '../utils/gameTypeLabel';
+import { resolveGameTypeToneStyle } from '../utils/gameTypeToneClass';
 
 type RankingTab = 'all' | 'hot' | 'new' | 'rising' | 'sales' | 'romance';
 
@@ -44,6 +46,8 @@ interface RankedGame {
     authorName: string;
     tags: string[];
     gameTags: string[];
+    gameTypeLabel: string;  // 转换后的中文标签
+    gameTypeTone: GameTypeTone;  // 标签色调
     theme_tag_names?: string[];
 }
 
@@ -61,6 +65,9 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
     const updateInfo = updatedAt && !Number.isNaN(updatedAt.getTime())
         ? `更新于 ${updatedAt.toLocaleDateString('zh-CN')}`
         : '';
+    // 使用 getGameTypeLabel 转换原始标签为中文展示名
+    const gameTypeLabel = getGameTypeLabel(item.game_tags, item.engine);
+    const gameTypeTone = getGameTypeTone(item.game_tags, item.engine);
     return {
         id: item.file_id,
         title: item.title,
@@ -73,6 +80,8 @@ function apiGameToRanked(item: RankingsGameItem): RankedGame {
         authorName: author,
         tags,
         gameTags: tagsFromGame,
+        gameTypeLabel,
+        gameTypeTone,
         theme_tag_names: item.theme_tag_names ?? [],
     };
 }
@@ -375,8 +384,14 @@ const Rankings: React.FC = () => {
                                     alt={game.title}
                                     className={styles.horizontalCardCover}
                                 />
-                                {(game.gameTags[0] || game.tags[0]) && (
-                                    <span className={styles.horizontalCardTag}>{game.gameTags[0] || game.tags[0]}</span>
+                                {game.gameTypeLabel && (
+                                    <div
+                                        className={styles.horizontalCardTag}
+                                        style={resolveGameTypeToneStyle(game.gameTypeTone)}
+                                        title={game.gameTypeLabel}
+                                    >
+                                        {game.gameTypeLabel}
+                                    </div>
                                 )}
                             </div>
                             <div className={styles.horizontalCardInfo}>
@@ -490,8 +505,14 @@ const Rankings: React.FC = () => {
                                                     <span className={styles.categoryBoxRank} data-rank={index + 1}>{index + 1}</span>
                                                     <div className={styles.categoryBoxCoverWrap}>
                                                         <img src={game.coverUrl} alt={game.title} className={styles.categoryBoxCover} />
-                                                        {(game.gameTags[0] || game.tags[0]) && (
-                                                            <span className={styles.categoryBoxTag}>{game.gameTags[0] || game.tags[0]}</span>
+                                                        {game.gameTypeLabel && (
+                                                            <div
+                                                                className={styles.categoryBoxTag}
+                                                                style={resolveGameTypeToneStyle(game.gameTypeTone)}
+                                                                title={game.gameTypeLabel}
+                                                            >
+                                                                {game.gameTypeLabel}
+                                                            </div>
                                                         )}
                                                     </div>
                                                     <div className={styles.categoryBoxInfo}>

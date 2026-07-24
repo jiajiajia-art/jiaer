@@ -61,6 +61,35 @@
   height: 320px;
 }
 
+.tableWrap {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid rgba(47, 36, 29, 0.08);
+  text-align: left;
+  font-size: 13px;
+}
+
+.table th {
+  color: #7a6a61;
+  font-weight: 600;
+  background: rgba(255, 248, 240, 0.72);
+}
+
+.table td {
+  color: #3f352e;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -86,4 +115,31 @@
   padding: 24px;
   text-align: center;
   color: #777;
+}
+
+.tooltipCard {
+  min-width: 156px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(47, 36, 29, 0.94);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(47, 36, 29, 0.18);
+}
+
+.tooltipTitle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.tooltipRow + .tooltipRow {
+  margin-top: 6px;
 }
