@@ -106,3 +106,13 @@ test('resolveWheelTargetDegrees_扇区中线与指针顶部对齐约定', () => 
   // 第 1 扇中线 108° → 252
   assert.equal(resolveWheelTargetDegrees('mini_handheld', { spins: 0 }), 252);
 });
+
+test('resolveRecentWinnersMarqueeSeconds_不足2条不轮播', async () => {
+  const { resolveRecentWinnersMarqueeSeconds } = await import(
+    '../src/activities/funloom-lottery-20260731/lib/recentWinnersMarquee.ts'
+  );
+  assert.equal(resolveRecentWinnersMarqueeSeconds(0), null);
+  assert.equal(resolveRecentWinnersMarqueeSeconds(1), null);
+  assert.equal(resolveRecentWinnersMarqueeSeconds(2), 10);
+  assert.equal(resolveRecentWinnersMarqueeSeconds(20), 44);
+});

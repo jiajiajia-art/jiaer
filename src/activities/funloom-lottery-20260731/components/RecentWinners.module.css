@@ -23,35 +23,47 @@
   box-shadow: 0 6px 16px rgba(40, 20, 100, 0.2);
 }
 
-/* 功能注释：最多约露出 3～4 条，其余区内滚动，避免活动页被 20 条撑太长 */
-.list {
+/* 功能注释：固定视口高度；内容自动向上轮播，悬停/按住时暂停便于阅读 */
+.viewport {
+  max-height: 196px;
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 8px,
+    #000 calc(100% - 8px),
+    transparent 100%
+  );
+}
+
+.staticList,
+.marqueeTrack {
   list-style: none;
   margin: 0;
-  padding: 0 4px 0 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 196px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.55) rgba(255, 255, 255, 0.12);
 }
 
-.list::-webkit-scrollbar {
-  width: 5px;
+.marqueeTrack {
+  animation: recentWinnersMarquee var(--marquee-seconds, 14s) linear infinite;
+  will-change: transform;
 }
 
-.list::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
+.viewport:hover .marqueeTrack,
+.viewport:active .marqueeTrack {
+  animation-play-state: paused;
 }
 
-.list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
+@keyframes recentWinnersMarquee {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    /* 列表复制了一份，滚到一半无缝接上 */
+    transform: translateY(-50%);
+  }
 }
 
 .item {
@@ -94,4 +106,16 @@
   flex-shrink: 0;
   font-size: 11px;
   color: rgba(43, 26, 74, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marqueeTrack {
+    animation: none;
+  }
+
+  .viewport {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    mask-image: none;
+  }
 }
