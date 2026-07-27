@@ -3,9 +3,9 @@ export const ON_SERVER: boolean = import.meta.env.PROD;
 //   (ON_SERVER ? 'https://api.kurangames.com' : 'http://localhost:3000');
 
 // 测试
-// export const HOST_ADDRESS = 'https://api-test.kurangames.com';
+export const HOST_ADDRESS = 'https://api-test.kurangames.com';
 // 国内正式生产
-export const HOST_ADDRESS = 'https://api.kurangames.com';
+// export const HOST_ADDRESS = 'https://api.kurangames.com';
 // 海外正式生产
 //export const HOST_ADDRESS = 'https://api-overseas.kurangames.com';
 // 本地

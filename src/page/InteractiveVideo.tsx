@@ -50,6 +50,12 @@ import {
     getNextPlaybackRate,
     type InteractiveVideoPlaybackRate,
 } from '../utils/interactiveVideoControls';
+import {
+    getInteractiveVideoTargetVideo,
+    getInteractiveVideoTargetVideoRefs,
+    getInteractiveVideoTargetVideoSequence,
+    type InteractiveVideoPlaybackTarget,
+} from '../utils/interactiveVideoPlayback';
 import { isMiniProgramEnv } from '../utils/miniProgram';
 import styles from './InteractiveVideo.module.css';
 
@@ -114,6 +120,8 @@ type StoryChoiceOption = {
     body?: string;
     conditions?: StoryCondition[];
     mutations?: StoryMutation[];
+    video?: StoryVideo;
+    videoSequence?: StoryVideoSequence;
 };
 
 type StoryMinigameResultPort = {
@@ -427,9 +435,10 @@ const getNodeBody = (node?: StoryNode | null): string => {
     return String(node?.data?.body || node?.body || '').trim();
 };
 
-const getNodeVideo = (node?: StoryNode | null): StoryVideo | undefined => node?.data?.video || node?.video;
-const getNodeVideoSequence = (node?: StoryNode | null): StoryVideoSequence | undefined =>
-    node?.data?.videoSequence || node?.videoSequence;
+const getNodeVideo = (target?: InteractiveVideoPlaybackTarget): StoryVideo | undefined =>
+    getInteractiveVideoTargetVideo(target) as StoryVideo | undefined;
+const getNodeVideoSequence = (target?: InteractiveVideoPlaybackTarget): StoryVideoSequence | undefined =>
+    getInteractiveVideoTargetVideoSequence(target) as StoryVideoSequence | undefined;
 const getNodeOptions = (node?: StoryNode | null): StoryChoiceOption[] => node?.data?.options || node?.options || [];
 const getNodeMutations = (node?: StoryNode | null): StoryMutation[] => node?.data?.mutations || node?.mutations || [];
 const getNodeMinigameAssetId = (node?: StoryNode | null): string =>
@@ -653,20 +662,8 @@ const videoUrlsMatch = (left?: string | null, right?: string | null): boolean =>
     return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
 };
 
-const getNodeVideoRefs = (node: StoryNode | null | undefined): StoryVideo[] => {
-    const sequence = getNodeVideoSequence(node);
-    const sequenceVideos = Array.isArray(sequence?.segments)
-        ? sequence.segments
-            .slice()
-            .sort((left, right) => Number(left.index ?? 0) - Number(right.index ?? 0))
-            .map((segment) => segment.video)
-            .filter((video): video is StoryVideo => Boolean(video))
-        : [];
-
-    if (sequenceVideos.length > 0) return sequenceVideos;
-    const singleVideo = getNodeVideo(node);
-    return singleVideo ? [singleVideo] : [];
-};
+const getNodeVideoRefs = (target: InteractiveVideoPlaybackTarget): StoryVideo[] =>
+    getInteractiveVideoTargetVideoRefs(target) as StoryVideo[];
 
 const resolveVideoAspect = (
     video: StoryVideo | undefined,
@@ -696,8 +693,8 @@ const resolveMinigameUrl = (node: StoryNode | null | undefined, manifest: StoryM
     return baseUrl ? `${baseUrl.replace(/\/$/, '')}/index.html` : '';
 };
 
-const getNodeVideoUrls = (node: StoryNode | null | undefined, manifest: StoryManifest | null): string[] => {
-    const sequence = getNodeVideoSequence(node);
+const getNodeVideoUrls = (target: InteractiveVideoPlaybackTarget, manifest: StoryManifest | null): string[] => {
+    const sequence = getNodeVideoSequence(target);
     const sequenceUrls = Array.isArray(sequence?.segments)
         ? sequence.segments
             .slice()
@@ -708,7 +705,7 @@ const getNodeVideoUrls = (node: StoryNode | null | undefined, manifest: StoryMan
 
     if (sequenceUrls.length > 0) return sequenceUrls;
 
-    const singleVideoUrl = resolveVideoUrl(getNodeVideo(node), manifest);
+    const singleVideoUrl = resolveVideoUrl(getNodeVideo(target), manifest);
     return singleVideoUrl ? [singleVideoUrl] : [];
 };
 
@@ -720,6 +717,20 @@ type RuntimeResolveResult = {
     node: StoryNode | null;
     callStack: InteractiveVideoRuntimeFrame[];
     variables: Record<string, StoryVariableValue>;
+};
+
+type ChoiceTransitionResolution = {
+    edgeRuntimeId: string;
+    routeWasUnlocked: boolean;
+    targetNode: StoryNode;
+    targetNodeKind: StoryNodeKind;
+    targetVideoUrl: string;
+    resolvedTarget: RuntimeResolveResult;
+};
+
+type ChoiceBridgePlayback = {
+    option: StoryChoiceOption;
+    transition: ChoiceTransitionResolution;
 };
 
 const getProjectFlowRuntimeScript = (story: StoryProject): StoryScript | null => {
@@ -2099,6 +2110,7 @@ const InteractiveVideo: React.FC = () => {
     const [ivgTheme, setIvgTheme] = useState<InteractiveVideoTheme>('light');
     const [isMiniProgramRuntime, setIsMiniProgramRuntime] = useState(() => isMiniProgramEnv());
     const [currentSequenceVideoIndex, setCurrentSequenceVideoIndex] = useState(0);
+    const [choiceBridgePlayback, setChoiceBridgePlayback] = useState<ChoiceBridgePlayback | null>(null);
     const isMiniProgramRuntimeRef = useRef(isMiniProgramRuntime);
     const preloadedVideoAspectRef = useRef<Record<string, VideoAspect>>({});
     const preloadManagerRef = useRef<VideoPreloadManager | null>(null);
@@ -2150,12 +2162,16 @@ const InteractiveVideo: React.FC = () => {
     const currentNode = sessionState?.currentNodeId ? nodeMap.get(sessionState.currentNodeId) : null;
     const isEndingNode = getNodeKind(currentNode) === 'ending';
     const isMinigameNode = getNodeKind(currentNode) === 'minigame';
+    const activeVideoTarget = choiceBridgePlayback?.option || currentNode;
+    const activeVideoTargetKey = choiceBridgePlayback
+        ? `choice:${currentNode?.id || ''}:${choiceBridgePlayback.option.id}`
+        : currentNode?.id || '';
     const projectPlaybackOrientation = useMemo(
         () => getProjectPlaybackOrientation(story, manifest, initialPlaybackOrientationRef.current),
         [manifest?.playbackOrientation, story?.playbackOrientation],
     );
-    const currentVideoRefs = useMemo(() => getNodeVideoRefs(currentNode), [currentNode]);
-    const currentVideoUrls = useMemo(() => getNodeVideoUrls(currentNode, manifest), [currentNode, manifest]);
+    const currentVideoRefs = useMemo(() => getNodeVideoRefs(activeVideoTarget), [activeVideoTarget]);
+    const currentVideoUrls = useMemo(() => getNodeVideoUrls(activeVideoTarget, manifest), [activeVideoTarget, manifest]);
     const currentVideoUrlsKey = currentVideoUrls.join('|');
     const currentVideoUrl = currentVideoUrls[currentSequenceVideoIndex] || currentVideoUrls[0] || '';
     const currentVideoRef = currentVideoRefs[currentSequenceVideoIndex] || currentVideoRefs[0];
@@ -2187,11 +2203,11 @@ const InteractiveVideo: React.FC = () => {
         preloadedVideoAspectRef.current = { ...preloadedVideoAspectRef.current, [url]: aspect };
     }, []);
 
-    const getKnownVideoAspect = useCallback((url: string, node: StoryNode | null | undefined, sequenceIndex = 0): VideoAspect => {
+    const getKnownVideoAspect = useCallback((url: string, target: InteractiveVideoPlaybackTarget, sequenceIndex = 0): VideoAspect => {
         if (!url) return 'unknown';
         const preloadedAspect = preloadedVideoAspectRef.current[url];
         if (preloadedAspect) return preloadedAspect;
-        const videoRefs = getNodeVideoRefs(node);
+        const videoRefs = getNodeVideoRefs(target);
         return resolveVideoAspect(videoRefs[sequenceIndex] || videoRefs[0], manifest, url);
     }, [manifest]);
 
@@ -2327,6 +2343,7 @@ const InteractiveVideo: React.FC = () => {
         setIsVideoBuffering(false);
         setIsVideoPaused(false);
         setIsVideoHudVisible(true);
+        setChoiceBridgePlayback(null);
         setPlaybackRate(1);
         setPreloadedVideoStatus({});
         preloadedVideoAspectRef.current = {};
@@ -2416,11 +2433,15 @@ const InteractiveVideo: React.FC = () => {
     useEffect(() => {
         const preloadedAspect = currentVideoUrl ? preloadedVideoAspectRef.current[currentVideoUrl] : undefined;
         setVideoAspect(preloadedAspect || currentManifestVideoAspect);
-    }, [currentManifestVideoAspect, currentNode?.id, currentVideoUrl]);
+    }, [activeVideoTargetKey, currentManifestVideoAspect, currentVideoUrl]);
 
     useEffect(() => {
         setCurrentSequenceVideoIndex(0);
-    }, [currentNode?.id, currentVideoUrlsKey]);
+    }, [activeVideoTargetKey, currentVideoUrlsKey]);
+
+    useEffect(() => {
+        setChoiceBridgePlayback(null);
+    }, [currentNode?.id]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined;
@@ -2460,7 +2481,7 @@ const InteractiveVideo: React.FC = () => {
             window.removeEventListener('resize', updateStageAspect);
             window.removeEventListener('orientationchange', updateStageAspect);
         };
-    }, [currentNode?.id, currentVideoUrl, videoAspect]);
+    }, [activeVideoTargetKey, currentVideoUrl, videoAspect]);
 
     useEffect(() => {
         if (!hasOrientableImmersiveMedia) {
@@ -2496,7 +2517,7 @@ const InteractiveVideo: React.FC = () => {
         if (isEndingNode && currentNode) {
             setEndingModalOpen(true);
         }
-    }, [currentNode?.id, currentVideoUrl, currentNode, isEndingNode]);
+    }, [activeVideoTargetKey, currentVideoUrl, currentNode, isEndingNode]);
 
     useEffect(() => {
         if (!currentVideoUrl || !videoGate) {
@@ -2526,7 +2547,7 @@ const InteractiveVideo: React.FC = () => {
         return () => {
             cancelled = true;
         };
-    }, [currentNode?.id, currentVideoUrl, playbackMode, videoGate]);
+    }, [activeVideoTargetKey, currentVideoUrl, playbackMode, videoGate]);
 
     const currentNodeOptions = useMemo(() => {
         if (!currentNode || !sessionState || isEndingNode || isMinigameNode) return [];
@@ -2551,13 +2572,20 @@ const InteractiveVideo: React.FC = () => {
                 })
                 : null;
             const targetNode = resolvedTarget?.node || null;
-            const url = getNodeVideoUrls(targetNode, manifest)[0] || '';
+            const optionVideoUrls = getNodeVideoUrls(option, manifest);
+            const targetVideoUrls = getNodeVideoUrls(targetNode, manifest);
+            const url = optionVideoUrls[0] || targetVideoUrls[0] || '';
             if (!edge || !targetNode || !url || url === currentVideoUrl || usedUrls.has(url)) {
                 return items;
             }
 
             const targetScript = runtimeScripts.find((script) => script.scriptId === resolvedTarget?.scriptId) || currentScript;
             const nextLayerUrls: string[] = [];
+            [...optionVideoUrls.slice(1), ...targetVideoUrls].forEach((nextUrl) => {
+                if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
+                    nextLayerUrls.push(nextUrl);
+                }
+            });
             getNodeOptions(targetNode)
                 .filter((nextOption) => optionIsAvailable(nextOption, resolvedTarget?.variables || {}, variableMap))
                 .forEach((nextOption) => {
@@ -2572,10 +2600,13 @@ const InteractiveVideo: React.FC = () => {
                         variables: nextVariables,
                         variableMap,
                     });
-                    const nextUrl = getNodeVideoUrls(nextResolvedTarget.node, manifest)[0] || '';
-                    if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
-                        nextLayerUrls.push(nextUrl);
-                    }
+                    const nextOptionUrl = getNodeVideoUrls(nextOption, manifest)[0] || '';
+                    const nextTargetUrl = getNodeVideoUrls(nextResolvedTarget.node, manifest)[0] || '';
+                    [nextOptionUrl, nextTargetUrl].forEach((nextUrl) => {
+                        if (nextUrl && nextUrl !== currentVideoUrl && nextUrl !== url && !nextLayerUrls.includes(nextUrl)) {
+                            nextLayerUrls.push(nextUrl);
+                        }
+                    });
                 });
 
             usedUrls.add(url);
@@ -2883,6 +2914,119 @@ const InteractiveVideo: React.FC = () => {
         }
     }, [isMiniProgramRuntime, preloadedVideoStatus, publishPlaybackMetrics]);
 
+    const resolveChoiceTransition = useCallback((option: StoryChoiceOption): ChoiceTransitionResolution | null => {
+        if (!story || !currentNode || !currentScript || !sessionState) return null;
+
+        const edge = getChoiceOutgoingEdge(currentScript, currentNode.id, option.id);
+        if (!edge) {
+            toast.error('\u5206\u652f\u672a\u8fde\u63a5');
+            return null;
+        }
+        const optionVariables = applyMutations(sessionState.variables, option.mutations || [], variableMap);
+        const resolvedTarget = resolveRuntimeNode({
+            story,
+            scriptId: currentScript.scriptId,
+            nodeId: edge.target,
+            callStack: sessionState.callStack || [],
+            variables: optionVariables,
+            variableMap,
+        });
+        const targetNode = resolvedTarget.node;
+        if (!targetNode) {
+            toast.error('\u76ee\u6807\u8282\u70b9\u4e0d\u5b58\u5728');
+            return null;
+        }
+
+        const edgeRuntimeId = getEdgeRuntimeId(edge);
+        const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
+        const routeWasUnlocked =
+            targetWasUnlocked ||
+            (sessionState.unlocked?.optionIds || []).includes(option.id) ||
+            (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
+
+        return {
+            edgeRuntimeId,
+            routeWasUnlocked,
+            targetNode,
+            targetNodeKind: getNodeKind(targetNode),
+            targetVideoUrl: getNodeVideoUrls(targetNode, manifest)[0] || '',
+            resolvedTarget,
+        };
+    }, [currentNode, currentScript, manifest, sessionState, story, variableMap]);
+
+    const applyChoiceTransition = useCallback(async (
+        option: StoryChoiceOption,
+        transition: ChoiceTransitionResolution,
+    ) => {
+        if (!currentNode || !currentScript || !sessionState) return;
+
+        const targetVideoUrl = transition.targetVideoUrl;
+        await prepareTargetVideo(targetVideoUrl);
+
+        setChoiceBridgePlayback(null);
+        setPlaybackMode(transition.routeWasUnlocked ? 'replay' : 'fresh');
+        setCurrentSequenceVideoIndex(0);
+        setShowManualPlay(false);
+        setEndingModalOpen(false);
+        setVideoAspect(getKnownVideoAspect(targetVideoUrl, transition.targetNode));
+        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
+        setIsVideoBuffering(false);
+        setVideoGate(Boolean(targetVideoUrl));
+        const sourceSnapshots = ensureSnapshot(
+            sessionState,
+            currentNode.id,
+            sessionState.variables,
+            sessionState.history || [],
+            sessionState.currentScriptId || currentScript.scriptId,
+            sessionState.callStack || [],
+        );
+        const variables = transition.resolvedTarget.variables;
+        const now = new Date().toISOString();
+        const history = [
+            ...(sessionState.history || []),
+            {
+                nodeId: transition.targetNode.id,
+                optionId: option.id,
+                edgeId: transition.edgeRuntimeId,
+                title: getNodeTitle(transition.targetNode),
+                enteredAt: now,
+            },
+        ];
+        const targetIsEnding = transition.targetNodeKind === 'ending';
+        const nextState: InteractiveVideoSessionState = {
+            ...sessionState,
+            currentNodeId: transition.targetNode.id,
+            currentScriptId: transition.resolvedTarget.scriptId,
+            callStack: cloneCallStack(transition.resolvedTarget.callStack),
+            variables,
+            history,
+            unlocked: {
+                nodeIds: uniquePush(sessionState.unlocked?.nodeIds || [], transition.targetNode.id),
+                optionIds: uniquePush(sessionState.unlocked?.optionIds || [], option.id),
+                edgeIds: uniquePush(sessionState.unlocked?.edgeIds || [], transition.edgeRuntimeId),
+            },
+            snapshots: ensureSnapshot(
+                { ...sessionState, snapshots: sourceSnapshots },
+                transition.targetNode.id,
+                variables,
+                history,
+                transition.resolvedTarget.scriptId,
+                transition.resolvedTarget.callStack,
+            ),
+            ending: {
+                reached: targetIsEnding,
+                nodeId: targetIsEnding ? transition.targetNode.id : null,
+            },
+            updatedAt: now,
+        };
+        await syncState(nextState);
+    }, [currentNode, currentScript, getKnownVideoAspect, prepareTargetVideo, sessionState, syncState]);
+
+    const completeChoiceBridgePlayback = useCallback(() => {
+        if (!choiceBridgePlayback) return;
+        void applyChoiceTransition(choiceBridgePlayback.option, choiceBridgePlayback.transition);
+    }, [applyChoiceTransition, choiceBridgePlayback]);
+
     const handleVideoComplete = () => {
         if (currentSequenceVideoIndex < currentVideoUrls.length - 1) {
             const nextIndex = currentSequenceVideoIndex + 1;
@@ -2893,7 +3037,7 @@ const InteractiveVideo: React.FC = () => {
                 setIsBranchTransitioning(false);
                 setIsVideoBuffering(false);
                 setIsVideoPaused(false);
-                setVideoAspect(getKnownVideoAspect(nextUrl, currentNode, nextIndex));
+                setVideoAspect(getKnownVideoAspect(nextUrl, activeVideoTarget, nextIndex));
                 setVideoGate(Boolean(nextUrl));
             };
             if (nextUrl && preloadManagerRef.current?.getStatus(nextUrl) !== 'ready') {
@@ -2902,6 +3046,11 @@ const InteractiveVideo: React.FC = () => {
                 return;
             }
             switchToNextVideo();
+            return;
+        }
+
+        if (choiceBridgePlayback) {
+            completeChoiceBridgePlayback();
             return;
         }
 
@@ -2972,94 +3121,26 @@ const InteractiveVideo: React.FC = () => {
     };
 
     const handleChooseOption = async (option: StoryChoiceOption) => {
-        if (!story || !currentNode || !currentScript || !sessionState) return;
+        const transition = resolveChoiceTransition(option);
+        if (!transition) return;
 
-        const edge = getChoiceOutgoingEdge(currentScript, currentNode.id, option.id);
-        if (!edge) {
-            toast.error('分支未连接');
-            return;
-        }
-        const optionVariables = applyMutations(sessionState.variables, option.mutations || [], variableMap);
-        const resolvedTarget = resolveRuntimeNode({
-            story,
-            scriptId: currentScript.scriptId,
-            nodeId: edge.target,
-            callStack: sessionState.callStack || [],
-            variables: optionVariables,
-            variableMap,
-        });
-        const targetNode = resolvedTarget.node;
-        if (!targetNode) {
-            toast.error('目标节点不存在');
+        const optionVideoUrl = getNodeVideoUrls(option, manifest)[0] || '';
+        if (optionVideoUrl) {
+            await prepareTargetVideo(optionVideoUrl);
+            setChoiceBridgePlayback({ option, transition });
+            setPlaybackMode(transition.routeWasUnlocked ? 'replay' : 'fresh');
+            setCurrentSequenceVideoIndex(0);
+            setShowManualPlay(false);
+            setEndingModalOpen(false);
+            setVideoAspect(getKnownVideoAspect(optionVideoUrl, option));
+            setIsBranchTransitioning(Boolean(optionVideoUrl) && preloadManagerRef.current?.getStatus(optionVideoUrl) !== 'ready');
+            setIsVideoBuffering(false);
+            setVideoGate(true);
             return;
         }
 
-        const edgeRuntimeId = getEdgeRuntimeId(edge);
-        const targetWasUnlocked = (sessionState.unlocked?.nodeIds || []).includes(targetNode.id);
-        const routeWasUnlocked =
-            targetWasUnlocked ||
-            (sessionState.unlocked?.optionIds || []).includes(option.id) ||
-            (sessionState.unlocked?.edgeIds || []).includes(edgeRuntimeId);
-        const targetNodeKind = getNodeKind(targetNode);
-        const targetVideoUrl = getNodeVideoUrls(targetNode, manifest)[0] || '';
-        await prepareTargetVideo(targetVideoUrl);
-
-        setPlaybackMode(routeWasUnlocked ? 'replay' : 'fresh');
-        setCurrentSequenceVideoIndex(0);
-        setShowManualPlay(false);
-        setEndingModalOpen(false);
-        setVideoAspect(getKnownVideoAspect(targetVideoUrl, targetNode));
-        setIsBranchTransitioning(Boolean(targetVideoUrl) && preloadManagerRef.current?.getStatus(targetVideoUrl) !== 'ready');
-        setIsVideoBuffering(false);
-        setVideoGate(Boolean(targetVideoUrl));
-        const sourceSnapshots = ensureSnapshot(
-            sessionState,
-            currentNode.id,
-            sessionState.variables,
-            sessionState.history || [],
-            sessionState.currentScriptId || currentScript.scriptId,
-            sessionState.callStack || [],
-        );
-        const variables = resolvedTarget.variables;
-        const now = new Date().toISOString();
-        const history = [
-            ...(sessionState.history || []),
-            {
-                nodeId: targetNode.id,
-                optionId: option.id,
-                edgeId: edgeRuntimeId,
-                title: getNodeTitle(targetNode),
-                enteredAt: now,
-            },
-        ];
-        const targetIsEnding = targetNodeKind === 'ending';
-        const nextState: InteractiveVideoSessionState = {
-            ...sessionState,
-            currentNodeId: targetNode.id,
-            currentScriptId: resolvedTarget.scriptId,
-            callStack: cloneCallStack(resolvedTarget.callStack),
-            variables,
-            history,
-            unlocked: {
-                nodeIds: uniquePush(sessionState.unlocked?.nodeIds || [], targetNode.id),
-                optionIds: uniquePush(sessionState.unlocked?.optionIds || [], option.id),
-                edgeIds: uniquePush(sessionState.unlocked?.edgeIds || [], edgeRuntimeId),
-            },
-            snapshots: ensureSnapshot(
-                { ...sessionState, snapshots: sourceSnapshots },
-                targetNode.id,
-                variables,
-                history,
-                resolvedTarget.scriptId,
-                resolvedTarget.callStack,
-            ),
-            ending: {
-                reached: targetIsEnding,
-                nodeId: targetIsEnding ? targetNode.id : null,
-            },
-            updatedAt: now,
-        };
-        await syncState(nextState);
+        await applyChoiceTransition(option, transition);
+        return;
     };
 
     const handleMinigameComplete = useCallback((rawResult: unknown) => {
@@ -3190,6 +3271,7 @@ const InteractiveVideo: React.FC = () => {
 
     const handleRollback = async (nodeId: string) => {
         if (!story || !sessionState) return;
+        setChoiceBridgePlayback(null);
         if (minigameCompletionTimerRef.current != null) {
             window.clearTimeout(minigameCompletionTimerRef.current);
             minigameCompletionTimerRef.current = null;
@@ -3248,6 +3330,7 @@ const InteractiveVideo: React.FC = () => {
         setShowManualPlay(false);
         setEndingModalOpen(false);
         setRestartConfirmOpen(false);
+        setChoiceBridgePlayback(null);
         setIsBranchTransitioning(false);
         setIsVideoBuffering(false);
         await loadSession(true);
