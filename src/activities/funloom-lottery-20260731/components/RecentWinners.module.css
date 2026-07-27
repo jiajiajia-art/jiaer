@@ -1,0 +1,97 @@
+.wrap {
+  margin: 28px auto 0;
+  max-width: 520px;
+}
+
+.title {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(40, 0, 90, 0.35);
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: rgba(43, 26, 74, 0.65);
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 14px;
+  box-shadow: 0 6px 16px rgba(40, 20, 100, 0.2);
+}
+
+/* 功能注释：最多约露出 3～4 条，其余区内滚动，避免活动页被 20 条撑太长 */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 196px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.55) rgba(255, 255, 255, 0.12);
+}
+
+.list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 14px rgba(40, 20, 100, 0.18);
+  border: 1px solid rgba(126, 182, 255, 0.45);
+  flex-shrink: 0;
+}
+
+.thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: rgba(43, 26, 74, 0.7);
+}
+
+.text strong {
+  font-size: 13px;
+  color: #2b1a4a;
+}
+
+.time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(43, 26, 74, 0.45);
+}

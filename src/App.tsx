@@ -35,6 +35,7 @@ import CreatorWorkStats from './page/creator/CreatorWorkStats';
 import OperatorPanel from './page/operator/OperatorPanel';
 import { CreatorRoute } from './components/CreatorRoute';
 import { OperatorRoute } from './components/OperatorRoute';
+import FunloomLotteryPage from './activities/funloom-lottery-20260731';
 import Categories from './page/Categories';
 import Rankings from './page/Rankings';
 import PromotionCenter from './page/PromotionCenter';
@@ -111,6 +112,8 @@ function App() {
         <Route path="/novel/:fileId/read" element={<NovelReader />} />
         <Route path="/replay/:replayId" element={<Galgame />} />
         <Route path="/document" element={<Document />} />
+        {/* Funloom 限定抽奖：独立活动链接，可配置到推广/ticker；点抽奖时鉴权 */}
+        <Route path="/activity/funloom-lottery-20260731" element={<FunloomLotteryPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/create" element={<Create />} />
@@ -145,6 +148,7 @@ function App() {
           <Route path="/admin/daily-tasks" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/withdraw" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+          <Route path="/admin/lottery" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><CommentAdminPage /></AdminRoute>} />
           <Route path="/galgame" element={<Galgame />} />
           <Route path="/galgameMap" element={<GalgameMap />} />

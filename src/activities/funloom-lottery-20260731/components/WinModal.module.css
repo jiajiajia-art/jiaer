@@ -1,0 +1,126 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  background: rgba(42, 11, 92, 0.78);
+  backdrop-filter: blur(2px);
+  animation: winOverlayIn 0.22s ease-out;
+}
+
+.card {
+  width: min(300px, 86vw);
+  padding: 28px 22px 22px;
+  text-align: center;
+  color: #fff;
+  border-radius: 22px;
+  border: 2.5px solid rgba(255, 196, 90, 0.92);
+  background: linear-gradient(180deg, #7b3cff 0%, #a128d4 48%, #e5399b 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+    0 18px 48px rgba(30, 0, 70, 0.55),
+    0 0 40px rgba(229, 57, 155, 0.28);
+  animation: winCardIn 0.28s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.title {
+  margin: 0 0 18px;
+  font-size: clamp(26px, 7vw, 32px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffd54f;
+  text-shadow:
+    0 2px 0 #c47f00,
+    0 4px 0 #a66a00,
+    0 8px 16px rgba(40, 0, 80, 0.35);
+}
+
+.prizeFrame {
+  width: 148px;
+  height: 148px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(20, 0, 50, 0.28);
+}
+
+.prizeImg {
+  width: 118px;
+  height: 118px;
+  object-fit: contain;
+  display: block;
+}
+
+.prizeName {
+  margin: 18px 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #fff;
+}
+
+.hint {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primary,
+.secondary {
+  border: none;
+  border-radius: 14px;
+  padding: 13px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  background: linear-gradient(180deg, #ffe082, #ffb300);
+  color: #4a2a00;
+  box-shadow: 0 4px 12px rgba(255, 180, 0, 0.35);
+}
+
+.secondary {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.primary:hover,
+.secondary:hover {
+  filter: brightness(1.05);
+}
+
+@keyframes winOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes winCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
