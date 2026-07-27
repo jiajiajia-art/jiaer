@@ -275,7 +275,7 @@ const TextModeDisplay: React.FC<TextModeDisplayProps> = ({
                             <div className={styles.core}></div>
                         </div>
                         <div className={styles.statusText}>
-                            AI 推演中<span className={styles.dots}></span>
+                            剧情展开中<span className={styles.dots}></span>
                         </div>
                     </div>
                 </div>

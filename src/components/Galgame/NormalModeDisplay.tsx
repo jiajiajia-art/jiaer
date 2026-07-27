@@ -286,7 +286,7 @@ const NormalModeDisplay: React.FC<NormalModeDisplayProps> = ({
                         <div className={styles.core}></div>
                     </div>
                     <div className={styles.statusText}>
-                        {isCompressingContext ? '正在整理故事记忆' : 'AI 推演中'}<span className={styles.dots}></span>
+                        {isCompressingContext ? t('createGame.organizingMemory') : t('createGame.aiThinking')}<span className={styles.dots}></span>
                     </div>
                 </div>
             )}
