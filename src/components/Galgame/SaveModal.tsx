@@ -1,6 +1,7 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './SaveModal.module.css';
 import { streamSaveSummary, savesApi } from '../../api/galgame/saves';
+import { normalizeSaveListItems } from '../../lib/galgame/normalizeSaveListItems';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -55,9 +56,8 @@ const SaveModal: React.FC<SaveModalProps> = ({
         try {
           const resp = await savesApi.listByFileId(fileId);
           const data = resp as any;
-          if (data?.data?.items) {
-            setSaveList(data.data.items);
-          }
+          const rawItems = data?.data?.items ?? data?.items;
+          setSaveList(normalizeSaveListItems(rawItems));
         } catch (e) {
           console.error('Failed to load saves:', e);
         }

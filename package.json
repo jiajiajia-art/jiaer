@@ -23,6 +23,7 @@
     "test:exportVisualNovel": "node --experimental-strip-types --test scripts/exportVisualNovel.check.mjs",
     "test:novelChapters": "node --experimental-strip-types --test scripts/novelChapters.check.mjs",
     "test:creatorContinuePlay": "node --experimental-strip-types --test scripts/creatorContinuePlay.check.mjs",
+    "test:normalizeSaveListItems": "node --experimental-strip-types --test scripts/normalizeSaveListItems.check.mjs",
     "test:galgamePlayPanels": "node --experimental-strip-types --test scripts/galgamePlayPanels.check.mjs",
     "test:choiceInteractionGate": "node --experimental-strip-types --test scripts/choiceInteractionGate.check.mjs",
     "test:attributePanelsStream": "node --experimental-strip-types --test scripts/attributePanelsStream.check.mjs",

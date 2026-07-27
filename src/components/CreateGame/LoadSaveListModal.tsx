@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styles from './LoadSaveListModal.module.css';
 import { savesApi, type SaveSummaryItem } from '../../api/galgame/saves';
+import { normalizeSaveListItems } from '../../lib/galgame/normalizeSaveListItems';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../CommonModal/ConfirmModal';
 
@@ -27,7 +28,7 @@ const LoadSaveListModal: React.FC<LoadSaveListModalProps> = ({ isOpen, onClose, 
     if (!fileId) { toast.error(t('createGame.loadSaveList.missingFileId')); return; }
     setLoading(true);
     savesApi.listByFileId(fileId)
-      .then((resp) => setItems(resp.data.items || []))
+      .then((resp) => setItems(normalizeSaveListItems(resp.data?.items) as SaveSummaryItem[]))
       .catch((e) => toast.error(e?.message || t('createGame.loadSaveList.loadFailed')))
       .finally(() => setLoading(false));
   }, [isOpen, fileId, t]);
