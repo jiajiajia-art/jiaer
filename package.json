@@ -25,6 +25,7 @@
     "test:creatorContinuePlay": "node --experimental-strip-types --test scripts/creatorContinuePlay.check.mjs",
     "test:normalizeSaveListItems": "node --experimental-strip-types --test scripts/normalizeSaveListItems.check.mjs",
     "test:galgamePlayPanels": "node --experimental-strip-types --test scripts/galgamePlayPanels.check.mjs",
+    "test:txtFreedomRevamp": "node --experimental-strip-types --test scripts/txtFreedomRevamp.check.mjs",
     "test:choiceInteractionGate": "node --experimental-strip-types --test scripts/choiceInteractionGate.check.mjs",
     "test:attributePanelsStream": "node --experimental-strip-types --test scripts/attributePanelsStream.check.mjs",
     "test:sanitizeVisualStepText": "node --experimental-strip-types --test scripts/sanitizeVisualStepText.check.mjs",

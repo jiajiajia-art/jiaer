@@ -11,6 +11,8 @@ import {
   pickAttributeCardsFromPanels,
   shouldSkipAttributeAutoRefresh,
 } from '../../../lib/galgame/attributePanelValues';
+import type { SessionPlayerProfile } from '../../../lib/galgame/playerCharacterCard';
+import PlayerArchiveSection from './PlayerArchiveSection';
 
 interface AttributesPanelProps {
   isOpen: boolean;
@@ -21,6 +23,8 @@ interface AttributesPanelProps {
   suppressAutoRefresh?: boolean;
   cachedPanels?: Record<string, string>;
   onPanelsUpdated?: (panels: Record<string, string>) => void;
+  sessionPlayerProfile?: SessionPlayerProfile | null;
+  onSessionPlayerProfileChange?: (profile: SessionPlayerProfile) => void;
 }
 
 /**
@@ -34,9 +38,12 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   suppressAutoRefresh = false,
   cachedPanels,
   onPanelsUpdated,
+  sessionPlayerProfile = null,
+  onSessionPlayerProfileChange,
 }) => {
   const { t } = useTranslation();
   const { sessionId } = useGameStore();
+  const [playerProfile, setPlayerProfile] = useState<SessionPlayerProfile | null>(sessionPlayerProfile);
   const [panels, setPanels] = useState<Record<string, string>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,6 +59,10 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
   const panelKeys = useMemo(() => Object.keys(panels || {}), [panels]);
   const { cards } = useMemo(() => pickAttributeCardsFromPanels(panels), [panels]);
   const activeContent = activeKey ? panels[activeKey] || '' : '';
+
+  useEffect(() => {
+    setPlayerProfile(sessionPlayerProfile);
+  }, [sessionPlayerProfile]);
 
   useEffect(() => {
     if (cachedPanels && Object.keys(cachedPanels).length > 0) {
@@ -211,6 +222,14 @@ const AttributesPanel: React.FC<AttributesPanelProps> = ({
     >
       {error ? <div className={shell.empty}>{error}</div> : null}
       {loading ? <div className={shell.empty}>{t('galgame.panelLoading')}</div> : null}
+
+      <PlayerArchiveSection
+        profile={playerProfile}
+        onProfileChange={(next) => {
+          setPlayerProfile(next);
+          onSessionPlayerProfileChange?.(next);
+        }}
+      />
 
       {!loading && showCards ? (
         <div className={shell.grid}>

@@ -4,7 +4,9 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useGameStore } from "../store/gameStore";
 import { RiLogoutCircleRLine } from "react-icons/ri";
 import { MdSettings, MdTimeline, MdPerson, MdOutlineAssessment, MdFlag, MdDns, MdContentCopy } from "react-icons/md";
-import StoryIntroModal from "../components/Galgame/StoryIntroModal";
+import GameStartWizard from "../components/Galgame/GameStartWizard";
+import type { GameStartConfig } from "../lib/galgame/gameStartConfig";
+import { sessionPlayerProfileApi } from "../api/galgame/playerCharacterCards";
 import NormalModeDisplay from "../components/Galgame/NormalModeDisplay";
 import { useCharacterAnimation } from "../hooks/galgame/useCharacterAnimation";
 import CharacterLayer from "../components/Galgame/CharacterLayer";
@@ -1117,11 +1119,27 @@ const Galgame = () => {
                         )}
                     </div>
 
-                    <StoryIntroModal
+                    <GameStartWizard
                         isOpen={controller.isReplay ? false : controller.showStoryIntro}
-                        presetData={controller.presetData}
-                        onStartGame={controller.handleStartGame}
+                        title={controller.presetData?.world?.title || t('common.storyIntro.defaultTitle')}
+                        routes={(controller.presetData?.world?.keyEvents || []).map((ev, idx) => ({
+                            id: `route-${idx}-${String(ev.title || '').slice(0, 12)}`,
+                            title: String(ev.title || `故事线 ${idx + 1}`),
+                            summary: String(ev.description || '').slice(0, 120),
+                            openingMonologue: String(ev.description || controller.presetData?.world?.initialPlot || ''),
+                        }))}
+                        defaultPlayerName={controller.presetData?.player?.name || ''}
                         isLoading={controller.isStartingGame}
+                        onConfirm={async (config: GameStartConfig) => {
+                            try {
+                                if (sessionId && user?.token) {
+                                    await sessionPlayerProfileApi.putGameStartConfig(user.token, sessionId, config);
+                                }
+                            } catch (err) {
+                                console.warn('[GameStartWizard] putGameStartConfig failed', err);
+                            }
+                            await controller.handleStartGame();
+                        }}
                     />
 
                     <GalgameHistoryModal
