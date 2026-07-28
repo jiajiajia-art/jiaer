@@ -18,7 +18,7 @@ const campaign = {
   title: 'Funloom限定抽奖日！100%中奖',
   startsAt: '2026-07-26T16:00:00.000Z',
   endsAt: '2026-08-03T15:59:59.999Z',
-  drawLimitType: 'once_per_day',
+  drawLimitType: 'once_per_activity',
   status: 'published',
   onsiteClaimHint: '现场领取',
 };
@@ -43,11 +43,11 @@ test('evaluateClientDrawGate_未登录应要求登录', () => {
   if (!gate.ok) assert.equal(gate.code, 'login_required');
 });
 
-test('evaluateClientDrawGate_今日已抽应禁止', () => {
+test('evaluateClientDrawGate_活动期内已抽应禁止', () => {
   const gate = evaluateClientDrawGate({
     isLoggedIn: true,
     campaign,
-    myTodayDraw: {
+    myDraw: {
       id: 1,
       campaignId: 1,
       userId: 'u1',
@@ -58,10 +58,10 @@ test('evaluateClientDrawGate_今日已抽应禁止', () => {
       pointsGrantStatus: 'granted',
       createdAt: '2026-07-31T04:00:00.000Z',
     },
-    now: '2026-07-31T04:00:00.000Z',
+    now: '2026-08-01T04:00:00.000Z',
   });
   assert.equal(gate.ok, false);
-  if (!gate.ok) assert.equal(gate.code, 'already_drawn_today');
+  if (!gate.ok) assert.equal(gate.code, 'already_drawn');
 });
 
 test('evaluateClientDrawGate_可抽主路径', () => {
@@ -70,6 +70,7 @@ test('evaluateClientDrawGate_可抽主路径', () => {
     campaign,
     canDrawFromServer: true,
     myTodayDraw: null,
+    myDraw: null,
     now: '2026-07-31T04:00:00.000Z',
   });
   assert.equal(gate.ok, true);

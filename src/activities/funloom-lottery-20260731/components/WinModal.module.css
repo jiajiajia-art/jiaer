@@ -65,8 +65,25 @@
   color: #fff;
 }
 
+.claimBox {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.claimLabel {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #ffd54f;
+}
+
 .hint {
-  margin: 0 0 20px;
+  margin: 0;
   font-size: 13px;
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.92);

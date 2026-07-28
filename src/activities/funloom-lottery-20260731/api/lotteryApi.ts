@@ -12,6 +12,8 @@ export interface LotteryCampaignPayload {
   campaign: LotteryCampaign;
   prizes: LotteryPrizePublic[];
   myTodayDraw: LotteryDraw | null;
+  /** 活动内最近一次抽奖；once_per_activity 时用于禁用再抽 */
+  myDraw?: LotteryDraw | null;
   canDraw: boolean;
   requireLoginToDraw: boolean;
 }

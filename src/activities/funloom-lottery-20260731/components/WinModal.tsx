@@ -60,21 +60,26 @@ const WinModal: React.FC<WinModalProps> = ({
           {img ? <img className={styles.prizeImg} src={img} alt={displayName} /> : null}
         </div>
         <p className={styles.prizeName}>{displayName}</p>
-        {fulfillment === 'points' && (
-          <p className={styles.hint}>
-            {pointsGrantStatus === 'granted'
-              ? `已发放 ${pointsAmount} 游戏积分`
-              : pointsGrantStatus === 'failed'
-                ? '积分发放失败，请重试'
-                : `即将发放 ${pointsAmount} 游戏积分`}
-          </p>
-        )}
-        {fulfillment === 'onsite' && (
-          <p className={styles.hint}>{onsiteHint || '请到活动现场领取奖品'}</p>
-        )}
-        {fulfillment === 'shipping' && (
-          <p className={styles.hint}>请填写收货人、地址与手机号，我们将安排寄送</p>
-        )}
+        <div className={styles.claimBox}>
+          <p className={styles.claimLabel}>领取方式</p>
+          {fulfillment === 'points' && (
+            <p className={styles.hint}>
+              {pointsGrantStatus === 'granted'
+                ? `已自动发放 ${pointsAmount} 游戏积分到账`
+                : pointsGrantStatus === 'failed'
+                  ? '积分发放失败，请重试'
+                  : `中奖后自动发放 ${pointsAmount} 游戏积分`}
+            </p>
+          )}
+          {fulfillment === 'onsite' && (
+            <p className={styles.hint}>{onsiteHint || '请到活动现场领取奖品'}</p>
+          )}
+          {fulfillment === 'shipping' && (
+            <p className={styles.hint}>
+              邮寄领取：请填写收货人、地址与手机号，我们将安排寄送
+            </p>
+          )}
+        </div>
         <div className={styles.actions}>
           {fulfillment === 'shipping' && onFillShipping ? (
             <button type="button" className={styles.primary} onClick={onFillShipping}>

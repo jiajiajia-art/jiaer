@@ -61,7 +61,7 @@ export interface DrawResultPrize {
   requiresShipping: boolean;
 }
 
-/** 功能注释：上海自然日 YYYY-MM-DD，与后端每日限抽一致。 */
+/** 功能注释：上海自然日 YYYY-MM-DD，与后端抽奖日界一致。 */
 export function formatShanghaiDrawDate(now: Date | string | number = new Date()): string {
   const date = now instanceof Date ? now : new Date(now);
   if (Number.isNaN(date.getTime())) throw new Error('invalid_now');
@@ -86,12 +86,15 @@ export function isCampaignActive(
 
 /**
  * 功能注释：前端抽奖按钮闸门（最终以后端为准；此处避免无效请求）。
+ * once_per_activity：活动期内任一抽奖记录即禁止再抽。
+ * once_per_day：仅当日记录禁止。
  */
 export function evaluateClientDrawGate(input: {
   isLoggedIn: boolean;
   campaign: LotteryCampaign | null;
   canDrawFromServer?: boolean;
   myTodayDraw?: LotteryDraw | null;
+  myDraw?: LotteryDraw | null;
   now?: Date | string | number;
 }): { ok: true } | { ok: false; code: string; message: string } {
   if (!input.isLoggedIn) {
@@ -106,11 +109,19 @@ export function evaluateClientDrawGate(input: {
   if (!isCampaignActive(input.campaign, input.now)) {
     return { ok: false, code: 'campaign_closed', message: '不在活动时间内' };
   }
-  if (input.myTodayDraw) {
+  const limitType = input.campaign.drawLimitType || 'once_per_day';
+  if (limitType === 'once_per_activity' && input.myDraw) {
+    return { ok: false, code: 'already_drawn', message: '本活动你已抽过奖' };
+  }
+  if (limitType === 'once_per_day' && input.myTodayDraw) {
     return { ok: false, code: 'already_drawn_today', message: '今日已抽过，明天再来' };
   }
   if (input.canDrawFromServer === false) {
-    return { ok: false, code: 'cannot_draw', message: '今日已抽过或活动未开放' };
+    return {
+      ok: false,
+      code: 'cannot_draw',
+      message: limitType === 'once_per_activity' ? '本活动你已抽过奖或活动未开放' : '今日已抽过或活动未开放',
+    };
   }
   return { ok: true };
 }
@@ -175,5 +186,37 @@ export const PRIZE_DISPLAY: Record<PrizeKey, { label: string; color: string }> =
   points_300: {
     label: '300积分券',
     color: '#7e57c2',
+  },
+};
+
+/** 功能注释：奖池预览 / 中奖弹窗共用的领取方式文案（每奖独立）。 */
+export const PRIZE_CLAIM_INFO: Record<
+  PrizeKey,
+  { fulfillment: 'shipping' | 'onsite' | 'points'; method: string; detail: string }
+> = {
+  console: {
+    fulfillment: 'shipping',
+    method: '邮寄领取',
+    detail: '中奖后请填写收货人、地址与手机号，我们将安排寄送。',
+  },
+  poke_ball: {
+    fulfillment: 'shipping',
+    method: '邮寄领取',
+    detail: '中奖后请填写收货人、地址与手机号，我们将安排寄送。',
+  },
+  mini_handheld: {
+    fulfillment: 'onsite',
+    method: '现场领取',
+    detail: '请凭中奖记录到活动现场工作人员处领取。',
+  },
+  badge: {
+    fulfillment: 'onsite',
+    method: '现场领取',
+    detail: '请凭中奖记录到活动现场工作人员处领取。',
+  },
+  points_300: {
+    fulfillment: 'points',
+    method: '自动发放',
+    detail: '中奖后 300 游戏积分直接到账，无需额外操作。',
   },
 };

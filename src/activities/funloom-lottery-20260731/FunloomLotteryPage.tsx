@@ -10,10 +10,12 @@ import {
   PRIZE_KEYS,
   type LotteryCampaign,
   type LotteryDraw,
+  type PrizeKey,
 } from './lib/lotteryClient';
 import LotteryWheel, { PRIZE_IMAGES } from './components/LotteryWheel';
 import WinModal from './components/WinModal';
 import ShippingFormModal from './components/ShippingFormModal';
+import PrizePreviewModal from './components/PrizePreviewModal';
 import RecentWinners, { type RecentWinnerItem } from './components/RecentWinners';
 import styles from './FunloomLottery.module.css';
 import heroBanner from './assets/hero-banner.jpg';
@@ -31,6 +33,7 @@ const FunloomLotteryPage: React.FC = () => {
 
   const [campaign, setCampaign] = useState<LotteryCampaign | null>(null);
   const [myTodayDraw, setMyTodayDraw] = useState<LotteryDraw | null>(null);
+  const [myDraw, setMyDraw] = useState<LotteryDraw | null>(null);
   const [canDraw, setCanDraw] = useState(false);
   const [recentWinners, setRecentWinners] = useState<RecentWinnerItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,7 @@ const FunloomLotteryPage: React.FC = () => {
   const [showWin, setShowWin] = useState(false);
   const [showShipping, setShowShipping] = useState(false);
   const [shippingSubmitting, setShippingSubmitting] = useState(false);
+  const [previewPrizeKey, setPreviewPrizeKey] = useState<PrizeKey | null>(null);
 
   const loadRecent = useCallback(async () => {
     try {
@@ -69,6 +73,7 @@ const FunloomLotteryPage: React.FC = () => {
       }
       setCampaign(data.campaign);
       setMyTodayDraw(data.myTodayDraw || null);
+      setMyDraw(data.myDraw || data.myTodayDraw || null);
       setCanDraw(Boolean(data.canDraw));
     } catch (error) {
       toast.error(getErrorMessage(error, '活动加载失败'));
@@ -88,6 +93,7 @@ const FunloomLotteryPage: React.FC = () => {
       campaign,
       canDrawFromServer: canDraw,
       myTodayDraw,
+      myDraw,
     });
     if (!gate.ok) {
       if (gate.code === 'login_required') {
@@ -118,6 +124,7 @@ const FunloomLotteryPage: React.FC = () => {
       setTargetPrizeKey(data.prize.prizeKey);
       setSpinning(true);
       setMyTodayDraw(data.draw);
+      setMyDraw(data.draw);
       setCanDraw(false);
     } catch (error) {
       toast.error(getErrorMessage(error, '抽奖失败'));
@@ -164,11 +171,15 @@ const FunloomLotteryPage: React.FC = () => {
     }
   };
 
-  const drawLabel = drawing || spinning ? '抽奖中…' : myTodayDraw ? '今日已抽过' : '开始抽奖';
+  const alreadyDrawn =
+    campaign?.drawLimitType === 'once_per_activity' ? Boolean(myDraw) : Boolean(myTodayDraw);
+  const drawLabel = drawing || spinning ? '抽奖中…' : alreadyDrawn ? '已抽过奖' : '开始抽奖';
   const statusHint = !isLoggedIn
     ? '点击后需登录才能抽奖'
-    : myTodayDraw
-      ? '你今天已经抽过啦，明天再来'
+    : alreadyDrawn
+      ? campaign?.drawLimitType === 'once_per_activity'
+        ? '本活动期间每账号限抽 1 次，你已抽过'
+        : '你今天已经抽过啦，明天再来'
       : !canDraw
         ? '当前暂不可抽（活动未开放或已抽过）'
         : '点击下方金色按钮开始抽奖';
@@ -188,7 +199,7 @@ const FunloomLotteryPage: React.FC = () => {
           src={heroBanner}
           alt="Funloom 惊喜一抽！100%中奖"
         />
-        <p className={styles.meta}>活动时间 7.31 – 8.03 · 每账号每天限抽 1 次</p>
+        <p className={styles.meta}>活动时间 7.31 – 8.03 · 每账号活动期间限抽 1 次</p>
       </header>
 
       {loading ? (
@@ -209,7 +220,7 @@ const FunloomLotteryPage: React.FC = () => {
             type="button"
             className={styles.drawBtn}
             onClick={handleDraw}
-            disabled={drawing || spinning || Boolean(myTodayDraw)}
+            disabled={drawing || spinning || alreadyDrawn}
           >
             {drawLabel}
           </button>
@@ -220,9 +231,16 @@ const FunloomLotteryPage: React.FC = () => {
               {PRIZE_KEYS.map((key) => {
                 const meta = PRIZE_DISPLAY[key];
                 return (
-                  <li key={key} className={styles.prizeCard}>
-                    <img src={PRIZE_IMAGES[key]} alt={meta.label} />
-                    <strong>{meta.label}</strong>
+                  <li key={key}>
+                    <button
+                      type="button"
+                      className={styles.prizeCard}
+                      onClick={() => setPreviewPrizeKey(key)}
+                      aria-label={`预览奖品：${meta.label}`}
+                    >
+                      <img src={PRIZE_IMAGES[key]} alt="" />
+                      <strong>{meta.label}</strong>
+                    </button>
                   </li>
                 );
               })}
@@ -254,6 +272,13 @@ const FunloomLotteryPage: React.FC = () => {
         submitting={shippingSubmitting}
         onClose={() => setShowShipping(false)}
         onSubmit={handleShippingSubmit}
+      />
+
+      <PrizePreviewModal
+        open={Boolean(previewPrizeKey)}
+        prizeKey={previewPrizeKey}
+        onsiteHint={campaign?.onsiteClaimHint}
+        onClose={() => setPreviewPrizeKey(null)}
       />
     </div>
   );
