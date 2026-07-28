@@ -7,11 +7,11 @@ import {
 } from '../lib/lotteryClient';
 import styles from './LotteryWheel.module.css';
 
-import imgConsole from '../assets/prize-console.png';
-import imgMini from '../assets/prize-mini-handheld.png';
-import imgBadge from '../assets/prize-badge.png';
-import imgPoke from '../assets/prize-poke-ball.png';
-import imgPoints from '../assets/prize-points-300.png';
+import imgConsole from '../assets/prize-console.jpg';
+import imgMini from '../assets/prize-mini-handheld.jpg';
+import imgBadge from '../assets/prize-badge.jpg';
+import imgPoke from '../assets/prize-poke-ball.jpg';
+import imgPoints from '../assets/prize-points-300.jpg';
 
 const PRIZE_IMAGES: Record<PrizeKey, string> = {
   console: imgConsole,

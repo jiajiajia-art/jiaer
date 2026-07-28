@@ -16,7 +16,7 @@ import WinModal from './components/WinModal';
 import ShippingFormModal from './components/ShippingFormModal';
 import RecentWinners, { type RecentWinnerItem } from './components/RecentWinners';
 import styles from './FunloomLottery.module.css';
-import heroBanner from './assets/hero-banner.png';
+import heroBanner from './assets/hero-banner.jpg';
 
 function getErrorMessage(error: unknown, fallback: string): string {
   const err = error as { response?: { data?: { message?: string } }; message?: string };
