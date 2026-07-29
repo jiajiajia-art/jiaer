@@ -70,8 +70,8 @@
   position: absolute;
   top: 4%;
   left: 50%;
-  width: 26%;
-  max-width: 88px;
+  width: 32%;
+  max-width: 110px;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
@@ -89,7 +89,7 @@
 .sectorImg {
   width: 100%;
   aspect-ratio: 1;
-  max-width: 70px; /* 原 64px * 1.1 */
+  max-width: 80px;
   object-fit: contain;
   border-radius: 10px;
   background: #ffffff;
@@ -98,10 +98,10 @@
 }
 
 .sectorName {
-  max-width: 100%;
+  width: 100%;
   padding: 0 2px;
   color: #fff;
-  font-size: clamp(10px, 2.6vw, 12px);
+  font-size: clamp(10px, 2.6vw, 13px);
   font-weight: 800;
   letter-spacing: 0.02em;
   text-align: center;

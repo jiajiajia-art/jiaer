@@ -199,7 +199,7 @@ const FunloomLotteryPage: React.FC = () => {
           src={heroBanner}
           alt="Funloom 惊喜一抽！100%中奖"
         />
-        <p className={styles.meta}>活动时间 7.31 – 8.03 · 每账号活动期间限抽 1 次</p>
+        <p className={styles.meta}>活动时间 7.31 – 8.03 · 每账号活动期间限抽 1 次（本次抽奖仅面向Chinajoy活动）</p>
       </header>
 
       {loading ? (

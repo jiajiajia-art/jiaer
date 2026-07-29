@@ -168,7 +168,7 @@ export function validateShippingForm(input: {
 /** 功能注释：页面仅展示奖品名与扇区配色；概率逻辑在后端。配色拉开对比，避免邻区糊成一片。 */
 export const PRIZE_DISPLAY: Record<PrizeKey, { label: string; color: string }> = {
   console: {
-    label: '游戏机',
+    label: 'Switch2游戏机',
     color: '#5c6bc0',
   },
   mini_handheld: {
@@ -207,12 +207,12 @@ export const PRIZE_CLAIM_INFO: Record<
   mini_handheld: {
     fulfillment: 'onsite',
     method: '现场领取',
-    detail: '请凭中奖记录到活动现场工作人员处领取。',
+    detail: '请凭中奖记录到Chinajoy场馆N2-G207现场工作人员处领取。',
   },
   badge: {
     fulfillment: 'onsite',
     method: '现场领取',
-    detail: '请凭中奖记录到活动现场工作人员处领取。',
+    detail: '请凭中奖记录到Chinajoy场馆N2-G207现场工作人员处领取。',
   },
   points_300: {
     fulfillment: 'points',

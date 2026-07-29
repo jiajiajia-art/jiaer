@@ -29,6 +29,14 @@
     }
 }
 
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
 .modalContent {
     background: #ffffff;
     border-radius: 14px;
@@ -238,7 +246,6 @@
 }
 
 .amountPriceOriginal {
-    text-decoration: line-through;
     color: #b6bcc7;
     margin-right: 0.35em;
 }
@@ -305,6 +312,17 @@
 
 .customInputWrapper.inputError {
     border-color: #e74c3c;
+}
+
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+.errorText {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-top: 4px;
+    text-align: center;
 }
 
 .currencySymbol {

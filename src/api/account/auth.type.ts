@@ -172,7 +172,7 @@ export interface PointsActivitiesResponse {
 
 // 钻石兑换积分
 export interface ExchangeDiamondsRequest {
-  diamonds: number;
+  points: number;
 }
 
 export interface ExchangeDiamondsResponse {
@@ -180,4 +180,9 @@ export interface ExchangeDiamondsResponse {
   pointsEarned: number;
   remainingDiamonds: number;
   remainingPoints: number;
+}
+
+export interface ExchangeDiamondsErrorResponse {
+    currentDiamonds: number;
+    diamondsNeeded: number;
 }

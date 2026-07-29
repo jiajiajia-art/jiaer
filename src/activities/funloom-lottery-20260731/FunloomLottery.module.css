@@ -291,9 +291,11 @@
 }
 
 .prizeCard strong {
+  max-width: 100%;
   font-size: 13px;
   color: var(--fx-ink);
   font-weight: 800;
+  white-space: nowrap;
 }
 
 @media (max-width: 380px) {
