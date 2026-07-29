@@ -285,12 +285,14 @@ const GameStatsView: React.FC<GameStatsViewProps> = ({
             const fileId = gameDetail?.file_id || gameDetail?.id;
             if (!fileId) return;
             setIsLoading(true);
-            // 进入游戏前清理旧状态
+            // 进入游戏前清理旧状态；必须同时写回 fileId + sessionId，否则 Galgame 会卡在「正在获取数据」
             useGameStore.getState().clearAll();
             const resp = await createGalgameSessionApi.createGalgameEditSession({ fileId, saveId });
             if (resp.data.success) {
                 const sessionId = resp.data.data.session;
+                setFileId(fileId);
                 setSessionId(sessionId);
+                setIsPreset(gameDetail?.is_preset == 1);
                 navigate('/galgame', { state: { saveEntry: 'load' } });
                 return;
             }

@@ -2,6 +2,7 @@ import { api } from '../base';
 import type { ApiResponse } from '../api.types';
 
 export type ReportGranularity = 'day' | 'week' | 'month';
+export type ReportPlatform = 'all' | 'pc' | 'mini_program';
 
 export interface TrendPoint {
   bucket: string;
@@ -120,6 +121,7 @@ export interface ReportQueryParams {
   endDate?: string;
   metrics?: string;
   days?: number;
+  platform?: ReportPlatform;
 }
 
 const operatorReportsApi = {
@@ -131,13 +133,13 @@ const operatorReportsApi = {
     api.get<ApiResponse<ConsumptionTrendResponse>>('/operator/reports/consumption/trend', { params }),
   getActiveUsersSummary: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate'>) =>
     api.get<ApiResponse<ActiveUsersSummaryResponse>>('/operator/reports/active-users/summary', { params }),
-  getNewUserRetention: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'days'>) =>
+  getNewUserRetention: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'days' | 'platform'>) =>
     api.get<ApiResponse<NewUserRetentionPoint[]>>('/auth/stats/new-user-retention', { params }),
-  getActiveUserRetention: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'days'>) =>
+  getActiveUserRetention: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'days' | 'platform'>) =>
     api.get<ApiResponse<ActiveUserRetentionPoint[]>>('/auth/stats/active-user-retention', { params }),
-  getRechargeSummary: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate'>) =>
+  getRechargeSummary: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'platform'>) =>
     api.get<ApiResponse<RechargeSummaryResponse>>('/operator/reports/recharge/summary', { params }),
-  getRechargeTrend: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'granularity'>) =>
+  getRechargeTrend: (params?: Pick<ReportQueryParams, 'startDate' | 'endDate' | 'granularity' | 'platform'>) =>
     api.get<ApiResponse<RechargeTrendResponse>>('/operator/reports/recharge/trend', { params }),
 };
 

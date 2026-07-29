@@ -1,0 +1,185 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1180;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(120, 40, 200, 0.35), transparent 70%),
+    rgba(18, 4, 42, 0.86);
+  backdrop-filter: blur(6px);
+  animation: previewOverlayIn 0.2s ease-out;
+}
+
+.stage {
+  position: relative;
+  width: min(360px, 92vw);
+  padding: 28px 22px 20px;
+  text-align: center;
+  border-radius: 22px;
+  border: 2px solid rgba(126, 182, 255, 0.75);
+  background: linear-gradient(165deg, #5b2ad4 0%, #8a1fc4 52%, #d43a9a 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset,
+    0 22px 56px rgba(12, 0, 40, 0.65),
+    0 0 48px rgba(126, 182, 255, 0.22);
+  animation: previewStageIn 0.32s cubic-bezier(0.18, 0.92, 0.28, 1);
+}
+
+.stage::before,
+.stage::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-style: solid;
+  pointer-events: none;
+}
+
+.stage::before {
+  top: 10px;
+  left: 10px;
+  border-width: 2.5px 0 0 2.5px;
+  border-color: #7eb6ff;
+}
+
+.stage::after {
+  right: 10px;
+  bottom: 10px;
+  border-width: 0 2.5px 2.5px 0;
+  border-color: #e070ff;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+  outline: 2px solid #ffd54f;
+  outline-offset: 2px;
+}
+
+.frame {
+  width: min(260px, 72vw);
+  height: min(260px, 72vw);
+  margin: 8px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 12px 28px rgba(20, 0, 50, 0.35),
+    0 0 0 3px rgba(255, 213, 79, 0.35);
+  animation: previewImgPop 0.38s cubic-bezier(0.2, 0.95, 0.25, 1);
+}
+
+.img {
+  width: 86%;
+  height: 86%;
+  object-fit: contain;
+  display: block;
+}
+
+.name {
+  margin: 18px 0 10px;
+  font-size: clamp(18px, 5vw, 22px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(20, 0, 60, 0.4);
+}
+
+.claimBox {
+  margin: 0 4px 14px;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.claimLabel {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #ffd54f;
+  text-transform: none;
+}
+
+.claimMethod {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.claimDetail {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.claimLinkNote {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #ffe082;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+@keyframes previewOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes previewStageIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes previewImgPop {
+  from {
+    opacity: 0.4;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
